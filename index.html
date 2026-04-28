@@ -619,16 +619,73 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- FORMAT -->
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Format de publication</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div id="fmt-vertical" onclick="setFormat('vertical')" style="border:2px solid var(--orange);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
-                  <div style="font-size:28px;margin-bottom:6px">📱</div>
-                  <div style="font-size:13px;font-weight:700">TikTok / Reels</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">9:16 · 1080×1920</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div id="fmt-vertical" onclick="setFormat('vertical')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
+                  <div style="font-size:22px;margin-bottom:5px">📱</div>
+                  <div style="font-size:12px;font-weight:700">TikTok / Reels</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16 vertical</div>
                 </div>
-                <div id="fmt-square" onclick="setFormat('square')" style="border:2px solid var(--border);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="font-size:28px;margin-bottom:6px">📸</div>
-                  <div style="font-size:13px;font-weight:700">Meta Ads / Insta</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">1:1 · 1080×1080</div>
+                <div id="fmt-square" onclick="setFormat('square')" style="border:2px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:22px;margin-bottom:5px">📸</div>
+                  <div style="font-size:12px;font-weight:700">Meta / Insta</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">1:1 carré</div>
+                </div>
+                <div id="fmt-landscape" onclick="setFormat('landscape')" style="border:2px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:22px;margin-bottom:5px">🖥️</div>
+                  <div style="font-size:12px;font-weight:700">Paysage</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">16:9 YouTube</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SPLIT SCREEN TOGGLE -->
+            <div class="fld" style="margin-bottom:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleSplit()" id="splitToggleRow">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="font-size:24px">🎮</div>
+                  <div>
+                    <div style="font-size:13px;font-weight:700">Mode Split Screen</div>
+                    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px">Avatar en haut · Gameplay en bas · Sous-titres au milieu</div>
+                  </div>
+                </div>
+                <div id="splitToggle" style="width:44px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="splitThumb" style="width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:all .25s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+                </div>
+              </div>
+
+              <!-- SPLIT OPTIONS — hidden by default -->
+              <div id="splitOptions" style="display:none;flex-direction:column;gap:12px;margin-top:12px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+                <div>
+                  <div class="flbl" style="font-size:11px;margin-bottom:8px">Vidéo de fond (gameplay, satisfying, mindmap...)</div>
+                  <div id="gameplayDropzone" onclick="document.getElementById('gameplayFileIn').click()"
+                    ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
+                    ondragleave="ev=>{this.classList.remove('av-drag')}"
+                    ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleGameplayFile(ev.dataTransfer.files[0])}"
+                    style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg4)">
+                    <div id="gameplayDropContent">
+                      <div style="font-size:28px;margin-bottom:8px">🎮</div>
+                      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Glisse ta vidéo de fond</div>
+                      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · gameplay · mindmap · satisfying</div>
+                      <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:12px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                    </div>
+                    <div id="gameplayFileInfo" style="display:none">
+                      <div style="font-size:28px;margin-bottom:6px">✅</div>
+                      <div id="gameplayFileName" style="font-size:13px;font-weight:600"></div>
+                      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:4px">Clique pour changer</div>
+                    </div>
+                  </div>
+                  <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
+                </div>
+
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <div class="flbl" style="font-size:11px;margin:0">Ratio Avatar / Gameplay</div>
+                    <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="splitRatioVal">50 / 50</span>
+                  </div>
+                  <input type="range" id="splitRatio" min="30" max="70" value="50" step="5"
+                    oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateSplitPreview()"
+                    style="width:100%;accent-color:var(--orange)">
+                  <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>+ Avatar</span><span>+ Gameplay</span></div>
                 </div>
               </div>
             </div>
@@ -668,7 +725,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- POSITION -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div class="flbl" style="font-size:11px;margin:0">Position verticale</div>
+                <div class="flbl" style="font-size:11px;margin:0">Position verticale des sous-titres</div>
                 <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
               </div>
               <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
@@ -690,7 +747,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;min-height:60px">
                 <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Les mots apparaîtront ici après génération de la voix...</div>
               </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Clique sur un mot pour le corriger · Double-clic pour le supprimer</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Clique = modifier · Double-clic = supprimer</div>
             </div>
 
           </div>
@@ -710,6 +767,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="gen-right" id="genRight">
         <div class="preview-area" id="previewArea">
           <div class="preview-label">Prévisualisation</div>
+
+          <!-- NORMAL PHONE PREVIEW -->
           <div class="phone" id="phoneFrame">
             <div class="phone-top"><div class="phone-pill"></div></div>
             <div class="phone-body" id="phoneBody">
@@ -729,6 +788,29 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="phone-follow">Suivre</div>
             </div>
           </div>
+
+          <!-- SPLIT SCREEN PREVIEW -->
+          <div id="splitPreview" style="display:none;width:220px;height:400px;border-radius:16px;overflow:hidden;border:2px solid var(--border2);box-shadow:0 24px 64px rgba(0,0,0,.7);flex-direction:column;position:relative">
+            <!-- TOP: Avatar -->
+            <div id="splitTop" style="background:linear-gradient(160deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;flex:1;position:relative;overflow:hidden">
+              <div style="font-size:52px" id="splitAv">👩‍💼</div>
+              <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.1)"></div>
+            </div>
+            <!-- SUBTITLE AT JUNCTION -->
+            <div id="splitSubs" style="position:absolute;left:0;right:0;z-index:10;text-align:center;padding:4px 8px;pointer-events:none" style="top:50%">
+              <span style="font-family:Impact,sans-serif;font-size:16px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span>
+              <span style="font-family:Impact,sans-serif;font-size:16px;color:#fff;-webkit-text-stroke:1px #000;margin-left:4px">GARANTIS</span>
+            </div>
+            <!-- BOTTOM: Gameplay -->
+            <div id="splitBottom" style="background:#000;display:flex;align-items:center;justify-content:center;flex:1;overflow:hidden;position:relative">
+              <div id="splitGameplayEmpty" style="text-align:center;color:rgba(255,255,255,0.2)">
+                <div style="font-size:28px;margin-bottom:4px">🎮</div>
+                <div style="font-size:9px;font-family:var(--mono)">Gameplay ici</div>
+              </div>
+              <video id="splitGameplayVid" style="display:none;width:100%;height:100%;object-fit:cover" loop muted autoplay playsinline></video>
+            </div>
+          </div>
+
           <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.7">Preview simulée · Rendu réel via Hedra API</div>
         </div>
 
@@ -1289,16 +1371,73 @@ function previewAvatarUrl(url){
 }
 function setFormat(fmt){
   cfg.format = fmt;
-  const v = document.getElementById('fmt-vertical');
-  const s = document.getElementById('fmt-square');
-  if(fmt === 'vertical'){
-    v.style.border = '2px solid var(--orange)'; v.style.background = 'var(--orange-dim)';
-    s.style.border = '2px solid var(--border)'; s.style.background = 'var(--bg3)';
+  const fmts = ['vertical','square','landscape'];
+  fmts.forEach(f => {
+    const el = document.getElementById('fmt-'+f);
+    if(!el) return;
+    el.style.border = f === fmt ? '2px solid var(--orange)' : '2px solid var(--border)';
+    el.style.background = f === fmt ? 'var(--orange-dim)' : 'var(--bg3)';
+  });
+}
+
+let splitEnabled = false;
+let gameplayFile = null;
+
+function toggleSplit(){
+  splitEnabled = !splitEnabled;
+  const toggle = document.getElementById('splitToggle');
+  const thumb = document.getElementById('splitThumb');
+  const opts = document.getElementById('splitOptions');
+  const row = document.getElementById('splitToggleRow');
+  if(splitEnabled){
+    toggle.style.background = 'var(--orange)';
+    thumb.style.left = '22px';
+    opts.style.display = 'flex';
+    row.style.borderColor = 'rgba(255,107,53,0.4)';
+    row.style.background = 'var(--orange-dim)';
+    // Show split preview
+    document.getElementById('phoneFrame').style.display = 'none';
+    document.getElementById('splitPreview').style.display = 'flex';
+    updateSplitPreview();
   } else {
-    s.style.border = '2px solid var(--orange)'; s.style.background = 'var(--orange-dim)';
-    v.style.border = '2px solid var(--border)'; v.style.background = 'var(--bg3)';
+    toggle.style.background = 'var(--bg5)';
+    thumb.style.left = '2px';
+    opts.style.display = 'none';
+    row.style.borderColor = 'var(--border)';
+    row.style.background = 'var(--bg3)';
+    document.getElementById('phoneFrame').style.display = 'flex';
+    document.getElementById('splitPreview').style.display = 'none';
   }
 }
+
+function handleGameplayFile(file){
+  if(!file || !file.type.startsWith('video/')) return;
+  gameplayFile = file;
+  document.getElementById('gameplayFileName').textContent = file.name;
+  document.getElementById('gameplayDropContent').style.display = 'none';
+  document.getElementById('gameplayFileInfo').style.display = 'block';
+  // Show in split preview
+  const vid = document.getElementById('splitGameplayVid');
+  vid.src = URL.createObjectURL(file);
+  vid.style.display = 'block';
+  document.getElementById('splitGameplayEmpty').style.display = 'none';
+  updateSplitPreview();
+}
+
+function updateSplitPreview(){
+  const ratio = cfg.splitRatio || 50;
+  const topPct = ratio + '%';
+  const botPct = (100 - ratio) + '%';
+  document.getElementById('splitTop').style.flex = ratio;
+  document.getElementById('splitBottom').style.flex = (100 - ratio);
+  // Position subs at junction
+  const subs = document.getElementById('splitSubs');
+  subs.style.top = 'calc(' + topPct + ' - 18px)';
+  // Update avatar in split
+  document.getElementById('splitAv').textContent = document.getElementById('phoneAv').textContent;
+}
+
+
 
 // Word editor — populate after voice generation
 function populateWordEditor(text){
