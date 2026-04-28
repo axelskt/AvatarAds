@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AvatarAds — IA Manager Members</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080a;--bg2:#0d0f12;--bg3:#13161a;--bg4:#1a1e24;--bg5:#22272f;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--border3:rgba(255,255,255,0.18);
+  --text:#eef0f4;--text2:#8b92a0;--text3:#45505e;
+  --orange:#ff6b35;--orange2:#ff8c5a;--orange-dim:rgba(255,107,53,0.1);--orange-glow:rgba(255,107,53,0.2);
+  --green:#00d97e;--red:#ff4757;--blue:#4dabf7;
+  --r:10px;--r-sm:7px;
+  --font:'Bricolage Grotesque',sans-serif;--mono:'Geist Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--orange),#e03e1a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 16px var(--orange-glow)}
+.logo-name{font-size:16px;font-weight:800;letter-spacing:-0.4px}
+.logo-members{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-left:8px;background:var(--bg4);border:1px solid var(--border2);padding:2px 8px;border-radius:10px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.keys-status{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 14px}
+.key-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--text3)}
+.key-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);transition:all .3s}
+.key-dot.ok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.key-dot.err{background:var(--red)}
+.btn-keys{display:flex;align-items:center;gap:6px;background:var(--orange);border:none;border-radius:8px;padding:7px 14px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 2px 12px var(--orange-glow)}
+.btn-keys:hover{background:var(--orange2);transform:translateY(-1px)}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.nav-g{padding:16px 10px 8px}
+.nav-gl{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;padding:0 8px;margin-bottom:6px}
+.nav-i{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.nav-i:hover{background:var(--bg4);color:var(--text)}
+.nav-i.on{background:var(--orange-dim);color:var(--orange2);border:1px solid rgba(255,107,53,0.15)}
+.nav-i svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-i.on svg{opacity:1;color:var(--orange)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.view{display:none;flex:1;overflow:hidden}
+.view.on{display:flex}
+
+/* ══ SETUP MODAL ══ */
+.setup-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center}
+.setup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px;width:520px;max-width:90vw}
+.setup-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.setup-title{font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+.setup-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+.setup-field{margin-bottom:16px}
+.setup-label{font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.setup-label a{color:var(--orange2);text-decoration:none;font-size:10px}
+.setup-label a:hover{text-decoration:underline}
+.setup-input{display:flex;gap:8px}
+.setup-input input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 12px;outline:none;transition:border-color .15s}
+.setup-input input:focus{border-color:var(--border3)}
+.setup-input input::placeholder{color:var(--text3)}
+.setup-input button{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;padding:0 12px;white-space:nowrap;transition:all .15s}
+.setup-input button:hover{color:var(--text);border-color:var(--border3)}
+.setup-hint{font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:5px;line-height:1.6}
+.setup-divider{height:1px;background:var(--border);margin:20px 0}
+.btn-setup-save{width:100%;padding:12px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:var(--r);color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);letter-spacing:-0.2px}
+.btn-setup-save:hover{transform:translateY(-1px);box-shadow:0 6px 24px var(--orange-glow)}
+.key-badge-row{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.key-badge{font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:var(--bg4);border:1px solid var(--border)}
+.key-badge.ok{border-color:rgba(0,217,126,0.3);color:var(--green);background:rgba(0,217,126,0.06)}
+.key-badge.err{border-color:rgba(255,71,87,0.3);color:var(--red)}
+
+/* ══ GENERATOR VIEW ══ */
+.gen-view{overflow:hidden}
+.gen-left{width:400px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+
+/* STEPS */
+.steps-bar{display:flex;padding:14px 20px;border-bottom:1px solid var(--border);gap:0;flex-shrink:0;align-items:center}
+.step{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--text3);cursor:pointer;transition:color .15s}
+.step.on{color:var(--orange2)}
+.step.done{color:var(--green)}
+.step-n{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .2s}
+.step.on .step-n{background:var(--orange);border-color:var(--orange);color:#fff}
+.step.done .step-n{background:var(--green);border-color:var(--green);color:#000}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 6px;min-width:10px}
+
+/* FORM */
+.gen-form{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.gen-form::-webkit-scrollbar{width:3px}
+.gen-form::-webkit-scrollbar-thumb{background:var(--bg5)}
+
+.fld{display:flex;flex-direction:column;gap:6px}
+.flbl{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.8px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.flbl-action{color:var(--orange2);cursor:pointer;font-size:10px;display:flex;align-items:center;gap:4px;transition:opacity .15s}
+.flbl-action:hover{opacity:.75}
+input[type=text],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:9px 12px;outline:none;transition:border-color .15s;line-height:1.5}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--border2)}
+input[type=text]::placeholder,textarea::placeholder{color:var(--text3)}
+textarea{resize:none;min-height:100px;font-size:12px;line-height:1.7;font-family:var(--mono)}
+select{cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--border2);color:var(--text)}
+.chip.on{background:var(--orange-dim);border-color:rgba(255,107,53,0.25);color:var(--orange2)}
+
+/* AVATAR PICK */
+.av-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.av-card{border:1.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;transition:all .15s;background:var(--bg3);text-align:center}
+.av-card:hover{border-color:var(--border2)}
+.av-card.on{border-color:var(--orange);background:var(--orange-dim)}
+.av-face{padding:12px 0 6px;font-size:36px;display:flex;align-items:center;justify-content:center;position:relative}
+.av-name{font-size:11px;font-weight:600;padding-bottom:4px}
+.av-sub{font-size:9px;font-family:var(--mono);color:var(--text3);padding-bottom:8px}
+
+/* VOICE SAMPLE */
+.voice-list{display:flex;flex-direction:column;gap:6px}
+.voice-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:all .15s}
+.voice-row:hover{border-color:var(--border2)}
+.voice-row.on{border-color:var(--orange);background:var(--orange-dim)}
+.voice-play{width:28px;height:28px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;border:1px solid var(--border2)}
+.voice-info{flex:1}
+.voice-name{font-size:12px;font-weight:600}
+.voice-desc{font-size:10px;font-family:var(--mono);color:var(--text3)}
+.voice-id{font-size:9px;font-family:var(--mono);color:var(--text3);margin-left:auto}
+
+/* SUBTITLE STYLE */
+.sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sub-card{border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 8px;cursor:pointer;transition:all .15s;background:var(--bg3)}
+.sub-card:hover{border-color:var(--border2)}
+.sub-card.on{border-color:var(--orange);background:var(--orange-dim)}
+.sub-name{font-size:11px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.sub-card.on .sub-name{color:var(--orange2)}
+.sub-preview{background:#000;border-radius:4px;padding:8px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+
+/* GEN FOOTER */
+.gen-footer{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0}
+.btn-gen{width:100%;padding:12px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:var(--r);color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);letter-spacing:-0.2px}
+.btn-gen:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px var(--orange-glow)}
+.btn-gen:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-back{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-top:8px}
+.btn-back:hover{background:var(--bg4);color:var(--text)}
+.cost-hint{text-align:center;font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:8px}
+.cost-hint span{color:var(--orange2)}
+
+/* RIGHT PREVIEW */
+.gen-right{flex:1;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 110%,rgba(255,107,53,0.05),transparent 60%);pointer-events:none}
+.preview-area{display:flex;flex-direction:column;align-items:center;gap:16px}
+.preview-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+
+/* PHONE */
+.phone{width:220px;height:400px;background:#000;border-radius:30px;border:2px solid rgba(255,255,255,0.08);overflow:hidden;position:relative;box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.03);display:flex;flex-direction:column}
+.phone-top{height:24px;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.phone-pill{width:52px;height:5px;background:#1a1a1a;border-radius:3px}
+.phone-body{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#111,#0a0a0a)}
+.phone-avatar{font-size:70px;position:relative;z-index:1}
+.phone-hook-area{position:absolute;top:14px;left:0;right:0;text-align:center;padding:0 12px;z-index:2}
+.phone-sub-area{position:absolute;bottom:50px;left:0;right:0;text-align:center;padding:0 12px;z-index:2}
+.phone-cta-bar{position:absolute;bottom:12px;left:12px;right:12px;background:var(--orange);border-radius:7px;padding:7px;text-align:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--font);z-index:2}
+.phone-bottom{height:32px;background:#050505;display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.phone-av-sm{width:22px;height:22px;border-radius:50%;background:var(--orange);font-size:10px;display:flex;align-items:center;justify-content:center}
+.phone-handle{font-size:10px;font-weight:600;flex:1;color:#eee}
+.phone-follow{font-size:9px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:4px;font-weight:700}
+
+/* ══ RESULT PANEL ══ */
+.result-panel{width:100%;display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px}
+.result-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:24px;width:100%;max-width:480px}
+.result-title{font-size:16px;font-weight:700;letter-spacing:-0.3px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.result-field{margin-bottom:12px}
+.result-field-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+.result-field-val{font-size:12px;font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;line-height:1.7;color:var(--text2);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow-y:auto}
+.result-field-val::-webkit-scrollbar{width:3px}
+.result-field-val::-webkit-scrollbar-thumb{background:var(--bg5)}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn-copy{font-size:11px;font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);cursor:pointer;padding:5px 12px;transition:all .15s}
+.btn-copy:hover{border-color:var(--border2);color:var(--text)}
+.audio-player{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px}
+.audio-player button{background:var(--orange);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;flex-shrink:0;transition:all .15s}
+.audio-player button:hover{background:var(--orange2)}
+audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
+.hedra-status{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-family:var(--mono)}
+.hedra-status.polling{color:var(--orange2)}
+.hedra-status.done{color:var(--green);border-color:rgba(0,217,126,0.2)}
+.hedra-status.err{color:var(--red)}
+
+/* ══ LIBRARY ══ */
+.lib-view{flex-direction:column;overflow-y:auto;padding:24px}
+.lib-view::-webkit-scrollbar{width:4px}
+.lib-view::-webkit-scrollbar-thumb{background:var(--bg4)}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.ph-title{font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.ph-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.lib-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.vid-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:all .2s}
+.vid-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.vid-thumb{aspect-ratio:9/16;max-height:170px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;overflow:hidden}
+.vid-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),transparent 55%)}
+.vid-badge{position:absolute;top:7px;left:7px;font-size:8px;font-family:var(--mono);background:rgba(0,0,0,.7);color:var(--orange2);padding:2px 6px;border-radius:8px}
+.vid-meta{padding:9px 10px}
+.vid-title{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.vid-tags{display:flex;gap:3px;flex-wrap:wrap}
+.vid-tag{font-size:9px;font-family:var(--mono);background:var(--bg4);color:var(--text3);padding:1px 5px;border-radius:3px}
+.vid-status{display:flex;align-items:center;gap:4px;margin-top:5px}
+.sdot{width:5px;height:5px;border-radius:50%}
+.sdot.ok{background:var(--green)}
+.sdot.spin{background:var(--orange);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ══ PROGRESS STEPS (generation) ══ */
+.genprog{display:flex;flex-direction:column;gap:8px;width:280px}
+.gp-step{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:var(--r-sm);font-size:12px;font-family:var(--mono);color:var(--text3);transition:all .3s}
+.gp-step.on{color:var(--text);background:var(--bg3);border:1px solid var(--border)}
+.gp-step.done{color:var(--green);background:rgba(0,217,126,0.05)}
+.gp-icon{width:20px;height:20px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.gp-step.done .gp-icon{background:var(--green);color:#000}
+.gp-step.on .gp-icon{background:var(--orange);color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:12px;height:12px;border:2px solid rgba(255,107,53,.3);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:8px;z-index:9999;transform:translateY(60px);opacity:0;transition:all .25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* misc */
+.divider{height:1px;background:var(--border);margin:4px 0}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--bg4)}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🎭</div>
+    <div class="logo-name">AvatarAds</div>
+    <div class="logo-members">IA Manager · Membres</div>
+  </div>
+  <div class="topbar-right" style="flex:1;justify-content:center">
+    <div id="memberBar" style="display:none;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 14px">
+      <div style="font-size:12px;font-weight:600" id="memberName">—</div>
+      <div style="width:1px;height:14px;background:var(--border)"></div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédits restants :</div>
+      <div style="font-size:14px;font-weight:800;color:var(--orange2)" id="memberCredits">—</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">/ 5</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="keys-status" id="keysStatus">
+      <div class="key-pill"><div class="key-dot" id="dot-gpt"></div>GPT-4o</div>
+      <div class="key-pill"><div class="key-dot" id="dot-el"></div>ElevenLabs</div>
+      <div class="key-pill"><div class="key-dot" id="dot-hedra"></div>Hedra</div>
+    </div>
+    <button class="btn-keys" onclick="openSetup()">⚙ Clés API</button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="nav-g">
+      <div class="nav-gl">Outils</div>
+      <div class="nav-i on" onclick="nav('generator',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 1l1.8 3.6L13 5.6l-2.75 2.68.65 3.78L7.5 10.2l-3.4 1.86.65-3.78L2 5.6l3.7-1Z"/></svg>
+        Générateur
+      </div>
+      <div class="nav-i" onclick="nav('library',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="13" height="10" rx="1.5"/><path d="M5 1v2M10 1v2"/></svg>
+        Bibliothèque
+      </div>
+    </div>
+    <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
+      <div class="nav-gl">Ressources</div>
+      <div class="nav-i" onclick="openSetup()">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v4l2.5 1.5"/></svg>
+        Clés API
+      </div>
+      <div class="nav-i" onclick="toast('📚 Documentation IA Manager — bientôt')">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h8l3 3v8H2z"/><path d="M10 2v3h3M5 7h5M5 10h3"/></svg>
+        Docs
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ══ GENERATOR ══ -->
+    <div class="view on" id="v-generator">
+      <div class="gen-left">
+        <div class="steps-bar">
+          <div class="step on" id="st-1"><div class="step-n">1</div>Produit</div>
+          <div class="step-line"></div>
+          <div class="step" id="st-2"><div class="step-n">2</div>Avatar</div>
+          <div class="step-line"></div>
+          <div class="step" id="st-3"><div class="step-n">3</div>Voix</div>
+          <div class="step-line"></div>
+          <div class="step" id="st-4"><div class="step-n">4</div>Style</div>
+          <div class="step-line"></div>
+          <div class="step" id="st-5"><div class="step-n">5</div>Générer</div>
+        </div>
+
+        <div class="gen-form">
+
+          <!-- STEP 1 -->
+          <div id="fs-1">
+            <div class="fld">
+              <div class="flbl">Nom du produit digital</div>
+              <input type="text" id="f-product" placeholder="Ex: Formation IA LEBD, E-book Marketing, Masterclass..." oninput="updatePreview()">
+            </div>
+            <div class="fld">
+              <div class="row2">
+                <div class="fld">
+                  <div class="flbl">Niche</div>
+                  <select id="f-niche">
+                    <option value="">Sélectionner...</option>
+                    <option>Produit digital / Formation</option>
+                    <option>Business en ligne</option>
+                    <option>Marketing digital</option>
+                    <option>Liberté financière</option>
+                    <option>Entrepreneuriat</option>
+                    <option>Beauté & Skincare</option>
+                    <option>Santé & Bien-être</option>
+                    <option>Tech & SaaS</option>
+                    <option>Fitness</option>
+                    <option>Finance & Investissement</option>
+                  </select>
+                </div>
+                <div class="fld">
+                  <div class="flbl">Durée cible</div>
+                  <select id="f-duration">
+                    <option>15 secondes</option>
+                    <option>20 secondes</option>
+                    <option>30 secondes</option>
+                    <option selected>60 secondes</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="fld">
+              <div class="flbl">Hook d'accroche — choisis-en un</div>
+              <select id="f-hook-select" onchange="applyHook(this.value)">
+                <option value="">Sélectionner un hook...</option>
+                <optgroup label="🔥 Curiosité / Secret">
+                  <option>Personne ne t'en parle mais actuellement le meilleur business en ligne est…</option>
+                  <option>Personne ne comprend encore ce business… (et c'est exactement pour ça que ça imprime de l'argent en ce moment)</option>
+                  <option>Je garde ça secret depuis longtemps.. J'aurais aimé savoir ça plus tôt..</option>
+                  <option>POV : Tu révèle le business secret que personne ne veut révéler et qui leurs génère des milliers d'euros…</option>
+                </optgroup>
+                <optgroup label="⚡ Urgence / FOMO">
+                  <option>Tu a louper le bitcoin, tu a louper le dropshipping, ne loupe pas ça</option>
+                  <option>C'est maintenant ou jamais : c'est la meilleure opportunité de 2026 !</option>
+                  <option>C'est bientôt l'été et tu n'as toujours pas d'argent pour partir en vacances ?</option>
+                  <option>Ne manque pas cette opportunité de 2026 pour devenir libre financièrement.</option>
+                </optgroup>
+                <optgroup label="💸 Résultats / Preuve">
+                  <option>Le business qui me fait gagner 2 SMIC par semaine</option>
+                  <option>De Fauché à +5 chiffres par mois</option>
+                  <option>A 21 ans j'ai fait le pari fou de tout quitter et de gagner 10.000€/mois</option>
+                  <option>Le business le plus simple et rentable de 2026 ?</option>
+                </optgroup>
+                <optgroup label="🎯 Comparaison / Contraste">
+                  <option>IL SE FOUTENT DE VOUS ! L'e-commerce ça marche, le SMMA ça marche… mais le meilleur c'est…</option>
+                  <option>Dire que certains se cassent le dos pour 1300€ alors que tu peux faire ça en quelques jours…</option>
+                  <option>Tu cherches un business rentable qui te prend pas beaucoup de temps ?</option>
+                  <option>Arrête de scroller si tu veux devenir libre financièrement</option>
+                </optgroup>
+                <optgroup label="🧠 Mindset / Motivation">
+                  <option>Vouloir réussir jeune va te détruire mentalement… Heureusement il existe une solution.</option>
+                  <option>Garde toujours ça en tête : la plupart des gens commencent à prendre la vie au sérieux entre 25 et 30 ans.</option>
+                  <option>Être mature c'est admettre qu'on deviendra pas riche avec un CDI</option>
+                  <option>«Frère faut qu'on trouve un moyen de faire de l'argent, cette vie là c'est pas pour nous»</option>
+                </optgroup>
+                <optgroup label="📱 POV / Storytelling">
+                  <option>POV : C'est 2027, le monde est à toi, tu as mis tes parents à la retraite</option>
+                  <option>POV : T'as 19 ans et t'as explosé grâce à ce business</option>
+                  <option>Ma plus grosse erreur en tant qu'entrepreneur… ne pas avoir commencé plus tôt.</option>
+                  <option>Si je devais recommencer de 0 et faire 10.000€ par mois</option>
+                </optgroup>
+              </select>
+              <div class="fld" style="margin-top:8px">
+                <div class="flbl">Hook sélectionné (modifiable)</div>
+                <input type="text" id="f-hook" placeholder="Le hook apparaîtra ici après sélection, ou écris le tien directement" oninput="updatePreview()">
+              </div>
+            </div>
+            <div class="fld">
+              <div class="flbl">Script <span style="color:var(--red);font-weight:700">*</span> <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">obligatoire — écris ton propre script</span></div>
+              <textarea id="f-script" placeholder="Écris ton script ici...&#10;&#10;Ex: Personne ne t'en parle mais actuellement le meilleur business en ligne c'est le produit digital. Tu prends 100% de bénéfice, tu travailles 2h par jour, et tu peux te lancer sans expérience. Commente PLAN et je t'explique tout en DM."></textarea>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">💡 Utilise tes hooks + ton script + un CTA ci-dessous. La voix sera générée depuis ce texte.</div>
+            </div>
+            <div class="fld">
+              <div class="flbl">CTA final — choisis-en un</div>
+              <select id="f-cta-select" onchange="applyCta(this.value)">
+                <option value="">Sélectionner un CTA...</option>
+                <optgroup label="Commente">
+                  <option>Commente PLAN et je t'explique tout en DM</option>
+                  <option>Commente PRÊT et je t'explique tout en DM</option>
+                  <option>Commente GUIDE et je t'explique tout en DM</option>
+                  <option>Commente GO et je t'explique tout en DM</option>
+                  <option>Commente MÉTHODE si tu veux les étapes de A à Z</option>
+                  <option>Commente PLAN si tu veux les étapes de A à Z</option>
+                  <option>Commente GUIDE si tu veux les étapes de A à Z</option>
+                  <option>Commente PLAN et je t'envoie tout en privé</option>
+                  <option>Commente GO et je t'envoie tout en privé</option>
+                  <option>Commente PRÊT et je t'envoie tout en privé</option>
+                  <option>Commente MÉTHODE et je t'envoie tout en privé</option>
+                  <option>Commente GUIDE pour te lancer maintenant</option>
+                  <option>Commente PLAN si tu veux apprendre</option>
+                  <option>Commente GO si tu veux apprendre</option>
+                  <option>Commente PRÊT si tu veux apprendre</option>
+                  <option>Commente GUIDE si tu veux apprendre</option>
+                  <option>Commente MÉTHODE si tu veux apprendre</option>
+                </optgroup>
+                <optgroup label="Écris">
+                  <option>Écris PLAN et je t'envoie les étapes en privé</option>
+                  <option>Écris GO et je t'envoie les étapes en privé</option>
+                  <option>Écris GUIDE et je t'envoie les étapes en privé</option>
+                  <option>Écris PRÊT et je t'envoie les étapes en privé</option>
+                  <option>Écris PLAN et je t'envoie tout en DM</option>
+                  <option>Écris PRÊT et je t'envoie tout en DM</option>
+                  <option>Écris GO et je t'envoie tout en DM</option>
+                  <option>Écris GUIDE et je t'envoie tout en DM</option>
+                  <option>Écris GO et je t'envoie tout en privé</option>
+                  <option>Écris PRÊT et je t'envoie tout en privé</option>
+                  <option>Écris PLAN et je t'envoie tout en privé</option>
+                  <option>Écris GUIDE et je t'envoie tout en privé</option>
+                  <option>Écris PLAN pour commencer maintenant</option>
+                  <option>Écris GO pour commencer maintenant</option>
+                  <option>Écris GUIDE pour commencer maintenant</option>
+                  <option>Écris PLAN pour te lancer maintenant</option>
+                  <option>Écris PRÊT pour te lancer maintenant</option>
+                  <option>Écris GO pour te lancer maintenant</option>
+                  <option>Écris GUIDE pour te lancer maintenant</option>
+                </optgroup>
+                <optgroup label="Tape / Mets / Marque">
+                  <option>Tape GUIDE si tu es prêt à te lancer</option>
+                  <option>Tape PLAN si tu es prêt à te lancer</option>
+                  <option>Tape GO si tu es prêt à te lancer</option>
+                  <option>Mets GO si tu veux comprendre</option>
+                  <option>Mets GUIDE si tu veux comprendre</option>
+                  <option>Mets PRÊT si tu veux comprendre</option>
+                  <option>Mets PLAN si tu veux comprendre</option>
+                  <option>Mets PLAN en commentaire si tu veux comprendre</option>
+                  <option>Mets GO en commentaire si tu veux comprendre</option>
+                  <option>Mets PRÊT en commentaire si tu veux comprendre</option>
+                  <option>Mets GUIDE en commentaire si tu veux comprendre</option>
+                  <option>Mets PLAN pour commencer maintenant</option>
+                  <option>Mets GO pour commencer maintenant</option>
+                  <option>Mets PRÊT pour commencer maintenant</option>
+                  <option>Mets GUIDE pour commencer maintenant</option>
+                  <option>Marque PLAN si tu veux te lancer maintenant</option>
+                  <option>Marque GO si tu veux te lancer maintenant</option>
+                  <option>Marque PRÊT si tu veux te lancer maintenant</option>
+                  <option>Marque GUIDE si tu veux te lancer maintenant</option>
+                </optgroup>
+                <optgroup label="Si tu veux copier ça">
+                  <option>Si tu veux copier ça, tape MÉTHODE et je t'envoie tout en DM</option>
+                  <option>Si tu veux copier ça, tape PLAN et je t'envoie tout en DM</option>
+                  <option>Si tu veux copier ça, tape PRÊT et je t'envoie tout en DM</option>
+                  <option>Si tu veux copier ça, tape GO et je t'envoie tout en DM</option>
+                  <option>Si tu veux apprendre le process : écris GO en commentaire</option>
+                  <option>Si tu veux apprendre le process : écris PLAN en commentaire</option>
+                  <option>Si tu veux apprendre le process : écris PRÊT en commentaire</option>
+                  <option>Si tu veux apprendre le process : écris GUIDE en commentaire</option>
+                </optgroup>
+              </select>
+              <div class="fld" style="margin-top:8px">
+                <div class="flbl">CTA sélectionné (affiché sur la vidéo)</div>
+                <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()">
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div id="fs-2" style="display:none">
+            <div class="fld">
+              <div class="flbl">Choisis un avatar</div>
+              <div class="av-grid">
+                <div class="av-card on" onclick="pickAvatar(this,'👩‍💼','sofia','Lifestyle / Beauté')">
+                  <div class="av-face">👩‍💼</div>
+                  <div class="av-name">Sofia</div>
+                  <div class="av-sub">Lifestyle · FR</div>
+                </div>
+                <div class="av-card" onclick="pickAvatar(this,'🧑‍💻','marco','Tech / SaaS')">
+                  <div class="av-face">🧑‍💻</div>
+                  <div class="av-name">Marco</div>
+                  <div class="av-sub">Tech · FR</div>
+                </div>
+                <div class="av-card" onclick="pickAvatar(this,'👩‍🔬','lea','Santé / Bien-être')">
+                  <div class="av-face">👩‍🔬</div>
+                  <div class="av-name">Léa</div>
+                  <div class="av-sub">Santé · FR</div>
+                </div>
+                <div class="av-card" onclick="pickAvatar(this,'🧔','karim','Fitness')">
+                  <div class="av-face">🧔</div>
+                  <div class="av-name">Karim</div>
+                  <div class="av-sub">Fitness · FR</div>
+                </div>
+                <div class="av-card" onclick="pickAvatar(this,'👩‍🦱','emma','Luxe / Mode')">
+                  <div class="av-face">👩‍🦱</div>
+                  <div class="av-name">Emma</div>
+                  <div class="av-sub">Luxe · FR</div>
+                </div>
+                <div class="av-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;opacity:.5">
+                  <div class="av-face" style="font-size:24px">+</div>
+                  <div class="av-name" style="font-size:10px;color:var(--text3)">Ton image</div>
+                  <div class="av-sub">Via Hedra API</div>
+                </div>
+              </div>
+            </div>
+            <div class="fld" style="margin-top:8px">
+              <div class="flbl">Image avatar (URL Hedra ou upload)</div>
+              <input type="text" id="f-avatarimg" placeholder="https://... ou laisse vide pour avatar par défaut">
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">Hedra accepte des photos portrait PNG/JPG. L'avatar animera l'image avec le lipsync.</div>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div id="fs-3" style="display:none">
+            <div class="fld">
+              <div class="flbl">Voix ElevenLabs</div>
+              <div class="voice-list">
+                <div class="voice-row on" onclick="pickVoice(this,'21m00Tcm4TlvDq8ikWAM','Rachel','Féminine · naturelle · lifestyle')">
+                  <div class="voice-play">▶</div>
+                  <div class="voice-info">
+                    <div class="voice-name">Rachel</div>
+                    <div class="voice-desc">Féminine · naturelle · lifestyle</div>
+                  </div>
+                  <div class="voice-id">21m00…</div>
+                </div>
+                <div class="voice-row" onclick="pickVoice(this,'AZnzlk1XvdvUeBnXmlld','Domi','Féminine · dynamique · énergie')">
+                  <div class="voice-play">▶</div>
+                  <div class="voice-info">
+                    <div class="voice-name">Domi</div>
+                    <div class="voice-desc">Féminine · dynamique · énergie</div>
+                  </div>
+                  <div class="voice-id">AZnzl…</div>
+                </div>
+                <div class="voice-row" onclick="pickVoice(this,'ErXwobaYiN019PkySvjV','Antoni','Masculine · crédible · premium')">
+                  <div class="voice-play">▶</div>
+                  <div class="voice-info">
+                    <div class="voice-name">Antoni</div>
+                    <div class="voice-desc">Masculine · crédible · premium</div>
+                  </div>
+                  <div class="voice-id">ErXwo…</div>
+                </div>
+                <div class="voice-row" onclick="pickVoice(this,'VR6AewLTigWG4xSOukaG','Arnold','Masculine · fort · autorité')">
+                  <div class="voice-play">▶</div>
+                  <div class="voice-info">
+                    <div class="voice-name">Arnold</div>
+                    <div class="voice-desc">Masculine · fort · autorité</div>
+                  </div>
+                  <div class="voice-id">VR6Ae…</div>
+                </div>
+              </div>
+            </div>
+            <div class="fld" style="margin-top:4px">
+              <div class="flbl">Voice ID custom (optionnel)</div>
+              <input type="text" id="f-voiceid-custom" placeholder="Colle ton Voice ID ElevenLabs ici">
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div id="fs-4" style="display:none">
+            <div class="fld">
+              <div class="flbl">Style sous-titres</div>
+              <div class="sub-grid">
+                <div class="sub-card on" onclick="pickSub(this,'hormozi')">
+                  <div class="sub-name">Hormozi</div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:14px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:14px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:4px">À L'ACTION</span></div>
+                </div>
+                <div class="sub-card" onclick="pickSub(this,'tiktok')">
+                  <div class="sub-name">TikTok</div>
+                  <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
+                </div>
+                <div class="sub-card" onclick="pickSub(this,'bold')">
+                  <div class="sub-name">Bold White</div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:12px;color:#fff;font-weight:900;text-shadow:1px 1px 4px rgba(0,0,0,.9)">PASSE À L'ACTION</span></div>
+                </div>
+                <div class="sub-card" onclick="pickSub(this,'neon')">
+                  <div class="sub-name">Néon</div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#7c6fff;text-shadow:0 0 7px #7c6fff">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#ff4d6a;text-shadow:0 0 7px #ff4d6a;margin-left:4px">ACTION</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="fld" style="margin-top:4px">
+              <div class="flbl">Format export</div>
+              <select id="f-platform">
+                <option>TikTok (9:16 · 1080×1920)</option>
+                <option>Reels (9:16 · 1080×1920)</option>
+                <option>Meta Ads (carré · 1080×1080)</option>
+              </select>
+            </div>
+            <div class="fld" style="margin-top:4px">
+              <div class="flbl">Durée max avatar Hedra</div>
+              <select id="f-hedra-duration">
+                <option value="15000">15 secondes</option>
+                <option value="20000">20 secondes</option>
+                <option value="30000">30 secondes</option>
+                <option value="60000" selected>60 secondes</option>
+              </select>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">15-20s = ~$0.05 · 30s = ~$0.08 · 60s = ~$0.15 de crédit Hedra</div>
+            </div>
+          </div>
+
+        </div><!-- /gen-form -->
+
+        <div class="gen-footer" id="genFooter">
+          <div id="footerBtns">
+            <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()">Continuer →</button>
+            <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
+          </div>
+          <div class="cost-hint" id="costHint">Coût estimé : <span id="costVal">~$0.22</span> · API GPT-4o + ElevenLabs + Hedra</div>
+        </div>
+      </div><!-- /gen-left -->
+
+      <!-- RIGHT -->
+      <div class="gen-right" id="genRight">
+        <div class="preview-area" id="previewArea">
+          <div class="preview-label">Prévisualisation</div>
+          <div class="phone" id="phoneFrame">
+            <div class="phone-top"><div class="phone-pill"></div></div>
+            <div class="phone-body" id="phoneBody">
+              <div class="phone-avatar" id="phoneAv">👩‍💼</div>
+              <div class="phone-hook-area" id="phoneHookArea" style="display:none">
+                <div id="phoneHookText" style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;line-height:1.2"></div>
+              </div>
+              <div class="phone-sub-area" id="phoneSubArea">
+                <span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000">RÉSULTATS</span>
+                <span style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;margin-left:5px">GARANTIS</span>
+              </div>
+              <div class="phone-cta-bar" id="phoneCta">Lien en bio → -20% !</div>
+            </div>
+            <div class="phone-bottom">
+              <div class="phone-av-sm">👩</div>
+              <div class="phone-handle" id="phoneHandle">@sofia.ads</div>
+              <div class="phone-follow">Suivre</div>
+            </div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.7">Preview simulée · Rendu réel via Hedra API</div>
+        </div>
+
+        <!-- GENERATING -->
+        <div id="genProgArea" style="display:none;flex-direction:column;align-items:center;gap:20px">
+          <div style="text-align:center">
+            <div style="font-size:28px;margin-bottom:10px">🎬</div>
+            <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours...</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">~45–90s selon les APIs</div>
+          </div>
+          <div class="genprog" id="genprog">
+            <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Validation du script</div>
+            <div class="gp-step" id="gp2"><div class="gp-icon">🎤</div>Voix ElevenLabs TTS</div>
+            <div class="gp-step" id="gp3"><div class="gp-icon">🎭</div>Lipsync Hedra API</div>
+            <div class="gp-step" id="gp4"><div class="gp-icon">💬</div>Sous-titres Hormozi</div>
+            <div class="gp-step" id="gp5"><div class="gp-icon">✅</div>Finalisation</div>
+          </div>
+        </div>
+
+        <!-- RESULT -->
+        <div id="resultArea" style="display:none;width:100%;overflow-y:auto;max-height:100%">
+          <div class="result-panel">
+            <div class="result-card">
+              <div class="result-title">📝 Script généré</div>
+              <div class="result-field">
+                <div class="result-field-label">Contenu</div>
+                <div class="result-field-val" id="res-script">—</div>
+                <div class="result-actions"><button class="btn-copy" onclick="copyText('res-script')">Copier</button></div>
+              </div>
+            </div>
+            <div class="result-card">
+              <div class="result-title">🎤 Voix générée</div>
+              <div class="result-field">
+                <div class="result-field-label">Audio ElevenLabs</div>
+                <div class="audio-player" id="audioPlayer">
+                  <button onclick="toggleAudio()" id="playAudioBtn">▶</button>
+                  <audio id="audioEl"></audio>
+                  <div style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="audioStatus">En attente...</div>
+                </div>
+              </div>
+            </div>
+            <div class="result-card">
+              <div class="result-title">🎭 Avatar Hedra</div>
+              <div class="result-field">
+                <div class="result-field-label">Statut génération</div>
+                <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
+              </div>
+              <div id="hedraVideoWrap" style="display:none;margin-top:10px">
+                <video id="hedraVideo" controls style="width:100%;border-radius:8px;max-height:200px;background:#000"></video>
+                <div class="result-actions" style="margin-top:8px">
+                  <button class="btn-copy" onclick="downloadVideo()">⬇ Télécharger MP4</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /gen-right -->
+    </div><!-- /generator -->
+
+    <!-- ══ LIBRARY ══ -->
+    <div class="view" id="v-library">
+      <div class="lib-view" style="width:100%">
+        <div class="ph">
+          <div>
+            <div class="ph-title">Bibliothèque</div>
+            <div class="ph-sub" id="libCount">0 vidéo générée</div>
+          </div>
+          <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px" onclick="nav('generator',document.querySelector('.nav-i'))">✨ Nouvelle vidéo</button>
+        </div>
+        <div class="lib-grid" id="libGrid">
+          <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px">
+            Aucune vidéo générée pour l'instant.<br>Lance ton premier avatar !
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- LOGIN OVERLAY -->
+<div class="setup-overlay" id="loginOverlay" style="z-index:600">
+  <div class="setup-box" style="max-width:420px">
+    <div class="setup-logo">
+      <div class="logo-icon">🎭</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Accès membres</div>
+      </div>
+    </div>
+    <div class="setup-title" style="font-size:16px;margin-bottom:6px">Entre ton code d'accès</div>
+    <div class="setup-sub" style="margin-bottom:20px">Ton code unique t'a été envoyé par Axel après ton accès à la formation IA Manager.</div>
+    <div class="setup-field">
+      <div class="setup-label">Code d'accès</div>
+      <div class="setup-input">
+        <input type="text" id="inp-code" placeholder="Ex: IAMGR-2024-XXX" style="text-transform:uppercase;letter-spacing:2px;font-size:14px;font-weight:600" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loginMember()">
+      </div>
+      <div class="key-badge-row" id="badge-login"></div>
+    </div>
+    <div class="setup-divider"></div>
+    <button class="btn-setup-save" onclick="loginMember()" id="loginBtn">
+      Accéder à l'outil →
+    </button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;font-family:var(--mono);color:var(--text3)">
+      Pas encore de code ? Rejoins la formation IA Manager ↗
+    </div>
+  </div>
+</div>
+
+<!-- SETUP MODAL -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-box">
+    <div class="setup-logo">
+      <div class="logo-icon">🎭</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds — Configuration</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Membres seulement</div>
+      </div>
+    </div>
+    <div class="setup-sub">Saisis tes clés API pour activer la génération complète.<br>Elles sont stockées <strong>localement dans ton navigateur</strong>, jamais envoyées ailleurs.</div>
+
+    <div class="setup-field">
+      <div class="setup-label">
+        Clé OpenAI (GPT-4o + Whisper)
+        <a href="https://platform.openai.com/api-keys" target="_blank">Obtenir une clé →</a>
+      </div>
+      <div class="setup-input">
+        <input type="password" id="inp-gpt" placeholder="sk-...">
+        <button onclick="testKey('gpt')">Tester</button>
+      </div>
+      <div class="key-badge-row" id="badge-gpt"></div>
+    </div>
+
+    <div class="setup-field">
+      <div class="setup-label">
+        Clé ElevenLabs (TTS voix)
+        <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">Obtenir une clé →</a>
+      </div>
+      <div class="setup-input">
+        <input type="password" id="inp-el" placeholder="sk_...">
+        <button onclick="testKey('el')">Tester</button>
+      </div>
+      <div class="key-badge-row" id="badge-el"></div>
+    </div>
+
+    <div class="setup-field">
+      <div class="setup-label">
+        Clé Hedra (Avatar lipsync)
+        <a href="https://hedra.com/api-profile" target="_blank">Obtenir une clé →</a>
+      </div>
+      <div class="setup-input">
+        <input type="password" id="inp-hedra" placeholder="sk-...">
+        <button onclick="testKey('hedra')">Tester</button>
+      </div>
+      <div class="key-badge-row" id="badge-hedra"></div>
+      <div class="setup-hint" style="margin-top:4px">⚠️ Hedra bloque les appels directs navigateur (CORS). Le flow complet est codé — si CORS bloque, l'app affiche le script + audio + un lien direct hedra.com pour finaliser. Plan Creator ou supérieur requis pour l'API.</div>
+    </div>
+
+    <div class="setup-divider"></div>
+    <button class="btn-setup-save" onclick="saveKeys()">Sauvegarder et commencer →</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastEl"><span id="toastMsg"></span></div>
+
+<script>
+// ── GOOGLE SHEETS CONFIG ──
+// ⚠️ Remplace ces valeurs par les tiennes avant de déployer
+const SHEET_CONFIG = {
+  apiKey: 'AIzaSyBzDCItiSbJoP-sADTv4OWKLRpTtHStGkc',            // Ta clé API Google
+  sheetId: '12HPhPzLpCT-Hz_rxoiwXc_8OQGrPcwWGaue-FYZFgXI',        // L'ID de ton Google Sheet (dans l'URL)
+  sheetName: 'Membres',                      // Nom de l'onglet
+  appsScriptUrl: 'COLLE_TON_APPS_SCRIPT_URL_ICI', // URL du Web App Google Apps Script
+  // Colonnes attendues dans le sheet (ligne 1 = headers) :
+  // A: Code | B: Nom | C: Credits_restants | D: Total_utilise | E: Date_reset | F: Actif
+};
+
+// ── STATE ──
+const K = {gpt:'',el:'',hedra:''};
+let step = 1, totalSteps = 4;
+let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
+let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
+let selSubStyle = 'hormozi';
+let results = {script:'', audioBlob:null, hedraUrl:''};
+let library = [];
+
+// Member session
+let currentMember = null; // {code, nom, credits, rowIndex}
+
+// ── GOOGLE SHEETS : LOGIN ──
+async function loginMember(){
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  if(!code){ toast('⚠️ Entre ton code d\'accès'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'Vérification...'; btn.disabled = true;
+  document.getElementById('badge-login').innerHTML = '<span class="key-badge">Recherche en cours...</span>';
+
+  try {
+    const member = await findMemberByCode(code);
+    if(!member){
+      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Code invalide ou non reconnu</span>';
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+    if(member.actif === 'NON' || member.actif === 'FALSE' || member.actif === '0'){
+      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Accès désactivé — contacte Axel</span>';
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+    if(parseInt(member.credits) <= 0){
+      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Plus de crédits ce mois — contacte Axel</span>';
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+
+    // ✅ Accès autorisé
+    currentMember = member;
+    localStorage.setItem('aa_member_code', code);
+    localStorage.setItem('aa_member_name', member.nom);
+
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('memberBar').style.display = 'flex';
+    document.getElementById('memberName').textContent = '👤 ' + member.nom;
+    document.getElementById('memberCredits').textContent = member.credits;
+
+    // Charge les clés API depuis le setup si besoin
+    checkSetupNeeded();
+    toast('✓ Bienvenue ' + member.nom + ' ! ' + member.credits + ' crédits disponibles.');
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Erreur réseau — vérifie ta connexion</span>';
+    btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+  }
+}
+
+async function findMemberByCode(code){
+  const { apiKey, sheetId, sheetName } = SHEET_CONFIG;
+  const range = encodeURIComponent(`${sheetName}!A:F`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Sheet inaccessible : ' + res.status);
+  const data = await res.json();
+  const rows = data.values || [];
+
+  // Skip header row (row 0)
+  for(let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const rowCode = (row[0]||'').trim().toUpperCase();
+    if(rowCode === code){
+      return {
+        rowIndex: i + 1, // 1-based for Sheets API
+        code: row[0] || '',
+        nom: row[1] || 'Membre',
+        credits: parseInt(row[2]) || 0,
+        totalUtilise: parseInt(row[3]) || 0,
+        dateReset: row[4] || '',
+        actif: (row[5] || 'OUI').toUpperCase()
+      };
+    }
+  }
+  return null;
+}
+
+async function decrementCredit(){
+  // Décrémente le crédit du membre dans le sheet
+  if(!currentMember) return false;
+  if(currentMember.credits <= 0){
+    toast('✗ Plus de crédits ce mois — contacte Axel pour recharger');
+    return false;
+  }
+
+  try {
+    const { apiKey, sheetId, sheetName } = SHEET_CONFIG;
+    const newCredits = currentMember.credits - 1;
+    const newTotal = (currentMember.totalUtilise || 0) + 1;
+
+    // Update colonnes C (credits) et D (total utilisé)
+    const range = encodeURIComponent(`${sheetName}!C${currentMember.rowIndex}:D${currentMember.rowIndex}`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
+
+    // ⚠️ L'écriture nécessite OAuth2, pas juste une clé API
+    // On utilise le mode "append via form" ou on informe l'utilisateur
+    // Pour écriture réelle → nécessite service account ou OAuth
+    // Solution court terme : on log via un webhook Google Apps Script
+    await logUsageViaAppsScript(currentMember.code, currentMember.nom, newTotal);
+
+    // Update local state
+    currentMember.credits = newCredits;
+    currentMember.totalUtilise = newTotal;
+    document.getElementById('memberCredits').textContent = newCredits;
+    return true;
+
+  } catch(e) {
+    console.error('Decrement error:', e);
+    // On laisse passer en cas d'erreur réseau pour ne pas bloquer
+    currentMember.credits -= 1;
+    document.getElementById('memberCredits').textContent = currentMember.credits;
+    return true;
+  }
+}
+
+async function logUsageViaAppsScript(code, nom, totalUtilise){
+  // Google Apps Script Web App URL — à configurer (voir instructions)
+  const appsScriptUrl = SHEET_CONFIG.appsScriptUrl;
+  if(!appsScriptUrl) return;
+  try {
+    await fetch(appsScriptUrl + '?code=' + encodeURIComponent(code) + '&action=decrement', {
+      method: 'GET', mode: 'no-cors'
+    });
+  } catch(e) { console.warn('Apps Script log failed:', e); }
+}
+
+function checkSetupNeeded(){
+  ['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
+  refreshDots();
+  if(!K.gpt && !K.el && !K.hedra){
+    setTimeout(() => openSetup(), 500);
+  }
+}
+
+// ── INIT : vérifie session sauvegardée ──
+function openSetup(){ document.getElementById('setupOverlay').style.display='flex'; loadKeysToInputs(); }
+function loadKeysToInputs(){
+  ['gpt','el','hedra'].forEach(k=>{
+    const v = localStorage.getItem('aa_'+k)||'';
+    document.getElementById('inp-'+k).value=v;
+    K[k]=v;
+  });
+  refreshDots();
+}
+function saveKeys(){
+  ['gpt','el','hedra'].forEach(k=>{
+    const v=document.getElementById('inp-'+k).value.trim();
+    localStorage.setItem('aa_'+k,v);
+    K[k]=v;
+  });
+  refreshDots();
+  document.getElementById('setupOverlay').style.display='none';
+  toast('✓ Clés sauvegardées localement');
+}
+function refreshDots(){
+  document.getElementById('dot-gpt').className='key-dot'+(K.gpt?' ok':'');
+  document.getElementById('dot-el').className='key-dot'+(K.el?' ok':'');
+  document.getElementById('dot-hedra').className='key-dot'+(K.hedra?' ok':'');
+}
+async function testKey(k){
+  const v=document.getElementById('inp-'+k).value.trim();
+  const badgeEl=document.getElementById('badge-'+k);
+  badgeEl.innerHTML='<span class="key-badge">Test...</span>';
+  let ok=false, msg='';
+  try{
+    if(k==='gpt'){
+      const r=await fetch('https://api.openai.com/v1/models',{headers:{'Authorization':'Bearer '+v}});
+      ok=r.ok; msg=ok?'✓ GPT-4o connecté':'✗ Clé invalide';
+    } else if(k==='el'){
+      const r=await fetch('https://api.elevenlabs.io/v1/user',{headers:{'xi-api-key':v}});
+      ok=r.ok; msg=ok?'✓ ElevenLabs connecté':'✗ Clé invalide';
+    } else if(k==='hedra'){
+      ok=v.length>5; msg=ok?'✓ Clé Hedra enregistrée (non testable sans CORS)':'✗ Clé vide';
+    }
+  }catch(e){msg='✗ Erreur réseau';}
+  badgeEl.innerHTML=`<span class="key-badge ${ok?'ok':'err'}">${msg}</span>`;
+}
+
+// ── NAV ──
+function nav(id,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
+  document.getElementById('v-'+id).classList.add('on');
+  if(el) el.classList.add('on');
+  if(id==='library') renderLibrary();
+}
+
+// ── STEPS ──
+function updateSteps(){
+  for(let i=1;i<=5;i++){
+    const fs=document.getElementById('fs-'+i);
+    const st=document.getElementById('st-'+i);
+    if(fs) fs.style.display=i===step?'block':'none';
+    if(st){
+      st.classList.remove('on','done');
+      if(i<step) st.classList.add('done');
+      else if(i===step) st.classList.add('on');
+    }
+  }
+  const btn=document.getElementById('mainBtn');
+  const back=document.getElementById('backBtn');
+  back.style.display=step>1&&step<5?'block':'none';
+  if(step<4) btn.textContent='Continuer →';
+  else btn.textContent='🚀 Générer la vidéo';
+  if(step===5) btn.style.display='none';
+}
+function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
+function nextStep(){ if(step<4){step++;updateSteps();} }
+function prevStep(){ if(step>1){step--;updateSteps();} }
+
+// ── AVATAR / VOICE / SUBSTYLE PICKS ──
+function pickAvatar(el,emo,name,desc){
+  document.querySelectorAll('.av-card').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  selAvatar={emo,name,desc};
+  document.getElementById('phoneAv').textContent=emo;
+  document.getElementById('phoneHandle').textContent='@'+name+'.ads';
+}
+function pickVoice(el,id,name,desc){
+  document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
+  el.classList.add('on');
+  selVoiceId=id;
+}
+function pickSub(el,style){
+  document.querySelectorAll('.sub-card').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  selSubStyle=style;
+  updateSubPreview();
+}
+
+function applyHook(val){
+  if(!val) return;
+  document.getElementById('f-hook').value = val;
+  updatePreview();
+}
+function applyCta(val){
+  if(!val) return;
+  document.getElementById('f-cta').value = val;
+  updatePreview();
+}
+function toggleChip(el){ el.classList.toggle('on'); }
+
+function updatePreview(){
+  const cta=document.getElementById('f-cta').value||'Lien en bio → -20% !';
+  document.getElementById('phoneCta').textContent=cta.substring(0,45);
+  const hook=document.getElementById('f-hook').value;
+  if(hook){
+    document.getElementById('phoneHookArea').style.display='block';
+    document.getElementById('phoneHookText').textContent=hook.substring(0,55);
+  } else document.getElementById('phoneHookArea').style.display='none';
+}
+
+function updateSubPreview(){
+  const sub=document.getElementById('phoneSubArea');
+  const styles={
+    hormozi:`<span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;margin-left:5px">GARANTIS</span>`,
+    tiktok:`<span style="font-family:'Arial Black',sans-serif;font-size:13px;color:#fff;background:#FF2D55;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">RÉSULTATS</span><span style="font-family:'Arial Black',sans-serif;font-size:13px;color:#000;background:#FFE500;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">GARANTIS</span>`,
+    bold:`<span style="font-family:'Arial Black',sans-serif;font-size:16px;color:#fff;font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">RÉSULTATS GARANTIS</span>`,
+    neon:`<span style="font-family:Impact,sans-serif;font-size:16px;color:#7c6fff;text-shadow:0 0 9px #7c6fff">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:16px;color:#ff4d6a;text-shadow:0 0 9px #ff4d6a;margin-left:5px">GARANTIS</span>`
+  };
+  sub.innerHTML=styles[selSubStyle]||styles.hormozi;
+}
+
+// ── GPT-4o SCRIPT ──
+async function generateScript(){
+  if(!K.gpt){ openSetup(); toast('⚠️ Configure ta clé OpenAI d\'abord'); return; }
+  const product=document.getElementById('f-product').value||'ce produit';
+  const niche=document.getElementById('f-niche').value||'e-commerce';
+  const duration=document.getElementById('f-duration').value;
+  const angles=[...document.querySelectorAll('.chip.on')].map(c=>c.textContent).join(', ')||'résultats rapides';
+  const btn=document.querySelector('.flbl-action');
+  btn.textContent='Génération...';
+  try{
+    const res=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+K.gpt,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'gpt-4o',
+        max_tokens:500,
+        messages:[{role:'system',content:`Tu es un expert en copywriting UGC viral pour TikTok et Instagram Reels. Tu écris des scripts courts, percutants, en français, style Alex Hormozi. Pas de hashtags, pas de markdown, juste le texte parlé.`},
+        {role:'user',content:`Écris un script UGC viral de ${duration} pour ce produit: "${product}".
+Niche: ${niche}
+Angle marketing: ${angles}
+Format: hook accrocheur (5s) + développement (problème → solution → bénéfice) + CTA final fort.
+Le script doit sembler authentique, comme un vrai témoignage. Commence directement par le hook sans titre.`}]
+      })
+    });
+    const d=await res.json();
+    if(d.choices && d.choices[0]){
+      document.getElementById('f-script').value=d.choices[0].message.content.trim();
+      toast('✓ Script généré par GPT-4o !');
+    } else toast('✗ Erreur GPT-4o : '+JSON.stringify(d));
+  }catch(e){ toast('✗ Erreur réseau : '+e.message); }
+  btn.textContent='✦ Générer avec GPT-4o';
+}
+
+// ── GENERATION PIPELINE ──
+async function startGeneration(){
+  if(!K.el){ openSetup(); toast('⚠️ Configure ta clé ElevenLabs'); return; }
+  const script = document.getElementById('f-script').value.trim();
+  if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
+
+  // ── Vérification crédits ──
+  if(currentMember){
+    if(currentMember.credits <= 0){
+      toast('✗ Plus de crédits ce mois — contacte Axel pour recharger');
+      return;
+    }
+    const ok = await decrementCredit();
+    if(!ok) return;
+  }
+
+  step=5; updateSteps();
+  document.getElementById('previewArea').style.display='none';
+  document.getElementById('genProgArea').style.display='flex';
+  document.getElementById('resultArea').style.display='none';
+  resetProgSteps();
+
+  let finalScript = script;
+
+  // Assemble : Hook + Script + CTA
+  const hook = document.getElementById('f-hook').value.trim();
+  const cta = document.getElementById('f-cta').value.trim();
+  if(hook) finalScript = hook + ' ' + finalScript;
+  if(cta) finalScript = finalScript + ' ' + cta;
+
+  // STEP 1: Script (toujours écrit par l'utilisateur)
+  setStep('gp1','on');
+  await wait(600);
+  setStep('gp1','done');
+
+  // STEP 2: Voice
+  setStep('gp2','on');
+  let audioBlob=null;
+  if(K.el){
+    audioBlob=await callElevenLabs(finalScript);
+  }
+  setStep('gp2','done');
+
+  // STEP 3: Hedra
+  setStep('gp3','on');
+  let hedraUrl='';
+  if(K.hedra && audioBlob){
+    hedraUrl=await callHedra(audioBlob);
+  }
+  setStep('gp3','done');
+
+  // STEP 4: Subs
+  setStep('gp4','on');
+  await wait(800);
+  setStep('gp4','done');
+
+  // STEP 5: Done
+  setStep('gp5','on');
+  await wait(500);
+  setStep('gp5','done');
+
+  // Show results
+  results={script:finalScript, audioBlob, hedraUrl};
+  showResults();
+
+  // Add to library
+  library.unshift({
+    emo:selAvatar.emo, name:document.getElementById('f-product').value||'Vidéo',
+    tags:[document.getElementById('f-platform').value.split('(')[0].trim(), document.getElementById('f-duration').value],
+    status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
+    script:finalScript, hedraUrl
+  });
+}
+
+async function callGPT(){
+  const product = document.getElementById('f-product').value || 'ce produit digital';
+  const niche = document.getElementById('f-niche').value || 'business en ligne';
+  const duration = document.getElementById('f-duration').value;
+  const hook = document.getElementById('f-hook').value || '';
+  const cta = document.getElementById('f-cta').value || 'Commente PLAN et je t\'explique tout en DM';
+  try{
+    const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+K.gpt,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'gpt-4o', max_tokens:400,
+        messages:[
+          {role:'system', content:'Tu es un expert en copywriting UGC viral pour TikTok et Instagram Reels. Tu écris des scripts courts, percutants, en français, style Alex Hormozi. Pas de hashtags, pas de markdown, juste le texte parlé naturellement.'},
+          {role:'user', content:`Écris un script UGC viral de ${duration} pour ce produit digital: "${product}".
+Niche: ${niche}
+${hook ? `Hook d'accroche: "${hook}"` : ''}
+CTA final obligatoire: "${cta}"
+Format: hook (3s) + problème → solution → bénéfices → CTA.
+Style: authentique, comme un vrai témoignage, direct, sans fioritures.`}
+        ]
+      })
+    });
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content?.trim() || 'Script non disponible.';
+  }catch(e){ return 'Erreur GPT-4o : ' + e.message; }
+}
+
+async function callElevenLabs(text){
+  const voiceId=document.getElementById('f-voiceid-custom').value.trim()||selVoiceId;
+  try{
+    const res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
+      method:'POST',
+      headers:{'xi-api-key':K.el,'Content-Type':'application/json','Accept':'audio/mpeg'},
+      body:JSON.stringify({
+        text:text.substring(0,2500),
+        model_id:'eleven_multilingual_v2',
+        voice_settings:{stability:0.5,similarity_boost:0.8,style:0.3,use_speaker_boost:true}
+      })
+    });
+    if(!res.ok){ toast('✗ ElevenLabs : '+res.status); return null; }
+    return await res.blob();
+  }catch(e){ toast('✗ ElevenLabs : '+e.message); return null; }
+}
+
+async function callHedra(audioBlob){
+  // Hedra API v2 — api.hedra.com — header X-API-Key
+  // Flow : 1) Upload audio asset → 2) Upload image asset (optionnel) → 3) POST /generations → 4) Poll GET /generations/{id}
+  // Note : CORS peut bloquer depuis le navigateur. En prod → backend proxy.
+  const BASE = 'https://api.hedra.com/web-app/public';
+  const headers = {'X-API-Key': K.hedra};
+
+  try {
+    // ── 1. Upload audio ──
+    const audioFd = new FormData();
+    audioFd.append('file', audioBlob, 'voice.mp3');
+    const audioUpRes = await fetch(`${BASE}/assets/upload`, {
+      method: 'POST',
+      headers,
+      body: audioFd
+    });
+    if (!audioUpRes.ok) {
+      const err = await audioUpRes.text();
+      toast('⚠️ Hedra CORS/erreur audio : ' + audioUpRes.status);
+      console.error('Hedra audio upload:', err);
+      return '';
+    }
+    const audioAsset = await audioUpRes.json();
+    const audioId = audioAsset.id || audioAsset.asset_id;
+
+    // ── 2. Upload image avatar (si URL fournie ou on skip) ──
+    let imageId = null;
+    const avatarImgUrl = document.getElementById('f-avatarimg').value.trim();
+    if (avatarImgUrl) {
+      try {
+        const imgBlob = await fetch(avatarImgUrl).then(r => r.blob());
+        const imgFd = new FormData();
+        imgFd.append('file', imgBlob, 'avatar.jpg');
+        const imgUpRes = await fetch(`${BASE}/assets/upload`, {
+          method: 'POST',
+          headers,
+          body: imgFd
+        });
+        if (imgUpRes.ok) {
+          const imgAsset = await imgUpRes.json();
+          imageId = imgAsset.id || imgAsset.asset_id;
+        }
+      } catch(e) { console.warn('Image upload skip:', e); }
+    }
+
+    // ── 3. Generate avatar video ──
+    const platform = document.getElementById('f-platform').value;
+    const aspectRatio = platform.includes('carré') ? '1:1' : '9:16';
+
+    const durationMs = parseInt(document.getElementById('f-hedra-duration')?.value || '30000');
+
+    const genBody = {
+      type: 'video',
+      ai_model_id: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3
+      audio_id: audioId,
+      generated_video_inputs: {
+        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze',
+        aspect_ratio: aspectRatio,
+        resolution: '720p',
+        duration_ms: durationMs,
+        character_orientation: 'video'
+      }
+    };
+    if (imageId) genBody.start_keyframe_id = imageId;
+
+    const genRes = await fetch(`${BASE}/generations`, {
+      method: 'POST',
+      headers: {...headers, 'Content-Type': 'application/json'},
+      body: JSON.stringify(genBody)
+    });
+    if (!genRes.ok) {
+      const err = await genRes.text();
+      toast('⚠️ Hedra génération erreur : ' + genRes.status);
+      console.error('Hedra generate:', err);
+      return '';
+    }
+    const genData = await genRes.json();
+    const genId = genData.id;
+    if (!genId) return '';
+
+    // ── 4. Poll status ──
+    for (let i = 0; i < 40; i++) {
+      await wait(4000);
+      const pollRes = await fetch(`${BASE}/generations/${genId}`, { headers });
+      if (!pollRes.ok) continue;
+      const pollData = await pollRes.json();
+      const status = pollData.status;
+      if (status === 'complete' || status === 'completed') {
+        // Récupère l'URL de la vidéo depuis l'asset
+        const assetId = pollData.asset_id;
+        if (assetId) {
+          const assetRes = await fetch(`${BASE}/assets/${assetId}`, { headers });
+          if (assetRes.ok) {
+            const assetData = await assetRes.json();
+            return assetData.url || assetData.download_url || '';
+          }
+        }
+        return pollData.url || pollData.video_url || '';
+      }
+      if (status === 'failed' || status === 'error') {
+        toast('✗ Hedra génération échouée');
+        return '';
+      }
+      // Update progress
+      const prog = pollData.progress || 0;
+      document.getElementById('gp3').querySelector('.gp-icon').textContent = prog + '%';
+    }
+    toast('⚠️ Hedra timeout — vérifie hedra.com/app');
+    return '';
+  } catch(e) {
+    toast('⚠️ Hedra CORS bloqué — nécessite un backend proxy');
+    console.error('Hedra error:', e);
+    return '';
+  }
+}
+
+function showResults(){
+  document.getElementById('genProgArea').style.display='none';
+  document.getElementById('resultArea').style.display='block';
+
+  document.getElementById('res-script').textContent=results.script||'—';
+
+  if(results.audioBlob){
+    const url=URL.createObjectURL(results.audioBlob);
+    document.getElementById('audioEl').src=url;
+    document.getElementById('audioStatus').textContent='Audio prêt — clique ▶';
+  } else {
+    document.getElementById('audioStatus').textContent='Audio non généré (clé ElevenLabs manquante)';
+    document.getElementById('playAudioBtn').disabled=true;
+  }
+
+  const hs=document.getElementById('hedraStatus');
+  if(results.hedraUrl){
+    hs.className='hedra-status done';
+    hs.textContent='✓ Avatar généré !';
+    document.getElementById('hedraVideoWrap').style.display='block';
+    document.getElementById('hedraVideo').src=results.hedraUrl;
+  } else {
+    hs.className='hedra-status';
+    if(K.hedra){
+      hs.innerHTML=`⚠️ CORS bloqué depuis le navigateur.<br>
+        <span style="color:var(--text3);font-size:11px">
+        Solution : upload l'audio ci-dessus sur 
+        <a href="https://hedra.com/app" target="_blank" style="color:var(--orange2)">hedra.com/app</a> 
+        avec ton image avatar pour finaliser la vidéo.<br>
+        Pour l'intégration complète → backend proxy (V2 commerciale).
+        </span>`;
+    } else {
+      hs.innerHTML='Clé Hedra non configurée — configure-la dans les clés API (<a href="https://hedra.com/api-profile" target="_blank" style="color:var(--orange2)">hedra.com/api-profile</a>).';
+    }
+  }
+
+  document.getElementById('mainBtn').style.display='block';
+  document.getElementById('mainBtn').textContent='+ Nouvelle vidéo';
+  document.getElementById('mainBtn').onclick=resetAll;
+  document.getElementById('backBtn').style.display='none';
+  toast('✓ Génération terminée !');
+}
+
+function resetAll(){
+  step=1; updateSteps();
+  results={script:'',audioBlob:null,hedraUrl:''};
+  document.getElementById('previewArea').style.display='flex';
+  document.getElementById('genProgArea').style.display='none';
+  document.getElementById('resultArea').style.display='none';
+  document.getElementById('mainBtn').onclick=handleMainBtn;
+}
+
+// ── AUDIO ──
+let audioPlaying=false;
+function toggleAudio(){
+  const a=document.getElementById('audioEl');
+  if(audioPlaying){a.pause();document.getElementById('playAudioBtn').textContent='▶';}
+  else{a.play();document.getElementById('playAudioBtn').textContent='⏸';}
+  audioPlaying=!audioPlaying;
+  document.getElementById('audioEl').onended=()=>{audioPlaying=false;document.getElementById('playAudioBtn').textContent='▶';};
+}
+function downloadVideo(){
+  if(!results.hedraUrl) return;
+  const a=document.createElement('a');
+  a.href=results.hedraUrl; a.download='avatarads-video.mp4';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── PROGRESS ──
+function resetProgSteps(){
+  ['gp1','gp2','gp3','gp4','gp5'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('on','done');
+    const icons={gp1:'📝',gp2:'🎤',gp3:'🎭',gp4:'💬',gp5:'✅'};
+    el.querySelector('.gp-icon').textContent=icons[id];
+  });
+}
+function setStep(id,state){
+  const el=document.getElementById(id);
+  el.classList.remove('on','done');
+  if(state==='on'){el.classList.add('on');el.querySelector('.gp-icon').innerHTML='<div class="spinner"></div>';}
+  else if(state==='done'){el.classList.add('done');el.querySelector('.gp-icon').textContent='✓';}
+}
+
+// ── LIBRARY ──
+function renderLibrary(){
+  const grid=document.getElementById('libGrid');
+  document.getElementById('libCount').textContent=library.length+' vidéo'+(library.length>1?'s':'')+' générée'+(library.length>1?'s':'');
+  if(!library.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px">Aucune vidéo générée pour l\'instant.<br>Lance ton premier avatar !</div>';
+    return;
+  }
+  grid.innerHTML=library.map((v,i)=>`
+    <div class="vid-card">
+      <div class="vid-thumb" style="background:${v.bg}">
+        <div style="font-size:40px;z-index:1;position:relative">${v.emo}</div>
+        <div class="vid-overlay"></div>
+        <div class="vid-badge">${v.style}</div>
+      </div>
+      <div class="vid-meta">
+        <div class="vid-title">${v.name}</div>
+        <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}</div>
+        <div class="vid-status">
+          <div class="sdot ok"></div>
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span>
+          ${v.hedraUrl?`<span style="margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--orange2);cursor:pointer" onclick="window.open('${v.hedraUrl}')">⬇ MP4</span>`:''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── UTILS ──
+function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); toast('✓ Copié !'); }
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function toast(msg){
+  const el=document.getElementById('toastEl');
+  document.getElementById('toastMsg').textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+function randBg(){
+  const bgs=['linear-gradient(160deg,#1a1208,#2d1f08)','linear-gradient(160deg,#0a1220,#0d1e35)','linear-gradient(160deg,#200a12,#350d1e)','linear-gradient(160deg,#0d1a10,#102014)','linear-gradient(160deg,#150a1a,#220d28)'];
+  return bgs[Math.floor(Math.random()*bgs.length)];
+}
+
+// ── INIT ──
+// 1. Toujours montrer le login en premier
+document.getElementById('loginOverlay').style.display = 'flex';
+document.getElementById('setupOverlay').style.display = 'none';
+
+// 2. Session sauvegardée ? (optionnel — retire si tu veux toujours forcer le login)
+const savedCode = localStorage.getItem('aa_member_code');
+const savedName = localStorage.getItem('aa_member_name');
+if(savedCode && savedName){
+  // Pré-rempli mais doit quand même valider
+  document.getElementById('inp-code').value = savedCode;
+}
+
+// 3. Load API keys
+['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
+refreshDots();
+updateSteps();
+</script>
+</body>
+</html>
