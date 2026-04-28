@@ -719,7 +719,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="flbl" style="font-size:11px;margin:0">Taille du texte</div>
                 <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subSizeVal">72px</span>
               </div>
-              <input type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+              <input type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
             </div>
 
             <!-- POSITION -->
@@ -728,7 +728,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="flbl" style="font-size:11px;margin:0">Position verticale des sous-titres</div>
                 <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
               </div>
-              <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+              <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px"><span>Haut</span><span>Bas</span></div>
             </div>
 
@@ -765,53 +765,153 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
       <!-- RIGHT -->
       <div class="gen-right" id="genRight">
-        <div class="preview-area" id="previewArea">
-          <div class="preview-label">Prévisualisation</div>
+        <div class="preview-area" id="previewArea" style="flex-direction:column;gap:12px;align-items:center">
 
-          <!-- NORMAL PHONE PREVIEW -->
-          <div class="phone" id="phoneFrame">
-            <div class="phone-top"><div class="phone-pill"></div></div>
-            <div class="phone-body" id="phoneBody">
-              <div class="phone-avatar" id="phoneAv">👩‍💼</div>
-              <div class="phone-hook-area" id="phoneHookArea" style="display:none">
-                <div id="phoneHookText" style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;line-height:1.2"></div>
+          <!-- PLATFORM TABS -->
+          <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
+            <button id="ptab-tiktok" onclick="setPlatformPreview('tiktok')" style="padding:5px 12px;border-radius:5px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">TikTok</button>
+            <button id="ptab-reels" onclick="setPlatformPreview('reels')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Reels</button>
+            <button id="ptab-youtube" onclick="setPlatformPreview('youtube')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">YouTube</button>
+          </div>
+
+          <!-- PHONE MOCKUP WRAPPER -->
+          <div id="phoneMockup" style="position:relative;width:220px;height:420px;border-radius:32px;border:3px solid #222;overflow:hidden;background:#000;box-shadow:0 24px 60px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,0.05)">
+
+            <!-- VIDEO CONTENT AREA (avatar + gameplay or just avatar) -->
+            <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
+              <!-- TOP: Avatar zone -->
+              <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:35">
+                <div id="previewAvEmoji" style="font-size:56px">👩‍💼</div>
+                <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
               </div>
-              <div class="phone-sub-area" id="phoneSubArea">
-                <span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000">RÉSULTATS</span>
+              <!-- BOTTOM: Gameplay zone (only in split mode) -->
+              <div id="gameplayZone" style="display:none;background:#0a0a0a;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:65">
+                <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15)">
+                  <div style="font-size:24px">🎮</div>
+                  <div style="font-size:9px;font-family:var(--mono);margin-top:3px">Gameplay ici</div>
+                </div>
+                <video id="gpVideo" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute" loop muted autoplay playsinline></video>
+              </div>
+            </div>
+
+            <!-- SUBTITLES OVERLAY — draggable position -->
+            <div id="subsOverlay" style="position:absolute;left:0;right:0;text-align:center;padding:0 8px;z-index:20;pointer-events:none;top:72%">
+              <div id="subsContent">
+                <span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span>
                 <span style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;margin-left:5px">GARANTIS</span>
               </div>
-              <div class="phone-cta-bar" id="phoneCta">Lien en bio → -20% !</div>
             </div>
-            <div class="phone-bottom">
-              <div class="phone-av-sm">👩</div>
-              <div class="phone-handle" id="phoneHandle">@sofia.ads</div>
-              <div class="phone-follow">Suivre</div>
-            </div>
-          </div>
 
-          <!-- SPLIT SCREEN PREVIEW -->
-          <div id="splitPreview" style="display:none;width:220px;height:400px;border-radius:16px;overflow:hidden;border:2px solid var(--border2);box-shadow:0 24px 64px rgba(0,0,0,.7);flex-direction:column;position:relative">
-            <!-- TOP: Avatar -->
-            <div id="splitTop" style="background:linear-gradient(160deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;flex:1;position:relative;overflow:hidden">
-              <div style="font-size:52px" id="splitAv">👩‍💼</div>
-              <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.1)"></div>
-            </div>
-            <!-- SUBTITLE AT JUNCTION -->
-            <div id="splitSubs" style="position:absolute;left:0;right:0;z-index:10;text-align:center;padding:4px 8px;pointer-events:none" style="top:50%">
-              <span style="font-family:Impact,sans-serif;font-size:16px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span>
-              <span style="font-family:Impact,sans-serif;font-size:16px;color:#fff;-webkit-text-stroke:1px #000;margin-left:4px">GARANTIS</span>
-            </div>
-            <!-- BOTTOM: Gameplay -->
-            <div id="splitBottom" style="background:#000;display:flex;align-items:center;justify-content:center;flex:1;overflow:hidden;position:relative">
-              <div id="splitGameplayEmpty" style="text-align:center;color:rgba(255,255,255,0.2)">
-                <div style="font-size:28px;margin-bottom:4px">🎮</div>
-                <div style="font-size:9px;font-family:var(--mono)">Gameplay ici</div>
+            <!-- CTA OVERLAY -->
+            <div id="ctaOverlay" style="position:absolute;bottom:80px;left:10px;right:10px;background:var(--orange);border-radius:7px;padding:6px;text-align:center;font-size:10px;font-weight:700;color:#fff;font-family:var(--font);z-index:20">Lien en bio → -20% !</div>
+
+            <!-- ── TIKTOK UI ── -->
+            <div id="ui-tiktok" style="position:absolute;inset:0;pointer-events:none">
+              <!-- Top bar -->
+              <div style="position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent)">
+                <div style="font-size:9px;color:rgba(255,255,255,.7);font-family:var(--mono)">13:42</div>
+                <div style="display:flex;gap:8px;font-size:10px;color:#fff;font-weight:600">
+                  <span>Abonnements</span>
+                  <span style="opacity:.6">|</span>
+                  <span style="opacity:.6">Pour toi</span>
+                </div>
+                <div style="font-size:10px">🔍</div>
               </div>
-              <video id="splitGameplayVid" style="display:none;width:100%;height:100%;object-fit:cover" loop muted autoplay playsinline></video>
+              <!-- Right action bar -->
+              <div style="position:absolute;right:8px;bottom:90px;display:flex;flex-direction:column;align-items:center;gap:14px">
+                <div style="text-align:center">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:16px;margin:0 auto 2px">A</div>
+                  <div style="width:16px;height:16px;background:#ff0050;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">+</div>
+                </div>
+                <div style="text-align:center"><div style="font-size:20px">❤️</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">42.1K</div></div>
+                <div style="text-align:center"><div style="font-size:20px">💬</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">1.2K</div></div>
+                <div style="text-align:center"><div style="font-size:20px">↗️</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">Partager</div></div>
+                <div style="text-align:center"><div style="font-size:16px">⋯</div></div>
+              </div>
+              <!-- Bottom info -->
+              <div style="position:absolute;bottom:48px;left:10px;right:60px">
+                <div id="tt-handle" style="font-size:11px;font-weight:700;color:#fff;margin-bottom:3px">@sofia.ads</div>
+                <div style="font-size:9px;color:rgba(255,255,255,.8);font-family:var(--mono);line-height:1.4">Le meilleur business en ligne... #ialebd #business</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:5px">
+                  <span style="font-size:10px">🎵</span>
+                  <div style="font-size:8px;color:rgba(255,255,255,.7);font-family:var(--mono)">Son original — IA Manager</div>
+                </div>
+              </div>
+              <!-- Bottom nav -->
+              <div style="position:absolute;bottom:0;left:0;right:0;height:44px;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:space-around;border-top:0.5px solid rgba(255,255,255,.1)">
+                <div style="text-align:center"><div style="font-size:16px">🏠</div><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Accueil</div></div>
+                <div style="text-align:center"><div style="font-size:16px">🔍</div><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Chercher</div></div>
+                <div style="text-align:center"><div style="width:28px;height:22px;background:linear-gradient(to right,#69C9D0,#fff,#EE1D52);border-radius:5px;display:flex;align-items:center;justify-content:center"><span style="font-size:14px">+</span></div></div>
+                <div style="text-align:center"><div style="font-size:16px">📩</div><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Boîte</div></div>
+                <div style="text-align:center"><div style="font-size:16px">👤</div><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Profil</div></div>
+              </div>
             </div>
-          </div>
 
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.7">Preview simulée · Rendu réel via Hedra API</div>
+            <!-- ── INSTAGRAM REELS UI ── -->
+            <div id="ui-reels" style="position:absolute;inset:0;pointer-events:none;display:none">
+              <!-- Top bar -->
+              <div style="position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent)">
+                <div style="font-size:9px;color:rgba(255,255,255,.7);font-family:var(--mono)">13:42</div>
+                <div style="font-size:11px;color:#fff;font-weight:700">Reels</div>
+                <div style="font-size:16px">📷</div>
+              </div>
+              <!-- Right actions -->
+              <div style="position:absolute;right:8px;bottom:90px;display:flex;flex-direction:column;align-items:center;gap:16px">
+                <div style="text-align:center"><div style="font-size:22px">🤍</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">42K</div></div>
+                <div style="text-align:center"><div style="font-size:22px">💬</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">1.2K</div></div>
+                <div style="text-align:center"><div style="font-size:22px">📤</div><div style="font-size:8px;color:#fff;font-family:var(--mono)">Partager</div></div>
+                <div style="text-align:center"><div style="font-size:20px">⋯</div></div>
+                <div style="width:32px;height:32px;border-radius:6px;background:var(--orange);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px">A</div>
+              </div>
+              <!-- Bottom info -->
+              <div style="position:absolute;bottom:50px;left:10px;right:60px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:11px">A</div>
+                  <div id="ig-handle" style="font-size:11px;font-weight:700;color:#fff">sofia.ads</div>
+                  <div style="font-size:9px;border:1px solid #fff;color:#fff;padding:1px 6px;border-radius:4px">Suivre</div>
+                </div>
+                <div style="font-size:9px;color:rgba(255,255,255,.9);font-family:var(--mono);line-height:1.4">Le meilleur business 2026 🔥 #ialebd</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+                  <div style="width:18px;height:18px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:9px">🎵</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,.7);font-family:var(--mono)">Son original</div>
+                </div>
+              </div>
+              <!-- Bottom nav Instagram -->
+              <div style="position:absolute;bottom:0;left:0;right:0;height:46px;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:space-around;border-top:0.5px solid rgba(255,255,255,.1)">
+                <span style="font-size:18px">🏠</span>
+                <span style="font-size:18px">🔍</span>
+                <span style="font-size:18px">🎬</span>
+                <span style="font-size:18px">🛍️</span>
+                <div style="width:24px;height:24px;border-radius:50%;background:var(--orange);border:1.5px solid #fff"></div>
+              </div>
+            </div>
+
+            <!-- ── YOUTUBE UI ── -->
+            <div id="ui-youtube" style="position:absolute;inset:0;pointer-events:none;display:none">
+              <div style="position:absolute;top:0;left:0;right:0;height:36px;background:rgba(0,0,0,.85);display:flex;align-items:center;padding:0 10px;gap:8px">
+                <span style="font-size:14px">◀</span>
+                <div style="flex:1"></div>
+                <span style="font-size:14px">⋮</span>
+              </div>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.9);padding:8px 10px">
+                <div style="height:2px;background:#333;border-radius:1px;margin-bottom:6px"><div style="height:100%;width:35%;background:#ff0000;border-radius:1px"></div></div>
+                <div style="font-size:9px;color:#fff;font-weight:600;margin-bottom:2px">Le meilleur business en ligne 2026</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                  <div style="width:20px;height:20px;border-radius:50%;background:var(--orange);font-size:9px;display:flex;align-items:center;justify-content:center">A</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,.7);font-family:var(--mono)">IA Manager · 12K vues</div>
+                </div>
+                <div style="display:flex;justify-content:space-around">
+                  <div style="text-align:center"><div style="font-size:14px">👍</div><div style="font-size:7px;color:rgba(255,255,255,.6);font-family:var(--mono)">4.2K</div></div>
+                  <div style="text-align:center"><div style="font-size:14px">👎</div><div style="font-size:7px;color:rgba(255,255,255,.6);font-family:var(--mono)"></div></div>
+                  <div style="text-align:center"><div style="font-size:14px">📤</div><div style="font-size:7px;color:rgba(255,255,255,.6);font-family:var(--mono)">Partager</div></div>
+                  <div style="text-align:center"><div style="font-size:14px">⬇️</div><div style="font-size:7px;color:rgba(255,255,255,.6);font-family:var(--mono)">Téléch.</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /phoneMockup -->
+
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.7">Preview live · Réglages en temps réel</div>
         </div>
 
         <!-- GENERATING -->
@@ -1234,8 +1334,8 @@ function pickAvatar(el,emo,name,desc){
   document.querySelectorAll('.av-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   selAvatar={emo,name,desc};
-  document.getElementById('phoneAv').textContent=emo;
-  document.getElementById('phoneHandle').textContent='@'+name+'.ads';
+  selAvatar.localFile = null; selAvatar.localUrl = null;
+  updateLivePreview();
 }
 function pickVoice(el,id,name,desc){
   document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
@@ -1359,10 +1459,9 @@ function handleAvatarFile(file){
   document.getElementById('avatarDropContent').style.display = 'none';
   document.getElementById('avatarPreviewWrap').style.display = 'block';
   document.getElementById('f-avatarimg').value = '';
-  // Store blob URL for Hedra upload
   selAvatar.localFile = file;
   selAvatar.localUrl = url;
-  document.getElementById('phoneAv').textContent = '📸';
+  updateLivePreview();
 }
 function previewAvatarUrl(url){
   if(!url) return;
@@ -1395,19 +1494,14 @@ function toggleSplit(){
     opts.style.display = 'flex';
     row.style.borderColor = 'rgba(255,107,53,0.4)';
     row.style.background = 'var(--orange-dim)';
-    // Show split preview
-    document.getElementById('phoneFrame').style.display = 'none';
-    document.getElementById('splitPreview').style.display = 'flex';
-    updateSplitPreview();
   } else {
     toggle.style.background = 'var(--bg5)';
     thumb.style.left = '2px';
     opts.style.display = 'none';
     row.style.borderColor = 'var(--border)';
     row.style.background = 'var(--bg3)';
-    document.getElementById('phoneFrame').style.display = 'flex';
-    document.getElementById('splitPreview').style.display = 'none';
   }
+  updateLivePreview();
 }
 
 function handleGameplayFile(file){
@@ -1416,25 +1510,99 @@ function handleGameplayFile(file){
   document.getElementById('gameplayFileName').textContent = file.name;
   document.getElementById('gameplayDropContent').style.display = 'none';
   document.getElementById('gameplayFileInfo').style.display = 'block';
-  // Show in split preview
-  const vid = document.getElementById('splitGameplayVid');
-  vid.src = URL.createObjectURL(file);
-  vid.style.display = 'block';
-  document.getElementById('splitGameplayEmpty').style.display = 'none';
-  updateSplitPreview();
+  // Show in new preview
+  const vid = document.getElementById('gpVideo');
+  const empty = document.getElementById('gpEmpty');
+  if(vid){ vid.src = URL.createObjectURL(file); vid.style.display = 'block'; }
+  if(empty) empty.style.display = 'none';
+  updateLivePreview();
+}
+
+// ── PLATFORM PREVIEW ──
+let currentPlatform = 'tiktok';
+
+function setPlatformPreview(p){
+  currentPlatform = p;
+  ['tiktok','reels','youtube'].forEach(id => {
+    const btn = document.getElementById('ptab-'+id);
+    const ui = document.getElementById('ui-'+id);
+    if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; }
+    if(ui) ui.style.display = id===p ? 'block' : 'none';
+  });
+}
+
+function updateLivePreview(){
+  // Subtitles position
+  const posY = (cfg.subPos || 75);
+  const overlay = document.getElementById('subsOverlay');
+  if(overlay) overlay.style.top = posY + '%';
+
+  // Subtitles content & style
+  updateSubPreview();
+
+  // Avatar
+  const avImg = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(selAvatar.localUrl && selAvatar.localFile){
+    if(avImg){ avImg.src = selAvatar.localUrl; avImg.style.display = 'block'; }
+    if(avEmoji) avEmoji.style.display = 'none';
+  } else {
+    if(avImg) avImg.style.display = 'none';
+    if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = selAvatar.emo || '👩‍💼'; }
+  }
+
+  // Split screen
+  const gameplayZone = document.getElementById('gameplayZone');
+  const avZone = document.getElementById('avZone');
+  if(splitEnabled && gameplayZone){
+    gameplayZone.style.display = 'flex';
+    const ratio = cfg.splitRatio || 35;
+    avZone.style.flex = ratio;
+    gameplayZone.style.flex = (100 - ratio);
+    // Position subs at junction
+    if(overlay) overlay.style.top = (ratio - 3) + '%';
+  } else if(gameplayZone){
+    gameplayZone.style.display = 'none';
+    if(avZone) avZone.style.flex = '1';
+  }
+
+  // CTA text
+  const ctaEl = document.getElementById('ctaOverlay');
+  const ctaVal = document.getElementById('f-cta');
+  if(ctaEl && ctaVal) ctaEl.textContent = ctaVal.value || 'Lien en bio → -20% !';
+
+  // Handle
+  const handle = document.getElementById('f-product');
+  if(document.getElementById('tt-handle') && handle) document.getElementById('tt-handle').textContent = '@' + (selAvatar.name || 'sofia') + '.ads';
+  if(document.getElementById('ig-handle') && handle) document.getElementById('ig-handle').textContent = (selAvatar.name || 'sofia') + '.ads';
+}
+
+// Override updateSubPreview to also update the new preview
+const _origUpdateSub = typeof updateSubPreview === 'function' ? updateSubPreview : null;
+
+function updateSubPreview(){
+  const style = selSubStyle || 'hormozi';
+  const size = cfg.subSize || 72;
+  const scaled = Math.round(size * 0.25); // scale for preview
+
+  const styles = {
+    hormozi: `<span style="font-family:Impact,sans-serif;font-size:${scaled}px;color:#FFE500;-webkit-text-stroke:${Math.round(scaled/18)}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:${scaled}px;color:#fff;-webkit-text-stroke:${Math.round(scaled/18)}px #000;margin-left:4px">GARANTIS</span>`,
+    tiktok: `<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(scaled*.8)}px;color:#fff;background:#FF2D55;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">RÉSULTATS</span><span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(scaled*.8)}px;color:#000;background:#FFE500;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">GARANTIS</span>`,
+    bold: `<span style="font-family:'Arial Black',sans-serif;font-size:${scaled}px;color:#fff;font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">RÉSULTATS GARANTIS</span>`,
+    neon: `<span style="font-family:Impact,sans-serif;font-size:${scaled}px;color:#7c6fff;text-shadow:0 0 ${scaled*.4}px #7c6fff">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:${scaled}px;color:#ff4d6a;text-shadow:0 0 ${scaled*.4}px #ff4d6a;margin-left:4px">GARANTIS</span>`
+  };
+
+  const content = document.getElementById('subsContent');
+  if(content) content.innerHTML = styles[style] || styles.hormozi;
+
+  // Also update position
+  const overlay = document.getElementById('subsOverlay');
+  if(overlay && !splitEnabled) overlay.style.top = (cfg.subPos || 75) + '%';
 }
 
 function updateSplitPreview(){
-  const ratio = cfg.splitRatio || 50;
-  const topPct = ratio + '%';
-  const botPct = (100 - ratio) + '%';
-  document.getElementById('splitTop').style.flex = ratio;
-  document.getElementById('splitBottom').style.flex = (100 - ratio);
-  // Position subs at junction
-  const subs = document.getElementById('splitSubs');
-  subs.style.top = 'calc(' + topPct + ' - 18px)';
-  // Update avatar in split
-  document.getElementById('splitAv').textContent = document.getElementById('phoneAv').textContent;
+  cfg.splitRatio = parseInt(document.getElementById('splitRatio')?.value || 35);
+  updateLivePreview();
 }
 
 
