@@ -38,6 +38,28 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 /* LAYOUT */
 .layout{display:flex;flex:1;overflow:hidden}
 
+/* RESPONSIVE */
+@media(max-width:768px){
+  html,body{overflow:auto}
+  .layout{flex-direction:column;overflow:auto}
+  .sidebar{display:none}
+  .main{overflow:visible}
+  .view.on{display:flex;flex-direction:column}
+  .gen-view{flex-direction:column!important;overflow:visible!important}
+  .gen-left{width:100%!important;overflow:visible!important;border-right:none!important;border-bottom:1px solid var(--border)}
+  .gen-right{display:none!important}
+  .gen-form{overflow:visible!important;max-height:none!important}
+  .steps-bar{overflow-x:auto;padding:12px 16px}
+  .step span:last-child{display:none}
+  .gen-footer{position:sticky;bottom:0;z-index:10;background:var(--bg2)}
+  .topbar{padding:0 14px}
+  .logo-members{display:none}
+  #memberBar{font-size:11px;padding:4px 10px;gap:8px}
+  .lib-view{padding:16px}
+  .lib-grid{grid-template-columns:repeat(2,1fr)!important}
+  .row2{grid-template-columns:1fr!important}
+}
+
 /* SIDEBAR */
 .sidebar{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .nav-g{padding:16px 10px 8px}
@@ -80,7 +102,7 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 
 /* ══ GENERATOR VIEW ══ */
 .gen-view{overflow:hidden}
-.gen-left{width:400px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.gen-left{width:520px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 
 /* STEPS */
 .steps-bar{display:flex;padding:14px 20px;border-bottom:1px solid var(--border);gap:0;flex-shrink:0;align-items:center}
@@ -512,47 +534,83 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 3 -->
           <div id="fs-3" style="display:none">
+
+            <!-- CLONE TA VOIX -->
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">🎤 Clone ta voix — upload un extrait</div>
+              <div id="voiceDropzone" onclick="document.getElementById('voiceFileIn').click()"
+                ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
+                ondragleave="ev=>{this.classList.remove('av-drag')}"
+                ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleVoiceFile(ev.dataTransfer.files[0])}"
+                style="border:2px dashed var(--border2);border-radius:14px;padding:24px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3)">
+                <div id="voiceDropContent">
+                  <div style="font-size:36px;margin-bottom:10px">🎙️</div>
+                  <div style="font-size:14px;font-weight:700;margin-bottom:5px">Glisse un extrait audio ou vidéo</div>
+                  <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">MP3 · MP4 · WAV · M4A · 30s minimum recommandé</div>
+                  <div style="margin-top:12px;display:inline-block;padding:7px 18px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:8px;font-size:12px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                </div>
+                <div id="voiceFileInfo" style="display:none">
+                  <div style="font-size:32px;margin-bottom:8px">✅</div>
+                  <div id="voiceFileName" style="font-size:13px;font-weight:600;margin-bottom:4px"></div>
+                  <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Clique pour changer</div>
+                </div>
+              </div>
+              <input type="file" id="voiceFileIn" accept="audio/*,video/*" style="display:none" onchange="handleVoiceFile(this.files[0])">
+
+              <button id="cloneBtn" onclick="cloneVoice()" disabled
+                style="width:100%;margin-top:10px;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:not-allowed;transition:all .2s">
+                Cloner ma voix avec ElevenLabs →
+              </button>
+
+              <!-- RÉSULTATS CLONAGE -->
+              <div id="cloneResults" style="display:none;margin-top:14px;display:none;flex-direction:column;gap:8px">
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">3 variations — écoute et choisis :</div>
+                <div id="cloneVariants" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+              <div id="cloneStatus" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px;display:none"></div>
+            </div>
+
+            <div class="divider" style="margin:4px 0 16px"></div>
+
+            <!-- VOIX PRESET -->
             <div class="fld">
-              <div class="flbl">Voix ElevenLabs</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Ou choisis une voix preset</div>
               <div class="voice-list">
-                <div class="voice-row on" onclick="pickVoice(this,'21m00Tcm4TlvDq8ikWAM','Rachel','Féminine · naturelle · lifestyle')">
-                  <div class="voice-play">▶</div>
+                <div class="voice-row on" id="vr-rachel" onclick="pickVoice(this,'21m00Tcm4TlvDq8ikWAM','Rachel','Féminine · naturelle · lifestyle')">
+                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('21m00Tcm4TlvDq8ikWAM','rachel-prev')}">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Rachel</div>
                     <div class="voice-desc">Féminine · naturelle · lifestyle</div>
                   </div>
-                  <div class="voice-id">21m00…</div>
+                  <audio id="rachel-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" onclick="pickVoice(this,'AZnzlk1XvdvUeBnXmlld','Domi','Féminine · dynamique · énergie')">
-                  <div class="voice-play">▶</div>
+                <div class="voice-row" id="vr-domi" onclick="pickVoice(this,'AZnzlk1XvdvUeBnXmlld','Domi','Féminine · dynamique · énergie')">
+                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('AZnzlk1XvdvUeBnXmlld','domi-prev')}">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Domi</div>
                     <div class="voice-desc">Féminine · dynamique · énergie</div>
                   </div>
-                  <div class="voice-id">AZnzl…</div>
+                  <audio id="domi-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" onclick="pickVoice(this,'ErXwobaYiN019PkySvjV','Antoni','Masculine · crédible · premium')">
-                  <div class="voice-play">▶</div>
+                <div class="voice-row" id="vr-antoni" onclick="pickVoice(this,'ErXwobaYiN019PkySvjV','Antoni','Masculine · crédible · premium')">
+                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('ErXwobaYiN019PkySvjV','antoni-prev')}">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Antoni</div>
                     <div class="voice-desc">Masculine · crédible · premium</div>
                   </div>
-                  <div class="voice-id">ErXwo…</div>
+                  <audio id="antoni-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" onclick="pickVoice(this,'VR6AewLTigWG4xSOukaG','Arnold','Masculine · fort · autorité')">
-                  <div class="voice-play">▶</div>
+                <div class="voice-row" id="vr-arnold" onclick="pickVoice(this,'VR6AewLTigWG4xSOukaG','Arnold','Masculine · fort · autorité')">
+                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('VR6AewLTigWG4xSOukaG','arnold-prev')}">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Arnold</div>
                     <div class="voice-desc">Masculine · fort · autorité</div>
                   </div>
-                  <div class="voice-id">VR6Ae…</div>
+                  <audio id="arnold-prev" style="display:none"></audio>
                 </div>
               </div>
             </div>
-            <div class="fld" style="margin-top:4px">
-              <div class="flbl">Voice ID custom (optionnel)</div>
-              <input type="text" id="f-voiceid-custom" placeholder="Colle ton Voice ID ElevenLabs ici">
-            </div>
+
           </div>
 
           <!-- STEP 4 -->
@@ -792,6 +850,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <div class="setup-divider"></div>
     <button class="btn-setup-save" onclick="saveKeys()">Sauvegarder et commencer →</button>
+  </div>
+</div>
+
+<!-- MOBILE NAV -->
+<div id="mobileNav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 0;z-index:200;justify-content:space-around">
+  <div onclick="nav('generator',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--orange2);cursor:pointer;padding:4px 16px">
+    <span style="font-size:20px">✨</span>Générer
+  </div>
+  <div onclick="nav('library',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
+    <span style="font-size:20px">🎬</span>Biblio
+  </div>
+  <div onclick="openSetup()" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
+    <span style="font-size:20px">⚙️</span>Clés API
   </div>
 </div>
 
@@ -1049,6 +1120,108 @@ function pickSub(el,style){
   el.classList.add('on');
   selSubStyle=style;
   updateSubPreview();
+}
+
+// ── VOICE CLONE ──
+let voiceFile = null;
+let clonedVoiceId = null;
+
+function handleVoiceFile(file){
+  if(!file) return;
+  voiceFile = file;
+  document.getElementById('voiceFileName').textContent = file.name;
+  document.getElementById('voiceDropContent').style.display = 'none';
+  document.getElementById('voiceFileInfo').style.display = 'block';
+  const btn = document.getElementById('cloneBtn');
+  btn.disabled = false;
+  btn.style.background = 'linear-gradient(135deg,var(--orange),#e03e1a)';
+  btn.style.color = '#fff';
+  btn.style.cursor = 'pointer';
+  btn.style.borderColor = 'var(--orange)';
+}
+
+async function cloneVoice(){
+  if(!voiceFile || !K.el){ toast('⚠️ Upload un fichier et configure ta clé ElevenLabs'); return; }
+  const btn = document.getElementById('cloneBtn');
+  btn.textContent = 'Clonage en cours...'; btn.disabled = true;
+  const status = document.getElementById('cloneStatus');
+  status.style.display = 'block';
+  status.textContent = '🔄 Upload vers ElevenLabs...';
+  try {
+    const fd = new FormData();
+    fd.append('name', 'Ma voix — ' + Date.now());
+    fd.append('description', 'Clone voix IA Manager');
+    fd.append('files', voiceFile, voiceFile.name);
+    const cloneRes = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST', headers: {'xi-api-key': K.el}, body: fd
+    });
+    if(!cloneRes.ok){ const err=await cloneRes.json(); toast('✗ ElevenLabs : '+(err.detail?.message||cloneRes.status)); btn.textContent='Cloner ma voix →';btn.disabled=false;status.textContent='';return; }
+    const cloneData = await cloneRes.json();
+    clonedVoiceId = cloneData.voice_id;
+    status.textContent = '🎙️ Voix clonée ! Génération de 3 variations...';
+    const previewText = 'Le meilleur business en ligne c\'est celui que tu lances maintenant.';
+    const variants = [
+      {label:'Style 1 — Naturel', stability:0.7, similarity:0.8},
+      {label:'Style 2 — Dynamique', stability:0.4, similarity:0.9},
+      {label:'Style 3 — Posé', stability:0.9, similarity:0.75},
+    ];
+    const container = document.getElementById('cloneVariants');
+    container.innerHTML = '';
+    document.getElementById('cloneResults').style.display = 'flex';
+    for(let i=0;i<variants.length;i++){
+      const v=variants[i];
+      status.textContent = `🎵 Génération variation ${i+1}/3...`;
+      try {
+        const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${clonedVoiceId}`,{
+          method:'POST', headers:{'xi-api-key':K.el,'Content-Type':'application/json','Accept':'audio/mpeg'},
+          body:JSON.stringify({text:previewText,model_id:'eleven_multilingual_v2',voice_settings:{stability:v.stability,similarity_boost:v.similarity,style:0.3,use_speaker_boost:true}})
+        });
+        if(!ttsRes.ok) continue;
+        const blob=await ttsRes.blob();
+        const url=URL.createObjectURL(blob);
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s';
+        row.innerHTML=`<button onclick="toggleSample(this)" style="width:32px;height:32px;border-radius:50%;background:var(--orange);border:none;color:#fff;cursor:pointer;font-size:13px;flex-shrink:0">▶</button><div style="flex:1"><div style="font-size:13px;font-weight:600">${v.label}</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Stabilité ${Math.round(v.stability*100)}%</div></div><button onclick="selectClonedVariant(this,'${clonedVoiceId}','${v.label}')" style="padding:5px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-family:var(--font);font-size:11px;cursor:pointer" class="select-variant-btn">Choisir</button><audio src="${url}" style="display:none"></audio>`;
+        container.appendChild(row);
+      }catch(e){}
+    }
+    status.textContent='✓ 3 variations prêtes — écoute et choisis !';
+    btn.textContent='Cloner ma voix →'; btn.disabled=false;
+    selVoiceId=clonedVoiceId;
+    toast('✓ Voix clonée ! Écoute les 3 variations.');
+  }catch(e){ toast('✗ Erreur : '+e.message); btn.textContent='Cloner ma voix →'; btn.disabled=false; status.textContent=''; }
+}
+
+function toggleSample(btn){
+  const audio=btn.parentElement.querySelector('audio');
+  if(audio.paused){audio.play();btn.textContent='⏸';}
+  else{audio.pause();btn.textContent='▶';}
+  audio.onended=()=>{btn.textContent='▶';};
+}
+function selectClonedVariant(btn,voiceId,label){
+  document.querySelectorAll('.select-variant-btn').forEach(b=>{b.textContent='Choisir';b.style.background='var(--bg4)';b.style.color='var(--text2)';});
+  btn.textContent='✓ Sélectionné';btn.style.background='var(--orange-dim)';btn.style.color='var(--orange2)';
+  selVoiceId=voiceId;
+  document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
+  toast('✓ "'+label+'" sélectionné');
+}
+async function previewVoice(voiceId,audioElId){
+  if(!K.el){toast('⚠️ Configure ta clé ElevenLabs');return;}
+  const audioEl=document.getElementById(audioElId);
+  if(audioEl.src&&!audioEl.paused){audioEl.pause();return;}
+  if(audioEl.src){audioEl.play();return;}
+  toast('Génération du sample...');
+  try{
+    const res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
+      method:'POST',headers:{'xi-api-key':K.el,'Content-Type':'application/json','Accept':'audio/mpeg'},
+      body:JSON.stringify({text:'Le meilleur business en ligne c\'est celui que tu lances maintenant.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.6,similarity_boost:0.8}})
+    });
+    if(!res.ok){toast('✗ ElevenLabs '+res.status);return;}
+    const blob=await res.blob();
+    audioEl.src=URL.createObjectURL(blob);
+    audioEl.play();
+    toast('▶ Lecture en cours...');
+  }catch(e){toast('✗ '+e.message);}
 }
 
 function handleAvatarFile(file){
@@ -1494,6 +1667,12 @@ function toast(msg){
 function randBg(){
   const bgs=['linear-gradient(160deg,#1a1208,#2d1f08)','linear-gradient(160deg,#0a1220,#0d1e35)','linear-gradient(160deg,#200a12,#350d1e)','linear-gradient(160deg,#0d1a10,#102014)','linear-gradient(160deg,#150a1a,#220d28)'];
   return bgs[Math.floor(Math.random()*bgs.length)];
+}
+
+// Mobile nav
+if(window.innerWidth <= 768){
+  document.getElementById('mobileNav').style.display = 'flex';
+  document.body.style.paddingBottom = '70px';
 }
 
 // ── INIT ──
