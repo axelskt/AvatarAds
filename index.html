@@ -236,6 +236,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .divider{height:1px;background:var(--border);margin:4px 0}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4)}
+.av-drag{border-color:var(--orange)!important;background:var(--orange-dim)!important}
 </style>
 </head>
 <body>
@@ -317,15 +318,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 1 -->
           <div id="fs-1">
-            <div class="fld">
-              <div class="flbl">Nom du produit digital</div>
-              <input type="text" id="f-product" placeholder="Ex: Formation IA LEBD, E-book Marketing, Masterclass..." oninput="updatePreview()">
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">Nom du produit digital</div>
+              <input type="text" id="f-product" placeholder="Ex: Formation IA LEBD, E-book Marketing..." oninput="updatePreview()" style="font-size:15px;padding:14px 16px;border-radius:10px">
             </div>
-            <div class="fld">
+            <div class="fld" style="margin-bottom:20px">
               <div class="row2">
                 <div class="fld">
-                  <div class="flbl">Niche</div>
-                  <select id="f-niche">
+                  <div class="flbl" style="font-size:11px;margin-bottom:8px">Niche</div>
+                  <select id="f-niche" style="font-size:14px;padding:12px 14px;border-radius:10px">
                     <option value="">Sélectionner...</option>
                     <option>Produit digital / Formation</option>
                     <option>Business en ligne</option>
@@ -340,8 +341,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </select>
                 </div>
                 <div class="fld">
-                  <div class="flbl">Durée cible</div>
-                  <select id="f-duration">
+                  <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
+                  <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
                     <option>15 secondes</option>
                     <option>20 secondes</option>
                     <option>30 secondes</option>
@@ -350,9 +351,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
             </div>
-            <div class="fld">
-              <div class="flbl">Hook d'accroche — choisis-en un</div>
-              <select id="f-hook-select" onchange="applyHook(this.value)">
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">Hook d'accroche</div>
+              <select id="f-hook-select" onchange="applyHook(this.value)" style="font-size:13px;padding:12px 14px;border-radius:10px">
                 <option value="">Sélectionner un hook...</option>
                 <optgroup label="🔥 Curiosité / Secret">
                   <option>Personne ne t'en parle mais actuellement le meilleur business en ligne est…</option>
@@ -391,19 +392,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <option>Si je devais recommencer de 0 et faire 10.000€ par mois</option>
                 </optgroup>
               </select>
-              <div class="fld" style="margin-top:8px">
-                <div class="flbl">Hook sélectionné (modifiable)</div>
-                <input type="text" id="f-hook" placeholder="Le hook apparaîtra ici après sélection, ou écris le tien directement" oninput="updatePreview()">
-              </div>
+              <input type="text" id="f-hook" placeholder="Le hook apparaîtra ici, ou écris le tien directement" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
-            <div class="fld">
-              <div class="flbl">Script <span style="color:var(--red);font-weight:700">*</span> <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">obligatoire — écris ton propre script</span></div>
-              <textarea id="f-script" placeholder="Écris ton script ici...&#10;&#10;Ex: Personne ne t'en parle mais actuellement le meilleur business en ligne c'est le produit digital. Tu prends 100% de bénéfice, tu travailles 2h par jour, et tu peux te lancer sans expérience. Commente PLAN et je t'explique tout en DM."></textarea>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">💡 Utilise tes hooks + ton script + un CTA ci-dessous. La voix sera générée depuis ce texte.</div>
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">Script <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">obligatoire — écris ton propre texte</span></div>
+              <textarea id="f-script" placeholder="Écris le corps de ton script ici...&#10;&#10;Le hook et le CTA seront ajoutés automatiquement autour." style="min-height:130px;font-size:13px;padding:14px;border-radius:10px;line-height:1.8"></textarea>
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Hook + Script + CTA = texte envoyé à ElevenLabs</div>
             </div>
-            <div class="fld">
-              <div class="flbl">CTA final — choisis-en un</div>
-              <select id="f-cta-select" onchange="applyCta(this.value)">
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">CTA final</div>
+              <select id="f-cta-select" onchange="applyCta(this.value)" style="font-size:13px;padding:12px 14px;border-radius:10px">
                 <option value="">Sélectionner un CTA...</option>
                 <optgroup label="Commente">
                   <option>Commente PLAN et je t'explique tout en DM</option>
@@ -477,54 +475,38 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <option>Si tu veux apprendre le process : écris GUIDE en commentaire</option>
                 </optgroup>
               </select>
-              <div class="fld" style="margin-top:8px">
-                <div class="flbl">CTA sélectionné (affiché sur la vidéo)</div>
-                <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()">
-              </div>
+              <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
           </div>
 
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
-            <div class="fld">
-              <div class="flbl">Choisis un avatar</div>
-              <div class="av-grid">
-                <div class="av-card on" onclick="pickAvatar(this,'👩‍💼','sofia','Lifestyle / Beauté')">
-                  <div class="av-face">👩‍💼</div>
-                  <div class="av-name">Sofia</div>
-                  <div class="av-sub">Lifestyle · FR</div>
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Ton image avatar — glisse ou clique pour uploader</div>
+              <!-- DRAG & DROP UPLOAD -->
+              <div id="avatarDropzone" onclick="document.getElementById('avatarFileIn').click()"
+                ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
+                ondragleave="ev=>{this.classList.remove('av-drag')}"
+                ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleAvatarFile(ev.dataTransfer.files[0])}"
+                style="border:2px dashed var(--border2);border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative">
+                <div id="avatarDropContent">
+                  <div style="font-size:48px;margin-bottom:12px">🖼️</div>
+                  <div style="font-size:15px;font-weight:700;margin-bottom:6px">Glisse ta photo ici</div>
+                  <div style="font-size:12px;font-family:var(--mono);color:var(--text3)">PNG · JPG · WEBP · Portrait recommandé</div>
+                  <div style="margin-top:14px;display:inline-block;padding:8px 20px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:8px;font-size:13px;font-weight:600;color:var(--orange2)">Parcourir</div>
                 </div>
-                <div class="av-card" onclick="pickAvatar(this,'🧑‍💻','marco','Tech / SaaS')">
-                  <div class="av-face">🧑‍💻</div>
-                  <div class="av-name">Marco</div>
-                  <div class="av-sub">Tech · FR</div>
-                </div>
-                <div class="av-card" onclick="pickAvatar(this,'👩‍🔬','lea','Santé / Bien-être')">
-                  <div class="av-face">👩‍🔬</div>
-                  <div class="av-name">Léa</div>
-                  <div class="av-sub">Santé · FR</div>
-                </div>
-                <div class="av-card" onclick="pickAvatar(this,'🧔','karim','Fitness')">
-                  <div class="av-face">🧔</div>
-                  <div class="av-name">Karim</div>
-                  <div class="av-sub">Fitness · FR</div>
-                </div>
-                <div class="av-card" onclick="pickAvatar(this,'👩‍🦱','emma','Luxe / Mode')">
-                  <div class="av-face">👩‍🦱</div>
-                  <div class="av-name">Emma</div>
-                  <div class="av-sub">Luxe · FR</div>
-                </div>
-                <div class="av-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;opacity:.5">
-                  <div class="av-face" style="font-size:24px">+</div>
-                  <div class="av-name" style="font-size:10px;color:var(--text3)">Ton image</div>
-                  <div class="av-sub">Via Hedra API</div>
+                <div id="avatarPreviewWrap" style="display:none">
+                  <img id="avatarPreviewImg" style="max-height:180px;border-radius:10px;object-fit:cover;margin-bottom:10px">
+                  <div id="avatarPreviewName" style="font-size:12px;font-family:var(--mono);color:var(--text2)"></div>
+                  <div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Clique pour changer</div>
                 </div>
               </div>
+              <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
             </div>
-            <div class="fld" style="margin-top:8px">
-              <div class="flbl">Image avatar (URL Hedra ou upload)</div>
-              <input type="text" id="f-avatarimg" placeholder="https://... ou laisse vide pour avatar par défaut">
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">Hedra accepte des photos portrait PNG/JPG. L'avatar animera l'image avec le lipsync.</div>
+            <div class="fld" style="margin-bottom:12px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">Ou colle une URL d'image</div>
+              <input type="text" id="f-avatarimg" placeholder="https://..." style="font-size:13px;padding:12px 14px;border-radius:10px" oninput="previewAvatarUrl(this.value)">
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px">Hedra anime ton image avec le lipsync — utilise une photo portrait face caméra.</div>
             </div>
           </div>
 
@@ -820,8 +802,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 // ── GOOGLE SHEETS CONFIG ──
 // ⚠️ Remplace ces valeurs par les tiennes avant de déployer
 const SHEET_CONFIG = {
-  apiKey: 'AIzaSyBzDCItiSbJoP-sADTv4OWKLRpTtHStGkc',            // Ta clé API Google
-  sheetId: '12HPhPzLpCT-Hz_rxoiwXc_8OQGrPcwWGaue-FYZFgXI',        // L'ID de ton Google Sheet (dans l'URL)
+  apiKey: 'COLLE_TA_CLE_API_ICI',           // Ta clé API Google
+  sheetId: 'COLLE_TON_SHEET_ID_ICI',        // L'ID de ton Google Sheet (dans l'URL)
   sheetName: 'Membres',                      // Nom de l'onglet
   appsScriptUrl: 'COLLE_TON_APPS_SCRIPT_URL_ICI', // URL du Web App Google Apps Script
   // Colonnes attendues dans le sheet (ligne 1 = headers) :
@@ -1069,6 +1051,24 @@ function pickSub(el,style){
   updateSubPreview();
 }
 
+function handleAvatarFile(file){
+  if(!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('avatarPreviewImg').src = url;
+  document.getElementById('avatarPreviewName').textContent = file.name;
+  document.getElementById('avatarDropContent').style.display = 'none';
+  document.getElementById('avatarPreviewWrap').style.display = 'block';
+  document.getElementById('f-avatarimg').value = '';
+  // Store blob URL for Hedra upload
+  selAvatar.localFile = file;
+  selAvatar.localUrl = url;
+  document.getElementById('phoneAv').textContent = '📸';
+}
+function previewAvatarUrl(url){
+  if(!url) return;
+  selAvatar.localFile = null;
+  selAvatar.localUrl = url;
+}
 function applyHook(val){
   if(!val) return;
   document.getElementById('f-hook').value = val;
