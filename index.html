@@ -257,6 +257,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4)}
+.crop-handle{position:absolute;width:10px;height:10px;background:#fff;border-radius:2px}
 </style>
 </head>
 <body>
@@ -701,6 +702,48 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
               <button class="safe-zone-btn on" id="safeZoneBtn" onclick="toggleSafeZone()">✓ Afficher</button>
             </div>
 
+            <!-- AVATAR POSITION & SIZE -->
+            <div class="fld" style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+              <div class="flbl" style="margin-bottom:10px">🎭 Position & taille de l'avatar</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px"><span>Position X</span><span id="avX-val" style="color:var(--or2)">50%</span></div>
+                  <input type="range" id="avX" min="0" max="100" value="50" oninput="avatarCfg.x=+this.value;document.getElementById('avX-val').textContent=this.value+'%';applyAvatarTransform()">
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px"><span>Position Y</span><span id="avY-val" style="color:var(--or2)">50%</span></div>
+                  <input type="range" id="avY" min="0" max="100" value="50" oninput="avatarCfg.y=+this.value;document.getElementById('avY-val').textContent=this.value+'%';applyAvatarTransform()">
+                </div>
+              </div>
+              <div style="margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px"><span>Taille</span><span id="avScale-val" style="color:var(--or2)">100%</span></div>
+                <input type="range" id="avScale" min="30" max="200" value="100" oninput="avatarCfg.scale=+this.value;document.getElementById('avScale-val').textContent=this.value+'%';applyAvatarTransform()">
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-sm" onclick="setAvatarPreset('center')">Centre</button>
+                <button class="btn-sm" onclick="setAvatarPreset('left')">Gauche</button>
+                <button class="btn-sm" onclick="setAvatarPreset('right')">Droite</button>
+                <button class="btn-sm" onclick="setAvatarPreset('top')">Haut</button>
+                <button class="btn-sm" onclick="setAvatarPreset('bottom')">Bas</button>
+                <button class="btn-sm" onclick="setAvatarPreset('reset')">Reset</button>
+              </div>
+            </div>
+
+            <!-- ROGNER (CROP) -->
+            <div class="fld" style="margin-bottom:14px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:12px;font-weight:500">✂️ Rogner l'avatar</div>
+                <button class="safe-zone-btn" id="cropBtn" onclick="toggleCropMode()" style="background:var(--bg3)">Activer</button>
+              </div>
+              <div id="cropControls" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px">
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;line-height:1.6">Glisse les poignées blanches pour rogner. La zone sélectionnée sera utilisée dans la vidéo finale.</div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn-sm" onclick="applyCrop()" style="flex:1;text-align:center">✓ Appliquer</button>
+                  <button class="btn-sm" onclick="resetCrop()" style="flex:1;text-align:center">↺ Reset</button>
+                </div>
+              </div>
+            </div>
+
             <!-- CORRECTION MOTS -->
             <div class="fld">
               <div class="flbl" style="margin-bottom:8px">Correction du transcript</div>
@@ -762,10 +805,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
                 <!-- AVATAR ZONE -->
                 <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1">
-                  <div id="previewAvEmoji" style="font-size:56px">👩‍💼</div>
-                  <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
+                  <div id="previewAvEmoji" style="font-size:56px;position:absolute;transition:all .1s" >👩‍💼</div>
+                  <img id="previewAvImg" style="display:none;position:absolute;object-fit:cover;transition:all .1s;cursor:move" onmousedown="startDragAvatar(event)">
                   <!-- SELFIE VIDEO -->
-                  <video id="previewSelfieVid" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loop muted playsinline></video>
+                  <video id="previewSelfieVid" style="display:none;position:absolute;object-fit:cover;transition:all .1s;cursor:move" loop muted playsinline onmousedown="startDragAvatar(event)"></video>
+                  <!-- CROP OVERLAY -->
+                  <div id="cropOverlay" style="display:none;position:absolute;inset:0;z-index:5">
+                    <div id="cropBox" style="position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.6);cursor:move;border-radius:2px" onmousedown="startDragCrop(event)">
+                      <div style="position:absolute;top:-1px;left:-1px;right:-1px;bottom:-1px;border:1px dashed rgba(255,255,255,.5)"></div>
+                      <!-- Handles -->
+                      <div class="crop-handle" style="top:-5px;left:-5px;cursor:nw-resize" onmousedown="startResizeCrop(event,'nw')"></div>
+                      <div class="crop-handle" style="top:-5px;right:-5px;cursor:ne-resize" onmousedown="startResizeCrop(event,'ne')"></div>
+                      <div class="crop-handle" style="bottom:-5px;left:-5px;cursor:sw-resize" onmousedown="startResizeCrop(event,'sw')"></div>
+                      <div class="crop-handle" style="bottom:-5px;right:-5px;cursor:se-resize" onmousedown="startResizeCrop(event,'se')"></div>
+                    </div>
+                  </div>
                 </div>
                 <!-- GAMEPLAY ZONE -->
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:65">
@@ -1017,37 +1071,81 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div class="view" id="v-publish">
       <div style="padding:28px;width:100%;overflow-y:auto">
         <div class="ph" style="margin-bottom:24px">
-          <div><div class="ph-title">Publication</div><div class="ph-sub">Connecte tes réseaux et poste automatiquement</div></div>
+          <div><div class="ph-title">Publication</div><div class="ph-sub">Publie directement sur tes réseaux depuis l'app</div></div>
         </div>
         <div class="publish-grid" style="max-width:600px;gap:16px">
-          <div class="publish-card" id="pub-tiktok" onclick="connectPlatform('tiktok')" style="padding:24px;cursor:pointer">
-            <div class="publish-icon" style="font-size:40px;margin-bottom:12px">🎵</div>
-            <div class="publish-name" style="font-size:16px;margin-bottom:6px">TikTok</div>
-            <div class="publish-status" id="ps2-tiktok" style="font-size:12px">Cliquer pour connecter</div>
-            <button style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;width:100%" id="psbtn-tiktok">Se connecter</button>
+
+          <!-- YouTube — DISPONIBLE -->
+          <div class="publish-card" id="pub-youtube" style="padding:24px;border-color:rgba(255,0,0,.3);cursor:default">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div class="publish-icon" style="font-size:32px;margin:0">▶️</div>
+              <div>
+                <div class="publish-name" style="font-size:14px;margin-bottom:2px">YouTube Shorts</div>
+                <div style="font-size:10px;font-family:var(--mono);background:rgba(0,217,126,.12);color:var(--green);padding:2px 7px;border-radius:8px;display:inline-block">Disponible</div>
+              </div>
+            </div>
+            <div class="publish-status" id="ps2-youtube" style="font-size:11px;margin-bottom:10px;font-family:var(--mono)">Non connecté</div>
+            <button onclick="connectYouTube()" id="yt-connect-btn" style="width:100%;padding:9px;border-radius:8px;border:none;background:#ff0000;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s">
+              🔗 Connecter Google →
+            </button>
+            <div id="yt-upload-section" style="display:none;margin-top:12px;display:none;flex-direction:column;gap:8px">
+              <input type="text" id="yt-title" placeholder="Titre de la vidéo YouTube" style="font-size:12px;padding:8px">
+              <textarea id="yt-desc" placeholder="Description (optionnel)..." style="min-height:60px;font-size:12px;padding:8px"></textarea>
+              <select id="yt-privacy" style="font-size:12px;padding:8px">
+                <option value="public">Public</option>
+                <option value="unlisted">Non répertorié</option>
+                <option value="private">Privé</option>
+              </select>
+              <button onclick="uploadToYouTube()" id="yt-upload-btn" style="padding:10px;border-radius:8px;border:none;background:#ff0000;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">
+                📤 Publier sur YouTube Shorts
+              </button>
+            </div>
           </div>
-          <div class="publish-card" id="pub-instagram" onclick="connectPlatform('instagram')" style="padding:24px;cursor:pointer">
-            <div class="publish-icon" style="font-size:40px;margin-bottom:12px">📸</div>
-            <div class="publish-name" style="font-size:16px;margin-bottom:6px">Instagram Reels</div>
-            <div class="publish-status" id="ps2-instagram" style="font-size:12px">Cliquer pour connecter</div>
-            <button style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;width:100%" id="psbtn-instagram">Se connecter</button>
+
+          <!-- TikTok — INDISPONIBLE -->
+          <div class="publish-card" style="padding:24px;opacity:.45;cursor:not-allowed">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div class="publish-icon" style="font-size:32px;margin:0">🎵</div>
+              <div>
+                <div class="publish-name" style="font-size:14px;margin-bottom:2px">TikTok</div>
+                <div style="font-size:10px;font-family:var(--mono);background:rgba(255,71,87,.12);color:var(--red);padding:2px 7px;border-radius:8px;display:inline-block">Bientôt disponible</div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">API en attente d'approbation</div>
+            <button disabled style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text3);font-family:var(--font);font-size:12px;cursor:not-allowed">Indisponible</button>
           </div>
-          <div class="publish-card" id="pub-youtube" onclick="connectPlatform('youtube')" style="padding:24px;cursor:pointer">
-            <div class="publish-icon" style="font-size:40px;margin-bottom:12px">▶️</div>
-            <div class="publish-name" style="font-size:16px;margin-bottom:6px">YouTube Shorts</div>
-            <div class="publish-status" id="ps2-youtube" style="font-size:12px">Cliquer pour connecter</div>
-            <button style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;width:100%" id="psbtn-youtube">Se connecter</button>
+
+          <!-- Instagram — INDISPONIBLE -->
+          <div class="publish-card" style="padding:24px;opacity:.45;cursor:not-allowed">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div class="publish-icon" style="font-size:32px;margin:0">📸</div>
+              <div>
+                <div class="publish-name" style="font-size:14px;margin-bottom:2px">Instagram Reels</div>
+                <div style="font-size:10px;font-family:var(--mono);background:rgba(255,71,87,.12);color:var(--red);padding:2px 7px;border-radius:8px;display:inline-block">Bientôt disponible</div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">API en attente d'approbation</div>
+            <button disabled style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text3);font-family:var(--font);font-size:12px;cursor:not-allowed">Indisponible</button>
           </div>
-          <div class="publish-card" id="pub-facebook" onclick="connectPlatform('facebook')" style="padding:24px;cursor:pointer">
-            <div class="publish-icon" style="font-size:40px;margin-bottom:12px">📘</div>
-            <div class="publish-name" style="font-size:16px;margin-bottom:6px">Facebook Reels</div>
-            <div class="publish-status" id="ps2-facebook" style="font-size:12px">Cliquer pour connecter</div>
-            <button style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;width:100%" id="psbtn-facebook">Se connecter</button>
+
+          <!-- Facebook — INDISPONIBLE -->
+          <div class="publish-card" style="padding:24px;opacity:.45;cursor:not-allowed">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div class="publish-icon" style="font-size:32px;margin:0">📘</div>
+              <div>
+                <div class="publish-name" style="font-size:14px;margin-bottom:2px">Facebook Reels</div>
+                <div style="font-size:10px;font-family:var(--mono);background:rgba(255,71,87,.12);color:var(--red);padding:2px 7px;border-radius:8px;display:inline-block">Bientôt disponible</div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">API en cours d'intégration</div>
+            <button disabled style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text3);font-family:var(--font);font-size:12px;cursor:not-allowed">Indisponible</button>
           </div>
+
         </div>
-        <div style="margin-top:24px;max-width:600px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8">
-          ⚠️ La publication automatique sur TikTok et Instagram nécessite une App API approuvée par ces plateformes. Pour tes membres, la solution la plus simple reste de télécharger la vidéo MP4 et de la poster manuellement — le fichier est prêt à l'upload direct.<br><br>
-          YouTube et Facebook ont des APIs plus accessibles — connecte ton compte Google/Facebook pour publier directement depuis l'app.
+        <div style="margin-top:20px;max-width:600px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8">
+          ✅ YouTube → connexion Google OAuth + upload direct en 1 clic<br>
+          ⏳ TikTok / Instagram / Facebook → intégration prévue prochainement<br>
+          💡 En attendant : télécharge le MP4 depuis les Résultats et poste manuellement
         </div>
       </div>
     </div>
@@ -1660,6 +1758,153 @@ function renderLibrary(){
     </div>
   `).join('');
 }
+
+// ══ AVATAR POSITION & SIZE ══
+const avatarCfg = {x:50, y:50, scale:100, cropX:0, cropY:0, cropW:100, cropH:100};
+let cropMode = false;
+
+function applyAvatarTransform(){
+  const targets = [document.getElementById('previewAvImg'), document.getElementById('previewSelfieVid')];
+  const zone = document.getElementById('avZone');
+  const zW = zone.offsetWidth || 204;
+  const zH = zone.offsetHeight || 200;
+  const sc = avatarCfg.scale / 100;
+  const imgW = zW * sc;
+  const imgH = zH * sc;
+  const left = (avatarCfg.x / 100) * zW - imgW / 2;
+  const top = (avatarCfg.y / 100) * zH - imgH / 2;
+  targets.forEach(el => {
+    if(!el) return;
+    el.style.width = imgW + 'px'; el.style.height = imgH + 'px';
+    el.style.left = left + 'px'; el.style.top = top + 'px';
+    el.style.right = 'auto'; el.style.bottom = 'auto';
+    el.style.objectPosition = avatarCfg.cropX + '% ' + avatarCfg.cropY + '%';
+  });
+}
+
+function setAvatarPreset(preset){
+  const presets = {center:{x:50,y:50,scale:100},left:{x:25,y:50,scale:80},right:{x:75,y:50,scale:80},top:{x:50,y:25,scale:80},bottom:{x:50,y:75,scale:80},reset:{x:50,y:50,scale:100,cropX:0,cropY:0,cropW:100,cropH:100}};
+  const p = presets[preset]; if(!p) return;
+  Object.assign(avatarCfg, p);
+  const xEl=document.getElementById('avX'), yEl=document.getElementById('avY'), scEl=document.getElementById('avScale');
+  if(xEl){xEl.value=avatarCfg.x;document.getElementById('avX-val').textContent=avatarCfg.x+'%';}
+  if(yEl){yEl.value=avatarCfg.y;document.getElementById('avY-val').textContent=avatarCfg.y+'%';}
+  if(scEl){scEl.value=avatarCfg.scale;document.getElementById('avScale-val').textContent=avatarCfg.scale+'%';}
+  applyAvatarTransform();
+}
+
+let draggingAv=false, dragAvSX=0, dragAvSY=0, dragAvSCX=50, dragAvSCY=50;
+function startDragAvatar(e){ draggingAv=true; dragAvSX=e.clientX; dragAvSY=e.clientY; dragAvSCX=avatarCfg.x; dragAvSCY=avatarCfg.y; e.preventDefault(); }
+
+// ══ CROP ══
+let cropDragging=false, cropResizing=false, cropHandle='';
+let cropSX=0, cropSY=0, cropBS={left:10,top:10,width:80,height:80};
+
+function toggleCropMode(){
+  cropMode=!cropMode;
+  const btn=document.getElementById('cropBtn');
+  const overlay=document.getElementById('cropOverlay');
+  const controls=document.getElementById('cropControls');
+  btn.classList.toggle('on',cropMode); btn.textContent=cropMode?'✓ Actif':'Activer';
+  overlay.style.display=cropMode?'block':'none'; controls.style.display=cropMode?'block':'none';
+  if(cropMode) initCropBox();
+}
+function initCropBox(){
+  const zone=document.getElementById('avZone');
+  const zW=zone.offsetWidth||200, zH=zone.offsetHeight||150;
+  const box=document.getElementById('cropBox');
+  box.style.left=Math.round(zW*.1)+'px'; box.style.top=Math.round(zH*.1)+'px';
+  box.style.width=Math.round(zW*.8)+'px'; box.style.height=Math.round(zH*.8)+'px';
+}
+function startDragCrop(e){ if(e.target.classList.contains('crop-handle'))return; cropDragging=true; cropSX=e.clientX; cropSY=e.clientY; const box=document.getElementById('cropBox'); cropBS={left:parseInt(box.style.left)||0,top:parseInt(box.style.top)||0,width:parseInt(box.style.width)||80,height:parseInt(box.style.height)||80}; e.preventDefault(); e.stopPropagation(); }
+function startResizeCrop(e,handle){ cropResizing=true; cropHandle=handle; cropSX=e.clientX; cropSY=e.clientY; const box=document.getElementById('cropBox'); cropBS={left:parseInt(box.style.left)||0,top:parseInt(box.style.top)||0,width:parseInt(box.style.width)||80,height:parseInt(box.style.height)||80}; e.preventDefault(); e.stopPropagation(); }
+function applyCrop(){
+  const zone=document.getElementById('avZone'); const box=document.getElementById('cropBox');
+  const zW=zone.offsetWidth||200, zH=zone.offsetHeight||150;
+  avatarCfg.cropX=Math.round((parseInt(box.style.left)||0)/zW*100);
+  avatarCfg.cropY=Math.round((parseInt(box.style.top)||0)/zH*100);
+  applyAvatarTransform(); toggleCropMode(); toast('✓ Recadrage appliqué');
+}
+function resetCrop(){ avatarCfg.cropX=0; avatarCfg.cropY=0; applyAvatarTransform(); toggleCropMode(); toast('↺ Réinitialisé'); }
+
+// ══ YOUTUBE OAUTH ══
+const YOUTUBE_CLIENT_ID = '758857318149-0h14ft44gnfvm6epq1jp8hhkf7i3cdj7.apps.googleusercontent.com';
+let ytAccessToken = null;
+
+function connectYouTube(){
+  if(YOUTUBE_CLIENT_ID==='COLLE_TON_GOOGLE_CLIENT_ID_ICI'){ toast('⚠️ Configure YOUTUBE_CLIENT_ID dans le code'); return; }
+  const redirect=encodeURIComponent(window.location.href.split('?')[0]);
+  const scope=encodeURIComponent('https://www.googleapis.com/auth/youtube.upload');
+  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${YOUTUBE_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
+  const popup=window.open(url,'yt-auth','width=500,height=600');
+  const timer=setInterval(()=>{
+    try{
+      if(popup.closed){clearInterval(timer);const t=localStorage.getItem('yt_token');if(t)onYouTubeConnected(t);return;}
+      const hash=popup.location.hash;
+      if(hash&&hash.includes('access_token')){const p=new URLSearchParams(hash.substring(1));const t=p.get('access_token');if(t){clearInterval(timer);popup.close();onYouTubeConnected(t);}}
+    }catch(e){}
+  },500);
+}
+function onYouTubeConnected(token){
+  ytAccessToken=token; localStorage.setItem('yt_token',token);
+  document.getElementById('ps2-youtube').textContent='✓ Connecté'; document.getElementById('ps2-youtube').style.color='var(--green)';
+  document.getElementById('yt-connect-btn').textContent='✓ Google connecté'; document.getElementById('yt-connect-btn').style.background='var(--green)';
+  document.getElementById('yt-upload-section').style.display='flex';
+  const ps=document.getElementById('ps-youtube'); if(ps){ps.textContent='✓ Connecté';ps.style.color='var(--green)';}
+  toast('✓ YouTube connecté !');
+}
+async function uploadToYouTube(){
+  if(!ytAccessToken){toast('⚠️ Connecte d\'abord YouTube');return;}
+  if(!results.hedraUrl){toast('⚠️ Génère une vidéo avec l\'avatar d\'abord');return;}
+  const title=document.getElementById('yt-title').value||'Ma vidéo IA Manager';
+  const desc=document.getElementById('yt-desc').value||'';
+  const privacy=document.getElementById('yt-privacy').value||'public';
+  const btn=document.getElementById('yt-upload-btn');
+  btn.textContent='Upload...'; btn.disabled=true;
+  try{
+    const r=await fetch(results.hedraUrl); const videoBlob=await r.blob();
+    const initRes=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{'Authorization':'Bearer '+ytAccessToken,'Content-Type':'application/json','X-Upload-Content-Type':'video/mp4','X-Upload-Content-Length':videoBlob.size},body:JSON.stringify({snippet:{title:title+' #Shorts',description:desc+'\n\n#Shorts',tags:['shorts','ia','ialebd'],categoryId:'22'},status:{privacyStatus:privacy}})});
+    if(!initRes.ok){toast('✗ YouTube erreur '+initRes.status);btn.textContent='📤 Publier';btn.disabled=false;return;}
+    const uploadUrl=initRes.headers.get('Location');
+    const upRes=await fetch(uploadUrl,{method:'PUT',headers:{'Content-Type':'video/mp4'},body:videoBlob});
+    if(upRes.ok||upRes.status===200||upRes.status===201){
+      const data=await upRes.json(); const id=data.id;
+      toast('✅ Publié sur YouTube !'); btn.textContent='✅ Publié !';
+      if(id) window.open('https://youtube.com/shorts/'+id,'_blank');
+    }else{toast('✗ Upload erreur '+upRes.status);btn.textContent='📤 Publier';btn.disabled=false;}
+  }catch(e){toast('✗ '+e.message);btn.textContent='📤 Publier';btn.disabled=false;}
+}
+
+// Global mousemove for avatar drag + crop
+document.addEventListener('mousemove', e => {
+  // Avatar drag
+  if(draggingAv){
+    const zone=document.getElementById('avZone');
+    const zW=zone.offsetWidth||204, zH=zone.offsetHeight||200;
+    const dx=((e.clientX-dragAvSX)/zW)*100, dy=((e.clientY-dragAvSY)/zH)*100;
+    avatarCfg.x=Math.max(0,Math.min(100,dragAvSCX+dx)); avatarCfg.y=Math.max(0,Math.min(100,dragAvSCY+dy));
+    const xEl=document.getElementById('avX'), yEl=document.getElementById('avY');
+    if(xEl){xEl.value=Math.round(avatarCfg.x);document.getElementById('avX-val').textContent=Math.round(avatarCfg.x)+'%';}
+    if(yEl){yEl.value=Math.round(avatarCfg.y);document.getElementById('avY-val').textContent=Math.round(avatarCfg.y)+'%';}
+    applyAvatarTransform();
+  }
+  // Crop drag/resize
+  const box=document.getElementById('cropBox');
+  if(!box)return;
+  const dx=e.clientX-cropSX, dy=e.clientY-cropSY;
+  if(cropDragging){ box.style.left=Math.max(0,cropBS.left+dx)+'px'; box.style.top=Math.max(0,cropBS.top+dy)+'px'; }
+  if(cropResizing){
+    if(cropHandle.includes('e'))box.style.width=Math.max(40,cropBS.width+dx)+'px';
+    if(cropHandle.includes('s'))box.style.height=Math.max(40,cropBS.height+dy)+'px';
+    if(cropHandle.includes('w')){box.style.left=(cropBS.left+dx)+'px';box.style.width=Math.max(40,cropBS.width-dx)+'px';}
+    if(cropHandle.includes('n')){box.style.top=(cropBS.top+dy)+'px';box.style.height=Math.max(40,cropBS.height-dy)+'px';}
+  }
+});
+document.addEventListener('mouseup',()=>{ draggingAv=false; cropDragging=false; cropResizing=false; });
+
+// Check saved YT token
+const savedYtToken=localStorage.getItem('yt_token');
+if(savedYtToken) setTimeout(()=>onYouTubeConnected(savedYtToken),800);
 
 // ══ UTILS ══
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
