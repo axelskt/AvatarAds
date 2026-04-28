@@ -615,12 +615,31 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 4 -->
           <div id="fs-4" style="display:none">
-            <div class="fld">
-              <div class="flbl">Style sous-titres</div>
+
+            <!-- FORMAT -->
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Format de publication</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div id="fmt-vertical" onclick="setFormat('vertical')" style="border:2px solid var(--orange);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
+                  <div style="font-size:28px;margin-bottom:6px">📱</div>
+                  <div style="font-size:13px;font-weight:700">TikTok / Reels</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">9:16 · 1080×1920</div>
+                </div>
+                <div id="fmt-square" onclick="setFormat('square')" style="border:2px solid var(--border);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:28px;margin-bottom:6px">📸</div>
+                  <div style="font-size:13px;font-weight:700">Meta Ads / Insta</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">1:1 · 1080×1080</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- STYLE SOUS-TITRES -->
+            <div class="fld" style="margin-bottom:20px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Style des sous-titres</div>
               <div class="sub-grid">
                 <div class="sub-card on" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:14px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:14px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:4px">À L'ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:14px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:14px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:4px">ACTION</span></div>
                 </div>
                 <div class="sub-card" onclick="pickSub(this,'tiktok')">
                   <div class="sub-name">TikTok</div>
@@ -636,24 +655,44 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
             </div>
-            <div class="fld" style="margin-top:4px">
-              <div class="flbl">Format export</div>
-              <select id="f-platform">
-                <option>TikTok (9:16 · 1080×1920)</option>
-                <option>Reels (9:16 · 1080×1920)</option>
-                <option>Meta Ads (carré · 1080×1080)</option>
-              </select>
+
+            <!-- TAILLE -->
+            <div class="fld" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div class="flbl" style="font-size:11px;margin:0">Taille du texte</div>
+                <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subSizeVal">72px</span>
+              </div>
+              <input type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
             </div>
-            <div class="fld" style="margin-top:4px">
-              <div class="flbl">Durée max avatar Hedra</div>
-              <select id="f-hedra-duration">
-                <option value="15000">15 secondes</option>
-                <option value="20000">20 secondes</option>
-                <option value="30000">30 secondes</option>
-                <option value="60000" selected>60 secondes</option>
-              </select>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">15-20s = ~$0.05 · 30s = ~$0.08 · 60s = ~$0.15 de crédit Hedra</div>
+
+            <!-- POSITION -->
+            <div class="fld" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div class="flbl" style="font-size:11px;margin:0">Position verticale</div>
+                <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
+              </div>
+              <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px"><span>Haut</span><span>Bas</span></div>
             </div>
+
+            <!-- MOTS PAR GROUPE -->
+            <div class="fld" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div class="flbl" style="font-size:11px;margin:0">Mots par groupe</div>
+                <span style="font-size:12px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
+              </div>
+              <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+            </div>
+
+            <!-- CORRECTION MOTS -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Correction du transcript — clique sur un mot pour le modifier</div>
+              <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;min-height:60px">
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Les mots apparaîtront ici après génération de la voix...</div>
+              </div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Clique sur un mot pour le corriger · Double-clic pour le supprimer</div>
+            </div>
+
           </div>
 
         </div><!-- /gen-form -->
@@ -885,6 +924,12 @@ const SHEET_CONFIG = {
 const K = {gpt:'',el:'',hedra:''};
 let step = 1, totalSteps = 4;
 let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
+
+// Global config for subtitle styling
+const cfg = {
+  subSize: 72, subPos: 75, subWpg: 2,
+  format: 'vertical'
+};
 let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
 let selSubStyle = 'hormozi';
 let results = {script:'', audioBlob:null, hedraUrl:''};
@@ -1242,6 +1287,45 @@ function previewAvatarUrl(url){
   selAvatar.localFile = null;
   selAvatar.localUrl = url;
 }
+function setFormat(fmt){
+  cfg.format = fmt;
+  const v = document.getElementById('fmt-vertical');
+  const s = document.getElementById('fmt-square');
+  if(fmt === 'vertical'){
+    v.style.border = '2px solid var(--orange)'; v.style.background = 'var(--orange-dim)';
+    s.style.border = '2px solid var(--border)'; s.style.background = 'var(--bg3)';
+  } else {
+    s.style.border = '2px solid var(--orange)'; s.style.background = 'var(--orange-dim)';
+    v.style.border = '2px solid var(--border)'; v.style.background = 'var(--bg3)';
+  }
+}
+
+// Word editor — populate after voice generation
+function populateWordEditor(text){
+  const words = text.trim().split(/\s+/).filter(w => w);
+  const editor = document.getElementById('wordEditor');
+  editor.innerHTML = '';
+  words.forEach((word, i) => {
+    const chip = document.createElement('span');
+    chip.textContent = word;
+    chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
+    chip.title = 'Clic = modifier · Double-clic = supprimer';
+    chip.onclick = () => {
+      const newWord = prompt('Modifier le mot :', chip.textContent);
+      if(newWord !== null) chip.textContent = newWord.toUpperCase();
+    };
+    chip.ondblclick = () => { chip.remove(); };
+    chip.onmouseover = () => { chip.style.background = 'var(--orange-dim)'; chip.style.borderColor = 'rgba(255,107,53,0.3)'; chip.style.color = 'var(--orange2)'; };
+    chip.onmouseout = () => { chip.style.background = 'var(--bg4)'; chip.style.borderColor = 'var(--border)'; chip.style.color = 'var(--text)'; };
+    editor.appendChild(chip);
+  });
+}
+
+function getEditedWords(){
+  const chips = document.getElementById('wordEditor').querySelectorAll('span');
+  return [...chips].map(c => c.textContent).join(' ');
+}
+
 function applyHook(val){
   if(!val) return;
   document.getElementById('f-hook').value = val;
@@ -1348,6 +1432,7 @@ async function startGeneration(){
   let audioBlob=null;
   if(K.el){
     audioBlob=await callElevenLabs(finalScript);
+    if(audioBlob) populateWordEditor(finalScript);
   }
   setStep('gp2','done');
 
