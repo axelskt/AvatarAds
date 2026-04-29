@@ -679,13 +679,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
                 <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="subSizeVal">72px</span>
               </div>
               <input type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview();updateLivePreview()">
+              <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Haut</span><span>Bas</span></div>
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="margin:0">Position verticale</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="subPosVal">75%</span>
               </div>
-              <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateSubPreview();updateLivePreview()">
+              <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()">
               <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Haut</span><span>Bas</span></div>
             </div>
             <div class="fld" style="margin-bottom:14px">
@@ -693,10 +694,54 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
                 <div class="flbl" style="margin:0">Mots par groupe</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="subWpgVal">2</span>
               </div>
-              <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value">
+              <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()">
             </div>
 
-            <!-- ZONE SAFE -->
+            <!-- COULEURS SOUS-TITRES -->
+            <div class="fld" style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+              <div class="flbl" style="margin-bottom:10px">🎨 Couleurs des sous-titres</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 1 (accentué)</div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="color" id="color-c1" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
+                    <input type="text" id="color-c1-hex" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 2 (autres)</div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="color" id="color-c2" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
+                    <input type="text" id="color-c2-hex" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Fond 1 (TikTok)</div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="color" id="color-bg1" value="#FF2D55" oninput="subColors.bg1=this.value;document.getElementById('color-bg1-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
+                    <input type="text" id="color-bg1-hex" value="#FF2D55" oninput="subColors.bg1=this.value;document.getElementById('color-bg1').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Fond 2 (TikTok)</div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="color" id="color-bg2" value="#FFE500" oninput="subColors.bg2=this.value;document.getElementById('color-bg2-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
+                    <input type="text" id="color-bg2-hex" value="#FFE500" oninput="subColors.bg2=this.value;document.getElementById('color-bg2').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);width:100%;margin-bottom:3px">Presets viraux :</div>
+                <button class="btn-sm" onclick="applyColorPreset('hormozi')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Hormozi</button>
+                <button class="btn-sm" onclick="applyColorPreset('iman')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#fff;border:1px solid #444;display:inline-block"></span>Iman</button>
+                <button class="btn-sm" onclick="applyColorPreset('mrbeast')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FFD700;display:inline-block"></span>MrBeast</button>
+                <button class="btn-sm" onclick="applyColorPreset('neon_green')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#00FF87;display:inline-block"></span>Neon</button>
+                <button class="btn-sm" onclick="applyColorPreset('fire')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FF4500;display:inline-block"></span>Fire</button>
+                <button class="btn-sm" onclick="applyColorPreset('podcast')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block"></span>Podcast</button>
+                <button class="btn-sm" onclick="applyColorPreset('tiktok_viral')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D55;display:inline-block"></span>TikTok</button>
+                <button class="btn-sm" onclick="applyColorPreset('purple_wave')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#BF5FFF;display:inline-block"></span>Purple</button>
+              </div>
+            </div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
               <div style="font-size:12px;font-weight:500">Zone safe</div>
               <button class="safe-zone-btn on" id="safeZoneBtn" onclick="toggleSafeZone()">✓ Afficher</button>
@@ -1531,36 +1576,90 @@ function setPlatformPreview(p){
     if(btn){ btn.style.background=id===p?'var(--or)':'transparent'; btn.style.color=id===p?'#fff':'var(--text3)'; }
     if(ui) ui.style.display=id===p?'block':'none';
   });
+  // Update mockup ratio for format
+  const m=document.getElementById('phoneMockup');
+  if(!m) return;
+  const currentW=m.offsetWidth||220;
+  if(p==='youtube'){
+    // Landscape 16:9
+    m.style.borderRadius='12px';
+  } else {
+    m.style.borderRadius='40px';
+  }
 }
 
 // ══ LIVE PREVIEW UPDATE ══
 function updateLivePreview(){
+  // Position sous-titres
   const posY=cfg.subPos||75;
   const overlay=document.getElementById('subsOverlay');
   if(overlay) overlay.style.top=posY+'%';
-  updateSubPreview();
+
+  // Split screen
   const gameplayZone=document.getElementById('gameplayZone');
   const avZone=document.getElementById('avZone');
   if(splitEnabled&&gameplayZone){
     gameplayZone.style.display='flex';
     const ratio=cfg.splitRatio||35;
-    avZone.style.flex=ratio; gameplayZone.style.flex=(100-ratio);
-    if(overlay) overlay.style.top=(ratio-3)+'%';
-  } else if(gameplayZone){ gameplayZone.style.display='none'; if(avZone)avZone.style.flex='1'; }
+    avZone.style.flex=ratio+''; gameplayZone.style.flex=(100-ratio)+'';
+    if(overlay) overlay.style.top=(ratio-4)+'%';
+  } else if(gameplayZone){
+    gameplayZone.style.display='none';
+    if(avZone) avZone.style.flex='1';
+  }
+
+  // Selfie mode
   const selfieVid=document.getElementById('previewSelfieVid');
-  if(mode==='selfie'&&selfieFile&&selfieVid){ selfieVid.style.display='block'; document.getElementById('previewAvEmoji').style.display='none'; }
+  if(mode==='selfie'&&selfieFile&&selfieVid){
+    selfieVid.style.display='block';
+    document.getElementById('previewAvEmoji').style.display='none';
+  }
+
+  // Format mockup shape
+  const m=document.getElementById('phoneMockup');
+  if(m){
+    if(cfg.format==='landscape'){
+      const w=m.offsetWidth||220;
+      m.style.height=Math.round(w*9/16)+'px';
+      m.style.borderRadius='12px';
+    } else if(cfg.format==='square'){
+      const w=m.offsetWidth||220;
+      m.style.height=w+'px';
+      m.style.borderRadius='20px';
+    } else {
+      const w=m.offsetWidth||220;
+      m.style.height=Math.round(w*16/9)+'px';
+      m.style.borderRadius='40px';
+    }
+  }
+
+  updateSubPreview();
 }
+
+// Sub colors config
+const subColors = {c1:'#FFE500', c2:'#ffffff', bg1:'#FF2D55', bg2:'#FFE500'};
+
 function updateSubPreview(){
   const style=selSubStyle||'hormozi';
-  const sz=Math.round((cfg.subSize||72)*0.25);
-  const s={
-    hormozi:`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:#FFE500;-webkit-text-stroke:${Math.max(1,Math.round(sz/18))}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:${sz}px;color:#fff;-webkit-text-stroke:${Math.max(1,Math.round(sz/18))}px #000;margin-left:4px">GARANTIS</span>`,
-    tiktok:`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.8)}px;color:#fff;background:#FF2D55;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">RÉSULTATS</span><span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.8)}px;color:#000;background:#FFE500;padding:2px 7px;border-radius:4px;margin:2px;display:inline-block">GARANTIS</span>`,
-    bold:`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:#fff;font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">RÉSULTATS GARANTIS</span>`,
-    neon:`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:#7c6fff;text-shadow:0 0 ${Math.round(sz*.4)}px #7c6fff">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:${sz}px;color:#ff4d6a;text-shadow:0 0 ${Math.round(sz*.4)}px #ff4d6a;margin-left:4px">GARANTIS</span>`
-  };
+  const sz=Math.max(10, Math.round((cfg.subSize||72)*0.25));
+  const stroke=Math.max(1,Math.round(sz/18));
+  const wpg=cfg.subWpg||2;
+  // Build sample words based on wpg
+  const allWords=['RÉSULTATS','GARANTIS','PASSE','À','L\'ACTION','MAINTENANT'];
+  const shown=allWords.slice(0,Math.min(wpg,allWords.length));
+  const c1=subColors.c1||'#FFE500';
+  const c2=subColors.c2||'#ffffff';
+  const bg1=subColors.bg1||'#FF2D55';
+  const bg2=subColors.bg2||'#FFE500';
+
+  const buildHormozi=()=>shown.map((w,i)=>`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join('');
+  const buildTiktok=()=>shown.map((w,i)=>`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?bg1:bg2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block">${w}</span>`).join('');
+  const buildBold=()=>`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c2};font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">${shown.join(' ')}</span>`;
+  const buildNeon=()=>shown.map((w,i)=>`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:0 0 ${Math.round(sz*.4)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`).join('');
+
+  const html={hormozi:buildHormozi(), tiktok:buildTiktok(), bold:buildBold(), neon:buildNeon()};
   const el=document.getElementById('subsContent');
-  if(el) el.innerHTML=s[style]||s.hormozi;
+  if(el) el.innerHTML=html[style]||html.hormozi;
 }
 
 // ══ RESIZE HANDLE ══
@@ -1905,6 +2004,43 @@ document.addEventListener('mouseup',()=>{ draggingAv=false; cropDragging=false; 
 // Check saved YT token
 const savedYtToken=localStorage.getItem('yt_token');
 if(savedYtToken) setTimeout(()=>onYouTubeConnected(savedYtToken),800);
+
+// ══ COLOR PRESETS ══
+function applyColorPreset(name){
+  const presets={
+    // Hormozi — jaune / blanc, contour noir, Impact
+    hormozi:{c1:'#FFE500',c2:'#ffffff',bg1:'#FF2D55',bg2:'#FFE500',style:'hormozi'},
+    // Iman Gadzhi — tout blanc gras, fond noir semi-transparent
+    iman:{c1:'#ffffff',c2:'#ffffff',bg1:'#000000',bg2:'#111111',style:'bold'},
+    // MrBeast — jaune vif sur rouge, Impact
+    mrbeast:{c1:'#FFD700',c2:'#ffffff',bg1:'#FF0000',bg2:'#FFD700',style:'hormozi'},
+    // Neon green — vert fluo / blanc, style néon
+    neon_green:{c1:'#00FF87',c2:'#ffffff',bg1:'#00CC6A',bg2:'#00FF87',style:'neon'},
+    // Fire — orange/rouge flamboyant
+    fire:{c1:'#FF6B35',c2:'#FFE500',bg1:'#FF0000',bg2:'#FF6B35',style:'hormozi'},
+    // Podcast — blanc pur sur fond transparent, Arial Black
+    podcast:{c1:'#ffffff',c2:'#ffffff',bg1:'#1a1a1a',bg2:'#2d2d2d',style:'bold'},
+    // TikTok viral — rose/jaune pills
+    tiktok_viral:{c1:'#ffffff',c2:'#000000',bg1:'#FF2D55',bg2:'#FFE500',style:'tiktok'},
+    // Purple wave — violet néon / blanc
+    purple_wave:{c1:'#BF5FFF',c2:'#ffffff',bg1:'#6B35FF',bg2:'#BF5FFF',style:'neon'},
+  };
+  const p=presets[name]; if(!p) return;
+  subColors.c1=p.c1; subColors.c2=p.c2; subColors.bg1=p.bg1; subColors.bg2=p.bg2;
+  ['c1','c2','bg1','bg2'].forEach(k=>{
+    const col=document.getElementById('color-'+k);
+    const hex=document.getElementById('color-'+k+'-hex');
+    if(col) col.value=subColors[k];
+    if(hex) hex.value=subColors[k];
+  });
+  // Switch to matching style if needed
+  if(p.style && p.style!==selSubStyle){
+    const card=document.querySelector(`.sub-card[onclick*="'${p.style}'"]`);
+    if(card) pickSub(card, p.style);
+  }
+  updateSubPreview();
+  toast('✓ Preset "'+name+'" appliqué');
+}
 
 // ══ UTILS ══
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
