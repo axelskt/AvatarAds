@@ -582,7 +582,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
                 </div>
               </div>
             </div>
-          </div>
 
           <!-- ── STEP 4: STYLE ── -->
           <div id="fs-4" style="display:none">
@@ -870,6 +869,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
             </div>
           </div>
 
+          </div><!-- /fs-4 -->
+
           <!-- ── STEP 5: GÉNÉRER ── -->
           <div id="fs-5" style="display:none">
             <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px">
@@ -894,6 +895,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
           </div>
           <div class="cost-hint">Coût estimé : <span id="costEst">~$0.22</span> · GPT-4o + ElevenLabs + Hedra</div>
+        </div>
         </div>
       </div><!-- /gen-left -->
 
@@ -1399,7 +1401,7 @@ async function loginMember(){
   showBadge('login','info','Recherche en cours...');
 
   // Check if config is set
-  if(!SHEET_CONFIG.apiKey || SHEET_CONFIG.apiKey === 'COLLE_TA_CLE_GOOGLE_API_ICI'){
+  if(!SHEET_CONFIG.apiKey || SHEET_CONFIG.apiKey === 'AIzaSyBzDCItiSbJoP-sADTv4OWKLRpTtHStGkc'){
     showBadge('login','err','Clé Google API non configurée');
     btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
     return;
