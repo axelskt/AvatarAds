@@ -657,29 +657,29 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl">Style des sous-titres</div>
               <div class="sub-grid" style="grid-template-columns:1fr 1fr 1fr;gap:7px">
-                <div class="sub-card on" onclick="pickSub(this,'hormozi')">
+                <div class="sub-card style-card on" id="sc-hormozi" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
                   <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
                 </div>
-                <div class="sub-card" onclick="pickSub(this,'mrbeast')">
+                <div class="sub-card style-card" id="sc-mrbeast" onclick="pickSub(this,'mrbeast')">
                   <div class="sub-name">MrBeast</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFD700;-webkit-text-stroke:.5px #000;text-shadow:0 0 8px rgba(255,215,0,.6)">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#FF0000;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFD700;-webkit-text-stroke:.5px #000;font-style:italic">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#FF0000;-webkit-text-stroke:.5px #000;margin-left:3px;font-style:italic">ACTION</span></div>
                 </div>
-                <div class="sub-card" onclick="pickSub(this,'iman')">
+                <div class="sub-card style-card" id="sc-iman" onclick="pickSub(this,'iman')">
                   <div class="sub-name">Iman</div>
-                  <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:11px;color:#fff;font-weight:900;letter-spacing:-.5px">PASSE ACTION</span></div>
+                  <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;letter-spacing:1px">PASSE ACTION</span></div>
                 </div>
-                <div class="sub-card" onclick="pickSub(this,'tiktok')">
+                <div class="sub-card style-card" id="sc-tiktok" onclick="pickSub(this,'tiktok')">
                   <div class="sub-name">TikTok Pills</div>
                   <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
                 </div>
-                <div class="sub-card" onclick="pickSub(this,'neon')">
+                <div class="sub-card style-card" id="sc-neon" onclick="pickSub(this,'neon')">
                   <div class="sub-name">Néon</div>
                   <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:11px;color:#00FF87;text-shadow:0 0 8px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#BF5FFF;text-shadow:0 0 8px #BF5FFF;margin-left:3px">ACTION</span></div>
                 </div>
-                <div class="sub-card" onclick="pickSub(this,'podcast')">
+                <div class="sub-card style-card" id="sc-podcast" onclick="pickSub(this,'podcast')">
                   <div class="sub-name">Podcast</div>
-                  <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;opacity:.95">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.5);margin-left:3px">ACTION</span></div>
+                  <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
                 </div>
               </div>
             </div>
@@ -751,6 +751,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
               </div>
               <input type="range" id="subWidth" min="30" max="100" value="90" oninput="cfg.subWidth=+this.value;document.getElementById('subWidthVal').textContent=this.value+'%';updateLivePreview()">
               <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Étroit</span><span>Pleine largeur</span></div>
+            </div>
+            <div class="fld" style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="margin:0">Étirement vertical</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="subLineHVal">1.0×</span>
+              </div>
+              <input type="range" id="subLineH" min="10" max="30" value="10" oninput="cfg.subLineH=+this.value/10;document.getElementById('subLineHVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview();updateLivePreview()">
+              <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Normal</span><span>Étiré</span></div>
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -978,27 +986,27 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
                   <div style="display:flex;flex-direction:column;align-items:center;gap:1px"><span style="font-size:9px;color:#fff;font-weight:700">Pour toi</span><div style="width:100%;height:1.5px;background:#fff;border-radius:1px"></div></div>
                   <span style="font-size:11px;color:#fff">🔍</span>
                 </div>
-                <div style="position:absolute;right:6px;bottom:55px;display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="position:absolute;right:4px;bottom:52px;display:flex;flex-direction:column;align-items:center;gap:7px">
                   <div style="text-align:center">
-                    <div style="width:32px;height:32px;border-radius:50%;background:var(--or);border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;margin:0 auto">A</div>
-                    <div style="width:13px;height:13px;background:#fe2c55;border-radius:50%;margin:-5px auto 0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:900;border:1px solid #000">+</div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:var(--or);border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin:0 auto">A</div>
+                    <div style="width:9px;height:9px;background:#fe2c55;border-radius:50%;margin:-4px auto 0;display:flex;align-items:center;justify-content:center;font-size:6px;color:#fff;font-weight:900;border:1px solid #000">+</div>
                   </div>
-                  <div style="text-align:center"><div style="width:32px;height:32px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5C5.5 1.5 3 3.8 3 6.8C3 11 8 15 8 15C8 15 13 11 13 6.8C13 3.8 10.5 1.5 8 1.5Z" fill="white"/></svg></div><div style="font-size:8px;color:#fff;font-family:var(--mono);margin-top:2px">59</div></div>
-                  <div style="text-align:center"><div style="width:32px;height:32px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2C4.7 2 2 4.4 2 7.5C2 9.1 2.8 10.5 4 11.5L3.3 14L6 13.3C6.6 13.5 7.3 13.6 8 13.6C11.3 13.6 14 11.2 14 8.1C14 5 11.3 2 8 2Z" fill="white"/></svg></div><div style="font-size:8px;color:#fff;font-family:var(--mono);margin-top:2px">2</div></div>
-                  <div style="text-align:center"><div style="width:32px;height:32px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M12 2L2 7L5.5 8.5L7 13Z" fill="white"/></svg></div><div style="font-size:8px;color:#fff;font-family:var(--mono);margin-top:2px">1</div></div>
-                  <div style="width:32px;height:32px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:13px">•••</span></div>
+                  <div style="text-align:center"><div style="width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="11" height="11" viewBox="0 0 16 16"><path d="M8 1.5C5.5 1.5 3 3.8 3 6.8C3 11 8 15 8 15C8 15 13 11 13 6.8C13 3.8 10.5 1.5 8 1.5Z" fill="white"/></svg></div><div style="font-size:7px;color:#fff;font-family:var(--mono)">59</div></div>
+                  <div style="text-align:center"><div style="width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="11" height="11" viewBox="0 0 16 16"><path d="M8 2C4.7 2 2 4.4 2 7.5C2 9.1 2.8 10.5 4 11.5L3.3 14L6 13.3C6.6 13.5 7.3 13.6 8 13.6C11.3 13.6 14 11.2 14 8.1C14 5 11.3 2 8 2Z" fill="white"/></svg></div><div style="font-size:7px;color:#fff;font-family:var(--mono)">2</div></div>
+                  <div style="text-align:center"><div style="width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="11" height="11" viewBox="0 0 16 16"><path d="M12 2L2 7L5.5 8.5L7 13Z" fill="white"/></svg></div><div style="font-size:7px;color:#fff;font-family:var(--mono)">1</div></div>
+                  <div style="width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:10px;line-height:1">•••</span></div>
                 </div>
-                <div style="position:absolute;bottom:52px;left:10px;right:48px">
-                  <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:2px" id="tt-handle">Lorenzo</div>
-                  <div style="font-size:9px;color:rgba(255,255,255,.85);line-height:1.4">Viens en DM si tu veux savoir comment on fais... <span style="font-weight:700">plus</span></div>
-                  <div style="height:2px;background:rgba(255,255,255,.15);border-radius:1px;margin-top:5px"><div style="width:25%;height:100%;background:#fff;border-radius:1px"></div></div>
+                <div style="position:absolute;bottom:50px;left:8px;right:32px">
+                  <div style="font-size:9px;font-weight:700;color:#fff;margin-bottom:2px" id="tt-handle">Lorenzo</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,.8);line-height:1.35">Viens en DM si tu veux savoir comment on fais... <span style="font-weight:700">plus</span></div>
+                  <div style="height:1.5px;background:rgba(255,255,255,.15);border-radius:1px;margin-top:4px"><div style="width:25%;height:100%;background:#fff;border-radius:1px"></div></div>
                 </div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:48px;background:#000;display:flex;align-items:center;justify-content:space-around">
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2L2 9h2v9h5v-5h2v5h5V9h2z"/></svg><div style="font-size:7px;color:#fff;font-family:var(--mono)">Accueil</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5l3 3"/></svg><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Ami(e)s</div></div>
-                  <div style="width:40px;height:25px;border-radius:6px;background:linear-gradient(135deg,#69C9D0,#fff,#EE1D52);display:flex;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:900;color:#fff">+</span></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><path d="M2 4h16v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/><path d="M2 4l8 7 8-7"/></svg><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Messages</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="10" cy="7" r="4"/><path d="M2 18c0-4 3.6-7 8-7s8 3 8 7"/></svg><div style="font-size:7px;color:rgba(255,255,255,.5);font-family:var(--mono)">Profil</div></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:42px;background:#000;display:flex;align-items:center;justify-content:space-around">
+                  <div style="text-align:center"><svg width="16" height="16" viewBox="0 0 20 20" fill="white"><path d="M10 2L2 9h2v9h5v-5h2v5h5V9h2z"/></svg><div style="font-size:6px;color:#fff;font-family:var(--mono)">Accueil</div></div>
+                  <div style="text-align:center"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5l3 3"/></svg><div style="font-size:6px;color:rgba(255,255,255,.5);font-family:var(--mono)">Ami(e)s</div></div>
+                  <div style="width:30px;height:19px;border-radius:5px;background:linear-gradient(135deg,#69C9D0,#fff,#EE1D52);display:flex;align-items:center;justify-content:center"><span style="font-size:14px;font-weight:900;color:#fff">+</span></div>
+                  <div style="text-align:center"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><path d="M2 4h16v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/><path d="M2 4l8 7 8-7"/></svg><div style="font-size:6px;color:rgba(255,255,255,.5);font-family:var(--mono)">Messages</div></div>
+                  <div style="text-align:center"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="10" cy="7" r="4"/><path d="M2 18c0-4 3.6-7 8-7s8 3 8 7"/></svg><div style="font-size:6px;color:rgba(255,255,255,.5);font-family:var(--mono)">Profil</div></div>
                 </div>
               </div>
 
@@ -1342,7 +1350,7 @@ let selfieFile = null;
 let gameplayFile = null;
 let clonedVoiceId = null;
 let results = {script:'', audioBlob:null, hedraUrl:''};
-const cfg = {subSize:72, subPos:75, subWpg:2, subWidth:90, format:'vertical', splitRatio:35};
+const cfg = {subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0, format:'vertical', splitRatio:35};
 const selfieCfg = {scale:100};
 const connectedPlatforms = {};
 
@@ -1608,7 +1616,13 @@ async function previewVoice(voiceId,audioElId){
 function pickVoice(el,id,name){ document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on')); el.classList.add('on'); selVoiceId=id; clonedVoiceId=null; }
 
 // ══ STYLE / SUBS ══
-function pickSub(el,style){ document.querySelectorAll('.sub-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); selSubStyle=style; updateSubPreview(); updateLivePreview(); }
+function pickSub(el,style){
+  document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  selSubStyle=style;
+  updateSubPreview();
+  updateLivePreview();
+}
 
 // ══ COLOR PRESETS ══
 function applyColorPreset(name){
@@ -1632,8 +1646,8 @@ function applyColorPreset(name){
   });
   if(p.style && p.style!==selSubStyle){
     selSubStyle=p.style;
-    document.querySelectorAll('.sub-card').forEach(c=>{
-      c.classList.toggle('on', c.getAttribute('onclick')&&c.getAttribute('onclick').includes("'"+p.style+"'"));
+    document.querySelectorAll('.style-card').forEach(c=>{
+      c.classList.toggle('on', c.id==='sc-'+p.style);
     });
   }
   updateSubPreview();
@@ -1689,9 +1703,11 @@ function updateLivePreview(){
   const overlay=document.getElementById('subsOverlay');
   if(overlay){
     overlay.style.top=posY+'%';
-    overlay.style.left=((100-width)/2)+'%';
-    overlay.style.right=((100-width)/2)+'%';
+    const margin=((100-width)/2)+'%';
+    overlay.style.left=margin;
+    overlay.style.right=margin;
     overlay.style.padding='0';
+    overlay.style.lineHeight=(cfg.subLineH||1.0)*1.3+'';
   }
 
   // Split screen
@@ -1816,25 +1832,27 @@ function updateSubPreview(){
 
 function updateSubPreview(){
   const style=selSubStyle||'hormozi';
-  const sz=Math.max(10, Math.round((cfg.subSize||72)*0.25));
+  const sz=Math.max(10,Math.round((cfg.subSize||72)*0.25));
   const stroke=Math.max(1,Math.round(sz/18));
   const wpg=cfg.subWpg||2;
-  // Build sample words based on wpg
-  const allWords=['RÉSULTATS','GARANTIS','PASSE','À','L\'ACTION','MAINTENANT'];
+  const lineH=cfg.subLineH||1.0;
+  const scaleY=lineH>1.0?`display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;`:'';
+  const allWords=['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
   const shown=allWords.slice(0,Math.min(wpg,allWords.length));
   const c1=subColors.c1||'#FFE500';
   const c2=subColors.c2||'#ffffff';
   const bg1=subColors.bg1||'#FF2D55';
   const bg2=subColors.bg2||'#FFE500';
-
-  const buildHormozi=()=>shown.map((w,i)=>`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join('');
-  const buildTiktok=()=>shown.map((w,i)=>`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?bg1:bg2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block">${w}</span>`).join('');
-  const buildBold=()=>`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c2};font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">${shown.join(' ')}</span>`;
-  const buildNeon=()=>shown.map((w,i)=>`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:0 0 ${Math.round(sz*.4)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`).join('');
-
-  const html={hormozi:buildHormozi(), tiktok:buildTiktok(), bold:buildBold(), neon:buildNeon()};
+  const s={
+    hormozi:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join(''),
+    mrbeast:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?'#FFD700':'#FF0000'};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`).join(''),
+    iman:()=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:#fff;font-weight:900;letter-spacing:${Math.round(sz*.05)}px">${shown.join(' ')}</span>`,
+    tiktok:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?bg1:bg2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`).join(''),
+    neon:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:0 0 ${Math.round(sz*.4)}px ${i===0?c1:c2},0 0 ${Math.round(sz*.8)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`).join(''),
+    podcast:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?'#fff':'rgba(255,255,255,.4)'};font-weight:900;margin:0 3px">${w}</span>`).join(''),
+  };
   const el=document.getElementById('subsContent');
-  if(el) el.innerHTML=html[style]||html.hormozi;
+  if(el){el.innerHTML=(s[style]||s.hormozi)();if(animEnabled&&selAnim!=='none')previewAnim();}
 }
 
 // ══ RESIZE HANDLE ══
