@@ -51,8 +51,8 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .view{display:none;flex:1;overflow:hidden}
-.view.on{display:flex;flex:1}
-.gen-view.on{display:flex;flex-direction:row!important}
+.view.on{display:flex;flex-direction:column;flex:1}
+.gen-view.on{flex-direction:row!important}
 
 /* ── FORMS ── */
 input[type=text],input[type=password],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s;line-height:1.5}
@@ -314,7 +314,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="main">
 
     <!-- ══ GENERATOR ══ -->
-    <div class="view on gen-view" id="v-generator">
+    <div class="view on gen-view" id="v-generator" style="flex-direction:row">
       <div class="gen-left">
 
         <div class="steps-bar">
@@ -1743,6 +1743,7 @@ function applyColorPreset(name){
     if(hex) hex.value=subColors[k];
   });
   updateSubPreview();
+  updateLivePreview();
   toast('✓ Couleurs "'+name+'" appliquées');
 }
 function applyHook(val){ if(!val)return; document.getElementById('f-hook').value=val; updateLivePreview(); }
