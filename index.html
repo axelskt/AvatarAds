@@ -650,6 +650,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
                     oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()">
                   <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>+ Avatar</span><span>+ Gameplay</span></div>
                 </div>
+                <div class="fld">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <div class="flbl" style="margin:0">Position gameplay (haut/bas)</div>
+                    <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="gpPosVal">50%</span>
+                  </div>
+                  <input type="range" id="gpPos" min="0" max="100" value="50" oninput="gameplayCfg.posY=+this.value;document.getElementById('gpPosVal').textContent=this.value+'%';applyGameplayPosition()">
+                </div>
+                <div class="fld">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <div class="flbl" style="margin:0">Zoom gameplay</div>
+                    <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="gpZoomVal">100%</span>
+                  </div>
+                  <input type="range" id="gpZoom" min="50" max="200" value="100" oninput="gameplayCfg.zoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';applyGameplayPosition()">
               </div>
             </div>
 
@@ -771,49 +784,31 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
             <!-- COULEURS SOUS-TITRES -->
             <div class="fld" style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
-              <div class="flbl" style="margin-bottom:10px">🎨 Couleurs — s'appliquent au style sélectionné</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="flbl" style="margin-bottom:10px">🎨 Couleurs — combinables avec n'importe quel style</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                 <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 1 (accentué)</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 1 (mot accentué)</div>
                   <div style="display:flex;align-items:center;gap:6px">
                     <input type="color" id="color-c1" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
                     <input type="text" id="color-c1-hex" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
                   </div>
                 </div>
                 <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 2 (autres)</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 2 (autres mots)</div>
                   <div style="display:flex;align-items:center;gap:6px">
                     <input type="color" id="color-c2" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
                     <input type="text" id="color-c2-hex" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
                   </div>
                 </div>
               </div>
-              <!-- Fond TikTok — seulement si TikTok Pills sélectionné -->
-              <div id="tiktok-bg-colors" style="display:none;margin-top:10px;display:none;grid-template-columns:1fr 1fr;gap:10px">
-                <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Fond pill 1</div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input type="color" id="color-bg1" value="#FF2D55" oninput="subColors.bg1=this.value;document.getElementById('color-bg1-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
-                    <input type="text" id="color-bg1-hex" value="#FF2D55" oninput="subColors.bg1=this.value;document.getElementById('color-bg1').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
-                  </div>
-                </div>
-                <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Fond pill 2</div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input type="color" id="color-bg2" value="#FFE500" oninput="subColors.bg2=this.value;document.getElementById('color-bg2-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
-                    <input type="text" id="color-bg2-hex" value="#FFE500" oninput="subColors.bg2=this.value;document.getElementById('color-bg2').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);width:100%;margin-bottom:3px">Presets viraux :</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);width:100%;margin-bottom:3px">Presets :</div>
                 <button class="btn-sm" onclick="applyColorPreset('hormozi')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Hormozi</button>
                 <button class="btn-sm" onclick="applyColorPreset('mrbeast')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FFD700;display:inline-block"></span>MrBeast</button>
                 <button class="btn-sm" onclick="applyColorPreset('iman')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#fff;border:1px solid #444;display:inline-block"></span>Iman</button>
                 <button class="btn-sm" onclick="applyColorPreset('neon_green')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#00FF87;display:inline-block"></span>Neon</button>
                 <button class="btn-sm" onclick="applyColorPreset('fire')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FF4500;display:inline-block"></span>Fire</button>
-                <button class="btn-sm" onclick="applyColorPreset('podcast')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block"></span>Podcast</button>
-                <button class="btn-sm" onclick="applyColorPreset('tiktok_viral')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D55;display:inline-block"></span>TikTok</button>
+                <button class="btn-sm" onclick="applyColorPreset('podcast')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#fff;border:1px solid #444;display:inline-block"></span>Podcast</button>
                 <button class="btn-sm" onclick="applyColorPreset('purple_wave')" style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:#BF5FFF;display:inline-block"></span>Purple</button>
               </div>
             </div>
@@ -923,7 +918,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP -->
-            <div id="phoneMockup" style="position:relative;width:220px;height:420px;border-radius:40px;border:8px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 1px #333,0 24px 60px rgba(0,0,0,.9);transition:width .15s,height .15s;flex-shrink:0">
+            <div id="phoneMockup" style="position:relative;width:240px;height:520px;border-radius:44px;border:8px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 1px #333,0 24px 60px rgba(0,0,0,.9);transition:width .15s,height .15s;flex-shrink:0">
               <!-- Notch -->
               <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:60px;height:20px;background:#1c1c1e;border-radius:0 0 12px 12px;z-index:99"></div>
 
@@ -1104,7 +1099,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
           </div>
 
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">220 × 420</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">240 × 520</div>
         </div>
 
         <!-- GENERATING -->
@@ -1339,8 +1334,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 // ══ CONFIG ══
 const SHEET_CONFIG = {
   apiKey: 'CLE-RETIREE',
-  sheetId: 'ID-FEUILLE-RETIRE
-',
+  sheetId: 'ID-FEUILLE-RETIRE',
   sheetName: 'Membres',
   appsScriptUrl: 'COLLE_TON_APPS_SCRIPT_URL_ICI'
 };
@@ -1631,9 +1625,6 @@ function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   selSubStyle=style;
-  // Show TikTok bg colors only for TikTok Pills
-  const tiktokBg=document.getElementById('tiktok-bg-colors');
-  if(tiktokBg) tiktokBg.style.display=style==='tiktok'?'grid':'none';
   updateSubPreview();
   updateLivePreview();
 }
@@ -1687,28 +1678,25 @@ function togglePreviewPlay(){
 
 // ══ COLOR PRESETS ══
 function applyColorPreset(name){
-  // Colors only — does NOT change the style (form)
-  // So you can combine Néon style + MrBeast colors for example
   const presets={
-    hormozi:{c1:'#FFE500',c2:'#ffffff',bg1:'#FF2D55',bg2:'#FFE500'},
-    mrbeast:{c1:'#FFD700',c2:'#FF0000',bg1:'#FF0000',bg2:'#FFD700'},
-    iman:{c1:'#ffffff',c2:'rgba(255,255,255,0.4)',bg1:'#000000',bg2:'#111111'},
-    neon_green:{c1:'#00FF87',c2:'#BF5FFF',bg1:'#00CC6A',bg2:'#BF5FFF'},
-    fire:{c1:'#FF6B35',c2:'#FFE500',bg1:'#FF0000',bg2:'#FF6B35'},
-    podcast:{c1:'#ffffff',c2:'rgba(255,255,255,0.4)',bg1:'#1a1a1a',bg2:'#2d2d2d'},
-    tiktok_viral:{c1:'#ffffff',c2:'#000000',bg1:'#FF2D55',bg2:'#FFE500'},
-    purple_wave:{c1:'#BF5FFF',c2:'#00FF87',bg1:'#6B35FF',bg2:'#BF5FFF'},
+    hormozi:{c1:'#FFE500',c2:'#ffffff'},
+    mrbeast:{c1:'#FFD700',c2:'#FF0000'},
+    iman:{c1:'#ffffff',c2:'rgba(255,255,255,0.35)'},
+    neon_green:{c1:'#00FF87',c2:'#BF5FFF'},
+    fire:{c1:'#FF6B35',c2:'#FFE500'},
+    podcast:{c1:'#ffffff',c2:'rgba(255,255,255,0.35)'},
+    purple_wave:{c1:'#BF5FFF',c2:'#00FF87'},
   };
   const p=presets[name]; if(!p) return;
-  subColors.c1=p.c1; subColors.c2=p.c2; subColors.bg1=p.bg1; subColors.bg2=p.bg2;
-  ['c1','c2','bg1','bg2'].forEach(k=>{
+  subColors.c1=p.c1; subColors.c2=p.c2;
+  ['c1','c2'].forEach(k=>{
     const col=document.getElementById('color-'+k);
     const hex=document.getElementById('color-'+k+'-hex');
     if(col) try{col.value=subColors[k];}catch(e){}
     if(hex) hex.value=subColors[k];
   });
   updateSubPreview();
-  toast('✓ Couleurs "'+name+'" — style inchangé');
+  toast('✓ Couleurs "'+name+'" appliquées');
 }
 function applyHook(val){ if(!val)return; document.getElementById('f-hook').value=val; updateLivePreview(); }
 function applyCta(val){ if(!val)return; document.getElementById('f-cta').value=val; updateLivePreview(); }
@@ -1893,23 +1881,28 @@ function updateSubPreview(){
   const stroke=Math.max(1,Math.round(sz/18));
   const wpg=cfg.subWpg||2;
   const lineH=cfg.subLineH||1.0;
-  const scaleY=lineH>1.0?`display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;`:'';
+  const sc=lineH>1.0?`display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;`:'';
   const allWords=['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
   const shown=allWords.slice(0,Math.min(wpg,allWords.length));
+  // Always use current subColors — fully decoupled from style
   const c1=subColors.c1||'#FFE500';
   const c2=subColors.c2||'#ffffff';
-  const bg1=subColors.bg1||'#FF2D55';
-  const bg2=subColors.bg2||'#FFE500';
-  const s={
-    hormozi:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join(''),
-    mrbeast:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?'#FFD700':'#FF0000'};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`).join(''),
-    iman:()=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:#fff;font-weight:900;letter-spacing:${Math.round(sz*.05)}px">${shown.join(' ')}</span>`,
-    tiktok:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?bg1:bg2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`).join(''),
-    neon:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:0 0 ${Math.round(sz*.4)}px ${i===0?c1:c2},0 0 ${Math.round(sz*.8)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`).join(''),
-    podcast:()=>shown.map((w,i)=>`<span style="${scaleY}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?'#fff':'rgba(255,255,255,.4)'};font-weight:900;margin:0 3px">${w}</span>`).join(''),
+  const glow1=`0 0 ${Math.round(sz*.5)}px ${c1}`;
+  const glow2=`0 0 ${Math.round(sz*.5)}px ${c2}`;
+
+  const render={
+    hormozi:()=>shown.map((w,i)=>`<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join(''),
+    mrbeast:()=>shown.map((w,i)=>`<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;text-shadow:0 0 ${Math.round(sz*.3)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`).join(''),
+    iman:()=>`<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.06)}px;text-shadow:1px 1px 3px rgba(0,0,0,.8)">${shown.join(' ')}</span>`,
+    tiktok:()=>shown.map((w,i)=>`<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`).join(''),
+    neon:()=>shown.map((w,i)=>`<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2},${i===0?glow1:glow2};margin:0 2px">${w}</span>`).join(''),
+    podcast:()=>shown.map((w,i)=>`<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`).join(''),
   };
   const el=document.getElementById('subsContent');
-  if(el){el.innerHTML=(s[style]||s.hormozi)();if(animEnabled&&selAnim!=='none')previewAnim();}
+  if(el){
+    el.innerHTML=(render[style]||render.hormozi)();
+    if(animEnabled&&selAnim!=='none')previewAnim();
+  }
 }
 
 // ══ RESIZE HANDLE ══
@@ -2106,6 +2099,18 @@ function renderLibrary(){
       </div>
     </div>
   `).join('');
+}
+
+const gameplayCfg = {posY:50, zoom:100};
+
+function applyGameplayPosition(){
+  const vid = document.getElementById('gpVideo');
+  if(!vid) return;
+  const posY = gameplayCfg.posY;
+  const zoom = gameplayCfg.zoom / 100;
+  vid.style.objectPosition = `50% ${posY}%`;
+  vid.style.transform = `scale(${zoom})`;
+  vid.style.transformOrigin = 'center center';
 }
 
 // ══ AVATAR POSITION & SIZE ══
