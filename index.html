@@ -51,7 +51,8 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .view{display:none;flex:1;overflow:hidden}
-.view.on{display:flex}
+.view.on{display:flex;flex:1}
+.gen-view.on{display:flex;flex-direction:row!important}
 
 /* ── FORMS ── */
 input[type=text],input[type=password],textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s;line-height:1.5}
@@ -118,8 +119,8 @@ select{cursor:pointer}
 .step-line{flex:1;height:1px;background:var(--border);margin:0 6px;min-width:8px}
 
 /* ── GEN VIEW ── */
-.gen-view{overflow:hidden;display:flex;flex-direction:row}
-.gen-left{width:480px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;height:100%}
+.gen-view{overflow:hidden}
+.gen-left{width:480px;min-width:480px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 .gen-form{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
 .gen-form::-webkit-scrollbar{width:3px}
 .gen-form::-webkit-scrollbar-thumb{background:var(--bg5)}
