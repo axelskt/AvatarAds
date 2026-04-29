@@ -2236,7 +2236,7 @@ const YOUTUBE_CLIENT_ID = '758857318149-0h14ft44gnfvm6epq1jp8hhkf7i3cdj7.apps.go
 let ytAccessToken = null;
 
 function connectYouTube(){
-  if(YOUTUBE_CLIENT_ID==='COLLE_TON_GOOGLE_CLIENT_ID_ICI'){ toast('⚠️ Configure YOUTUBE_CLIENT_ID dans le code'); return; }
+  if(YOUTUBE_CLIENT_ID==='CLE-RETIREE'){ toast('⚠️ Configure YOUTUBE_CLIENT_ID dans le code'); return; }
   const redirect=encodeURIComponent(window.location.href.split('?')[0]);
   const scope=encodeURIComponent('https://www.googleapis.com/auth/youtube.upload');
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${YOUTUBE_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=${scope}`;
