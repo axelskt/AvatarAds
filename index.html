@@ -238,6 +238,29 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .sdot.ok{background:var(--green)}
 .sdot.spin{background:var(--orange);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes sub-pop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes sub-bounce{0%{transform:translateY(18px);opacity:0}60%{transform:translateY(-4px)}100%{transform:translateY(0);opacity:1}}
+@keyframes sub-slide{0%{transform:translateX(-30px);opacity:0}100%{transform:translateX(0);opacity:1}}
+@keyframes sub-fade{0%{opacity:0}100%{opacity:1}}
+@keyframes sub-karaoke{0%{color:transparent;-webkit-text-stroke:0}100%{}}
+.sub-anim-pop span{animation:sub-pop .25s cubic-bezier(.17,.67,.35,1.2) both}
+.sub-anim-pop span:nth-child(2){animation-delay:.08s}
+.sub-anim-pop span:nth-child(3){animation-delay:.16s}
+.sub-anim-pop span:nth-child(4){animation-delay:.24s}
+.sub-anim-bounce span{animation:sub-bounce .3s ease both}
+.sub-anim-bounce span:nth-child(2){animation-delay:.1s}
+.sub-anim-bounce span:nth-child(3){animation-delay:.2s}
+.sub-anim-bounce span:nth-child(4){animation-delay:.3s}
+.sub-anim-slide span{animation:sub-slide .25s ease both}
+.sub-anim-slide span:nth-child(2){animation-delay:.08s}
+.sub-anim-slide span:nth-child(3){animation-delay:.16s}
+.sub-anim-slide span:nth-child(4){animation-delay:.24s}
+.sub-anim-fade span{animation:sub-fade .35s ease both}
+.sub-anim-fade span:nth-child(2){animation-delay:.12s}
+.sub-anim-fade span:nth-child(3){animation-delay:.24s}
+.sub-anim-fade span:nth-child(4){animation-delay:.36s}
+.btn-publish{display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-publish:hover{border-color:var(--orange);color:var(--orange2);background:var(--orange-dim)}
 
 /* ══ PROGRESS STEPS (generation) ══ */
 .genprog{display:flex;flex-direction:column;gap:8px;width:280px}
@@ -669,6 +692,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                   <input type="range" id="splitRatio" min="20" max="70" value="35" step="5" oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()" style="width:100%;accent-color:var(--orange)">
                 </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                    <div class="flbl" style="font-size:10px;margin:0">Zoom gameplay</div>
+                    <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal">100%</span>
+                  </div>
+                  <input type="range" id="gpZoom" min="100" max="200" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpZoom()" style="width:100%;accent-color:var(--orange)">
+                </div>
+                <button onclick="swapSplit()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                  ↕ Inverser Avatar / Gameplay
+                </button>
               </div>
             </div>
 
@@ -987,6 +1020,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
 
           <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">220 × 420</div>
+          <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="margin-top:8px;display:flex;align-items:center;gap:6px;padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}">▶ Aperçu animé</button>
         </div>
 
         <!-- GENERATING -->
@@ -1038,6 +1072,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="result-actions" style="margin-top:8px">
                   <button class="btn-copy" onclick="downloadVideo()">⬇ Télécharger MP4</button>
                 </div>
+              </div>
+            </div>
+            <div class="result-card">
+              <div class="result-title">📱 Publier sur les réseaux</div>
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Télécharge d'abord ta vidéo, puis publie-la directement sur la plateforme.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button class="btn-publish" onclick="publishTo('tiktok')"><span style="font-size:16px">📱</span>TikTok</button>
+                <button class="btn-publish" onclick="publishTo('instagram')"><span style="font-size:16px">📸</span>Instagram Reels</button>
+                <button class="btn-publish" onclick="publishTo('youtube')"><span style="font-size:16px">▶️</span>YouTube Shorts</button>
+                <button class="btn-publish" onclick="publishTo('facebook')"><span style="font-size:16px">👥</span>Facebook Reels</button>
               </div>
             </div>
           </div>
@@ -1185,7 +1229,7 @@ let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
 // Global config for subtitle styling
 const cfg = {
   subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
-  format:'vertical', splitRatio:35
+  format:'vertical', splitRatio:35, gpZoom:100
 };
 const subColors = {c1:'#FFE500', c2:'#ffffff'};
 let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -1589,6 +1633,12 @@ function previewAvatarUrl(url){
 }
 function setFormat(fmt){
   cfg.format = fmt;
+  const dims = {vertical:{w:220,h:420}, square:{w:320,h:320}, landscape:{w:380,h:214}};
+  const d = dims[fmt] || dims.vertical;
+  const ph = document.getElementById('phoneMockup');
+  if(ph){ ph.style.width = d.w+'px'; ph.style.height = d.h+'px'; }
+  const lbl = document.getElementById('previewSizeLabel');
+  if(lbl) lbl.textContent = d.w+' × '+d.h;
   const fmts = ['vertical','square','landscape'];
   fmts.forEach(f => {
     const el = document.getElementById('fmt-'+f);
@@ -1596,9 +1646,104 @@ function setFormat(fmt){
     el.style.border = f === fmt ? '2px solid var(--orange)' : '2px solid var(--border)';
     el.style.background = f === fmt ? 'var(--orange-dim)' : 'var(--bg3)';
   });
+  updateLivePreview();
 }
 
 let gameplayFile = null;
+let splitSwapped = false;
+let previewPlaying = false;
+let previewInterval = null;
+let previewWordIndex = 0;
+
+function swapSplit(){
+  splitSwapped = !splitSwapped;
+  const vc = document.getElementById('videoContent');
+  const av = document.getElementById('avZone');
+  const gp = document.getElementById('gameplayZone');
+  if(!vc||!av||!gp) return;
+  if(splitSwapped){ vc.insertBefore(gp, av); } else { vc.insertBefore(av, gp); }
+  toast(splitSwapped ? '↕ Gameplay en haut / Avatar en bas' : '↕ Avatar en haut / Gameplay en bas');
+}
+
+function updateGpZoom(){
+  const vid = document.getElementById('gpVideo');
+  if(vid) vid.style.transform = 'scale('+(cfg.gpZoom||100)/100+')';
+}
+
+function togglePreviewPlay(){
+  previewPlaying = !previewPlaying;
+  const btn = document.getElementById('previewPlayBtn');
+  if(previewPlaying){
+    btn.textContent = '⏸ Pause';
+    btn.style.borderColor = 'var(--orange)';
+    btn.style.color = 'var(--orange2)';
+    startPreviewAnim();
+  } else {
+    btn.textContent = '▶ Aperçu animé';
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.color = 'var(--text2)';
+    stopPreviewAnim();
+  }
+}
+
+function startPreviewAnim(){
+  const allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS","CLIQUE","SUR","LE","LIEN"];
+  const wpg = cfg.subWpg || 2;
+  previewWordIndex = 0;
+  const gpVid = document.getElementById('gpVideo');
+  if(gpVid && gpVid.src) gpVid.play();
+  function tick(){
+    const shown = [];
+    for(let i=0;i<wpg;i++) shown.push(allWords[(previewWordIndex+i) % allWords.length]);
+    previewWordIndex = (previewWordIndex + wpg) % allWords.length;
+    updateSubPreviewWithWords(shown);
+  }
+  tick();
+  previewInterval = setInterval(tick, 1800);
+}
+
+function stopPreviewAnim(){
+  if(previewInterval){ clearInterval(previewInterval); previewInterval = null; }
+  const gpVid = document.getElementById('gpVideo');
+  if(gpVid) gpVid.pause();
+  updateSubPreview();
+}
+
+function updateSubPreviewWithWords(shown){
+  const el = document.getElementById('subsContent');
+  if(!el) return;
+  const style = selSubStyle || 'hormozi';
+  const sz = Math.max(10, Math.round((cfg.subSize||72)*0.25));
+  const stroke = Math.max(1, Math.round(sz/18));
+  const c1 = subColors.c1||'#FFE500', c2 = subColors.c2||'#ffffff';
+  const glow1 = '0 0 '+Math.round(sz*.6)+'px '+c1+',0 0 '+Math.round(sz*1.2)+'px '+c1;
+  const glow2 = '0 0 '+Math.round(sz*.6)+'px '+c2+',0 0 '+Math.round(sz*1.2)+'px '+c2;
+  let html = '';
+  shown.forEach((w,i)=>{
+    if(style==='tiktok') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`;
+    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`;
+    else if(style==='iman') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
+    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
+    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
+    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
+  });
+  const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
+  el.className = animClass;
+  el.innerHTML = html;
+}
+
+const publishUrls = {
+  tiktok: 'https://www.tiktok.com/upload',
+  instagram: 'https://www.instagram.com/reels/upload',
+  youtube: 'https://studio.youtube.com/channel/upload',
+  facebook: 'https://www.facebook.com/reels/create'
+};
+function publishTo(platform){
+  const url = publishUrls[platform];
+  if(!url) return;
+  window.open(url, '_blank');
+  toast('💡 Télécharge ta vidéo MP4 puis importe-la sur '+platform);
+}
 
 function toggleSplit(){
   splitEnabled = !splitEnabled;
@@ -1686,7 +1831,11 @@ function updateSubPreview(){
 
   const html = (render[style] || render.hormozi)();
   const el = document.getElementById('subsContent');
-  if(el) el.innerHTML = html;
+  if(el){
+    const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
+    el.className = animClass;
+    el.innerHTML = html;
+  }
 
   // Position + size of subtitle overlay
   const overlay = document.getElementById('subsOverlay');
