@@ -856,8 +856,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
 
               <!-- SUBTITLES -->
-              <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:68%;width:90%">
-                <div id="subsContent"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;margin-left:5px">GARANTIS</span></div>
+              <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:75%;width:90%">
+                <div id="subsContent"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">PASSE</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#ffffff;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">À</span></div>
               </div>
 
               <!-- ── TIKTOK ── -->
@@ -1236,7 +1236,7 @@ async function loginMember(){
     document.getElementById('memberName').textContent = '👤 ' + member.nom;
     document.getElementById('memberCredits').textContent = member.credits;
 
-    // Charge les clés API depuis le setup si besoin
+    updateLivePreview();
     checkSetupNeeded();
     toast('✓ Bienvenue ' + member.nom + ' ! ' + member.credits + ' crédits disponibles.');
 
@@ -1795,10 +1795,6 @@ function applyCta(val){
   updatePreview();
 }
 function toggleChip(el){ el.classList.toggle('on'); }
-
-function updatePreview(){
-  updateLivePreview();
-}
 
 // ── GPT-4o SCRIPT ──
 async function generateScript(){
