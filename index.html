@@ -258,6 +258,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4)}
 .crop-handle{position:absolute;width:10px;height:10px;background:#fff;border-radius:2px}
+@keyframes subPop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes subBounce{0%{transform:translateY(16px);opacity:0}60%{transform:translateY(-4px)}100%{transform:translateY(0);opacity:1}}
+@keyframes subSlide{0%{transform:translateX(-20px);opacity:0}100%{transform:translateX(0);opacity:1}}
+@keyframes subFade{0%{opacity:0}100%{opacity:1}}
 </style>
 </head>
 <body>
@@ -652,23 +656,74 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
             <!-- STYLE SUBS -->
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl">Style des sous-titres</div>
-              <div class="sub-grid">
+              <div class="sub-grid" style="grid-template-columns:1fr 1fr 1fr;gap:7px">
                 <div class="sub-card on" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:14px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:14px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:4px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
+                </div>
+                <div class="sub-card" onclick="pickSub(this,'mrbeast')">
+                  <div class="sub-name">MrBeast</div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFD700;-webkit-text-stroke:.5px #000;text-shadow:0 0 8px rgba(255,215,0,.6)">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#FF0000;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
+                </div>
+                <div class="sub-card" onclick="pickSub(this,'iman')">
+                  <div class="sub-name">Iman</div>
+                  <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:11px;color:#fff;font-weight:900;letter-spacing:-.5px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card" onclick="pickSub(this,'tiktok')">
-                  <div class="sub-name">TikTok</div>
-                  <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
-                </div>
-                <div class="sub-card" onclick="pickSub(this,'bold')">
-                  <div class="sub-name">Bold White</div>
-                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:12px;color:#fff;font-weight:900;text-shadow:1px 1px 4px rgba(0,0,0,.9)">PASSE À L'ACTION</span></div>
+                  <div class="sub-name">TikTok Pills</div>
+                  <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
                 </div>
                 <div class="sub-card" onclick="pickSub(this,'neon')">
                   <div class="sub-name">Néon</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#7c6fff;text-shadow:0 0 7px #7c6fff">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#ff4d6a;text-shadow:0 0 7px #ff4d6a;margin-left:4px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:11px;color:#00FF87;text-shadow:0 0 8px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#BF5FFF;text-shadow:0 0 8px #BF5FFF;margin-left:3px">ACTION</span></div>
                 </div>
+                <div class="sub-card" onclick="pickSub(this,'podcast')">
+                  <div class="sub-name">Podcast</div>
+                  <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;opacity:.95">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.5);margin-left:3px">ACTION</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ANIMATIONS SOUS-TITRES -->
+            <div class="fld" style="margin-bottom:18px">
+              <div class="toggle-row" id="animToggleRow" onclick="toggleAnimMenu()" style="margin-bottom:0">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">✨</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:700">Animations des sous-titres</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="animLabel">Aucune · Cliquer pour choisir</div>
+                  </div>
+                </div>
+                <div class="toggle-switch" id="animSwitch"><div class="toggle-thumb"></div></div>
+              </div>
+              <div id="animMenu" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div class="sub-card on" id="anim-none" onclick="pickAnim(this,'none','Aucune')">
+                    <div class="sub-name">Aucune</div>
+                    <div class="sub-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono)">A B C</div>
+                  </div>
+                  <div class="sub-card" id="anim-pop" onclick="pickAnim(this,'pop','Pop')">
+                    <div class="sub-name">Pop 💥</div>
+                    <div class="sub-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono)">A → B → C</div>
+                  </div>
+                  <div class="sub-card" id="anim-bounce" onclick="pickAnim(this,'bounce','Bounce')">
+                    <div class="sub-name">Bounce ⬆️</div>
+                    <div class="sub-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono)">↑ A ↑ B</div>
+                  </div>
+                  <div class="sub-card" id="anim-slide" onclick="pickAnim(this,'slide','Slide')">
+                    <div class="sub-name">Slide →</div>
+                    <div class="sub-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono)">→ A → B</div>
+                  </div>
+                  <div class="sub-card" id="anim-fade" onclick="pickAnim(this,'fade','Fade')">
+                    <div class="sub-name">Fade 🌫️</div>
+                    <div class="sub-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono)">░ A ░ B</div>
+                  </div>
+                  <div class="sub-card" id="anim-karaoke" onclick="pickAnim(this,'karaoke','Karaoké')">
+                    <div class="sub-name">Karaoké 🎤</div>
+                    <div class="sub-preview" style="font-size:11px;font-family:var(--mono)"><span style="color:var(--or2)">A</span><span style="color:var(--text3)"> B C</span></div>
+                  </div>
+                </div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;line-height:1.6">💡 Les animations s'appliquent à la vidéo finale générée par Hedra.</div>
               </div>
             </div>
 
@@ -688,6 +743,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
               </div>
               <input type="range" id="subPos" min="20" max="95" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()">
               <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Haut</span><span>Bas</span></div>
+            </div>
+            <div class="fld" style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="margin:0">Largeur de la zone</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--or2)" id="subWidthVal">90%</span>
+              </div>
+              <input type="range" id="subWidth" min="30" max="100" value="90" oninput="cfg.subWidth=+this.value;document.getElementById('subWidthVal').textContent=this.value+'%';updateLivePreview()">
+              <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px"><span>Étroit</span><span>Pleine largeur</span></div>
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -1279,7 +1342,7 @@ let selfieFile = null;
 let gameplayFile = null;
 let clonedVoiceId = null;
 let results = {script:'', audioBlob:null, hedraUrl:''};
-const cfg = {subSize:72, subPos:75, subWpg:2, format:'vertical', splitRatio:35};
+const cfg = {subSize:72, subPos:75, subWpg:2, subWidth:90, format:'vertical', splitRatio:35};
 const selfieCfg = {scale:100};
 const connectedPlatforms = {};
 
@@ -1546,6 +1609,36 @@ function pickVoice(el,id,name){ document.querySelectorAll('.voice-row').forEach(
 
 // ══ STYLE / SUBS ══
 function pickSub(el,style){ document.querySelectorAll('.sub-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); selSubStyle=style; updateSubPreview(); updateLivePreview(); }
+
+// ══ COLOR PRESETS ══
+function applyColorPreset(name){
+  const presets={
+    hormozi:{c1:'#FFE500',c2:'#ffffff',bg1:'#FF2D55',bg2:'#FFE500',style:'hormozi'},
+    iman:{c1:'#ffffff',c2:'#ffffff',bg1:'#000000',bg2:'#111111',style:'iman'},
+    mrbeast:{c1:'#FFD700',c2:'#FF0000',bg1:'#FF0000',bg2:'#FFD700',style:'mrbeast'},
+    neon_green:{c1:'#00FF87',c2:'#BF5FFF',bg1:'#00CC6A',bg2:'#00FF87',style:'neon'},
+    fire:{c1:'#FF6B35',c2:'#FFE500',bg1:'#FF0000',bg2:'#FF6B35',style:'hormozi'},
+    podcast:{c1:'#ffffff',c2:'#ffffff',bg1:'#1a1a1a',bg2:'#2d2d2d',style:'podcast'},
+    tiktok_viral:{c1:'#ffffff',c2:'#000000',bg1:'#FF2D55',bg2:'#FFE500',style:'tiktok'},
+    purple_wave:{c1:'#BF5FFF',c2:'#00FF87',bg1:'#6B35FF',bg2:'#BF5FFF',style:'neon'},
+  };
+  const p=presets[name]; if(!p) return;
+  subColors.c1=p.c1; subColors.c2=p.c2; subColors.bg1=p.bg1; subColors.bg2=p.bg2;
+  ['c1','c2','bg1','bg2'].forEach(k=>{
+    const col=document.getElementById('color-'+k);
+    const hex=document.getElementById('color-'+k+'-hex');
+    if(col) col.value=subColors[k];
+    if(hex) hex.value=subColors[k];
+  });
+  if(p.style && p.style!==selSubStyle){
+    selSubStyle=p.style;
+    document.querySelectorAll('.sub-card').forEach(c=>{
+      c.classList.toggle('on', c.getAttribute('onclick')&&c.getAttribute('onclick').includes("'"+p.style+"'"));
+    });
+  }
+  updateSubPreview();
+  toast('✓ Preset "'+name+'" appliqué');
+}
 function applyHook(val){ if(!val)return; document.getElementById('f-hook').value=val; updateLivePreview(); }
 function applyCta(val){ if(!val)return; document.getElementById('f-cta').value=val; updateLivePreview(); }
 
@@ -1590,10 +1683,16 @@ function setPlatformPreview(p){
 
 // ══ LIVE PREVIEW UPDATE ══
 function updateLivePreview(){
-  // Position sous-titres
+  // Position + largeur sous-titres
   const posY=cfg.subPos||75;
+  const width=cfg.subWidth||90;
   const overlay=document.getElementById('subsOverlay');
-  if(overlay) overlay.style.top=posY+'%';
+  if(overlay){
+    overlay.style.top=posY+'%';
+    overlay.style.left=((100-width)/2)+'%';
+    overlay.style.right=((100-width)/2)+'%';
+    overlay.style.padding='0';
+  }
 
   // Split screen
   const gameplayZone=document.getElementById('gameplayZone');
@@ -1638,6 +1737,82 @@ function updateLivePreview(){
 
 // Sub colors config
 const subColors = {c1:'#FFE500', c2:'#ffffff', bg1:'#FF2D55', bg2:'#FFE500'};
+let selAnim = 'none';
+let animEnabled = false;
+
+function pickAnim(el, anim, label){
+  document.querySelectorAll('[id^="anim-"]').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  selAnim = anim;
+  document.getElementById('animLabel').textContent = label + ' · Actif';
+  previewAnim();
+}
+
+function toggleAnimMenu(){
+  animEnabled = !animEnabled;
+  const sw = document.getElementById('animSwitch');
+  const menu = document.getElementById('animMenu');
+  const row = document.getElementById('animToggleRow');
+  sw.classList.toggle('on', animEnabled);
+  menu.style.display = animEnabled ? 'block' : 'none';
+  row.classList.toggle('on', animEnabled);
+  if(!animEnabled) document.getElementById('animLabel').textContent = 'Aucune · Cliquer pour choisir';
+}
+
+function previewAnim(){
+  const el = document.getElementById('subsContent');
+  if(!el) return;
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  const anims = {
+    none: '',
+    pop: 'subPop .25s cubic-bezier(.36,.07,.19,.97)',
+    bounce: 'subBounce .4s ease',
+    slide: 'subSlide .3s ease',
+    fade: 'subFade .3s ease',
+    karaoke: 'subPop .2s ease'
+  };
+  el.style.animation = anims[selAnim] || '';
+}
+
+function updateSubPreview(){
+  const style = selSubStyle || 'hormozi';
+  const sz = Math.max(10, Math.round((cfg.subSize||72)*0.25));
+  const stroke = Math.max(1, Math.round(sz/18));
+  const wpg = cfg.subWpg || 2;
+  const allWords = ['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
+  const shown = allWords.slice(0, Math.min(wpg, allWords.length));
+  const c1 = subColors.c1||'#FFE500';
+  const c2 = subColors.c2||'#ffffff';
+  const bg1 = subColors.bg1||'#FF2D55';
+  const bg2 = subColors.bg2||'#FFE500';
+
+  const styles = {
+    hormozi: () => shown.map((w,i) =>
+      `<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
+    ).join(''),
+    mrbeast: () => shown.map((w,i) =>
+      `<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?'#FFD700':'#FF0000'};-webkit-text-stroke:${stroke}px #000;text-shadow:0 0 ${Math.round(sz*.3)}px ${i===0?'rgba(255,215,0,.5)':'rgba(255,0,0,.5)'};margin:0 2px;font-style:italic">${w}</span>`
+    ).join(''),
+    iman: () => `<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:#fff;font-weight:900;letter-spacing:${Math.round(sz*.05)}px;text-transform:uppercase">${shown.join(' ')}</span>`,
+    tiktok: () => shown.map((w,i) =>
+      `<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?bg1:bg2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`
+    ).join(''),
+    neon: () => shown.map((w,i) =>
+      `<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:0 0 ${Math.round(sz*.4)}px ${i===0?c1:c2},0 0 ${Math.round(sz*.8)}px ${i===0?c1:c2};margin:0 2px">${w}</span>`
+    ).join(''),
+    podcast: () => shown.map((w,i) =>
+      `<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?'#fff':'rgba(255,255,255,.45)'};font-weight:900;margin:0 3px">${w}</span>`
+    ).join(''),
+  };
+
+  const html = (styles[style] || styles.hormozi)();
+  const el = document.getElementById('subsContent');
+  if(el){
+    el.innerHTML = html;
+    if(animEnabled && selAnim !== 'none') previewAnim();
+  }
+}
 
 function updateSubPreview(){
   const style=selSubStyle||'hormozi';
