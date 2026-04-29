@@ -1336,7 +1336,7 @@ const SHEET_CONFIG = {
   apiKey: 'AIzaSyBzDCItiSbJoP-sADTv4OWKLRpTtHStGkc',
   sheetId: '12HPhPzLpCT-Hz_rxoiwXc_8OQGrPcwWGaue-FYZFgXI',
   sheetName: 'Membres',
-  appsScriptUrl: 'COLLE_TON_APPS_SCRIPT_URL_ICI'
+  appsScriptUrl: ''
 };
 
 // ══ STATE ══
@@ -1390,57 +1390,103 @@ async function testKey(k){
 
 // ══ LOGIN ══
 async function loginMember(){
-  const code=document.getElementById('inp-code').value.trim().toUpperCase();
-  if(!code){ toast('⚠️ Entre ton code'); return; }
-  const btn=document.getElementById('loginBtn');
-  btn.textContent='Vérification...'; btn.disabled=true;
-  document.getElementById('badge-login').innerHTML='<span class="key-badge">Recherche...</span>';
-  try{
-    const member=await findMemberByCode(code);
-    if(!member){ document.getElementById('badge-login').innerHTML='<span class="key-badge err">✗ Code invalide</span>'; btn.textContent='Accéder →'; btn.disabled=false; return; }
-    if((member.actif||'OUI').toUpperCase()==='NON'){ document.getElementById('badge-login').innerHTML='<span class="key-badge err">✗ Accès désactivé</span>'; btn.textContent='Accéder →'; btn.disabled=false; return; }
-    if(parseInt(member.credits)<=0){ document.getElementById('badge-login').innerHTML='<span class="key-badge err">✗ Plus de crédits</span>'; btn.textContent='Accéder →'; btn.disabled=false; return; }
-    currentMember=member;
-    localStorage.setItem('aa_member_code',code);
-    document.getElementById('loginOverlay').style.display='none';
-    document.getElementById('memberBar').style.display='flex';
-    document.getElementById('memberName').textContent='👤 '+member.nom;
-    document.getElementById('memberCredits').textContent=member.credits;
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  if(!code){ showBadge('login','warn','Entre ton code d\'accès'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'Vérification...'; btn.disabled = true;
+  showBadge('login','info','Recherche en cours...');
+
+  // Check if config is set
+  if(!SHEET_CONFIG.apiKey || SHEET_CONFIG.apiKey === 'COLLE_TA_CLE_GOOGLE_API_ICI'){
+    showBadge('login','err','Clé Google API non configurée');
+    btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+    return;
+  }
+
+  try {
+    const member = await findMemberByCode(code);
+
+    if(!member){
+      showBadge('login','err','Code invalide — vérifie ton code');
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+
+    const actif = (member.actif||'OUI').trim().toUpperCase();
+    if(actif === 'NON'){
+      showBadge('login','err','Accès désactivé — contacte Axel');
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+
+    if(parseInt(member.credits) <= 0){
+      showBadge('login','err','Plus de crédits — contacte Axel');
+      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
+      return;
+    }
+
+    // ✅ Login OK
+    currentMember = member;
+    localStorage.setItem('aa_member_code', code);
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('memberBar').style.display = 'flex';
+    document.getElementById('memberName').textContent = '👤 ' + member.nom;
+    document.getElementById('memberCredits').textContent = member.credits;
     loadKeys();
-    if(!K.gpt&&!K.el&&!K.hedra) setTimeout(openSetup,600);
-    toast('✓ Bienvenue '+member.nom+' !');
-  }catch(e){
-    document.getElementById('badge-login').innerHTML='<span class="key-badge err">✗ Erreur réseau</span>';
-    btn.textContent='Accéder →'; btn.disabled=false;
+    if(!K.gpt && !K.el && !K.hedra) setTimeout(openSetup, 600);
+    toast('✓ Bienvenue ' + member.nom + ' !');
+
+  } catch(e) {
+    console.error('Login error:', e);
+    showBadge('login','err','Erreur : ' + (e.message||'réseau'));
+    btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
   }
 }
+
+function showBadge(id, type, msg){
+  const colors = {info:'var(--text3)',ok:'var(--green)',err:'var(--red)',warn:'var(--or2)'};
+  const el = document.getElementById('badge-'+id);
+  if(el) el.innerHTML = `<span class="key-badge" style="color:${colors[type]||colors.info};border-color:${colors[type]||colors.info}20">${msg}</span>`;
+}
+
 async function findMemberByCode(code){
-  const {apiKey,sheetId,sheetName}=SHEET_CONFIG;
-  const range=encodeURIComponent(`${sheetName}!A:F`);
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
-  const res=await fetch(url);
-  if(!res.ok) throw new Error('Sheet inaccessible');
-  const data=await res.json();
-  const rows=data.values||[];
-  for(let i=1;i<rows.length;i++){
-    const row=rows[i];
-    if((row[0]||'').trim().toUpperCase()===code){
-      return {rowIndex:i+1,code:row[0],nom:row[1]||'Membre',credits:parseInt(row[2])||0,totalUtilise:parseInt(row[3])||0,dateReset:row[4]||'',actif:row[5]||'OUI'};
+  const {apiKey, sheetId, sheetName} = SHEET_CONFIG;
+  const range = encodeURIComponent(`${sheetName}!A:F`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+
+  const res = await fetch(url);
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error?.message) || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const rows = data.values || [];
+
+  for(let i = 1; i < rows.length; i++){
+    const row = rows[i];
+    const rowCode = (row[0]||'').trim().toUpperCase();
+    if(rowCode === code){
+      return {
+        rowIndex: i+1,
+        code: row[0],
+        nom: row[1] || 'Membre',
+        credits: parseInt(row[2]) || 0,
+        totalUtilise: parseInt(row[3]) || 0,
+        dateReset: row[4] || '',
+        actif: row[5] || 'OUI'
+      };
     }
   }
   return null;
 }
+
 async function decrementCredit(){
   if(!currentMember) return true;
-  if(currentMember.credits<=0){ toast('✗ Plus de crédits — contacte Axel'); return false; }
+  if(currentMember.credits <= 0){ toast('✗ Plus de crédits'); return false; }
   currentMember.credits--;
-  document.getElementById('memberCredits').textContent=currentMember.credits;
-  try{
-    const url=SHEET_CONFIG.appsScriptUrl;
-    if(url&&url!=='COLLE_TON_APPS_SCRIPT_URL_ICI'){
-      await fetch(url+'?code='+encodeURIComponent(currentMember.code)+'&action=decrement',{method:'GET',mode:'no-cors'});
-    }
-  }catch(e){}
+  document.getElementById('memberCredits').textContent = currentMember.credits;
   return true;
 }
 
