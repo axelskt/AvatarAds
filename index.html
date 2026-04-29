@@ -837,21 +837,26 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
               <!-- VIDEO CONTENT -->
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
-                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1">
-                  <div id="previewAvEmoji" style="font-size:56px">👩‍💼</div>
-                  <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
+                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0">
+                  <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
+                  <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:2">
                 </div>
-                <div id="gameplayZone" style="display:none;background:#0a0a0a;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:65">
-                  <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15)">
+                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden">
+                  <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="font-size:24px">🎮</div>
                     <div style="font-size:9px;font-family:var(--mono);margin-top:3px">Gameplay ici</div>
                   </div>
-                  <video id="gpVideo" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute" loop muted autoplay playsinline></video>
+                  <video id="gpVideo" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loop muted autoplay playsinline></video>
                 </div>
               </div>
 
+              <!-- HOOK TEXT (top overlay) -->
+              <div id="hookOverlay" style="display:none;position:absolute;top:28px;left:0;right:0;text-align:center;padding:0 12px;z-index:52;pointer-events:none">
+                <span id="hookText" style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:0.5px #000;text-shadow:1px 1px 3px rgba(0,0,0,.9);line-height:1.3;display:inline-block"></span>
+              </div>
+
               <!-- SUBTITLES -->
-              <div id="subsOverlay" style="position:absolute;left:0;right:0;text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:68%">
+              <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:68%;width:90%">
                 <div id="subsContent"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)">RÉSULTATS</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#fff;-webkit-text-stroke:1px #000;margin-left:5px">GARANTIS</span></div>
               </div>
 
@@ -1638,101 +1643,119 @@ function setPlatformPreview(p){
   currentPlatform = p;
   ['tiktok','reels','youtube'].forEach(id => {
     const btn = document.getElementById('ptab-'+id);
-    const ui = document.getElementById('ui-'+id);
+    const ui  = document.getElementById('ui-'+id);
     if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; }
-    if(ui) ui.style.display = id===p ? 'block' : 'none';
+    if(ui)  ui.style.display = id===p ? 'block' : 'none';
   });
 }
 
-function updateLivePreview(){
-  // Subtitles position
-  const posY = (cfg.subPos || 75);
-  const overlay = document.getElementById('subsOverlay');
-  if(overlay) overlay.style.top = posY + '%';
-
-  // Subtitles content & style
-  updateSubPreview();
-
-  // Avatar
-  const avImg = document.getElementById('previewAvImg');
-  const avEmoji = document.getElementById('previewAvEmoji');
-  if(selAvatar.localUrl && selAvatar.localFile){
-    if(avImg){ avImg.src = selAvatar.localUrl; avImg.style.display = 'block'; }
-    if(avEmoji) avEmoji.style.display = 'none';
-  } else {
-    if(avImg) avImg.style.display = 'none';
-    if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = selAvatar.emo || '👩‍💼'; }
-  }
-
-  // Split screen
-  const gameplayZone = document.getElementById('gameplayZone');
-  const avZone = document.getElementById('avZone');
-  if(splitEnabled && gameplayZone){
-    gameplayZone.style.display = 'flex';
-    const ratio = cfg.splitRatio || 35;
-    avZone.style.flex = ratio;
-    gameplayZone.style.flex = (100 - ratio);
-    // Position subs at junction
-    if(overlay) overlay.style.top = (ratio - 3) + '%';
-  } else if(gameplayZone){
-    gameplayZone.style.display = 'none';
-    if(avZone) avZone.style.flex = '1';
-  }
-
-  // CTA text
-  const ctaEl = document.getElementById('ctaOverlay');
-  const ctaVal = document.getElementById('f-cta');
-  if(ctaEl && ctaVal) ctaEl.textContent = ctaVal.value || 'Lien en bio → -20% !';
-
-  // Handle
-  const handle = document.getElementById('f-product');
-  if(document.getElementById('tt-handle') && handle) document.getElementById('tt-handle').textContent = '@' + (selAvatar.name || 'sofia') + '.ads';
-  if(document.getElementById('ig-handle') && handle) document.getElementById('ig-handle').textContent = (selAvatar.name || 'sofia') + '.ads';
-}
-
-// Override updateSubPreview to also update the new preview
+// ── SUBTITLE PREVIEW ──
 function updateSubPreview(){
-  const style = selSubStyle || 'hormozi';
-  const sz = Math.max(10, Math.round((cfg.subSize||72)*0.25));
-  const stroke = Math.max(1, Math.round(sz/18));
-  const wpg = cfg.subWpg || 2;
-  const lineH = cfg.subLineH || 1.0;
-  const sc = lineH > 1.0 ? `display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;` : '';
-  const allWords = ['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
-  const shown = allWords.slice(0, Math.min(wpg, allWords.length));
-  const c1 = subColors.c1 || '#FFE500';
-  const c2 = subColors.c2 || '#ffffff';
-  const g1 = `0 0 ${Math.round(sz*.5)}px ${c1}`;
-  const g2 = `0 0 ${Math.round(sz*.5)}px ${c2}`;
+  const style  = selSubStyle || 'hormozi';
+  const sz     = Math.max(10, Math.round((cfg.subSize || 72) * 0.25));
+  const stroke = Math.max(1, Math.round(sz / 18));
+  const wpg    = cfg.subWpg || 2;
+  const lineH  = cfg.subLineH || 1.0;
+  const sc     = lineH > 1.0 ? `display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;` : '';
+  const words  = ['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
+  const shown  = words.slice(0, Math.min(wpg, words.length));
+  const c1     = subColors.c1 || '#FFE500';
+  const c2     = subColors.c2 || '#ffffff';
+  const glow1  = `0 0 ${Math.round(sz*.6)}px ${c1},0 0 ${Math.round(sz*1.2)}px ${c1}`;
+  const glow2  = `0 0 ${Math.round(sz*.6)}px ${c2},0 0 ${Math.round(sz*1.2)}px ${c2}`;
 
   const render = {
-    hormozi: () => shown.map((w,i) => `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`).join(''),
-    mrbeast: () => shown.map((w,i) => `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`).join(''),
-    iman: () => `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px">${shown.join(' ')}</span>`,
-    tiktok: () => shown.map((w,i) => `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`).join(''),
-    neon: () => shown.map((w,i) => `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?g1:g2},${i===0?g1:g2};margin:0 2px">${w}</span>`).join(''),
-    podcast: () => shown.map((w,i) => `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`).join(''),
-    bold: () => `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;text-shadow:2px 2px 5px rgba(0,0,0,.9)">${shown.join(' ')}</span>`,
+    hormozi: () => shown.map((w,i) =>
+      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
+    ).join(''),
+    mrbeast: () => shown.map((w,i) =>
+      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`
+    ).join(''),
+    iman: () =>
+      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px">${shown.join(' ')}</span>`,
+    tiktok: () => shown.map((w,i) =>
+      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`
+    ).join(''),
+    neon: () => shown.map((w,i) =>
+      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`
+    ).join(''),
+    podcast: () => shown.map((w,i) =>
+      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
+    ).join(''),
   };
 
-  // Update new subsContent (preview overlay)
+  const html = (render[style] || render.hormozi)();
   const el = document.getElementById('subsContent');
-  if(el) el.innerHTML = (render[style] || render.hormozi)();
+  if(el) el.innerHTML = html;
 
-  // Update old phoneSubArea (original phone preview)  
-  const sub = document.getElementById('phoneSubArea');
-  if(sub) sub.innerHTML = (render[style] || render.hormozi)();
-
-  // Update position
+  // Position + size of subtitle overlay
   const overlay = document.getElementById('subsOverlay');
-  if(overlay && !splitEnabled){
-    overlay.style.top = (cfg.subPos||75) + '%';
-    const w = cfg.subWidth||90;
-    overlay.style.width = w + '%';
-    overlay.style.left = '50%';
+  if(overlay){
+    const posY = splitEnabled ? Math.max(5, (cfg.splitRatio||35) - 4) : (cfg.subPos||75);
+    overlay.style.top       = posY + '%';
+    overlay.style.width     = (cfg.subWidth||90) + '%';
+    overlay.style.left      = '50%';
     overlay.style.transform = 'translateX(-50%)';
   }
 }
+
+// ── LIVE PREVIEW (tout mettre à jour) ──
+function updateLivePreview(){
+  // 1. Avatar
+  const avImg   = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(selAvatar && selAvatar.localUrl){
+    if(avImg)  { avImg.src = selAvatar.localUrl; avImg.style.display = 'block'; }
+    if(avEmoji)  avEmoji.style.display = 'none';
+  } else {
+    if(avImg)   avImg.style.display = 'none';
+    if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = (selAvatar && selAvatar.emo) || '👩‍💼'; }
+  }
+
+  // 2. Split screen
+  const avZone      = document.getElementById('avZone');
+  const gameplayZone = document.getElementById('gameplayZone');
+  if(avZone && gameplayZone){
+    if(splitEnabled){
+      const ratio = cfg.splitRatio || 35;
+      avZone.style.flex        = String(ratio);
+      avZone.style.minHeight   = '0';
+      gameplayZone.style.display    = 'flex';
+      gameplayZone.style.flex       = String(100 - ratio);
+      gameplayZone.style.minHeight  = '0';
+    } else {
+      avZone.style.flex        = '1';
+      avZone.style.minHeight   = '0';
+      gameplayZone.style.display    = 'none';
+    }
+  }
+
+  // 3. Subtitles
+  updateSubPreview();
+
+  // 4. Hook text overlay
+  const hookInput   = document.getElementById('f-hook');
+  const hookOverlay = document.getElementById('hookOverlay');
+  const hookTextEl  = document.getElementById('hookText');
+  if(hookOverlay && hookTextEl){
+    const h = hookInput ? hookInput.value.trim() : '';
+    if(h){
+      hookOverlay.style.display = 'block';
+      hookTextEl.textContent    = h.length > 60 ? h.substring(0,60)+'…' : h;
+    } else {
+      hookOverlay.style.display = 'none';
+    }
+  }
+
+  // 5. TikTok handle
+  const name = (selAvatar && selAvatar.name) || 'sofia';
+  const ttHandle = document.getElementById('tt-handle');
+  const igHandle = document.getElementById('ig-handle');
+  if(ttHandle) ttHandle.textContent = '@' + name + '.ads';
+  if(igHandle) igHandle.textContent = name + '.ads';
+}
+
+function updatePreview(){ updateLivePreview(); }
 
 function updateSplitPreview(){
   cfg.splitRatio = parseInt(document.getElementById('splitRatio')?.value || 35);
@@ -2194,6 +2217,37 @@ if(savedCode && savedName){
 ['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
 refreshDots();
 updateSteps();
+updateLivePreview();
+
+// ── RESIZE HANDLE ──
+let resizing = false, resizeStart = 0, resizeW0 = 0, resizeH0 = 0;
+function startResize(e){
+  const ph = document.getElementById('phoneMockup');
+  if(!ph) return;
+  resizing = true;
+  resizeStart = e.clientX;
+  resizeW0 = ph.offsetWidth;
+  resizeH0 = ph.offsetHeight;
+  document.addEventListener('mousemove', onResize);
+  document.addEventListener('mouseup', stopResize);
+}
+function onResize(e){
+  if(!resizing) return;
+  const ph = document.getElementById('phoneMockup');
+  if(!ph) return;
+  const dx = e.clientX - resizeStart;
+  const newW = Math.max(160, Math.min(380, resizeW0 + dx));
+  const ratio = resizeH0 / resizeW0;
+  ph.style.width = newW + 'px';
+  ph.style.height = Math.round(newW * ratio) + 'px';
+  const lbl = document.getElementById('previewSizeLabel');
+  if(lbl) lbl.textContent = newW + ' × ' + Math.round(newW * ratio);
+}
+function stopResize(){
+  resizing = false;
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', stopResize);
+}
 </script>
 </body>
 </html>
