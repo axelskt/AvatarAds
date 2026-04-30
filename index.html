@@ -579,6 +579,27 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 3 -->
           <div id="fs-3" style="display:none">
 
+            <!-- SOURCE VOIX -->
+            <div class="fld" style="margin-bottom:16px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Source de la voix</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div id="vmode-el" onclick="setVoiceMode('elevenlabs')" style="padding:12px;border:2px solid var(--orange);border-radius:10px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
+                  <div style="font-size:22px;margin-bottom:4px">🤖</div>
+                  <div style="font-size:12px;font-weight:700">ElevenLabs TTS</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Voix IA générée</div>
+                </div>
+                <div id="vmode-gp" onclick="setVoiceMode('gameplay')" style="padding:12px;border:2px solid var(--border);border-radius:10px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:22px;margin-bottom:4px">🎮</div>
+                  <div style="font-size:12px;font-weight:700">Audio gameplay</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Ta voix du gameplay</div>
+                </div>
+              </div>
+              <div id="vmode-gp-hint" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green)">✅ L'audio sera extrait de ton fichier gameplay — ElevenLabs non utilisé</div>
+              <div id="vmode-gp-warn" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;font-size:11px;font-family:var(--mono);color:#ffa040">⚠️ Importe d'abord un gameplay avec ta voix (étape Style → Split Screen)</div>
+            </div>
+
+            <div id="voice-el-sections">
+
             <!-- CLONE TA VOIX -->
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">🎤 Clone ta voix — upload un extrait</div>
@@ -654,6 +675,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
             </div>
+
+            </div><!-- /voice-el-sections -->
 
           </div>
 
@@ -2324,8 +2347,10 @@ async function startGeneration(){
   // STEP 2: Voice
   setStep('gp2','on');
   let audioBlob=null;
-  if(K.el){
-    audioBlob=await callElevenLabs(finalScript);
+  if(voiceMode === 'gameplay'){
+    audioBlob = await extractGameplayAudio();
+  } else if(K.el){
+    audioBlob = await callElevenLabs(finalScript);
     if(audioBlob) populateWordEditor(finalScript);
   }
   setStep('gp2','done');
@@ -2387,6 +2412,63 @@ Style: authentique, comme un vrai témoignage, direct, sans fioritures.`}
     const d = await res.json();
     return d.choices?.[0]?.message?.content?.trim() || 'Script non disponible.';
   }catch(e){ return 'Erreur GPT-4o : ' + e.message; }
+}
+
+// ── VOICE MODE ──
+let voiceMode = 'elevenlabs';
+
+function setVoiceMode(mode){
+  voiceMode = mode;
+  const elCard  = document.getElementById('vmode-el');
+  const gpCard  = document.getElementById('vmode-gp');
+  const elSec   = document.getElementById('voice-el-sections');
+  const gpHint  = document.getElementById('vmode-gp-hint');
+  const gpWarn  = document.getElementById('vmode-gp-warn');
+  if(mode === 'gameplay'){
+    elCard.style.border = '2px solid var(--border)';   elCard.style.background = 'var(--bg3)';
+    gpCard.style.border = '2px solid var(--green)';    gpCard.style.background = 'rgba(0,217,126,0.06)';
+    if(elSec) elSec.style.display = 'none';
+    if(gameplayFile){ gpHint.style.display='block'; gpWarn.style.display='none'; }
+    else            { gpHint.style.display='none';  gpWarn.style.display='block'; }
+  } else {
+    elCard.style.border = '2px solid var(--orange)';   elCard.style.background = 'var(--orange-dim)';
+    gpCard.style.border = '2px solid var(--border)';   gpCard.style.background = 'var(--bg3)';
+    if(elSec) elSec.style.display = 'block';
+    gpHint.style.display = 'none'; gpWarn.style.display = 'none';
+  }
+}
+
+async function extractGameplayAudio(){
+  if(!gameplayFile){ toast('⚠️ Aucun fichier gameplay importé'); return null; }
+  try {
+    toast('⏳ Extraction de l\'audio du gameplay...');
+    const arrayBuffer = await gameplayFile.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    audioCtx.close();
+    return audioBufferToWav(audioBuffer);
+  } catch(e) { toast('✗ Extraction audio : ' + e.message); return null; }
+}
+
+function audioBufferToWav(buffer){
+  const nCh = Math.min(buffer.numberOfChannels, 2);
+  const sr   = buffer.sampleRate;
+  const len  = buffer.length;
+  const dataLen = len * nCh * 2;
+  const ab = new ArrayBuffer(44 + dataLen);
+  const v  = new DataView(ab);
+  const ws = (off,s) => { for(let i=0;i<s.length;i++) v.setUint8(off+i,s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4,36+dataLen,true); ws(8,'WAVE');
+  ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+  v.setUint16(22,nCh,true); v.setUint32(24,sr,true);
+  v.setUint32(28,sr*nCh*2,true); v.setUint16(32,nCh*2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,dataLen,true);
+  let off=44;
+  for(let i=0;i<len;i++) for(let c=0;c<nCh;c++){
+    const s=Math.max(-1,Math.min(1,buffer.getChannelData(c)[i]));
+    v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true); off+=2;
+  }
+  return new Blob([ab],{type:'audio/wav'});
 }
 
 async function callElevenLabs(text){
