@@ -391,9 +391,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
               <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
                 <option>15 secondes</option>
-                <option>20 secondes</option>
+                <option selected>20 secondes</option>
                 <option>30 secondes</option>
-                <option selected>60 secondes</option>
+                <option>60 secondes</option>
               </select>
             </div>
             <div class="fld" style="margin-bottom:20px">
@@ -642,37 +642,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="fld">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Ou choisis une voix preset</div>
               <div class="voice-list">
-                <div class="voice-row on" id="vr-rachel" onclick="pickVoice(this,'21m00Tcm4TlvDq8ikWAM','Rachel','Féminine · naturelle · lifestyle')">
-                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('21m00Tcm4TlvDq8ikWAM','rachel-prev')">▶</button>
+                <div class="voice-row on" id="vr-charlotte" onclick="pickVoice(this,'XB0fDUnXU5powFXDhCwa','Charlotte','Féminine · chaleureuse · naturelle')">
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('XB0fDUnXU5powFXDhCwa','charlotte-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Rachel</div>
-                    <div class="voice-desc">Féminine · naturelle · lifestyle</div>
+                    <div class="voice-name">Charlotte</div>
+                    <div class="voice-desc">Féminine · chaleureuse · naturelle</div>
                   </div>
-                  <audio id="rachel-prev" style="display:none"></audio>
+                  <audio id="charlotte-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" id="vr-domi" onclick="pickVoice(this,'AZnzlk1XvdvUeBnXmlld','Domi','Féminine · dynamique · énergie')">
-                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('AZnzlk1XvdvUeBnXmlld','domi-prev')">▶</button>
+                <div class="voice-row" id="vr-aria" onclick="pickVoice(this,'9BWtsMINqrJLrRacOk9x','Aria','Féminine · expressive · moderne')">
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('9BWtsMINqrJLrRacOk9x','aria-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Domi</div>
-                    <div class="voice-desc">Féminine · dynamique · énergie</div>
+                    <div class="voice-name">Aria</div>
+                    <div class="voice-desc">Féminine · expressive · moderne</div>
                   </div>
-                  <audio id="domi-prev" style="display:none"></audio>
+                  <audio id="aria-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" id="vr-antoni" onclick="pickVoice(this,'ErXwobaYiN019PkySvjV','Antoni','Masculine · crédible · premium')">
-                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('ErXwobaYiN019PkySvjV','antoni-prev')">▶</button>
+                <div class="voice-row" id="vr-liam" onclick="pickVoice(this,'TX3LPaxmHKxFdv7VOQHJ','Liam','Masculine · fluide · conversationnel')">
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('TX3LPaxmHKxFdv7VOQHJ','liam-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Antoni</div>
-                    <div class="voice-desc">Masculine · crédible · premium</div>
+                    <div class="voice-name">Liam</div>
+                    <div class="voice-desc">Masculine · fluide · conversationnel</div>
                   </div>
-                  <audio id="antoni-prev" style="display:none"></audio>
+                  <audio id="liam-prev" style="display:none"></audio>
                 </div>
-                <div class="voice-row" id="vr-arnold" onclick="pickVoice(this,'VR6AewLTigWG4xSOukaG','Arnold','Masculine · fort · autorité')">
-                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('VR6AewLTigWG4xSOukaG','arnold-prev')">▶</button>
+                <div class="voice-row" id="vr-daniel" onclick="pickVoice(this,'onwK4e9ZLuTAKqWW03F9','Daniel','Masculine · posé · confiant')">
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('onwK4e9ZLuTAKqWW03F9','daniel-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Arnold</div>
-                    <div class="voice-desc">Masculine · fort · autorité</div>
+                    <div class="voice-name">Daniel</div>
+                    <div class="voice-desc">Masculine · posé · confiant</div>
                   </div>
-                  <audio id="arnold-prev" style="display:none"></audio>
+                  <audio id="daniel-prev" style="display:none"></audio>
                 </div>
               </div>
             </div>
@@ -688,15 +688,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Format</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-                <div id="fmt-vertical" onclick="setFormat('vertical')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
+                <div id="fmt-vertical" onclick="selectFormatGroup('short')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📱</div>
                   <div style="font-size:11px;font-weight:700">TikTok / Reels</div>
                   <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16</div>
                 </div>
-                <div id="fmt-square" onclick="setFormat('square')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                <div id="fmt-square" onclick="selectFormatGroup('post')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📸</div>
-                  <div style="font-size:11px;font-weight:700">Publication Insta</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">1:1</div>
+                  <div style="font-size:11px;font-weight:700">Publication</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · Meta</div>
+                </div>
+                <div id="fmt-youtube" onclick="selectFormatGroup('youtube')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:20px;margin-bottom:4px">▶️</div>
+                  <div style="font-size:11px;font-weight:700">YouTube Shorts</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16</div>
                 </div>
               </div>
             </div>
@@ -939,10 +944,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div class="preview-area" id="previewArea" style="flex-direction:column;gap:10px;align-items:center">
 
           <!-- PLATFORM TABS -->
-          <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
-            <button id="ptab-tiktok" onclick="setPlatformPreview('tiktok')" style="padding:5px 14px;border-radius:5px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">TikTok</button>
-            <button id="ptab-reels" onclick="setPlatformPreview('reels')" style="padding:5px 14px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Reels</button>
-            <button id="ptab-instagram" onclick="setPlatformPreview('instagram')" style="padding:5px 14px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Instagram</button>
+          <!-- Tabs for 9:16 short-form content -->
+          <div id="tabs-short" style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
+            <button id="ptab-tiktok" onclick="setPlatformPreview('tiktok')" style="padding:5px 12px;border-radius:5px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">TikTok</button>
+            <button id="ptab-reels" onclick="setPlatformPreview('reels')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Reels</button>
+            <button id="ptab-fbshort" onclick="setPlatformPreview('fbshort')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Facebook</button>
+            <button id="ptab-youtube" onclick="setPlatformPreview('youtube')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">YouTube</button>
+          </div>
+          <!-- Tabs for Publication (Instagram/Meta) -->
+          <div id="tabs-post" style="display:none;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
+            <button id="ptab-instagram" onclick="setPlatformPreview('instagram')" style="padding:5px 12px;border-radius:5px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">Instagram</button>
+            <button id="ptab-meta" onclick="setPlatformPreview('meta')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Meta / Facebook</button>
           </div>
 
           <div style="display:flex;align-items:center;gap:10px">
@@ -1122,6 +1134,92 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                   <div style="color:#fff;font-size:13px;font-weight:700;font-family:sans-serif;margin-bottom:4px">59 345 J'aime</div>
                   <div style="color:#fff;font-size:12px;font-family:sans-serif;line-height:1.4"><span style="font-weight:700">sofia.ads</span> Viens en DM si tu veux savoir comment on fait... <span style="color:rgba(255,255,255,0.5)">plus</span></div>
+                </div>
+              </div>
+
+              <!-- FACEBOOK SHORT UI -->
+              <div id="ui-fbshort" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
+                <!-- Top bar -->
+                <div style="position:absolute;top:0;left:0;right:0;height:52px;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;justify-content:space-between;padding:0 14px 8px">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    <span style="color:#fff;font-size:13px;font-weight:700;font-family:sans-serif">Reels</span>
+                  </div>
+                  <div style="display:flex;gap:12px;align-items:center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </div>
+                </div>
+                <!-- Right sidebar -->
+                <div style="position:absolute;right:12px;bottom:110px;display:flex;flex-direction:column;align-items:center;gap:18px">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+                    <span style="color:#fff;font-size:11px;font-family:var(--mono)">59K</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <span style="color:#fff;font-size:11px;font-family:var(--mono)">1,2K</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                    <span style="color:#fff;font-size:11px;font-family:var(--mono)">Partager</span>
+                  </div>
+                  <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid #fff">
+                    <div style="width:100%;height:100%;background:linear-gradient(135deg,#1877f2,#42b883);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px">A</div>
+                  </div>
+                </div>
+                <!-- Bottom info -->
+                <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 14px 22px;background:linear-gradient(transparent,rgba(0,0,0,0.7))">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#42b883);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">A</div>
+                    <span style="color:#fff;font-size:14px;font-weight:700;font-family:sans-serif">@sofia.ads</span>
+                    <span style="color:#fff;font-size:11px;border:1px solid #fff;border-radius:4px;padding:1px 7px;font-family:sans-serif">Suivre</span>
+                  </div>
+                  <div style="color:rgba(255,255,255,0.9);font-size:13px;font-family:sans-serif">Viens en DM si tu veux savoir comment on fait... <span style="color:rgba(255,255,255,0.6)">plus</span></div>
+                </div>
+              </div>
+
+              <!-- META / FACEBOOK POST UI -->
+              <div id="ui-meta" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
+                <!-- Top header -->
+                <div style="position:absolute;top:0;left:0;right:0;background:rgba(255,255,255,0.96);padding:12px 14px 10px;display:flex;align-items:center;gap:10px">
+                  <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#42b883);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0">A</div>
+                  <div style="flex:1">
+                    <div style="font-size:14px;font-weight:700;color:#050505;font-family:sans-serif">sofia.ads</div>
+                    <div style="font-size:11px;color:#65676b;font-family:sans-serif">Il y a 2 heures · 🌍</div>
+                  </div>
+                  <span style="color:#1877f2;font-size:13px;font-weight:700;font-family:sans-serif">+ Suivre</span>
+                  <span style="color:#65676b;font-size:20px">⋯</span>
+                </div>
+                <!-- Bottom action bar -->
+                <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,0.96);padding:6px 14px 18px">
+                  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e4e6ea">
+                    <div style="display:flex;align-items:center">
+                      <span style="font-size:16px">👍</span><span style="font-size:16px;margin-left:-4px">❤️</span><span style="font-size:16px;margin-left:-4px">😮</span>
+                    </div>
+                    <span style="color:#65676b;font-size:12px;font-family:sans-serif;margin-left:4px">59 345</span>
+                    <span style="color:#65676b;font-size:12px;font-family:sans-serif;margin-left:auto">1 245 commentaires</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-around">
+                    <div style="display:flex;align-items:center;gap:5px;padding:6px 0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="1.8"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                      <span style="color:#65676b;font-size:12px;font-weight:600;font-family:sans-serif">J'aime</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;padding:6px 0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style="color:#65676b;font-size:12px;font-weight:600;font-family:sans-serif">Commenter</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;padding:6px 0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="1.8"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      <span style="color:#65676b;font-size:12px;font-weight:600;font-family:sans-serif">Partager</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1928,7 +2026,7 @@ async function previewVoice(voiceId,audioElId){
   try{
     const res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
       method:'POST',headers:{'xi-api-key':K.el,'Content-Type':'application/json','Accept':'audio/mpeg'},
-      body:JSON.stringify({text:'Le meilleur business en ligne c\'est celui que tu lances maintenant.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.6,similarity_boost:0.8}})
+      body:JSON.stringify({text:'Le meilleur business en ligne c\'est celui que tu lances maintenant.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.28,similarity_boost:0.82,style:0.35,use_speaker_boost:true}})
     });
     if(!res.ok){toast('✗ ElevenLabs '+res.status);return;}
     const blob=await res.blob();
@@ -1975,13 +2073,7 @@ function setFormat(fmt){
   }
   const lbl = document.getElementById('previewSizeLabel');
   if(lbl) lbl.textContent = d.dw+' × '+d.dh;
-  const fmts = ['vertical','square'];
-  fmts.forEach(f => {
-    const el = document.getElementById('fmt-'+f);
-    if(!el) return;
-    el.style.border = f === fmt ? '2px solid var(--orange)' : '2px solid var(--border)';
-    el.style.background = f === fmt ? 'var(--orange-dim)' : 'var(--bg3)';
-  });
+  // Format button highlighting is handled by selectFormatGroup
   updateLivePreview();
 }
 
@@ -2154,14 +2246,36 @@ let currentPlatform = 'tiktok';
 
 function setPlatformPreview(p){
   currentPlatform = p;
-  ['tiktok','reels','instagram'].forEach(id => {
+  ['tiktok','reels','fbshort','youtube','instagram','meta'].forEach(id => {
     const btn = document.getElementById('ptab-'+id);
     const ui  = document.getElementById('ui-'+id);
-    if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; }
+    if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; btn.style.fontWeight = id===p ? '700' : '400'; }
     if(ui)  ui.style.display = id===p ? 'block' : 'none';
   });
-  // For instagram, auto-switch to square format
-  if(p === 'instagram') setFormat('square');
+}
+
+let currentFormatGroup = 'short';
+function selectFormatGroup(group){
+  currentFormatGroup = group;
+  // All groups use the 9:16 portrait phone
+  setFormat('vertical');
+  // Show correct tab bar
+  const tabsShort = document.getElementById('tabs-short');
+  const tabsPost  = document.getElementById('tabs-post');
+  if(tabsShort) tabsShort.style.display = group === 'post' ? 'none' : 'flex';
+  if(tabsPost)  tabsPost.style.display  = group === 'post' ? 'flex' : 'none';
+  // Highlight format button
+  ['vertical','square','youtube'].forEach((id,i) => {
+    const g = ['short','post','youtube'][i];
+    const el = document.getElementById('fmt-'+id);
+    if(!el) return;
+    el.style.border = g===group ? '2px solid var(--orange)' : '2px solid var(--border)';
+    el.style.background = g===group ? 'var(--orange-dim)' : 'var(--bg3)';
+  });
+  // Auto-select default tab for this group
+  if(group === 'short')   setPlatformPreview('tiktok');
+  if(group === 'post')    setPlatformPreview('instagram');
+  if(group === 'youtube') setPlatformPreview('youtube');
 }
 
 // ── SUBTITLE PREVIEW ──
