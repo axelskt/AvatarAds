@@ -585,6 +585,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
             </div>
+            <div class="fld" style="margin-top:14px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="font-size:10px;margin:0">📐 Taille de l'avatar</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
+              </div>
+              <input type="range" id="avZoomSlider" min="50" max="250" value="100" step="5" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
+            </div>
             <div class="fld" style="margin-bottom:12px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Ou colle une URL d'image</div>
               <input type="text" id="f-avatarimg" placeholder="https://..." style="font-size:13px;padding:12px 14px;border-radius:10px" oninput="previewAvatarUrl(this.value)">
@@ -873,6 +881,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="font-size:10px;margin:0">Étirement horizontal</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subScaleXVal">1.0×</span>
+              </div>
+              <input type="range" id="subScaleX" min="5" max="30" value="10" step="1" oninput="cfg.subScaleX=+this.value/10;document.getElementById('subScaleXVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+            </div>
+            <div class="fld" style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Mots par groupe</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
               </div>
@@ -964,7 +979,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
-                  <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:2">
+                  <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                 </div>
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" title="Glisse pour repositionner">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
@@ -972,7 +987,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="font-size:24px">🎮</div>
                     <div style="font-size:9px;font-family:var(--mono);margin-top:3px">Gameplay ici</div>
                   </div>
-                  <video id="gpVideo" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loop muted autoplay playsinline></video>
+                  <video id="gpVideo" style="display:none;object-fit:cover;position:absolute;pointer-events:none" loop muted autoplay playsinline></video>
                 </div>
               </div>
 
@@ -2187,7 +2202,8 @@ function updateSubPreview(){
     const posX = cfg.subPosX !== undefined ? cfg.subPosX : 50;
     overlay.style.top       = posY + '%';
     overlay.style.left      = posX + '%';
-    overlay.style.transform = 'translateX(-50%)';
+    const sx = cfg.subScaleX || 1.0;
+    overlay.style.transform = `translateX(-50%) scaleX(${sx})`;
     overlay.style.width     = (cfg.subWidth||90) + '%';
   }
 }
@@ -2249,19 +2265,39 @@ function applyClip(zone){
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  const x = 50 + (cfg.gpCropX||0);
-  const y = 50 + (cfg.gpCropY||0);
-  vid.style.objectPosition = x+'% '+y+'%';
+  const zoom = Math.max(50, cfg.gpZoom||100);
+  const tx = cfg.gpCropX||0;
+  const ty = cfg.gpCropY||0;
+  vid.style.width = zoom + '%';
+  vid.style.height = zoom + '%';
+  vid.style.maxWidth = 'none';
+  vid.style.maxHeight = 'none';
+  vid.style.top = '50%';
+  vid.style.left = '50%';
+  vid.style.inset = 'unset';
+  vid.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+  vid.style.transformOrigin = 'center center';
+  vid.style.objectFit = 'cover';
+  vid.style.objectPosition = '50% 50%';
 }
 
 function updateAvatarCrop(){
   const img = document.getElementById('previewAvImg');
   if(!img) return;
-  const x = 50 + (cfg.avCropX||0);
-  const y = 50 + (cfg.avCropY||0);
-  img.style.objectPosition = x+'% '+y+'%';
-  img.style.transform = 'scale('+(cfg.avZoom||100)/100+')';
-  img.style.transformOrigin = x+'% '+y+'%';
+  const zoom = Math.max(50, cfg.avZoom||100);
+  const tx = cfg.avCropX||0;
+  const ty = cfg.avCropY||0;
+  img.style.width = zoom + '%';
+  img.style.height = zoom + '%';
+  img.style.maxWidth = 'none';
+  img.style.maxHeight = 'none';
+  img.style.top = '50%';
+  img.style.left = '50%';
+  img.style.inset = 'unset';
+  img.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+  img.style.transformOrigin = 'center center';
+  img.style.objectFit = 'cover';
+  img.style.objectPosition = '50% 50%';
 }
 
 // ── DRAG-TO-CROP ──
@@ -2299,19 +2335,17 @@ document.addEventListener('mousemove', e=>{
   if(!_drag) return;
   // scale factor: phone renders at 393px native, displayed at wrapper width
   const wrapper = document.getElementById('phoneWrapper');
-  const nativeW = 393;
   const dispW = wrapper ? wrapper.offsetWidth : 220;
-  const scale = dispW / nativeW; // ~0.56
-  const sens = 0.1 / scale; // sensitivity adjusted for scale
-  const dx = (e.clientX - _drag.x0) * sens;
-  const dy = (e.clientY - _drag.y0) * sens;
+  const scale = dispW / 393;
+  const dx = (e.clientX - _drag.x0) / scale;
+  const dy = (e.clientY - _drag.y0) / scale;
   if(_drag.zone==='av'){
-    cfg.avCropX = Math.max(-50, Math.min(50, _drag.cx0 - dx));
-    cfg.avCropY = Math.max(-50, Math.min(50, _drag.cy0 - dy));
+    cfg.avCropX = Math.max(-300, Math.min(300, _drag.cx0 + dx));
+    cfg.avCropY = Math.max(-300, Math.min(300, _drag.cy0 + dy));
     updateAvatarCrop();
   } else {
-    cfg.gpCropX = Math.max(-50, Math.min(50, _drag.cx0 - dx));
-    cfg.gpCropY = Math.max(-50, Math.min(50, _drag.cy0 - dy));
+    cfg.gpCropX = Math.max(-300, Math.min(300, _drag.cx0 + dx));
+    cfg.gpCropY = Math.max(-300, Math.min(300, _drag.cy0 + dy));
     updateGpCrop();
   }
 });
