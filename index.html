@@ -450,8 +450,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <option>Si je devais recommencer de 0 et faire 10.000€ par mois</option>
                 </optgroup>
               </select>
-              <input type="text" id="f-hook" placeholder="Le hook apparaîtra ici, ou écris le tien directement" oninput="updatePreview();toggleScriptGenBtn()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
-              <button id="gen-script-btn" onclick="generateScriptFromHook()" style="display:none;width:100%;margin-top:8px;padding:10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:9px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='var(--orange-dim)'">✨ Générer le corps du script depuis ce hook</button>
+              <input type="text" id="f-hook" placeholder="Le hook apparaîtra ici, ou écris le tien directement" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Script <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-size:9px;font-weight:400;text-transform:none">obligatoire — écris ton propre texte</span></div>
@@ -2329,55 +2328,128 @@ function applyHook(val){
   if(!val) return;
   document.getElementById('f-hook').value = val;
   updatePreview();
+  // Auto-select a random CTA to avoid shadowban
+  pickRandomCta();
+  // Auto-generate script body from this hook
+  generateScriptFromHook();
 }
+
 function applyCta(val){
   if(!val) return;
   document.getElementById('f-cta').value = val;
   updatePreview();
 }
 
-function toggleScriptGenBtn(){
-  const hook = document.getElementById('f-hook').value.trim();
-  const btn = document.getElementById('gen-script-btn');
-  if(btn) btn.style.display = hook.length > 5 ? 'block' : 'none';
+function pickRandomCta(){
+  const sel = document.getElementById('f-cta-select');
+  if(!sel) return;
+  const opts = [...sel.options].filter(o => o.value && o.value.trim() !== '');
+  if(!opts.length) return;
+  const chosen = opts[Math.floor(Math.random() * opts.length)];
+  sel.value = chosen.value;
+  document.getElementById('f-cta').value = chosen.value;
+  updatePreview();
 }
 
-async function generateScriptFromHook(){
+const HOOK_SCRIPTS = {
+  // 🔥 Curiosité / Secret
+  "Personne ne t'en parle mais actuellement le meilleur business en ligne est…":
+    "Tu cherches une source de revenu stable ? Tu cherches à te lancer dans un business en ligne rentable ? Être libre financièrement en 2026 n'a jamais été aussi facile. Pas de concurrence, environ 2h par jour, travail où tu veux quand tu veux, 100% de bénéfice, résultat rapide, potentiel +10k par mois. L'IA LEBD.",
+
+  "Personne ne comprend encore ce business… (et c'est exactement pour ça que ça imprime de l'argent en ce moment)":
+    "Pas de stock, pas de produit, pas de compétences techniques, potentiel 10k par mois. Juste une chose : utiliser l'IA intelligemment. Aujourd'hui des gens génèrent des revenus avec ça sans jamais montrer leurs visages. L'IA LEBD est le business à ne pas rater en 2026.",
+
+  "Je garde ça secret depuis longtemps.. J'aurais aimé savoir ça plus tôt..":
+    "L'IA LEBD est définitivement le business le plus rentable de 2026. Potentiel +10K par mois, 100% de marge, environ 1h de ton temps par jour, peu de concurrence, liberté géographique totale. Si tu avais su ça plus tôt tu serais déjà libre.",
+
+  "POV : Tu révèle le business secret que personne ne veut révéler et qui leurs génère des milliers d'euros…":
+    "L'IA LEBD. Le business que ceux qui font 5 chiffres par mois gardent jalousement pour eux. 100% de bénéfice, aucune concurrence, aucun produit physique à gérer. Tu peux commencer avec 0€ et chiffrer en quelques jours.",
+
+  // ⚡ Urgence / FOMO
+  "Tu a louper le bitcoin, tu a louper le dropshipping, ne loupe pas ça":
+    "Il a jamais été aussi facile de faire de l'argent en 2026. Tu a louper le SMMA, tu a louper la bêta TikTok. Si tu ne fais pas de business en ligne maintenant tu loupe ta liberté financière. Ne loupe pas l'IA LEBD.",
+
+  "C'est maintenant ou jamais : c'est la meilleure opportunité de 2026 !":
+    "L'IA LEBD c'est 2h par jour environ, pas de patron, liberté géographique, liberté financière, pas de produit physique à vendre, pas de concurrence, résultats rapides. Les gens qui s'y lancent maintenant prennent une avance énorme.",
+
+  "C'est bientôt l'été et tu n'as toujours pas d'argent pour partir en vacances ?":
+    "L'IA LEBD est le meilleur business à lancer en 2026. 100% de bénéfice, aucune compétence à avoir, pas de stock de produit, aucune concurrence, liberté géographique. Tu peux chiffrer en quelques jours et te payer l'été que tu mérites.",
+
+  "Ne manque pas cette opportunité de 2026 pour devenir libre financièrement.":
+    "L'IA LEBD c'est le business en ligne le plus rentable du moment. 2h par jour environ, pas de patron, liberté géographique et financière, pas de produit physique, pas de concurrence. Ne laisse pas cette opportunité te passer sous le nez.",
+
+  // 💸 Résultats / Preuve
+  "Le business qui me fait gagner 2 SMIC par semaine":
+    "C'est l'IA LEBD. Le business en ligne le plus simple et rentable de 2026. 100% de bénéfice, peu de concurrence, environ 1h par jour, potentiel +10K par mois. Et le meilleur c'est que tu peux commencer avec 0€.",
+
+  "De Fauché à +5 chiffres par mois":
+    "Avec l'IA LEBD. C'est actuellement le meilleur business dans lequel tu dois absolument te lancer. Potentiel +10K par mois, 100% de marge, environ 1h de ton temps par jour, peu de concurrence. Le changement de vie que tu attends il est là.",
+
+  "A 21 ans j'ai fait le pari fou de tout quitter et de gagner 10.000€/mois":
+    "D'autres allaient en boîte tous les week-ends, d'autres scrollaient TikTok toute la journée. Moi j'ai misé sur l'IA LEBD le meilleur business de 2026. Aujourd'hui je fais 5 chiffres par mois et je ne regrette rien.",
+
+  "Le business le plus simple et rentable de 2026 ?":
+    "C'est l'IA LEBD. Soit tu ne fais pas encore de business en ligne, soit tu as les mauvaises stratégies. Potentiel +10K par mois, 100% de marge, environ 1h de ton temps par jour, très peu de concurrence. La réponse était là depuis le début.",
+
+  // 🎯 Comparaison / Contraste
+  "IL SE FOUTENT DE VOUS ! L'e-commerce ça marche, le SMMA ça marche… mais le meilleur c'est…":
+    "L'IA LEBD. L'e-commerce ça marche, TikTok ça marche, Amazon FBA ça marche, le SMMA ça marche. Tous les business marchent mais celui qui est le plus facile et rentable en ce moment c'est l'IA LEBD. Et tu peux commencer dès aujourd'hui.",
+
+  "Dire que certains se cassent le dos pour 1300€ alors que tu peux faire ça en quelques jours…":
+    "Tu es en train de te casser le dos pour 1300€ par mois, pour enrichir un patron. Alors que tu peux faire ce salaire en quelques jours avec l'IA LEBD. À tous les jeunes qui veulent réellement faire de l'argent, l'IA LEBD peut réellement changer votre vie.",
+
+  "Tu cherches un business rentable qui te prend pas beaucoup de temps ?":
+    "L'IA LEBD c'est la réponse. Environ 2h par jour, 100% de bénéfice, aucune concurrence, aucun produit physique à gérer. Tu peux travailler depuis n'importe où dans le monde et commencer à chiffrer rapidement.",
+
+  "Arrête de scroller si tu veux devenir libre financièrement":
+    "L'IA LEBD est le business le plus rentable et simple du moment. Très peu de concurrence, 100% de bénéfice, quelques heures par jour, liberté géographique, potentiel de 5 chiffres par mois avec les bonnes stratégies.",
+
+  // 🧠 Mindset / Motivation
+  "Vouloir réussir jeune va te détruire mentalement… Heureusement il existe une solution.":
+    "La plupart des gens se brûlent en cherchant à tout faire en même temps. La clé c'est d'avoir le bon business, pas de s'épuiser sur le mauvais. L'IA LEBD c'est simple, accessible à tous, tu peux commencer avec 0€. Quelques heures par semaine et tu génères tes premiers revenus.",
+
+  "Garde toujours ça en tête : la plupart des gens commencent à prendre la vie au sérieux entre 25 et 30 ans.":
+    "Si tu commences à 18 ans, voire plus tôt, tu as une avance de plus de 7 ans. Si tu peux transformer ta vie en un an, imagine l'avantage avec 7 ans d'avance. Lance-toi dans l'IA LEBD le business le plus rentable de 2026 avec 100% de bénéfice.",
+
+  "Être mature c'est admettre qu'on deviendra pas riche avec un CDI":
+    "Être mature c'est assumer que l'école ne vous rendra pas riche. Admettre que métro boulot dodo n'a jamais rendu quelqu'un heureux. Mais faire 5 chiffres par mois à 21 ans grâce à l'IA LEBD, ça par contre c'est possible.",
+
+  "«Frère faut qu'on trouve un moyen de faire de l'argent, cette vie là c'est pas pour nous»":
+    "Lance-toi dans l'IA LEBD le meilleur business de 2026. Y'a pas que le babysitting et McDo comme travail étudiant. Pas de stock, peu d'investissement de départ, pas de connaissance nécessaire, pas de concurrence, liberté géographique. Cette vie là elle est à toi.",
+
+  // 📱 POV / Storytelling
+  "POV : C'est 2027, le monde est à toi, tu as mis tes parents à la retraite":
+    "Tout ça parce qu'en 2026 tu as pris la décision de te lancer dans l'IA LEBD. Le business en ligne le plus simple et rentable du moment. 100% de bénéfice, aucune concurrence, liberté totale. Ta vie peut vraiment changer en quelques mois.",
+
+  "POV : T'as 19 ans et t'as explosé grâce à ce business":
+    "L'IA LEBD. Pas d'études, pas de patron, pas de stock. Juste toi, ton téléphone et la bonne méthode. 100% de bénéfice, liberté géographique, potentiel +10K par mois. Et le meilleur dans tout ça ? Presque personne ne le fait encore.",
+
+  "Ma plus grosse erreur en tant qu'entrepreneur… ne pas avoir commencé plus tôt.":
+    "Si j'avais connu l'IA LEBD plus tôt, j'aurais évité des mois de galère. C'est définitivement le business le plus rentable de 2026. Potentiel +10K par mois, 100% de marge, environ 1h par jour, peu de concurrence, liberté géographique complète.",
+
+  "Si je devais recommencer de 0 et faire 10.000€ par mois":
+    "Je me lancerais directement dans l'IA LEBD. Pas de dropshipping, pas de SMMA, pas d'e-commerce classique. L'IA LEBD c'est 100% de bénéfice, aucune concurrence, quelques heures par jour, et un potentiel de 5 chiffres par mois. Le business le plus smart de 2026."
+};
+
+function generateScriptFromHook(){
   const hook = document.getElementById('f-hook').value.trim();
   if(!hook) return;
-  if(!K.gpt){ toast('⚠️ Clé GPT-4o manquante'); openSetup(); return; }
-  const btn = document.getElementById('gen-script-btn');
   const scriptEl = document.getElementById('f-script');
-  if(btn){ btn.textContent = '⏳ Génération...'; btn.disabled = true; }
-  try {
-    const product = document.getElementById('f-product')?.value || '';
-    const cta = document.getElementById('f-cta')?.value || 'Commente PLAN';
-    const res = await fetch('https://api.openai.com/v1/chat/completions',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+K.gpt,'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'gpt-4o',
-        messages:[{role:'user',content:`Tu es un expert en vidéos TikTok/Reels virales pour vendre des formations en ligne.
-
-Hook: "${hook}"
-Produit/thème: "${product || 'business en ligne, revenus passifs'}"
-CTA final: "${cta}"
-
-Écris UNIQUEMENT le corps du script (sans le hook, sans le CTA).
-- 3 à 5 phrases maximum
-- Ton direct, percutant, parlé
-- Structure: problème → solution → bénéfice concret
-- Pas de tirets ni de numéros, juste le texte fluide à lire à voix haute
-- 15 à 25 secondes de lecture max`}],
-        max_tokens:200,temperature:0.8
-      })
-    });
-    const d = await res.json();
-    const text = d.choices?.[0]?.message?.content?.trim();
-    if(text && scriptEl) scriptEl.value = text;
-    toast('✅ Script généré !');
-  } catch(e){ toast('✗ Erreur : '+e.message); }
-  if(btn){ btn.textContent = '✨ Générer le corps du script depuis ce hook'; btn.disabled = false; }
+  if(!scriptEl) return;
+  // Find exact match first, then partial match
+  let body = HOOK_SCRIPTS[hook];
+  if(!body){
+    const lc = hook.toLowerCase();
+    const key = Object.keys(HOOK_SCRIPTS).find(k => k.toLowerCase().startsWith(lc.slice(0,20)));
+    body = key ? HOOK_SCRIPTS[key] : null;
+  }
+  if(body){
+    scriptEl.value = body;
+    updatePreview();
+    toast('✨ Hook sélectionné · Script chargé · CTA aléatoire choisi');
+  } else {
+    toast('✨ Hook sélectionné · CTA aléatoire choisi');
+  }
 }
 
 function toggleChip(el){ el.classList.toggle('on'); }
