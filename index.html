@@ -585,12 +585,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
             </div>
-            <div class="fld" style="margin-top:14px;margin-bottom:12px">
+            <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">📐 Taille de l'avatar</div>
+                <div class="flbl" style="font-size:10px;margin:0">📐 Hauteur de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
               </div>
-              <input type="range" id="avZoomSlider" min="50" max="250" value="100" step="5" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
+              <input type="range" id="avZoomSlider" min="10" max="400" value="100" step="5" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
+            </div>
+            <div class="fld" style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="font-size:10px;margin:0">↔️ Largeur de l'avatar</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avWidthVal">100%</span>
+              </div>
+              <input type="range" id="avWidthSlider" min="10" max="400" value="100" step="5" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
             <div class="fld" style="margin-bottom:12px">
@@ -779,7 +786,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div class="flbl" style="font-size:10px;margin:0">Zoom gameplay</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal">100%</span>
                   </div>
-                  <input type="range" id="gpZoom" min="100" max="200" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpZoom()" style="width:100%;accent-color:var(--orange)">
+                  <input type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
                 </div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
                 <button onclick="swapSplit()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
@@ -2284,11 +2291,12 @@ function updateGpCrop(){
 function updateAvatarCrop(){
   const img = document.getElementById('previewAvImg');
   if(!img) return;
-  const zoom = Math.max(50, cfg.avZoom||100);
+  const h = Math.max(10, cfg.avZoom||100);
+  const w = Math.max(10, cfg.avWidth||cfg.avZoom||100);
   const tx = cfg.avCropX||0;
   const ty = cfg.avCropY||0;
-  img.style.width = zoom + '%';
-  img.style.height = zoom + '%';
+  img.style.width = w + '%';
+  img.style.height = h + '%';
   img.style.maxWidth = 'none';
   img.style.maxHeight = 'none';
   img.style.top = '50%';
@@ -2340,12 +2348,12 @@ document.addEventListener('mousemove', e=>{
   const dx = (e.clientX - _drag.x0) / scale;
   const dy = (e.clientY - _drag.y0) / scale;
   if(_drag.zone==='av'){
-    cfg.avCropX = Math.max(-300, Math.min(300, _drag.cx0 + dx));
-    cfg.avCropY = Math.max(-300, Math.min(300, _drag.cy0 + dy));
+    cfg.avCropX = Math.max(-800, Math.min(800, _drag.cx0 + dx));
+    cfg.avCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
     updateAvatarCrop();
   } else {
-    cfg.gpCropX = Math.max(-300, Math.min(300, _drag.cx0 + dx));
-    cfg.gpCropY = Math.max(-300, Math.min(300, _drag.cy0 + dy));
+    cfg.gpCropX = Math.max(-800, Math.min(800, _drag.cx0 + dx));
+    cfg.gpCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
     updateGpCrop();
   }
 });
