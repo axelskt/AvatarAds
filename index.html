@@ -388,37 +388,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 1 -->
           <div id="fs-1">
             <div class="fld" style="margin-bottom:20px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">Nom du produit digital</div>
-              <input type="text" id="f-product" placeholder="Ex: Formation IA LEBD, E-book Marketing..." oninput="updatePreview()" style="font-size:15px;padding:14px 16px;border-radius:10px">
-            </div>
-            <div class="fld" style="margin-bottom:20px">
-              <div class="row2">
-                <div class="fld">
-                  <div class="flbl" style="font-size:11px;margin-bottom:8px">Niche</div>
-                  <select id="f-niche" style="font-size:14px;padding:12px 14px;border-radius:10px">
-                    <option value="">Sélectionner...</option>
-                    <option>Produit digital / Formation</option>
-                    <option>Business en ligne</option>
-                    <option>Marketing digital</option>
-                    <option>Liberté financière</option>
-                    <option>Entrepreneuriat</option>
-                    <option>Beauté & Skincare</option>
-                    <option>Santé & Bien-être</option>
-                    <option>Tech & SaaS</option>
-                    <option>Fitness</option>
-                    <option>Finance & Investissement</option>
-                  </select>
-                </div>
-                <div class="fld">
-                  <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
-                  <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
-                    <option>15 secondes</option>
-                    <option>20 secondes</option>
-                    <option>30 secondes</option>
-                    <option selected>60 secondes</option>
-                  </select>
-                </div>
-              </div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
+              <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
+                <option>15 secondes</option>
+                <option>20 secondes</option>
+                <option>30 secondes</option>
+                <option selected>60 secondes</option>
+              </select>
             </div>
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Hook d'accroche</div>
@@ -600,11 +576,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <input type="range" id="avWidthSlider" min="10" max="400" value="100" step="5" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
-            <div class="fld" style="margin-bottom:12px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">Ou colle une URL d'image</div>
-              <input type="text" id="f-avatarimg" placeholder="https://..." style="font-size:13px;padding:12px 14px;border-radius:10px" oninput="previewAvatarUrl(this.value)">
-              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px">Hedra anime ton image avec le lipsync — utilise une photo portrait face caméra.</div>
-            </div>
           </div>
 
           <!-- STEP 3 -->
@@ -672,7 +643,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Ou choisis une voix preset</div>
               <div class="voice-list">
                 <div class="voice-row on" id="vr-rachel" onclick="pickVoice(this,'21m00Tcm4TlvDq8ikWAM','Rachel','Féminine · naturelle · lifestyle')">
-                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('21m00Tcm4TlvDq8ikWAM','rachel-prev')}">▶</button>
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('21m00Tcm4TlvDq8ikWAM','rachel-prev')">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Rachel</div>
                     <div class="voice-desc">Féminine · naturelle · lifestyle</div>
@@ -680,7 +651,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <audio id="rachel-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-domi" onclick="pickVoice(this,'AZnzlk1XvdvUeBnXmlld','Domi','Féminine · dynamique · énergie')">
-                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('AZnzlk1XvdvUeBnXmlld','domi-prev')}">▶</button>
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('AZnzlk1XvdvUeBnXmlld','domi-prev')">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Domi</div>
                     <div class="voice-desc">Féminine · dynamique · énergie</div>
@@ -688,7 +659,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <audio id="domi-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-antoni" onclick="pickVoice(this,'ErXwobaYiN019PkySvjV','Antoni','Masculine · crédible · premium')">
-                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('ErXwobaYiN019PkySvjV','antoni-prev')}">▶</button>
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('ErXwobaYiN019PkySvjV','antoni-prev')">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Antoni</div>
                     <div class="voice-desc">Masculine · crédible · premium</div>
@@ -696,7 +667,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <audio id="antoni-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-arnold" onclick="pickVoice(this,'VR6AewLTigWG4xSOukaG','Arnold','Masculine · fort · autorité')">
-                  <button class="voice-play" onclick="ev=>{ev.stopPropagation();previewVoice('VR6AewLTigWG4xSOukaG','arnold-prev')}">▶</button>
+                  <button class="voice-play" onclick="event.stopPropagation();previewVoice('VR6AewLTigWG4xSOukaG','arnold-prev')">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Arnold</div>
                     <div class="voice-desc">Masculine · fort · autorité</div>
@@ -724,13 +695,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <div id="fmt-square" onclick="setFormat('square')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📸</div>
-                  <div style="font-size:11px;font-weight:700">Meta / Insta</div>
+                  <div style="font-size:11px;font-weight:700">Publication Insta</div>
                   <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">1:1</div>
-                </div>
-                <div id="fmt-landscape" onclick="setFormat('landscape')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="font-size:20px;margin-bottom:4px">🖥️</div>
-                  <div style="font-size:11px;font-weight:700">YouTube</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">16:9</div>
                 </div>
               </div>
             </div>
@@ -788,6 +754,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                   <input type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
                 </div>
+                  <div class="fld" style="margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                      <div class="flbl" style="font-size:10px;margin:0">Largeur gameplay</div>
+                      <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal">100%</span>
+                    </div>
+                    <input type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
+                  </div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
                 <button onclick="swapSplit()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
                   ↕ Inverser Avatar / Gameplay
@@ -969,7 +942,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
             <button id="ptab-tiktok" onclick="setPlatformPreview('tiktok')" style="padding:5px 14px;border-radius:5px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">TikTok</button>
             <button id="ptab-reels" onclick="setPlatformPreview('reels')" style="padding:5px 14px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Reels</button>
-            <button id="ptab-youtube" onclick="setPlatformPreview('youtube')" style="padding:5px 14px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">YouTube</button>
+            <button id="ptab-instagram" onclick="setPlatformPreview('instagram')" style="padding:5px 14px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Instagram</button>
           </div>
 
           <div style="display:flex;align-items:center;gap:10px">
@@ -1118,6 +1091,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="white" stroke-width="1.4"><path d="M8.5 2v10M5 9l3.5 4 3.5-4M2 14h13"/></svg><span style="font-size:7px;color:rgba(255,255,255,.7);font-family:var(--mono)">Téléch.</span></div>
                     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px"><svg width="17" height="17" viewBox="0 0 17 17" fill="white"><circle cx="3" cy="8.5" r="1.3"/><circle cx="8.5" cy="8.5" r="1.3"/><circle cx="14" cy="8.5" r="1.3"/></svg><span style="font-size:7px;color:rgba(255,255,255,.7);font-family:var(--mono)">Plus</span></div>
                   </div>
+                </div>
+              </div>
+
+              <!-- INSTAGRAM POST UI -->
+              <div id="ui-instagram" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
+                <!-- Header -->
+                <div style="position:absolute;top:0;left:0;right:0;height:68px;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:space-between;padding:0 18px;padding-top:16px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);display:flex;align-items:center;justify-content:center">
+                      <div style="width:32px;height:32px;border-radius:50%;background:#1c1c1e;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:700">A</div>
+                    </div>
+                    <div>
+                      <div style="color:#fff;font-size:14px;font-weight:700;font-family:sans-serif">sofia.ads</div>
+                      <div style="color:rgba(255,255,255,0.55);font-size:11px;font-family:sans-serif">Publication</div>
+                    </div>
+                  </div>
+                  <div style="color:#3897f0;font-size:14px;font-weight:700;font-family:sans-serif">Suivre</div>
+                  <div style="color:#fff;font-size:22px;font-family:sans-serif">⋯</div>
+                </div>
+                <!-- Bottom action bar -->
+                <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.9);padding:12px 18px 28px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <div style="display:flex;gap:16px;align-items:center">
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div style="color:#fff;font-size:13px;font-weight:700;font-family:sans-serif;margin-bottom:4px">59 345 J'aime</div>
+                  <div style="color:#fff;font-size:12px;font-family:sans-serif;line-height:1.4"><span style="font-weight:700">sofia.ads</span> Viens en DM si tu veux savoir comment on fait... <span style="color:rgba(255,255,255,0.5)">plus</span></div>
                 </div>
               </div>
 
@@ -1971,7 +1975,7 @@ function setFormat(fmt){
   }
   const lbl = document.getElementById('previewSizeLabel');
   if(lbl) lbl.textContent = d.dw+' × '+d.dh;
-  const fmts = ['vertical','square','landscape'];
+  const fmts = ['vertical','square'];
   fmts.forEach(f => {
     const el = document.getElementById('fmt-'+f);
     if(!el) return;
@@ -2150,12 +2154,14 @@ let currentPlatform = 'tiktok';
 
 function setPlatformPreview(p){
   currentPlatform = p;
-  ['tiktok','reels','youtube'].forEach(id => {
+  ['tiktok','reels','instagram'].forEach(id => {
     const btn = document.getElementById('ptab-'+id);
     const ui  = document.getElementById('ui-'+id);
     if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; }
     if(ui)  ui.style.display = id===p ? 'block' : 'none';
   });
+  // For instagram, auto-switch to square format
+  if(p === 'instagram') setFormat('square');
 }
 
 // ── SUBTITLE PREVIEW ──
@@ -2272,11 +2278,12 @@ function applyClip(zone){
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  const zoom = Math.max(50, cfg.gpZoom||100);
+  const h = Math.max(10, cfg.gpZoom||100);
+  const w = Math.max(10, cfg.gpWidth||cfg.gpZoom||100);
   const tx = cfg.gpCropX||0;
   const ty = cfg.gpCropY||0;
-  vid.style.width = zoom + '%';
-  vid.style.height = zoom + '%';
+  vid.style.width = w + '%';
+  vid.style.height = h + '%';
   vid.style.maxWidth = 'none';
   vid.style.maxHeight = 'none';
   vid.style.top = '50%';
