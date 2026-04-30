@@ -331,6 +331,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="13" height="8" rx="1.5"/><path d="M6 6.5l3.5 1.5L6 9.5z" fill="currentColor" stroke="none"/></svg>
         YouTube Shorts
       </div>
+      <div class="nav-i" onclick="nav('social',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11.5" cy="3.5" r="1.8"/><circle cx="3.5" cy="7.5" r="1.8"/><circle cx="11.5" cy="11.5" r="1.8"/><path d="M5.2 6.6l4.6-2.2M5.2 8.4l4.6 2.2"/></svg>
+        Réseaux sociaux
+      </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-gl">Ressources</div>
@@ -1110,6 +1114,63 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
       </div>
     </div>
+
+    <!-- ══ RÉSEAUX SOCIAUX ══ -->
+    <div class="view" id="v-social">
+      <div class="lib-view" style="width:100%;max-width:620px;margin:0 auto">
+        <div class="ph" style="margin-bottom:8px">
+          <div>
+            <div class="ph-title">Connexions réseaux sociaux</div>
+            <div class="ph-sub">Connecte tes comptes pour publier directement depuis AvatarAds.</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:12px;font-family:var(--mono);color:var(--orange2);line-height:1.7">
+          ⚙️ Les connexions directes aux APIs TikTok, Instagram et Facebook sont en cours de développement.<br>
+          YouTube Shorts est déjà disponible via l'outil dédié.
+        </div>
+
+        <!-- TikTok -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+          <div style="width:44px;height:44px;background:#010101;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📱</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">TikTok</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie directement sur ton compte TikTok</div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+        </div>
+
+        <!-- Instagram -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📸</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">Instagram Reels</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie des Reels directement sur ton compte</div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+        </div>
+
+        <!-- Facebook -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+          <div style="width:44px;height:44px;background:#1877f2;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👥</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">Facebook Reels</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie des Reels sur ta page Facebook</div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+        </div>
+
+        <!-- YouTube (disponible) -->
+        <div style="background:var(--bg2);border:1px solid rgba(255,0,0,0.25);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
+          <div style="width:44px;height:44px;background:#ff0000;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">▶️</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">YouTube Shorts</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie sur YouTube Shorts en 1 clic</div>
+          </div>
+          <button onclick="nav('youtube',document.querySelectorAll('.nav-i')[2])" style="font-size:11px;font-family:var(--mono);background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:20px;padding:5px 14px;color:#ff6060;cursor:pointer;white-space:nowrap;font-weight:600">Utiliser →</button>
+        </div>
+      </div>
+    </div><!-- /social -->
 
     <!-- ══ YOUTUBE SHORTS ══ -->
     <div class="view" id="v-youtube">
