@@ -287,6 +287,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4)}
 .av-drag{border-color:var(--orange)!important;background:var(--orange-dim)!important}
+/* Crop handles overlay */
+.crop-handles-ov{position:absolute;inset:0;z-index:30;pointer-events:none;box-sizing:border-box;border:2px dashed rgba(255,107,53,0.8)}
+.crop-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--orange);border-radius:2px;pointer-events:all;box-sizing:border-box}
+.crop-handle.tl{top:-6px;left:-6px;cursor:nw-resize}
+.crop-handle.tc{top:-6px;left:calc(50% - 6px);cursor:n-resize}
+.crop-handle.tr{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.ml{top:calc(50% - 6px);left:-6px;cursor:w-resize}
+.crop-handle.mr{top:calc(50% - 6px);right:-6px;cursor:e-resize}
+.crop-handle.bl{bottom:-6px;left:-6px;cursor:sw-resize}
+.crop-handle.bc{bottom:-6px;left:calc(50% - 6px);cursor:s-resize}
+.crop-handle.br{bottom:-6px;right:-6px;cursor:se-resize}
 </style>
 </head>
 <body>
@@ -617,6 +628,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="file" id="voiceFileIn" accept="audio/*,video/*" style="display:none" onchange="handleVoiceFile(this.files[0])">
 
+              <div id="savedVoiceBanner" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;display:none;align-items:center;gap:10px">
+                <span style="font-size:20px">🎙️</span>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:700;color:var(--text1)" id="savedVoiceLabel">Voix clonée sauvegardée</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="savedVoiceDate"></div>
+                </div>
+                <button onclick="useSavedVoice()" style="padding:5px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">✓ Réutiliser</button>
+                <button onclick="clearSavedVoice()" style="padding:5px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer">✕</button>
+              </div>
               <button id="cloneBtn" onclick="cloneVoice()" disabled
                 style="width:100%;margin-top:10px;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:not-allowed;transition:all .2s">
                 Cloner ma voix avec ElevenLabs →
@@ -846,13 +866,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">Largeur de la zone</div>
-                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWidthVal">90%</span>
-              </div>
-              <input type="range" id="subWidth" min="10" max="100" value="90" oninput="cfg.subWidth=+this.value;document.getElementById('subWidthVal').textContent=this.value+'%';updateLivePreview()" style="width:100%;accent-color:var(--orange)">
-            </div>
-            <div class="fld" style="margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Étirement vertical</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subLineHVal">1.0×</span>
               </div>
@@ -948,12 +961,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
               <!-- VIDEO CONTENT -->
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
-                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour recadrer">
+                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:2">
                 </div>
-                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" title="Glisse pour recadrer">
+                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" title="Glisse pour repositionner">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="font-size:24px">🎮</div>
@@ -1456,6 +1469,7 @@ let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
 // Global config for subtitle styling
 const cfg = {
   subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
+  avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
   format:'vertical', splitRatio:35, gpZoom:100
 };
 const subColors = {c1:'#FFE500', c2:'#ffffff'};
@@ -1769,6 +1783,12 @@ function applyColorPreset(name){
 let voiceFile = null;
 let clonedVoiceId = null;
 
+// Restore saved voice from localStorage
+(function(){
+  const saved = localStorage.getItem('avatarads_voice');
+  if(saved){ try{ const d=JSON.parse(saved); clonedVoiceId=d.voice_id; selVoiceId=d.voice_id; document.addEventListener('DOMContentLoaded',()=>showSavedVoiceBanner(d)); }catch(e){} }
+})();
+
 function handleVoiceFile(file){
   if(!file) return;
   voiceFile = file;
@@ -1832,7 +1852,32 @@ async function cloneVoice(){
     btn.textContent='Cloner ma voix →'; btn.disabled=false;
     selVoiceId=clonedVoiceId;
     toast('✓ Voix clonée ! Écoute les 3 variations.');
+    // Save to localStorage
+    const saveData = {voice_id: clonedVoiceId, date: new Date().toLocaleDateString('fr-FR')};
+    localStorage.setItem('avatarads_voice', JSON.stringify(saveData));
+    showSavedVoiceBanner(saveData);
   }catch(e){ toast('✗ Erreur : '+e.message); btn.textContent='Cloner ma voix →'; btn.disabled=false; status.textContent=''; }
+}
+
+function showSavedVoiceBanner(data){
+  const banner = document.getElementById('savedVoiceBanner');
+  const dateEl = document.getElementById('savedVoiceDate');
+  if(banner){ banner.style.display = 'flex'; }
+  if(dateEl && data.date) dateEl.textContent = 'Clonée le ' + data.date;
+}
+function useSavedVoice(){
+  const saved = localStorage.getItem('avatarads_voice');
+  if(!saved) return;
+  const data = JSON.parse(saved);
+  clonedVoiceId = data.voice_id;
+  selVoiceId = data.voice_id;
+  toast('✓ Voix clonée rechargée !');
+}
+function clearSavedVoice(){
+  localStorage.removeItem('avatarads_voice');
+  const banner = document.getElementById('savedVoiceBanner');
+  if(banner) banner.style.display = 'none';
+  clonedVoiceId = null;
 }
 
 function toggleSample(btn){
@@ -2151,28 +2196,54 @@ let cropModeAvatar = false;
 let cropModeGameplay = false;
 
 function toggleCropMode(zone){
-  if(zone === 'avatar'){
+  if(zone==='avatar'){
     cropModeAvatar = !cropModeAvatar;
-    if(cropModeAvatar) cropModeGameplay = false;
+    if(cropModeAvatar){ cropModeGameplay=false; hideCropHandles('gp'); }
   } else {
     cropModeGameplay = !cropModeGameplay;
-    if(cropModeGameplay) cropModeAvatar = false;
+    if(cropModeGameplay){ cropModeAvatar=false; hideCropHandles('av'); }
   }
   const avBtn  = document.getElementById('crop-btn-av');
   const gpBtn  = document.getElementById('crop-btn-gp');
   const hint   = document.getElementById('crop-hint');
-  const avZone = document.getElementById('avZone');
-  const gpZone = document.getElementById('gameplayZone');
-  const on = 'var(--orange-dim)'; const onB = 'rgba(255,107,53,0.4)'; const onC = 'var(--orange2)';
-  const off = 'var(--bg4)'; const offB = 'var(--border2)'; const offC = 'var(--text2)';
+  const on='rgba(255,107,53,0.15)',off='var(--bg4)',onB='rgba(255,107,53,0.5)',offB='var(--border2)',onC='var(--orange2)',offC='var(--text2)';
   if(avBtn){ avBtn.style.background=cropModeAvatar?on:off; avBtn.style.borderColor=cropModeAvatar?onB:offB; avBtn.style.color=cropModeAvatar?onC:offC; }
   if(gpBtn){ gpBtn.style.background=cropModeGameplay?on:off; gpBtn.style.borderColor=cropModeGameplay?onB:offB; gpBtn.style.color=cropModeGameplay?onC:offC; }
-  if(avZone) avZone.style.outline = cropModeAvatar ? '3px solid var(--orange)' : 'none';
-  if(gpZone) gpZone.style.outline = cropModeGameplay ? '3px solid var(--orange)' : 'none';
   const active = cropModeAvatar || cropModeGameplay;
   if(hint) hint.style.display = active ? 'block' : 'none';
-  if(!active) toast('✂️ Rognage désactivé');
-  else toast('✂️ Rognage activé — glisse sur le preview');
+  if(cropModeAvatar) showCropHandles('av'); else hideCropHandles('av');
+  if(cropModeGameplay) showCropHandles('gp'); else hideCropHandles('gp');
+}
+
+function showCropHandles(zone){
+  const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  if(!zoneEl) return;
+  hideCropHandles(zone);
+  const ov = document.createElement('div');
+  ov.id = 'cropOv-'+zone;
+  ov.className = 'crop-handles-ov';
+  ['tl','tc','tr','ml','mr','bl','bc','br'].forEach(pos=>{
+    const h = document.createElement('div');
+    h.className = 'crop-handle '+pos;
+    h.addEventListener('mousedown', e=>{
+      e.stopPropagation(); e.preventDefault();
+      const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
+      _cropDrag = {zone, pos, x0:e.clientX, y0:e.clientY, clip0:{...clip}};
+    });
+    ov.appendChild(h);
+  });
+  zoneEl.appendChild(ov);
+  applyClip(zone);
+}
+function hideCropHandles(zone){
+  const ov = document.getElementById('cropOv-'+zone);
+  if(ov) ov.remove();
+}
+function applyClip(zone){
+  const el = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  if(!el) return;
+  const c = zone==='av' ? (cfg.avClip||{t:0,b:0,l:0,r:0}) : (cfg.gpClip||{t:0,b:0,l:0,r:0});
+  el.style.clipPath = `inset(${c.t}% ${c.r}% ${c.b}% ${c.l}% round 2px)`;
 }
 
 function updateGpCrop(){
@@ -2195,9 +2266,8 @@ function updateAvatarCrop(){
 
 // ── DRAG-TO-CROP ──
 let _drag = null;
+let _cropDrag = null;
 function startZoneDrag(e, zone){
-  if(zone === 'av' && !cropModeAvatar) return;
-  if(zone === 'gp' && !cropModeGameplay) return;
   e.preventDefault();
   _drag = {
     zone,
@@ -2211,6 +2281,21 @@ function startZoneDrag(e, zone){
   if(el) el.style.cursor='grabbing';
 }
 document.addEventListener('mousemove', e=>{
+  if(_cropDrag){
+    const {zone, pos, x0, y0, clip0} = _cropDrag;
+    const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+    if(!zoneEl) return;
+    const rect = zoneEl.getBoundingClientRect();
+    const dx = (e.clientX - x0) / rect.width * 100;
+    const dy = (e.clientY - y0) / rect.height * 100;
+    const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
+    if(pos.includes('t')) clip.t = Math.max(0, Math.min(45, clip0.t + dy));
+    if(pos.includes('b')) clip.b = Math.max(0, Math.min(45, clip0.b - dy));
+    if(pos.includes('l')) clip.l = Math.max(0, Math.min(45, clip0.l + dx));
+    if(pos.includes('r')) clip.r = Math.max(0, Math.min(45, clip0.r - dx));
+    applyClip(zone);
+    return;
+  }
   if(!_drag) return;
   // scale factor: phone renders at 393px native, displayed at wrapper width
   const wrapper = document.getElementById('phoneWrapper');
@@ -2231,12 +2316,32 @@ document.addEventListener('mousemove', e=>{
   }
 });
 document.addEventListener('mouseup', ()=>{
+  if(_cropDrag){ _cropDrag = null; return; }
   if(!_drag) return;
   const hint = document.getElementById(_drag.zone==='av'?'avDragHint':'gpDragHint');
   if(hint) hint.style.opacity='0';
   const el = document.getElementById(_drag.zone==='av'?'avZone':'gameplayZone');
   if(el) el.style.cursor='grab';
   _drag = null;
+});
+document.addEventListener('click', e=>{
+  if(!cropModeAvatar && !cropModeGameplay) return;
+  const avZone = document.getElementById('avZone');
+  const gpZone = document.getElementById('gameplayZone');
+  const avBtn = document.getElementById('crop-btn-av');
+  const gpBtn = document.getElementById('crop-btn-gp');
+  const inside = [avZone, gpZone, avBtn, gpBtn].some(el => el && el.contains(e.target));
+  if(!inside){
+    cropModeAvatar = false; cropModeGameplay = false;
+    hideCropHandles('av'); hideCropHandles('gp');
+    const hint = document.getElementById('crop-hint');
+    if(hint) hint.style.display = 'none';
+    const avB = document.getElementById('crop-btn-av');
+    const gpB = document.getElementById('crop-btn-gp');
+    const off='var(--bg4)',offB='var(--border2)',offC='var(--text2)';
+    if(avB){ avB.style.background=off; avB.style.borderColor=offB; avB.style.color=offC; }
+    if(gpB){ gpB.style.background=off; gpB.style.borderColor=offB; gpB.style.color=offC; }
+  }
 });
 
 // ── LIVE PREVIEW (tout mettre à jour) ──
