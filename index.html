@@ -242,7 +242,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 @keyframes sub-bounce{0%{transform:translateY(18px);opacity:0}60%{transform:translateY(-4px)}100%{transform:translateY(0);opacity:1}}
 @keyframes sub-slide{0%{transform:translateX(-30px);opacity:0}100%{transform:translateX(0);opacity:1}}
 @keyframes sub-fade{0%{opacity:0}100%{opacity:1}}
-@keyframes sub-karaoke{0%{color:transparent;-webkit-text-stroke:0}100%{}}
+@keyframes sub-karaoke{0%{opacity:0;transform:translateY(6px) scale(0.85)}60%{transform:translateY(-2px) scale(1.05)}100%{opacity:1;transform:none}}
+.sub-anim-karaoke span{animation:sub-karaoke .3s ease both}
+.sub-anim-karaoke span:nth-child(1){animation-delay:0s}
+.sub-anim-karaoke span:nth-child(2){animation-delay:.15s}
+.sub-anim-karaoke span:nth-child(3){animation-delay:.3s}
+.sub-anim-karaoke span:nth-child(4){animation-delay:.45s}
 .sub-anim-pop span{animation:sub-pop .25s cubic-bezier(.17,.67,.35,1.2) both}
 .sub-anim-pop span:nth-child(2){animation-delay:.08s}
 .sub-anim-pop span:nth-child(3){animation-delay:.16s}
@@ -579,23 +584,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 3 -->
           <div id="fs-3" style="display:none">
 
-            <!-- SOURCE VOIX -->
-            <div class="fld" style="margin-bottom:16px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Source de la voix</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div id="vmode-el" onclick="setVoiceMode('elevenlabs')" style="padding:12px;border:2px solid var(--orange);border-radius:10px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
-                  <div style="font-size:22px;margin-bottom:4px">🤖</div>
-                  <div style="font-size:12px;font-weight:700">ElevenLabs TTS</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Voix IA générée</div>
-                </div>
-                <div id="vmode-gp" onclick="setVoiceMode('gameplay')" style="padding:12px;border:2px solid var(--border);border-radius:10px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="font-size:22px;margin-bottom:4px">🎮</div>
-                  <div style="font-size:12px;font-weight:700">Audio gameplay</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Ta voix du gameplay</div>
-                </div>
+            <!-- STATUT SOURCE VOIX (géré depuis l'étape Style) -->
+            <div id="voice-gp-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;display:none;align-items:center;gap:10px">
+              <span style="font-size:20px">🎮</span>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--green)">Mode "Audio gameplay" activé</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">La voix de ton gameplay animera la bouche de l'avatar · ElevenLabs ignoré</div>
               </div>
-              <div id="vmode-gp-hint" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green)">✅ L'audio sera extrait de ton fichier gameplay — ElevenLabs non utilisé</div>
-              <div id="vmode-gp-warn" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;font-size:11px;font-family:var(--mono);color:#ffa040">⚠️ Importe d'abord un gameplay avec ta voix (étape Style → Split Screen)</div>
             </div>
 
             <div id="voice-el-sections">
@@ -729,6 +724,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="gameplayFileInfo" style="display:none"><div style="font-size:22px">✅</div><div id="gameplayFileName" style="font-size:12px;font-weight:600;margin-top:4px"></div></div>
                 </div>
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
+
+                <!-- TOGGLE AUDIO GAMEPLAY -->
+                <div id="gpAudioRow" onclick="toggleGameplayAudio()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="font-size:16px">🎤</span>
+                    <div>
+                      <div style="font-size:12px;font-weight:700">Utiliser l'audio du gameplay pour le lipsync</div>
+                      <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">La voix de ta vidéo anime la bouche de l'avatar — sans ElevenLabs</div>
+                    </div>
+                  </div>
+                  <div id="gpAudioSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                    <div id="gpAudioThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s"></div>
+                  </div>
+                </div>
+
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
                     <div class="flbl" style="font-size:10px;margin:0">Ratio Avatar / Gameplay</div>
@@ -743,22 +753,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                   <input type="range" id="gpZoom" min="100" max="200" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpZoom()" style="width:100%;accent-color:var(--orange)">
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-                      <div class="flbl" style="font-size:10px;margin:0">Rogner X</div>
-                      <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpCropXVal">0%</span>
-                    </div>
-                    <input type="range" id="gpCropX" min="-50" max="50" value="0" oninput="cfg.gpCropX=+this.value;document.getElementById('gpCropXVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
-                  </div>
-                  <div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-                      <div class="flbl" style="font-size:10px;margin:0">Rogner Y</div>
-                      <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpCropYVal">0%</span>
-                    </div>
-                    <input type="range" id="gpCropY" min="-50" max="50" value="0" oninput="cfg.gpCropY=+this.value;document.getElementById('gpCropYVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
-                  </div>
-                </div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
                 <button onclick="swapSplit()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
                   ↕ Inverser Avatar / Gameplay
                 </button>
@@ -904,35 +899,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">💡 Clic = modifier · Double-clic = supprimer</div>
             </div>
 
-            <!-- ROGNER AVATAR -->
-            <div class="fld" style="margin-bottom:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">✂️ Rogner l'avatar</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                <div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Décalage X</div>
-                    <span style="font-size:10px;font-family:var(--mono);color:var(--orange2)" id="avCropXVal">0%</span>
-                  </div>
-                  <input type="range" id="avCropX" min="-50" max="50" value="0" oninput="cfg.avCropX=+this.value;document.getElementById('avCropXVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
-                </div>
-                <div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Décalage Y</div>
-                    <span style="font-size:10px;font-family:var(--mono);color:var(--orange2)" id="avCropYVal">0%</span>
-                  </div>
-                  <input type="range" id="avCropY" min="-50" max="50" value="0" oninput="cfg.avCropY=+this.value;document.getElementById('avCropYVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
-                </div>
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom avatar</div>
-                  <span style="font-size:10px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
-                </div>
-                <input type="range" id="avZoomSl" min="100" max="250" value="100" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
-              </div>
-              <button onclick="cfg.avCropX=0;cfg.avCropY=0;cfg.avZoom=100;document.getElementById('avCropX').value=0;document.getElementById('avCropY').value=0;document.getElementById('avZoomSl').value=100;document.getElementById('avCropXVal').textContent='0%';document.getElementById('avCropYVal').textContent='0%';document.getElementById('avZoomVal').textContent='100%';updateAvatarCrop()" style="margin-top:8px;width:100%;padding:6px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">↺ Réinitialiser</button>
-            </div>
-
           </div>
 
         </div><!-- /gen-form -->
@@ -968,11 +934,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
               <!-- VIDEO CONTENT -->
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
-                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0">
+                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour recadrer">
+                  <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:2">
                 </div>
-                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden">
+                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" title="Glisse pour recadrer">
+                  <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="font-size:24px">🎮</div>
                     <div style="font-size:9px;font-family:var(--mono);margin-top:3px">Gameplay ici</div>
@@ -2179,6 +2147,50 @@ function updateAvatarCrop(){
   img.style.transformOrigin = x+'% '+y+'%';
 }
 
+// ── DRAG-TO-CROP ──
+let _drag = null;
+function startZoneDrag(e, zone){
+  e.preventDefault();
+  _drag = {
+    zone,
+    x0: e.clientX, y0: e.clientY,
+    cx0: zone==='av' ? (cfg.avCropX||0) : (cfg.gpCropX||0),
+    cy0: zone==='av' ? (cfg.avCropY||0) : (cfg.gpCropY||0)
+  };
+  const hint = document.getElementById(zone==='av'?'avDragHint':'gpDragHint');
+  if(hint) hint.style.opacity='1';
+  const el = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  if(el) el.style.cursor='grabbing';
+}
+document.addEventListener('mousemove', e=>{
+  if(!_drag) return;
+  // scale factor: phone renders at 393px native, displayed at wrapper width
+  const wrapper = document.getElementById('phoneWrapper');
+  const nativeW = 393;
+  const dispW = wrapper ? wrapper.offsetWidth : 220;
+  const scale = dispW / nativeW; // ~0.56
+  const sens = 0.1 / scale; // sensitivity adjusted for scale
+  const dx = (e.clientX - _drag.x0) * sens;
+  const dy = (e.clientY - _drag.y0) * sens;
+  if(_drag.zone==='av'){
+    cfg.avCropX = Math.max(-50, Math.min(50, _drag.cx0 - dx));
+    cfg.avCropY = Math.max(-50, Math.min(50, _drag.cy0 - dy));
+    updateAvatarCrop();
+  } else {
+    cfg.gpCropX = Math.max(-50, Math.min(50, _drag.cx0 - dx));
+    cfg.gpCropY = Math.max(-50, Math.min(50, _drag.cy0 - dy));
+    updateGpCrop();
+  }
+});
+document.addEventListener('mouseup', ()=>{
+  if(!_drag) return;
+  const hint = document.getElementById(_drag.zone==='av'?'avDragHint':'gpDragHint');
+  if(hint) hint.style.opacity='0';
+  const el = document.getElementById(_drag.zone==='av'?'avZone':'gameplayZone');
+  if(el) el.style.cursor='grab';
+  _drag = null;
+});
+
 // ── LIVE PREVIEW (tout mettre à jour) ──
 function updateLivePreview(){
   // 1. Avatar
@@ -2417,24 +2429,27 @@ Style: authentique, comme un vrai témoignage, direct, sans fioritures.`}
 // ── VOICE MODE ──
 let voiceMode = 'elevenlabs';
 
-function setVoiceMode(mode){
-  voiceMode = mode;
-  const elCard  = document.getElementById('vmode-el');
-  const gpCard  = document.getElementById('vmode-gp');
-  const elSec   = document.getElementById('voice-el-sections');
-  const gpHint  = document.getElementById('vmode-gp-hint');
-  const gpWarn  = document.getElementById('vmode-gp-warn');
-  if(mode === 'gameplay'){
-    elCard.style.border = '2px solid var(--border)';   elCard.style.background = 'var(--bg3)';
-    gpCard.style.border = '2px solid var(--green)';    gpCard.style.background = 'rgba(0,217,126,0.06)';
-    if(elSec) elSec.style.display = 'none';
-    if(gameplayFile){ gpHint.style.display='block'; gpWarn.style.display='none'; }
-    else            { gpHint.style.display='none';  gpWarn.style.display='block'; }
+function toggleGameplayAudio(){
+  voiceMode = voiceMode === 'gameplay' ? 'elevenlabs' : 'gameplay';
+  const sw    = document.getElementById('gpAudioSwitch');
+  const thumb = document.getElementById('gpAudioThumb');
+  const row   = document.getElementById('gpAudioRow');
+  const elSec = document.getElementById('voice-el-sections');
+  const gpCard = document.getElementById('voice-gp-active');
+  if(voiceMode === 'gameplay'){
+    if(sw)    { sw.style.background='var(--green)'; }
+    if(thumb) { thumb.style.left='19px'; }
+    if(row)   { row.style.borderColor='rgba(0,217,126,0.35)'; row.style.background='rgba(0,217,126,0.06)'; }
+    if(elSec) elSec.style.display='none';
+    if(gpCard){ gpCard.style.display='flex'; }
+    toast('🎮 Audio gameplay activé — ta voix du gameplay sera utilisée');
   } else {
-    elCard.style.border = '2px solid var(--orange)';   elCard.style.background = 'var(--orange-dim)';
-    gpCard.style.border = '2px solid var(--border)';   gpCard.style.background = 'var(--bg3)';
-    if(elSec) elSec.style.display = 'block';
-    gpHint.style.display = 'none'; gpWarn.style.display = 'none';
+    if(sw)    { sw.style.background='var(--bg5)'; }
+    if(thumb) { thumb.style.left='3px'; }
+    if(row)   { row.style.borderColor='var(--border)'; row.style.background='var(--bg4)'; }
+    if(elSec) elSec.style.display='block';
+    if(gpCard){ gpCard.style.display='none'; }
+    toast('🤖 ElevenLabs TTS activé');
   }
 }
 
