@@ -970,7 +970,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                 </div>
-                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" title="Glisse pour repositionner">
+                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="font-size:24px">🎮</div>
@@ -2183,6 +2183,33 @@ function swapSplit(){
 function updateGpZoom(){
   const vid = document.getElementById('gpVideo');
   if(vid) vid.style.transform = 'scale('+(cfg.gpZoom||100)/100+')';
+}
+
+function toggleGameplayPause(e){
+  // Ne pas déclencher si c'était un drag
+  if(_drag && _drag.moved) return;
+  const vid = document.getElementById('gpVideo');
+  if(!vid || !vid.src) return;
+  const zone = document.getElementById('gameplayZone');
+  if(vid.paused){
+    vid.play();
+    zone.style.cursor = 'grab';
+    // Retire l'icône pause si présente
+    const ic = document.getElementById('gp-pause-icon');
+    if(ic) ic.remove();
+  } else {
+    vid.pause();
+    zone.style.cursor = 'grab';
+    // Affiche une icône pause temporaire
+    let ic = document.getElementById('gp-pause-icon');
+    if(!ic){
+      ic = document.createElement('div');
+      ic.id = 'gp-pause-icon';
+      ic.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;pointer-events:none';
+      ic.innerHTML = '<div style="width:44px;height:44px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>';
+      zone.appendChild(ic);
+    }
+  }
 }
 
 function togglePreviewPlay(){
