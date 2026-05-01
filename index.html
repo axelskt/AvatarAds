@@ -362,6 +362,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h8l3 3v8H2z"/><path d="M10 2v3h3M5 7h5M5 10h3"/></svg>
         Docs
       </div>
+      <div class="nav-i" onclick="openBugReport()" style="color:var(--text2)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5v3M7.5 10h.01"/></svg>
+        Report bug
+      </div>
     </div>
   </div>
 
@@ -3653,6 +3657,81 @@ function stopResize(){
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
 }
+
+// ── BUG REPORT ──
+const BUG_WEBHOOK = 'https://hook.eu1.make.com/85nubik4r7qgsm54j4qpjo3kd2skzcjr';
+
+function openBugReport(){
+  document.getElementById('bugModal').style.display = 'flex';
+  document.getElementById('bugTitle').value = '';
+  document.getElementById('bugDesc').value = '';
+  document.getElementById('bugSuccess').style.display = 'none';
+  document.getElementById('bugForm').style.display = 'block';
+  document.getElementById('bugTitle').focus();
+}
+function closeBugReport(){
+  document.getElementById('bugModal').style.display = 'none';
+}
+async function submitBugReport(){
+  const title = document.getElementById('bugTitle').value.trim();
+  const desc  = document.getElementById('bugDesc').value.trim();
+  if(!title){ toast('⚠️ Donne un titre au bug'); return; }
+  const btn = document.getElementById('bugSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  try {
+    await fetch(BUG_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        date: new Date().toLocaleString('fr-FR'),
+        user: document.getElementById('topbar-username')?.textContent || 'Membre',
+        title,
+        description: desc || '(pas de description)',
+      })
+    });
+  } catch(e){ /* make.com répond parfois avec un non-JSON, on ignore */ }
+  btn.disabled = false;
+  btn.textContent = 'Envoyer';
+  document.getElementById('bugForm').style.display = 'none';
+  document.getElementById('bugSuccess').style.display = 'flex';
+}
 </script>
+<!-- BUG REPORT MODAL -->
+<div id="bugModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="if(event.target===this)closeBugReport()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:420px;max-width:90vw;padding:28px;position:relative">
+    <button onclick="closeBugReport()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <div style="width:36px;height:36px;background:rgba(255,71,87,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 15 15" fill="none" stroke="#ff4757" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5v3M7.5 10h.01"/></svg>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700">Report un bug</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">AvatarAds IA Manager</div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div id="bugForm">
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Titre du bug *</div>
+        <input id="bugTitle" type="text" placeholder="Ex : L'avatar ne s'affiche pas dans le preview" onkeydown="if(event.key==='Enter')document.getElementById('bugDesc').focus()" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px">
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Description (optionnel)</div>
+        <textarea id="bugDesc" rows="4" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+      </div>
+      <button id="bugSubmitBtn" onclick="submitBugReport()" style="width:100%;padding:12px;background:var(--red);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Envoyer le bug report</button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="bugSuccess" style="display:none;flex-direction:column;align-items:center;padding:20px 0;gap:12px;text-align:center">
+      <div style="font-size:48px">✅</div>
+      <div style="font-size:16px;font-weight:700">Bug bien reçu !</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">On l'a enregistré dans notre tracker.<br>On règle ça ensemble dès que possible.</div>
+      <button onclick="closeBugReport()" style="margin-top:8px;padding:10px 24px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;cursor:pointer">Fermer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
