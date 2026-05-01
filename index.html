@@ -939,6 +939,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="gen-right" id="genRight">
         <div class="preview-area" id="previewArea" style="flex-direction:column;gap:10px;align-items:center">
 
+          <!-- GAMEPLAY SOUND TOGGLE -->
+          <button id="gp-sound-btn" onclick="toggleGameplaySound()" style="display:none;align-items:center;gap:6px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">
+            <svg id="gp-sound-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+            <span id="gp-sound-label">Son gameplay : OFF</span>
+          </button>
+
           <!-- PLATFORM TABS -->
           <!-- Tabs for 9:16 short-form content -->
           <div id="tabs-short" style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
@@ -2185,6 +2191,26 @@ function updateGpZoom(){
   if(vid) vid.style.transform = 'scale('+(cfg.gpZoom||100)/100+')';
 }
 
+function toggleGameplaySound(){
+  const vid = document.getElementById('gpVideo');
+  if(!vid) return;
+  vid.muted = !vid.muted;
+  const btn   = document.getElementById('gp-sound-btn');
+  const icon  = document.getElementById('gp-sound-icon');
+  const label = document.getElementById('gp-sound-label');
+  if(vid.muted){
+    btn.style.color = 'var(--text3)';
+    btn.style.borderColor = 'var(--border2)';
+    label.textContent = 'Son gameplay : OFF';
+    icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+  } else {
+    btn.style.color = 'var(--orange2)';
+    btn.style.borderColor = 'rgba(255,107,53,0.35)';
+    label.textContent = 'Son gameplay : ON';
+    icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+  }
+}
+
 function toggleGameplayPause(e){
   // Ne pas déclencher si c'était un drag
   if(_drag && _drag.moved) return;
@@ -2350,8 +2376,10 @@ function handleGameplayFile(file){
   // Show in new preview
   const vid = document.getElementById('gpVideo');
   const empty = document.getElementById('gpEmpty');
-  if(vid){ vid.src = URL.createObjectURL(file); vid.style.display = 'block'; }
+  if(vid){ vid.src = URL.createObjectURL(file); vid.style.display = 'block'; vid.muted = true; }
   if(empty) empty.style.display = 'none';
+  const soundBtn = document.getElementById('gp-sound-btn');
+  if(soundBtn) soundBtn.style.display = 'flex';
   updateLivePreview();
 }
 
