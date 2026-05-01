@@ -1352,14 +1352,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div class="result-card">
               <div class="result-title">📱 Publier sur les réseaux</div>
-              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie directement ta vidéo sur YouTube Shorts en 1 clic.</div>
-              <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier maintenant sur YouTube Shorts</button>
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie ta vidéo directement sur tes comptes connectés.</div>
+              <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier sur YouTube Shorts</button>
               <div id="yt-result-status" style="font-size:11px;font-family:var(--mono);text-align:center;margin-bottom:12px"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ TikTok — bientôt disponible')"><span>📱</span>TikTok</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Instagram — bientôt disponible')"><span>📸</span>Instagram</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Facebook — bientôt disponible')"><span>👥</span>Facebook</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
+                <button id="pub-btn-tiktok" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('tiktok')"><span>📱</span>TikTok</button>
+                <button id="pub-btn-instagram" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('instagram')"><span>📸</span>Instagram</button>
+                <button id="pub-btn-facebook" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('facebook')"><span>👥</span>Facebook</button>
+                <button id="pub-btn-linkedin" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('linkedin')"><span>💼</span>LinkedIn</button>
               </div>
             </div>
           </div>
@@ -1400,37 +1400,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- TikTok -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+        <div id="sc-tiktok" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#010101;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📱</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">TikTok</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie directement sur ton compte TikTok</div>
           </div>
-          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+          <div id="scb-tiktok" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap;transition:all .3s">Bientôt disponible</div>
         </div>
 
         <!-- Instagram -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+        <div id="sc-instagram" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📸</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">Instagram Reels</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie des Reels directement sur ton compte</div>
           </div>
-          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+          <div id="scb-instagram" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap;transition:all .3s">Bientôt disponible</div>
         </div>
 
         <!-- Facebook -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+        <div id="sc-facebook" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#1877f2;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👥</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">Facebook Reels</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie des Reels sur ta page Facebook</div>
           </div>
-          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+          <div id="scb-facebook" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap;transition:all .3s">Bientôt disponible</div>
         </div>
 
         <!-- LinkedIn -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55">
+        <div id="sc-linkedin" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#0A66C2;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
           </div>
@@ -1438,7 +1438,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">LinkedIn</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Publie des vidéos courtes sur ton profil LinkedIn</div>
           </div>
-          <div style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap">Bientôt disponible</div>
+          <div id="scb-linkedin" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;color:var(--text3);white-space:nowrap;transition:all .3s">Bientôt disponible</div>
         </div>
 
         <!-- YouTube (disponible) -->
@@ -1609,6 +1609,35 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <input type="text" id="inp-yt-client" placeholder="123456789-abc.apps.googleusercontent.com">
       </div>
       <div class="setup-hint">Client ID OAuth 2.0 (type «Application Web»). Ajoute <code style="background:var(--bg4);padding:1px 5px;border-radius:3px">https://axelskt.github.io/avatarads-membres/</code> dans les URIs de redirection autorisées.</div>
+    </div>
+
+    <div class="setup-divider"></div>
+
+    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Connexions réseaux sociaux</div>
+
+    <div class="setup-field">
+      <div class="setup-label">TikTok</div>
+      <div class="setup-input">
+        <input type="text" id="inp-wh-tiktok" placeholder="https://...">
+      </div>
+    </div>
+    <div class="setup-field">
+      <div class="setup-label">Instagram</div>
+      <div class="setup-input">
+        <input type="text" id="inp-wh-instagram" placeholder="https://...">
+      </div>
+    </div>
+    <div class="setup-field">
+      <div class="setup-label">Facebook</div>
+      <div class="setup-input">
+        <input type="text" id="inp-wh-facebook" placeholder="https://...">
+      </div>
+    </div>
+    <div class="setup-field">
+      <div class="setup-label">LinkedIn</div>
+      <div class="setup-input">
+        <input type="text" id="inp-wh-linkedin" placeholder="https://...">
+      </div>
     </div>
 
     <div class="setup-divider"></div>
@@ -1810,6 +1839,10 @@ function loadKeysToInputs(){
   });
   const ytc = localStorage.getItem('yt_client_id')||'';
   document.getElementById('inp-yt-client').value = ytc;
+  ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
+    const el = document.getElementById('inp-wh-'+p);
+    if(el) el.value = localStorage.getItem('aa_wh_'+p)||'';
+  });
   refreshDots();
 }
 function saveKeys(){
@@ -1820,7 +1853,13 @@ function saveKeys(){
   });
   const ytClient = document.getElementById('inp-yt-client').value.trim();
   if(ytClient) localStorage.setItem('yt_client_id', ytClient);
+  ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
+    const el = document.getElementById('inp-wh-'+p);
+    if(el){ const v=el.value.trim(); if(v) localStorage.setItem('aa_wh_'+p,v); else localStorage.removeItem('aa_wh_'+p); }
+  });
   refreshDots();
+  refreshSocialCards();
+  refreshPublishButtons();
   document.getElementById('setupOverlay').style.display='none';
   toast('✓ Clés sauvegardées localement');
 }
@@ -3114,6 +3153,7 @@ async function callHedra(audioBlob){
 function showResults(){
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='block';
+  refreshPublishButtons();
 
   document.getElementById('res-script').textContent=results.script||'—';
 
@@ -3177,6 +3217,90 @@ function downloadVideo(){
   const a=document.createElement('a');
   a.href=results.hedraUrl; a.download='avatarads-video.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── SOCIAL PUBLISH ──
+const SOCIAL_META = {
+  tiktok:    { label:'TikTok',    icon:'📱' },
+  instagram: { label:'Instagram', icon:'📸' },
+  facebook:  { label:'Facebook',  icon:'👥' },
+  linkedin:  { label:'LinkedIn',  icon:'💼' },
+};
+
+function refreshPublishButtons(){
+  Object.keys(SOCIAL_META).forEach(p => {
+    const btn = document.getElementById('pub-btn-'+p);
+    if(!btn) return;
+    const wh = localStorage.getItem('aa_wh_'+p)||'';
+    const hasVideo = !!(results && results.hedraUrl);
+    const active = wh && hasVideo;
+    btn.style.opacity   = active ? '1' : '0.35';
+    btn.style.cursor    = active ? 'pointer' : 'not-allowed';
+    btn.style.background = active ? 'rgba(255,107,53,0.12)' : '';
+    btn.style.borderColor = active ? 'rgba(255,107,53,0.35)' : '';
+  });
+}
+
+async function publishToSocial(platform){
+  const wh = localStorage.getItem('aa_wh_'+platform)||'';
+  if(!wh){ toast('⚙️ Configure la connexion dans les Clés API'); return; }
+  if(!results || !results.hedraUrl){ toast('⚠️ Génère d\'abord une vidéo'); return; }
+  const meta = SOCIAL_META[platform] || { label: platform, icon: '📤' };
+  const btn = document.getElementById('pub-btn-'+platform);
+  const orig = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML = `<span>⏳</span>Publication...`; btn.style.opacity='0.6'; btn.style.cursor='not-allowed'; }
+  try{
+    const payload = {
+      video_url:   results.hedraUrl,
+      platform:    platform,
+      title:       document.getElementById('f-hook')?.value || '',
+      description: results.script || '',
+      timestamp:   new Date().toISOString()
+    };
+    const res = await fetch(wh, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok){
+      toast(`${meta.icon} Vidéo envoyée sur ${meta.label} ✓`);
+    } else {
+      toast(`✗ Erreur ${res.status} — vérifie la connexion dans les Clés API`);
+    }
+  } catch(e){
+    toast(`✗ Impossible d'atteindre le serveur — vérifie ta connexion`);
+  }
+  if(btn){ btn.innerHTML = orig; refreshPublishButtons(); }
+}
+
+function refreshSocialCards(){
+  const platforms = [
+    { id:'sc-tiktok',    key:'tiktok'    },
+    { id:'sc-instagram', key:'instagram' },
+    { id:'sc-facebook',  key:'facebook'  },
+    { id:'sc-linkedin',  key:'linkedin'  },
+  ];
+  platforms.forEach(({id, key}) => {
+    const card   = document.getElementById(id);
+    const badge  = document.getElementById('scb-'+key);
+    if(!card || !badge) return;
+    const wh = localStorage.getItem('aa_wh_'+key)||'';
+    if(wh){
+      card.style.opacity = '1';
+      card.style.borderColor = 'rgba(34,197,94,0.3)';
+      badge.textContent = '● Connecté';
+      badge.style.color = '#22c55e';
+      badge.style.background = 'rgba(34,197,94,0.1)';
+      badge.style.borderColor = 'rgba(34,197,94,0.25)';
+    } else {
+      card.style.opacity = '0.55';
+      card.style.borderColor = '';
+      badge.textContent = 'Bientôt disponible';
+      badge.style.color = '';
+      badge.style.background = '';
+      badge.style.borderColor = '';
+    }
+  });
 }
 
 // ── PROGRESS ──
@@ -3425,6 +3549,8 @@ if(savedCode && savedName){
 // 3. Load API keys
 ['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
 refreshDots();
+refreshSocialCards();
+refreshPublishButtons();
 updateSteps();
 updateLivePreview();
 
