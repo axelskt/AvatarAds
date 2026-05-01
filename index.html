@@ -2138,8 +2138,17 @@ function handleAvatarFile(file){
   document.getElementById('f-avatarimg').value = '';
   selAvatar.localFile = file;
   selAvatar.localUrl = url;
+  // Force direct injection in phone preview
+  const avImg   = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(avImg){
+    avImg.style.display = 'block';
+    avImg.onload = () => { avImg.style.display='block'; updateAvatarCrop(); };
+    avImg.src = url;
+    updateAvatarCrop();
+  }
+  if(avEmoji) avEmoji.style.display = 'none';
   updateLivePreview();
-  updateAvatarCrop();
 }
 function previewAvatarUrl(url){
   if(!url) return;
@@ -2657,12 +2666,9 @@ function updateLivePreview(){
   if(selAvatar && selAvatar.localUrl){
     if(avImg){
       avImg.style.display = 'block';
-      if(avImg.src !== selAvatar.localUrl){
-        avImg.onload = () => updateAvatarCrop();
-        avImg.src = selAvatar.localUrl;
-      } else {
-        updateAvatarCrop();
-      }
+      avImg.onload = () => { avImg.style.display='block'; updateAvatarCrop(); };
+      avImg.src = selAvatar.localUrl;
+      updateAvatarCrop();
     }
     if(avEmoji)  avEmoji.style.display = 'none';
   } else {
