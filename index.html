@@ -2135,7 +2135,7 @@ function handleAvatarFile(file){
   document.getElementById('avatarPreviewName').textContent = file.name;
   document.getElementById('avatarDropContent').style.display = 'none';
   document.getElementById('avatarPreviewWrap').style.display = 'block';
-  document.getElementById('f-avatarimg').value = '';
+  const _faEl = document.getElementById('f-avatarimg'); if(_faEl) _faEl.value = '';
   selAvatar.localFile = file;
   selAvatar.localUrl = url;
   // Force direct injection in phone preview
@@ -3125,7 +3125,7 @@ async function callHedra(audioBlob){
 
     // ── 2. Upload image avatar (si URL fournie ou on skip) ──
     let imageId = null;
-    const avatarImgUrl = document.getElementById('f-avatarimg').value.trim();
+    const avatarImgUrl = (document.getElementById('f-avatarimg')||{value:''}).value.trim();
     if (avatarImgUrl) {
       try {
         const imgBlob = await fetch(avatarImgUrl).then(r => r.blob());
