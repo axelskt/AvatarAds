@@ -23,7 +23,7 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 /* TOPBAR */
 .topbar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
 .logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--orange),#e03e1a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 16px var(--orange-glow)}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#FF6B35,#C0392B);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--orange-glow);overflow:hidden;padding:0;flex-shrink:0}
 .logo-name{font-size:16px;font-weight:800;letter-spacing:-0.4px}
 .logo-members{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-left:8px;background:var(--bg4);border:1px solid var(--border2);padding:2px 8px;border-radius:10px}
 .topbar-right{display:flex;align-items:center;gap:8px}
@@ -305,7 +305,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="logo">
-    <div class="logo-icon">🎭</div>
+    <div class="logo-icon"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="12" r="5.4" fill="rgba(255,255,255,0.96)"/><path d="M5.5 28.5C5.5 22.6 10.2 19 16 19C21.8 19 26.5 22.6 26.5 28.5" fill="rgba(255,255,255,0.96)"/><circle cx="24.5" cy="7.5" r="4" fill="rgba(0,0,0,0.25)"/><circle cx="24.5" cy="7.5" r="2.6" fill="#ff3333"/><circle cx="24.5" cy="7.5" r="1" fill="rgba(255,255,255,0.9)"/></svg></div>
     <div class="logo-name">AvatarAds</div>
     <div class="logo-members">IA Manager · Membres</div>
   </div>
@@ -1301,10 +1301,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie directement ta vidéo sur YouTube Shorts en 1 clic.</div>
               <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier maintenant sur YouTube Shorts</button>
               <div id="yt-result-status" style="font-size:11px;font-family:var(--mono);text-align:center;margin-bottom:12px"></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ TikTok — bientôt')"><span>📱</span>TikTok</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Instagram — bientôt')"><span>📸</span>Instagram</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Facebook — bientôt')"><span>👥</span>Facebook</button>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ TikTok — bientôt disponible')"><span>📱</span>TikTok</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Instagram — bientôt disponible')"><span>📸</span>Instagram</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Facebook — bientôt disponible')"><span>👥</span>Facebook</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
               </div>
             </div>
           </div>
@@ -1384,13 +1385,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="yt-connect-status" style="font-size:11px;font-family:var(--mono);color:var(--text3)">⚪ Non connecté</div>
             </div>
           </div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.7;margin-bottom:12px;background:var(--bg3);border-radius:8px;padding:10px 12px">
-            <b style="color:var(--text2)">Prérequis :</b><br>
-            1. Active <b>YouTube Data API v3</b> sur Google Cloud ✅ (déjà fait)<br>
-            2. Crée un <b>OAuth 2.0 Client ID</b> (type «Application Web»)<br>
-            3. Ajoute <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;color:var(--orange2)">https://axelskt.github.io/avatarads-membres/</code> en URI autorisée<br>
-            4. Colle le Client ID dans <b>Clés API → YouTube Client ID</b>
-          </div>
           <div style="display:flex;gap:8px">
             <button id="yt-connect-btn" onclick="connectYoutube()" style="flex:1;padding:10px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:8px;color:#ff6060;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">🔗 Connecter mon compte YouTube</button>
             <button onclick="openSetup()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">⚙ Clés API</button>
@@ -1467,7 +1461,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <div class="setup-overlay" id="loginOverlay" style="z-index:600">
   <div class="setup-box" style="max-width:420px">
     <div class="setup-logo">
-      <div class="logo-icon">🎭</div>
+      <div class="logo-icon"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="12" r="5.4" fill="rgba(255,255,255,0.96)"/><path d="M5.5 28.5C5.5 22.6 10.2 19 16 19C21.8 19 26.5 22.6 26.5 28.5" fill="rgba(255,255,255,0.96)"/><circle cx="24.5" cy="7.5" r="4" fill="rgba(0,0,0,0.25)"/><circle cx="24.5" cy="7.5" r="2.6" fill="#ff3333"/><circle cx="24.5" cy="7.5" r="1" fill="rgba(255,255,255,0.9)"/></svg></div>
       <div>
         <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds</div>
         <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Accès membres</div>
@@ -1496,7 +1490,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <div class="setup-overlay" id="setupOverlay" style="display:none">
   <div class="setup-box">
     <div class="setup-logo">
-      <div class="logo-icon">🎭</div>
+      <div class="logo-icon"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="12" r="5.4" fill="rgba(255,255,255,0.96)"/><path d="M5.5 28.5C5.5 22.6 10.2 19 16 19C21.8 19 26.5 22.6 26.5 28.5" fill="rgba(255,255,255,0.96)"/><circle cx="24.5" cy="7.5" r="4" fill="rgba(0,0,0,0.25)"/><circle cx="24.5" cy="7.5" r="2.6" fill="#ff3333"/><circle cx="24.5" cy="7.5" r="1" fill="rgba(255,255,255,0.9)"/></svg></div>
       <div>
         <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds — Configuration</div>
         <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Membres seulement</div>
@@ -3227,25 +3221,58 @@ function handleYoutubeOAuthRedirect(){
     localStorage.setItem('yt_token_expiry', String(Date.now() + expiresIn * 1000));
     history.replaceState(null,'', window.location.pathname);
     toast('✅ Compte YouTube connecté !');
-    refreshSocialView();
+    // Fetch and save channel info for persistent display
+    fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+      headers:{'Authorization':'Bearer '+token}
+    }).then(r=>r.json()).then(d=>{
+      const ch = d.items?.[0]?.snippet;
+      if(ch){ localStorage.setItem('yt_channel', JSON.stringify({name:ch.title, thumb:ch.thumbnails?.default?.url||''})); }
+      refreshSocialView();
+    }).catch(()=>refreshSocialView());
   }
 }
 
 function refreshSocialView(){
   const connected = ytConnected();
-  const btn = document.getElementById('yt-connect-btn');
+  const hasToken  = !!localStorage.getItem('yt_access_token');
+  const chRaw     = localStorage.getItem('yt_channel');
+  const ch        = chRaw ? JSON.parse(chRaw) : null;
+  const btn    = document.getElementById('yt-connect-btn');
   const status = document.getElementById('yt-connect-status');
   const uploadBtn = document.getElementById('yt-result-upload-btn');
   if(btn){
-    btn.textContent = connected ? '🔌 Déconnecter' : '🔗 Connecter mon compte YouTube';
-    btn.onclick = connected ? disconnectYoutube : connectYoutube;
-    btn.style.background = connected ? 'rgba(255,71,87,0.15)' : 'rgba(255,0,0,0.12)';
-    btn.style.borderColor = connected ? 'rgba(255,71,87,0.4)' : 'rgba(255,0,0,0.3)';
-    btn.style.color = connected ? '#ff4757' : '#ff6060';
+    if(connected){
+      btn.textContent = '🔌 Déconnecter';
+      btn.onclick = disconnectYoutube;
+      btn.style.background = 'rgba(255,71,87,0.15)';
+      btn.style.borderColor = 'rgba(255,71,87,0.4)';
+      btn.style.color = '#ff4757';
+    } else if(hasToken){
+      // Token expired but we remember the account → 1-click reconnect
+      btn.textContent = '🔄 Reconnecter' + (ch ? ' @'+ch.name : '');
+      btn.onclick = connectYoutube;
+      btn.style.background = 'rgba(255,165,0,0.12)';
+      btn.style.borderColor = 'rgba(255,165,0,0.4)';
+      btn.style.color = '#ffa500';
+    } else {
+      btn.textContent = '🔗 Connecter mon compte YouTube';
+      btn.onclick = connectYoutube;
+      btn.style.background = 'rgba(255,0,0,0.12)';
+      btn.style.borderColor = 'rgba(255,0,0,0.3)';
+      btn.style.color = '#ff6060';
+    }
   }
   if(status){
-    status.textContent = connected ? '✅ Connecté — prêt à publier' : '⚪ Non connecté';
-    status.style.color = connected ? 'var(--green)' : 'var(--text3)';
+    if(connected){
+      status.textContent = '✅ Connecté' + (ch?' — @'+ch.name:'') + ' · prêt à publier';
+      status.style.color = 'var(--green)';
+    } else if(hasToken){
+      status.textContent = '⏱ Session expirée · clique pour reconnecter';
+      status.style.color = '#ffa500';
+    } else {
+      status.textContent = '⚪ Non connecté';
+      status.style.color = 'var(--text3)';
+    }
   }
   if(uploadBtn){
     uploadBtn.disabled = !connected;
