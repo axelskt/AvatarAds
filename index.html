@@ -3676,14 +3676,23 @@ function closeBugReport(){
 }
 function handleBugScreenshot(file){
   if(!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _bugScreenshotB64 = e.target.result;
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    // Resize to max 800px wide, compress to ~30KB
+    const MAX = 800;
+    const ratio = Math.min(1, MAX / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(img.width  * ratio);
+    canvas.height = Math.round(img.height * ratio);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    _bugScreenshotB64 = canvas.toDataURL('image/jpeg', 0.5);
+    URL.revokeObjectURL(url);
     document.getElementById('bugScreenshotImg').src = _bugScreenshotB64;
     document.getElementById('bugScreenshotEmpty').style.display = 'none';
     document.getElementById('bugScreenshotPreview').style.display = 'block';
   };
-  reader.readAsDataURL(file);
+  img.src = url;
 }
 function clearBugScreenshot(){
   _bugScreenshotB64 = null;
