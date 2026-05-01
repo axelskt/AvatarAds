@@ -1351,10 +1351,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier sur YouTube Shorts</button>
               <div id="yt-result-status" style="font-size:11px;font-family:var(--mono);text-align:center;margin-bottom:12px"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <button id="pub-btn-tiktok" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('tiktok')"><span>📱</span>TikTok</button>
-                <button id="pub-btn-instagram" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('instagram')"><span>📸</span>Instagram</button>
-                <button id="pub-btn-facebook" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('facebook')"><span>👥</span>Facebook</button>
-                <button id="pub-btn-linkedin" class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="publishToSocial('linkedin')"><span>💼</span>LinkedIn</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ TikTok — bientôt disponible')"><span>📱</span>TikTok</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Instagram — bientôt disponible')"><span>📸</span>Instagram</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Facebook — bientôt disponible')"><span>👥</span>Facebook</button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
               </div>
             </div>
           </div>
@@ -1610,35 +1610,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <div class="setup-field">
       <div class="setup-label">TikTok</div>
-      <div class="setup-input">
-        <input type="text" id="inp-wh-tiktok" placeholder="https://...">
-        <button onclick="testWebhook('tiktok')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-wh-tiktok"></div>
+      <div class="setup-input"><input type="text" id="inp-wh-tiktok" placeholder="https://..."></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">Instagram</div>
-      <div class="setup-input">
-        <input type="text" id="inp-wh-instagram" placeholder="https://...">
-        <button onclick="testWebhook('instagram')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-wh-instagram"></div>
+      <div class="setup-input"><input type="text" id="inp-wh-instagram" placeholder="https://..."></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">Facebook</div>
-      <div class="setup-input">
-        <input type="text" id="inp-wh-facebook" placeholder="https://...">
-        <button onclick="testWebhook('facebook')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-wh-facebook"></div>
+      <div class="setup-input"><input type="text" id="inp-wh-facebook" placeholder="https://..."></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">LinkedIn</div>
-      <div class="setup-input">
-        <input type="text" id="inp-wh-linkedin" placeholder="https://...">
-        <button onclick="testWebhook('linkedin')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-wh-linkedin"></div>
+      <div class="setup-input"><input type="text" id="inp-wh-linkedin" placeholder="https://..."></div>
     </div>
 
     <div class="setup-divider"></div>
