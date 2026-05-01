@@ -1612,25 +1612,33 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="setup-label">TikTok</div>
       <div class="setup-input">
         <input type="text" id="inp-wh-tiktok" placeholder="https://...">
+        <button onclick="testWebhook('tiktok')">Tester</button>
       </div>
+      <div class="key-badge-row" id="badge-wh-tiktok"></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">Instagram</div>
       <div class="setup-input">
         <input type="text" id="inp-wh-instagram" placeholder="https://...">
+        <button onclick="testWebhook('instagram')">Tester</button>
       </div>
+      <div class="key-badge-row" id="badge-wh-instagram"></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">Facebook</div>
       <div class="setup-input">
         <input type="text" id="inp-wh-facebook" placeholder="https://...">
+        <button onclick="testWebhook('facebook')">Tester</button>
       </div>
+      <div class="key-badge-row" id="badge-wh-facebook"></div>
     </div>
     <div class="setup-field">
       <div class="setup-label">LinkedIn</div>
       <div class="setup-input">
         <input type="text" id="inp-wh-linkedin" placeholder="https://...">
+        <button onclick="testWebhook('linkedin')">Tester</button>
       </div>
+      <div class="key-badge-row" id="badge-wh-linkedin"></div>
     </div>
 
     <div class="setup-divider"></div>
@@ -1861,6 +1869,29 @@ function refreshDots(){
   document.getElementById('dot-el').className='key-dot'+(K.el?' ok':'');
   document.getElementById('dot-hedra').className='key-dot'+(K.hedra?' ok':'');
 }
+async function testWebhook(platform){
+  const url = document.getElementById('inp-wh-'+platform).value.trim();
+  const badge = document.getElementById('badge-wh-'+platform);
+  if(!url){ badge.innerHTML='<span class="key-badge err">✗ URL vide</span>'; return; }
+  badge.innerHTML='<span class="key-badge">Envoi...</span>';
+  try{
+    await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        video_url: 'https://test.avatarads.io/sample.mp4',
+        platform:  platform,
+        title:     'Test AvatarAds — hook exemple',
+        description: 'Ceci est un test de connexion envoyé depuis AvatarAds.',
+        timestamp:  new Date().toISOString()
+      })
+    });
+    badge.innerHTML='<span class="key-badge ok">✓ Test envoyé — vérifie Make</span>';
+  } catch(e){
+    badge.innerHTML='<span class="key-badge err">✗ Erreur réseau</span>';
+  }
+}
+
 async function testKey(k){
   const v=document.getElementById('inp-'+k).value.trim();
   const badgeEl=document.getElementById('badge-'+k);
