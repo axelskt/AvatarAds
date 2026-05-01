@@ -3686,9 +3686,10 @@ function handleBugScreenshot(file){
     canvas.width  = Math.round(img.width  * ratio);
     canvas.height = Math.round(img.height * ratio);
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    _bugScreenshotB64 = canvas.toDataURL('image/jpeg', 0.5);
+    const full = canvas.toDataURL('image/jpeg', 0.5);
+    _bugScreenshotB64 = full.replace(/^data:image\/jpeg;base64,/, '');
     URL.revokeObjectURL(url);
-    document.getElementById('bugScreenshotImg').src = _bugScreenshotB64;
+    document.getElementById('bugScreenshotImg').src = full;
     document.getElementById('bugScreenshotEmpty').style.display = 'none';
     document.getElementById('bugScreenshotPreview').style.display = 'block';
   };
