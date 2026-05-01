@@ -3660,6 +3660,7 @@ function stopResize(){
 
 // ── BUG REPORT ──
 const BUG_WEBHOOK = 'https://hook.eu1.make.com/85nubik4r7qgsm54j4qpjo3kd2skzcjr';
+let _bugScreenshotB64 = null;
 
 function openBugReport(){
   document.getElementById('bugModal').style.display = 'flex';
@@ -3667,10 +3668,30 @@ function openBugReport(){
   document.getElementById('bugDesc').value = '';
   document.getElementById('bugSuccess').style.display = 'none';
   document.getElementById('bugForm').style.display = 'block';
+  clearBugScreenshot();
   document.getElementById('bugTitle').focus();
 }
 function closeBugReport(){
   document.getElementById('bugModal').style.display = 'none';
+}
+function handleBugScreenshot(file){
+  if(!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _bugScreenshotB64 = e.target.result;
+    document.getElementById('bugScreenshotImg').src = _bugScreenshotB64;
+    document.getElementById('bugScreenshotEmpty').style.display = 'none';
+    document.getElementById('bugScreenshotPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function clearBugScreenshot(){
+  _bugScreenshotB64 = null;
+  document.getElementById('bugScreenshotIn').value = '';
+  const empty = document.getElementById('bugScreenshotEmpty');
+  const preview = document.getElementById('bugScreenshotPreview');
+  if(empty) empty.style.display = 'block';
+  if(preview) preview.style.display = 'none';
 }
 async function submitBugReport(){
   const title = document.getElementById('bugTitle').value.trim();
@@ -3688,6 +3709,7 @@ async function submitBugReport(){
         user: document.getElementById('topbar-username')?.textContent || 'Membre',
         title,
         description: desc || '(pas de description)',
+        screenshot: _bugScreenshotB64 || '(aucun screenshot)',
       })
     });
   } catch(e){ /* make.com répond parfois avec un non-JSON, on ignore */ }
@@ -3717,9 +3739,22 @@ async function submitBugReport(){
         <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Titre du bug *</div>
         <input id="bugTitle" type="text" placeholder="Ex : L'avatar ne s'affiche pas dans le preview" onkeydown="if(event.key==='Enter')document.getElementById('bugDesc').focus()" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px">
       </div>
-      <div style="margin-bottom:20px">
+      <div style="margin-bottom:14px">
         <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Description (optionnel)</div>
-        <textarea id="bugDesc" rows="4" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+        <textarea id="bugDesc" rows="3" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical"></textarea>
+      </div>
+      <!-- SCREENSHOT -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Screenshot (optionnel)</div>
+        <div id="bugScreenshotZone" onclick="document.getElementById('bugScreenshotIn').click()" style="border:1.5px dashed var(--border2);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
+          <div id="bugScreenshotEmpty" style="color:var(--text3);font-size:12px;font-family:var(--mono)">📎 Clique pour ajouter une capture d'écran</div>
+          <div id="bugScreenshotPreview" style="display:none">
+            <img id="bugScreenshotImg" style="max-width:100%;max-height:120px;border-radius:6px;object-fit:contain">
+            <div style="margin-top:6px;font-size:11px;font-family:var(--mono);color:var(--green)">✅ Screenshot ajouté</div>
+            <button onclick="event.stopPropagation();clearBugScreenshot()" style="margin-top:4px;background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;font-family:var(--mono)">✕ Supprimer</button>
+          </div>
+        </div>
+        <input id="bugScreenshotIn" type="file" accept="image/*" style="display:none" onchange="handleBugScreenshot(this.files[0])">
       </div>
       <button id="bugSubmitBtn" onclick="submitBugReport()" style="width:100%;padding:12px;background:var(--red);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer">Envoyer le bug report</button>
     </div>
