@@ -1655,6 +1655,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- SIGNUP FORM -->
     <div id="form-signup" style="display:none">
       <div class="setup-field">
+        <div class="setup-label">Prénom</div>
+        <input type="text" id="signup-firstname" placeholder="Ton prénom" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div class="setup-field" style="margin-top:12px">
         <div class="setup-label">Email</div>
         <input type="email" id="signup-email" placeholder="ton@email.com" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
       </div>
@@ -1863,10 +1867,12 @@ async function authLogin(){
 
 // ── SIGNUP ──
 async function authSignup(){
-  const email = document.getElementById('signup-email').value.trim();
-  const pwd   = document.getElementById('signup-password').value;
-  const errEl = document.getElementById('signup-error');
-  const btn   = document.getElementById('signupBtn');
+  const firstName = document.getElementById('signup-firstname').value.trim();
+  const email     = document.getElementById('signup-email').value.trim();
+  const pwd       = document.getElementById('signup-password').value;
+  const errEl     = document.getElementById('signup-error');
+  const btn       = document.getElementById('signupBtn');
+  if(!firstName){ errEl.textContent='Entre ton prénom.'; errEl.style.display='block'; return; }
   if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
   if(pwd.length < 6){ errEl.textContent='Mot de passe trop court (6 caractères min).'; errEl.style.display='block'; return; }
   btn.textContent='Création...'; btn.disabled=true; errEl.style.display='none';
@@ -1875,7 +1881,10 @@ async function authSignup(){
     errEl.textContent = error.message; errEl.style.display='block';
     btn.textContent='Créer mon compte →'; btn.disabled=false; return;
   }
-  // Profil créé automatiquement par le trigger Supabase
+  // Profil créé automatiquement par le trigger — on ajoute le prénom ensuite
+  if(data.user){
+    await sb.from('profiles').update({ first_name: firstName }).eq('id', data.user.id);
+  }
   await loadProfile(data.user);
 }
 
@@ -1905,7 +1914,8 @@ function enterApp(profile){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
   const planLabel = { free:'Gratuit', starter:'Starter', pro:'Pro', elite:'Elite ♾' };
-  const nameDisplay = profile.is_owner ? '👑 Axel' : '👤 ' + (profile.email||'').split('@')[0];
+  const displayName = profile.first_name || (profile.email||'').split('@')[0];
+  const nameDisplay = profile.is_owner ? '👑 ' + displayName : '👤 ' + displayName;
   document.getElementById('memberName').textContent = nameDisplay;
   document.getElementById('memberCredits').textContent =
     profile.plan === 'elite' ? '∞' : profile.credits_remaining;
