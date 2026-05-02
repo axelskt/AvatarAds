@@ -1629,8 +1629,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- TABS -->
     <div style="display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:24px">
-      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border-radius:7px;border:none;background:var(--bg2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Connexion</button>
-      <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s">Créer un compte</button>
+      <button id="tab-login" data-tab="login" class="auth-tab" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border-radius:7px;border:none;background:var(--bg2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,0.3)">Connexion</button>
+      <button id="tab-signup" data-tab="signup" class="auth-tab" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s">Créer un compte</button>
     </div>
 
     <!-- LOGIN FORM -->
@@ -1833,7 +1833,13 @@ function switchAuthTab(tab){
   const isLogin = tab === 'login';
   document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
   document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+  document.querySelectorAll('.auth-tab').forEach(t => {
+    const active = t.dataset.tab === tab;
+    t.style.background   = active ? 'var(--bg2)' : 'transparent';
+    t.style.color        = active ? 'var(--text)' : 'var(--text2)';
+    t.style.fontWeight   = active ? '600' : '500';
+    t.style.boxShadow    = active ? '0 1px 4px rgba(0,0,0,0.3)' : 'none';
+  });
   document.getElementById('auth-error').style.display   = 'none';
   document.getElementById('signup-error').style.display = 'none';
 }
