@@ -1615,7 +1615,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 </div><!-- /layout -->
 
 <!-- LOGIN OVERLAY -->
-<div class="setup-overlay" id="loginOverlay" style="z-index:600">
+<div class="setup-overlay" id="loginOverlay" style="z-index:600" onclick="if(event.target===this)loginGuest()">
   <div class="setup-box" style="max-width:400px">
 
     <!-- LOGO -->
