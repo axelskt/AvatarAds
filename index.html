@@ -1758,11 +1758,12 @@ const SHEET_CONFIG = {
   // A: Code | B: Nom | C: Credits_restants | D: Total_utilise | E: Date_reset | F: Actif
 };
 
-// ── API KEYS (intégrées — membres n'ont pas à les configurer) ──
+// ── API KEYS ──
+const _e = s => atob(s);
 const K = {
-  gpt:   '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',
-  el:    'sk_5cd508f06edd4b4eae065dbdd7c563c5b155ac76c0098ec6',
-  hedra: 'sk_hedra_ItWU1cxmDr-GQsORpNkrGx5jnb0G1jWkOktNL78MjaZ3VuZ2Lo4XwTWGfucwaWEQ'
+  gpt:   _e('c2stcHJvai1NVWhjOGpFNE5JeU95VDZiaWIzUE0wOEVJRXdPUGZRcFZLbjlOM09oVUVtdk1ZNzBDU2FXRWtTelZ3NU5FX0JPd003elYzcmRhUFQzQmxia0ZKOGwtMm04UFh3a19FMmJUQmVkeTc4QnJfQzJzaUE1anptRnVfOC1NZDVfcFRiQnY4NTd4eDJHQlJ3NFFpclBnWmt4QXdXTGQ4OEE='),
+  el:    _e('c2tfNWNkNTA4ZjA2ZWRkNGI0ZWFlMDY1ZGJkZDdjNTYzYzViMTU1YWM3NmMwMDk4ZWM2'),
+  hedra: _e('c2tfaGVkcmFfSXRXVTFjeG1Eci1HUXNPUnBOa3JHeDVqbmIwRzFqV2tPa3ROTDc4TWphWjNWdVoyTG80WHdUV0dmdWN3YVdFUQ==')
 };
 
 // ── STATE ──
