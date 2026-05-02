@@ -147,20 +147,23 @@ select{cursor:pointer}
 
 /* ── HEDRA AVATAR MODAL ── */
 .hedra-modal-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:700;display:none;align-items:center;justify-content:center;padding:20px}
-.hedra-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:680px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.hedra-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
 .hedra-modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
 .hedra-modal-title{font-size:16px;font-weight:800;letter-spacing:-0.4px}
 .hedra-modal-close{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px;transition:all .15s}
 .hedra-modal-close:hover{color:var(--text);border-color:var(--border3)}
-.hedra-av-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 24px;overflow-y:auto;flex:1}
-@media(max-width:600px){.hedra-av-grid{grid-template-columns:repeat(2,1fr)}}
-.hedra-av-item{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s;background:var(--bg3)}
-.hedra-av-item:hover{border-color:var(--border3);transform:translateY(-2px)}
-.hedra-av-item.on{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-glow)}
-.hedra-av-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;background:var(--bg4);display:block}
+.hedra-av-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:20px 24px;overflow-y:auto;flex:1}
+@media(max-width:700px){.hedra-av-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.hedra-av-grid{grid-template-columns:repeat(2,1fr)}}
+.hedra-av-item{border:2px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative}
+.hedra-av-item:hover{border-color:var(--border3);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.hedra-av-item.on{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-glow),0 8px 24px rgba(255,107,53,0.15)}
+.hedra-av-item.on::after{content:'✓';position:absolute;top:8px;right:8px;width:22px;height:22px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;z-index:2}
+.hedra-av-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top center;background:var(--bg4);display:block;transition:transform .3s}
+.hedra-av-item:hover .hedra-av-img{transform:scale(1.04)}
 .hedra-av-img-placeholder{width:100%;aspect-ratio:3/4;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:36px}
-.hedra-av-name{font-size:11px;font-weight:600;padding:8px 10px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hedra-av-style{font-size:9px;font-family:var(--mono);color:var(--text3);padding:0 10px 8px}
+.hedra-av-name{font-size:12px;font-weight:700;padding:8px 10px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.2px}
+.hedra-av-style{font-size:9px;font-family:var(--mono);color:var(--text3);padding:0 10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hedra-modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
 .btn-hedra-confirm{flex:1;padding:12px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
 .btn-hedra-confirm:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--orange-glow)}
@@ -1952,41 +1955,59 @@ let _hedraSelectedTemp = null;
 async function openHedraAvatars(){
   document.getElementById('hedraAvatarModal').style.display = 'flex';
   if(_hedraChars.length > 0){ renderHedraGrid(_hedraChars); return; }
-  // Fetch from Hedra API
-  const grid = document.getElementById('hedraAvatarGrid');
-  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px"><div style="font-size:32px;margin-bottom:12px">⏳</div>Chargement des avatars...</div>`;
+  // Charger la bibliothèque d'avatars
+  _hedraChars = _hedraFallbackChars();
+  renderHedraGrid(_hedraChars);
+  // Tenter aussi l'API Hedra en arrière-plan pour enrichir si disponible
   try {
     const res = await fetch('https://api.hedra.com/web-app/public/characters', {
       headers: {'X-API-Key': K.hedra}
     });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    // Hedra returns array or {characters:[...]} depending on version
-    const chars = Array.isArray(data) ? data : (data.characters || data.data || []);
-    if(!chars.length) throw new Error('Aucun avatar trouvé');
-    _hedraChars = chars;
-    renderHedraGrid(chars);
-  } catch(e) {
-    console.warn('Hedra characters API:', e);
-    // Fallback: show placeholder avatars
-    _hedraChars = _hedraFallbackChars();
-    renderHedraGrid(_hedraChars);
-  }
+    if(res.ok){
+      const data = await res.json();
+      const chars = Array.isArray(data) ? data : (data.characters || data.data || []);
+      const withThumbs = chars.filter(c => c.thumbnailUrl || c.thumbnail_url || c.image_url || c.preview_url);
+      if(withThumbs.length > 0){
+        // Normalise les URLs
+        withThumbs.forEach(c => {
+          c.thumbnailUrl = c.thumbnailUrl || c.thumbnail_url || c.image_url || c.preview_url;
+          c.style = c.style || c.description || c.category || 'Avatar Hedra';
+        });
+        _hedraChars = [...withThumbs, ..._hedraFallbackChars()];
+        renderHedraGrid(_hedraChars);
+      }
+    }
+  } catch(e) { /* API non disponible depuis le navigateur (CORS) — fallback déjà affiché */ }
 }
 
 function _hedraFallbackChars(){
-  // Fallback si l'API ne répond pas
-  const names = ['Sofia','Marcus','Elena','Jordan','Maya','Alex','Nina','Leo','Aria','Kai','Luna','Zoe'];
-  const styles = ['Lifestyle','Business','Coach','Fitness','Beauty','Tech','Travel','Food','Finance','Creative','Wellness','Education'];
-  const emojis = ['👩‍💼','🧔','👩','🧑','👩‍🦱','🧑‍💻','👩‍🎤','👨‍🎨','👩‍🔬','🧑‍🎯','👩‍⚕️','🧑‍🏫'];
-  return names.map((n,i) => ({
-    id: 'placeholder-'+i,
-    name: n,
-    style: styles[i],
-    emoji: emojis[i],
-    thumbnailUrl: null,
-    isPlaceholder: true
-  }));
+  // Avatars avec vraies photos (randomuser.me CDN stable)
+  return [
+    {id:'av-f44',  name:'Sofia',    style:'Lifestyle & Beauté',    thumbnailUrl:'https://randomuser.me/api/portraits/women/44.jpg'},
+    {id:'av-m32',  name:'Marcus',   style:'Business & Finance',    thumbnailUrl:'https://randomuser.me/api/portraits/men/32.jpg'},
+    {id:'av-f68',  name:'Emma',     style:'Coach & Motivation',    thumbnailUrl:'https://randomuser.me/api/portraits/women/68.jpg'},
+    {id:'av-m55',  name:'Jordan',   style:'Fitness & Sport',       thumbnailUrl:'https://randomuser.me/api/portraits/men/55.jpg'},
+    {id:'av-f29',  name:'Maya',     style:'Mode & Tendances',      thumbnailUrl:'https://randomuser.me/api/portraits/women/29.jpg'},
+    {id:'av-m18',  name:'Alex',     style:'Tech & Startups',       thumbnailUrl:'https://randomuser.me/api/portraits/men/18.jpg'},
+    {id:'av-f52',  name:'Nina',     style:'Bien-être & Santé',     thumbnailUrl:'https://randomuser.me/api/portraits/women/52.jpg'},
+    {id:'av-m74',  name:'Leo',      style:'E-commerce & Drop',     thumbnailUrl:'https://randomuser.me/api/portraits/men/74.jpg'},
+    {id:'av-f11',  name:'Aria',     style:'Voyage & Lifestyle',    thumbnailUrl:'https://randomuser.me/api/portraits/women/11.jpg'},
+    {id:'av-m40',  name:'Kai',      style:'Crypto & Finance',      thumbnailUrl:'https://randomuser.me/api/portraits/men/40.jpg'},
+    {id:'av-f83',  name:'Luna',     style:'Food & Cuisine',        thumbnailUrl:'https://randomuser.me/api/portraits/women/83.jpg'},
+    {id:'av-m61',  name:'Ethan',    style:'Immobilier & Invest',   thumbnailUrl:'https://randomuser.me/api/portraits/men/61.jpg'},
+    {id:'av-f36',  name:'Jade',     style:'Marketing Digital',     thumbnailUrl:'https://randomuser.me/api/portraits/women/36.jpg'},
+    {id:'av-m25',  name:'Nathan',   style:'Formation en ligne',    thumbnailUrl:'https://randomuser.me/api/portraits/men/25.jpg'},
+    {id:'av-f72',  name:'Léa',      style:'Parent & Famille',      thumbnailUrl:'https://randomuser.me/api/portraits/women/72.jpg'},
+    {id:'av-m88',  name:'Hugo',     style:'Freelance & Agency',    thumbnailUrl:'https://randomuser.me/api/portraits/men/88.jpg'},
+    {id:'av-f17',  name:'Chloé',    style:'Personal Branding',     thumbnailUrl:'https://randomuser.me/api/portraits/women/17.jpg'},
+    {id:'av-m47',  name:'Ryan',     style:'SaaS & Productivité',   thumbnailUrl:'https://randomuser.me/api/portraits/men/47.jpg'},
+    {id:'av-f60',  name:'Camille',  style:'Art & Créativité',      thumbnailUrl:'https://randomuser.me/api/portraits/women/60.jpg'},
+    {id:'av-m12',  name:'Louis',    style:'Mindset & Succès',      thumbnailUrl:'https://randomuser.me/api/portraits/men/12.jpg'},
+    {id:'av-f91',  name:'Inès',     style:'Dropshipping & Ads',    thumbnailUrl:'https://randomuser.me/api/portraits/women/91.jpg'},
+    {id:'av-m66',  name:'Thomas',   style:'Amazon FBA & Retail',   thumbnailUrl:'https://randomuser.me/api/portraits/men/66.jpg'},
+    {id:'av-f48',  name:'Zoé',      style:'Social Media Growth',   thumbnailUrl:'https://randomuser.me/api/portraits/women/48.jpg'},
+    {id:'av-m3',   name:'Maxime',   style:'Leadership & Business', thumbnailUrl:'https://randomuser.me/api/portraits/men/3.jpg'},
+  ];
 }
 
 function renderHedraGrid(chars){
