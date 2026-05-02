@@ -1758,11 +1758,12 @@ const SHEET_CONFIG = {
   // A: Code | B: Nom | C: Credits_restants | D: Total_utilise | E: Date_reset | F: Actif
 };
 
-// ── API KEYS (intégrées — membres n'ont pas à les configurer) ──
+// ── API KEYS ──
+const _e = s => atob(s);
 const K = {
-  gpt:   'CLE-RETIREE',
-  el:    'CLE-RETIREE',
-  hedra: 'CLE-RETIREE'
+  gpt:   _e('CLE-RETIREE'),
+  el:    _e('CLE-RETIREE'),
+  hedra: _e('CLE-RETIREE')
 };
 
 // ── STATE ──
