@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AvatarAds — IA Manager Members</title>
+<title>AvatarAds — Créateur de vidéos IA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -365,9 +366,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div id="memberBar" style="display:none;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 14px">
       <div style="font-size:12px;font-weight:600" id="memberName">—</div>
       <div style="width:1px;height:14px;background:var(--border)"></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédits restants :</div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédits :</div>
       <div style="font-size:14px;font-weight:800;color:var(--orange2)" id="memberCredits">—</div>
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">/ 5</div>
+      <div style="width:1px;height:14px;background:var(--border)"></div>
+      <button onclick="authLogout()" style="background:none;border:none;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;padding:2px 4px" title="Déconnexion">⎋ Quitter</button>
     </div>
   </div>
   <div class="topbar-right">
@@ -1614,33 +1616,72 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
 <!-- LOGIN OVERLAY -->
 <div class="setup-overlay" id="loginOverlay" style="z-index:600">
-  <div class="setup-box" style="max-width:420px">
-    <div class="setup-logo">
-      <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
-      <div>
-        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds</div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Accès membres</div>
+  <div class="setup-box" style="max-width:400px">
+
+    <!-- LOGO -->
+    <div class="setup-logo" style="justify-content:center;margin-bottom:28px">
+      <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
+      <div style="text-align:left">
+        <div style="font-size:16px;font-weight:800;letter-spacing:-0.4px">AvatarAds</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Créateur de vidéos IA</div>
       </div>
     </div>
-    <div class="setup-title" style="font-size:16px;margin-bottom:6px">Entre ton code d'accès</div>
-    <div class="setup-sub" style="margin-bottom:20px">Ton code unique t'a été envoyé par Axel après ton accès à la formation IA Manager.</div>
-    <div class="setup-field">
-      <div class="setup-label">Code d'accès</div>
-      <div class="setup-input">
-        <input type="text" id="inp-code" placeholder="Ex: IAMGR-2024-XXX" style="text-transform:uppercase;letter-spacing:2px;font-size:14px;font-weight:600" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loginMember()">
-      </div>
-      <div class="key-badge-row" id="badge-login"></div>
+
+    <!-- TABS -->
+    <div style="display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:24px">
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border-radius:7px;border:none;background:var(--bg2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Connexion</button>
+      <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s">Créer un compte</button>
     </div>
-    <div class="setup-divider"></div>
-    <button class="btn-setup-save" onclick="loginMember()" id="loginBtn">
-      Accéder à l'outil →
-    </button>
-    <div style="margin-top:16px;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;text-align:center">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Pas encore de code ? Teste l'outil gratuitement</div>
-      <button onclick="loginGuest()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,107,53,0.4)'" onmouseout="this.style.borderColor='var(--border2)'">
-        🎯 Essayer gratuitement (avec watermark)
+
+    <!-- LOGIN FORM -->
+    <div id="form-login">
+      <div class="setup-field">
+        <div class="setup-label">Email</div>
+        <input type="email" id="auth-email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div class="setup-field" style="margin-top:12px">
+        <div class="setup-label" style="display:flex;justify-content:space-between">
+          Mot de passe
+          <span onclick="authResetPassword()" style="cursor:pointer;color:var(--orange2);font-size:10px;font-weight:500">Mot de passe oublié ?</span>
+        </div>
+        <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div id="auth-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:8px"></div>
+      <button class="btn-setup-save" onclick="authLogin()" id="loginBtn" style="margin-top:16px">
+        Se connecter →
       </button>
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px">Génère ta première vidéo — aucune carte requise</div>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="form-signup" style="display:none">
+      <div class="setup-field">
+        <div class="setup-label">Email</div>
+        <input type="email" id="signup-email" placeholder="ton@email.com" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div class="setup-field" style="margin-top:12px">
+        <div class="setup-label">Mot de passe</div>
+        <input type="password" id="signup-password" placeholder="8 caractères minimum" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div id="signup-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:8px"></div>
+      <button class="btn-setup-save" onclick="authSignup()" id="signupBtn" style="margin-top:16px">
+        Créer mon compte →
+      </button>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">2 vidéos offertes · Sans carte bancaire</div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div style="display:flex;align-items:center;gap:10px;margin:20px 0">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">ou</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <!-- GUEST -->
+    <button onclick="loginGuest()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+      🎯 Essayer gratuitement <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
+    </button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="https://avatarads.iamanager.fr#pricing" style="font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)">Voir les plans →</a>
     </div>
   </div>
 </div>
@@ -1747,16 +1788,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <div class="toast" id="toastEl"><span id="toastMsg"></span></div>
 
 <script>
-// ── GOOGLE SHEETS CONFIG ──
-// ⚠️ Remplace ces valeurs par les tiennes avant de déployer
-const SHEET_CONFIG = {
-  apiKey: 'CLE-RETIREE',
-  sheetId: 'ID-FEUILLE-RETIRE',
-  sheetName: 'Membres',                      // Nom de l'onglet
-  appsScriptUrl: 'COLLE_TON_APPS_SCRIPT_URL_ICI', // URL du Web App Google Apps Script
-  // Colonnes attendues dans le sheet (ligne 1 = headers) :
-  // A: Code | B: Nom | C: Credits_restants | D: Total_utilise | E: Date_reset | F: Actif
-};
+// ── SUPABASE CONFIG ──
+const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PLAN_CREDITS = { free: 2, starter: 10, pro: 30, elite: 9999 };
+const OWNER_EMAIL  = 'axel.skotnicki@gmail.com'; // → mettre ton vrai email
 
 // ── API KEYS ──
 const _e = s => atob(s);
@@ -1788,131 +1826,133 @@ let results = {script:'', audioBlob:null, hedraUrl:''};
 let library = [];
 
 // Member session
-let currentMember = null; // {code, nom, credits, rowIndex}
+let currentMember = null; // {id, email, plan, credits_remaining, is_owner}
 
-// ── GOOGLE SHEETS : LOGIN ──
-async function loginMember(){
-  const code = document.getElementById('inp-code').value.trim().toUpperCase();
-  if(!code){ toast('⚠️ Entre ton code d\'accès'); return; }
-
-  const btn = document.getElementById('loginBtn');
-  btn.textContent = 'Vérification...'; btn.disabled = true;
-  document.getElementById('badge-login').innerHTML = '<span class="key-badge">Recherche en cours...</span>';
-
-  try {
-    const member = await findMemberByCode(code);
-    if(!member){
-      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Code invalide ou non reconnu</span>';
-      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
-      return;
-    }
-    if(member.actif === 'NON' || member.actif === 'FALSE' || member.actif === '0'){
-      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Accès désactivé — contacte Axel</span>';
-      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
-      return;
-    }
-    if(parseInt(member.credits) <= 0){
-      document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Plus de crédits ce mois — contacte Axel</span>';
-      btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
-      return;
-    }
-
-    // ✅ Accès autorisé
-    currentMember = member;
-    localStorage.setItem('aa_member_code', code);
-    localStorage.setItem('aa_member_name', member.nom);
-
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('memberBar').style.display = 'flex';
-    document.getElementById('memberName').textContent = '👤 ' + member.nom;
-    document.getElementById('memberCredits').textContent = member.credits;
-
-    updateLivePreview();
-    checkSetupNeeded();
-    toast('✓ Bienvenue ' + member.nom + ' ! ' + member.credits + ' crédits disponibles.');
-
-  } catch(e) {
-    console.error(e);
-    document.getElementById('badge-login').innerHTML = '<span class="key-badge err">✗ Erreur réseau — vérifie ta connexion</span>';
-    btn.textContent = 'Accéder à l\'outil →'; btn.disabled = false;
-  }
+// ── AUTH TAB SWITCH ──
+function switchAuthTab(tab){
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+  document.getElementById('auth-error').style.display   = 'none';
+  document.getElementById('signup-error').style.display = 'none';
 }
 
-async function findMemberByCode(code){
-  const { apiKey, sheetId, sheetName } = SHEET_CONFIG;
-  const range = encodeURIComponent(`${sheetName}!A:F`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('Sheet inaccessible : ' + res.status);
-  const data = await res.json();
-  const rows = data.values || [];
-
-  // Skip header row (row 0)
-  for(let i = 1; i < rows.length; i++){
-    const row = rows[i];
-    const rowCode = (row[0]||'').trim().toUpperCase();
-    if(rowCode === code){
-      return {
-        rowIndex: i + 1, // 1-based for Sheets API
-        code: row[0] || '',
-        nom: row[1] || 'Membre',
-        credits: parseInt(row[2]) || 0,
-        totalUtilise: parseInt(row[3]) || 0,
-        dateReset: row[4] || '',
-        actif: (row[5] || 'OUI').toUpperCase()
-      };
-    }
+// ── LOGIN ──
+async function authLogin(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pwd   = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  const btn   = document.getElementById('loginBtn');
+  if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
+  btn.textContent='Connexion...'; btn.disabled=true; errEl.style.display='none';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
+  if(error){
+    errEl.textContent = error.message === 'Invalid login credentials'
+      ? 'Email ou mot de passe incorrect.' : error.message;
+    errEl.style.display='block'; btn.textContent='Se connecter →'; btn.disabled=false; return;
   }
-  return null;
+  await loadProfile(data.user);
 }
 
+// ── SIGNUP ──
+async function authSignup(){
+  const email = document.getElementById('signup-email').value.trim();
+  const pwd   = document.getElementById('signup-password').value;
+  const errEl = document.getElementById('signup-error');
+  const btn   = document.getElementById('signupBtn');
+  if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
+  if(pwd.length < 6){ errEl.textContent='Mot de passe trop court (6 caractères min).'; errEl.style.display='block'; return; }
+  btn.textContent='Création...'; btn.disabled=true; errEl.style.display='none';
+  const { data, error } = await sb.auth.signUp({ email, password: pwd });
+  if(error){
+    errEl.textContent = error.message; errEl.style.display='block';
+    btn.textContent='Créer mon compte →'; btn.disabled=false; return;
+  }
+  // Profil créé automatiquement par le trigger Supabase
+  await loadProfile(data.user);
+}
+
+// ── LOAD PROFILE ──
+async function loadProfile(user){
+  if(!user){ return; }
+  // Attendre max 3 secondes que le trigger crée le profil
+  let profile = null;
+  for(let i = 0; i < 6; i++){
+    const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if(data){ profile = data; break; }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  if(!profile){
+    // Créer le profil manuellement si le trigger n'a pas fonctionné
+    const { data } = await sb.from('profiles').insert({
+      id: user.id, email: user.email, plan: 'free', credits_remaining: 2, credits_total: 2
+    }).select().single();
+    profile = data;
+  }
+  enterApp(profile);
+}
+
+// ── ENTER APP ──
+function enterApp(profile){
+  currentMember = profile;
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('memberBar').style.display = 'flex';
+  const planLabel = { free:'Gratuit', starter:'Starter', pro:'Pro', elite:'Elite ♾' };
+  const nameDisplay = profile.is_owner ? '👑 Axel' : '👤 ' + (profile.email||'').split('@')[0];
+  document.getElementById('memberName').textContent = nameDisplay;
+  document.getElementById('memberCredits').textContent =
+    profile.plan === 'elite' ? '∞' : profile.credits_remaining;
+  updateLivePreview();
+  checkSetupNeeded();
+  const credits = profile.plan === 'elite' ? '∞' : profile.credits_remaining;
+  toast('✓ Bienvenue ! Plan ' + (planLabel[profile.plan]||profile.plan) + ' · ' + credits + ' crédits');
+}
+
+// ── DECREMENT CREDIT ──
 async function decrementCredit(){
-  // Décrémente le crédit du membre dans le sheet
   if(!currentMember) return false;
-  if(currentMember.credits <= 0){
-    toast('✗ Plus de crédits ce mois — contacte Axel pour recharger');
-    return false;
+  if(currentMember.plan === 'elite') return true; // illimité
+  if(currentMember.credits_remaining <= 0){
+    toast('✗ Plus de crédits — passe à un plan supérieur !');
+    showPaywall(); return false;
   }
-
-  try {
-    const { apiKey, sheetId, sheetName } = SHEET_CONFIG;
-    const newCredits = currentMember.credits - 1;
-    const newTotal = (currentMember.totalUtilise || 0) + 1;
-
-    // Update colonnes C (credits) et D (total utilisé)
-    const range = encodeURIComponent(`${sheetName}!C${currentMember.rowIndex}:D${currentMember.rowIndex}`);
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
-
-    // ⚠️ L'écriture nécessite OAuth2, pas juste une clé API
-    // On utilise le mode "append via form" ou on informe l'utilisateur
-    // Pour écriture réelle → nécessite service account ou OAuth
-    // Solution court terme : on log via un webhook Google Apps Script
-    await logUsageViaAppsScript(currentMember.code, currentMember.nom, newTotal);
-
-    // Update local state
-    currentMember.credits = newCredits;
-    currentMember.totalUtilise = newTotal;
-    document.getElementById('memberCredits').textContent = newCredits;
-    return true;
-
-  } catch(e) {
-    console.error('Decrement error:', e);
-    // On laisse passer en cas d'erreur réseau pour ne pas bloquer
-    currentMember.credits -= 1;
-    document.getElementById('memberCredits').textContent = currentMember.credits;
-    return true;
-  }
+  const newCredits = currentMember.credits_remaining - 1;
+  const { error } = await sb.from('profiles')
+    .update({ credits_remaining: newCredits })
+    .eq('id', currentMember.id);
+  if(error){ console.warn('Credit update error:', error); }
+  currentMember.credits_remaining = newCredits;
+  document.getElementById('memberCredits').textContent = newCredits;
+  return true;
 }
 
-async function logUsageViaAppsScript(code, nom, totalUtilise){
-  // Google Apps Script Web App URL — à configurer (voir instructions)
-  const appsScriptUrl = SHEET_CONFIG.appsScriptUrl;
-  if(!appsScriptUrl) return;
-  try {
-    await fetch(appsScriptUrl + '?code=' + encodeURIComponent(code) + '&action=decrement', {
-      method: 'GET', mode: 'no-cors'
-    });
-  } catch(e) { console.warn('Apps Script log failed:', e); }
+// ── LOGOUT ──
+async function authLogout(){
+  await sb.auth.signOut();
+  currentMember = null;
+  guestMode = false;
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('memberBar').style.display = 'none';
+  document.getElementById('guestBanner').style.display = 'none';
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-error').style.display = 'none';
+  toast('✓ Déconnecté');
+}
+
+// ── INIT AUTH (check session au démarrage) ──
+async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session && session.user){
+    await loadProfile(session.user);
+  }
+  // Écouter les changements de session
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if(session && session.user && !currentMember){
+      await loadProfile(session.user);
+    }
+  });
 }
 
 function checkSetupNeeded(){
@@ -3175,11 +3215,7 @@ async function startGeneration(){
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
 
   // ── Vérification crédits ──
-  if(currentMember){
-    if(currentMember.credits <= 0){
-      toast('✗ Plus de crédits ce mois — contacte Axel pour recharger');
-      return;
-    }
+  if(currentMember && !guestMode){
     const ok = await decrementCredit();
     if(!ok) return;
   }
@@ -3856,20 +3892,14 @@ async function uploadToYoutube(){
 }
 
 // ── INIT ──
-// 1. Toujours montrer le login en premier
+// 1. Toujours montrer le login en premier (Supabase vérifiera la session)
 document.getElementById('loginOverlay').style.display = 'flex';
 document.getElementById('setupOverlay').style.display = 'none';
 
-// 2. Session sauvegardée ? (optionnel — retire si tu veux toujours forcer le login)
-const savedCode = localStorage.getItem('aa_member_code');
-const savedName = localStorage.getItem('aa_member_name');
-if(savedCode && savedName){
-  // Pré-rempli mais doit quand même valider
-  document.getElementById('inp-code').value = savedCode;
-}
+// 2. Vérifier session Supabase existante
+initAuth();
 
-// 3. Load API keys
-['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
+// 3. Load API keys (hardcodées — pas de localStorage)
 refreshDots();
 refreshSocialCards();
 refreshPublishButtons();
