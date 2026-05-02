@@ -383,7 +383,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px">
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="opacity:.5"><path d="M6 1l1.35 2.73L10.5 4.3l-2.25 2.19.53 3.09L6 8.1l-2.78 1.48.53-3.09L1.5 4.3l3.15-.57L6 1z" fill="currentColor"/></svg>
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
-        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">crédits</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">restant</span>
       </div>
       <button onclick="authLogout()" style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M8 2H10a1 1 0 011 1v6a1 1 0 01-1 1H8M5 8.5L8 6 5 3.5M1 6h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -403,8 +403,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
 <!-- GUEST BANNER -->
 <div class="guest-banner" id="guestBanner">
-  <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · Téléchargement bloqué</div>
-  <button class="btn-guest-upgrade" onclick="showPaywall()">Supprimer le watermark · 10€/mois →</button>
+  <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · Téléchargement bloqué · 2 min offertes</div>
+  <button class="btn-guest-upgrade" onclick="showPaywall()">Voir les plans · dès 19,99€/mois →</button>
 </div>
 
 <!-- LAYOUT -->
@@ -1791,19 +1791,33 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <!-- PAYWALL MODAL -->
 <div class="paywall-overlay" id="paywallOverlay" onclick="if(event.target===this)closePaywall()">
   <div class="paywall-box">
-    <div class="paywall-icon">🔓</div>
-    <div class="paywall-title">Supprimer le watermark</div>
-    <div class="paywall-sub">Tu es en mode essai. Pour télécharger tes vidéos sans watermark, passe en accès complet.</div>
-    <div class="paywall-price"><sup>€</sup>10<span>/mois</span></div>
-    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:20px">APIs incluses · Sans engagement</div>
-    <div class="paywall-perks">
-      <div class="paywall-perk">GPT-4o, ElevenLabs, Hedra inclus</div>
-      <div class="paywall-perk">Téléchargement sans watermark</div>
-      <div class="paywall-perk">Bibliothèque vidéo illimitée</div>
-      <div class="paywall-perk">Support & mises à jour inclus</div>
+    <div class="paywall-icon">⚡</div>
+    <div class="paywall-title" id="paywallTitle">Passe à l'accès complet</div>
+    <div class="paywall-sub" id="paywallSub">Choisis le plan qui correspond à ton usage. Tous les APIs sont inclus, zéro configuration.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">19,99€</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 min · 0,67€/j</div>
+      </div>
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
+        <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">PRO</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">38,99€</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">10 min · 1,30€/j</div>
+      </div>
+      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">ELITE</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">59,99€</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">25 min + 4K + BLOX</div>
+      </div>
     </div>
-    <button class="btn-paywall" onclick="window.open('https://iamanager.fr','_blank')">🚀 Rejoindre AvatarAds →</button>
-    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai</button>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">14,99€/mois</strong> en annuel · Sans engagement</div>
+    <button class="btn-paywall" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">Voir tous les plans →</button>
+    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai (watermark)</button>
   </div>
 </div>
 
@@ -1816,8 +1830,19 @@ const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const PLAN_CREDITS = { free: 2, starter: 10, pro: 30, elite: 9999 };
-const OWNER_EMAIL  = 'axel.skotnicki@gmail.com'; // → mettre ton vrai email
+// Minutes de vidéo par plan (stockées en secondes dans Supabase)
+const PLAN_SECONDS = { free: 120, starter: 300, pro: 600, elite: 1500 };
+const PLAN_PRICES  = { starter: '19,99€', pro: '38,99€', elite: '59,99€' };
+const OWNER_EMAIL  = 'axel.skotnicki@gmail.com';
+
+function secsToDisplay(s){ // "4 min 30s" ou "2 min"
+  if(s >= 1500) return '25 min';
+  const m = Math.floor(s/60), r = s%60;
+  return r > 0 ? m+'min '+r+'s' : m+' min';
+}
+function durationToSecs(label){ // "30 secondes" → 30
+  const n = parseInt(label); return isNaN(n) ? 20 : n;
+}
 
 // ── API KEYS ──
 const _e = s => atob(s);
@@ -1938,7 +1963,7 @@ function enterApp(profile){
   const nameDisplay = profile.is_owner ? '👑 ' + displayName : displayName;
   document.getElementById('memberName').textContent = nameDisplay;
   document.getElementById('memberCredits').textContent =
-    profile.plan === 'elite' ? '∞' : profile.credits_remaining;
+    profile.plan === 'elite' ? '25 min' : secsToDisplay(profile.credits_remaining || 0);
   const badge = document.getElementById('memberPlanBadge');
   if(badge){
     badge.textContent = planLabels[profile.plan] || profile.plan;
@@ -1954,21 +1979,23 @@ function enterApp(profile){
   toast('✓ Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
 }
 
-// ── DECREMENT CREDIT ──
-async function decrementCredit(){
+// ── DEDUCT MINUTES ──
+async function decrementCredit(durationSecs){
   if(!currentMember) return false;
-  if(currentMember.plan === 'elite') return true; // illimité
-  if(currentMember.credits_remaining <= 0){
-    toast('✗ Plus de crédits — passe à un plan supérieur !');
+  const secs = durationSecs || 20;
+  const remaining = currentMember.credits_remaining || 0;
+  if(remaining < secs){
+    const needed = Math.ceil(secs/60);
+    toast('✗ Il te faut ' + needed + ' min — tu n\'en as plus assez !');
     showPaywall(); return false;
   }
-  const newCredits = currentMember.credits_remaining - 1;
+  const newSecs = remaining - secs;
   const { error } = await sb.from('profiles')
-    .update({ credits_remaining: newCredits })
+    .update({ credits_remaining: newSecs })
     .eq('id', currentMember.id);
-  if(error){ console.warn('Credit update error:', error); }
-  currentMember.credits_remaining = newCredits;
-  document.getElementById('memberCredits').textContent = newCredits;
+  if(error){ console.warn('Minutes update error:', error); }
+  currentMember.credits_remaining = newSecs;
+  document.getElementById('memberCredits').textContent = secsToDisplay(newSecs);
   return true;
 }
 
@@ -3259,9 +3286,10 @@ async function startGeneration(){
   const script = document.getElementById('f-script').value.trim();
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
 
-  // ── Vérification crédits ──
+  // ── Vérification minutes ──
   if(currentMember && !guestMode){
-    const ok = await decrementCredit();
+    const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
+    const ok = await decrementCredit(durSecs);
     if(!ok) return;
   }
 

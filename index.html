@@ -469,6 +469,15 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
     <h2>Choisis ton plan.<br><em>Scale ton contenu.</em></h2>
     <p class="section-sub" style="margin:0 auto 56px">Tous les plans incluent les APIs. Sans engagement. Résiliation en 1 clic.</p>
 
+    <!-- Toggle mensuel / annuel -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:40px">
+      <span id="tog-monthly" style="font-size:13px;font-weight:600;color:#fff;cursor:pointer" onclick="setPricingToggle('monthly')">Mensuel</span>
+      <div onclick="setPricingToggle(currentPricingMode==='monthly'?'yearly':'monthly')" style="width:44px;height:24px;background:var(--orange);border-radius:12px;cursor:pointer;position:relative;flex-shrink:0">
+        <div id="tog-knob" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s"></div>
+      </div>
+      <span id="tog-yearly" style="font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer" onclick="setPricingToggle('yearly')">Annuel <span style="background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange);font-size:10px;padding:1px 7px;border-radius:10px;margin-left:4px">-25%</span></span>
+    </div>
+
     <div class="pricing-grid">
 
       <!-- STARTER -->
@@ -476,18 +485,20 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="plan-badge starter">Starter</div>
         <div class="plan-name">Starter</div>
         <div class="plan-desc">Pour commencer à créer du contenu IA.</div>
-        <div class="plan-price"><sup>€</sup>9<sub>/mois</sub></div>
-        <div class="plan-period">Facturé mensuellement</div>
+        <div class="plan-price"><sup>€</sup><span class="price-monthly">19,99</span><span class="price-yearly" style="display:none">14,99</span><sub>/mois</sub></div>
+        <div class="plan-period price-yearly-note" style="display:none;color:var(--orange);font-size:11px">Facturé 179,88€/an · soit 0,50€/jour</div>
+        <div class="plan-period price-monthly-note">Facturé mensuellement · 0,67€/jour</div>
         <div class="plan-divider"></div>
         <div class="plan-features">
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">10 crédits</strong>/mois (10 vidéos)</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">5 min de vidéo</strong>/mois</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>GPT-4o scripts</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>ElevenLabs voix</span></div>
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Hedra lipsync 720p</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Hedra lipsync HD</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Export TikTok / Reels</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Sans watermark</span></div>
         </div>
         <a href="./app/" class="btn-plan outline">Commencer →</a>
-        <div class="plan-note">Essai gratuit inclus</div>
+        <div class="plan-note">2 min offertes à l'inscription</div>
       </div>
 
       <!-- PRO -->
@@ -495,41 +506,52 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="plan-badge popular">⚡ Populaire</div>
         <div class="plan-name">Pro</div>
         <div class="plan-desc">Pour les créateurs qui veulent scaler sérieusement.</div>
-        <div class="plan-price"><sup>€</sup>19<sub>/mois</sub></div>
-        <div class="plan-period">Facturé mensuellement</div>
+        <div class="plan-price"><sup>€</sup><span class="price-monthly">38,99</span><span class="price-yearly" style="display:none">29,99</span><sub>/mois</sub></div>
+        <div class="plan-period price-yearly-note" style="display:none;color:var(--orange);font-size:11px">Facturé 359,88€/an · soit 1,00€/jour</div>
+        <div class="plan-period price-monthly-note">Facturé mensuellement · 1,30€/jour</div>
         <div class="plan-divider"></div>
         <div class="plan-features">
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">30 crédits</strong>/mois (30 vidéos)</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">10 min de vidéo</strong>/mois</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>GPT-4o scripts illimités</span></div>
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Clonage voix prioritaire</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Clonage de voix</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Hedra lipsync <strong style="color:#fff">1080p</strong></span></div>
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Bibliothèque illimitée</span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Bibliothèque vidéo</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Publication réseaux sociaux</span></div>
         </div>
         <a href="./app/" class="btn-plan orange">Commencer →</a>
-        <div class="plan-note">Le plus choisi · Économise 20% vs Starter</div>
+        <div class="plan-note">Le plus choisi · 2× plus de vidéos que Starter</div>
       </div>
 
       <!-- ELITE -->
       <div class="plan-card">
         <div class="plan-badge elite">✦ Elite</div>
         <div class="plan-name">Elite</div>
-        <div class="plan-desc">Accès complet AvatarAds + suite BLOX.</div>
-        <div class="plan-price"><sup>€</sup>39<sub>/mois</sub></div>
-        <div class="plan-period">Facturé mensuellement</div>
+        <div class="plan-desc">Le pack ultime AvatarAds + BLOX inclus.</div>
+        <div class="plan-price"><sup>€</sup><span class="price-monthly">59,99</span><span class="price-yearly" style="display:none">44,99</span><sub>/mois</sub></div>
+        <div class="plan-period price-yearly-note" style="display:none;color:var(--orange);font-size:11px">Facturé 539,88€/an · soit 1,50€/jour</div>
+        <div class="plan-period price-monthly-note">Facturé mensuellement · 2,00€/jour</div>
         <div class="plan-divider"></div>
         <div class="plan-features">
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span><strong style="color:#fff">Crédits illimités</strong></span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span><strong style="color:#fff">25 min de vidéo</strong>/mois</span></div>
           <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Hedra lipsync <strong style="color:#fff">4K</strong></span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Génération prioritaire</span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Accès <strong style="color:#a855f7">BLOX complet</strong></span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Support prioritaire Axel</span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Accès early features</span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Accès <strong style="color:#a855f7">BLOX Elite inclus</strong></span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Support prioritaire direct</span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Early access nouvelles features</span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Tout ce qui est dans Pro</span></div>
         </div>
         <a href="./app/" class="btn-plan purple-btn">Commencer →</a>
-        <div class="plan-note">Tout inclus · Meilleure valeur</div>
+        <div class="plan-note">AvatarAds Elite → BLOX Elite offert</div>
       </div>
 
+    </div>
+
+    <!-- Cross-access note -->
+    <div style="margin-top:32px;padding:16px 24px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);border-radius:12px;max-width:600px;margin-left:auto;margin-right:auto;text-align:left">
+      <div style="font-size:11px;font-family:monospace;color:#a855f7;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Cross-accès</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:13px;color:rgba(255,255,255,0.7)">🟠 <strong style="color:#fff">AvatarAds Elite</strong> → BLOX Elite inclus</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7)">🟣 <strong style="color:#fff">BLOX Elite</strong> → AvatarAds Pro inclus</div>
+      </div>
     </div>
   </div>
 </section>
@@ -546,8 +568,8 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="faq-a">Non. Les 3 APIs (OpenAI, ElevenLabs, Hedra) sont intégrées dans ton abonnement AvatarAds. Tu crées un compte, tu te connectes, et tu génères ta première vidéo immédiatement.</div>
       </div>
       <div class="faq-item" onclick="toggleFaq(this)">
-        <button class="faq-q">C'est quoi un "crédit" ? <span class="faq-arrow">+</span></button>
-        <div class="faq-a">1 crédit = 1 vidéo complète générée (script + voix + avatar lipsync). Les crédits se rechargent automatiquement chaque mois à la date de ton abonnement.</div>
+        <button class="faq-q">Comment fonctionnent les minutes de vidéo ? <span class="faq-arrow">+</span></button>
+        <div class="faq-a">Chaque plan inclut un quota de minutes de vidéo par mois (5 min Starter, 10 min Pro, 25 min Elite). Tu choisis la durée de chaque vidéo (15s, 30s, 60s…) et les minutes sont déduites en fonction. 5 min = 10 vidéos de 30 secondes, ou 5 vidéos de 60 secondes. Les minutes se rechargent chaque mois.</div>
       </div>
       <div class="faq-item" onclick="toggleFaq(this)">
         <button class="faq-q">Puis-je utiliser ma propre voix ? <span class="faq-arrow">+</span></button>
@@ -605,6 +627,20 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
 window.addEventListener('scroll',()=>{
   document.getElementById('nav').classList.toggle('scrolled',window.scrollY>20);
 });
+// ── PRICING TOGGLE ──
+let currentPricingMode = 'monthly';
+function setPricingToggle(mode){
+  currentPricingMode = mode;
+  const yearly = mode === 'yearly';
+  document.querySelectorAll('.price-monthly').forEach(el => el.style.display = yearly ? 'none' : '');
+  document.querySelectorAll('.price-yearly').forEach(el => el.style.display = yearly ? '' : 'none');
+  document.querySelectorAll('.price-yearly-note').forEach(el => el.style.display = yearly ? '' : 'none');
+  document.querySelectorAll('.price-monthly-note').forEach(el => el.style.display = yearly ? 'none' : '');
+  document.getElementById('tog-monthly').style.color = yearly ? 'rgba(255,255,255,0.4)' : '#fff';
+  document.getElementById('tog-yearly').style.color  = yearly ? '#fff' : 'rgba(255,255,255,0.4)';
+  document.getElementById('tog-knob').style.transform = yearly ? 'translateX(20px)' : 'translateX(0)';
+}
+
 function toggleFaq(item){
   const open=item.classList.contains('open');
   document.querySelectorAll('.faq-item.open').forEach(i=>i.classList.remove('open'));
