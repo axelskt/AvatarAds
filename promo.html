@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AvatarAds — Promo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080a;--bg2:#0d0f12;--bg3:#13161a;--bg4:#1a1e24;
+  --orange:#ff6b35;--orange2:#ff8c5a;
+  --text:#eef0f4;--text2:#8b92a0;--text3:#45505e;
+  --green:#00d97e;--border:rgba(255,255,255,0.07);
+  --font:'Bricolage Grotesque',sans-serif;--mono:'Geist Mono',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text)}
+
+/* CANVAS */
+#canvas{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+
+/* SCENES */
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .6s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.scene.active{opacity:1}
+.scene.exit{opacity:0}
+
+/* PROGRESS BAR */
+#progress-bar{position:fixed;bottom:0;left:0;height:3px;background:var(--orange);transition:width .1s linear;z-index:100}
+
+/* SCENE 0 — LOGO INTRO */
+.s0-wrap{display:flex;flex-direction:column;align-items:center;gap:20px}
+.s0-logo{display:flex;align-items:center;gap:14px}
+.s0-icon{width:56px;height:56px;background:#0a0a0a;border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(255,107,53,.3)}
+.s0-name{font-size:42px;font-weight:900;letter-spacing:-1px}
+.s0-tag{font-size:13px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(255,255,255,.1);padding:4px 14px;border-radius:20px}
+
+/* SCENE 1 — TAGLINE */
+.s1-wrap{text-align:center;max-width:800px;padding:0 40px}
+.s1-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.25);border-radius:20px;padding:6px 16px;font-size:12px;font-family:var(--mono);color:var(--orange);margin-bottom:28px}
+.s1-title{font-size:58px;font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:16px}
+.s1-title span{color:var(--orange)}
+.s1-sub{font-size:18px;color:var(--text2);line-height:1.6}
+
+/* SCENE 2-6 — STEPS */
+.step-wrap{display:flex;align-items:center;gap:60px;max-width:1000px;width:100%;padding:0 60px}
+.step-left{flex:1;min-width:0}
+.step-num{font-size:11px;font-family:var(--mono);color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.step-num::before{content:'';width:24px;height:2px;background:var(--orange);border-radius:2px}
+.step-title{font-size:44px;font-weight:900;letter-spacing:-1.5px;line-height:1.1;margin-bottom:14px}
+.step-desc{font-size:16px;color:var(--text2);line-height:1.7;max-width:380px}
+.step-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.step-tag{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--text2)}
+.step-tag.active{background:rgba(255,107,53,.1);border-color:rgba(255,107,53,.3);color:var(--orange)}
+
+.step-right{flex-shrink:0;width:280px}
+
+/* MOCK UI CARDS */
+.mock-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.mock-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,107,53,.04),transparent);pointer-events:none}
+.mock-label{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.mock-input{background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text2);margin-bottom:10px;width:100%;font-family:var(--mono)}
+.mock-input.typed{color:var(--text);border-color:rgba(255,107,53,.3)}
+.mock-select-row{display:flex;gap:8px;margin-bottom:10px}
+.mock-sel{flex:1;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;font-size:11px;font-family:var(--mono);color:var(--text2);text-align:center}
+.mock-sel.picked{background:rgba(255,107,53,.12);border-color:rgba(255,107,53,.35);color:var(--orange)}
+.mock-btn{width:100%;padding:10px;background:var(--orange);border-radius:8px;font-size:13px;font-weight:700;color:#fff;text-align:center;margin-top:6px;cursor:pointer}
+.mock-avatar-zone{background:var(--bg3);border:2px dashed rgba(255,255,255,.12);border-radius:10px;padding:24px;text-align:center;margin-bottom:10px}
+.mock-avatar-img{width:80px;height:80px;border-radius:10px;object-fit:cover;margin:0 auto 8px;display:block;background:linear-gradient(135deg,#1a1e24,#22272f)}
+.mock-voice-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;margin-bottom:6px;border:1px solid transparent}
+.mock-voice-row.sel{background:rgba(255,107,53,.08);border-color:rgba(255,107,53,.2)}
+.mock-voice-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#ff4757);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.mock-voice-info{flex:1}
+.mock-voice-name{font-size:12px;font-weight:700}
+.mock-voice-tag{font-size:10px;font-family:var(--mono);color:var(--text3)}
+.mock-play{width:24px;height:24px;background:var(--bg4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px}
+
+/* PHONE PREVIEW */
+.phone-wrap{position:relative;width:200px;margin:0 auto}
+.phone-shell{width:200px;height:433px;border-radius:38px;border:8px solid #1c1c1e;background:#000;overflow:hidden;position:relative;box-shadow:0 0 60px rgba(255,107,53,.15),0 24px 80px rgba(0,0,0,.8)}
+.phone-screen{position:absolute;inset:0;background:linear-gradient(160deg,#0f0c29,#302b63,#24243e)}
+.phone-av-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s}
+.phone-av-img.show{opacity:1}
+.phone-tiktok-ui{position:absolute;inset:0;pointer-events:none}
+.phone-di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:60px;height:18px;background:#000;border-radius:10px;z-index:9}
+.phone-username{position:absolute;bottom:70px;left:12px;font-size:10px;font-weight:700;color:#fff}
+.phone-desc{position:absolute;bottom:52px;left:12px;right:40px;font-size:8px;color:rgba(255,255,255,.7);line-height:1.4}
+.phone-sidebar{position:absolute;right:8px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone-sidebar-btn{display:flex;flex-direction:column;align-items:center;gap:2px}
+.phone-sidebar-icon{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:12px}
+.phone-sidebar-count{font-size:8px;color:rgba(255,255,255,.7);font-family:var(--mono)}
+.phone-bottom-nav{position:absolute;bottom:0;left:0;right:0;height:40px;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:space-around;padding:0 8px}
+.phone-nav-item{font-size:7px;color:rgba(255,255,255,.6);text-align:center}
+.phone-nav-item.active{color:#fff}
+.phone-subs{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);text-align:center;width:90%}
+.phone-subs span{font-family:Impact,sans-serif;font-size:13px;color:#FFE500;-webkit-text-stroke:.5px #000;margin:0 2px}
+.phone-subs span.white{color:#fff}
+
+/* GENERATION SCENE */
+.gen-wrap{text-align:center;max-width:600px;padding:0 40px}
+.gen-title{font-size:46px;font-weight:900;letter-spacing:-1.5px;margin-bottom:24px}
+.gen-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.gen-step{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;text-align:left}
+.gen-step-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.gen-step-icon.done{background:rgba(0,217,126,.12)}
+.gen-step-icon.loading{background:rgba(255,107,53,.12)}
+.gen-step-icon.wait{background:var(--bg3)}
+.gen-step-info{flex:1}
+.gen-step-name{font-size:13px;font-weight:600}
+.gen-step-status{font-size:10px;font-family:var(--mono);color:var(--text3)}
+.gen-step-status.done{color:var(--green)}
+.gen-step-status.loading{color:var(--orange)}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-cost{font-size:12px;font-family:var(--mono);color:var(--text3)}
+.gen-cost span{color:var(--orange)}
+
+/* RESULT SCENE */
+.result-wrap{display:flex;align-items:center;gap:60px;max-width:900px;padding:0 40px}
+.result-left{flex:1}
+.result-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,217,126,.1);border:1px solid rgba(0,217,126,.25);border-radius:20px;padding:5px 14px;font-size:11px;font-family:var(--mono);color:var(--green);margin-bottom:20px}
+.result-title{font-size:48px;font-weight:900;letter-spacing:-1.5px;margin-bottom:14px}
+.result-title span{color:var(--orange)}
+.result-platforms{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.result-plat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;font-family:var(--mono);color:var(--text2)}
+
+/* CTA SCENE */
+.cta-wrap{text-align:center;max-width:800px;padding:0 40px;position:relative}
+.cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;height:300px;background:radial-gradient(ellipse,rgba(255,107,53,.18),transparent 70%);pointer-events:none}
+.cta-eyebrow{font-size:12px;font-family:var(--mono);color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-bottom:20px}
+.cta-title{font-size:62px;font-weight:900;letter-spacing:-2px;line-height:1.0;margin-bottom:20px}
+.cta-title span{color:var(--orange);display:inline-block}
+.cta-sub{font-size:17px;color:var(--text2);margin-bottom:36px;line-height:1.6}
+.cta-btn{display:inline-flex;align-items:center;gap:10px;background:var(--orange);color:#fff;font-family:var(--font);font-size:17px;font-weight:800;padding:16px 36px;border-radius:14px;cursor:pointer;box-shadow:0 0 40px rgba(255,107,53,.4);transition:transform .2s,box-shadow .2s;letter-spacing:-.3px}
+.cta-btn:hover{transform:scale(1.03);box-shadow:0 0 60px rgba(255,107,53,.5)}
+.cta-logos{display:flex;align-items:center;justify-content:center;gap:20px;margin-top:28px}
+.cta-logo-item{font-size:10px;font-family:var(--mono);color:var(--text3);display:flex;align-items:center;gap:6px}
+.cta-logo-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* BG GRID */
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+.bg-gradient{position:fixed;inset:0;background:radial-gradient(ellipse at center top,rgba(255,107,53,.06),transparent 60%);pointer-events:none;z-index:0}
+
+/* SCENE COUNTER */
+#scene-dots{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:100}
+.dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s}
+.dot.active{width:18px;border-radius:3px;background:var(--orange)}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 40px rgba(255,107,53,.3)}50%{box-shadow:0 0 70px rgba(255,107,53,.5)}}
+
+.scene.active .animate-up{animation:fadeUp .6s cubic-bezier(.4,0,.2,1) both}
+.scene.active .animate-up:nth-child(1){animation-delay:.1s}
+.scene.active .animate-up:nth-child(2){animation-delay:.25s}
+.scene.active .animate-up:nth-child(3){animation-delay:.4s}
+.scene.active .animate-up:nth-child(4){animation-delay:.55s}
+.scene.active .animate-right{animation:slideRight .6s cubic-bezier(.4,0,.2,1) both}
+.scene.active .animate-right:nth-child(1){animation-delay:.1s}
+.scene.active .animate-right:nth-child(2){animation-delay:.25s}
+.scene.active .animate-right:nth-child(3){animation-delay:.4s}
+.scene.active .animate-left{animation:slideLeft .6s cubic-bezier(.4,0,.2,1) .15s both}
+.scene.active .animate-scale{animation:scaleIn .5s cubic-bezier(.4,0,.2,1) .1s both}
+.scene.active .animate-logo{animation:scaleIn .7s cubic-bezier(.34,1.56,.64,1) both}
+.scene.active .animate-pulse{animation:pulse 2s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-gradient"></div>
+<div id="progress-bar" style="width:0%"></div>
+
+<div id="canvas">
+
+  <!-- SCENE 0 — LOGO -->
+  <div class="scene active" id="scene-0">
+    <div class="s0-wrap">
+      <div class="s0-logo animate-logo">
+        <div class="s0-icon">
+          <svg viewBox="0 0 36 36" width="40" height="40" fill="none"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg>
+        </div>
+        <div class="s0-name">AvatarAds</div>
+      </div>
+      <div class="s0-tag animate-up" style="animation-delay:.4s">IA Manager · Members</div>
+    </div>
+  </div>
+
+  <!-- SCENE 1 — TAGLINE -->
+  <div class="scene" id="scene-1">
+    <div class="s1-wrap">
+      <div class="s1-badge animate-up">⚡ Propulsé par GPT-4o · ElevenLabs · Hedra</div>
+      <div class="s1-title animate-up">Crée des vidéos<br><span>virales</span> avec l'IA<br>en 5 étapes</div>
+      <div class="s1-sub animate-up">Avatar · Voix · Script · Style · Publication</div>
+    </div>
+  </div>
+
+  <!-- SCENE 2 — PRODUIT -->
+  <div class="scene" id="scene-2">
+    <div class="step-wrap">
+      <div class="step-left">
+        <div class="step-num animate-right">Étape 01</div>
+        <div class="step-title animate-right">Ton produit.<br>Ton message.</div>
+        <div class="step-desc animate-right">Décris ton offre, choisis ton hook accrocheur et ton CTA — l'IA génère le script automatiquement.</div>
+        <div class="step-tags animate-right">
+          <div class="step-tag active">Hook IA</div>
+          <div class="step-tag active">Script auto</div>
+          <div class="step-tag">CTA optimisé</div>
+        </div>
+      </div>
+      <div class="step-right animate-left">
+        <div class="mock-card">
+          <div class="mock-label">Ton produit</div>
+          <div class="mock-input typed">Formation dropshipping</div>
+          <div class="mock-label">Hook viral</div>
+          <div class="mock-input typed" style="font-size:11px;line-height:1.5">"Ce que personne ne te dit sur le dropshipping en 2025..."</div>
+          <div class="mock-label">CTA</div>
+          <div class="mock-select-row">
+            <div class="mock-sel picked">Commente "PLAN" 📩</div>
+          </div>
+          <div class="mock-btn">✨ Générer le script</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 3 — AVATAR -->
+  <div class="scene" id="scene-3">
+    <div class="step-wrap">
+      <div class="step-left">
+        <div class="step-num animate-right">Étape 02</div>
+        <div class="step-title animate-right">Ton avatar.<br>Ta présence.</div>
+        <div class="step-desc animate-right">Upload ta photo — l'IA la transforme en avatar parlant qui prononce ton script avec tes expressions.</div>
+        <div class="step-tags animate-right">
+          <div class="step-tag active">Photo → Avatar</div>
+          <div class="step-tag active">Lèvres synchronisées</div>
+          <div class="step-tag">Crop & repositionne</div>
+        </div>
+      </div>
+      <div class="step-right animate-left">
+        <div class="mock-card">
+          <div class="mock-avatar-zone">
+            <div style="font-size:32px;margin-bottom:8px">🧑‍💼</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--orange)">✅ Avatar chargé</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">REMINI_photo.jpg</div>
+          </div>
+          <div class="mock-label">Hauteur de l'avatar</div>
+          <div style="height:4px;background:var(--bg4);border-radius:2px;margin-bottom:12px"><div style="width:60%;height:100%;background:var(--orange);border-radius:2px"></div></div>
+          <div class="mock-label">Largeur</div>
+          <div style="height:4px;background:var(--bg4);border-radius:2px"><div style="width:80%;height:100%;background:var(--orange);border-radius:2px"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 4 — VOIX -->
+  <div class="scene" id="scene-4">
+    <div class="step-wrap">
+      <div class="step-left">
+        <div class="step-num animate-right">Étape 03</div>
+        <div class="step-title animate-right">Ta voix.<br>Ton émotion.</div>
+        <div class="step-desc animate-right">Choisis parmi 20+ voix IA ultra-réalistes — françaises, dynamiques, naturelles. Le script est lu automatiquement.</div>
+        <div class="step-tags animate-right">
+          <div class="step-tag active">ElevenLabs</div>
+          <div class="step-tag active">20+ voix FR</div>
+          <div class="step-tag">Aperçu live</div>
+        </div>
+      </div>
+      <div class="step-right animate-left">
+        <div class="mock-card">
+          <div class="mock-voice-row sel">
+            <div class="mock-voice-avatar">🎙</div>
+            <div class="mock-voice-info">
+              <div class="mock-voice-name">Sofia</div>
+              <div class="mock-voice-tag">Lifestyle · Dynamique</div>
+            </div>
+            <div class="mock-play">▶</div>
+          </div>
+          <div class="mock-voice-row">
+            <div class="mock-voice-avatar" style="background:linear-gradient(135deg,#4dabf7,#339af0)">🎙</div>
+            <div class="mock-voice-info">
+              <div class="mock-voice-name">Lucas</div>
+              <div class="mock-voice-tag">Business · Confiant</div>
+            </div>
+            <div class="mock-play">▶</div>
+          </div>
+          <div class="mock-voice-row">
+            <div class="mock-voice-avatar" style="background:linear-gradient(135deg,#00d97e,#12b886)">🎙</div>
+            <div class="mock-voice-info">
+              <div class="mock-voice-name">Emma</div>
+              <div class="mock-voice-tag">Naturel · Chaleureux</div>
+            </div>
+            <div class="mock-play">▶</div>
+          </div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;font-family:var(--mono);color:var(--orange)">▶ Aperçu du script en cours...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 5 — STYLE -->
+  <div class="scene" id="scene-5">
+    <div class="step-wrap">
+      <div class="step-left">
+        <div class="step-num animate-right">Étape 04</div>
+        <div class="step-title animate-right">Ton style.<br>Ton format.</div>
+        <div class="step-desc animate-right">TikTok 9:16, Reels ou carré Instagram — preview live dans un vrai téléphone. Sous-titres, couleurs, position.</div>
+        <div class="step-tags animate-right">
+          <div class="step-tag active">TikTok · Reels</div>
+          <div class="step-tag active">Sous-titres IA</div>
+          <div class="step-tag">Preview live</div>
+        </div>
+      </div>
+      <div class="step-right animate-left" style="display:flex;justify-content:center">
+        <div class="phone-wrap">
+          <div class="phone-shell animate-pulse">
+            <div class="phone-screen"></div>
+            <div class="phone-tiktok-ui">
+              <div class="phone-di"></div>
+              <!-- Avatar placeholder -->
+              <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center">
+                <div style="font-size:60px;opacity:.3">🧑‍💼</div>
+              </div>
+              <div class="phone-subs">
+                <span>PASSE</span><span class="white">À</span><span style="color:#fff">L'ACTION</span>
+              </div>
+              <div class="phone-username">@tonpseudo</div>
+              <div class="phone-desc">Commente "PLAN" et je t'envoie tout en DM 📩</div>
+              <div class="phone-sidebar">
+                <div class="phone-sidebar-btn">
+                  <div class="phone-sidebar-icon">❤️</div>
+                  <div class="phone-sidebar-count">59k</div>
+                </div>
+                <div class="phone-sidebar-btn">
+                  <div class="phone-sidebar-icon">💬</div>
+                  <div class="phone-sidebar-count">1.2k</div>
+                </div>
+                <div class="phone-sidebar-btn">
+                  <div class="phone-sidebar-icon">↗️</div>
+                  <div class="phone-sidebar-count">87</div>
+                </div>
+              </div>
+              <div class="phone-bottom-nav">
+                <div class="phone-nav-item">🏠<br>Accueil</div>
+                <div class="phone-nav-item">🔍<br>Amis</div>
+                <div class="phone-nav-item active" style="transform:scale(1.1)">➕</div>
+                <div class="phone-nav-item">✉️<br>Messages</div>
+                <div class="phone-nav-item">👤<br>Profil</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 6 — GÉNÉRATION -->
+  <div class="scene" id="scene-6">
+    <div class="gen-wrap">
+      <div class="gen-title animate-up">Génération<br>en cours... ✨</div>
+      <div class="gen-steps animate-up">
+        <div class="gen-step">
+          <div class="gen-step-icon done">✅</div>
+          <div class="gen-step-info">
+            <div class="gen-step-name">Script généré</div>
+            <div class="gen-step-status done">GPT-4o · Terminé</div>
+          </div>
+        </div>
+        <div class="gen-step">
+          <div class="gen-step-icon done">✅</div>
+          <div class="gen-step-info">
+            <div class="gen-step-name">Voix synthétisée</div>
+            <div class="gen-step-status done">ElevenLabs · Terminé</div>
+          </div>
+        </div>
+        <div class="gen-step">
+          <div class="gen-step-icon loading">⏳</div>
+          <div class="gen-step-info">
+            <div class="gen-step-name">Avatar animé</div>
+            <div class="gen-step-status loading"><span class="spin">⟳</span> Hedra · En cours...</div>
+          </div>
+        </div>
+        <div class="gen-step">
+          <div class="gen-step-icon wait">🎬</div>
+          <div class="gen-step-info">
+            <div class="gen-step-name">Vidéo finale</div>
+            <div class="gen-step-status">En attente</div>
+          </div>
+        </div>
+      </div>
+      <div class="gen-cost animate-up">Coût estimé : <span>-$0.22</span> · Qualité professionnelle</div>
+    </div>
+  </div>
+
+  <!-- SCENE 7 — RÉSULTAT -->
+  <div class="scene" id="scene-7">
+    <div class="result-wrap">
+      <div class="result-left">
+        <div class="result-badge animate-up">✅ Vidéo générée avec succès</div>
+        <div class="result-title animate-up">Prête à<br><span>publier.</span></div>
+        <div class="step-desc animate-up" style="margin-top:0">Ta vidéo IA avec avatar parlant, voix naturelle et sous-titres — générée en moins de 2 minutes.</div>
+        <div class="result-platforms animate-up">
+          <div class="result-plat">📱 TikTok</div>
+          <div class="result-plat">📸 Reels</div>
+          <div class="result-plat">▶️ YouTube</div>
+          <div class="result-plat">💼 LinkedIn</div>
+        </div>
+      </div>
+      <div class="animate-left" style="display:flex;justify-content:center">
+        <div class="phone-wrap">
+          <div class="phone-shell" style="box-shadow:0 0 80px rgba(255,107,53,.25),0 24px 80px rgba(0,0,0,.8)">
+            <div class="phone-screen" style="background:linear-gradient(180deg,#0a0a0a,#1a0a0a)">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                <div style="text-align:center">
+                  <div style="font-size:48px;margin-bottom:8px">🧑‍💼</div>
+                  <div style="width:40px;height:40px;border-radius:50%;border:3px solid var(--orange);border-top-color:transparent;animation:spin .8s linear infinite;margin:0 auto"></div>
+                </div>
+              </div>
+            </div>
+            <div class="phone-tiktok-ui">
+              <div class="phone-di"></div>
+              <div class="phone-subs" style="bottom:55px">
+                <span>COMMENTE</span><span class="white" style="color:#fff">"PLAN"</span>
+              </div>
+              <div class="phone-username">@tonpseudo.ads</div>
+              <div class="phone-desc">Commente "PLAN" et je t'envoie tout en DM 📩</div>
+              <div class="phone-sidebar">
+                <div class="phone-sidebar-btn">
+                  <div class="phone-sidebar-icon">❤️</div>
+                  <div class="phone-sidebar-count" id="likes">59k</div>
+                </div>
+                <div class="phone-sidebar-btn">
+                  <div class="phone-sidebar-icon">💬</div>
+                  <div class="phone-sidebar-count">1.2k</div>
+                </div>
+              </div>
+              <div class="phone-bottom-nav">
+                <div class="phone-nav-item">🏠</div>
+                <div class="phone-nav-item">🔍</div>
+                <div class="phone-nav-item active">➕</div>
+                <div class="phone-nav-item">✉️</div>
+                <div class="phone-nav-item">👤</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 8 — CTA -->
+  <div class="scene" id="scene-8">
+    <div class="cta-wrap">
+      <div class="cta-glow"></div>
+      <div class="cta-eyebrow animate-up">⚡ Rejoins les créateurs qui scalent avec l'IA</div>
+      <div class="cta-title animate-up">Crée tes vidéos<br><span>virales</span><br>maintenant.</div>
+      <div class="cta-sub animate-up">Avatar IA · Voix naturelle · Script viral · En 2 minutes</div>
+      <div class="animate-up" style="animation-delay:.4s">
+        <div class="cta-btn">🚀 Rejoindre AvatarAds</div>
+      </div>
+      <div class="cta-logos animate-up" style="animation-delay:.55s">
+        <div class="cta-logo-item"><div class="cta-logo-dot"></div>GPT-4o</div>
+        <div class="cta-logo-item"><div class="cta-logo-dot"></div>ElevenLabs</div>
+        <div class="cta-logo-item"><div class="cta-logo-dot"></div>Hedra</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DOTS -->
+<div id="scene-dots">
+  <div class="dot active"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+</div>
+
+<script>
+const SCENES = 9;
+const DURATIONS = [2200, 2800, 3000, 3000, 3000, 3000, 3200, 3200, 5000]; // ms per scene
+let current = 0;
+let elapsed = 0;
+let startTime = null;
+let rafId = null;
+
+const totalDuration = DURATIONS.reduce((a,b) => a+b, 0);
+
+function showScene(idx){
+  document.querySelectorAll('.scene').forEach((el,i) => {
+    el.classList.remove('active','exit');
+    if(i === idx) el.classList.add('active');
+  });
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.classList.toggle('active', i === idx);
+  });
+}
+
+function tick(ts){
+  if(!startTime) startTime = ts;
+  const totalElapsed = ts - startTime;
+
+  // which scene?
+  let acc = 0, sceneIdx = 0;
+  for(let i = 0; i < DURATIONS.length; i++){
+    if(totalElapsed < acc + DURATIONS[i]){ sceneIdx = i; break; }
+    acc += DURATIONS[i];
+    sceneIdx = i;
+  }
+  if(totalElapsed >= totalDuration){
+    // restart
+    startTime = ts;
+    current = 0;
+    showScene(0);
+    rafId = requestAnimationFrame(tick);
+    return;
+  }
+
+  if(sceneIdx !== current){
+    current = sceneIdx;
+    showScene(current);
+  }
+
+  // progress bar
+  const pct = (totalElapsed / totalDuration) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  // animate likes counter in result scene
+  if(current === 7){
+    const base = 59000 + Math.round(Math.sin(totalElapsed/500)*50);
+    document.getElementById('likes').textContent = (base/1000).toFixed(1)+'k';
+  }
+
+  rafId = requestAnimationFrame(tick);
+}
+
+// Start
+showScene(0);
+requestAnimationFrame(tick);
+
+// Click to advance manually
+document.getElementById('canvas').addEventListener('click', () => {
+  current = (current + 1) % SCENES;
+  showScene(current);
+  // recalc startTime
+  let acc = 0;
+  for(let i = 0; i < current; i++) acc += DURATIONS[i];
+  startTime = performance.now() - acc;
+});
+</script>
+</body>
+</html>

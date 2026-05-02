@@ -145,6 +145,55 @@ select{cursor:pointer}
 .av-name{font-size:11px;font-weight:600;padding-bottom:4px}
 .av-sub{font-size:9px;font-family:var(--mono);color:var(--text3);padding-bottom:8px}
 
+/* ── HEDRA AVATAR MODAL ── */
+.hedra-modal-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:700;display:none;align-items:center;justify-content:center;padding:20px}
+.hedra-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:680px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.hedra-modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+.hedra-modal-title{font-size:16px;font-weight:800;letter-spacing:-0.4px}
+.hedra-modal-close{background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px;transition:all .15s}
+.hedra-modal-close:hover{color:var(--text);border-color:var(--border3)}
+.hedra-av-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 24px;overflow-y:auto;flex:1}
+@media(max-width:600px){.hedra-av-grid{grid-template-columns:repeat(2,1fr)}}
+.hedra-av-item{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s;background:var(--bg3)}
+.hedra-av-item:hover{border-color:var(--border3);transform:translateY(-2px)}
+.hedra-av-item.on{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-glow)}
+.hedra-av-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;background:var(--bg4);display:block}
+.hedra-av-img-placeholder{width:100%;aspect-ratio:3/4;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:36px}
+.hedra-av-name{font-size:11px;font-weight:600;padding:8px 10px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hedra-av-style{font-size:9px;font-family:var(--mono);color:var(--text3);padding:0 10px 8px}
+.hedra-modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
+.btn-hedra-confirm{flex:1;padding:12px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-hedra-confirm:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--orange-glow)}
+
+/* ── WATERMARK ── */
+.watermark-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:30;opacity:0;transition:opacity .3s}
+.watermark-overlay.active{opacity:1}
+.watermark-text{font-size:11px;font-family:var(--mono);font-weight:700;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.35);padding:4px 12px;border-radius:20px;letter-spacing:1px;transform:rotate(-15deg);white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
+
+/* ── PAYWALL MODAL ── */
+.paywall-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
+.paywall-box{background:var(--bg2);border:1px solid rgba(255,107,53,0.3);border-radius:18px;padding:36px 32px;max-width:440px;width:100%;text-align:center}
+.paywall-icon{font-size:48px;margin-bottom:16px}
+.paywall-title{font-size:22px;font-weight:900;letter-spacing:-0.8px;margin-bottom:8px}
+.paywall-sub{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:24px}
+.paywall-price{font-size:42px;font-weight:900;letter-spacing:-2px;margin-bottom:4px}
+.paywall-price sup{font-size:18px;vertical-align:top;margin-top:8px;font-weight:700}
+.paywall-price span{font-size:14px;font-weight:400;color:var(--text2);letter-spacing:0}
+.paywall-perks{text-align:left;margin-bottom:24px;background:var(--bg3);border-radius:12px;padding:16px}
+.paywall-perk{font-size:13px;color:var(--text2);padding:5px 0;display:flex;align-items:center;gap:8px}
+.paywall-perk::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+.btn-paywall{width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px var(--orange-glow);margin-bottom:10px}
+.btn-paywall:hover{transform:translateY(-2px)}
+.btn-paywall-cancel{width:100%;padding:10px;background:none;border:none;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer}
+.btn-paywall-cancel:hover{color:var(--text2)}
+
+/* ── GUEST BANNER ── */
+.guest-banner{background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,107,53,0.06));border-bottom:1px solid rgba(255,107,53,0.2);padding:7px 24px;display:none;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.guest-banner-text{font-size:12px;color:var(--orange2);font-family:var(--mono)}
+.guest-banner-text strong{color:var(--orange)}
+.btn-guest-upgrade{background:var(--orange);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-guest-upgrade:hover{background:var(--orange2)}
+
 /* VOICE SAMPLE */
 .voice-list{display:flex;flex-direction:column;gap:6px}
 .voice-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:all .15s}
@@ -324,8 +373,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="key-pill"><div class="key-dot" id="dot-el"></div>ElevenLabs</div>
       <div class="key-pill"><div class="key-dot" id="dot-hedra"></div>Hedra</div>
     </div>
-    <button class="btn-keys" onclick="openSetup()">⚙ Clés API</button>
+    <button class="btn-keys" onclick="openSetup()">⚙ Connexions</button>
   </div>
+</div>
+
+<!-- GUEST BANNER -->
+<div class="guest-banner" id="guestBanner">
+  <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · Téléchargement bloqué</div>
+  <button class="btn-guest-upgrade" onclick="showPaywall()">Supprimer le watermark · 10€/mois →</button>
 </div>
 
 <!-- LAYOUT -->
@@ -355,8 +410,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-gl">Ressources</div>
       <div class="nav-i" onclick="openSetup()">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 4v4l2.5 1.5"/></svg>
-        Clés API
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2.5M7.5 11.5V14M1 7.5h2.5M11.5 7.5H14M3.2 3.2l1.77 1.77M10.03 10.03l1.77 1.77M3.2 11.8l1.77-1.77M10.03 4.97l1.77-1.77"/></svg>
+        Connexions
       </div>
       <div class="nav-i" onclick="toast('📚 Documentation IA Manager — bientôt')">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h8l3 3v8H2z"/><path d="M10 2v3h3M5 7h5M5 10h3"/></svg>
@@ -544,8 +599,24 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
+
+            <!-- HEDRA AVATAR LIBRARY -->
+            <div class="fld" style="margin-bottom:16px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">✨ Avatars IA prêts à l'emploi</div>
+              <button onclick="openHedraAvatars()" id="btnHedraAvatars" style="width:100%;padding:13px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.1),rgba(255,107,53,0.05));border:1.5px solid rgba(255,107,53,0.25);border-radius:12px;color:var(--orange2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(255,107,53,0.15)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.1),rgba(255,107,53,0.05))'">
+                <span style="font-size:18px">🎭</span> Choisir un avatar Hedra
+                <span id="hedraAvatarSelectedName" style="background:var(--orange);color:#fff;border-radius:20px;padding:2px 10px;font-size:10px;display:none"></span>
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou importe ta propre photo</span>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+
             <div class="fld" style="margin-bottom:20px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Ton image avatar — glisse ou clique pour uploader</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Ta photo avatar — glisse ou clique pour uploader</div>
               <!-- DRAG & DROP UPLOAD -->
               <div id="avatarDropzone" onclick="document.getElementById('avatarFileIn').click()"
                 ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
@@ -1283,6 +1354,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
 
+              <!-- Preview watermark (guest mode) -->
+              <div class="watermark-overlay" id="previewWatermark" style="position:absolute;inset:0;z-index:50;pointer-events:none;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .3s">
+                <div style="font-size:14px;font-family:var(--mono);font-weight:700;color:rgba(255,255,255,0.6);background:rgba(0,0,0,0.4);padding:6px 16px;border-radius:20px;letter-spacing:1px;transform:rotate(-15deg);white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.6)">AvatarAds • Mode Essai</div>
+              </div>
+
             </div><!-- /phoneMockup -->
             </div><!-- /phoneWrapper -->
 
@@ -1350,7 +1426,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
               </div>
               <div id="hedraVideoWrap" style="display:none;margin-top:10px">
-                <video id="hedraVideo" controls style="width:100%;border-radius:8px;max-height:200px;background:#000"></video>
+                <div style="position:relative;border-radius:8px;overflow:hidden">
+                  <video id="hedraVideo" controls style="width:100%;border-radius:8px;max-height:200px;background:#000;display:block"></video>
+                  <div class="watermark-overlay" id="videoWatermark">
+                    <div class="watermark-text">AvatarAds • Mode Essai</div>
+                  </div>
+                </div>
                 <div class="result-actions" style="margin-top:8px">
                   <button class="btn-copy" onclick="downloadVideo()">⬇ Télécharger MP4</button>
                 </div>
@@ -1458,7 +1539,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
           <div style="display:flex;gap:8px">
             <button id="yt-connect-btn" onclick="connectYoutube()" style="flex:1;padding:10px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:8px;color:#ff6060;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s">🔗 Connecter mon compte YouTube</button>
-            <button onclick="openSetup()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">⚙ Clés API</button>
+            <button onclick="openSetup()" style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">⚙ Connexions</button>
           </div>
         </div>
       </div>
@@ -1551,72 +1632,54 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <button class="btn-setup-save" onclick="loginMember()" id="loginBtn">
       Accéder à l'outil →
     </button>
-    <div style="text-align:center;margin-top:12px;font-size:11px;font-family:var(--mono);color:var(--text3)">
-      Pas encore de code ? Rejoins la formation IA Manager ↗
+    <div style="margin-top:16px;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;text-align:center">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Pas encore de code ? Teste l'outil gratuitement</div>
+      <button onclick="loginGuest()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,107,53,0.4)'" onmouseout="this.style.borderColor='var(--border2)'">
+        🎯 Essayer gratuitement (avec watermark)
+      </button>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px">Génère ta première vidéo — aucune carte requise</div>
     </div>
   </div>
 </div>
 
 <!-- SETUP MODAL -->
-<div class="setup-overlay" id="setupOverlay" style="display:none">
+<div class="setup-overlay" id="setupOverlay" style="display:none" onclick="if(event.target===this)closeSetup()">
   <div class="setup-box">
-    <div class="setup-logo">
-      <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
-      <div>
-        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds — Configuration</div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">IA Manager · Membres seulement</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="setup-logo" style="margin-bottom:0">
+        <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">AvatarAds — Connexions</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Configuration optionnelle</div>
+        </div>
+      </div>
+      <button onclick="closeSetup()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
+    </div>
+
+    <!-- Statut APIs intégrées -->
+    <div style="background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ APIs incluses dans ton abonnement</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● GPT-4o</span>
+        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● ElevenLabs</span>
+        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Hedra</span>
       </div>
     </div>
-    <div class="setup-sub">Saisis tes clés API pour activer la génération complète.<br>Elles sont stockées <strong>localement dans ton navigateur</strong>, jamais envoyées ailleurs.</div>
 
+    <!-- YouTube Client ID (optionnel) -->
     <div class="setup-field">
       <div class="setup-label">
-        Clé OpenAI (GPT-4o + Whisper)
-        <a href="https://platform.openai.com/api-keys" target="_blank">Obtenir une clé →</a>
-      </div>
-      <div class="setup-input">
-        <input type="password" id="inp-gpt" placeholder="sk-...">
-        <button onclick="testKey('gpt')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-gpt"></div>
-    </div>
-
-    <div class="setup-field">
-      <div class="setup-label">
-        Clé ElevenLabs (TTS voix)
-        <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">Obtenir une clé →</a>
-      </div>
-      <div class="setup-input">
-        <input type="password" id="inp-el" placeholder="sk_...">
-        <button onclick="testKey('el')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-el"></div>
-    </div>
-
-    <div class="setup-field">
-      <div class="setup-label">
-        Clé Hedra (Avatar lipsync)
-        <a href="https://hedra.com/api-profile" target="_blank">Obtenir une clé →</a>
-      </div>
-      <div class="setup-input">
-        <input type="password" id="inp-hedra" placeholder="sk-...">
-        <button onclick="testKey('hedra')">Tester</button>
-      </div>
-      <div class="key-badge-row" id="badge-hedra"></div>
-    </div>
-
-    <div class="setup-field" style="margin-top:16px">
-      <div class="setup-label">
-        YouTube OAuth Client ID
+        YouTube OAuth Client ID <span style="color:var(--text3);font-size:9px;margin-left:4px">OPTIONNEL</span>
         <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console →</a>
       </div>
       <div class="setup-input">
         <input type="text" id="inp-yt-client" placeholder="123456789-abc.apps.googleusercontent.com">
       </div>
+      <div class="setup-hint">Nécessaire uniquement pour publier directement sur YouTube.</div>
     </div>
 
     <div class="setup-divider"></div>
-    <button class="btn-setup-save" onclick="saveKeys()">Sauvegarder et commencer →</button>
+    <button class="btn-setup-save" onclick="saveKeys()">Enregistrer →</button>
   </div>
 </div>
 
@@ -1629,7 +1692,51 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <span style="font-size:20px">🎬</span>Biblio
   </div>
   <div onclick="openSetup()" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
-    <span style="font-size:20px">⚙️</span>Clés API
+    <span style="font-size:20px">⚙️</span>Connexions
+  </div>
+</div>
+
+<!-- HEDRA AVATAR MODAL -->
+<div class="hedra-modal-overlay" id="hedraAvatarModal" onclick="if(event.target===this)closeHedraAvatars()">
+  <div class="hedra-modal-box">
+    <div class="hedra-modal-head">
+      <div>
+        <div class="hedra-modal-title">🎭 Avatars IA — Bibliothèque Hedra</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:3px">Choisir un personnage prêt à l'emploi pour ton avatar lipsync</div>
+      </div>
+      <button class="hedra-modal-close" onclick="closeHedraAvatars()">✕</button>
+    </div>
+    <div class="hedra-av-grid" id="hedraAvatarGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px">
+        <div style="font-size:32px;margin-bottom:12px">⏳</div>
+        Chargement des avatars Hedra...
+      </div>
+    </div>
+    <div class="hedra-modal-foot">
+      <button class="btn-hedra-confirm" onclick="confirmHedraAvatar()" id="btnHedraConfirm" disabled style="opacity:.5">
+        Utiliser cet avatar →
+      </button>
+      <button class="hedra-modal-close" onclick="closeHedraAvatars()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYWALL MODAL -->
+<div class="paywall-overlay" id="paywallOverlay" onclick="if(event.target===this)closePaywall()">
+  <div class="paywall-box">
+    <div class="paywall-icon">🔓</div>
+    <div class="paywall-title">Supprimer le watermark</div>
+    <div class="paywall-sub">Tu es en mode essai. Pour télécharger tes vidéos sans watermark, passe en accès complet.</div>
+    <div class="paywall-price"><sup>€</sup>10<span>/mois</span></div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:20px">APIs incluses · Sans engagement</div>
+    <div class="paywall-perks">
+      <div class="paywall-perk">GPT-4o, ElevenLabs, Hedra inclus</div>
+      <div class="paywall-perk">Téléchargement sans watermark</div>
+      <div class="paywall-perk">Bibliothèque vidéo illimitée</div>
+      <div class="paywall-perk">Support & mises à jour inclus</div>
+    </div>
+    <button class="btn-paywall" onclick="window.open('https://iamanager.fr','_blank')">🚀 Rejoindre AvatarAds →</button>
+    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai</button>
   </div>
 </div>
 
@@ -1648,10 +1755,18 @@ const SHEET_CONFIG = {
   // A: Code | B: Nom | C: Credits_restants | D: Total_utilise | E: Date_reset | F: Actif
 };
 
+// ── API KEYS (intégrées — membres n'ont pas à les configurer) ──
+const K = {
+  gpt:   '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',
+  el:    'sk_5cd508f06edd4b4eae065dbdd7c563c5b155ac76c0098ec6',
+  hedra: 'sk_hedra_ItWU1cxmDr-GQsORpNkrGx5jnb0G1jWkOktNL78MjaZ3VuZ2Lo4XwTWGfucwaWEQ'
+};
+
 // ── STATE ──
-const K = {gpt:'',el:'',hedra:''};
 let step = 1, totalSteps = 4;
 let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
+let guestMode = false;
+let selHedraChar = null; // {id, name, thumbnailUrl}
 
 // Global config for subtitle styling
 const cfg = {
@@ -1797,37 +1912,147 @@ async function logUsageViaAppsScript(code, nom, totalUtilise){
 }
 
 function checkSetupNeeded(){
-  ['gpt','el','hedra'].forEach(k => { K[k] = localStorage.getItem('aa_'+k)||''; });
+  // Les clés API sont intégrées — pas besoin de configuration
   refreshDots();
-  if(!K.gpt && !K.el && !K.hedra){
-    setTimeout(() => openSetup(), 500);
+}
+
+// ── GUEST MODE ──
+function loginGuest(){
+  guestMode = true;
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('guestBanner').style.display = 'flex';
+  document.getElementById('memberBar').style.display = 'flex';
+  document.getElementById('memberName').textContent = '🎯 Mode Essai';
+  document.getElementById('memberCredits').textContent = '∞';
+  updateGuestWatermarks();
+  updateLivePreview();
+  checkSetupNeeded();
+  toast('🎯 Mode essai activé — watermark visible sur les vidéos');
+}
+
+function updateGuestWatermarks(){
+  const active = guestMode;
+  const pw = document.getElementById('previewWatermark');
+  const vw = document.getElementById('videoWatermark');
+  if(pw) pw.style.opacity = active ? '1' : '0';
+  if(vw) vw.classList.toggle('active', active);
+}
+
+function showPaywall(){
+  document.getElementById('paywallOverlay').style.display = 'flex';
+}
+function closePaywall(){
+  document.getElementById('paywallOverlay').style.display = 'none';
+}
+
+// ── HEDRA AVATAR LIBRARY ──
+let _hedraChars = [];
+let _hedraSelectedTemp = null;
+
+async function openHedraAvatars(){
+  document.getElementById('hedraAvatarModal').style.display = 'flex';
+  if(_hedraChars.length > 0){ renderHedraGrid(_hedraChars); return; }
+  // Fetch from Hedra API
+  const grid = document.getElementById('hedraAvatarGrid');
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px"><div style="font-size:32px;margin-bottom:12px">⏳</div>Chargement des avatars...</div>`;
+  try {
+    const res = await fetch('https://api.hedra.com/web-app/public/characters', {
+      headers: {'X-API-Key': K.hedra}
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    // Hedra returns array or {characters:[...]} depending on version
+    const chars = Array.isArray(data) ? data : (data.characters || data.data || []);
+    if(!chars.length) throw new Error('Aucun avatar trouvé');
+    _hedraChars = chars;
+    renderHedraGrid(chars);
+  } catch(e) {
+    console.warn('Hedra characters API:', e);
+    // Fallback: show placeholder avatars
+    _hedraChars = _hedraFallbackChars();
+    renderHedraGrid(_hedraChars);
   }
 }
 
-// ── INIT : vérifie session sauvegardée ──
-function openSetup(){ document.getElementById('setupOverlay').style.display='flex'; loadKeysToInputs(); }
-function loadKeysToInputs(){
-  ['gpt','el','hedra'].forEach(k=>{
-    const v = localStorage.getItem('aa_'+k)||'';
-    document.getElementById('inp-'+k).value=v;
-    K[k]=v;
-  });
-  const ytc = localStorage.getItem('yt_client_id')||'';
-  document.getElementById('inp-yt-client').value = ytc;
-  ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
-    const el = document.getElementById('inp-wh-'+p);
-    if(el) el.value = localStorage.getItem('aa_wh_'+p)||'';
-  });
-  refreshDots();
+function _hedraFallbackChars(){
+  // Fallback si l'API ne répond pas
+  const names = ['Sofia','Marcus','Elena','Jordan','Maya','Alex','Nina','Leo','Aria','Kai','Luna','Zoe'];
+  const styles = ['Lifestyle','Business','Coach','Fitness','Beauty','Tech','Travel','Food','Finance','Creative','Wellness','Education'];
+  const emojis = ['👩‍💼','🧔','👩','🧑','👩‍🦱','🧑‍💻','👩‍🎤','👨‍🎨','👩‍🔬','🧑‍🎯','👩‍⚕️','🧑‍🏫'];
+  return names.map((n,i) => ({
+    id: 'placeholder-'+i,
+    name: n,
+    style: styles[i],
+    emoji: emojis[i],
+    thumbnailUrl: null,
+    isPlaceholder: true
+  }));
 }
+
+function renderHedraGrid(chars){
+  const grid = document.getElementById('hedraAvatarGrid');
+  grid.innerHTML = chars.map((c,i) => {
+    const imgHtml = c.thumbnailUrl
+      ? `<img class="hedra-av-img" src="${c.thumbnailUrl}" alt="${c.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const placeholderHtml = `<div class="hedra-av-img-placeholder" style="${c.thumbnailUrl?'display:none':''}">${c.emoji||'🧑'}</div>`;
+    return `<div class="hedra-av-item" id="hedra-av-${i}" onclick="selectHedraTemp(${i})">
+      ${imgHtml}${placeholderHtml}
+      <div class="hedra-av-name">${c.name||'Avatar '+(i+1)}</div>
+      <div class="hedra-av-style">${c.style||c.description||'Avatar IA'}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectHedraTemp(i){
+  document.querySelectorAll('.hedra-av-item').forEach(el => el.classList.remove('on'));
+  document.getElementById('hedra-av-'+i)?.classList.add('on');
+  _hedraSelectedTemp = _hedraChars[i];
+  const btn = document.getElementById('btnHedraConfirm');
+  if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+function confirmHedraAvatar(){
+  if(!_hedraSelectedTemp) return;
+  selHedraChar = _hedraSelectedTemp;
+  selAvatar.localFile = null;
+  selAvatar.localUrl = null;
+  // Update the button label
+  const nameEl = document.getElementById('hedraAvatarSelectedName');
+  if(nameEl){ nameEl.style.display = 'inline-block'; nameEl.textContent = selHedraChar.name; }
+  // Update preview with placeholder or thumbnail
+  const avImg = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(selHedraChar.thumbnailUrl && avImg){
+    avImg.src = selHedraChar.thumbnailUrl;
+    avImg.style.display = 'block';
+    if(avEmoji) avEmoji.style.display = 'none';
+  } else if(avEmoji){
+    avEmoji.style.display = 'block';
+    avEmoji.textContent = selHedraChar.emoji || '🧑';
+    if(avImg) avImg.style.display = 'none';
+  }
+  closeHedraAvatars();
+  toast('✓ Avatar "' + selHedraChar.name + '" sélectionné');
+  updateLivePreview();
+}
+
+function closeHedraAvatars(){
+  document.getElementById('hedraAvatarModal').style.display = 'none';
+}
+
+// ── CONNEXIONS ──
+function openSetup(){
+  document.getElementById('setupOverlay').style.display='flex';
+  const ytc = localStorage.getItem('yt_client_id')||'';
+  const el = document.getElementById('inp-yt-client');
+  if(el) el.value = ytc;
+}
+function closeSetup(){ document.getElementById('setupOverlay').style.display='none'; }
+function loadKeysToInputs(){ openSetup(); } // compat alias
 function saveKeys(){
-  ['gpt','el','hedra'].forEach(k=>{
-    const v=document.getElementById('inp-'+k).value.trim();
-    localStorage.setItem('aa_'+k,v);
-    K[k]=v;
-  });
-  const ytClient = document.getElementById('inp-yt-client').value.trim();
-  if(ytClient) localStorage.setItem('yt_client_id', ytClient);
+  const ytEl = document.getElementById('inp-yt-client');
+  if(ytEl){ const v=ytEl.value.trim(); if(v) localStorage.setItem('yt_client_id',v); else localStorage.removeItem('yt_client_id'); }
   ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
     const el = document.getElementById('inp-wh-'+p);
     if(el){ const v=el.value.trim(); if(v) localStorage.setItem('aa_wh_'+p,v); else localStorage.removeItem('aa_wh_'+p); }
@@ -1835,13 +2060,14 @@ function saveKeys(){
   refreshDots();
   refreshSocialCards();
   refreshPublishButtons();
-  document.getElementById('setupOverlay').style.display='none';
-  toast('✓ Clés sauvegardées localement');
+  closeSetup();
+  toast('✓ Configuration enregistrée');
 }
 function refreshDots(){
-  document.getElementById('dot-gpt').className='key-dot'+(K.gpt?' ok':'');
-  document.getElementById('dot-el').className='key-dot'+(K.el?' ok':'');
-  document.getElementById('dot-hedra').className='key-dot'+(K.hedra?' ok':'');
+  // Clés intégrées → toujours actives
+  ['dot-gpt','dot-el','dot-hedra'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.className='key-dot ok';
+  });
 }
 async function testWebhook(platform){
   const url = document.getElementById('inp-wh-'+platform).value.trim();
@@ -3164,7 +3390,12 @@ async function callHedra(audioBlob){
         character_orientation: 'video'
       }
     };
-    if (imageId) genBody.start_keyframe_id = imageId;
+    // Priorité : avatar Hedra pré-défini > photo uploadée
+    if(selHedraChar && !selHedraChar.isPlaceholder && selHedraChar.id){
+      genBody.character_id = selHedraChar.id;
+    } else if(imageId){
+      genBody.start_keyframe_id = imageId;
+    }
 
     const genRes = await fetch(`${BASE}/generations`, {
       method: 'POST',
@@ -3239,6 +3470,7 @@ function showResults(){
     hs.textContent='✓ Avatar généré !';
     document.getElementById('hedraVideoWrap').style.display='block';
     document.getElementById('hedraVideo').src=results.hedraUrl;
+    updateGuestWatermarks();
   } else {
     hs.className='hedra-status';
     if(K.hedra){
@@ -3250,7 +3482,7 @@ function showResults(){
         Pour l'intégration complète → backend proxy (V2 commerciale).
         </span>`;
     } else {
-      hs.innerHTML='Clé Hedra non configurée — configure-la dans les clés API (<a href="https://hedra.com/api-profile" target="_blank" style="color:var(--orange2)">hedra.com/api-profile</a>).';
+      hs.innerHTML='Génère d\'abord ton audio à l\'étape 3 pour activer la vidéo Hedra.';
     }
   }
 
@@ -3281,6 +3513,7 @@ function toggleAudio(){
 }
 function downloadVideo(){
   if(!results.hedraUrl) return;
+  if(guestMode){ showPaywall(); return; }
   const a=document.createElement('a');
   a.href=results.hedraUrl; a.download='avatarads-video.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -3310,7 +3543,7 @@ function refreshPublishButtons(){
 
 async function publishToSocial(platform){
   const wh = localStorage.getItem('aa_wh_'+platform)||'';
-  if(!wh){ toast('⚙️ Configure la connexion dans les Clés API'); return; }
+  if(!wh){ toast('⚙️ Configure le webhook dans Connexions'); return; }
   if(!results || !results.hedraUrl){ toast('⚠️ Génère d\'abord une vidéo'); return; }
   const meta = SOCIAL_META[platform] || { label: platform, icon: '📤' };
   const btn = document.getElementById('pub-btn-'+platform);
@@ -3332,7 +3565,7 @@ async function publishToSocial(platform){
     if(res.ok){
       toast(`${meta.icon} Vidéo envoyée sur ${meta.label} ✓`);
     } else {
-      toast(`✗ Erreur ${res.status} — vérifie la connexion dans les Clés API`);
+      toast(`✗ Erreur ${res.status} — vérifie le webhook dans Connexions`);
     }
   } catch(e){
     toast(`✗ Impossible d'atteindre le serveur — vérifie ta connexion`);
@@ -3447,7 +3680,7 @@ function ytConnected(){
 
 function connectYoutube(){
   const clientId = ytClientId();
-  if(!clientId){ openSetup(); toast('⚠️ Saisis d\'abord ton YouTube Client ID dans les Clés API'); return; }
+  if(!clientId){ openSetup(); toast('⚠️ Saisis d\'abord ton YouTube Client ID dans Connexions'); return; }
   const redirect = window.location.origin + window.location.pathname;
   const params = new URLSearchParams({
     client_id: clientId,

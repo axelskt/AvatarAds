@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AvatarAds — Crée des vidéos virales avec l'IA en 5 minutes</title>
+<meta name="description" content="Génère des vidéos UGC avec un avatar IA, une voix clonée et un script optimisé — sans caméra, sans montage. 10€/mois.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080a;--bg2:#0d0f12;--bg3:#13161a;--bg4:#1a1e24;--bg5:#22272f;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--border3:rgba(255,255,255,0.18);
+  --text:#eef0f4;--text2:#8b92a0;--text3:#45505e;
+  --orange:#ff6b35;--orange2:#ff8c5a;--orange-dim:rgba(255,107,53,0.1);--orange-glow:rgba(255,107,53,0.25);
+  --green:#00d97e;--red:#ff4757;
+  --font:'Bricolage Grotesque',sans-serif;--mono:'Geist Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:var(--text);background:var(--bg);overflow-x:hidden}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;background:rgba(7,8,10,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-icon{width:34px;height:34px;border-radius:9px;overflow:hidden;flex-shrink:0}
+.nav-brand{font-size:15px;font-weight:800;letter-spacing:-0.4px}
+.nav-badge{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;background:var(--bg4);border:1px solid var(--border2);padding:2px 8px;border-radius:10px;margin-left:6px}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.btn-nav{background:var(--orange);border:none;border-radius:8px;padding:9px 20px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 2px 16px var(--orange-glow);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-nav:hover{background:var(--orange2);transform:translateY(-1px);box-shadow:0 4px 24px var(--orange-glow)}
+.btn-nav-ghost{background:transparent;border:1px solid var(--border2);border-radius:8px;padding:9px 20px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center}
+.btn-nav-ghost:hover{color:var(--text);border-color:var(--border3)}
+@media(max-width:600px){nav{padding:0 16px} .nav-cta .btn-nav-ghost{display:none}}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 24px 60px;position:relative;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.4;mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 0%,transparent 70%)}
+.hero-glow{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(255,107,53,0.12) 0%,transparent 70%);pointer-events:none}
+.hero-content{position:relative;text-align:center;max-width:860px;margin:0 auto}
+.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.2);border-radius:20px;padding:6px 16px;font-size:12px;font-family:var(--mono);color:var(--orange2);margin-bottom:28px;letter-spacing:.3px}
+.hero-pill-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
+h1{font-size:clamp(42px,7vw,80px);font-weight:900;letter-spacing:-2.5px;line-height:1.0;margin-bottom:24px}
+h1 .accent{color:var(--orange);position:relative}
+.hero-sub{font-size:clamp(16px,2.5vw,19px);color:var(--text2);line-height:1.65;max-width:600px;margin:0 auto 36px;font-weight:400}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:52px}
+.btn-primary{background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;padding:16px 32px;color:#fff;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px var(--orange-glow);text-decoration:none;display:inline-flex;align-items:center;gap:8px;letter-spacing:-0.3px}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--orange-glow)}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px 28px;color:var(--text2);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-secondary:hover{color:var(--text);border-color:var(--border3);transform:translateY(-1px)}
+.hero-price-hint{font-size:13px;color:var(--text3);font-family:var(--mono)}
+.hero-price-hint strong{color:var(--text2)}
+
+/* ── PROOF STRIP ── */
+.proof-strip{padding:32px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);overflow:hidden}
+.proof-inner{display:flex;gap:40px;align-items:center;animation:scroll-x 22s linear infinite;width:max-content}
+@keyframes scroll-x{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.proof-item{display:flex;align-items:center;gap:10px;white-space:nowrap;color:var(--text2);font-size:13px;font-weight:500}
+.proof-item svg{width:16px;height:16px;color:var(--orange);flex-shrink:0}
+.proof-divider{width:1px;height:20px;background:var(--border2)}
+
+/* ── SECTIONS COMMUNES ── */
+section{padding:96px 24px}
+.container{max-width:1080px;margin:0 auto}
+.section-tag{font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+h2{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-2px;line-height:1.1;margin-bottom:16px}
+h2 .accent{color:var(--orange)}
+.section-sub{font-size:16px;color:var(--text2);line-height:1.65;max-width:540px;margin-bottom:56px}
+
+/* ── HOW IT WORKS ── */
+.steps-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;align-items:start}
+.steps-grid::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--border2) 20%,var(--border2) 80%,transparent)}
+@media(max-width:768px){.steps-grid{grid-template-columns:1fr;gap:8px}.steps-grid::before{display:none}}
+.step-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 20px;text-align:center;transition:all .3s;position:relative}
+.step-card:hover{border-color:rgba(255,107,53,0.25);transform:translateY(-4px);background:var(--bg3)}
+.step-num{width:44px;height:44px;border-radius:50%;background:var(--bg4);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--orange2);margin:0 auto 16px;position:relative;z-index:1;background:var(--bg)}
+.step-icon{font-size:26px;margin-bottom:10px}
+.step-title{font-size:14px;font-weight:700;margin-bottom:6px;letter-spacing:-0.3px}
+.step-desc{font-size:12px;color:var(--text2);line-height:1.55}
+
+/* ── FEATURES ── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.features-grid{grid-template-columns:1fr}}
+.feature-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;transition:all .3s}
+.feature-card:hover{border-color:rgba(255,107,53,0.2);background:var(--bg3)}
+.feature-card.featured{background:linear-gradient(135deg,rgba(255,107,53,0.08),var(--bg2));border-color:rgba(255,107,53,0.2)}
+.feature-icon-wrap{width:44px;height:44px;border-radius:12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px}
+.feature-title{font-size:16px;font-weight:700;margin-bottom:8px;letter-spacing:-0.3px}
+.feature-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.feature-tag{display:inline-block;font-size:10px;font-family:var(--mono);background:rgba(255,107,53,0.1);color:var(--orange2);border-radius:20px;padding:2px 10px;margin-top:12px}
+
+/* ── DEMO / PREVIEW ── */
+.demo-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;overflow:hidden;position:relative}
+.demo-bar{height:40px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:6px}
+.demo-dot{width:10px;height:10px;border-radius:50%}
+.demo-content{padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}
+@media(max-width:700px){.demo-content{grid-template-columns:1fr}}
+.demo-form-wrap{display:flex;flex-direction:column;gap:10px}
+.demo-field{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px}
+.demo-field-label{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+.demo-field-value{font-size:13px;color:var(--text2)}
+.demo-field-value.orange{color:var(--orange2)}
+.demo-btn{background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.demo-phone{width:160px;height:290px;background:var(--bg);border:2px solid var(--border2);border-radius:24px;margin:0 auto;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:10px}
+.demo-phone-screen{position:absolute;inset:0;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%)}
+.demo-phone-avatar{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:120px;height:180px;background:linear-gradient(180deg,rgba(255,107,53,0.15),rgba(255,107,53,0.05));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:56px}
+.demo-phone-ui{position:relative;z-index:2;width:100%;display:flex;flex-direction:column;gap:4px}
+.demo-phone-bar{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden}
+.demo-phone-bar-fill{height:100%;width:65%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:2px}
+.demo-phone-stat{font-size:8px;font-family:var(--mono);color:rgba(255,255,255,0.5);text-align:center}
+
+/* ── PRICING ── */
+.pricing-wrap{display:grid;grid-template-columns:1fr 420px 1fr;gap:24px;align-items:center}
+@media(max-width:900px){.pricing-wrap{grid-template-columns:1fr}}
+.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:36px 32px;text-align:center;transition:all .3s}
+.pricing-card.main{background:linear-gradient(145deg,rgba(255,107,53,0.08),var(--bg2));border-color:rgba(255,107,53,0.3);box-shadow:0 0 48px rgba(255,107,53,0.08),0 0 0 1px rgba(255,107,53,0.15);transform:scale(1.03)}
+.pricing-badge{display:inline-block;background:var(--orange);color:#fff;font-size:10px;font-family:var(--mono);font-weight:700;padding:3px 12px;border-radius:20px;margin-bottom:16px;letter-spacing:.5px}
+.pricing-price{font-size:64px;font-weight:900;letter-spacing:-3px;line-height:1;margin-bottom:4px}
+.pricing-price sup{font-size:24px;vertical-align:top;margin-top:12px;font-weight:700}
+.pricing-price span{font-size:16px;font-weight:400;color:var(--text2);letter-spacing:0}
+.pricing-period{font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:24px}
+.pricing-includes{text-align:left;margin-bottom:28px}
+.pricing-includes li{list-style:none;font-size:13px;color:var(--text2);padding:7px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;line-height:1.4}
+.pricing-includes li:last-child{border-bottom:none}
+.pricing-includes li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+.pricing-includes li.muted::before{content:'—';color:var(--text3)}
+.btn-pricing{width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px var(--orange-glow);text-decoration:none;display:block;text-align:center;letter-spacing:-0.2px}
+.btn-pricing:hover{transform:translateY(-2px);box-shadow:0 8px 28px var(--orange-glow)}
+.pricing-side{text-align:center;padding:24px;color:var(--text3);font-size:13px;line-height:1.7}
+.pricing-side strong{display:block;font-size:24px;font-weight:900;color:var(--text2);letter-spacing:-1px;margin-bottom:4px}
+
+/* ── TESTIMONIALS ── */
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.testi-grid{grid-template-columns:1fr}}
+.testi-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all .3s}
+.testi-card:hover{border-color:var(--border2)}
+.testi-stars{color:var(--orange);font-size:13px;margin-bottom:12px;letter-spacing:2px}
+.testi-text{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:16px;font-style:italic}
+.testi-text::before{content:'"'}
+.testi-text::after{content:'"'}
+.testi-author{display:flex;align-items:center;gap:10px}
+.testi-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:18px}
+.testi-name{font-size:13px;font-weight:700}
+.testi-role{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.testi-result{display:inline-block;font-size:10px;font-family:var(--mono);background:rgba(0,217,126,0.08);color:var(--green);border:1px solid rgba(0,217,126,0.2);border-radius:20px;padding:2px 10px;margin-top:6px}
+
+/* ── FAQ ── */
+.faq-list{max-width:680px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border);overflow:hidden}
+.faq-q{width:100%;background:none;border:none;color:var(--text);font-family:var(--font);font-size:15px;font-weight:600;padding:20px 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;text-align:left;gap:16px;letter-spacing:-0.2px}
+.faq-q:hover{color:var(--orange2)}
+.faq-icon{font-size:18px;color:var(--text3);flex-shrink:0;transition:transform .3s}
+.faq-item.open .faq-icon{transform:rotate(45deg);color:var(--orange2)}
+.faq-a{font-size:14px;color:var(--text2);line-height:1.7;max-height:0;overflow:hidden;transition:max-height .35s ease, padding .35s}
+.faq-item.open .faq-a{max-height:300px;padding-bottom:18px}
+
+/* ── CTA FINAL ── */
+.cta-final{padding:96px 24px;text-align:center;position:relative;overflow:hidden}
+.cta-final-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:800px;height:400px;background:radial-gradient(ellipse,rgba(255,107,53,0.1) 0%,transparent 70%);pointer-events:none}
+.cta-final h2{font-size:clamp(36px,6vw,64px);font-weight:900;letter-spacing:-2.5px;line-height:1.1;margin-bottom:16px}
+.cta-final-sub{font-size:17px;color:var(--text2);max-width:500px;margin:0 auto 36px;line-height:1.6}
+.cta-hint{font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:16px}
+.cta-hint strong{color:var(--text2)}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:32px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:var(--bg2)}
+.footer-left{font-size:12px;color:var(--text3)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:12px;color:var(--text3);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:var(--text2)}
+
+/* ── UTILS ── */
+.text-center{text-align:center}
+.mb-4{margin-bottom:16px}
+.mb-8{margin-bottom:32px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 36 36" width="34" height="34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" fill="#0a0a0a"/>
+        <path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/>
+      </svg>
+    </div>
+    <span class="nav-brand">AvatarAds</span>
+    <span class="nav-badge">by IA Manager</span>
+  </div>
+  <div class="nav-cta">
+    <a href="#pricing" class="btn-nav-ghost">Tarifs</a>
+    <a href="./index.html" class="btn-nav">Accéder à l'outil →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-pill">
+      <div class="hero-pill-dot"></div>
+      Nouvelle version · GPT-4o + ElevenLabs + Hedra
+    </div>
+    <h1>Crée des vidéos <span class="accent">virales</span><br>avec l'IA en 5 minutes</h1>
+    <p class="hero-sub">Script optimisé, voix clonée, avatar qui parle — sans caméra, sans montage, sans compétences techniques. Juste ton produit et l'IA fait le reste.</p>
+    <div class="hero-actions">
+      <a href="./index.html" class="btn-primary">🚀 Commencer maintenant</a>
+      <a href="#how" class="btn-secondary">Voir comment ça marche →</a>
+    </div>
+    <p class="hero-price-hint">Accès complet à partir de <strong>10€/mois</strong> · Sans engagement · APIs incluses</p>
+  </div>
+</section>
+
+<!-- PROOF STRIP -->
+<div class="proof-strip">
+  <div class="proof-inner">
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>GPT-4o pour les scripts</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>ElevenLabs voix clonée</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Hedra avatar lipsync</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>APIs 100% incluses</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Vidéo prête en 5 min</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>GPT-4o pour les scripts</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>ElevenLabs voix clonée</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Hedra avatar lipsync</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>APIs 100% incluses</div>
+    <div class="proof-divider"></div>
+    <div class="proof-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Vidéo prête en 5 min</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-tag">Comment ça marche</div>
+    <h2>5 étapes.<br><span class="accent">Une vidéo virale.</span></h2>
+    <p class="section-sub">De l'idée à la vidéo publiable en moins de 5 minutes — sans avoir besoin d'apparaître à l'écran.</p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon">📦</div>
+        <div class="step-title">Ton produit</div>
+        <div class="step-desc">Décris ton offre, ta niche et ton accroche en quelques mots.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon">🧑‍💼</div>
+        <div class="step-title">Choisis ton avatar</div>
+        <div class="step-desc">Sélectionne un avatar IA ou importe ta propre photo.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon">🎙️</div>
+        <div class="step-title">Clone ta voix</div>
+        <div class="step-desc">Enregistre 30 secondes ou choisis parmi nos voix premium.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-icon">🎨</div>
+        <div class="step-title">Style & format</div>
+        <div class="step-desc">TikTok, Reels, YouTube Shorts — sous-titres animés inclus.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">05</div>
+        <div class="step-icon">✨</div>
+        <div class="step-title">Génère & publie</div>
+        <div class="step-desc">L'IA génère ta vidéo. Télécharge ou publie directement.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section style="padding-top:0">
+  <div class="container">
+    <div class="section-tag">Fonctionnalités</div>
+    <h2>Tout ce qu'il faut<br>pour <span class="accent">cartonner</span></h2>
+    <p class="section-sub">Un outil complet pensé pour les créateurs de contenu et les entrepreneurs en ligne.</p>
+
+    <div class="features-grid">
+      <div class="feature-card featured">
+        <div class="feature-icon-wrap">🤖</div>
+        <div class="feature-title">Script IA optimisé</div>
+        <div class="feature-desc">GPT-4o génère un script de vente calibré pour accrocher dès les 3 premières secondes. Hook, développement, CTA — tout est structuré.</div>
+        <span class="feature-tag">GPT-4o</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🎙️</div>
+        <div class="feature-title">Voix clonée</div>
+        <div class="feature-desc">Clone ta propre voix en 30 secondes avec ElevenLabs. Ou choisis parmi 20+ voix premium prêtes à l'emploi.</div>
+        <span class="feature-tag">ElevenLabs</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🧑‍💼</div>
+        <div class="feature-title">Avatar lipsync</div>
+        <div class="feature-desc">Ton avatar bouge les lèvres en parfaite synchronisation avec l'audio. Résultat ultra-réaliste, sans toi devant la caméra.</div>
+        <span class="feature-tag">Hedra</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">📱</div>
+        <div class="feature-title">Sous-titres animés</div>
+        <div class="feature-desc">Style Hormozi, MrBeast, Minimal, Karaoke — les sous-titres les plus viraux directement dans ta vidéo.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🎬</div>
+        <div class="feature-title">Multi-format</div>
+        <div class="feature-desc">TikTok vertical, Reels carré, YouTube Shorts — un seul clic pour adapter le format à chaque plateforme.</div>
+      </div>
+      <div class="feature-card featured">
+        <div class="feature-icon-wrap">⚡</div>
+        <div class="feature-title">APIs incluses</div>
+        <div class="feature-desc">Pas besoin de créer des comptes OpenAI, ElevenLabs ou Hedra. Tout est intégré dans ton abonnement AvatarAds.</div>
+        <span class="feature-tag">Inclus à 10€/mois</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO MOCKUP -->
+<section style="padding-top:0">
+  <div class="container">
+    <div class="section-tag">Aperçu de l'outil</div>
+    <h2>Simple.<br><span class="accent">Puissant.</span> Rapide.</h2>
+    <p class="section-sub">Une interface claire, pensée pour aller vite. Pas de prise en main, tu génères ta première vidéo en quelques minutes.</p>
+
+    <div class="demo-wrap">
+      <div class="demo-bar">
+        <div class="demo-dot" style="background:#ff5f57"></div>
+        <div class="demo-dot" style="background:#ffbd2e"></div>
+        <div class="demo-dot" style="background:#28ca41"></div>
+        <span style="margin-left:10px;font-size:11px;font-family:var(--mono);color:var(--text3)">avatarads.iamanager.fr</span>
+      </div>
+      <div class="demo-content">
+        <div class="demo-form-wrap">
+          <div class="demo-field">
+            <div class="demo-field-label">Produit / Offre</div>
+            <div class="demo-field-value">Formation dropshipping 0 à 10k€/mois</div>
+          </div>
+          <div class="demo-field">
+            <div class="demo-field-label">Accroche</div>
+            <div class="demo-field-value orange">Comment j'ai gagné 10 000€ avec ce business...</div>
+          </div>
+          <div class="demo-field">
+            <div class="demo-field-label">CTA sélectionné</div>
+            <div class="demo-field-value">Commente "PLAN" et je t'explique tout en DM 📩</div>
+          </div>
+          <div class="demo-btn">
+            <span>✨</span> Générer la vidéo
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div class="demo-phone">
+            <div class="demo-phone-screen"></div>
+            <div class="demo-phone-avatar">👩‍💼</div>
+            <div class="demo-phone-ui">
+              <div class="demo-phone-bar"><div class="demo-phone-bar-fill"></div></div>
+              <div class="demo-phone-stat">65% — génération en cours...</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center">Preview temps réel · Format TikTok</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="container text-center">
+    <div class="section-tag">Témoignages</div>
+    <h2>Ce qu'en disent<br><span class="accent">nos membres</span></h2>
+    <p class="section-sub" style="margin:0 auto 48px">Des entrepreneurs et créateurs qui ont déjà adopté AvatarAds pour scaler leur contenu.</p>
+
+    <div class="testi-grid">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">J'ai généré 3 vidéos TikTok en une heure. L'une d'elles a déjà 80k vues et j'ai eu 40 leads en DM. Clairement l'outil le plus ROI que j'ai.</div>
+        <div class="testi-author">
+          <div class="testi-avatar">🧑</div>
+          <div>
+            <div class="testi-name">Lucas M.</div>
+            <div class="testi-role">Entrepreneur e-commerce</div>
+            <div class="testi-result">+80k vues · 40 leads</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">Je n'aimais pas me filmer. Maintenant j'ai un avatar qui fait ça à ma place avec ma voix. Mes abonnés ne font même pas la différence.</div>
+        <div class="testi-author">
+          <div class="testi-avatar">👩</div>
+          <div>
+            <div class="testi-name">Sarah K.</div>
+            <div class="testi-role">Coach business en ligne</div>
+            <div class="testi-result">2 vidéos/jour · automatisé</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">Le fait que les APIs soient déjà incluses c'est un game changer. 10€ et t'as accès à GPT-4o + ElevenLabs + Hedra. C'est insensé comme valeur.</div>
+        <div class="testi-author">
+          <div class="testi-avatar">🧔</div>
+          <div>
+            <div class="testi-name">Mehdi R.</div>
+            <div class="testi-role">Créateur de contenu</div>
+            <div class="testi-result">Économise 50€/mois d'APIs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container text-center">
+    <div class="section-tag">Tarifs</div>
+    <h2>Simple.<br><span class="accent">Un seul plan.</span></h2>
+    <p class="section-sub" style="margin:0 auto 56px">Tout est inclus. Pas de surprise, pas d'APIs à payer en plus.</p>
+
+    <div class="pricing-wrap">
+      <div class="pricing-side">
+        <strong>Gratuit</strong>
+        Ce que les autres outils proposent<br>sans les APIs incluses
+      </div>
+
+      <div class="pricing-card main">
+        <div class="pricing-badge">✦ ACCÈS COMPLET</div>
+        <div class="pricing-price"><sup>€</sup>10<span>/mois</span></div>
+        <div class="pricing-period">Inclus dans l'abonnement IA Manager · sans engagement</div>
+        <ul class="pricing-includes">
+          <li>GPT-4o pour scripts illimités</li>
+          <li>ElevenLabs clonage voix</li>
+          <li>Hedra avatars lipsync</li>
+          <li>Sous-titres animés (5 styles)</li>
+          <li>Export multi-format TikTok / Reels / YT</li>
+          <li>Bibliothèque de vidéos générées</li>
+          <li>Support & mises à jour inclus</li>
+        </ul>
+        <a href="./index.html" class="btn-pricing">Commencer maintenant →</a>
+      </div>
+
+      <div class="pricing-side">
+        <strong>~50€/mois</strong>
+        Le coût des 3 APIs si tu les payais<br>séparément (OpenAI + ElevenLabs + Hedra)
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="container text-center">
+    <div class="section-tag">Questions fréquentes</div>
+    <h2>Tu te poses<br><span class="accent">des questions ?</span></h2>
+    <p class="section-sub" style="margin:0 auto 48px">On y répond ici. Si t'en as d'autres, envoie un DM à Axel.</p>
+
+    <div class="faq-list">
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">Ai-je besoin d'un compte OpenAI, ElevenLabs ou Hedra ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Non. Les 3 APIs sont intégrées dans ton abonnement AvatarAds. Tu n'as rien à configurer — tu entres ton code d'accès et tu génères ta première vidéo immédiatement.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">Combien de vidéos puis-je générer par mois ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Chaque abonnement inclut un quota de crédits mensuels. Un crédit = une vidéo complète. Les crédits se rechargent chaque mois. Si tu as besoin de plus, contacte directement Axel.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">Est-ce que les vidéos sont vraiment détectables comme IA ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Hedra produit des avatars lipsync très réalistes. Combiné à un clone de ta propre voix et un bon script, les résultats passent très bien sur TikTok et Reels. La qualité s'améliore à chaque mise à jour.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">Puis-je utiliser ma propre voix ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Oui. Tu enregistres 30 secondes d'audio directement dans l'outil et ElevenLabs clone ta voix instantanément. Tu peux aussi choisir parmi les voix premium disponibles.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">Puis-je publier directement sur TikTok / Instagram ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">Tu peux télécharger ta vidéo et la publier manuellement (recommandé pour le meilleur reach). L'intégration directe avec les plateformes via webhooks est disponible pour les utilisateurs avancés.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <button class="faq-q">C'est quoi IA Manager et ce "blox" mentionné ? <span class="faq-icon">+</span></button>
+        <div class="faq-a">IA Manager est la plateforme créée par Axel qui regroupe des outils IA pour les entrepreneurs en ligne. AvatarAds est l'un de ses outils inclus dans l'abonnement "blox" à 10€/mois.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-final">
+  <div class="cta-final-glow"></div>
+  <div style="position:relative">
+    <div class="hero-pill" style="margin-bottom:24px">
+      <div class="hero-pill-dot"></div>
+      Plus de 100 membres actifs en ce moment
+    </div>
+    <h2>Prêt à créer tes<br><span class="accent">premières vidéos virales ?</span></h2>
+    <p class="cta-final-sub">Rejoins AvatarAds aujourd'hui. Ta première vidéo est à 5 minutes.</p>
+    <a href="./index.html" class="btn-primary" style="font-size:17px;padding:18px 40px">🚀 Commencer pour 10€/mois</a>
+    <p class="cta-hint">Sans engagement · <strong>Résiliation en 1 clic</strong> · APIs incluses</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">© 2025 AvatarAds · IA Manager · Tous droits réservés</div>
+  <div class="footer-links">
+    <a href="./index.html">Accéder à l'outil</a>
+    <a href="mailto:contact@iamanager.fr">Contact</a>
+    <a href="./promo.html">Démo vidéo</a>
+  </div>
+</footer>
+
+<script>
+function toggleFaq(item){
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if(!isOpen) item.classList.add('open');
+}
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if(target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth',block:'start'}); }
+  });
+});
+
+// Nav active state on scroll
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  nav.style.background = window.scrollY > 40 ? 'rgba(7,8,10,0.95)' : 'rgba(7,8,10,0.85)';
+});
+</script>
+</body>
+</html>
