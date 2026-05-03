@@ -2154,25 +2154,10 @@ function closePaywall(){
 let _hedraChars = [];
 let _hedraSelectedTemp = null;
 
-async function openHedraAvatars(){
+function openHedraAvatars(){
   document.getElementById('hedraAvatarModal').style.display = 'flex';
-  if(_hedraChars.length > 0){ renderHedraGrid(_hedraChars); return; }
-  // Charger la bibliothèque d'avatars
   _hedraChars = _hedraFallbackChars();
   renderHedraGrid(_hedraChars);
-  // Tenter aussi l'API Hedra en arrière-plan pour enrichir si disponible
-  try {
-    const res = await fetch('https://api.hedra.com/web-app/public/characters', {
-      headers: {'X-API-Key': K.hedra}
-    });
-    if(res.ok){
-      const data = await res.json();
-      const chars = Array.isArray(data) ? data : (data.characters || data.data || []);
-      const withThumbs = chars.filter(c => c.thumbnailUrl || c.thumbnail_url || c.image_url || c.preview_url);
-      // On ignore les persos Hedra API — on garde uniquement notre sélection curated
-      // (les personnages Hedra API ont un rendu trop "IA", notre sélection photo est meilleure)
-    }
-  } catch(e) { /* API non disponible depuis le navigateur (CORS) — fallback déjà affiché */ }
 }
 
 function _hedraFallbackChars(){
