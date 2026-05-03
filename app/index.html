@@ -3647,10 +3647,10 @@ function toggleAudio(){
 }
 function downloadVideo(){
   if(!results.hedraUrl) return;
-  if(guestMode){ showPaywall(); return; }
   const a=document.createElement('a');
   a.href=results.hedraUrl; a.download='avatarads-video.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if(guestMode) toast('💧 Vidéo téléchargée avec watermark — passe à un plan payant pour la version HD sans watermark');
 }
 
 // ── SOCIAL PUBLISH ──
