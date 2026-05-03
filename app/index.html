@@ -815,28 +815,48 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
                 <audio id="mp4AudioEl" style="display:none"></audio>
 
-                <!-- Trim sliders -->
+                <!-- Trimmer visuel style iPhone -->
                 <div id="mp4TrimPanel" style="display:none">
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">✂️ Rogner l'audio</div>
-                  <div style="margin-bottom:10px">
-                    <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
-                      <span>Début</span><span id="mp4TrimStartVal">0s</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;text-transform:uppercase">✂️ Sélection audio</div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                      <span id="mp4TrimStartVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">0s</span>
+                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">→</span>
+                      <span id="mp4TrimEndVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">—</span>
                     </div>
-                    <input type="range" id="mp4TrimStart" min="0" max="100" value="0" step="0.5"
-                      oninput="updateMp4Trim()"
-                      style="width:100%;accent-color:var(--orange)">
                   </div>
-                  <div>
-                    <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
-                      <span>Fin</span><span id="mp4TrimEndVal">—</span>
+
+                  <!-- Waveform trimmer container -->
+                  <div id="mp4TrimmerWrap" style="position:relative;height:64px;border-radius:10px;overflow:hidden;background:#0d0f12;cursor:crosshair;touch-action:none">
+                    <!-- Waveform canvas -->
+                    <canvas id="mp4WaveCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                    <!-- Left dark overlay -->
+                    <div id="mp4OverlayLeft" style="position:absolute;top:0;left:0;height:100%;background:rgba(0,0,0,0.65);pointer-events:none;width:0"></div>
+                    <!-- Right dark overlay -->
+                    <div id="mp4OverlayRight" style="position:absolute;top:0;right:0;height:100%;background:rgba(0,0,0,0.65);pointer-events:none;width:0"></div>
+                    <!-- Selected region border top/bottom -->
+                    <div id="mp4TrimRegion" style="position:absolute;top:0;height:100%;border-top:2px solid var(--orange);border-bottom:2px solid var(--orange);box-sizing:border-box;pointer-events:none"></div>
+                    <!-- Left handle -->
+                    <div id="mp4HandleL" style="position:absolute;top:0;left:0;width:18px;height:100%;background:var(--orange);cursor:col-resize;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:none">
+                      <div style="display:flex;gap:2px">
+                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
+                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
+                      </div>
                     </div>
-                    <input type="range" id="mp4TrimEnd" min="0" max="100" value="100" step="0.5"
-                      oninput="updateMp4Trim()"
-                      style="width:100%;accent-color:var(--orange)">
+                    <!-- Right handle -->
+                    <div id="mp4HandleR" style="position:absolute;top:0;right:0;width:18px;height:100%;background:var(--orange);cursor:col-resize;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:none">
+                      <div style="display:flex;gap:2px">
+                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
+                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
+                      </div>
+                    </div>
+                    <!-- Playhead -->
+                    <div id="mp4Playhead" style="display:none;position:absolute;top:0;width:2px;height:100%;background:#fff;pointer-events:none;z-index:15;box-shadow:0 0 4px rgba(255,255,255,0.6)"></div>
                   </div>
+
                   <!-- Preview + Reset -->
                   <div style="display:flex;gap:8px;margin-top:10px">
-                    <button onclick="previewMp4Audio()" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" id="mp4PreviewBtn">▶ Écouter la sélection</button>
+                    <button onclick="previewMp4Audio()" id="mp4PreviewBtn" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">▶ Écouter la sélection</button>
                     <button onclick="resetMp4Trim()" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">↺ Reset</button>
                   </div>
                 </div>
@@ -2365,7 +2385,14 @@ function updateSteps(){
   if(step===5) btn.style.display='none';
 }
 function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
-function nextStep(){ if(step<4){step++;updateSteps();} }
+function nextStep(){
+  if(step<4){
+    step++;
+    updateSteps();
+    // Auto-ouvre l'option audio MP4 à l'arrivée sur l'étape Voix
+    if(step===3 && !mp4AudioEnabled) toggleMp4AudioOption(true);
+  }
+}
 function prevStep(){ if(step>1){step--;updateSteps();} }
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
@@ -2940,17 +2967,21 @@ function resetCrop(){
 }
 
 // ── MP4 Audio optionnel ──
-let mp4AudioEnabled = false;
-let mp4AudioFile    = null;
-let mp4AudioTrimSt  = 0;   // secondes
-let mp4AudioTrimEnd = 0;   // secondes (0 = pas de trim fin)
+let mp4AudioEnabled      = false;
+let mp4AudioFile         = null;
+let mp4AudioTrimSt       = 0;
+let mp4AudioTrimEnd      = 0;
+let mp4AudioDur          = 0;
 let mp4AudioPreviewTimer = null;
+let mp4TrimDragging      = null;  // 'L' | 'R' | null
 
-function toggleMp4AudioOption(){
-  mp4AudioEnabled = !mp4AudioEnabled;
+function toggleMp4AudioOption(force){
+  if(force !== undefined) mp4AudioEnabled = !force; // will flip below
+  mp4AudioEnabled = (force !== undefined) ? force : !mp4AudioEnabled;
   const sw    = document.getElementById('mp4AudioSwitch');
   const thumb = document.getElementById('mp4AudioThumb');
   const panel = document.getElementById('mp4AudioPanel');
+  if(!sw||!thumb||!panel) return;
   if(mp4AudioEnabled){
     sw.style.background='var(--green)';
     thumb.style.left='19px'; thumb.style.opacity='1';
@@ -2968,64 +2999,161 @@ function handleMp4AudioFile(file){
   const el = document.getElementById('mp4AudioEl');
   el.src = URL.createObjectURL(file);
   el.load();
-  el.onloadedmetadata = ()=>{
-    const dur = el.duration;
+  el.onloadedmetadata = async ()=>{
+    mp4AudioDur     = el.duration;
     mp4AudioTrimSt  = 0;
-    mp4AudioTrimEnd = dur;
-    // Mise à jour UI
+    mp4AudioTrimEnd = mp4AudioDur;
     document.getElementById('mp4AudioDropContent').style.display = 'none';
     document.getElementById('mp4AudioFileInfo').style.display    = 'block';
     document.getElementById('mp4AudioFileName').textContent      = file.name;
-    document.getElementById('mp4AudioDuration').textContent      = '⏱ ' + Math.round(dur) + 's';
-    const trimPanel = document.getElementById('mp4TrimPanel');
-    trimPanel.style.display = 'block';
-    const st  = document.getElementById('mp4TrimStart');
-    const end = document.getElementById('mp4TrimEnd');
-    st.max  = dur; st.value  = 0;
-    end.max = dur; end.value = dur;
-    document.getElementById('mp4TrimStartVal').textContent = '0s';
-    document.getElementById('mp4TrimEndVal').textContent   = Math.round(dur) + 's';
+    document.getElementById('mp4AudioDuration').textContent      = '⏱ ' + Math.round(mp4AudioDur) + 's';
+    document.getElementById('mp4TrimPanel').style.display        = 'block';
+    _mp4UpdateTrimLabels();
+    _mp4UpdateTrimmerUI();
+    await _mp4DrawWaveform(file);
+    _mp4InitDrag();
   };
 }
 
-function updateMp4Trim(){
-  const el  = document.getElementById('mp4AudioEl');
-  const st  = parseFloat(document.getElementById('mp4TrimStart').value) || 0;
-  let   end = parseFloat(document.getElementById('mp4TrimEnd').value)   || el.duration;
-  // S'assure que start < end
-  if(st >= end){ end = st + 1; document.getElementById('mp4TrimEnd').value = end; }
-  mp4AudioTrimSt  = st;
-  mp4AudioTrimEnd = end;
-  document.getElementById('mp4TrimStartVal').textContent = Math.round(st)  + 's';
-  document.getElementById('mp4TrimEndVal').textContent   = Math.round(end) + 's';
+async function _mp4DrawWaveform(file){
+  try {
+    const canvas = document.getElementById('mp4WaveCanvas');
+    if(!canvas) return;
+    const wrap = document.getElementById('mp4TrimmerWrap');
+    canvas.width  = wrap.offsetWidth  || 400;
+    canvas.height = wrap.offsetHeight || 64;
+    const ctx = canvas.getContext('2d');
+    const ab  = await file.arrayBuffer();
+    const ac  = new (window.AudioContext||window.webkitAudioContext)();
+    const buf = await ac.decodeAudioData(ab);
+    const data = buf.getChannelData(0);
+    const W = canvas.width, H = canvas.height;
+    const step = Math.ceil(data.length / W);
+    const amp  = H / 2;
+    ctx.clearRect(0,0,W,H);
+    // Background
+    ctx.fillStyle = '#0d0f12';
+    ctx.fillRect(0,0,W,H);
+    // Waveform bars
+    for(let x=0;x<W;x++){
+      let mn=1,mx=-1;
+      for(let j=0;j<step;j++){
+        const d=data[x*step+j]||0;
+        if(d<mn)mn=d; if(d>mx)mx=d;
+      }
+      const yTop = (1+mx)*amp, yBot = (1+mn)*amp;
+      const h = Math.max(1, yBot-yTop);
+      // Color gradient: center bright orange, edges dimmer
+      const relCenter = Math.abs((x/W)-0.5)*2;
+      const alpha = 0.5 + 0.5*(1-relCenter);
+      ctx.fillStyle = `rgba(255,107,53,${alpha})`;
+      ctx.fillRect(x, yTop, 1, h);
+    }
+    ac.close();
+    _mp4UpdateTrimmerUI();
+  } catch(e){ console.warn('Waveform error', e); }
+}
+
+function _mp4UpdateTrimmerUI(){
+  const wrap = document.getElementById('mp4TrimmerWrap');
+  if(!wrap || !mp4AudioDur) return;
+  const W   = wrap.offsetWidth;
+  const pL  = mp4AudioTrimSt  / mp4AudioDur;
+  const pR  = mp4AudioTrimEnd / mp4AudioDur;
+  const xL  = pL * W;
+  const xR  = pR * W;
+  const ovL = document.getElementById('mp4OverlayLeft');
+  const ovR = document.getElementById('mp4OverlayRight');
+  const reg = document.getElementById('mp4TrimRegion');
+  const hL  = document.getElementById('mp4HandleL');
+  const hR  = document.getElementById('mp4HandleR');
+  if(ovL) ovL.style.width = xL+'px';
+  if(ovR) ovR.style.width = (W-xR)+'px';
+  if(reg){ reg.style.left=xL+'px'; reg.style.width=(xR-xL)+'px'; }
+  if(hL)  hL.style.left = (xL)+'px';
+  if(hR)  hR.style.right = (W-xR)+'px';
+}
+
+function _mp4InitDrag(){
+  const wrap = document.getElementById('mp4TrimmerWrap');
+  const hL   = document.getElementById('mp4HandleL');
+  const hR   = document.getElementById('mp4HandleR');
+  if(!wrap||!hL||!hR) return;
+
+  function getX(e){ return (e.touches?e.touches[0].clientX:e.clientX); }
+
+  function onMove(e){
+    if(!mp4TrimDragging) return;
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    const W    = rect.width;
+    let   pct  = Math.max(0, Math.min(1, (getX(e)-rect.left) / W));
+    const minGap = 18/W; // poignée width en %
+    if(mp4TrimDragging==='L'){
+      const maxPct = (mp4AudioTrimEnd/mp4AudioDur) - minGap;
+      mp4AudioTrimSt = Math.min(pct, maxPct) * mp4AudioDur;
+    } else {
+      const minPct = (mp4AudioTrimSt/mp4AudioDur) + minGap;
+      mp4AudioTrimEnd = Math.max(pct, minPct) * mp4AudioDur;
+    }
+    _mp4UpdateTrimLabels();
+    _mp4UpdateTrimmerUI();
+  }
+  function onUp(){ mp4TrimDragging = null; }
+
+  hL.onmousedown  = e=>{ mp4TrimDragging='L'; e.preventDefault(); };
+  hR.onmousedown  = e=>{ mp4TrimDragging='R'; e.preventDefault(); };
+  hL.ontouchstart = e=>{ mp4TrimDragging='L'; };
+  hR.ontouchstart = e=>{ mp4TrimDragging='R'; };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('touchend',  onUp);
+}
+
+function _mp4UpdateTrimLabels(){
+  const fmt = s => s<60 ? Math.round(s)+'s' : Math.floor(s/60)+'m'+(Math.round(s%60)||'');
+  const stEl  = document.getElementById('mp4TrimStartVal');
+  const endEl = document.getElementById('mp4TrimEndVal');
+  if(stEl)  stEl.textContent  = fmt(mp4AudioTrimSt);
+  if(endEl) endEl.textContent = fmt(mp4AudioTrimEnd);
 }
 
 function previewMp4Audio(){
   const el  = document.getElementById('mp4AudioEl');
   const btn = document.getElementById('mp4PreviewBtn');
-  if(!el.src){ toast('Import un fichier d\'abord'); return; }
+  if(!el||!el.src){ toast('Import un fichier d\'abord'); return; }
   if(!el.paused){ el.pause(); btn.textContent='▶ Écouter la sélection'; return; }
   el.currentTime = mp4AudioTrimSt;
   el.play();
   btn.textContent = '⏸ Pause';
-  // Stop auto au moment du trim end
+  const ph = document.getElementById('mp4Playhead');
+  const wrap = document.getElementById('mp4TrimmerWrap');
+  if(ph) ph.style.display='block';
   clearInterval(mp4AudioPreviewTimer);
   mp4AudioPreviewTimer = setInterval(()=>{
-    if(el.currentTime >= mp4AudioTrimEnd){ el.pause(); btn.textContent='▶ Écouter la sélection'; clearInterval(mp4AudioPreviewTimer); }
-  }, 200);
-  el.onended = ()=>{ btn.textContent='▶ Écouter la sélection'; clearInterval(mp4AudioPreviewTimer); };
+    if(el.currentTime >= mp4AudioTrimEnd){
+      el.pause(); btn.textContent='▶ Écouter la sélection';
+      if(ph) ph.style.display='none';
+      clearInterval(mp4AudioPreviewTimer); return;
+    }
+    if(ph && wrap && mp4AudioDur){
+      const pct = (el.currentTime-mp4AudioTrimSt)/(mp4AudioTrimEnd-mp4AudioTrimSt);
+      const xL  = (mp4AudioTrimSt/mp4AudioDur)*wrap.offsetWidth;
+      const xR  = (mp4AudioTrimEnd/mp4AudioDur)*wrap.offsetWidth;
+      ph.style.left = (xL + pct*(xR-xL)) + 'px';
+    }
+  }, 80);
+  el.onended = ()=>{ btn.textContent='▶ Écouter la sélection'; if(ph) ph.style.display='none'; clearInterval(mp4AudioPreviewTimer); };
 }
 
 function resetMp4Trim(){
-  const el = document.getElementById('mp4AudioEl');
-  if(!el.duration) return;
+  if(!mp4AudioDur) return;
   mp4AudioTrimSt  = 0;
-  mp4AudioTrimEnd = el.duration;
-  document.getElementById('mp4TrimStart').value        = 0;
-  document.getElementById('mp4TrimEnd').value          = el.duration;
-  document.getElementById('mp4TrimStartVal').textContent = '0s';
-  document.getElementById('mp4TrimEndVal').textContent   = Math.round(el.duration) + 's';
-  toast('↺ Trim audio réinitialisé');
+  mp4AudioTrimEnd = mp4AudioDur;
+  _mp4UpdateTrimLabels();
+  _mp4UpdateTrimmerUI();
+  toast('↺ Sélection réinitialisée');
 }
 
 let cropModeAvatar = false;
