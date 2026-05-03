@@ -2176,37 +2176,34 @@ async function openHedraAvatars(){
 }
 
 function _hedraFallbackChars(){
-  // Unsplash — facepad=2.5 pour cadrer le visage entier sans couper
-  const u = (id) => `https://images.unsplash.com/photo-${id}?w=320&h=427&fit=crop&crop=faces&facepad=2.5&auto=format&q=85`;
-  // Pexels — qualité HD, portraits pro
-  const p = (id) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=320&h=427&dpr=1`;
+  const u = (id) => `https://images.unsplash.com/photo-${id}?w=320&h=427&fit=crop&crop=faces&facepad=3&auto=format&q=85`;
   return [
     // ── Femmes ──
-    {id:'av-f1',  name:'Sofia',    style:'Lifestyle · Extérieur',      thumbnailUrl:u('1494790108377-be9c29b29330')},
-    {id:'av-f2',  name:'Emma',     style:'Coach · Studio',             thumbnailUrl:u('1438761681033-6461ffad8d80')},
-    {id:'av-f3',  name:'Maya',     style:'Business · Bureau',          thumbnailUrl:p('774909')},
-    {id:'av-f4',  name:'Nina',     style:'Pro · Fond neutre',          thumbnailUrl:p('1239291')},
-    {id:'av-f5',  name:'Aria',     style:'Casual · Lumière naturelle', thumbnailUrl:p('415829')},
-    {id:'av-f6',  name:'Luna',     style:'Outdoor · Authentique',      thumbnailUrl:p('733872')},
-    {id:'av-f7',  name:'Jade',     style:'Créative · Setup',           thumbnailUrl:u('1544005313-94ddf0286df2')},
-    {id:'av-f8',  name:'Léa',      style:'Moderne · Tech',             thumbnailUrl:p('1181686')},
+    {id:'av-f1',  name:'Sofia',    style:'Lifestyle · Naturelle',      thumbnailUrl:u('1494790108377-be9c29b29330')},
+    {id:'av-f2',  name:'Emma',     style:'Coach · Souriante',          thumbnailUrl:u('1438761681033-6461ffad8d80')},
+    {id:'av-f3',  name:'Maya',     style:'Business · Professionnelle', thumbnailUrl:u('1573497019940-1c28c88b4f3e')},
+    {id:'av-f4',  name:'Nina',     style:'Pro · Fond neutre',          thumbnailUrl:u('1488426862026-3ee34a7d66df')},
+    {id:'av-f5',  name:'Aria',     style:'Outdoor · Lumière naturelle',thumbnailUrl:u('1534528741775-53994a69daeb')},
+    {id:'av-f6',  name:'Luna',     style:'Casual · Authentique',       thumbnailUrl:u('1508214751196-bcfd4ca60f91')},
+    {id:'av-f7',  name:'Jade',     style:'Créative · Dynamique',       thumbnailUrl:u('1544005313-94ddf0286df2')},
+    {id:'av-f8',  name:'Léa',      style:'Moderne · Tech',             thumbnailUrl:u('1529626455594-4ff0802cfb7e')},
     {id:'av-f9',  name:'Camille',  style:'Business · Sérieuse',        thumbnailUrl:u('1531746020798-e6953c6e8e04')},
-    {id:'av-f10', name:'Chloé',    style:'Lifestyle · Dynamique',      thumbnailUrl:p('712513')},
-    {id:'av-f11', name:'Inès',     style:'Pro · Fond blanc',           thumbnailUrl:u('1573496359142-b8d87734a5a2')},
-    {id:'av-f12', name:'Zoé',      style:'Casual · Colorée',           thumbnailUrl:p('1587009')},
+    {id:'av-f10', name:'Chloé',    style:'Lifestyle · Colorée',        thumbnailUrl:u('1517841905240-472988babdf9')},
+    {id:'av-f11', name:'Inès',     style:'Pro · Studio',               thumbnailUrl:u('1573496359142-b8d87734a5a2')},
+    {id:'av-f12', name:'Zoé',      style:'Casual · Souriante',         thumbnailUrl:u('1580489944761-15a19d654956')},
     // ── Hommes ──
     {id:'av-m1',  name:'Marcus',   style:'Business · Finance',         thumbnailUrl:u('1507003211169-0a1dd7228f2d')},
-    {id:'av-m2',  name:'Jordan',   style:'Fitness · Énergie',          thumbnailUrl:u('1472099645785-5658abf4ff4e')},
+    {id:'av-m2',  name:'Jordan',   style:'Sport · Énergie',            thumbnailUrl:u('1472099645785-5658abf4ff4e')},
     {id:'av-m3',  name:'Alex',     style:'Casual · Naturel',           thumbnailUrl:u('1500648767791-00dcc994a43e')},
-    {id:'av-m4',  name:'Leo',      style:'Tech · Startup',             thumbnailUrl:p('220453')},
-    {id:'av-m5',  name:'Kai',      style:'Moderne · Urbain',           thumbnailUrl:p('614810')},
-    {id:'av-m6',  name:'Ethan',    style:'Pro · Setup bureau',         thumbnailUrl:u('1519085360753-af0119f7cbe7')},
+    {id:'av-m4',  name:'Leo',      style:'Business · Posé',            thumbnailUrl:u('1506794778202-cad84cf45f1d')},
+    {id:'av-m5',  name:'Kai',      style:'Moderne · Urbain',           thumbnailUrl:u('1519085360753-af0119f7cbe7')},
+    {id:'av-m6',  name:'Ethan',    style:'Pro · Setup',                thumbnailUrl:u('1560250097-0b93528c311a')},
     {id:'av-m7',  name:'Nathan',   style:'Outdoor · Confiant',         thumbnailUrl:u('1463453091185-61582044d556')},
-    {id:'av-m8',  name:'Hugo',     style:'Business · Posé',            thumbnailUrl:p('91227')},
-    {id:'av-m9',  name:'Ryan',     style:'Casual · Créatif',           thumbnailUrl:p('1681010')},
+    {id:'av-m8',  name:'Hugo',     style:'Business · Stratège',        thumbnailUrl:u('1570295999919-56ceb5ecca61')},
+    {id:'av-m9',  name:'Ryan',     style:'Casual · Créatif',           thumbnailUrl:u('1539571696357-5a69c17a67c6')},
     {id:'av-m10', name:'Louis',    style:'Leadership · Pro',           thumbnailUrl:u('1542909168-82c6c7fc59b0')},
-    {id:'av-m11', name:'Thomas',   style:'Entrepreneur · Ambitieux',   thumbnailUrl:p('3785079')},
-    {id:'av-m12', name:'Maxime',   style:'Mindset · Stratège',         thumbnailUrl:p('2379005')},
+    {id:'av-m11', name:'Thomas',   style:'Entrepreneur · Ambitieux',   thumbnailUrl:u('1552058751-325cf4f4efee')},
+    {id:'av-m12', name:'Maxime',   style:'Mindset · Succès',           thumbnailUrl:u('1534030347209-467a573de57e')},
   ];
 }
 
