@@ -169,7 +169,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .hedra-av-item:hover{border-color:var(--border3);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
 .hedra-av-item.on{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-glow),0 8px 24px rgba(255,107,53,0.15)}
 .hedra-av-item.on::after{content:'✓';position:absolute;top:8px;right:8px;width:22px;height:22px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;z-index:2}
-.hedra-av-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top center;background:var(--bg4);display:block;transition:transform .3s}
+.hedra-av-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:center 20%;background:var(--bg4);display:block;transition:transform .3s}
 .hedra-av-item:hover .hedra-av-img{transform:scale(1.04)}
 .hedra-av-img-placeholder{width:100%;aspect-ratio:3/4;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:36px}
 .hedra-av-name{font-size:12px;font-weight:700;padding:8px 10px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.2px}
@@ -3024,17 +3024,20 @@ document.addEventListener('click', e=>{
 
 // ── LIVE PREVIEW (tout mettre à jour) ──
 function updateLivePreview(){
-  // 1. Avatar
+  // 1. Avatar — uploaded file OU Hedra char thumbnail OU emoji
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
-  if(selAvatar && selAvatar.localUrl){
+  const previewSrc = (selAvatar && selAvatar.localUrl) || (selHedraChar && selHedraChar.thumbnailUrl) || null;
+  if(previewSrc){
     if(avImg){
       avImg.style.display = 'block';
-      avImg.onload = () => { avImg.style.display='block'; updateAvatarCrop(); };
-      avImg.src = selAvatar.localUrl;
+      if(avImg.src !== previewSrc){
+        avImg.src = previewSrc;
+        avImg.style.objectPosition = selHedraChar ? 'center 15%' : 'center center';
+      }
       updateAvatarCrop();
     }
-    if(avEmoji)  avEmoji.style.display = 'none';
+    if(avEmoji) avEmoji.style.display = 'none';
   } else {
     if(avImg)   avImg.style.display = 'none';
     if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = (selAvatar && selAvatar.emo) || '👩‍💼'; }
