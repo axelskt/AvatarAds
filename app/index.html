@@ -486,7 +486,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <optgroup label="🔥 Curiosité / Secret">
                   <option>Personne ne t'en parle mais actuellement le meilleur business en ligne est…</option>
                   <option>Personne ne comprend encore ce business… (et c'est exactement pour ça que ça imprime de l'argent en ce moment)</option>
-                  <option>Je garde ça secret depuis longtemps.. J'aurais aimé savoir ça plus tôt..</option>
                   <option>POV : Tu révèle le business secret que personne ne veut révéler et qui leurs génère des milliers d'euros…</option>
                 </optgroup>
                 <optgroup label="⚡ Urgence / FOMO">
@@ -779,6 +778,75 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             </div><!-- /voice-el-sections -->
 
+            <!-- AUDIO MP4 OPTIONNEL -->
+            <div class="fld" style="margin-top:18px">
+              <div onclick="toggleMp4AudioOption()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:16px">🎬</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Ajouter un audio depuis un fichier MP4</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Voix off, interview, enregistrement… extrait et ajouté au-dessus du gameplay</div>
+                  </div>
+                </div>
+                <div id="mp4AudioSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="mp4AudioThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+                </div>
+              </div>
+              <div id="mp4AudioPanel" style="display:none;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+                <!-- Dropzone -->
+                <div id="mp4AudioDropzone" onclick="document.getElementById('mp4AudioFileIn').click()"
+                  ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
+                  ondragleave="ev=>{this.classList.remove('av-drag')}"
+                  ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleMp4AudioFile(ev.dataTransfer.files[0])}"
+                  style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg4);margin-bottom:12px">
+                  <div id="mp4AudioDropContent">
+                    <div style="font-size:28px;margin-bottom:8px">🎬</div>
+                    <div style="font-size:13px;font-weight:700;margin-bottom:4px">Glisse ton fichier ici</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · MP3 · WAV · M4A</div>
+                    <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:11px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                  </div>
+                  <div id="mp4AudioFileInfo" style="display:none">
+                    <div style="font-size:28px;margin-bottom:6px">✅</div>
+                    <div id="mp4AudioFileName" style="font-size:12px;font-weight:600;margin-bottom:2px"></div>
+                    <div id="mp4AudioDuration" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
+                  </div>
+                </div>
+                <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
+                <audio id="mp4AudioEl" style="display:none"></audio>
+
+                <!-- Trim sliders -->
+                <div id="mp4TrimPanel" style="display:none">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">✂️ Rogner l'audio</div>
+                  <div style="margin-bottom:10px">
+                    <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
+                      <span>Début</span><span id="mp4TrimStartVal">0s</span>
+                    </div>
+                    <input type="range" id="mp4TrimStart" min="0" max="100" value="0" step="0.5"
+                      oninput="updateMp4Trim()"
+                      style="width:100%;accent-color:var(--orange)">
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
+                      <span>Fin</span><span id="mp4TrimEndVal">—</span>
+                    </div>
+                    <input type="range" id="mp4TrimEnd" min="0" max="100" value="100" step="0.5"
+                      oninput="updateMp4Trim()"
+                      style="width:100%;accent-color:var(--orange)">
+                  </div>
+                  <!-- Preview + Reset -->
+                  <div style="display:flex;gap:8px;margin-top:10px">
+                    <button onclick="previewMp4Audio()" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" id="mp4PreviewBtn">▶ Écouter la sélection</button>
+                    <button onclick="resetMp4Trim()" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">↺ Reset</button>
+                  </div>
+                </div>
+
+                <div style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
+                  💡 L'audio extrait remplace ElevenLabs et est mixé avec la vidéo finale.
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- STEP 4 -->
@@ -1019,6 +1087,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </button>
               </div>
               <div id="crop-hint" style="display:none;margin-top:8px;font-size:10px;font-family:var(--mono);color:var(--orange2);text-align:center;padding:6px;background:var(--orange-dim);border-radius:6px">✋ Mode rognage actif — glisse sur la zone dans le preview · Clic à nouveau pour désactiver</div>
+              <button onclick="resetCrop()" style="width:100%;margin-top:8px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Réinitialiser le rognage</button>
             </div>
 
           </div>
@@ -2850,6 +2919,115 @@ function updateSubPreview(){
   }
 }
 
+// ── Reset crop ──
+function resetCrop(){
+  if(cfg.avClip) cfg.avClip = {t:0,b:0,l:0,r:0};
+  if(cfg.gpClip) cfg.gpClip = {t:0,b:0,l:0,r:0};
+  applyClip('av');
+  applyClip('gp');
+  // Désactive les modes de rognage
+  cropModeAvatar = false;
+  cropModeGameplay = false;
+  const avBtn = document.getElementById('crop-btn-av');
+  const gpBtn = document.getElementById('crop-btn-gp');
+  const hint  = document.getElementById('crop-hint');
+  const off='var(--bg4)',offB='var(--border2)',offC='var(--text2)';
+  if(avBtn){ avBtn.style.background=off; avBtn.style.borderColor=offB; avBtn.style.color=offC; }
+  if(gpBtn){ gpBtn.style.background=off; gpBtn.style.borderColor=offB; gpBtn.style.color=offC; }
+  if(hint)  hint.style.display='none';
+  hideCropHandles('av'); hideCropHandles('gp');
+  toast('↺ Rognage réinitialisé');
+}
+
+// ── MP4 Audio optionnel ──
+let mp4AudioEnabled = false;
+let mp4AudioFile    = null;
+let mp4AudioTrimSt  = 0;   // secondes
+let mp4AudioTrimEnd = 0;   // secondes (0 = pas de trim fin)
+let mp4AudioPreviewTimer = null;
+
+function toggleMp4AudioOption(){
+  mp4AudioEnabled = !mp4AudioEnabled;
+  const sw    = document.getElementById('mp4AudioSwitch');
+  const thumb = document.getElementById('mp4AudioThumb');
+  const panel = document.getElementById('mp4AudioPanel');
+  if(mp4AudioEnabled){
+    sw.style.background='var(--green)';
+    thumb.style.left='19px'; thumb.style.opacity='1';
+    panel.style.display='block';
+  } else {
+    sw.style.background='var(--bg5)';
+    thumb.style.left='3px'; thumb.style.opacity='.4';
+    panel.style.display='none';
+  }
+}
+
+function handleMp4AudioFile(file){
+  if(!file) return;
+  mp4AudioFile = file;
+  const el = document.getElementById('mp4AudioEl');
+  el.src = URL.createObjectURL(file);
+  el.load();
+  el.onloadedmetadata = ()=>{
+    const dur = el.duration;
+    mp4AudioTrimSt  = 0;
+    mp4AudioTrimEnd = dur;
+    // Mise à jour UI
+    document.getElementById('mp4AudioDropContent').style.display = 'none';
+    document.getElementById('mp4AudioFileInfo').style.display    = 'block';
+    document.getElementById('mp4AudioFileName').textContent      = file.name;
+    document.getElementById('mp4AudioDuration').textContent      = '⏱ ' + Math.round(dur) + 's';
+    const trimPanel = document.getElementById('mp4TrimPanel');
+    trimPanel.style.display = 'block';
+    const st  = document.getElementById('mp4TrimStart');
+    const end = document.getElementById('mp4TrimEnd');
+    st.max  = dur; st.value  = 0;
+    end.max = dur; end.value = dur;
+    document.getElementById('mp4TrimStartVal').textContent = '0s';
+    document.getElementById('mp4TrimEndVal').textContent   = Math.round(dur) + 's';
+  };
+}
+
+function updateMp4Trim(){
+  const el  = document.getElementById('mp4AudioEl');
+  const st  = parseFloat(document.getElementById('mp4TrimStart').value) || 0;
+  let   end = parseFloat(document.getElementById('mp4TrimEnd').value)   || el.duration;
+  // S'assure que start < end
+  if(st >= end){ end = st + 1; document.getElementById('mp4TrimEnd').value = end; }
+  mp4AudioTrimSt  = st;
+  mp4AudioTrimEnd = end;
+  document.getElementById('mp4TrimStartVal').textContent = Math.round(st)  + 's';
+  document.getElementById('mp4TrimEndVal').textContent   = Math.round(end) + 's';
+}
+
+function previewMp4Audio(){
+  const el  = document.getElementById('mp4AudioEl');
+  const btn = document.getElementById('mp4PreviewBtn');
+  if(!el.src){ toast('Import un fichier d\'abord'); return; }
+  if(!el.paused){ el.pause(); btn.textContent='▶ Écouter la sélection'; return; }
+  el.currentTime = mp4AudioTrimSt;
+  el.play();
+  btn.textContent = '⏸ Pause';
+  // Stop auto au moment du trim end
+  clearInterval(mp4AudioPreviewTimer);
+  mp4AudioPreviewTimer = setInterval(()=>{
+    if(el.currentTime >= mp4AudioTrimEnd){ el.pause(); btn.textContent='▶ Écouter la sélection'; clearInterval(mp4AudioPreviewTimer); }
+  }, 200);
+  el.onended = ()=>{ btn.textContent='▶ Écouter la sélection'; clearInterval(mp4AudioPreviewTimer); };
+}
+
+function resetMp4Trim(){
+  const el = document.getElementById('mp4AudioEl');
+  if(!el.duration) return;
+  mp4AudioTrimSt  = 0;
+  mp4AudioTrimEnd = el.duration;
+  document.getElementById('mp4TrimStart').value        = 0;
+  document.getElementById('mp4TrimEnd').value          = el.duration;
+  document.getElementById('mp4TrimStartVal').textContent = '0s';
+  document.getElementById('mp4TrimEndVal').textContent   = Math.round(el.duration) + 's';
+  toast('↺ Trim audio réinitialisé');
+}
+
 let cropModeAvatar = false;
 let cropModeGameplay = false;
 
@@ -3125,8 +3303,14 @@ function applyHook(val){
   const dur = document.getElementById('f-duration')?.value || '20 secondes';
   const rec = document.getElementById('hook-rec');
   if(rec){
+    const tips = {
+      '15 secondes': '⚡ 15s — Hook + CTA uniquement, <strong>2 phrases max</strong>. Va droit au but, zéro explication.',
+      '20 secondes': '💡 20s — Hook + 1 argument + CTA. <strong>3-4 phrases</strong>, script ultra percutant.',
+      '30 secondes': '🎯 30s — Hook + 2-3 arguments + CTA. <strong>5-6 phrases</strong>, histoire courte et fluide.',
+      '60 secondes': '🔥 60s — Script complet : hook fort + contenu + preuve + CTA. <strong>8-12 phrases</strong>.',
+    };
     rec.style.display = 'block';
-    rec.innerHTML = `💡 Durée recommandée : <strong>${dur}</strong> · Script court et percutant · CTA choisi aléatoirement ✓`;
+    rec.innerHTML = (tips[dur] || `💡 Durée : <strong>${dur}</strong>`) + ' · CTA choisi aléatoirement ✓';
   }
 }
 
