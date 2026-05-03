@@ -2169,15 +2169,8 @@ async function openHedraAvatars(){
       const data = await res.json();
       const chars = Array.isArray(data) ? data : (data.characters || data.data || []);
       const withThumbs = chars.filter(c => c.thumbnailUrl || c.thumbnail_url || c.image_url || c.preview_url);
-      if(withThumbs.length > 0){
-        // Normalise les URLs
-        withThumbs.forEach(c => {
-          c.thumbnailUrl = c.thumbnailUrl || c.thumbnail_url || c.image_url || c.preview_url;
-          c.style = c.style || c.description || c.category || 'Avatar Hedra';
-        });
-        _hedraChars = [...withThumbs, ..._hedraFallbackChars()];
-        renderHedraGrid(_hedraChars);
-      }
+      // On ignore les persos Hedra API — on garde uniquement notre sélection curated
+      // (les personnages Hedra API ont un rendu trop "IA", notre sélection photo est meilleure)
     }
   } catch(e) { /* API non disponible depuis le navigateur (CORS) — fallback déjà affiché */ }
 }
@@ -2390,14 +2383,7 @@ function updateSteps(){
   if(step===5) btn.style.display='none';
 }
 function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
-function nextStep(){
-  if(step<4){
-    step++;
-    updateSteps();
-    // Auto-ouvre l'option audio MP4 à l'arrivée sur l'étape Voix
-    if(step===3 && !mp4AudioEnabled) toggleMp4AudioOption(true);
-  }
-}
+function nextStep(){ if(step<4){step++;updateSteps();} }
 function prevStep(){ if(step>1){step--;updateSteps();} }
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
