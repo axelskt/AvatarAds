@@ -661,7 +661,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
               <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
-              <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Réinitialiser l'avatar</button>
+              <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Recadrer</button>
             </div>
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -873,6 +873,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div style="display:flex;gap:8px;margin-top:10px">
                     <button onclick="previewMp4Audio()" id="mp4PreviewBtn" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">▶ Écouter la sélection</button>
                     <button onclick="resetMp4Trim()" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">↺ Reset</button>
+                    <button onclick="toggleMp4Mute()" id="mp4MuteBtn" style="display:none;padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" title="Activer/couper le son de l'audio MP4">🔊</button>
                   </div>
                 </div>
 
@@ -1194,6 +1195,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
+                </div>
+                <div id="splitResizeHandle" style="display:none;height:6px;background:rgba(255,107,53,0.5);cursor:ns-resize;flex-shrink:0;position:relative;z-index:50;touch-action:none" title="Glisse pour régler le ratio Avatar/Gameplay">
+                  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:2px;background:rgba(255,255,255,0.6);border-radius:1px"></div>
                 </div>
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
@@ -2602,23 +2606,14 @@ async function previewVoice(voiceId,audioElId){
 }
 
 function resetAvatar(){
-  selAvatar = { emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté' };
-  selAvatar.localFile = null; selAvatar.localUrl = null;
-  // Reset UI
-  document.getElementById('avatarDropContent').style.display = 'block';
-  document.getElementById('avatarPreviewWrap').style.display = 'none';
-  document.getElementById('avatarFileIn').value = '';
-  document.getElementById('resetAvatarBtn').style.display = 'none';
-  // Reset sliders
-  const z = document.getElementById('avZoomSlider'); if(z){z.value=100;cfg.avZoom=100;document.getElementById('avZoomVal').textContent='100%';}
-  const w = document.getElementById('avWidthSlider'); if(w){w.value=100;cfg.avWidth=100;document.getElementById('avWidthVal').textContent='100%';}
-  cfg.avCropX=0; cfg.avCropY=0;
-  // Reset preview
-  const avImg = document.getElementById('previewAvImg');
-  const avEmoji = document.getElementById('previewAvEmoji');
-  if(avImg){ avImg.style.display='none'; avImg.src=''; }
-  if(avEmoji){ avEmoji.style.display='block'; avEmoji.textContent='👩‍💼'; }
-  toast('↺ Avatar réinitialisé');
+  // Recadrage auto — garde l'image sélectionnée, remet zoom/position à zéro
+  cfg.avZoom=100; cfg.avWidth=100; cfg.avCropX=0; cfg.avCropY=0;
+  const z = document.getElementById('avZoomSlider');
+  const w = document.getElementById('avWidthSlider');
+  if(z){ z.value=100; document.getElementById('avZoomVal').textContent='100%'; }
+  if(w){ w.value=100; document.getElementById('avWidthVal').textContent='100%'; }
+  updateAvatarCrop();
+  toast('↺ Recadrage réinitialisé');
 }
 
 // ── VOICE PRESET MENU TOGGLE ──
@@ -2738,6 +2733,44 @@ function swapSplit(){
   if(splitSwapped){ vc.insertBefore(gp, av); } else { vc.insertBefore(av, gp); }
   toast(splitSwapped ? '↕ Gameplay en haut / Avatar en bas' : '↕ Avatar en haut / Gameplay en bas');
 }
+
+// ── SPLIT HANDLE RESIZE ──
+let _splitDrag = false;
+let _splitDragStartY = 0;
+let _splitDragStartRatio = 35;
+
+document.addEventListener('mousedown', function(e){
+  const handle = document.getElementById('splitResizeHandle');
+  if(!handle || !handle.contains(e.target)) return;
+  e.preventDefault();
+  _splitDrag = true;
+  _splitDragStartY = e.clientY;
+  _splitDragStartRatio = cfg.splitRatio || 35;
+  document.body.style.cursor = 'ns-resize';
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', function(e){
+  if(!_splitDrag) return;
+  const wrapper = document.getElementById('phoneWrapper');
+  if(!wrapper) return;
+  const wh = wrapper.offsetHeight;
+  const dy = e.clientY - _splitDragStartY;
+  const deltaRatio = Math.round((dy / wh) * 100);
+  let newRatio = Math.min(70, Math.max(20, _splitDragStartRatio + deltaRatio));
+  cfg.splitRatio = newRatio;
+  const ratioSlider = document.getElementById('splitRatio');
+  const ratioVal = document.getElementById('splitRatioVal');
+  if(ratioSlider) ratioSlider.value = newRatio;
+  if(ratioVal) ratioVal.textContent = newRatio + ' / ' + (100 - newRatio);
+  updateLivePreview();
+});
+document.addEventListener('mouseup', function(){
+  if(_splitDrag){
+    _splitDrag = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
 
 function updateGpZoom(){
   const vid = document.getElementById('gpVideo');
@@ -3088,7 +3121,7 @@ function resetCrop(){
 }
 
 // ── MP4 Audio optionnel ──
-let mp4AudioEnabled      = false;
+let mp4AudioEnabled      = true;
 let mp4AudioFile         = null;
 let mp4AudioTrimSt       = 0;
 let mp4AudioTrimEnd      = 0;
@@ -3131,6 +3164,82 @@ function toggleMp4AudioOption(force){
   }
 }
 
+let mp4AudioMuted = false;
+function toggleMp4Mute(){
+  mp4AudioMuted = !mp4AudioMuted;
+  const btn = document.getElementById('mp4MuteBtn');
+  const el = document.getElementById('mp4AudioEl');
+  if(el) el.muted = mp4AudioMuted;
+  if(btn) btn.textContent = mp4AudioMuted ? '🔇' : '🔊';
+  if(btn) btn.style.color = mp4AudioMuted ? 'var(--orange2)' : 'var(--text3)';
+}
+
+function autoTrimSilence(){
+  const el = document.getElementById('mp4AudioEl');
+  if(!el || !el.src || mp4AudioDur <= 0) return;
+  // Analyse via Web Audio API pour détecter le silence
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  fetch(el.src)
+    .then(r => r.arrayBuffer())
+    .then(buf => ctx.decodeAudioData(buf))
+    .then(decoded => {
+      const data = decoded.getChannelData(0);
+      const threshold = 0.01;
+      const sampleRate = decoded.sampleRate;
+      let startSample = 0;
+      let endSample = data.length - 1;
+      // Cherche début réel
+      for(let i = 0; i < data.length; i++){
+        if(Math.abs(data[i]) > threshold){ startSample = i; break; }
+      }
+      // Cherche fin réelle
+      for(let i = data.length - 1; i >= 0; i--){
+        if(Math.abs(data[i]) > threshold){ endSample = i; break; }
+      }
+      mp4AudioTrimSt = Math.max(0, startSample / sampleRate - 0.05);
+      mp4AudioTrimEnd = Math.min(mp4AudioDur, endSample / sampleRate + 0.05);
+      _mp4UpdateTrimmerUI();
+      _mp4UpdateTrimLabels();
+      toast('✂️ Silences supprimés automatiquement');
+    })
+    .catch(() => toast('⚠️ Impossible d\'analyser le fichier'));
+}
+
+function applyMp4Transcript(text){
+  if(!text || !text.trim()) return;
+  const words = text.trim().split(/\s+/);
+  const wd = document.getElementById('wordEditor');
+  if(!wd) return;
+  // Garde le textarea en haut et ajoute les mots dessous
+  const existing = wd.querySelector('div');
+  const chips = words.map(w => {
+    const span = document.createElement('span');
+    span.textContent = w;
+    span.style.cssText = 'display:inline-block;padding:3px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;font-size:12px;font-family:var(--mono);color:var(--text);cursor:pointer;transition:all .15s';
+    span.onclick = () => {
+      const val = prompt('Modifier le mot :', w);
+      if(val !== null){ span.textContent = val || ''; }
+    };
+    span.ondblclick = () => span.remove();
+    return span;
+  });
+  // Recrée la zone : textarea + chips
+  wd.innerHTML = '';
+  if(existing) wd.appendChild(existing);
+  chips.forEach(c => wd.appendChild(c));
+  // Met à jour les sous-titres dans le preview
+  const subsContent = document.getElementById('subsContent');
+  if(subsContent && words.length > 0){
+    const cfg_sub = window.cfg || {};
+    const wpg = cfg_sub.subWpg || 2;
+    const chunk = words.slice(0, wpg);
+    subsContent.innerHTML = chunk.map(w =>
+      `<span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
+    ).join('');
+  }
+  toast('✓ Transcript appliqué aux sous-titres');
+}
+
 function handleMp4AudioFile(file){
   if(!file) return;
   mp4AudioFile = file;
@@ -3146,10 +3255,32 @@ function handleMp4AudioFile(file){
     document.getElementById('mp4AudioFileName').textContent      = file.name;
     document.getElementById('mp4AudioDuration').textContent      = '⏱ ' + Math.round(mp4AudioDur) + 's';
     document.getElementById('mp4TrimPanel').style.display        = 'block';
+    const muteBtn = document.getElementById('mp4MuteBtn');
+    if(muteBtn) muteBtn.style.display = 'block';
     _mp4UpdateTrimLabels();
     _mp4UpdateTrimmerUI();
     await _mp4DrawWaveform(file);
     _mp4InitDrag();
+    // Ajouter bouton auto-silence si pas déjà présent
+    if(!document.getElementById('mp4AutoSilenceBtn')){
+      const autoBtn = document.createElement('button');
+      autoBtn.id = 'mp4AutoSilenceBtn';
+      autoBtn.textContent = '✂️ Supprimer silences';
+      autoBtn.style.cssText = 'width:100%;margin-top:8px;padding:7px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s';
+      autoBtn.onclick = autoTrimSilence;
+      const trimPanel = document.getElementById('mp4TrimPanel');
+      if(trimPanel) trimPanel.appendChild(autoBtn);
+    }
+    // Proposer transcript éditable dans l'étape 4
+    const wd = document.getElementById('wordEditor');
+    if(wd){
+      wd.innerHTML = `
+        <div style="width:100%">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">📝 Colle ou tape le transcript de ton audio MP4 :</div>
+          <textarea id="mp4TranscriptInput" placeholder="Colle le transcript ici pour générer les sous-titres automatiquement..." style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6" oninput="applyMp4Transcript(this.value)"></textarea>
+          <button onclick="applyMp4Transcript(document.getElementById('mp4TranscriptInput')?.value||'')" style="margin-top:6px;padding:6px 14px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">✓ Appliquer aux sous-titres</button>
+        </div>`;
+    }
   };
 }
 
@@ -3505,10 +3636,14 @@ function updateLivePreview(){
       gameplayZone.style.display    = 'flex';
       gameplayZone.style.flex       = String(100 - ratio);
       gameplayZone.style.minHeight  = '0';
+      const rh = document.getElementById('splitResizeHandle');
+      if(rh) rh.style.display = 'block';
     } else {
       avZone.style.flex        = '1';
       avZone.style.minHeight   = '0';
       gameplayZone.style.display    = 'none';
+      const rh = document.getElementById('splitResizeHandle');
+      if(rh) rh.style.display = 'none';
     }
   }
 
@@ -4438,6 +4573,7 @@ refreshSocialCards();
 refreshPublishButtons();
 updateSteps();
 updateLivePreview();
+toggleMp4AudioOption(true);
 
 // 4. Handle YouTube OAuth redirect
 handleYoutubeOAuthRedirect();
