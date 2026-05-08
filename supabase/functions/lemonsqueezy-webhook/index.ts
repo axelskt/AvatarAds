@@ -10,17 +10,22 @@ const LS_SIGNING_SECRET       = Deno.env.get('LEMONSQUEEZY_SIGNING_SECRET')!
 // REMPLIS CES VARIANT IDs avec tes vrais IDs
 // LemonSqueezy → Produit → Variants → copie l'ID numérique
 // ─────────────────────────────────────────────
-const VARIANT_MAP: Record<string, { product: string; plan: string; credits: number }> = {
-  // AvatarAds
+const VARIANT_MAP: Record<string, { product: string; plan: string; credits: number; topup?: boolean }> = {
+  // AvatarAds — abonnements (remplacent le plan)
   'XXXXX_AVATARADS_FORMATION': { product: 'avatarads', plan: 'starter',   credits: 300  },
   'XXXXX_AVATARADS_STARTER'  : { product: 'avatarads', plan: 'starter',   credits: 300  },
   'XXXXX_AVATARADS_PRO'      : { product: 'avatarads', plan: 'pro',       credits: 600  },
   'XXXXX_AVATARADS_ELITE'    : { product: 'avatarads', plan: 'elite',     credits: 1500 },
-  // BLOX
+  // BloxAI — abonnements (remplacent le plan)
   'XXXXX_BLOX_FORMATION'     : { product: 'blox',      plan: 'starter',   credits: 300  },
   'XXXXX_BLOX_STARTER'       : { product: 'blox',      plan: 'starter',   credits: 300  },
   'XXXXX_BLOX_PRO'           : { product: 'blox',      plan: 'pro',       credits: 600  },
   'XXXXX_BLOX_ELITE'         : { product: 'blox',      plan: 'elite',     credits: 1500 },
+  // Packs de minutes (s'ajoutent au solde existant — topup: true)
+  // AvatarAds — crée ces produits dans LemonSqueezy et colle leurs variant IDs
+  'XXXXX_AVATARADS_PACK_S'   : { product: 'avatarads', plan: '',          credits: 300,  topup: true },
+  'XXXXX_AVATARADS_PACK_M'   : { product: 'avatarads', plan: '',          credits: 900,  topup: true },
+  'XXXXX_AVATARADS_PACK_L'   : { product: 'avatarads', plan: '',          credits: 1800, topup: true },
 }
 
 // ─── Vérifie la signature HMAC-SHA256 de LemonSqueezy ───
@@ -86,20 +91,40 @@ serve(async (req) => {
   }
 
   if (profile) {
-    // ✅ Compte existant → mise à jour du plan
-    const { error } = await sb.from('profiles').update({
-      plan:               config.plan,
-      credits_remaining:  config.credits,
-    }).eq('id', profile.id)
+    if (config.topup) {
+      // ➕ Pack de minutes → ajouter au solde existant
+      const newCredits = (profile.credits_remaining || 0) + config.credits
+      const { error } = await sb.from('profiles')
+        .update({ credits_remaining: newCredits })
+        .eq('id', profile.id)
 
-    if (error) {
-      console.error('Erreur update profil:', error)
-      return new Response('DB error', { status: 500 })
+      if (error) {
+        console.error('Erreur topup crédits:', error)
+        return new Response('DB error', { status: 500 })
+      }
+      console.log(`➕ Crédits ajoutés pour ${email}: +${config.credits}s → total ${newCredits}s`)
+
+    } else {
+      // ✅ Abonnement → mise à jour du plan
+      const { error } = await sb.from('profiles').update({
+        plan:               config.plan,
+        credits_remaining:  config.credits,
+      }).eq('id', profile.id)
+
+      if (error) {
+        console.error('Erreur update profil:', error)
+        return new Response('DB error', { status: 500 })
+      }
+      console.log(`✅ Plan activé pour ${email}: ${config.plan} (${config.product})`)
     }
-    console.log(`✅ Plan activé pour ${email}: ${config.plan} (${config.product})`)
 
   } else {
-    // ⏳ Pas encore de compte → sauvegarde en "pending"
+    if (config.topup) {
+      // ⚠️ Achat de crédits sans compte existant — peu probable mais on log
+      console.warn(`⚠️ Pack crédits pour ${email} mais aucun compte trouvé — ignoré`)
+      return new Response('OK', { status: 200 })
+    }
+    // ⏳ Abonnement sans compte → sauvegarde en "pending"
     // Le plan s'activera automatiquement à l'inscription
     const { error } = await sb.from('pending_activations').upsert({
       email,
