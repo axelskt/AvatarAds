@@ -346,6 +346,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4)}
 .av-drag{border-color:var(--orange)!important;background:var(--orange-dim)!important}
+.dimmed{opacity:.35;pointer-events:none;transition:opacity .2s}
+/* LIBRARY AVATAR FILTERS */
+.lib-av-filters{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.lib-av-filter{padding:4px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s}
+.lib-av-filter:hover{border-color:var(--border3);color:var(--text2)}
+.lib-av-filter.on{background:var(--orange-dim);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
+/* LIBRARY AVATAR CARD SELECTED */
+.lib-av-card.on{border-color:var(--orange)!important;box-shadow:0 0 0 2px var(--orange-glow)!important;background:var(--orange-dim)!important}
 /* Crop handles overlay */
 .crop-handles-ov{position:absolute;inset:0;z-index:30;pointer-events:none;box-sizing:border-box;border:2px dashed rgba(255,107,53,0.8)}
 .crop-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--orange);border-radius:2px;pointer-events:all;box-sizing:border-box}
@@ -661,7 +669,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
               <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
-              <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Recadrer</button>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Recadrer</button>
+                <button id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer avatar</button>
+              </div>
             </div>
 
             <!-- BIBLIOTHÈQUE D'AVATARS -->
@@ -670,56 +681,62 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="flbl" style="font-size:11px;margin:0">📚 Bibliothèque d'avatars <span style="color:var(--text3);font-weight:400">(49)</span></div>
                 <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">ou upload ta photo ci-dessus</div>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:300px;overflow-y:auto;padding-right:2px">
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg','Avatar 1')" title="Avatar 1"><img src="Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">1</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg','Avatar 2')" title="Avatar 2"><img src="Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">2</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg','Avatar 3')" title="Avatar 3"><img src="Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">3</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg','Avatar 4')" title="Avatar 4"><img src="Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">4</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg','Avatar 5')" title="Avatar 5"><img src="Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">5</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg','Avatar 6')" title="Avatar 6"><img src="Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">6</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg','Avatar 7')" title="Avatar 7"><img src="Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">7</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg','Avatar 8')" title="Avatar 8"><img src="Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">8</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg','Avatar 9')" title="Avatar 9"><img src="Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">9</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg','Avatar 10')" title="Avatar 10"><img src="Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">10</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg','Avatar 11')" title="Avatar 11"><img src="Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">11</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_958arf958arf958a.jpg','Avatar 12')" title="Avatar 12"><img src="Avatar/Gemini_Generated_Image_958arf958arf958a.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">12</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg','Avatar 13')" title="Avatar 13"><img src="Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">13</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg','Avatar 14')" title="Avatar 14"><img src="Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">14</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg','Avatar 15')" title="Avatar 15"><img src="Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">15</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg','Avatar 16')" title="Avatar 16"><img src="Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">16</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg','Avatar 17')" title="Avatar 17"><img src="Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">17</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg','Avatar 18')" title="Avatar 18"><img src="Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">18</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg','Avatar 19')" title="Avatar 19"><img src="Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">19</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg','Avatar 20')" title="Avatar 20"><img src="Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">20</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg','Avatar 21')" title="Avatar 21"><img src="Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">21</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg','Avatar 22')" title="Avatar 22"><img src="Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">22</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg','Avatar 23')" title="Avatar 23"><img src="Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">23</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg','Avatar 24')" title="Avatar 24"><img src="Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">24</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg','Avatar 25')" title="Avatar 25"><img src="Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">25</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg','Avatar 26')" title="Avatar 26"><img src="Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">26</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg','Avatar 27')" title="Avatar 27"><img src="Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">27</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg','Avatar 28')" title="Avatar 28"><img src="Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">28</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg','Avatar 29')" title="Avatar 29"><img src="Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">29</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg','Avatar 30')" title="Avatar 30"><img src="Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">30</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg','Avatar 31')" title="Avatar 31"><img src="Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">31</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg','Avatar 32')" title="Avatar 32"><img src="Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">32</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg','Avatar 33')" title="Avatar 33"><img src="Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">33</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg','Avatar 34')" title="Avatar 34"><img src="Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">34</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg','Avatar 35')" title="Avatar 35"><img src="Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">35</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg','Avatar 36')" title="Avatar 36"><img src="Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">36</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg','Avatar 37')" title="Avatar 37"><img src="Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">37</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg','Avatar 38')" title="Avatar 38"><img src="Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">38</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg','Avatar 39')" title="Avatar 39"><img src="Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">39</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg','Avatar 40')" title="Avatar 40"><img src="Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">40</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg','Avatar 41')" title="Avatar 41"><img src="Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">41</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg','Avatar 42')" title="Avatar 42"><img src="Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">42</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg','Avatar 43')" title="Avatar 43"><img src="Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">43</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg','Avatar 44')" title="Avatar 44"><img src="Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">44</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg','Avatar 45')" title="Avatar 45"><img src="Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">45</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg','Avatar 46')" title="Avatar 46"><img src="Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">46</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg','Avatar 47')" title="Avatar 47"><img src="Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">47</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg','Avatar 48')" title="Avatar 48"><img src="Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">48</div></div>
-                <div class="av-card lib-av-card" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg','Avatar 49')" title="Avatar 49"><img src="Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg" style="width:100%;height:70px;object-fit:cover;object-position:top;display:block" loading="lazy"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">49</div></div>
+              <!-- FILTRES GENRE -->
+              <div class="lib-av-filters">
+                <button class="lib-av-filter on" onclick="filterLibAv('tous',this)">Tous</button>
+                <button class="lib-av-filter" onclick="filterLibAv('f',this)">Femmes</button>
+                <button class="lib-av-filter" onclick="filterLibAv('m',this)">Hommes</button>
+              </div>
+              <div id="libAvGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:300px;overflow-y:auto;padding-right:2px">
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg','Avatar 1')" title="Avatar 1"><img src="Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">1 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg','Avatar 2')" title="Avatar 2"><img src="Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">2 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg','Avatar 3')" title="Avatar 3"><img src="Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">3 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg','Avatar 4')" title="Avatar 4"><img src="Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">4 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg','Avatar 5')" title="Avatar 5"><img src="Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">5 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg','Avatar 6')" title="Avatar 6"><img src="Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">6 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg','Avatar 7')" title="Avatar 7"><img src="Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">7 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg','Avatar 8')" title="Avatar 8"><img src="Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">8 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg','Avatar 9')" title="Avatar 9"><img src="Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">9 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg','Avatar 10')" title="Avatar 10"><img src="Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">10 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg','Avatar 11')" title="Avatar 11"><img src="Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">11 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_958arf958arf958a.jpg','Avatar 12')" title="Avatar 12"><img src="Avatar/Gemini_Generated_Image_958arf958arf958a.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">12 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg','Avatar 13')" title="Avatar 13"><img src="Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">13 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg','Avatar 14')" title="Avatar 14"><img src="Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">14 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg','Avatar 15')" title="Avatar 15"><img src="Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">15 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg','Avatar 16')" title="Avatar 16"><img src="Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">16 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg','Avatar 17')" title="Avatar 17"><img src="Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">17 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg','Avatar 18')" title="Avatar 18"><img src="Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">18 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg','Avatar 19')" title="Avatar 19"><img src="Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">19 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg','Avatar 20')" title="Avatar 20"><img src="Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">20 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg','Avatar 21')" title="Avatar 21"><img src="Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">21 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg','Avatar 22')" title="Avatar 22"><img src="Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">22 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg','Avatar 23')" title="Avatar 23"><img src="Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">23 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg','Avatar 24')" title="Avatar 24"><img src="Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">24 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg','Avatar 25')" title="Avatar 25"><img src="Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">25 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg','Avatar 26')" title="Avatar 26"><img src="Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">26 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg','Avatar 27')" title="Avatar 27"><img src="Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">27 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg','Avatar 28')" title="Avatar 28"><img src="Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">28 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg','Avatar 29')" title="Avatar 29"><img src="Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">29 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg','Avatar 30')" title="Avatar 30"><img src="Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">30 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg','Avatar 31')" title="Avatar 31"><img src="Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">31 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg','Avatar 32')" title="Avatar 32"><img src="Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">32 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg','Avatar 33')" title="Avatar 33"><img src="Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">33 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg','Avatar 34')" title="Avatar 34"><img src="Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">34 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg','Avatar 35')" title="Avatar 35"><img src="Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">35 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg','Avatar 36')" title="Avatar 36"><img src="Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">36 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg','Avatar 37')" title="Avatar 37"><img src="Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">37 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg','Avatar 38')" title="Avatar 38"><img src="Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">38 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg','Avatar 39')" title="Avatar 39"><img src="Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">39 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg','Avatar 40')" title="Avatar 40"><img src="Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">40 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg','Avatar 41')" title="Avatar 41"><img src="Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">41 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg','Avatar 42')" title="Avatar 42"><img src="Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">42 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg','Avatar 43')" title="Avatar 43"><img src="Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">43 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg','Avatar 44')" title="Avatar 44"><img src="Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">44 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg','Avatar 45')" title="Avatar 45"><img src="Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">45 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg','Avatar 46')" title="Avatar 46"><img src="Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">46 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg','Avatar 47')" title="Avatar 47"><img src="Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">47 · F</div></div>
+                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg','Avatar 48')" title="Avatar 48"><img src="Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">48 · H</div></div>
+                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg','Avatar 49')" title="Avatar 49"><img src="Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg" style="width:100%;height:80px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">49 · F</div></div>
               </div>
             </div>
 
@@ -755,7 +772,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div id="voice-el-sections">
 
             <!-- CLONE TA VOIX -->
-            <div class="fld" style="margin-bottom:20px">
+            <div id="voice-clone-section" class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">🎤 Clone ta voix — upload un extrait</div>
               <div id="voiceDropzone" onclick="document.getElementById('voiceFileIn').click()"
                 ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
@@ -801,7 +818,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="divider" style="margin:4px 0 16px"></div>
 
             <!-- VOIX PRESET -->
-            <div class="fld">
+            <div id="voice-preset-section" class="fld">
               <div onclick="toggleVoicePresetMenu()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;margin-bottom:0" id="voicePresetHeader" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
                 <div style="display:flex;align-items:center;gap:9px">
                   <span style="font-size:16px">🎧</span>
@@ -1005,6 +1022,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="gameplayFileInfo" style="display:none"><div style="font-size:22px">✅</div><div id="gameplayFileName" style="font-size:12px;font-weight:600;margin-top:4px"></div></div>
                 </div>
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
+                <button id="removeGameplayBtn" onclick="removeGameplay()" style="display:none;width:100%;margin-top:6px;padding:8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer gameplay</button>
 
                 <!-- TOGGLE AUDIO GAMEPLAY -->
                 <div id="gpAudioRow" onclick="toggleGameplayAudio()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s">
@@ -1042,9 +1060,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <input type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
                   </div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
-                <button onclick="swapSplit()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-                  ↕ Inverser Avatar / Gameplay
-                </button>
+                <!-- POSITION TOGGLE -->
+                <div style="display:flex;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                  <button id="gpPosAvBtn" onclick="setGpPosition('bottom')" style="flex:1;padding:8px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">Avatar dessus</button>
+                  <button id="gpPosGpBtn" onclick="setGpPosition('top')" style="flex:1;padding:8px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s">Gameplay dessus</button>
+                </div>
               </div>
             </div>
 
@@ -1181,7 +1201,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- CORRECTION MOTS -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Correction du transcript</div>
-              <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;min-height:50px">
+              <textarea id="wordEditorText" placeholder="Texte après génération de la voix..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';onWordTextEdit(this.value)" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow:hidden;line-height:1.5;border-bottom:none;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+              <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0 0 10px 10px;min-height:36px;border-top:1px solid var(--border2)">
                 <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Mots après génération de la voix...</div>
               </div>
             </div>
@@ -1213,7 +1234,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()">Continuer →</button>
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
           </div>
-          <div class="cost-hint" id="costHint">Coût estimé : <span id="costVal">~$0.22</span> · IA Script + ElevenLabs + Avatar lipsync</div>
         </div>
       </div><!-- /gen-left -->
 
@@ -1242,6 +1262,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <button id="ptab-meta" onclick="setPlatformPreview('meta')" style="padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Meta / Facebook</button>
           </div>
 
+          <!-- APERÇU ANIMÉ — au-dessus du téléphone -->
+          <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="display:flex;align-items:center;gap:6px;padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}">▶ Aperçu animé</button>
+
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
@@ -1258,9 +1281,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                 </div>
-                <div id="splitResizeHandle" style="display:none;height:6px;background:rgba(255,107,53,0.5);cursor:ns-resize;flex-shrink:0;position:relative;z-index:50;touch-action:none" title="Glisse pour régler le ratio Avatar/Gameplay">
-                  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:2px;background:rgba(255,255,255,0.6);border-radius:1px"></div>
-                </div>
+
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
@@ -1588,7 +1609,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
 
           <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">220 × 420</div>
-          <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="margin-top:8px;display:flex;align-items:center;gap:6px;padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}">▶ Aperçu animé</button>
         </div>
 
         <!-- GENERATING -->
@@ -1610,43 +1630,64 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <!-- RESULT -->
         <div id="resultArea" style="display:none;width:100%;overflow-y:auto;max-height:100%">
           <div class="result-panel">
-            <div class="result-card">
-              <div class="result-title">📝 Script généré</div>
-              <div class="result-field">
-                <div class="result-field-label">Contenu</div>
-                <div class="result-field-val" id="res-script">—</div>
-                <div class="result-actions"><button class="btn-copy" onclick="copyText('res-script')">Copier</button></div>
-              </div>
+
+            <!-- STATUS -->
+            <div id="genStatusCard" class="result-card" style="display:none">
+              <div class="result-title">⚙️ Statut</div>
+              <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
             </div>
-            <div class="result-card">
-              <div class="result-title">🎤 Voix générée</div>
-              <div class="result-field">
-                <div class="result-field-label">Audio ElevenLabs</div>
-                <div class="audio-player" id="audioPlayer">
-                  <button onclick="toggleAudio()" id="playAudioBtn">▶</button>
-                  <audio id="audioEl"></audio>
-                  <div style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="audioStatus">En attente...</div>
-                </div>
-              </div>
-            </div>
-            <div class="result-card">
-              <div class="result-title">🎭 Avatar IA — Lipsync</div>
-              <div class="result-field">
-                <div class="result-field-label">Statut génération</div>
-                <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
-              </div>
-              <div id="hedraVideoWrap" style="display:none;margin-top:10px">
+
+            <!-- AUDIO (hidden, used for preview sync) -->
+            <audio id="audioEl" style="display:none"></audio>
+
+            <!-- TÉLÉCHARGEMENT -->
+            <div id="downloadCard" class="result-card" style="display:none">
+              <div class="result-title">🎬 Ta vidéo est prête !</div>
+              <div id="hedraVideoWrap" style="margin-bottom:12px">
                 <div style="position:relative;border-radius:8px;overflow:hidden">
                   <video id="hedraVideo" controls style="width:100%;border-radius:8px;max-height:200px;background:#000;display:block"></video>
                   <div class="watermark-overlay" id="videoWatermark">
                     <div class="watermark-text">AvatarAds • Mode Essai</div>
                   </div>
                 </div>
-                <div class="result-actions" style="margin-top:8px">
-                  <button class="btn-copy" onclick="downloadVideo()">⬇ Télécharger MP4</button>
+              </div>
+              <button onclick="downloadVideo()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger la vidéo</button>
+              <button onclick="genSubtitlesFromAudio()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📝 Générer sous-titres depuis l'audio</button>
+            </div>
+
+            <!-- HEDRA CORS WORKAROUND -->
+            <div id="hedraManualCard" class="result-card" style="display:none">
+              <div class="result-title">🎭 Générer le lipsync avatar</div>
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.7">La génération Hedra doit être lancée manuellement depuis leur site (restriction CORS navigateur).</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">1️⃣</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Télécharge l'audio généré</div>
+                    <button id="downloadAudioBtn" onclick="downloadGeneratedAudio()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s">⬇ Télécharger l'audio</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">2️⃣</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Ouvre Hedra et crée ta vidéo</div>
+                    <a href="https://www.hedra.com" target="_blank" style="display:inline-block;padding:6px 14px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;text-decoration:none;transition:all .15s">Ouvrir Hedra →</a>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">3️⃣</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Colle l'URL vidéo Hedra ici</div>
+                    <div style="display:flex;gap:6px;margin-top:4px">
+                      <input id="hedraVideoUrlInput" type="text" placeholder="https://..." style="flex:1;padding:6px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border2)'">
+                      <button onclick="loadHedraVideoFromUrl()" style="padding:6px 12px;background:var(--orange);border:none;border-radius:7px;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer">OK</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <!-- PUBLIER -->
             <div class="result-card">
               <div class="result-title">📱 Publier sur les réseaux</div>
               <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie ta vidéo directement sur tes comptes connectés.</div>
@@ -1659,6 +1700,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
               </div>
             </div>
+
           </div>
         </div>
       </div><!-- /gen-right -->
@@ -2112,7 +2154,7 @@ let selHedraChar = null;
 const cfg = {
   subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
-  format:'vertical', splitRatio:35, gpZoom:100
+  format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom'
 };
 const subColors = {c1:'#FFE500', c2:'#ffffff'};
 let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -2510,16 +2552,38 @@ function pickLibraryAvatar(el, path, name){
   if(previewName) previewName.textContent = name;
   if(dropContent) dropContent.style.display = 'none';
   if(previewWrap) previewWrap.style.display = 'block';
-  // Montre le bouton recadrer
+  // Montre les boutons recadrer + supprimer
   const resetBtn = document.getElementById('resetAvatarBtn');
+  const removeBtn = document.getElementById('removeAvatarBtn');
   if(resetBtn) resetBtn.style.display = 'block';
+  if(removeBtn) removeBtn.style.display = 'block';
   updateLivePreview();
+}
+function filterLibAv(genre, btn){
+  document.querySelectorAll('.lib-av-filter').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('#libAvGrid .lib-av-card').forEach(card => {
+    if(genre === 'tous') card.style.display = '';
+    else card.style.display = card.dataset.genre === genre ? '' : 'none';
+  });
 }
 function pickVoice(el,id,name,desc){
   document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
   el.classList.add('on');
   selVoiceId=id;
   updateVoicePresetLabel(name);
+  // Dim clone section, un-dim preset section
+  const cloneSection = document.getElementById('voice-clone-section');
+  const presetSection = document.getElementById('voice-preset-section');
+  if(cloneSection) cloneSection.classList.add('dimmed');
+  if(presetSection) presetSection.classList.remove('dimmed');
+}
+function clearVoiceMode(){
+  // Remove all dimming — allow re-selection
+  const cloneSection = document.getElementById('voice-clone-section');
+  const presetSection = document.getElementById('voice-preset-section');
+  if(cloneSection) cloneSection.classList.remove('dimmed');
+  if(presetSection) presetSection.classList.remove('dimmed');
 }
 function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
@@ -2590,6 +2654,11 @@ function handleVoiceFile(file){
   btn.style.color = '#fff';
   btn.style.cursor = 'pointer';
   btn.style.borderColor = 'var(--orange)';
+  // Dim preset section, un-dim clone section
+  const cloneSection = document.getElementById('voice-clone-section');
+  const presetSection = document.getElementById('voice-preset-section');
+  if(presetSection) presetSection.classList.add('dimmed');
+  if(cloneSection) cloneSection.classList.remove('dimmed');
 }
 
 async function cloneVoice(){
@@ -2712,6 +2781,36 @@ function resetAvatar(){
   toast('↺ Recadrage réinitialisé');
 }
 
+function removeAvatar(){
+  selAvatar = { emo:'👩‍💼', name:'Avatar par défaut', desc:'' };
+  selAvatar.localFile = null; selAvatar.localUrl = null;
+  const avImg   = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(avImg){ avImg.style.display='none'; avImg.src=''; }
+  if(avEmoji) avEmoji.style.display='block';
+  document.getElementById('avatarDropContent').style.display='';
+  document.getElementById('avatarPreviewWrap').style.display='none';
+  document.querySelectorAll('.av-card,.lib-av-card').forEach(c=>c.classList.remove('on'));
+  const resetBtn = document.getElementById('resetAvatarBtn');
+  const removeBtn = document.getElementById('removeAvatarBtn');
+  if(resetBtn) resetBtn.style.display='none';
+  if(removeBtn) removeBtn.style.display='none';
+  const faEl = document.getElementById('f-avatarimg'); if(faEl) faEl.value='';
+  updateLivePreview();
+  toast('✕ Avatar supprimé');
+}
+function removeGameplay(){
+  gameplayFile = null;
+  document.getElementById('gameplayDropContent').style.display='';
+  document.getElementById('gameplayFileInfo').style.display='none';
+  const removeBtn = document.getElementById('removeGameplayBtn');
+  if(removeBtn) removeBtn.style.display='none';
+  const gpZone = document.getElementById('gameplayZone');
+  if(gpZone) gpZone.style.display='none';
+  updateLivePreview();
+  toast('✕ Gameplay supprimé');
+}
+
 // ── VOICE PRESET MENU TOGGLE ──
 let voicePresetOpen = false;
 function toggleVoicePresetMenu(){
@@ -2780,9 +2879,11 @@ function handleAvatarFile(file){
     updateAvatarCrop();
   }
   if(avEmoji) avEmoji.style.display = 'none';
-  // Show reset button
+  // Show reset + remove buttons
   const resetBtn = document.getElementById('resetAvatarBtn');
+  const removeBtn2 = document.getElementById('removeAvatarBtn');
   if(resetBtn) resetBtn.style.display = 'block';
+  if(removeBtn2) removeBtn2.style.display = 'block';
   updateLivePreview();
 }
 function previewAvatarUrl(url){
@@ -2829,44 +2930,26 @@ function swapSplit(){
   if(splitSwapped){ vc.insertBefore(gp, av); } else { vc.insertBefore(av, gp); }
   toast(splitSwapped ? '↕ Gameplay en haut / Avatar en bas' : '↕ Avatar en haut / Gameplay en bas');
 }
-
-// ── SPLIT HANDLE RESIZE ──
-let _splitDrag = false;
-let _splitDragStartY = 0;
-let _splitDragStartRatio = 35;
-
-document.addEventListener('mousedown', function(e){
-  const handle = document.getElementById('splitResizeHandle');
-  if(!handle || !handle.contains(e.target)) return;
-  e.preventDefault();
-  _splitDrag = true;
-  _splitDragStartY = e.clientY;
-  _splitDragStartRatio = cfg.splitRatio || 35;
-  document.body.style.cursor = 'ns-resize';
-  document.body.style.userSelect = 'none';
-});
-document.addEventListener('mousemove', function(e){
-  if(!_splitDrag) return;
-  const wrapper = document.getElementById('phoneWrapper');
-  if(!wrapper) return;
-  const wh = wrapper.offsetHeight;
-  const dy = e.clientY - _splitDragStartY;
-  const deltaRatio = Math.round((dy / wh) * 100);
-  let newRatio = Math.min(70, Math.max(20, _splitDragStartRatio + deltaRatio));
-  cfg.splitRatio = newRatio;
-  const ratioSlider = document.getElementById('splitRatio');
-  const ratioVal = document.getElementById('splitRatioVal');
-  if(ratioSlider) ratioSlider.value = newRatio;
-  if(ratioVal) ratioVal.textContent = newRatio + ' / ' + (100 - newRatio);
-  updateLivePreview();
-});
-document.addEventListener('mouseup', function(){
-  if(_splitDrag){
-    _splitDrag = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+function setGpPosition(pos){
+  // pos: 'bottom' = avatar on top (gameplay below), 'top' = gameplay on top (avatar below)
+  cfg.gpPosition = pos;
+  const avBtn = document.getElementById('gpPosAvBtn');
+  const gpBtn = document.getElementById('gpPosGpBtn');
+  if(pos === 'bottom'){
+    if(avBtn){ avBtn.style.background='var(--orange)';avBtn.style.color='#fff';avBtn.style.fontWeight='700'; }
+    if(gpBtn){ gpBtn.style.background='transparent';gpBtn.style.color='var(--text3)';gpBtn.style.fontWeight='400'; }
+  } else {
+    if(gpBtn){ gpBtn.style.background='var(--orange)';gpBtn.style.color='#fff';gpBtn.style.fontWeight='700'; }
+    if(avBtn){ avBtn.style.background='transparent';avBtn.style.color='var(--text3)';avBtn.style.fontWeight='400'; }
   }
-});
+  const vc = document.getElementById('videoContent');
+  const av = document.getElementById('avZone');
+  const gp = document.getElementById('gameplayZone');
+  if(!vc||!av||!gp) return;
+  if(pos === 'top'){ vc.insertBefore(gp, av); } else { vc.insertBefore(av, gp); }
+  updateLivePreview();
+}
+
 
 function updateGpZoom(){
   const vid = document.getElementById('gpVideo');
@@ -2930,10 +3013,13 @@ function togglePreviewPlay(){
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange2)';
     startPreviewAnim();
-    // Play selected audio if MP4 is loaded
+    // Play audio — priority: MP4 audio > generated voice blob > preset preview
     if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
       if(el && el.src){ el.currentTime = mp4AudioTrimSt; el.play(); }
+    } else if(results && results.audioBlob){
+      const el = document.getElementById('audioEl');
+      if(el){ el.currentTime = 0; el.play().catch(()=>{}); previewAudio = el; }
     } else {
       // Play currently selected preset voice audio if it has been generated
       const selectedVoiceAudio = document.querySelector('.voice-row.on audio');
@@ -3099,6 +3185,8 @@ function handleGameplayFile(file){
   if(empty) empty.style.display = 'none';
   const soundBtn = document.getElementById('gp-sound-btn');
   if(soundBtn) soundBtn.style.display = 'flex';
+  const removeGpBtn = document.getElementById('removeGameplayBtn');
+  if(removeGpBtn) removeGpBtn.style.display = 'block';
   updateLivePreview();
 }
 
@@ -3749,14 +3837,10 @@ function updateLivePreview(){
       gameplayZone.style.display    = 'flex';
       gameplayZone.style.flex       = String(100 - ratio);
       gameplayZone.style.minHeight  = '0';
-      const rh = document.getElementById('splitResizeHandle');
-      if(rh) rh.style.display = 'block';
     } else {
       avZone.style.flex        = '1';
       avZone.style.minHeight   = '0';
       gameplayZone.style.display    = 'none';
-      const rh = document.getElementById('splitResizeHandle');
-      if(rh) rh.style.display = 'none';
     }
   }
 
@@ -3794,19 +3878,27 @@ function updateSplitPreview(){
 
 // Word editor — populate after voice generation
 function populateWordEditor(text){
-  const words = text.trim().split(/\s+/).filter(w => w);
+  // Update textarea
+  const ta = document.getElementById('wordEditorText');
+  if(ta){ ta.value = text; ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
+  _renderWordChips(text);
+}
+function _renderWordChips(text){
+  const words = text.trim().split(/[\s\n]+/).filter(w => w);
   const editor = document.getElementById('wordEditor');
   editor.innerHTML = '';
-  words.forEach((word, i) => {
+  words.forEach((word) => {
     const chip = document.createElement('span');
     chip.textContent = word.toUpperCase().replace(/[.,!?;:'"«»]/g,'');
     chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
-    chip.onclick = () => { const nw=prompt('Modifier :',chip.textContent); if(nw!==null)chip.textContent=nw.toUpperCase(); };
-    chip.ondblclick = () => { chip.remove(); };
+    chip.ondblclick = () => { chip.remove(); const ta=document.getElementById('wordEditorText'); if(ta){ta.value=getEditedWords();} };
     chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
     chip.onmouseout = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
     editor.appendChild(chip);
   });
+}
+function onWordTextEdit(value){
+  _renderWordChips(value);
 }
 
 function getEditedWords(){
@@ -4292,37 +4384,38 @@ function showResults(){
   document.getElementById('resultArea').style.display='block';
   refreshPublishButtons();
 
-  document.getElementById('res-script').textContent=results.script||'—';
-
+  // Audio setup for preview sync
   if(results.audioBlob){
     const url=URL.createObjectURL(results.audioBlob);
     document.getElementById('audioEl').src=url;
-    document.getElementById('audioStatus').textContent='Audio prêt — clique ▶';
-  } else {
-    document.getElementById('audioStatus').textContent='Audio non généré (clé ElevenLabs manquante)';
-    document.getElementById('playAudioBtn').disabled=true;
   }
 
-  const hs=document.getElementById('hedraStatus');
+  // Show video if available, else show Hedra manual workflow
   if(results.hedraUrl){
-    hs.className='hedra-status done';
-    hs.textContent='✓ Avatar généré !';
-    document.getElementById('hedraVideoWrap').style.display='block';
+    document.getElementById('downloadCard').style.display='block';
+    document.getElementById('hedraManualCard').style.display='none';
+    document.getElementById('genStatusCard').style.display='none';
     document.getElementById('hedraVideo').src=results.hedraUrl;
     updateGuestWatermarks();
+    // Auto-download
+    const a=document.createElement('a');
+    a.href=results.hedraUrl; a.download='avatarads-video.mp4';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   } else {
-    hs.className='hedra-status';
-    if(K.hedra){
-      hs.innerHTML=`⚠️ CORS bloqué depuis le navigateur.<br>
-        <span style="color:var(--text3);font-size:11px">
-        Solution : upload l'audio ci-dessus sur 
-        <a href="https://hedra.com/app" target="_blank" style="color:var(--orange2)">hedra.com/app</a> 
-        avec ton image avatar pour finaliser la vidéo.<br>
-        Pour l'intégration complète → backend proxy (V2 commerciale).
-        </span>`;
+    document.getElementById('downloadCard').style.display='none';
+    // Show Hedra manual workflow only if there's audio (voice was generated)
+    if(results.audioBlob || voiceMode==='gameplay'){
+      document.getElementById('hedraManualCard').style.display='block';
+      const dlAudioBtn=document.getElementById('downloadAudioBtn');
+      if(dlAudioBtn) dlAudioBtn.style.display = results.audioBlob ? 'inline-block':'none';
     } else {
-      hs.innerHTML='Génère d\'abord ton audio à l\'étape 3 pour activer la vidéo Hedra.';
+      document.getElementById('hedraManualCard').style.display='none';
     }
+    const genStatusCard=document.getElementById('genStatusCard');
+    const hs=document.getElementById('hedraStatus');
+    genStatusCard.style.display='block';
+    hs.className='hedra-status';
+    hs.textContent='Lipsync non généré — utilise le workflow ci-dessous.';
   }
 
   document.getElementById('mainBtn').style.display='block';
@@ -4330,6 +4423,28 @@ function showResults(){
   document.getElementById('mainBtn').onclick=resetAll;
   document.getElementById('backBtn').style.display='none';
   toast('✓ Génération terminée !');
+}
+
+function downloadGeneratedAudio(){
+  if(!results.audioBlob){ toast('⚠️ Aucun audio généré'); return; }
+  const url=URL.createObjectURL(results.audioBlob);
+  const a=document.createElement('a');
+  a.href=url; a.download='avatarads-audio.mp3';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function loadHedraVideoFromUrl(){
+  const input=document.getElementById('hedraVideoUrlInput');
+  if(!input||!input.value.trim()){toast('⚠️ Colle une URL valide'); return;}
+  results.hedraUrl=input.value.trim();
+  document.getElementById('hedraManualCard').style.display='none';
+  document.getElementById('genStatusCard').style.display='none';
+  document.getElementById('downloadCard').style.display='block';
+  document.getElementById('hedraVideo').src=results.hedraUrl;
+  updateGuestWatermarks();
+  toast('✓ Vidéo chargée !');
+}
+function genSubtitlesFromAudio(){
+  toast('📝 Génération des sous-titres depuis AssemblyAI — fonctionnalité bientôt disponible');
 }
 
 function resetAll(){
