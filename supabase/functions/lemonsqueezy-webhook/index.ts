@@ -23,9 +23,9 @@ const VARIANT_MAP: Record<string, { product: string; plan: string; credits: numb
   'XXXXX_BLOX_ELITE'         : { product: 'blox',      plan: 'elite',     credits: 1500 },
   // Packs de minutes (s'ajoutent au solde existant — topup: true)
   // AvatarAds — crée ces produits dans LemonSqueezy et colle leurs variant IDs
-  'XXXXX_AVATARADS_PACK_S'   : { product: 'avatarads', plan: '',          credits: 300,  topup: true },
-  'XXXXX_AVATARADS_PACK_M'   : { product: 'avatarads', plan: '',          credits: 900,  topup: true },
-  'XXXXX_AVATARADS_PACK_L'   : { product: 'avatarads', plan: '',          credits: 1800, topup: true },
+  'XXXXX_AVATARADS_PACK_S'   : { product: 'avatarads', plan: '',          credits: 300,  topup: true }, // 5 min  – 14,99€
+  'XXXXX_AVATARADS_PACK_M'   : { product: 'avatarads', plan: '',          credits: 900,  topup: true }, // 15 min – 34,99€
+  'XXXXX_AVATARADS_PACK_L'   : { product: 'avatarads', plan: '',          credits: 1500, topup: true }, // 25 min – 54,99€
 }
 
 // ─── Vérifie la signature HMAC-SHA256 de LemonSqueezy ───
