@@ -374,9 +374,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
   <div class="topbar-right">
     <div class="keys-status" id="keysStatus">
-      <div class="key-pill"><div class="key-dot" id="dot-gpt"></div>GPT-4o</div>
+      <div class="key-pill"><div class="key-dot" id="dot-gpt"></div>Script IA</div>
       <div class="key-pill"><div class="key-dot" id="dot-el"></div>ElevenLabs</div>
-      <div class="key-pill"><div class="key-dot" id="dot-hedra"></div>Hedra</div>
+      <div class="key-pill"><div class="key-dot" id="dot-hedra"></div>Avatar IA</div>
     </div>
     <button class="btn-keys" onclick="openSetup()">⚙ Connexions</button>
   </div>
@@ -631,6 +631,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
               <input type="file" id="avatarFileIn" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0])">
+              <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Réinitialiser l'avatar</button>
             </div>
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -711,7 +712,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             <!-- VOIX PRESET -->
             <div class="fld">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Ou choisis une voix preset</div>
+              <div onclick="toggleVoicePresetMenu()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;margin-bottom:0" id="voicePresetHeader" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="font-size:16px">🎧</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Voix preset — bibliothèque</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="voicePresetLabel">Charlotte sélectionnée</div>
+                  </div>
+                </div>
+                <span id="voicePresetArrow" style="font-size:12px;color:var(--text3);transition:transform .25s">›</span>
+              </div>
+              <div id="voicePresetMenu" style="display:none;margin-top:8px">
               <div class="voice-list">
                 <div class="voice-row on" id="vr-charlotte" onclick="pickVoice(this,'XB0fDUnXU5powFXDhCwa','Charlotte','Féminine · chaleureuse · naturelle')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('XB0fDUnXU5powFXDhCwa','charlotte-prev')">▶</button>
@@ -747,6 +758,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
             </div>
+
+              </div><!-- /voicePresetMenu -->
+            </div><!-- /voice preset fld -->
 
             </div><!-- /voice-el-sections -->
 
@@ -843,6 +857,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 4 -->
           <div id="fs-4" style="display:none">
+
+            <!-- SOUS-TITRES ON/OFF -->
+            <div class="fld" style="margin-bottom:18px">
+              <div onclick="toggleSubtitles()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;cursor:pointer;transition:all .15s" id="subtitlesToggleRow">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:20px">💬</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:700">Sous-titres</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="subtitlesToggleLabel">Activés — style Hormozi</div>
+                  </div>
+                </div>
+                <div id="subtitlesSwitch" style="width:42px;height:24px;background:var(--orange);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="subtitlesThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:21px;transition:all .25px"></div>
+                </div>
+              </div>
+            </div>
 
             <!-- FORMAT -->
             <div class="fld" style="margin-bottom:18px">
@@ -1091,7 +1121,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()">Continuer →</button>
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
           </div>
-          <div class="cost-hint" id="costHint">Coût estimé : <span id="costVal">~$0.22</span> · API GPT-4o + ElevenLabs + Hedra</div>
+          <div class="cost-hint" id="costHint">Coût estimé : <span id="costVal">~$0.22</span> · IA Script + ElevenLabs + Avatar lipsync</div>
         </div>
       </div><!-- /gen-left -->
 
@@ -1476,7 +1506,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div class="genprog" id="genprog">
             <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Validation du script</div>
             <div class="gp-step" id="gp2"><div class="gp-icon">🎤</div>Voix ElevenLabs TTS</div>
-            <div class="gp-step" id="gp3"><div class="gp-icon">🎭</div>Lipsync Hedra API</div>
+            <div class="gp-step" id="gp3"><div class="gp-icon">🎭</div>Lipsync avatar IA</div>
             <div class="gp-step" id="gp4"><div class="gp-icon">💬</div>Sous-titres Hormozi</div>
             <div class="gp-step" id="gp5"><div class="gp-icon">✅</div>Finalisation</div>
           </div>
@@ -1505,7 +1535,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
             <div class="result-card">
-              <div class="result-title">🎭 Avatar Hedra</div>
+              <div class="result-title">🎭 Avatar IA — Lipsync</div>
               <div class="result-field">
                 <div class="result-field-label">Statut génération</div>
                 <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
@@ -1786,11 +1816,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- Statut APIs intégrées -->
     <div style="background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ APIs incluses dans ton abonnement</div>
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ Outils IA inclus dans ton abonnement</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● GPT-4o</span>
+        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Script IA</span>
         <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● ElevenLabs</span>
-        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Hedra</span>
+        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Avatar IA</span>
       </div>
     </div>
 
@@ -1849,7 +1879,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">ELITE</div>
         <div style="font-size:20px;font-weight:900;letter-spacing:-1px">59,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">25 min + 4K + BLOX</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">25 min + 4K + BloxAI Pro</div></div>
       </div>
     </div>
     <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">14,99€/mois</strong> en annuel · Sans engagement</div>
@@ -2235,6 +2265,7 @@ function pickVoice(el,id,name,desc){
   document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
   el.classList.add('on');
   selVoiceId=id;
+  updateVoicePresetLabel(name);
 }
 function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
@@ -2416,6 +2447,74 @@ async function previewVoice(voiceId,audioElId){
   }catch(e){toast('✗ '+e.message);}
 }
 
+function resetAvatar(){
+  selAvatar = { emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté' };
+  selAvatar.localFile = null; selAvatar.localUrl = null;
+  // Reset UI
+  document.getElementById('avatarDropContent').style.display = 'block';
+  document.getElementById('avatarPreviewWrap').style.display = 'none';
+  document.getElementById('avatarFileIn').value = '';
+  document.getElementById('resetAvatarBtn').style.display = 'none';
+  // Reset sliders
+  const z = document.getElementById('avZoomSlider'); if(z){z.value=100;cfg.avZoom=100;document.getElementById('avZoomVal').textContent='100%';}
+  const w = document.getElementById('avWidthSlider'); if(w){w.value=100;cfg.avWidth=100;document.getElementById('avWidthVal').textContent='100%';}
+  cfg.avCropX=0; cfg.avCropY=0;
+  // Reset preview
+  const avImg = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(avImg){ avImg.style.display='none'; avImg.src=''; }
+  if(avEmoji){ avEmoji.style.display='block'; avEmoji.textContent='👩‍💼'; }
+  toast('↺ Avatar réinitialisé');
+}
+
+// ── VOICE PRESET MENU TOGGLE ──
+let voicePresetOpen = false;
+function toggleVoicePresetMenu(){
+  voicePresetOpen = !voicePresetOpen;
+  const menu   = document.getElementById('voicePresetMenu');
+  const arrow  = document.getElementById('voicePresetArrow');
+  const header = document.getElementById('voicePresetHeader');
+  if(voicePresetOpen){
+    menu.style.display = 'block';
+    arrow.style.transform = 'rotate(90deg)';
+    header.style.borderColor = 'rgba(255,107,53,0.35)';
+    header.style.background = 'var(--orange-dim)';
+  } else {
+    menu.style.display = 'none';
+    arrow.style.transform = 'rotate(0deg)';
+    header.style.borderColor = 'var(--border)';
+    header.style.background = 'var(--bg4)';
+  }
+}
+function updateVoicePresetLabel(name){
+  const lbl = document.getElementById('voicePresetLabel');
+  if(lbl) lbl.textContent = name + ' sélectionné(e)';
+}
+
+// ── SUBTITLES TOGGLE ──
+let subtitlesEnabled = true;
+function toggleSubtitles(){
+  subtitlesEnabled = !subtitlesEnabled;
+  const sw    = document.getElementById('subtitlesSwitch');
+  const thumb = document.getElementById('subtitlesThumb');
+  const lbl   = document.getElementById('subtitlesToggleLabel');
+  const row   = document.getElementById('subtitlesToggleRow');
+  const overlay = document.getElementById('subsOverlay');
+  if(subtitlesEnabled){
+    sw.style.background = 'var(--orange)';
+    thumb.style.left = '21px';
+    lbl.textContent = 'Activés — style ' + (selSubStyle||'Hormozi');
+    row.style.borderColor = 'rgba(255,107,53,0.3)';
+    if(overlay) overlay.style.visibility = 'visible';
+  } else {
+    sw.style.background = 'var(--bg5)';
+    thumb.style.left = '3px';
+    lbl.textContent = 'Désactivés';
+    row.style.borderColor = 'var(--border)';
+    if(overlay) overlay.style.visibility = 'hidden';
+  }
+}
+
 function handleAvatarFile(file){
   if(!file || !file.type.startsWith('image/')) return;
   const url = URL.createObjectURL(file);
@@ -2436,6 +2535,9 @@ function handleAvatarFile(file){
     updateAvatarCrop();
   }
   if(avEmoji) avEmoji.style.display = 'none';
+  // Show reset button
+  const resetBtn = document.getElementById('resetAvatarBtn');
+  if(resetBtn) resetBtn.style.display = 'block';
   updateLivePreview();
 }
 function previewAvatarUrl(url){
@@ -2535,6 +2637,8 @@ function toggleGameplayPause(e){
   }
 }
 
+let previewAudio = null;
+
 function togglePreviewPlay(){
   previewPlaying = !previewPlaying;
   const btn = document.getElementById('previewPlayBtn');
@@ -2543,11 +2647,30 @@ function togglePreviewPlay(){
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange2)';
     startPreviewAnim();
+    // Play selected audio if MP4 is loaded
+    if(mp4AudioEnabled && mp4AudioFile){
+      const el = document.getElementById('mp4AudioEl');
+      if(el && el.src){ el.currentTime = mp4AudioTrimSt; el.play(); }
+    } else {
+      // Play currently selected preset voice audio if it has been generated
+      const selectedVoiceAudio = document.querySelector('.voice-row.on audio');
+      if(selectedVoiceAudio && selectedVoiceAudio.src){
+        selectedVoiceAudio.currentTime = 0;
+        selectedVoiceAudio.play().catch(()=>{});
+        previewAudio = selectedVoiceAudio;
+      }
+    }
   } else {
     btn.textContent = '▶ Aperçu animé';
     btn.style.borderColor = 'var(--border2)';
     btn.style.color = 'var(--text2)';
     stopPreviewAnim();
+    // Stop audio
+    if(mp4AudioEnabled){
+      const el = document.getElementById('mp4AudioEl');
+      if(el) el.pause();
+    }
+    if(previewAudio){ previewAudio.pause(); previewAudio = null; }
   }
 }
 
@@ -2814,10 +2937,27 @@ function toggleMp4AudioOption(force){
     sw.style.background='var(--green)';
     thumb.style.left='19px'; thumb.style.opacity='1';
     panel.style.display='block';
+    // MP4 wins → cancel clone voice
+    if(clonedVoiceId){
+      clonedVoiceId = null;
+      // Reset clone UI
+      const banner = document.getElementById('savedVoiceBanner');
+      const cloneResults = document.getElementById('cloneResults');
+      if(banner) banner.style.display = 'none';
+      if(cloneResults) cloneResults.style.display = 'none';
+      const status = document.getElementById('cloneStatus');
+      if(status){ status.textContent = '↺ Voix clone annulée — audio MP4 utilisé à la place'; status.style.display='block'; status.style.color='var(--orange2)'; }
+      toast('🎬 Audio MP4 activé — clone voix annulé');
+    }
+    // Show ElevenLabs bypass notice
+    const elSections = document.getElementById('voice-el-sections');
+    if(elSections) elSections.style.opacity = '0.4';
   } else {
     sw.style.background='var(--bg5)';
     thumb.style.left='3px'; thumb.style.opacity='.4';
     panel.style.display='none';
+    const elSections = document.getElementById('voice-el-sections');
+    if(elSections) elSections.style.opacity = '1';
   }
 }
 
@@ -2940,7 +3080,14 @@ function _mp4InitDrag(){
 }
 
 function _mp4UpdateTrimLabels(){
-  const fmt = s => s<60 ? Math.round(s)+'s' : Math.floor(s/60)+'m'+(Math.round(s%60)||'');
+  const fmt = s => {
+    if(s < 60){
+      const sInt = Math.floor(s);
+      const ms = Math.round((s - sInt) * 1000);
+      return sInt + 's ' + String(ms).padStart(3,'0') + 'ms';
+    }
+    return Math.floor(s/60)+'m'+(Math.round(s%60)||'0')+'s';
+  };
   const stEl  = document.getElementById('mp4TrimStartVal');
   const endEl = document.getElementById('mp4TrimEndVal');
   if(stEl)  stEl.textContent  = fmt(mp4AudioTrimSt);
@@ -3417,10 +3564,10 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
     const d=await res.json();
     if(d.choices && d.choices[0]){
       document.getElementById('f-script').value=d.choices[0].message.content.trim();
-      toast('✓ Script généré par GPT-4o !');
-    } else toast('✗ Erreur GPT-4o : '+JSON.stringify(d));
+      toast('✓ Script généré par l\'IA !');
+    } else toast('✗ Erreur IA : '+JSON.stringify(d));
   }catch(e){ toast('✗ Erreur réseau : '+e.message); }
-  btn.textContent='✦ Générer avec GPT-4o';
+  btn.textContent='✦ Générer avec l\'IA';
 }
 
 // ── GENERATION PIPELINE ──
