@@ -620,6 +620,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
 
+            <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
+            <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:18px">🎮</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700">Split Screen</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Avatar + vidéo gameplay · réglages dans Style</div>
+                </div>
+              </div>
+              <div id="splitToggleS2" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                <div id="splitThumbS2" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+              </div>
+            </div>
+
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
               <div style="flex:1;height:1px;background:var(--border)"></div>
               <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ta photo avatar</span>
@@ -2907,22 +2921,38 @@ function publishTo(platform){
 
 function toggleSplit(){
   splitEnabled = !splitEnabled;
+  // ── Toggle étape 4 (principal avec options gameplay) ──
   const toggle = document.getElementById('splitToggle');
-  const thumb = document.getElementById('splitThumb');
-  const opts = document.getElementById('splitOptions');
-  const row = document.getElementById('splitToggleRow');
+  const thumb  = document.getElementById('splitThumb');
+  const opts   = document.getElementById('splitOptions');
+  const row    = document.getElementById('splitToggleRow');
+  // ── Toggle étape 2 (mini, synchronisé) ──
+  const toggle2 = document.getElementById('splitToggleS2');
+  const thumb2  = document.getElementById('splitThumbS2');
+  const row2    = document.getElementById('splitToggleStep2');
+
   if(splitEnabled){
+    // Étape 4
     toggle.style.background = 'var(--orange)';
     thumb.style.left = '22px';
     opts.style.display = 'flex';
     row.style.borderColor = 'rgba(255,107,53,0.4)';
     row.style.background = 'var(--orange-dim)';
+    // Étape 2
+    if(toggle2){ toggle2.style.background = 'var(--orange)'; }
+    if(thumb2){ thumb2.style.left = '22px'; thumb2.style.opacity = '1'; }
+    if(row2){ row2.style.borderColor = 'rgba(255,107,53,0.4)'; row2.style.background = 'var(--orange-dim)'; }
   } else {
+    // Étape 4
     toggle.style.background = 'var(--bg5)';
     thumb.style.left = '2px';
     opts.style.display = 'none';
     row.style.borderColor = 'var(--border)';
     row.style.background = 'var(--bg3)';
+    // Étape 2
+    if(toggle2){ toggle2.style.background = 'var(--bg5)'; }
+    if(thumb2){ thumb2.style.left = '3px'; thumb2.style.opacity = '.4'; }
+    if(row2){ row2.style.borderColor = 'var(--border)'; row2.style.background = 'var(--bg3)'; }
   }
   updateLivePreview();
 }
