@@ -182,14 +182,15 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .btn-paywall-cancel:hover{color:var(--text2)}
 
 /* ── BUY CREDITS MODAL ── */
-.credits-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
-.credits-box{background:var(--bg2);border:1px solid rgba(77,171,247,0.25);border-radius:18px;padding:32px;max-width:460px;width:100%}
-.credits-pack{border:1px solid var(--border2);border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;margin-bottom:10px}
-.credits-pack:hover{border-color:rgba(77,171,247,0.5);background:rgba(77,171,247,0.04);transform:translateY(-1px)}
-.credits-pack.popular{border-color:var(--orange);background:rgba(255,107,53,0.04)}
-.btn-buy-pack{padding:9px 20px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;box-shadow:0 3px 12px var(--orange-glow)}
-.btn-buy-pack:hover{transform:translateY(-1px)}
-.btn-credits-close{width:100%;padding:10px;background:none;border:none;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer;margin-top:8px}
+.credits-overlay{position:fixed;inset:0;background:rgba(4,5,8,0.94);backdrop-filter:blur(12px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
+.credits-box{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04)}
+.credits-pack{border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;background:var(--bg3)}
+.credits-pack:hover{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.credits-pack.popular{border-color:var(--orange);background:rgba(255,107,53,0.06);box-shadow:0 0 0 1px rgba(255,107,53,0.1)}
+.credits-pack.popular:hover{box-shadow:0 8px 28px rgba(255,107,53,0.2)}
+.btn-buy-pack{padding:10px 22px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;box-shadow:0 4px 14px rgba(255,107,53,0.35);letter-spacing:-0.1px}
+.btn-buy-pack:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,53,0.5)}
+.btn-credits-close{width:100%;padding:10px;background:none;border:none;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer;margin-top:6px;transition:color .15s}
 .btn-credits-close:hover{color:var(--text2)}
 
 /* ── GUEST BANNER ── */
@@ -1872,72 +1873,88 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <!-- BUY CREDITS MODAL -->
 <div class="credits-overlay" id="creditsOverlay" onclick="if(event.target===this)closeBuyCredits()">
   <div class="credits-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-0.6px">⚡ Recharger des minutes</div>
-        <div style="font-size:13px;color:var(--text2);margin-top:4px">Les minutes s'ajoutent à ton solde existant · Pas d'expiration</div>
-      </div>
-      <button onclick="closeBuyCredits()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px;flex-shrink:0;margin-left:16px">✕</button>
-    </div>
 
-    <div style="background:rgba(77,171,247,0.06);border:1px solid rgba(77,171,247,0.15);border-radius:10px;padding:12px 14px;margin:18px 0 20px">
-      <div style="font-size:11px;font-family:var(--mono);color:#4dabf7">
-        💡 Solde actuel : <strong id="creditsModalBalance">—</strong>
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Recharger des minutes</div>
+        <div style="font-size:24px;font-weight:900;letter-spacing:-1px;line-height:1.1">Ajoute des minutes<br>à ton compte</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px">
+          <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span>
+          Solde actuel : <span id="creditsModalBalance" style="color:var(--text2);font-weight:600">—</span>
+        </div>
       </div>
+      <button onclick="closeBuyCredits()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 12px;cursor:pointer;font-size:12px;flex-shrink:0;margin-left:16px;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕</button>
     </div>
 
     <!-- Pack S -->
     <div class="credits-pack" onclick="buyCredits('pack_s')">
-      <div>
-        <div style="font-size:13px;font-weight:700;margin-bottom:2px">Pack S · <span style="color:#4dabf7">+5 minutes</span></div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">+300 secondes · 3,00€/min</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">14,99€</div>
-          <div style="font-size:10px;color:var(--text3)">paiement unique</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:3px">+5 minutes <span style="font-size:11px;font-weight:500;color:var(--text3);font-family:var(--mono)">· 300s</span></div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">3,00€ / minute</div>
         </div>
-        <button class="btn-buy-pack">Acheter →</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">14,99€</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+        </div>
+        <button class="btn-buy-pack">Acheter</button>
       </div>
     </div>
 
-    <!-- Pack M -->
-    <div class="credits-pack popular" onclick="buyCredits('pack_m')">
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
-          <div style="font-size:13px;font-weight:700">Pack M · <span style="color:var(--orange)">+15 minutes</span></div>
-          <div style="font-size:9px;font-weight:700;background:var(--orange);color:#fff;padding:2px 6px;border-radius:8px">MEILLEUR RAPPORT</div>
+    <!-- Pack M (populaire) -->
+    <div class="credits-pack popular" onclick="buyCredits('pack_m')" style="margin-top:14px">
+      <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--orange),#d93a15);color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:3px;color:var(--orange)">+15 minutes <span style="font-size:11px;font-weight:500;color:var(--text3);font-family:var(--mono)">· 900s</span></div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,33€ / minute</div>
         </div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">+900 secondes · 2,33€/min</div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
         <div style="text-align:right">
-          <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">34,99€</div>
-          <div style="font-size:10px;color:var(--text3)">paiement unique</div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">34,99€</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
         </div>
-        <button class="btn-buy-pack">Acheter →</button>
+        <button class="btn-buy-pack">Acheter</button>
       </div>
     </div>
 
     <!-- Pack L -->
-    <div class="credits-pack" onclick="buyCredits('pack_l')">
-      <div>
-        <div style="font-size:13px;font-weight:700;margin-bottom:2px">Pack L · <span style="color:#a855f7">+25 minutes</span></div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">+1500 secondes · 2,20€/min</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">54,99€</div>
-          <div style="font-size:10px;color:var(--text3)">paiement unique</div>
+    <div class="credits-pack" onclick="buyCredits('pack_l')" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:3px">+25 minutes <span style="font-size:11px;font-weight:500;color:var(--text3);font-family:var(--mono)">· 1500s</span></div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,20€ / minute</div>
         </div>
-        <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed)">Acheter →</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">54,99€</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+        </div>
+        <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 4px 14px rgba(168,85,247,0.35)">Acheter</button>
       </div>
     </div>
 
-    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:14px;line-height:1.6">
-      Paiement sécurisé via LemonSqueezy · Minutes créditées instantanément après achat
+    <!-- Footer -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:16px">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--text3)">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 3v3c0 2.5 1.7 4.8 4 5.5C8.3 10.8 10 8.5 10 6V3L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        Paiement sécurisé
+      </div>
+      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédité instantanément</div>
+      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Sans expiration</div>
     </div>
     <button class="btn-credits-close" onclick="closeBuyCredits()">Fermer</button>
+
   </div>
 </div>
 
