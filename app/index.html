@@ -374,13 +374,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-filters{display:flex;gap:6px}
 .av-modal-close{padding:6px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s}
 .av-modal-close:hover{border-color:var(--orange);color:var(--orange2)}
-.av-modal-grid{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-@media(max-width:900px){.av-modal-grid{grid-template-columns:repeat(3,1fr)}}
-.av-modal-card{border-radius:12px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3)}
-.av-modal-card:hover{border-color:var(--orange);transform:scale(1.02)}
+.av-modal-grid{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-content:start}
+.av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3)}
+.av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block}
-.av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:4px 8px;text-align:center;background:var(--bg4)}
+.av-modal-card img{width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center top;display:block}
+.av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
 </style>
 </head>
 <body>
@@ -1173,7 +1172,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             <!-- CORRECTION MOTS -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">Correction du transcript</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div class="flbl" style="font-size:11px;margin:0">Transcript / Sous-titres</div>
+                <button onclick="autoGenSubtitles()" title="Générer les sous-titres depuis l'audio chargé" style="padding:3px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">🎙️ Générer depuis l'audio</button>
+              </div>
               <textarea id="wordEditorText" placeholder="Texte après génération de la voix..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';onWordTextEdit(this.value)" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow:hidden;line-height:1.5;border-bottom:none;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
               <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0 0 10px 10px;min-height:36px;border-top:1px solid var(--border2)">
                 <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Mots après génération de la voix...</div>
@@ -2128,7 +2130,9 @@ let selHedraChar = null;
 const cfg = {
   subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
-  format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom'
+  format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom',
+  avZoom:100, avWidth:100, avCropX:0, avCropY:0,
+  gpWidth:100, gpCropX:0, gpCropY:0
 };
 const subColors = {c1:'#FFE500', c2:'#ffffff'};
 let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -2674,6 +2678,53 @@ function handleVoiceFile(file){
   if(presetSection) presetSection.classList.add('dimmed');
   if(cloneSection) cloneSection.classList.remove('dimmed');
 }
+function autoGenSubtitles(){
+  // 1. Si transcript déjà en attente depuis Step 3 → l'utiliser
+  if(pendingTranscript && pendingTranscript.trim()){
+    populateWordEditor(pendingTranscript);
+    toast('✓ Transcript importé depuis l\'audio');
+    return;
+  }
+  // 2. Si textarea voix remplie dans Step 3 → l'utiliser
+  const voiceTa = document.getElementById('voiceTranscriptTA');
+  if(voiceTa && voiceTa.value.trim()){
+    populateWordEditor(voiceTa.value.trim());
+    toast('✓ Transcript importé');
+    return;
+  }
+  // 3. Tenter Web Speech API (Chrome uniquement, joue l'audio système)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SpeechRecognition){
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    let finalText = '';
+    toast('🎙️ Parole en cours... parlez maintenant ou jouez l\'audio');
+    recognition.onresult = (e) => {
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
+      }
+    };
+    recognition.onerror = () => toast('⚠️ Reconnaissance vocale non disponible');
+    recognition.onend = () => {
+      if(finalText.trim()){
+        populateWordEditor(finalText.trim());
+        toast('✓ Sous-titres générés depuis la parole');
+      } else {
+        toast('⚠️ Aucun texte détecté — colle ton transcript dans la zone texte');
+      }
+    };
+    recognition.start();
+    // Joue l'audio si disponible
+    const audioEl = document.getElementById('mp4AudioEl') || document.getElementById('audioEl');
+    if(audioEl && audioEl.src){ audioEl.currentTime=0; audioEl.play().catch(()=>{}); }
+    setTimeout(()=>recognition.stop(), 30000); // max 30s
+  } else {
+    // Fallback : message clair avec instructions
+    toast('ℹ️ Colle ton transcript dans la zone texte ci-dessus — ou utilise Whisper/ChatGPT pour transcrire ton audio');
+  }
+}
 function syncVoiceTranscript(text){
   pendingTranscript = text;
   // Popule immédiatement l'éditeur de sous-titres (Step 4)
@@ -3029,7 +3080,6 @@ function toggleGameplayPause(e){
 let previewAudio = null;
 
 function togglePreviewPlay(){
-  // Toujours recommencer de zéro
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
   previewPlaying = !previewPlaying;
@@ -3038,22 +3088,20 @@ function togglePreviewPlay(){
     btn.textContent = '⏸ Pause';
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange2)';
-    startPreviewAnim();
-    // Play audio depuis 0 — priorité: MP4 audio > blob généré > preset
+    // Identifier l'audio AVANT startPreviewAnim pour la sync
+    let activeAudio = null;
     if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
-      if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); previewAudio = el; }
+      if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); activeAudio = el; }
     } else if(results && results.audioBlob){
       const el = document.getElementById('audioEl');
-      if(el){ el.currentTime = 0; el.play().catch(()=>{}); previewAudio = el; }
+      if(el){ el.currentTime = 0; el.play().catch(()=>{}); activeAudio = el; }
     } else {
-      const selectedVoiceAudio = document.querySelector('.voice-row.on audio');
-      if(selectedVoiceAudio && selectedVoiceAudio.src){
-        selectedVoiceAudio.currentTime = 0;
-        selectedVoiceAudio.play().catch(()=>{});
-        previewAudio = selectedVoiceAudio;
-      }
+      const sel = document.querySelector('.voice-row.on audio');
+      if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
     }
+    previewAudio = activeAudio;
+    startPreviewAnim(activeAudio);
   } else {
     btn.textContent = '▶ Aperçu animé';
     btn.style.borderColor = 'var(--border2)';
@@ -3061,8 +3109,8 @@ function togglePreviewPlay(){
   }
 }
 
-function startPreviewAnim(){
-  // Récupère les vrais mots du word editor
+function startPreviewAnim(audioEl){
+  // Récupère les vrais mots
   let allWords = [];
   document.querySelectorAll('#wordEditor span').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
   if(!allWords.length){
@@ -3070,51 +3118,54 @@ function startPreviewAnim(){
     if(ta && ta.value.trim()) allWords = ta.value.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase());
     else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
   }
-  const wpg = cfg.subWpg || 2;
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  const totalWords = allWords.length;
+  const totalGroups = Math.ceil(totalWords / wpg);
   previewWordIndex = 0;
+
   const gpVid = document.getElementById('gpVideo');
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
 
-  // Cherche l'audio actif
-  let audioEl = null;
-  if(mp4AudioEnabled && mp4AudioFile){ audioEl = document.getElementById('mp4AudioEl'); }
-  else if(results && results.audioBlob){ audioEl = document.getElementById('audioEl'); }
+  // Affiche le premier groupe immédiatement
+  updateSubPreviewWithWords(allWords.slice(0, wpg));
 
-  if(audioEl && audioEl.duration && audioEl.duration > 0){
-    // SYNC avec l'audio via timeupdate
-    const totalWords = allWords.length;
-    const audioDur = audioEl.duration - (mp4AudioTrimSt||0);
-    function onTimeUpdate(){
-      if(!previewPlaying){ audioEl.removeEventListener('timeupdate',onTimeUpdate); return; }
-      const elapsed = audioEl.currentTime - (mp4AudioTrimSt||0);
-      const progress = Math.max(0, Math.min(1, elapsed / audioDur));
-      const wordIdx = Math.floor(progress * totalWords / wpg) * wpg;
-      if(wordIdx !== previewWordIndex){
-        previewWordIndex = wordIdx;
+  const audioDur = audioEl ? (audioEl.duration||0) - (mp4AudioTrimSt||0) : 0;
+  const hasAudio = audioEl && audioDur > 1;
+
+  if(hasAudio){
+    // Sync via requestAnimationFrame — précision maximale
+    let lastGroup = -1;
+    const startOffset = mp4AudioTrimSt || 0;
+    const rafLoop = () => {
+      if(!previewPlaying) return;
+      const elapsed = Math.max(0, audioEl.currentTime - startOffset);
+      const progress = Math.min(1, elapsed / audioDur);
+      const groupIdx = Math.min(totalGroups - 1, Math.floor(progress * totalGroups));
+      if(groupIdx !== lastGroup){
+        lastGroup = groupIdx;
+        const wordStart = groupIdx * wpg;
         const shown = [];
-        for(let i=0;i<wpg;i++) shown.push(allWords[(wordIdx+i)%allWords.length]);
+        for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
         updateSubPreviewWithWords(shown);
       }
-    }
-    audioEl.removeEventListener('timeupdate', audioEl._subSyncHandler);
-    audioEl._subSyncHandler = onTimeUpdate;
-    audioEl.addEventListener('timeupdate', onTimeUpdate);
-    // Affiche le premier groupe
-    updateSubPreviewWithWords(allWords.slice(0, wpg));
-    previewInterval = null;
+      previewInterval = requestAnimationFrame(rafLoop);
+    };
+    previewInterval = requestAnimationFrame(rafLoop);
   } else {
-    // Pas d'audio — intervalle fixe calculé sur la vitesse de parole moyenne
-    const msPerWord = 380;
-    const interval = wpg * msPerWord;
-    function tick(){
-      if(!previewPlaying){ clearInterval(previewInterval); previewInterval=null; return; }
+    // Pas d'audio — interval calculé sur 160 mots/min
+    const msPerGroup = wpg * 375;
+    let groupIdx = 0;
+    const tick = () => {
+      if(!previewPlaying){ clearInterval(_tickInterval); _tickInterval=null; return; }
+      const wordStart = (groupIdx % totalGroups) * wpg;
       const shown = [];
-      for(let i=0;i<wpg;i++) shown.push(allWords[(previewWordIndex+i)%allWords.length]);
-      previewWordIndex = (previewWordIndex + wpg) % allWords.length;
+      for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
       updateSubPreviewWithWords(shown);
-    }
+      groupIdx++;
+    };
     tick();
-    previewInterval = setInterval(tick, interval);
+    let _tickInterval = setInterval(tick, msPerGroup);
+    previewInterval = _tickInterval; // pour stopPreviewAnim
   }
 }
 
@@ -3122,11 +3173,12 @@ function stopPreviewAnim(){
   if(previewInterval){ clearInterval(previewInterval); previewInterval = null; }
   const gpVid = document.getElementById('gpVideo');
   if(gpVid) gpVid.pause();
-  // Nettoie le sync timeupdate
-  ['mp4AudioEl','audioEl'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el && el._subSyncHandler){ el.removeEventListener('timeupdate',el._subSyncHandler); el._subSyncHandler=null; }
-  });
+  // Annule le rAF ou clearInterval selon le type
+  if(typeof previewInterval === 'number'){
+    cancelAnimationFrame(previewInterval);
+    clearInterval(previewInterval);
+    previewInterval = null;
+  }
   updateSubPreview();
 }
 
@@ -3247,7 +3299,13 @@ function handleGameplayFile(file){
   // Show in new preview
   const vid = document.getElementById('gpVideo');
   const empty = document.getElementById('gpEmpty');
-  if(vid){ vid.src = URL.createObjectURL(file); vid.style.display = 'block'; vid.muted = true; }
+  if(vid){
+    vid.src = URL.createObjectURL(file);
+    vid.muted = true;
+    vid.style.display = 'block';
+    vid.onloadeddata = () => { updateGpCrop(); };
+    updateGpCrop();
+  }
   if(empty) empty.style.display = 'none';
   const soundBtn = document.getElementById('gp-sound-btn');
   if(soundBtn) soundBtn.style.display = 'flex';
@@ -3815,41 +3873,57 @@ function applyClip(zone){
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  const h = Math.max(10, cfg.gpZoom||100);
-  const w = Math.max(10, cfg.gpWidth||cfg.gpZoom||100);
-  const tx = cfg.gpCropX||0;
-  const ty = cfg.gpCropY||0;
-  vid.style.width = w + '%';
-  vid.style.height = h + '%';
+  const h = cfg.gpZoom || 100;
+  const w = cfg.gpWidth || cfg.gpZoom || 100;
+  const tx = cfg.gpCropX || 0;
+  const ty = cfg.gpCropY || 0;
   vid.style.maxWidth = 'none';
   vid.style.maxHeight = 'none';
-  vid.style.top = '50%';
-  vid.style.left = '50%';
-  vid.style.inset = 'unset';
-  vid.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-  vid.style.transformOrigin = 'center center';
   vid.style.objectFit = 'cover';
+  if(h === 100 && w === 100 && tx === 0 && ty === 0){
+    // Centrage parfait par défaut
+    vid.style.width = '100%';
+    vid.style.height = '100%';
+    vid.style.top = '0';
+    vid.style.left = '0';
+    vid.style.transform = 'none';
+  } else {
+    vid.style.width = w + '%';
+    vid.style.height = h + '%';
+    vid.style.top = '50%';
+    vid.style.left = '50%';
+    vid.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+  }
+  vid.style.transformOrigin = 'center center';
   vid.style.objectPosition = '50% 50%';
 }
 
 function updateAvatarCrop(){
   const img = document.getElementById('previewAvImg');
   if(!img) return;
-  const h = Math.max(10, cfg.avZoom||100);
-  const w = Math.max(10, cfg.avWidth||cfg.avZoom||100);
-  const tx = cfg.avCropX||0;
-  const ty = cfg.avCropY||0;
-  img.style.width = w + '%';
-  img.style.height = h + '%';
+  const h = cfg.avZoom || 100;
+  const w = cfg.avWidth || cfg.avZoom || 100;
+  const tx = cfg.avCropX || 0;
+  const ty = cfg.avCropY || 0;
   img.style.maxWidth = 'none';
   img.style.maxHeight = 'none';
-  img.style.top = '50%';
-  img.style.left = '50%';
-  img.style.inset = 'unset';
-  img.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-  img.style.transformOrigin = 'center center';
   img.style.objectFit = 'cover';
-  img.style.objectPosition = '50% 50%';
+  if(h === 100 && w === 100 && tx === 0 && ty === 0){
+    // Centrage parfait par défaut
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.top = '0';
+    img.style.left = '0';
+    img.style.transform = 'none';
+  } else {
+    img.style.width = w + '%';
+    img.style.height = h + '%';
+    img.style.top = '50%';
+    img.style.left = '50%';
+    img.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+  }
+  img.style.transformOrigin = 'center center';
+  img.style.objectPosition = 'center top';
 }
 
 // ── DRAG-TO-CROP ──
