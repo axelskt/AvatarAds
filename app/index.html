@@ -374,11 +374,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-filters{display:flex;gap:6px}
 .av-modal-close{padding:6px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s}
 .av-modal-close:hover{border-color:var(--orange);color:var(--orange2)}
-.av-modal-grid{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-content:start}
-.av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3)}
+.av-modal-grid{flex:1;overflow-y:auto;padding:20px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+.av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3);width:calc(50% - 7px);flex-shrink:0}
 .av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;height:280px;object-fit:cover;object-position:center top;display:block}
+.av-modal-card img{width:100%;height:300px;object-fit:cover;object-position:center top;display:block}
 .av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
 </style>
 </head>
@@ -490,6 +490,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 1 -->
           <div id="fs-1">
+            <div class="fld" style="margin-bottom:18px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🏢 Nom de ton business <span style="color:var(--text3);font-weight:400;font-size:9px;text-transform:none">— remplace automatiquement dans les scripts</span></div>
+              <input type="text" id="bizNameInput" placeholder="Ex: DropAcademy, FunnelPro, MonBusiness IA..." oninput="setBizName(this.value)" style="font-size:13px;padding:12px 14px;border-radius:10px;width:100%;box-sizing:border-box;background:var(--bg3);border:1.5px solid var(--orange);color:var(--text);font-family:var(--font);outline:none">
+            </div>
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
               <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
@@ -872,6 +876,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
                 <audio id="mp4AudioEl" style="display:none"></audio>
+                <!-- Bouton Whisper IA — visible après upload -->
+                <button id="mp4WhisperBtn" onclick="whisperTranscribe()" style="display:none;width:100%;margin-top:10px;padding:10px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.05));border:1.5px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.05))'">🎙️ Transcrire automatiquement (Whisper IA) → Sous-titres</button>
 
                 <!-- Trimmer visuel style iPhone -->
                 <div id="mp4TrimPanel" style="display:none">
@@ -2126,6 +2132,18 @@ const K = {
 // ── STATE ──
 let step = 1, totalSteps = 4;
 let pendingTranscript = '';
+let userBizName = localStorage.getItem('aa_bizname') || '';
+function setBizName(val){
+  userBizName = val.trim();
+  localStorage.setItem('aa_bizname', userBizName);
+}
+function replaceBiz(text){
+  if(!text) return text;
+  const name = userBizName || '[TON BUSINESS]';
+  return text
+    .replace(/[Ll]'IA LEBD/g, name)
+    .replace(/IA LEBD/g, name);
+}
 let selAvatar = {emo:'👩‍💼', name:'sofia', desc:'Lifestyle / Beauté'};
 let guestMode = false;
 let selHedraChar = null;
@@ -2595,6 +2613,18 @@ function saveSubPreset(){
   localStorage.setItem('aa_sub_preset', JSON.stringify(preset));
   toast('💾 Preset sous-titres sauvegardé');
 }
+// Restaurer le nom business depuis localStorage au chargement
+(function(){
+  const saved = localStorage.getItem('aa_bizname');
+  if(saved){
+    userBizName = saved;
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const inp = document.getElementById('bizNameInput');
+      if(inp) inp.value = saved;
+    });
+  }
+})();
+
 function loadSubPreset(){
   try{
     const saved = localStorage.getItem('aa_sub_preset');
@@ -2718,6 +2748,48 @@ function autoGenSubtitles(){
       else if(voiceTa && voiceTa.value.trim()) ta.value = voiceTa.value.trim();
     }
     if(ta) setTimeout(()=>ta.focus(), 50);
+  }
+}
+async function whisperTranscribe(){
+  if(!mp4AudioFile){ toast('⚠️ Upload un fichier audio d\'abord'); return; }
+  if(!K.gpt){ toast('⚠️ Clé OpenAI requise — configure dans ⚙ Connexions'); openSetup(); return; }
+  const btn = document.getElementById('mp4WhisperBtn');
+  if(btn){ btn.textContent = '⏳ Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
+  try {
+    const fd = new FormData();
+    fd.append('file', mp4AudioFile, mp4AudioFile.name.replace(/\.[^.]+$/, '.mp3') || 'audio.mp3');
+    fd.append('model', 'whisper-1');
+    fd.append('language', 'fr');
+    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + K.gpt },
+      body: fd
+    });
+    if(!resp.ok){
+      const errText = await resp.text();
+      throw new Error(errText);
+    }
+    const data = await resp.json();
+    const text = (data.text || '').trim();
+    if(text){
+      populateWordEditor(text);
+      pendingTranscript = text;
+      const voiceTa = document.getElementById('voiceTranscriptTA');
+      if(voiceTa) voiceTa.value = text;
+      const ta = document.getElementById('transcriptInput');
+      if(ta) ta.value = text;
+      const wordTa = document.getElementById('wordEditorText');
+      if(wordTa){ wordTa.value = text; wordTa.style.height = 'auto'; wordTa.style.height = wordTa.scrollHeight + 'px'; }
+      toast('✓ Whisper IA — transcript appliqué aux sous-titres !');
+    } else {
+      toast('⚠️ Aucun texte détecté par Whisper');
+    }
+  } catch(e){
+    const msg = String(e.message || e).slice(0, 120);
+    toast('⚠️ Erreur Whisper : ' + msg);
+    console.error('Whisper error:', e);
+  } finally {
+    if(btn){ btn.textContent = '🎙️ Transcrire automatiquement (Whisper IA) → Sous-titres'; btn.disabled = false; btn.style.opacity = '1'; }
   }
 }
 function applyTranscript(){
@@ -3235,11 +3307,11 @@ function updateSubPreviewWithWords(shown, activeIdx){
   shown.forEach((w,i)=>{
     const active = getActive(i);
     if(style==='tiktok') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${active?'#fff':'#000'};background:${active?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`;
-    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px">${w}</span>`;
-    else if(style==='iman') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
-    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
-    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
-    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
+    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px;display:inline-block">${w}</span>`;
+    else if(style==='iman') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px;display:inline-block">${w}</span>`;
+    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px;display:inline-block">${w}</span>`;
+    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px;display:inline-block">${w}</span>`;
+    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px;display:inline-block">${w}</span>`;
   });
   const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
   el.innerHTML = html;
@@ -3696,6 +3768,9 @@ function handleMp4AudioFile(file){
       const trimPanel = document.getElementById('mp4TrimPanel');
       if(trimPanel) trimPanel.appendChild(autoBtn);
     }
+    // Afficher le bouton Whisper
+    const whisperBtn = document.getElementById('mp4WhisperBtn');
+    if(whisperBtn) whisperBtn.style.display = 'block';
     // Ouvrir automatiquement le panneau transcript dans l'étape style
     const panel = document.getElementById('transcriptPanel');
     const btn = document.getElementById('transcriptPanelBtn');
@@ -4152,7 +4227,7 @@ function getEditedWords(){
 
 function applyHook(val){
   if(!val) return;
-  document.getElementById('f-hook').value = val;
+  document.getElementById('f-hook').value = replaceBiz(val);
   updatePreview();
   pickRandomCta();
   generateScriptFromHook();
@@ -4281,7 +4356,7 @@ function generateScriptFromHook(){
     body = key ? HOOK_SCRIPTS[key] : null;
   }
   if(body){
-    scriptEl.value = body;
+    scriptEl.value = replaceBiz(body);
     updatePreview();
     toast('✨ Hook sélectionné · Script chargé · CTA aléatoire choisi');
   } else {
