@@ -1151,6 +1151,31 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- TIMING MODE SOUS-TITRES -->
+            <div class="fld" style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div class="flbl" style="font-size:10px;margin:0">⏱ Sync sous-titres</div>
+                <div style="display:flex;gap:5px">
+                  <button id="timingBtnProp" onclick="setTimingMode('proportionnel')" style="padding:4px 10px;background:var(--orange);color:#fff;border:none;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">Proportionnel</button>
+                  <button id="timingBtnFixe" onclick="setTimingMode('fixe')" style="padding:4px 10px;background:var(--bg4);color:var(--text3);border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Fixe</button>
+                </div>
+              </div>
+              <!-- Avance / retard -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">Avance</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subAdvanceVal">0.3s</span>
+              </div>
+              <input type="range" id="subAdvanceSlider" min="-10" max="20" value="3" step="1" oninput="cfg.subAdvanceMs=+this.value*100;document.getElementById('subAdvanceVal').textContent=(+this.value/10).toFixed(1)+'s'" style="width:100%;accent-color:var(--orange);margin-bottom:10px">
+              <!-- Durée/groupe (mode fixe) -->
+              <div id="secPerGroupRow" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                  <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">Durée/groupe</div>
+                  <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="secPerGroupVal">1.2s</span>
+                </div>
+                <input type="range" id="secPerGroupSlider" min="3" max="40" value="12" step="1" oninput="cfg.subSecPerGroup=+this.value/10;document.getElementById('secPerGroupVal').textContent=(+this.value/10).toFixed(1)+'s'" style="width:100%;accent-color:var(--orange)">
+              </div>
+            </div>
+
             <!-- ANIMATIONS -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
@@ -1184,7 +1209,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:none;margin-bottom:8px">
                 <!-- Whisper IA — Elite/Pro uniquement -->
-                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:12px;padding:12px 10px;background:linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.06));border:1.5px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.06))'">🎙️ Transcrire automatiquement <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono)">ELITE</span></button>
+                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:18px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
                 <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
@@ -2153,6 +2178,7 @@ let selHedraChar = null;
 // Global config for subtitle styling
 const cfg = {
   subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
+  subTimingMode:'proportionnel', subAdvanceMs:300, subSecPerGroup:1.2,
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
   format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom',
   avZoom:100, avWidth:100, avCropX:0, avCropY:0,
@@ -3039,18 +3065,22 @@ function handleAvatarFile(file){
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
   if(avImg){
-    avImg.style.display = 'block';
-    avImg.onload = () => { avImg.style.display='block'; updateAvatarCrop(); };
+    avImg.onload = () => {
+      avImg.style.display = 'block';
+      updateAvatarCrop();
+    };
     avImg.src = url;
-    updateAvatarCrop();
+    // Si déjà en cache, onload ne se déclenche pas → forcer l'affichage
+    if(avImg.complete && avImg.naturalWidth > 0){
+      avImg.style.display = 'block';
+      updateAvatarCrop();
+    }
   }
   if(avEmoji) avEmoji.style.display = 'none';
-  // Show reset + remove buttons
   const resetBtn = document.getElementById('resetAvatarBtn');
   const removeBtn2 = document.getElementById('removeAvatarBtn');
   if(resetBtn) resetBtn.style.display = 'block';
   if(removeBtn2) removeBtn2.style.display = 'block';
-  updateLivePreview();
 }
 function previewAvatarUrl(url){
   if(!url) return;
@@ -3251,13 +3281,23 @@ function startPreviewAnim(audioEl){
     const startOffset = mp4AudioTrimSt || 0;
     const rafLoop = () => {
       if(!previewPlaying) return;
-      const elapsed = Math.max(0, audioEl.currentTime - startOffset);
-      const progress = Math.min(1, elapsed / audioDur);
-      const rawGroup = progress * totalGroups;
-      const groupIdx = Math.min(totalGroups - 1, Math.floor(rawGroup));
-      // Karaoke : mot actif dans le groupe
-      const groupProgress = rawGroup - groupIdx; // 0..1 dans le groupe
-      const wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+      const advanceSec = (cfg.subAdvanceMs || 0) / 1000;
+      const elapsed = Math.max(0, audioEl.currentTime - startOffset + advanceSec);
+      let groupIdx, wordInGroup;
+      if((cfg.subTimingMode || 'proportionnel') === 'fixe'){
+        // Mode fixe : 1 groupe toutes les N secondes (utile pour MP4 perso)
+        const secPerGroup = cfg.subSecPerGroup || 1.2;
+        groupIdx = Math.min(totalGroups - 1, Math.floor(elapsed / secPerGroup));
+        const groupProgress = (elapsed / secPerGroup) - groupIdx;
+        wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+      } else {
+        // Mode proportionnel : répartition sur la durée totale
+        const progress = Math.min(1, elapsed / audioDur);
+        const rawGroup = progress * totalGroups;
+        groupIdx = Math.min(totalGroups - 1, Math.floor(rawGroup));
+        const groupProgress = rawGroup - groupIdx;
+        wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+      }
       if(groupIdx !== lastGroup || wordInGroup !== lastWordInGroup){
         lastGroup = groupIdx;
         lastWordInGroup = wordInGroup;
@@ -3531,6 +3571,21 @@ function updateSubPreview(){
 }
 
 // ── Reset crop ──
+function setTimingMode(mode){
+  cfg.subTimingMode = mode;
+  const btnProp = document.getElementById('timingBtnProp');
+  const btnFixe = document.getElementById('timingBtnFixe');
+  const row = document.getElementById('secPerGroupRow');
+  if(mode === 'fixe'){
+    if(btnFixe){ btnFixe.style.background='var(--orange)'; btnFixe.style.color='#fff'; btnFixe.style.border='none'; }
+    if(btnProp){ btnProp.style.background='var(--bg4)'; btnProp.style.color='var(--text3)'; btnProp.style.border='1px solid var(--border2)'; }
+    if(row) row.style.display = 'block';
+  } else {
+    if(btnProp){ btnProp.style.background='var(--orange)'; btnProp.style.color='#fff'; btnProp.style.border='none'; }
+    if(btnFixe){ btnFixe.style.background='var(--bg4)'; btnFixe.style.color='var(--text3)'; btnFixe.style.border='1px solid var(--border2)'; }
+    if(row) row.style.display = 'none';
+  }
+}
 function resetProduit(){
   const fields = ['f-hook','f-script','f-cta','f-hook-select','f-cta-select'];
   fields.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
