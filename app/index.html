@@ -793,6 +793,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="file" id="voiceFileIn" accept="audio/*,video/*" style="display:none" onchange="handleVoiceFile(this.files[0])">
 
+              <!-- TRANSCRIPT depuis l'audio -->
+              <div id="voiceTranscriptWrap" style="display:none;margin-top:12px">
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">📝 Transcript de l'audio — colle ou tape le texte dit dans la vidéo</div>
+                <textarea id="voiceTranscriptTA" placeholder="Ex: De fauché à +5 chiffres par mois grâce à l'IA LEBD..." oninput="syncVoiceTranscript(this.value)" style="width:100%;box-sizing:border-box;min-height:70px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow-y:auto;line-height:1.5;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">→ Ce texte sera utilisé comme sous-titres à l'étape Style</div>
+              </div>
+
               <div id="savedVoiceBanner" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;display:none;align-items:center;gap:10px">
                 <span style="font-size:20px">🎙️</span>
                 <div style="flex:1">
@@ -824,14 +831,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <span style="font-size:16px">🎧</span>
                   <div>
                     <div style="font-size:12px;font-weight:700">Voix preset — bibliothèque</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="voicePresetLabel">Charlotte sélectionnée</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="voicePresetLabel">Clique pour choisir une voix</div>
                   </div>
                 </div>
                 <span id="voicePresetArrow" style="font-size:12px;color:var(--text3);transition:transform .25s">›</span>
               </div>
               <div id="voicePresetMenu" style="display:none;margin-top:8px">
               <div class="voice-list">
-                <div class="voice-row on" id="vr-charlotte" onclick="pickVoice(this,'XB0fDUnXU5powFXDhCwa','Charlotte','Féminine · chaleureuse · naturelle')">
+                <div class="voice-row" id="vr-charlotte" onclick="pickVoice(this,'XB0fDUnXU5powFXDhCwa','Charlotte','Féminine · chaleureuse · naturelle')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('XB0fDUnXU5powFXDhCwa','charlotte-prev')">▶</button>
                   <div class="voice-info">
                     <div class="voice-name">Charlotte</div>
@@ -2648,6 +2655,9 @@ function handleVoiceFile(file){
   document.getElementById('voiceFileName').textContent = file.name;
   document.getElementById('voiceDropContent').style.display = 'none';
   document.getElementById('voiceFileInfo').style.display = 'block';
+  // Affiche textarea transcript
+  const transcriptWrap = document.getElementById('voiceTranscriptWrap');
+  if(transcriptWrap) transcriptWrap.style.display = 'block';
   const btn = document.getElementById('cloneBtn');
   btn.disabled = false;
   btn.style.background = 'linear-gradient(135deg,var(--orange),#e03e1a)';
@@ -2659,6 +2669,16 @@ function handleVoiceFile(file){
   const presetSection = document.getElementById('voice-preset-section');
   if(presetSection) presetSection.classList.add('dimmed');
   if(cloneSection) cloneSection.classList.remove('dimmed');
+}
+function syncVoiceTranscript(text){
+  // Popule l'éditeur de sous-titres (Step 4) en temps réel
+  const ta = document.getElementById('wordEditorText');
+  if(ta){
+    ta.value = text;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+  if(typeof populateWordEditor === 'function') populateWordEditor(text);
 }
 
 async function cloneVoice(){
