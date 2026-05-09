@@ -378,7 +378,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3)}
 .av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center top;display:block}
+.av-modal-card img{width:100%;height:280px;object-fit:cover;object-position:center top;display:block}
 .av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
 </style>
 </head>
@@ -1026,13 +1026,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <input type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
                   </div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
-                <!-- POSITION TOGGLE + INVERSER -->
-                <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center">
-                  <div style="display:flex;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;overflow:hidden">
-                    <button id="gpPosAvBtn" onclick="setGpPosition('bottom')" style="flex:1;padding:8px;border:none;background:var(--orange);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">Avatar dessus</button>
-                    <button id="gpPosGpBtn" onclick="setGpPosition('top')" style="flex:1;padding:8px;border:none;background:transparent;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s">Gameplay dessus</button>
-                  </div>
-                  <button onclick="swapSplit()" title="Inverser les positions" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕</button>
+                <!-- INVERSER + AVATAR AU-DESSUS -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center">
+                  <button onclick="swapSplit()" title="Inverser les positions" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-align:center" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser</button>
+                  <button id="avOverlayBtn" onclick="toggleAvatarOverlay()" title="Avatar flotte au-dessus du gameplay (non rogné)" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-align:center" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!avOverlayOn)this.style.borderColor='var(--border2)';if(!avOverlayOn)this.style.color='var(--text2)'">📌 Avatar dessus</button>
                 </div>
               </div>
             </div>
@@ -1174,7 +1171,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="fld" style="margin-bottom:8px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div class="flbl" style="font-size:11px;margin:0">Transcript / Sous-titres</div>
-                <button onclick="autoGenSubtitles()" title="Générer les sous-titres depuis l'audio chargé" style="padding:3px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">🎙️ Générer depuis l'audio</button>
+                <button id="transcriptPanelBtn" onclick="autoGenSubtitles()" title="Ouvrir le panneau transcript" style="padding:3px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">🎙️ Générer depuis l'audio</button>
+              </div>
+              <!-- TRANSCRIPT PANEL -->
+              <div id="transcriptPanel" style="display:none;margin-bottom:8px">
+                <textarea id="transcriptInput" placeholder="Colle ou tape ton transcript ici…" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
+                <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
               <textarea id="wordEditorText" placeholder="Texte après génération de la voix..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';onWordTextEdit(this.value)" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow:hidden;line-height:1.5;border-bottom:none;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
               <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0 0 10px 10px;min-height:36px;border-top:1px solid var(--border2)">
@@ -2679,51 +2681,38 @@ function handleVoiceFile(file){
   if(cloneSection) cloneSection.classList.remove('dimmed');
 }
 function autoGenSubtitles(){
-  // 1. Si transcript déjà en attente depuis Step 3 → l'utiliser
-  if(pendingTranscript && pendingTranscript.trim()){
-    populateWordEditor(pendingTranscript);
-    toast('✓ Transcript importé depuis l\'audio');
-    return;
-  }
-  // 2. Si textarea voix remplie dans Step 3 → l'utiliser
-  const voiceTa = document.getElementById('voiceTranscriptTA');
-  if(voiceTa && voiceTa.value.trim()){
-    populateWordEditor(voiceTa.value.trim());
-    toast('✓ Transcript importé');
-    return;
-  }
-  // 3. Tenter Web Speech API (Chrome uniquement, joue l'audio système)
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(SpeechRecognition){
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'fr-FR';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    let finalText = '';
-    toast('🎙️ Parole en cours... parlez maintenant ou jouez l\'audio');
-    recognition.onresult = (e) => {
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        if(e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
-      }
-    };
-    recognition.onerror = () => toast('⚠️ Reconnaissance vocale non disponible');
-    recognition.onend = () => {
-      if(finalText.trim()){
-        populateWordEditor(finalText.trim());
-        toast('✓ Sous-titres générés depuis la parole');
-      } else {
-        toast('⚠️ Aucun texte détecté — colle ton transcript dans la zone texte');
-      }
-    };
-    recognition.start();
-    // Joue l'audio si disponible
-    const audioEl = document.getElementById('mp4AudioEl') || document.getElementById('audioEl');
-    if(audioEl && audioEl.src){ audioEl.currentTime=0; audioEl.play().catch(()=>{}); }
-    setTimeout(()=>recognition.stop(), 30000); // max 30s
+  const panel = document.getElementById('transcriptPanel');
+  const btn = document.getElementById('transcriptPanelBtn');
+  if(!panel) return;
+  const open = panel.style.display !== 'none';
+  if(open){
+    panel.style.display = 'none';
+    if(btn) btn.textContent = '🎙️ Générer depuis l\'audio';
   } else {
-    // Fallback : message clair avec instructions
-    toast('ℹ️ Colle ton transcript dans la zone texte ci-dessus — ou utilise Whisper/ChatGPT pour transcrire ton audio');
+    panel.style.display = 'block';
+    if(btn) btn.textContent = '✕ Fermer';
+    // Pré-remplir si transcript déjà disponible
+    const ta = document.getElementById('transcriptInput');
+    if(ta && !ta.value.trim()){
+      const voiceTa = document.getElementById('voiceTranscriptTA');
+      if(pendingTranscript && pendingTranscript.trim()) ta.value = pendingTranscript;
+      else if(voiceTa && voiceTa.value.trim()) ta.value = voiceTa.value.trim();
+    }
+    if(ta) setTimeout(()=>ta.focus(), 50);
   }
+}
+function applyTranscript(){
+  const ta = document.getElementById('transcriptInput');
+  if(!ta || !ta.value.trim()){ toast('⚠️ Tape ou colle ton transcript dans la zone'); return; }
+  const text = ta.value.trim();
+  populateWordEditor(text);
+  pendingTranscript = text;
+  // Fermer le panneau
+  const panel = document.getElementById('transcriptPanel');
+  const btn = document.getElementById('transcriptPanelBtn');
+  if(panel) panel.style.display = 'none';
+  if(btn) btn.textContent = '🎙️ Générer depuis l\'audio';
+  toast('✓ Transcript appliqué comme sous-titres');
 }
 function syncVoiceTranscript(text){
   pendingTranscript = text;
@@ -3004,6 +2993,26 @@ function swapSplit(){
   if(splitSwapped){ vc.insertBefore(gp, av); } else { vc.insertBefore(av, gp); }
   toast(splitSwapped ? '↕ Gameplay en haut / Avatar en bas' : '↕ Avatar en haut / Gameplay en bas');
 }
+
+let avOverlayOn = false;
+function toggleAvatarOverlay(){
+  avOverlayOn = !avOverlayOn;
+  const avZone = document.getElementById('avZone');
+  const avImg = document.getElementById('previewAvImg');
+  const btn = document.getElementById('avOverlayBtn');
+  if(avOverlayOn){
+    // Avatar flotte au-dessus du gameplay — overflow visible, z-index élevé
+    if(avZone){ avZone.style.overflow = 'visible'; avZone.style.zIndex = '10'; }
+    if(avImg){ avImg.style.zIndex = '100'; }
+    if(btn){ btn.style.background = 'var(--orange)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--orange)'; btn.textContent = '📌 Avatar dessus ✓'; }
+    toast('📌 Avatar flotte au-dessus du gameplay');
+  } else {
+    if(avZone){ avZone.style.overflow = 'hidden'; avZone.style.zIndex = ''; }
+    if(avImg){ avImg.style.zIndex = '2'; }
+    if(btn){ btn.style.background = 'var(--bg4)'; btn.style.color = 'var(--text2)'; btn.style.borderColor = 'var(--border2)'; btn.textContent = '📌 Avatar dessus'; }
+    toast('Avatar rogné par sa zone');
+  }
+}
 function setGpPosition(pos){
   // pos: 'bottom' = avatar on top (gameplay below), 'top' = gameplay on top (avatar below)
   cfg.gpPosition = pos;
@@ -3135,18 +3144,24 @@ function startPreviewAnim(audioEl){
   if(hasAudio){
     // Sync via requestAnimationFrame — précision maximale
     let lastGroup = -1;
+    let lastWordInGroup = -1;
     const startOffset = mp4AudioTrimSt || 0;
     const rafLoop = () => {
       if(!previewPlaying) return;
       const elapsed = Math.max(0, audioEl.currentTime - startOffset);
       const progress = Math.min(1, elapsed / audioDur);
-      const groupIdx = Math.min(totalGroups - 1, Math.floor(progress * totalGroups));
-      if(groupIdx !== lastGroup){
+      const rawGroup = progress * totalGroups;
+      const groupIdx = Math.min(totalGroups - 1, Math.floor(rawGroup));
+      // Karaoke : mot actif dans le groupe
+      const groupProgress = rawGroup - groupIdx; // 0..1 dans le groupe
+      const wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+      if(groupIdx !== lastGroup || wordInGroup !== lastWordInGroup){
         lastGroup = groupIdx;
+        lastWordInGroup = wordInGroup;
         const wordStart = groupIdx * wpg;
         const shown = [];
         for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
-        updateSubPreviewWithWords(shown);
+        updateSubPreviewWithWords(shown, wordInGroup);
       }
       previewInterval = requestAnimationFrame(rafLoop);
     };
@@ -3182,7 +3197,7 @@ function stopPreviewAnim(){
   updateSubPreview();
 }
 
-function updateSubPreviewWithWords(shown){
+function updateSubPreviewWithWords(shown, activeIdx){
   const el = document.getElementById('subsContent');
   if(!el) return;
   const style = selSubStyle || 'hormozi';
@@ -3191,14 +3206,18 @@ function updateSubPreviewWithWords(shown){
   const c1 = subColors.c1||'#FFE500', c2 = subColors.c2||'#ffffff';
   const glow1 = '0 0 '+Math.round(sz*.6)+'px '+c1+',0 0 '+Math.round(sz*1.2)+'px '+c1;
   const glow2 = '0 0 '+Math.round(sz*.6)+'px '+c2+',0 0 '+Math.round(sz*1.2)+'px '+c2;
+  // Si activeIdx fourni → karaoke : mot actif = c1, autres = c2
+  // Sinon (aperçu statique) → premier mot = c1
+  const getActive = (i) => (activeIdx !== undefined && activeIdx !== null) ? i === activeIdx : i === 0;
   let html = '';
   shown.forEach((w,i)=>{
-    if(style==='tiktok') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`;
-    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`;
+    const active = getActive(i);
+    if(style==='tiktok') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${active?'#fff':'#000'};background:${active?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`;
+    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px">${w}</span>`;
     else if(style==='iman') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
-    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
-    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
-    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
+    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
+    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
+    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
   const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
   el.innerHTML = html;
@@ -5231,7 +5250,7 @@ function openAvatarModal(){
       card.className = 'av-modal-card lib-av-card';
       card.dataset.genre = av.genre;
       card.title = av.name;
-      card.innerHTML = `<img src="${av.path}" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.innerHTML = `<img src="${av.path}" loading="eager" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
       card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
       grid.appendChild(card);
     });
