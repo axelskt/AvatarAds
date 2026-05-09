@@ -1038,7 +1038,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div class="flbl" style="font-size:11px;margin:0">Style des sous-titres</div>
-                <button onclick="saveSubPreset()" title="Sauvegarder ce style comme preset par défaut" style="padding:3px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
                 <div class="sub-card style-card on" id="sc-hormozi" onclick="pickSub(this,'hormozi')">
@@ -1141,6 +1140,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
               </div>
               <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <div style="display:flex;justify-content:flex-end;margin-top:7px">
+                <button onclick="saveSubPreset()" title="Sauvegarder ce style comme preset par défaut" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
+              </div>
             </div>
 
             <!-- ANIMATIONS -->
@@ -2612,8 +2614,25 @@ function loadSubPreset(){
 function pickAnim(el,anim,label){
   document.querySelectorAll('.anim-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  selAnim=anim;
-  document.getElementById('animLabel').textContent=label;
+  selAnim = anim;
+  document.getElementById('animLabel').textContent = label;
+  // Auto-activer les animations si on choisit autre chose que "Aucune"
+  const shouldEnable = anim !== 'none';
+  if(shouldEnable !== animEnabled){
+    animEnabled = shouldEnable;
+    const sw = document.getElementById('animSwitch');
+    const th = document.getElementById('animThumb');
+    const menu = document.getElementById('animMenu');
+    const row = document.getElementById('animToggleRow');
+    if(animEnabled){
+      if(sw) sw.style.background='var(--orange)'; if(th) th.style.left='21px';
+      if(menu) menu.style.display='block'; if(row) row.style.borderColor='rgba(255,107,53,.4)';
+    } else {
+      if(sw) sw.style.background='var(--bg5)'; if(th) th.style.left='3px';
+      if(menu) menu.style.display='none'; if(row) row.style.borderColor='var(--border)';
+    }
+  }
+  updateSubPreview();
 }
 function toggleAnimMenu(){
   animEnabled=!animEnabled;
@@ -2718,6 +2737,9 @@ function syncVoiceTranscript(text){
   pendingTranscript = text;
   // Popule immédiatement l'éditeur de sous-titres (Step 4)
   populateWordEditor(text);
+  // Sync aussi dans le panneau transcript (Step 4)
+  const ta = document.getElementById('transcriptInput');
+  if(ta) ta.value = text;
   // Toast discret
   if(text.trim().length > 5) toast('📝 Transcript → sous-titres mis à jour');
 }
@@ -3674,16 +3696,20 @@ function handleMp4AudioFile(file){
       const trimPanel = document.getElementById('mp4TrimPanel');
       if(trimPanel) trimPanel.appendChild(autoBtn);
     }
-    // Proposer transcript éditable dans l'étape 4
-    const wd = document.getElementById('wordEditor');
-    if(wd){
-      wd.innerHTML = `
-        <div style="width:100%">
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">📝 Colle ou tape le transcript de ton audio MP4 :</div>
-          <textarea id="mp4TranscriptInput" placeholder="Colle le transcript ici pour générer les sous-titres automatiquement..." style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6" oninput="applyMp4Transcript(this.value)"></textarea>
-          <button onclick="applyMp4Transcript(document.getElementById('mp4TranscriptInput')?.value||'')" style="margin-top:6px;padding:6px 14px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">✓ Appliquer aux sous-titres</button>
-        </div>`;
+    // Ouvrir automatiquement le panneau transcript dans l'étape style
+    const panel = document.getElementById('transcriptPanel');
+    const btn = document.getElementById('transcriptPanelBtn');
+    if(panel && panel.style.display === 'none'){
+      panel.style.display = 'block';
+      if(btn) btn.textContent = '✕ Fermer';
+      // Pré-remplir si voiceTranscriptTA a du texte
+      const ta = document.getElementById('transcriptInput');
+      const voiceTa = document.getElementById('voiceTranscriptTA');
+      if(ta && !ta.value.trim() && voiceTa && voiceTa.value.trim()){
+        ta.value = voiceTa.value.trim();
+      }
     }
+    toast('📝 Tape ton transcript dans la zone → sous-titres auto');
   };
 }
 
@@ -5250,7 +5276,7 @@ function openAvatarModal(){
       card.className = 'av-modal-card lib-av-card';
       card.dataset.genre = av.genre;
       card.title = av.name;
-      card.innerHTML = `<img src="${av.path}" loading="eager" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.innerHTML = `<div style="width:100%;height:280px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
       card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
       grid.appendChild(card);
     });
