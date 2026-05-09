@@ -378,7 +378,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3);width:calc(50% - 7px);flex-shrink:0}
 .av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;height:300px;object-fit:cover;object-position:center top;display:block}
+.av-modal-card img{width:100%;height:300px;object-fit:cover;object-position:center 15%;display:block}
 .av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
 </style>
 </head>
@@ -876,8 +876,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
                 <audio id="mp4AudioEl" style="display:none"></audio>
-                <!-- Bouton Whisper IA — visible après upload -->
-                <button id="mp4WhisperBtn" onclick="whisperTranscribe()" style="display:none;width:100%;margin-top:10px;padding:10px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.05));border:1.5px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.05))'">🎙️ Transcrire automatiquement (Whisper IA) → Sous-titres</button>
 
                 <!-- Trimmer visuel style iPhone -->
                 <div id="mp4TrimPanel" style="display:none">
@@ -1183,7 +1181,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:none;margin-bottom:8px">
-                <textarea id="transcriptInput" placeholder="Colle ou tape ton transcript ici…" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
+                <!-- Whisper IA — Elite/Pro uniquement -->
+                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:8px;padding:10px;background:linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.06));border:1.5px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.06))'">🎙️ Transcrire automatiquement <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono)">ELITE</span></button>
+                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
                 <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
               <textarea id="wordEditorText" placeholder="Texte après génération de la voix..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';onWordTextEdit(this.value)" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow:hidden;line-height:1.5;border-bottom:none;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
@@ -2751,10 +2751,17 @@ function autoGenSubtitles(){
   }
 }
 async function whisperTranscribe(){
-  if(!mp4AudioFile){ toast('⚠️ Upload un fichier audio d\'abord'); return; }
+  // Gate Elite / Pro
+  const plan = currentMember?.plan || 'free';
+  if(!['pro','elite'].includes(plan)){
+    showPaywall();
+    toast('⚠️ Whisper IA disponible avec le plan Elite');
+    return;
+  }
+  if(!mp4AudioFile){ toast('⚠️ Upload un fichier audio MP4 dans l\'étape Voix d\'abord'); return; }
   if(!K.gpt){ toast('⚠️ Clé OpenAI requise — configure dans ⚙ Connexions'); openSetup(); return; }
-  const btn = document.getElementById('mp4WhisperBtn');
-  if(btn){ btn.textContent = '⏳ Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
+  const btn = event?.currentTarget;
+  if(btn){ btn.innerHTML = '⏳ Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
   try {
     const fd = new FormData();
     fd.append('file', mp4AudioFile, mp4AudioFile.name.replace(/\.[^.]+$/, '.mp3') || 'audio.mp3');
@@ -2789,7 +2796,7 @@ async function whisperTranscribe(){
     toast('⚠️ Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
-    if(btn){ btn.textContent = '🎙️ Transcrire automatiquement (Whisper IA) → Sous-titres'; btn.disabled = false; btn.style.opacity = '1'; }
+    if(btn){ btn.innerHTML = '🎙️ Transcrire automatiquement <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono)">ELITE</span>'; btn.disabled = false; btn.style.opacity = '1'; }
   }
 }
 function applyTranscript(){
@@ -3768,23 +3775,8 @@ function handleMp4AudioFile(file){
       const trimPanel = document.getElementById('mp4TrimPanel');
       if(trimPanel) trimPanel.appendChild(autoBtn);
     }
-    // Afficher le bouton Whisper
-    const whisperBtn = document.getElementById('mp4WhisperBtn');
-    if(whisperBtn) whisperBtn.style.display = 'block';
-    // Ouvrir automatiquement le panneau transcript dans l'étape style
-    const panel = document.getElementById('transcriptPanel');
-    const btn = document.getElementById('transcriptPanelBtn');
-    if(panel && panel.style.display === 'none'){
-      panel.style.display = 'block';
-      if(btn) btn.textContent = '✕ Fermer';
-      // Pré-remplir si voiceTranscriptTA a du texte
-      const ta = document.getElementById('transcriptInput');
-      const voiceTa = document.getElementById('voiceTranscriptTA');
-      if(ta && !ta.value.trim() && voiceTa && voiceTa.value.trim()){
-        ta.value = voiceTa.value.trim();
-      }
-    }
-    toast('📝 Tape ton transcript dans la zone → sous-titres auto');
+    // Marquer qu'un fichier MP4 est disponible pour Whisper dans Step 4
+    window._mp4ReadyForWhisper = true;
   };
 }
 
@@ -5351,7 +5343,7 @@ function openAvatarModal(){
       card.className = 'av-modal-card lib-av-card';
       card.dataset.genre = av.genre;
       card.title = av.name;
-      card.innerHTML = `<div style="width:100%;height:280px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.innerHTML = `<div style="width:100%;height:300px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center 15%;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
       card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
       grid.appendChild(card);
     });
