@@ -365,6 +365,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .crop-handle.bl{bottom:-6px;left:-6px;cursor:sw-resize}
 .crop-handle.bc{bottom:-6px;left:calc(50% - 6px);cursor:s-resize}
 .crop-handle.br{bottom:-6px;right:-6px;cursor:se-resize}
+
+/* AVATAR MODAL */
+#avatarModal{position:fixed;inset:0;background:rgba(7,8,10,0.95);backdrop-filter:blur(12px);z-index:900;display:none;flex-direction:column}
+#avatarModal.open{display:flex}
+.av-modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+.av-modal-title{font-size:16px;font-weight:700}
+.av-modal-filters{display:flex;gap:6px}
+.av-modal-close{padding:6px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s}
+.av-modal-close:hover{border-color:var(--orange);color:var(--orange2)}
+.av-modal-grid{flex:1;overflow-y:auto;padding:24px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media(max-width:900px){.av-modal-grid{grid-template-columns:repeat(3,1fr)}}
+.av-modal-card{border-radius:12px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3)}
+.av-modal-card:hover{border-color:var(--orange);transform:scale(1.02)}
+.av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
+.av-modal-card img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block}
+.av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:4px 8px;text-align:center;background:var(--bg4)}
 </style>
 </head>
 <body>
@@ -675,69 +691,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
-            <!-- BIBLIOTHÈQUE D'AVATARS -->
+            <!-- BIBLIOTHÈQUE D'AVATARS (bouton ouverture modale) -->
             <div class="fld" style="margin-bottom:16px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div class="flbl" style="font-size:11px;margin:0">📚 Bibliothèque d'avatars <span style="color:var(--text3);font-weight:400">(49)</span></div>
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">ou upload ta photo ci-dessus</div>
-              </div>
-              <!-- FILTRES GENRE -->
-              <div class="lib-av-filters">
-                <button class="lib-av-filter on" onclick="filterLibAv('tous',this)">Tous</button>
-                <button class="lib-av-filter" onclick="filterLibAv('f',this)">Femmes</button>
-                <button class="lib-av-filter" onclick="filterLibAv('m',this)">Hommes</button>
-              </div>
-              <div id="libAvGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:340px;overflow-y:auto;padding-right:2px">
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg','Avatar 1')" title="Avatar 1"><img src="Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">1 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg','Avatar 2')" title="Avatar 2"><img src="Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">2 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg','Avatar 3')" title="Avatar 3"><img src="Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">3 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg','Avatar 4')" title="Avatar 4"><img src="Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">4 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg','Avatar 5')" title="Avatar 5"><img src="Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">5 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg','Avatar 6')" title="Avatar 6"><img src="Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">6 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg','Avatar 7')" title="Avatar 7"><img src="Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">7 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg','Avatar 8')" title="Avatar 8"><img src="Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">8 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg','Avatar 9')" title="Avatar 9"><img src="Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">9 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg','Avatar 10')" title="Avatar 10"><img src="Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">10 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg','Avatar 11')" title="Avatar 11"><img src="Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">11 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_958arf958arf958a.jpg','Avatar 12')" title="Avatar 12"><img src="Avatar/Gemini_Generated_Image_958arf958arf958a.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">12 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg','Avatar 13')" title="Avatar 13"><img src="Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">13 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg','Avatar 14')" title="Avatar 14"><img src="Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">14 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg','Avatar 15')" title="Avatar 15"><img src="Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">15 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg','Avatar 16')" title="Avatar 16"><img src="Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">16 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg','Avatar 17')" title="Avatar 17"><img src="Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">17 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg','Avatar 18')" title="Avatar 18"><img src="Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">18 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg','Avatar 19')" title="Avatar 19"><img src="Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">19 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg','Avatar 20')" title="Avatar 20"><img src="Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">20 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg','Avatar 21')" title="Avatar 21"><img src="Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">21 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg','Avatar 22')" title="Avatar 22"><img src="Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">22 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg','Avatar 23')" title="Avatar 23"><img src="Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">23 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg','Avatar 24')" title="Avatar 24"><img src="Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">24 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg','Avatar 25')" title="Avatar 25"><img src="Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">25 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg','Avatar 26')" title="Avatar 26"><img src="Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">26 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg','Avatar 27')" title="Avatar 27"><img src="Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">27 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg','Avatar 28')" title="Avatar 28"><img src="Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">28 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg','Avatar 29')" title="Avatar 29"><img src="Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">29 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg','Avatar 30')" title="Avatar 30"><img src="Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">30 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg','Avatar 31')" title="Avatar 31"><img src="Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">31 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg','Avatar 32')" title="Avatar 32"><img src="Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">32 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg','Avatar 33')" title="Avatar 33"><img src="Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">33 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg','Avatar 34')" title="Avatar 34"><img src="Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">34 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg','Avatar 35')" title="Avatar 35"><img src="Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">35 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg','Avatar 36')" title="Avatar 36"><img src="Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">36 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg','Avatar 37')" title="Avatar 37"><img src="Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">37 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg','Avatar 38')" title="Avatar 38"><img src="Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">38 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg','Avatar 39')" title="Avatar 39"><img src="Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">39 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg','Avatar 40')" title="Avatar 40"><img src="Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">40 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg','Avatar 41')" title="Avatar 41"><img src="Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">41 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg','Avatar 42')" title="Avatar 42"><img src="Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">42 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg','Avatar 43')" title="Avatar 43"><img src="Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">43 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg','Avatar 44')" title="Avatar 44"><img src="Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">44 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg','Avatar 45')" title="Avatar 45"><img src="Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">45 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg','Avatar 46')" title="Avatar 46"><img src="Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">46 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg','Avatar 47')" title="Avatar 47"><img src="Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">47 · F</div></div>
-                <div class="av-card lib-av-card" data-genre="m" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg','Avatar 48')" title="Avatar 48"><img src="Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">48 · H</div></div>
-                <div class="av-card lib-av-card" data-genre="f" onclick="pickLibraryAvatar(this,'Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg','Avatar 49')" title="Avatar 49"><img src="Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg" style="width:100%;height:120px;object-fit:cover;object-position:top;display:block" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div style="font-size:9px;font-family:var(--mono);color:var(--text3);padding:3px 4px;text-align:center">49 · F</div></div>
-              </div>
+              <button onclick="openAvatarModal()" style="width:100%;padding:14px;background:var(--bg3);border:2px dashed var(--border2);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                <span style="font-size:20px">📸</span>
+                Voir les avatars IA <span style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:4px">(49)</span>
+                <span style="font-size:12px;opacity:.5">→</span>
+              </button>
             </div>
 
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
@@ -2547,6 +2507,8 @@ function pickAvatar(el,emo,name,desc){
   updateLivePreview();
 }
 function pickLibraryAvatar(el, path, name){
+  // Reset crop à 0 (centré) pour le nouvel avatar
+  cfg.avCropX = 0; cfg.avCropY = 0;
   // Déselectionne tout
   document.querySelectorAll('.av-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
@@ -2920,6 +2882,8 @@ function toggleSubtitles(){
 
 function handleAvatarFile(file){
   if(!file || !file.type.startsWith('image/')) return;
+  // Reset crop à 0 (centré) pour le nouvel avatar
+  cfg.avCropX = 0; cfg.avCropY = 0;
   const url = URL.createObjectURL(file);
   document.getElementById('avatarPreviewImg').src = url;
   document.getElementById('avatarPreviewName').textContent = file.name;
@@ -3098,38 +3062,71 @@ function togglePreviewPlay(){
 }
 
 function startPreviewAnim(){
-  // Utilise les vrais mots du word editor, sinon fallback sur des mots démo
+  // Récupère les vrais mots du word editor
   let allWords = [];
-  const chips = document.querySelectorAll('#wordEditor span');
-  chips.forEach(c => { const t = c.textContent.trim(); if(t) allWords.push(t); });
+  document.querySelectorAll('#wordEditor span').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
   if(!allWords.length){
-    // Fallback si pas de transcript
     const ta = document.getElementById('wordEditorText');
-    if(ta && ta.value.trim()){
-      allWords = ta.value.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase());
-    } else {
-      allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS","CLIQUE","SUR","LE","LIEN"];
-    }
+    if(ta && ta.value.trim()) allWords = ta.value.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase());
+    else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
   }
   const wpg = cfg.subWpg || 2;
   previewWordIndex = 0;
   const gpVid = document.getElementById('gpVideo');
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
-  function tick(){
-    if(!previewPlaying){ clearInterval(previewInterval); previewInterval=null; return; }
-    const shown = [];
-    for(let i=0;i<wpg;i++) shown.push(allWords[(previewWordIndex+i) % allWords.length]);
-    previewWordIndex = (previewWordIndex + wpg) % allWords.length;
-    updateSubPreviewWithWords(shown);
+
+  // Cherche l'audio actif
+  let audioEl = null;
+  if(mp4AudioEnabled && mp4AudioFile){ audioEl = document.getElementById('mp4AudioEl'); }
+  else if(results && results.audioBlob){ audioEl = document.getElementById('audioEl'); }
+
+  if(audioEl && audioEl.duration && audioEl.duration > 0){
+    // SYNC avec l'audio via timeupdate
+    const totalWords = allWords.length;
+    const audioDur = audioEl.duration - (mp4AudioTrimSt||0);
+    function onTimeUpdate(){
+      if(!previewPlaying){ audioEl.removeEventListener('timeupdate',onTimeUpdate); return; }
+      const elapsed = audioEl.currentTime - (mp4AudioTrimSt||0);
+      const progress = Math.max(0, Math.min(1, elapsed / audioDur));
+      const wordIdx = Math.floor(progress * totalWords / wpg) * wpg;
+      if(wordIdx !== previewWordIndex){
+        previewWordIndex = wordIdx;
+        const shown = [];
+        for(let i=0;i<wpg;i++) shown.push(allWords[(wordIdx+i)%allWords.length]);
+        updateSubPreviewWithWords(shown);
+      }
+    }
+    audioEl.removeEventListener('timeupdate', audioEl._subSyncHandler);
+    audioEl._subSyncHandler = onTimeUpdate;
+    audioEl.addEventListener('timeupdate', onTimeUpdate);
+    // Affiche le premier groupe
+    updateSubPreviewWithWords(allWords.slice(0, wpg));
+    previewInterval = null;
+  } else {
+    // Pas d'audio — intervalle fixe calculé sur la vitesse de parole moyenne
+    const msPerWord = 380;
+    const interval = wpg * msPerWord;
+    function tick(){
+      if(!previewPlaying){ clearInterval(previewInterval); previewInterval=null; return; }
+      const shown = [];
+      for(let i=0;i<wpg;i++) shown.push(allWords[(previewWordIndex+i)%allWords.length]);
+      previewWordIndex = (previewWordIndex + wpg) % allWords.length;
+      updateSubPreviewWithWords(shown);
+    }
+    tick();
+    previewInterval = setInterval(tick, interval);
   }
-  tick();
-  previewInterval = setInterval(tick, 1800);
 }
 
 function stopPreviewAnim(){
   if(previewInterval){ clearInterval(previewInterval); previewInterval = null; }
   const gpVid = document.getElementById('gpVideo');
   if(gpVid) gpVid.pause();
+  // Nettoie le sync timeupdate
+  ['mp4AudioEl','audioEl'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el._subSyncHandler){ el.removeEventListener('timeupdate',el._subSyncHandler); el._subSyncHandler=null; }
+  });
   updateSubPreview();
 }
 
@@ -3241,6 +3238,8 @@ function toggleSplit(){
 
 function handleGameplayFile(file){
   if(!file || !file.type.startsWith('video/')) return;
+  // Reset crop à 0 (centré) pour le nouveau gameplay
+  cfg.gpCropX = 0; cfg.gpCropY = 0;
   gameplayFile = file;
   document.getElementById('gameplayFileName').textContent = file.name;
   document.getElementById('gameplayDropContent').style.display = 'none';
@@ -3442,35 +3441,94 @@ function toggleMp4Mute(){
   if(btn) btn.style.color = mp4AudioMuted ? 'var(--orange2)' : 'var(--text3)';
 }
 
-function autoTrimSilence(){
+async function autoTrimSilence(){
   const el = document.getElementById('mp4AudioEl');
   if(!el || !el.src || mp4AudioDur <= 0) return;
-  // Analyse via Web Audio API pour détecter le silence
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  fetch(el.src)
-    .then(r => r.arrayBuffer())
-    .then(buf => ctx.decodeAudioData(buf))
-    .then(decoded => {
-      const data = decoded.getChannelData(0);
-      const threshold = 0.01;
-      const sampleRate = decoded.sampleRate;
-      let startSample = 0;
-      let endSample = data.length - 1;
-      // Cherche début réel
-      for(let i = 0; i < data.length; i++){
-        if(Math.abs(data[i]) > threshold){ startSample = i; break; }
+  toast('⏳ Analyse des silences...');
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const resp = await fetch(el.src);
+    const buf  = await resp.arrayBuffer();
+    const decoded = await ctx.decodeAudioData(buf);
+    const data = decoded.getChannelData(0);
+    const sr   = decoded.sampleRate;
+    const threshold = 0.015;
+    const minSilenceMs = 300;
+    const minSilenceSamples = Math.floor(sr * minSilenceMs / 1000);
+
+    // Détecter les régions de silence
+    let silences = [];
+    let inSilence = false;
+    let silStart = 0;
+    for(let i = 0; i < data.length; i++){
+      const loud = Math.abs(data[i]) > threshold;
+      if(!inSilence && !loud){ inSilence = true; silStart = i; }
+      else if(inSilence && loud){
+        if(i - silStart > minSilenceSamples) silences.push({start:silStart, end:i});
+        inSilence = false;
       }
-      // Cherche fin réelle
-      for(let i = data.length - 1; i >= 0; i--){
-        if(Math.abs(data[i]) > threshold){ endSample = i; break; }
+    }
+    if(inSilence && data.length - silStart > minSilenceSamples) silences.push({start:silStart, end:data.length});
+
+    if(silences.length === 0){
+      // Juste trim début/fin
+      let st=0,en=data.length-1;
+      for(let i=0;i<data.length;i++){if(Math.abs(data[i])>threshold){st=i;break;}}
+      for(let i=data.length-1;i>=0;i--){if(Math.abs(data[i])>threshold){en=i;break;}}
+      mp4AudioTrimSt = Math.max(0, st/sr - 0.05);
+      mp4AudioTrimEnd = Math.min(mp4AudioDur, en/sr + 0.05);
+      _mp4UpdateTrimmerUI(); _mp4UpdateTrimLabels();
+      toast('✂️ Silences début/fin supprimés');
+      return;
+    }
+
+    // Construire un nouveau buffer sans les silences internes
+    let globalStart = 0, globalEnd = data.length;
+    for(let i=0;i<data.length;i++){if(Math.abs(data[i])>threshold){globalStart=i;break;}}
+    for(let i=data.length-1;i>=0;i--){if(Math.abs(data[i])>threshold){globalEnd=i;break;}}
+
+    const keepSegments = [];
+    let pos = globalStart;
+    for(const sil of silences){
+      if(sil.start > pos && sil.start >= globalStart && sil.end <= globalEnd){
+        keepSegments.push({start:pos, end:sil.start});
+        pos = sil.end;
       }
-      mp4AudioTrimSt = Math.max(0, startSample / sampleRate - 0.05);
-      mp4AudioTrimEnd = Math.min(mp4AudioDur, endSample / sampleRate + 0.05);
-      _mp4UpdateTrimmerUI();
-      _mp4UpdateTrimLabels();
-      toast('✂️ Silences supprimés automatiquement');
-    })
-    .catch(() => toast('⚠️ Impossible d\'analyser le fichier'));
+    }
+    if(pos < globalEnd) keepSegments.push({start:pos, end:globalEnd});
+
+    if(keepSegments.length === 0){ toast('⚠️ Rien à couper'); return; }
+
+    const totalSamples = keepSegments.reduce((acc,s)=>acc+(s.end-s.start),0);
+    const nChannels = decoded.numberOfChannels;
+    const newBuffer = ctx.createBuffer(nChannels, totalSamples, sr);
+
+    for(let ch=0;ch<nChannels;ch++){
+      const srcData = decoded.getChannelData(ch);
+      const dstData = newBuffer.getChannelData(ch);
+      let writePos = 0;
+      for(const seg of keepSegments){
+        const segData = srcData.slice(seg.start, seg.end);
+        dstData.set(segData, writePos);
+        writePos += segData.length;
+      }
+    }
+
+    // Convertir en WAV et recharger (réutilise audioBufferToWav existant)
+    const wavBlob = audioBufferToWav(newBuffer);
+    const newUrl = URL.createObjectURL(wavBlob);
+    el.src = newUrl;
+    el.load();
+    el.onloadedmetadata = () => {
+      mp4AudioDur = el.duration;
+      mp4AudioTrimSt = 0;
+      mp4AudioTrimEnd = el.duration;
+      _mp4UpdateTrimmerUI(); _mp4UpdateTrimLabels();
+    };
+    const removed = silences.length;
+    toast(`✂️ ${removed} silence(s) supprimé(s) — durée réduite`);
+    ctx.close();
+  } catch(e){ toast('⚠️ Erreur analyse : ' + e.message); }
 }
 
 function applyMp4Transcript(text){
@@ -5016,5 +5074,115 @@ async function submitBugReport(){
     </div>
   </div>
 </div>
+
+<!-- AVATAR MODAL -->
+<div id="avatarModal">
+  <div class="av-modal-header">
+    <div class="av-modal-title">📸 Choisir un avatar IA <span style="color:var(--text3);font-weight:400;font-size:13px">(49 disponibles)</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="av-modal-filters" id="avModalFilters">
+        <button class="lib-av-filter on" onclick="filterAvModal('tous',this)">Tous</button>
+        <button class="lib-av-filter" onclick="filterAvModal('f',this)">Femmes</button>
+        <button class="lib-av-filter" onclick="filterAvModal('m',this)">Hommes</button>
+      </div>
+      <button class="av-modal-close" onclick="closeAvatarModal()">✕ Fermer</button>
+    </div>
+  </div>
+  <div class="av-modal-grid" id="avModalGrid">
+    <!-- Les cartes seront générées dynamiquement par JS -->
+  </div>
+</div>
+
+<script>
+// ── AVATAR MODAL ──
+const _AV_LIST = [
+  {path:'Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg',name:'Avatar 1',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg',name:'Avatar 2',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg',name:'Avatar 3',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg',name:'Avatar 4',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg',name:'Avatar 5',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg',name:'Avatar 6',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg',name:'Avatar 7',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg',name:'Avatar 8',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg',name:'Avatar 9',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg',name:'Avatar 10',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg',name:'Avatar 11',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_958arf958arf958a.jpg',name:'Avatar 12',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg',name:'Avatar 13',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg',name:'Avatar 14',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg',name:'Avatar 15',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg',name:'Avatar 16',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg',name:'Avatar 17',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg',name:'Avatar 18',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg',name:'Avatar 19',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg',name:'Avatar 20',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg',name:'Avatar 21',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg',name:'Avatar 22',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg',name:'Avatar 23',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg',name:'Avatar 24',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg',name:'Avatar 25',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg',name:'Avatar 26',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg',name:'Avatar 27',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg',name:'Avatar 28',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg',name:'Avatar 29',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg',name:'Avatar 30',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg',name:'Avatar 31',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg',name:'Avatar 32',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg',name:'Avatar 33',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg',name:'Avatar 34',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg',name:'Avatar 35',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg',name:'Avatar 36',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg',name:'Avatar 37',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg',name:'Avatar 38',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg',name:'Avatar 39',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg',name:'Avatar 40',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg',name:'Avatar 41',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg',name:'Avatar 42',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg',name:'Avatar 43',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg',name:'Avatar 44',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg',name:'Avatar 45',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg',name:'Avatar 46',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg',name:'Avatar 47',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg',name:'Avatar 48',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg',name:'Avatar 49',genre:'f'},
+];
+
+function openAvatarModal(){
+  const modal = document.getElementById('avatarModal');
+  if(!modal) return;
+  const grid = document.getElementById('avModalGrid');
+  if(grid && grid.children.length === 0){
+    _AV_LIST.forEach((av,i) => {
+      const card = document.createElement('div');
+      card.className = 'av-modal-card lib-av-card';
+      card.dataset.genre = av.genre;
+      card.title = av.name;
+      card.innerHTML = `<img src="${av.path}" loading="lazy" onerror="this.parentElement.style.background='#2a2a2a';this.style.display='none'"><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
+      grid.appendChild(card);
+    });
+  }
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAvatarModal(){
+  const modal = document.getElementById('avatarModal');
+  if(modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function filterAvModal(genre, btn){
+  document.querySelectorAll('#avModalFilters .lib-av-filter').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('#avModalGrid .av-modal-card').forEach(c=>{
+    c.style.display = (genre==='tous' || c.dataset.genre===genre) ? '' : 'none';
+  });
+}
+function pickLibraryAvatarFromModal(card, path, name){
+  document.querySelectorAll('.av-modal-card').forEach(c=>c.classList.remove('on'));
+  card.classList.add('on');
+  pickLibraryAvatar(card, path, name);
+  setTimeout(closeAvatarModal, 400);
+}
+</script>
 </body>
 </html>
