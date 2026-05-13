@@ -378,7 +378,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3);width:calc(50% - 7px);flex-shrink:0}
 .av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;height:300px;object-fit:cover;object-position:center center;display:block}
+.av-modal-card img{width:100%;height:300px;object-fit:cover;object-position:center 15%;display:block}
 .av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
 </style>
 </head>
@@ -456,10 +456,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="openSetup()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2.5M7.5 11.5V14M1 7.5h2.5M11.5 7.5H14M3.2 3.2l1.77 1.77M10.03 10.03l1.77 1.77M3.2 11.8l1.77-1.77M10.03 4.97l1.77-1.77"/></svg>
         Connexions
-      </div>
-      <div class="nav-i" onclick="toast('📚 Documentation IA Manager — bientôt')">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h8l3 3v8H2z"/><path d="M10 2v3h3M5 7h5M5 10h3"/></svg>
-        Docs
       </div>
       <div class="nav-i" onclick="openBugReport()" style="color:var(--text2)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5v3M7.5 10h.01"/></svg>
@@ -734,6 +730,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- MODE VOIX SELECTOR -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+              <button id="voiceModeBtnClone" onclick="selectVoiceMode('clone')" style="padding:10px 8px;background:var(--orange);border:2px solid var(--orange);border-radius:10px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center">🎤 Clone / Preset</button>
+              <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center">🎬 Audio MP4</button>
+            </div>
+
             <div id="voice-el-sections">
 
             <!-- CLONE TA VOIX -->
@@ -956,11 +958,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- FORMAT -->
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Format</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
                 <div id="fmt-vertical" onclick="selectFormatGroup('short')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📱</div>
                   <div style="font-size:11px;font-weight:700">TikTok / Reels</div>
                   <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16</div>
+                </div>
+                <div id="fmt-story" onclick="selectFormatGroup('story')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="font-size:20px;margin-bottom:4px">✨</div>
+                  <div style="font-size:11px;font-weight:700">Story</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · FB</div>
                 </div>
                 <div id="fmt-square" onclick="selectFormatGroup('post')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📸</div>
@@ -1213,10 +1220,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
                 <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
-              <textarea id="wordEditorText" placeholder="Texte après génération de la voix..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';onWordTextEdit(this.value)" style="width:100%;box-sizing:border-box;min-height:60px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow:hidden;line-height:1.5;border-bottom:none;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-              <div id="wordEditor" style="display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0 0 10px 10px;min-height:36px;border-top:1px solid var(--border2)">
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Mots après génération de la voix...</div>
-              </div>
+              <!-- hidden word storage for subtitle sync -->
+              <div id="wordEditor" style="display:none"></div>
             </div>
 
             <!-- ROGNAGE -->
@@ -1878,11 +1883,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   <div class="setup-box" style="max-width:400px">
 
     <!-- LOGO -->
-    <div class="setup-logo" style="justify-content:center;margin-bottom:28px">
+    <div class="setup-logo" style="justify-content:center;margin-bottom:12px">
       <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
       <div style="text-align:left">
         <div style="font-size:16px;font-weight:800;letter-spacing:-0.4px">AvatarAds</div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Créateur de vidéos IA</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">by IA Manager</div>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div style="text-align:center;margin-bottom:22px;padding:16px;background:linear-gradient(135deg,rgba(255,107,53,0.08),rgba(255,107,53,0.02));border:1px solid rgba(255,107,53,0.15);border-radius:14px">
+      <div style="font-size:19px;font-weight:900;letter-spacing:-0.7px;line-height:1.25;margin-bottom:8px">Tes vidéos virales,<br>générées par l'IA<br><span style="color:var(--orange)">sans montrer ton visage</span></div>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3);display:flex;align-items:center;gap:4px"><span style="color:var(--green)">✓</span> Faceless</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3);display:flex;align-items:center;gap:4px"><span style="color:var(--green)">✓</span> Simple &amp; rapide</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3);display:flex;align-items:center;gap:4px"><span style="color:var(--green)">✓</span> Virale en 9:16</span>
       </div>
     </div>
 
@@ -1941,7 +1956,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- GUEST -->
     <button onclick="loginGuest()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
-      🎯 Essayer gratuitement <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
+      🚀 Commencer gratuitement <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
     </button>
     <div style="text-align:center;margin-top:14px">
       <a href="https://avatarads.iamanager.fr#pricing" style="font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)">Voir les plans →</a>
@@ -2813,8 +2828,7 @@ async function whisperTranscribe(){
       if(voiceTa) voiceTa.value = text;
       const ta = document.getElementById('transcriptInput');
       if(ta) ta.value = text;
-      const wordTa = document.getElementById('wordEditorText');
-      if(wordTa){ wordTa.value = text; wordTa.style.height = 'auto'; wordTa.style.height = wordTa.scrollHeight + 'px'; }
+      _renderWordChips(text);
       toast('✓ Whisper IA — transcript appliqué aux sous-titres !');
     } else {
       toast('⚠️ Aucun texte détecté par Whisper');
@@ -3256,8 +3270,11 @@ function startPreviewAnim(audioEl){
   let allWords = [];
   document.querySelectorAll('#wordEditor span').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
   if(!allWords.length){
-    const ta = document.getElementById('wordEditorText');
-    if(ta && ta.value.trim()) allWords = ta.value.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase());
+    // Fallback: read from transcript inputs
+    const tiTa = document.getElementById('transcriptInput');
+    const vTa  = document.getElementById('voiceTranscriptTA');
+    const src  = (tiTa && tiTa.value.trim()) || (vTa && vTa.value.trim()) || pendingTranscript || '';
+    if(src) allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:'"«»]/g,''));
     else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
   }
   const wpg = Math.max(1, cfg.subWpg || 2);
@@ -3500,8 +3517,8 @@ function selectFormatGroup(group){
   if(tabsShort) tabsShort.style.display = group === 'post' ? 'none' : 'flex';
   if(tabsPost)  tabsPost.style.display  = group === 'post' ? 'flex' : 'none';
   // Highlight format button
-  ['vertical','square','youtube'].forEach((id,i) => {
-    const g = ['short','post','youtube'][i];
+  ['vertical','story','square','youtube'].forEach((id,i) => {
+    const g = ['short','story','post','youtube'][i];
     const el = document.getElementById('fmt-'+id);
     if(!el) return;
     el.style.border = g===group ? '2px solid var(--orange)' : '2px solid var(--border)';
@@ -3509,6 +3526,7 @@ function selectFormatGroup(group){
   });
   // Auto-select default tab for this group
   if(group === 'short')   setPlatformPreview('tiktok');
+  if(group === 'story')   setPlatformPreview('instagram');
   if(group === 'post')    setPlatformPreview('instagram');
   if(group === 'youtube') setPlatformPreview('youtube');
 }
@@ -3528,23 +3546,25 @@ function updateSubPreview(){
   const glow1  = `0 0 ${Math.round(sz*.6)}px ${c1},0 0 ${Math.round(sz*1.2)}px ${c1}`;
   const glow2  = `0 0 ${Math.round(sz*.6)}px ${c2},0 0 ${Math.round(sz*1.2)}px ${c2}`;
 
+  const sc2 = sc || 'display:inline-block;';
   const render = {
     hormozi: () => shown.map((w,i) =>
-      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
+      `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
     ).join(''),
     mrbeast: () => shown.map((w,i) =>
-      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`
+      `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`
     ).join(''),
-    iman: () =>
-      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${c1};font-weight:900;letter-spacing:${Math.round(sz*.05)}px">${shown.join(' ')}</span>`,
+    iman: () => shown.map((w,i) =>
+      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`
+    ).join(''),
     tiktok: () => shown.map((w,i) =>
-      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`
+      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;font-weight:900">${w}</span>`
     ).join(''),
     neon: () => shown.map((w,i) =>
-      `<span style="${sc}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`
+      `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`
     ).join(''),
     podcast: () => shown.map((w,i) =>
-      `<span style="${sc}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
+      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
     ).join(''),
   };
 
@@ -3631,7 +3651,7 @@ function resetGameplay(){
 }
 
 // ── MP4 Audio optionnel ──
-let mp4AudioEnabled      = true;
+let mp4AudioEnabled      = false;
 let mp4AudioFile         = null;
 let mp4AudioTrimSt       = 0;
 let mp4AudioTrimEnd      = 0;
@@ -3664,13 +3684,39 @@ function toggleMp4AudioOption(force){
     }
     // Show ElevenLabs bypass notice
     const elSections = document.getElementById('voice-el-sections');
-    if(elSections) elSections.style.opacity = '0.4';
+    if(elSections){ elSections.style.opacity = '0.4'; elSections.style.pointerEvents='none'; }
   } else {
     sw.style.background='var(--bg5)';
     thumb.style.left='3px'; thumb.style.opacity='.4';
     panel.style.display='none';
     const elSections = document.getElementById('voice-el-sections');
-    if(elSections) elSections.style.opacity = '1';
+    if(elSections){ elSections.style.opacity = '1'; elSections.style.pointerEvents=''; }
+  }
+  // Sync mode selector buttons
+  const btnC = document.getElementById('voiceModeBtnClone');
+  const btnM = document.getElementById('voiceModeBtnMp4');
+  if(mp4AudioEnabled){
+    if(btnC){ btnC.style.background='var(--bg3)'; btnC.style.border='2px solid var(--border)'; btnC.style.color='var(--text2)'; }
+    if(btnM){ btnM.style.background='var(--orange)'; btnM.style.border='2px solid var(--orange)'; btnM.style.color='#fff'; }
+  } else {
+    if(btnC){ btnC.style.background='var(--orange)'; btnC.style.border='2px solid var(--orange)'; btnC.style.color='#fff'; }
+    if(btnM){ btnM.style.background='var(--bg3)'; btnM.style.border='2px solid var(--border)'; btnM.style.color='var(--text2)'; }
+  }
+}
+
+function selectVoiceMode(mode){
+  const btnClone = document.getElementById('voiceModeBtnClone');
+  const btnMp4   = document.getElementById('voiceModeBtnMp4');
+  const elSec    = document.getElementById('voice-el-sections');
+  const mp4Wrap  = document.getElementById('mp4AudioPanel')?.closest('.fld');
+  if(mode === 'mp4'){
+    toggleMp4AudioOption(true);
+    if(btnClone){ btnClone.style.background='var(--bg3)'; btnClone.style.border='2px solid var(--border)'; btnClone.style.color='var(--text2)'; }
+    if(btnMp4)  { btnMp4.style.background='var(--orange)'; btnMp4.style.border='2px solid var(--orange)'; btnMp4.style.color='#fff'; }
+  } else {
+    toggleMp4AudioOption(false);
+    if(btnClone){ btnClone.style.background='var(--orange)'; btnClone.style.border='2px solid var(--orange)'; btnClone.style.color='#fff'; }
+    if(btnMp4)  { btnMp4.style.background='var(--bg3)'; btnMp4.style.border='2px solid var(--border)'; btnMp4.style.color='var(--text2)'; }
   }
 }
 
@@ -4254,9 +4300,11 @@ function updateSplitPreview(){
 
 // Word editor — populate after voice generation
 function populateWordEditor(text){
-  // Update textarea
-  const ta = document.getElementById('wordEditorText');
-  if(ta){ ta.value = text; ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
+  // Sync to transcript textarea (now the canonical source)
+  const tiTa = document.getElementById('transcriptInput');
+  if(tiTa) tiTa.value = text;
+  const vTa = document.getElementById('voiceTranscriptTA');
+  if(vTa) vTa.value = text;
   _renderWordChips(text);
 }
 function _renderWordChips(text){
@@ -4267,7 +4315,7 @@ function _renderWordChips(text){
     const chip = document.createElement('span');
     chip.textContent = word.toUpperCase().replace(/[.,!?;:'"«»]/g,'');
     chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
-    chip.ondblclick = () => { chip.remove(); const ta=document.getElementById('wordEditorText'); if(ta){ta.value=getEditedWords();} };
+    chip.ondblclick = () => { chip.remove(); };
     chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
     chip.onmouseout = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
     editor.appendChild(chip);
@@ -4279,7 +4327,9 @@ function onWordTextEdit(value){
 
 function getEditedWords(){
   const chips = document.getElementById('wordEditor').querySelectorAll('span');
-  return [...chips].map(c => c.textContent).join(' ');
+  if(chips.length) return [...chips].map(c => c.textContent).join(' ');
+  const tiTa = document.getElementById('transcriptInput');
+  return (tiTa && tiTa.value.trim()) || '';
 }
 
 function applyHook(val){
@@ -5408,7 +5458,7 @@ function openAvatarModal(){
       card.className = 'av-modal-card lib-av-card';
       card.dataset.genre = av.genre;
       card.title = av.name;
-      card.innerHTML = `<div style="width:100%;height:300px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center center;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.innerHTML = `<div style="width:100%;height:300px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center 15%;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
       card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
       grid.appendChild(card);
     });
