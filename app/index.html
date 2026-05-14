@@ -1021,21 +1021,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- FORMAT -->
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Format</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div id="fmt-vertical" onclick="selectFormatGroup('short')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📱</div>
                   <div style="font-size:11px;font-weight:700">TikTok / Reels</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16</div>
-                </div>
-                <div id="fmt-story" onclick="selectFormatGroup('story')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="font-size:20px;margin-bottom:4px">✨</div>
-                  <div style="font-size:11px;font-weight:700">Story</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · FB</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16 · Shorts · Reels</div>
                 </div>
                 <div id="fmt-square" onclick="selectFormatGroup('post')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
                   <div style="font-size:20px;margin-bottom:4px">📸</div>
                   <div style="font-size:11px;font-weight:700">Publication</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · Meta</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · Meta · LinkedIn</div>
                 </div>
               </div>
             </div>
@@ -1221,30 +1216,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
-            <!-- TIMING MODE SOUS-TITRES -->
-            <div class="fld" style="margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div class="flbl" style="font-size:10px;margin:0">⏱ Sync sous-titres</div>
-                <div style="display:flex;gap:5px">
-                  <button id="timingBtnProp" onclick="setTimingMode('proportionnel')" style="padding:4px 10px;background:var(--orange);color:#fff;border:none;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s">Proportionnel</button>
-                  <button id="timingBtnFixe" onclick="setTimingMode('fixe')" style="padding:4px 10px;background:var(--bg4);color:var(--text3);border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">Fixe</button>
-                </div>
-              </div>
-              <!-- Avance / retard -->
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">Avance</div>
-                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subAdvanceVal">0.3s</span>
-              </div>
-              <input type="range" id="subAdvanceSlider" min="-10" max="20" value="3" step="1" oninput="cfg.subAdvanceMs=+this.value*100;document.getElementById('subAdvanceVal').textContent=(+this.value/10).toFixed(1)+'s'" style="width:100%;accent-color:var(--orange);margin-bottom:10px">
-              <!-- Durée/groupe (mode fixe) -->
-              <div id="secPerGroupRow" style="display:none">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-                  <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">Durée/groupe</div>
-                  <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="secPerGroupVal">1.2s</span>
-                </div>
-                <input type="range" id="secPerGroupSlider" min="3" max="40" value="12" step="1" oninput="cfg.subSecPerGroup=+this.value/10;document.getElementById('secPerGroupVal').textContent=(+this.value/10).toFixed(1)+'s'" style="width:100%;accent-color:var(--orange)">
-              </div>
-            </div>
+            <!-- hidden timing inputs kept for JS compat -->
+            <input type="hidden" id="subAdvanceSlider" value="3">
+            <input type="hidden" id="secPerGroupSlider" value="12">
+            <input type="hidden" id="timingBtnProp">
+            <input type="hidden" id="timingBtnFixe">
+            <input type="hidden" id="secPerGroupRow">
 
             <!-- ANIMATIONS -->
             <div class="fld" style="margin-bottom:16px">
@@ -1277,7 +1254,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button id="transcriptPanelBtn" onclick="autoGenSubtitles()" title="Ouvrir le panneau transcript" style="padding:3px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">🎙️ Générer depuis l'audio</button>
               </div>
               <!-- TRANSCRIPT PANEL -->
-              <div id="transcriptPanel" style="display:none;margin-bottom:8px">
+              <div id="transcriptPanel" style="display:block;margin-bottom:8px">
                 <!-- Whisper IA — Elite/Pro uniquement -->
                 <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:18px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
@@ -1773,12 +1750,28 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie ta vidéo directement sur tes comptes connectés.</div>
               <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier sur YouTube Shorts</button>
               <div id="yt-result-status" style="font-size:11px;font-family:var(--mono);text-align:center;margin-bottom:12px"></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ TikTok — bientôt disponible')"><span>📱</span>TikTok</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Instagram — bientôt disponible')"><span>📸</span>Instagram</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ Facebook — bientôt disponible')"><span>👥</span>Facebook</button>
-                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
+
+              <!-- TikTok -->
+              <div style="margin-bottom:8px">
+                <button class="btn-publish" style="width:100%;opacity:.35;cursor:not-allowed;font-size:12px;justify-content:center" onclick="toast('⏳ TikTok — bientôt disponible')"><span>📱</span>TikTok</button>
               </div>
+
+              <!-- Instagram -->
+              <div style="margin-bottom:4px;font-size:10px;font-family:var(--mono);color:var(--text3);font-weight:700;letter-spacing:.5px">INSTAGRAM</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center;flex-direction:column;gap:2px;padding:10px 6px" onclick="toast('⏳ Instagram Reels — bientôt disponible')"><span>🎬</span><span>Reels</span></button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center;flex-direction:column;gap:2px;padding:10px 6px" onclick="toast('⏳ Instagram Stories — bientôt disponible')"><span>✨</span><span>Story</span></button>
+              </div>
+
+              <!-- Facebook -->
+              <div style="margin-bottom:4px;font-size:10px;font-family:var(--mono);color:var(--text3);font-weight:700;letter-spacing:.5px">FACEBOOK</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center;flex-direction:column;gap:2px;padding:10px 6px" onclick="toast('⏳ Facebook Reels — bientôt disponible')"><span>🎬</span><span>Reels</span></button>
+                <button class="btn-publish" style="opacity:.35;cursor:not-allowed;font-size:11px;justify-content:center;flex-direction:column;gap:2px;padding:10px 6px" onclick="toast('⏳ Facebook Stories — bientôt disponible')"><span>✨</span><span>Story</span></button>
+              </div>
+
+              <!-- LinkedIn -->
+              <button class="btn-publish" style="width:100%;opacity:.35;cursor:not-allowed;font-size:12px;justify-content:center" onclick="toast('⏳ LinkedIn — bientôt disponible')"><span>💼</span>LinkedIn</button>
             </div>
 
           </div>
@@ -3581,8 +3574,8 @@ function selectFormatGroup(group){
   if(tabsShort) tabsShort.style.display = group === 'post' ? 'none' : 'flex';
   if(tabsPost)  tabsPost.style.display  = group === 'post' ? 'flex' : 'none';
   // Highlight format button
-  ['vertical','story','square','youtube'].forEach((id,i) => {
-    const g = ['short','story','post','youtube'][i];
+  ['vertical','square','youtube'].forEach((id,i) => {
+    const g = ['short','post','youtube'][i];
     const el = document.getElementById('fmt-'+id);
     if(!el) return;
     el.style.border = g===group ? '2px solid var(--orange)' : '2px solid var(--border)';
@@ -3590,7 +3583,6 @@ function selectFormatGroup(group){
   });
   // Auto-select default tab for this group
   if(group === 'short')   setPlatformPreview('tiktok');
-  if(group === 'story')   setPlatformPreview('instagram');
   if(group === 'post')    setPlatformPreview('instagram');
   if(group === 'youtube') setPlatformPreview('youtube');
 }
@@ -3821,10 +3813,10 @@ async function analyzeSilences(){
     silenceAudioBuffer = await actx.decodeAudioData(arrayBuf);
     actx.close();
 
-    // Fixed smart defaults — no sliders needed
-    const threshDb  = -40;
-    const minDurSec = 0.4;
-    const padSec    = 0.08;
+    // Calibration identique à l'ancien bouton ✂️ (seuil amplitude, 300ms min)
+    const threshDb  = -36;  // ≈ amplitude 0.015 (identique à l'ancien autoTrimSilence)
+    const minDurSec = 0.3;
+    const padSec    = 0.05;
 
     const silences = _detectSilences(silenceAudioBuffer, threshDb, minDurSec, padSec);
     silenceKeepSegs = _silencesToKeep(silences, silenceAudioBuffer.duration);
@@ -3845,21 +3837,7 @@ async function analyzeSilences(){
     }
     statsEl.innerHTML = `<span style="color:var(--green)">✓</span> <strong>${silences.length}</strong> silence${silences.length!==1?'s':''} supprimé${silences.length!==1?'s':''} · <strong>${totalCut.toFixed(1)}s</strong> retirées · Durée finale : <strong>${cleanDur.toFixed(1)}s</strong>`;
     document.getElementById('silenceResultsRow').style.display = 'flex';
-
-    // Auto-export audio immediately
-    btn.innerHTML = '⏳ Export audio...';
-    const cleaned = await _reconstructAudio(silenceAudioBuffer, silenceKeepSegs);
-    const wavBlob = _encodeWAV(cleaned);
-    _triggerDownload(wavBlob, 'audio_nettoye.wav');
-
-    // Auto-export gameplay if one is loaded
-    const gpFile = silenceGameplayFile || gameplayFile;
-    if(gpFile){
-      btn.innerHTML = '⏳ Synchro gameplay...';
-      await _runGameplayExport(gpFile);
-    } else {
-      toast(`✓ Audio nettoyé téléchargé · ${silences.length} silence${silences.length!==1?'s':''} supprimé${silences.length!==1?'s':''}`);
-    }
+    toast(`✓ Analyse terminée · ${silences.length} silence${silences.length!==1?'s':''} supprimé${silences.length!==1?'s':''} · Clique sur un bouton pour télécharger`);
 
   } catch(e){
     toast('⚠️ Erreur : ' + (e.message||e));
@@ -4037,28 +4015,68 @@ async function _loadFFmpeg(){
 
 async function _runGameplayExport(gpFile){
   const status = document.getElementById('silenceExportStatus');
-  if(status){ status.style.display='block'; status.textContent='⏳ Chargement FFmpeg...'; status.style.color='var(--text3)'; }
+  const setStatus = (msg, color='var(--text3)') => { if(status){ status.style.display='block'; status.textContent=msg; status.style.color=color; } };
+  setStatus('⏳ Chargement FFmpeg...');
   await _loadFFmpeg();
-  if(status) status.textContent = '⏳ Découpe du gameplay...';
+  setStatus('⏳ Découpe du gameplay en cours...');
   const ff = _ffmpegInst;
+  try { ff.FS('unlink','gp_in.mp4'); } catch(e){}
+  try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
   ff.FS('writeFile','gp_in.mp4', await window._ffFetchFile(gpFile));
   const segs = silenceKeepSegs;
-  let vParts='', aParts='';
-  segs.forEach((s,i) => {
-    vParts += `[0:v]trim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},setpts=PTS-STARTPTS[v${i}];`;
-    aParts += `[0:a]atrim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},asetpts=PTS-STARTPTS[a${i}];`;
-  });
-  const vIns = segs.map((_,i)=>`[v${i}]`).join('');
-  const aIns = segs.map((_,i)=>`[a${i}]`).join('');
-  const fc = vParts + aParts +
-    `${vIns}concat=n=${segs.length}:v=1:a=0[outv];${aIns}concat=n=${segs.length}:v=0:a=1[outa]`;
-  await ff.run('-i','gp_in.mp4','-filter_complex',fc,'-map','[outv]','-map','[outa]',
-    '-c:v','libx264','-preset','fast','-crf','23','-c:a','aac','-b:a','192k','gp_out.mp4');
-  const data = ff.FS('readFile','gp_out.mp4');
-  _triggerDownload(new Blob([data.buffer],{type:'video/mp4'}), 'gameplay_synchro.mp4');
-  ff.FS('unlink','gp_in.mp4'); ff.FS('unlink','gp_out.mp4');
-  if(status){ status.textContent='✓ Gameplay synchro téléchargé !'; status.style.color='var(--green)'; }
-  toast('✓ Audio nettoyé + Gameplay synchro téléchargés — parfaitement alignés !');
+
+  // Build filter_complex — try with audio first, fallback to video-only
+  const buildFC = (withAudio) => {
+    let vParts='', aParts='';
+    segs.forEach((s,i) => {
+      vParts += `[0:v]trim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},setpts=PTS-STARTPTS[v${i}];`;
+      if(withAudio) aParts += `[0:a]atrim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},asetpts=PTS-STARTPTS[a${i}];`;
+    });
+    const vIns = segs.map((_,i)=>`[v${i}]`).join('');
+    const aIns = withAudio ? segs.map((_,i)=>`[a${i}]`).join('') : '';
+    let fc = vParts;
+    if(withAudio) fc += aParts;
+    fc += `${vIns}concat=n=${segs.length}:v=1:a=0[outv]`;
+    if(withAudio) fc += `;${aIns}concat=n=${segs.length}:v=0:a=1[outa]`;
+    return fc;
+  };
+
+  let success = false;
+
+  // Attempt 1: with audio
+  try {
+    const fc = buildFC(true);
+    await ff.run('-i','gp_in.mp4','-filter_complex',fc,
+      '-map','[outv]','-map','[outa]',
+      '-c:v','libx264','-preset','ultrafast','-crf','23',
+      '-c:a','aac','-b:a','128k',
+      '-movflags','+faststart','gp_out.mp4');
+    success = true;
+  } catch(e1){
+    console.warn('FFmpeg avec audio échoué, tentative sans audio :', e1);
+    // Attempt 2: video-only (gameplay sans piste audio)
+    try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
+    try {
+      const fc = buildFC(false);
+      await ff.run('-i','gp_in.mp4','-filter_complex',fc,
+        '-map','[outv]',
+        '-c:v','libx264','-preset','ultrafast','-crf','23','-an',
+        '-movflags','+faststart','gp_out.mp4');
+      success = true;
+    } catch(e2){
+      console.error('FFmpeg video-only échoué :', e2);
+      throw new Error('Erreur FFmpeg : ' + (e2.message || e2));
+    }
+  }
+
+  if(success){
+    const data = ff.FS('readFile','gp_out.mp4');
+    _triggerDownload(new Blob([data.buffer],{type:'video/mp4'}), 'gameplay_synchro.mp4');
+    try { ff.FS('unlink','gp_in.mp4'); } catch(e){}
+    try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
+    setStatus('✓ Gameplay synchro téléchargé !', 'var(--green)');
+    toast('✓ Gameplay synchro téléchargé — parfaitement aligné avec l\'audio nettoyé !');
+  }
 }
 
 async function exportCleanGameplay(){
@@ -4081,6 +4099,13 @@ function handleSilenceGameplayFile(file){
   if(drop) drop.style.display='none';
   if(info) info.style.display='block';
   if(name) name.textContent = file.name;
+
+  // Synchroniser avec le gameplay du style (split screen)
+  // Le même fichier est partagé entre les deux sections
+  handleGameplayFile(file);
+  // Activer le split screen pour montrer le gameplay dans le preview
+  if(!splitOn) toggleSplit();
+  toast('🎮 Gameplay synchro avec le preview — visible dans l\'aperçu');
 }
 // ── end silence removal ──
 
