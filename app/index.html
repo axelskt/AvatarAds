@@ -3512,44 +3512,59 @@ function toggleSubtitles(){
 
 function handleAvatarFile(file){
   if(!file) return;
-  if(file.type.startsWith('video/')){
-    toast('⚠️ L\'avatar doit être une image JPG/PNG. Pour le gameplay, glisse ta vidéo dans la section "Style" → Gameplay.');
+  // Détection par MIME et par extension (macOS peut renvoyer type="" sur certains JPG)
+  const mime = file.type || '';
+  const ext  = (file.name || '').split('.').pop().toLowerCase();
+  const isVideo = mime.startsWith('video/') || ['mp4','mov','avi','webm','mkv'].includes(ext);
+  const isImage = mime.startsWith('image/') || ['jpg','jpeg','png','webp','gif','bmp','heic','heif','avif'].includes(ext);
+  if(isVideo){
+    toast('⚠️ L\'avatar doit être une image JPG/PNG — glisse ta vidéo dans la section Gameplay (Style).');
     return;
   }
-  if(!file.type.startsWith('image/')){
-    toast('⚠️ Format non supporté — utilise une image JPG ou PNG.');
+  if(!isImage){
+    toast('⚠️ Format non supporté — utilise JPG, PNG ou WEBP.');
     return;
   }
-  // Reset crop à 0 (centré) pour le nouvel avatar
-  cfg.avCropX = 0; cfg.avCropY = 0;
-  const url = URL.createObjectURL(file);
-  document.getElementById('avatarPreviewImg').src = url;
-  document.getElementById('avatarPreviewName').textContent = file.name;
-  document.getElementById('avatarDropContent').style.display = 'none';
-  document.getElementById('avatarPreviewWrap').style.display = 'block';
-  const _faEl = document.getElementById('f-avatarimg'); if(_faEl) _faEl.value = '';
-  selAvatar.localFile = file;
-  selAvatar.localUrl = url;
-  // Force direct injection in phone preview
-  const avImg   = document.getElementById('previewAvImg');
-  const avEmoji = document.getElementById('previewAvEmoji');
-  if(avImg){
-    avImg.onload = () => {
-      avImg.style.display = 'block';
-      updateAvatarCrop();
-    };
-    avImg.src = url;
-    // Si déjà en cache, onload ne se déclenche pas → forcer l'affichage
-    if(avImg.complete && avImg.naturalWidth > 0){
-      avImg.style.display = 'block';
-      updateAvatarCrop();
+  try{
+    // Reset crop centré
+    cfg.avCropX = 0; cfg.avCropY = 0;
+    const url = URL.createObjectURL(file);
+    selAvatar.localFile = file;
+    selAvatar.localUrl  = url;
+    // Dropzone preview
+    const previewImg  = document.getElementById('avatarPreviewImg');
+    const previewName = document.getElementById('avatarPreviewName');
+    const dropContent = document.getElementById('avatarDropContent');
+    const previewWrap = document.getElementById('avatarPreviewWrap');
+    if(previewImg){
+      previewImg.style.display   = 'block';
+      previewImg.style.width     = '100%';
+      previewImg.style.maxHeight = '180px';
+      previewImg.src = url;
     }
+    if(previewName) previewName.textContent = file.name;
+    if(dropContent) dropContent.style.display = 'none';
+    if(previewWrap) previewWrap.style.display = 'block';
+    const _faEl = document.getElementById('f-avatarimg'); if(_faEl) _faEl.value = '';
+    // Phone preview
+    const avImg   = document.getElementById('previewAvImg');
+    const avEmoji = document.getElementById('previewAvEmoji');
+    if(avImg){
+      avImg.onload = () => { avImg.style.display='block'; updateAvatarCrop(); };
+      avImg.src = url;
+      if(avImg.complete && avImg.naturalWidth > 0){ avImg.style.display='block'; updateAvatarCrop(); }
+    }
+    if(avEmoji) avEmoji.style.display = 'none';
+    // Boutons recadrer / supprimer
+    const resetBtn   = document.getElementById('resetAvatarBtn');
+    const removeBtn2 = document.getElementById('removeAvatarBtn');
+    if(resetBtn)   resetBtn.style.display   = 'block';
+    if(removeBtn2) removeBtn2.style.display = 'block';
+    updateLivePreview();
+  }catch(e){
+    console.error('handleAvatarFile error:', e);
+    toast('⚠️ Impossible de charger cette image — essaie un autre fichier.');
   }
-  if(avEmoji) avEmoji.style.display = 'none';
-  const resetBtn = document.getElementById('resetAvatarBtn');
-  const removeBtn2 = document.getElementById('removeAvatarBtn');
-  if(resetBtn) resetBtn.style.display = 'block';
-  if(removeBtn2) removeBtn2.style.display = 'block';
 }
 function previewAvatarUrl(url){
   if(!url) return;
