@@ -6454,8 +6454,9 @@ const QUALITY_CONFIGS = {
   2160: { W:2160, H:3840, br:40_000_000, codec:'avc1.640034', label:'4K'    },  // Level 5.2
 };
 
-// ── COMPOSITION VIDÉO — WebCodecs MP4 (H.264 + AAC via mp4-muxer)
+// ── COMPOSITION VIDÉO — MediaRecorder (canvas.captureStream + AudioContext)
 // Layout split, zoom/crop, hook, sous-titres (style/anim/couleurs/pos)
+// Plus fiable que WebCodecs : produit toujours de vraies frames vidéo
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
@@ -6463,36 +6464,57 @@ async function composeVideo(btn){
   const compBar  = document.getElementById('composeProgressWrap');
   const compFill = document.getElementById('composeProgressFill');
   const compPct  = document.getElementById('composeProgressPct');
-  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger MP4'; } if(compBar) compBar.style.display='none'; };
+  const resetBtn = () => {
+    if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger MP4'; }
+    if(compBar) compBar.style.display='none';
+  };
+  const setStage = (label, pct) => {
+    const stageLbl = document.getElementById('composeProgressStage');
+    if(stageLbl) stageLbl.textContent = label;
+    if(compPct) compPct.textContent = (pct||0) + '%';
+    if(compFill) compFill.style.width = (pct||0) + '%';
+    if(btn) btn.innerHTML = '⏳ ' + label;
+  };
+  if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
 
   // Qualité sélectionnée
   const qCfg = QUALITY_CONFIGS[_composeQuality] || QUALITY_CONFIGS[1080];
   const isSquare = cfg.format === 'square';
   const W = qCfg.W, H = isSquare ? qCfg.W : qCfg.H;
 
-  toast('🎬 Chargement de la vidéo Hedra…');
-
-  // 1. Fetch Hedra video as blob (avoid CORS canvas taint)
+  // ── 1. Charger la vidéo Hedra en blob (évite CORS canvas taint) ──
+  setStage('Chargement vidéo…', 3);
   let hedraObjUrl;
   try {
     const r = await fetch(results.hedraUrl);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
     hedraObjUrl = URL.createObjectURL(await r.blob());
   } catch(e) {
-    toast('⚠️ CORS bloqué — téléchargement direct de la vidéo Hedra brute');
+    toast('⚠️ Impossible de charger la vidéo Hedra — téléchargement brut');
     const a = document.createElement('a'); a.href=results.hedraUrl; a.download='avatarads-hedra.mp4';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     resetBtn(); return;
   }
 
-  // 2. Hedra video element
+  // ── 2. Élément vidéo Hedra ──
   const hedraVid = document.createElement('video');
-  hedraVid.src = hedraObjUrl; hedraVid.muted = true;
+  hedraVid.src = hedraObjUrl;
+  hedraVid.muted = true;
+  hedraVid.crossOrigin = 'anonymous';
+  setStage('Décodage vidéo…', 6);
   try {
-    await new Promise((res,rej) => { hedraVid.onloadedmetadata=res; hedraVid.onerror=rej; hedraVid.load(); });
-  } catch(e) { toast('⚠️ Vidéo Hedra illisible : '+e.message); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
-  const totalDuration = hedraVid.duration || 30;
+    await new Promise((res, rej) => {
+      hedraVid.onloadedmetadata = res;
+      hedraVid.onerror = rej;
+      hedraVid.load();
+    });
+  } catch(e) {
+    toast('⚠️ Vidéo Hedra illisible : ' + (e.message||'format inconnu'));
+    resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
+  }
+  const totalDuration = (hedraVid.duration && isFinite(hedraVid.duration)) ? hedraVid.duration : 30;
 
-  // 3. Gameplay video (if loaded and visible)
+  // ── 3. Gameplay vidéo (si présent) ──
   const gpVideoEl = document.getElementById('gpVideo');
   const gpZoneEl  = document.getElementById('gameplayZone');
   const hasGp = !!(gpVideoEl?.src && gpZoneEl?.style.display !== 'none');
@@ -6501,22 +6523,22 @@ async function composeVideo(btn){
     gpVid = document.createElement('video');
     gpVid.src = gpVideoEl.src; gpVid.muted = true; gpVid.loop = true;
     await new Promise(res => { gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
-    if(!gpVid.videoWidth) gpVid = null; // load failed
+    if(!gpVid.videoWidth) gpVid = null;
   }
 
-  // 4. Layout: mirror preview split ratio
+  // ── 4. Layout split ──
   const avZoneEl = document.getElementById('avZone');
   const avFlex = parseFloat(avZoneEl?.style.flex) || 60;
   const gpFlex = parseFloat(gpZoneEl?.style.flex) || 40;
   const avH = gpVid ? Math.round(H * avFlex / (avFlex + gpFlex)) : H;
   const gpH = H - avH;
 
-  // 5. Canvas (WebCodecs path — pas de captureStream nécessaire)
+  // ── 5. Canvas ──
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // 6. Sous-titres / mots
+  // ── 6. Mots / sous-titres ──
   const wordChips   = document.querySelectorAll('#wordEditor span');
   const words       = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
   const wpg         = Math.max(1, cfg.subWpg || 2);
@@ -6524,10 +6546,8 @@ async function composeVideo(btn){
   const subAdvSec   = (cfg.subAdvanceMs || 0) / 1000;
   const isFixedMode = (cfg.subTimingMode || 'proportionnel') === 'fixe';
   const secPerGroup = cfg.subSecPerGroup || 1.2;
-  const wordInterval = words.length > 0 ? totalDuration / words.length : 99;
   const needWatermark = guestMode || (currentMember && currentMember.plan === 'free');
 
-  // Shared render function (writes to canvas — same for both encode paths)
   let _lastGrpIdx = -1, _lastGrpTime = 0;
   function drawFrame(elapsed){
     ctx.fillStyle = '#000';
@@ -6556,183 +6576,129 @@ async function composeVideo(btn){
     if(needWatermark) _cvWatermark(ctx, W, H);
   }
 
-  // 7. Encodage WebCodecs + mp4-muxer → MP4
-  if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
-  if(btn) btn.innerHTML = '⏳ Préparation…';
-
-  // Helper pour label étape
-  const setStage = (label, pct) => {
-    const stageLbl = document.getElementById('composeProgressStage');
-    if(stageLbl) stageLbl.textContent = label;
-    if(compPct) compPct.textContent = (pct||0) + '%';
-    if(compFill) compFill.style.width = (pct||0) + '%';
-    if(btn) btn.innerHTML = '⏳ ' + label;
-  };
-
-  // ── Charger mp4-muxer depuis CDN ──
-  setStage('Chargement mp4-muxer…', 2);
-  let mp4Muxer = null;
-  const CDN_URLS = [
-    'https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.esm.min.js',
-    'https://unpkg.com/mp4-muxer@4/build/mp4-muxer.esm.min.js',
-    'https://esm.sh/mp4-muxer@4',
-  ];
-  for(const url of CDN_URLS){
-    try { const m = await import(url); if(m?.Muxer){ mp4Muxer=m; break; } } catch(e){ console.warn('CDN fail:',url,e); }
-  }
-  if(!mp4Muxer?.Muxer){ toast('⚠️ Impossible de charger mp4-muxer (vérif connexion)'); URL.revokeObjectURL(hedraObjUrl); resetBtn(); return; }
-
-  // ── Vérifier support VideoEncoder ──
-  setStage('Vérification codec…', 5);
-  if(typeof VideoEncoder === 'undefined'){
-    toast('⚠️ WebCodecs non supporté — utilise Chrome 94+ ou Edge 94+');
-    const a=document.createElement('a'); a.href=hedraObjUrl; a.download='avatarads-hedra.mp4';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(hedraObjUrl),5000); resetBtn(); return;
-  }
-  // Tester le codec sur la résolution choisie
-  let finalCodec = qCfg.codec;
-  try {
-    const sup = await VideoEncoder.isConfigSupported({ codec: qCfg.codec, width: W, height: H });
-    if(!sup?.supported){
-      // Fallback vers codec moins strict
-      const fallbacks = ['avc1.640028','avc1.4d0028','avc1.42003e'];
-      for(const fc of fallbacks){
-        const s2 = await VideoEncoder.isConfigSupported({ codec:fc, width:W, height:H });
-        if(s2?.supported){ finalCodec=fc; break; }
-      }
-    }
-  } catch(e){ console.warn('isConfigSupported error:', e); }
-
-  // ── Créer le muxer ──
-  const { Muxer, ArrayBufferTarget } = mp4Muxer;
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({
-    target,
-    video: { codec:'avc', width:W, height:H },
-    audio: results.audioBlob ? { codec:'aac', sampleRate:48000, numberOfChannels:1 } : undefined,
-    fastStart: 'in-memory',
-  });
-
-  // ── VideoEncoder ──
-  let vEncError = null;
-  const vEnc = new VideoEncoder({
-    output: (chunk, meta) => { try{ muxer.addVideoChunk(chunk, meta); }catch(e){ vEncError=e; } },
-    error: (e) => { vEncError=e; console.error('VideoEncoder error:', e); }
-  });
-  try {
-    vEnc.configure({ codec: finalCodec, width: W, height: H, bitrate: qCfg.br, framerate: 30 });
-  } catch(e) {
-    toast('⚠️ VideoEncoder config failed: ' + e.message);
-    URL.revokeObjectURL(hedraObjUrl); resetBtn(); return;
-  }
-
-  // ── Pré-encoder l'audio (OfflineAudioContext → AAC) ──
-  setStage('Encodage audio…', 10);
-  // Priorité : audio nettoyé (silences supprimés) si disponible
+  // ── 7. Audio blob à utiliser (avec silences supprimés si applicable) ──
+  setStage('Préparation audio…', 10);
   let _audioBlobToEncode = results.audioBlob;
   if(silenceKeepSegs.length > 0 && silenceAudioBuffer){
     const cleanUrl = await _getOrBuildCleanBlobUrl();
-    if(cleanUrl) _audioBlobToEncode = await fetch(cleanUrl).then(r => r.blob());
+    if(cleanUrl){
+      _audioBlobToEncode = await fetch(cleanUrl).then(r => r.blob());
+      toast('✂️ Silences supprimés appliqués');
+    }
   }
+
+  // ── 8. Choisir le mimeType MediaRecorder ──
+  setStage('Initialisation encodeur…', 14);
+  const mimeTypes = [
+    'video/mp4;codecs=avc1,mp4a.40.2',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=h264,opus',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ];
+  let chosenMime = '';
+  for(const mt of mimeTypes){
+    if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)){ chosenMime = mt; break; }
+  }
+  if(!chosenMime){ toast('⚠️ MediaRecorder non supporté — utilise Chrome/Edge'); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
+  const isWebm = chosenMime.startsWith('video/webm');
+  const fileExt = isWebm ? 'webm' : 'mp4';
+
+  // ── 9. AudioContext pour mixer audio dans le stream ──
+  let audioCtx = null, audioSrc = null;
+  const videoStream = canvas.captureStream(30);
+  let combinedStream = videoStream;
   if(_audioBlobToEncode){
     try {
-      const aEnc = new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:e=>console.warn('AEnc:',e) });
-      aEnc.configure({ codec:'mp4a.40.2', sampleRate:48000, numberOfChannels:1, bitrate:128_000 });
-      const raw = await _audioBlobToEncode.arrayBuffer();
-      const tmpCtx = new AudioContext();
-      const decoded = await tmpCtx.decodeAudioData(raw.slice(0)); tmpCtx.close();
-      const sr = 48000, dur = decoded.duration + 0.5;
-      const off = new OfflineAudioContext(1, Math.ceil(sr * dur), sr);
-      const src2 = off.createBufferSource(); src2.buffer = decoded; src2.connect(off.destination); src2.start();
-      const rendered = await off.startRendering();
-      const pcm = rendered.getChannelData(0);
-      const CS = 4096;
-      for(let i=0; i<pcm.length; i+=CS){
-        const len = Math.min(CS, pcm.length-i);
-        const ad = new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:len, numberOfChannels:1,
-          timestamp: Math.round(i/sr*1e6), data: pcm.subarray(i, i+len) });
-        aEnc.encode(ad); ad.close();
-      }
-      await aEnc.flush();
-    } catch(e){ console.warn('Audio encode failed (vidéo sera muette):', e); }
-  }
-  if(_silenceCleanBlobUrl && silenceKeepSegs.length > 0){
-    toast('✂️ Silences supprimés appliqués à la composition');
+      audioCtx = new AudioContext();
+      const dest = audioCtx.createMediaStreamDestination();
+      const audioBuf = await audioCtx.decodeAudioData(await _audioBlobToEncode.arrayBuffer());
+      audioSrc = audioCtx.createBufferSource();
+      audioSrc.buffer = audioBuf;
+      audioSrc.connect(dest);
+      combinedStream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks(),
+      ]);
+    } catch(e){ console.warn('Audio mix failed, vidéo muette:', e); }
   }
 
-  // ── Boucle rAF : encoder les frames vidéo en temps réel ──
-  setStage('Initialisation vidéo…', 15);
+  // ── 10. MediaRecorder ──
+  let recorder, chunks = [];
+  try {
+    recorder = new MediaRecorder(combinedStream, {
+      mimeType: chosenMime,
+      videoBitsPerSecond: qCfg.br,
+      audioBitsPerSecond: 128_000,
+    });
+  } catch(e){
+    toast('⚠️ MediaRecorder init failed: ' + e.message);
+    resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
+  }
+  recorder.ondataavailable = e => { if(e.data && e.data.size > 0) chunks.push(e.data); };
+
+  // ── 11. Démarrer lecture + enregistrement ──
+  setStage('Composition ' + qCfg.label + '…', 18);
+  toast('🎬 Composition ' + qCfg.label + ' (~' + Math.round(totalDuration) + 's en temps réel)…');
   hedraVid.currentTime = 0;
-  // Play avec timeout 8s pour éviter le blocage si le navigateur bloque autoplay
   await Promise.race([
     hedraVid.play().catch(()=>{}),
-    new Promise(r => setTimeout(r, 8000))
+    new Promise(r => setTimeout(r, 5000))
   ]);
   if(gpVid){ gpVid.currentTime=0; gpVid.play().catch(()=>{}); }
-  setStage('Composition ' + qCfg.label + '…', 18);
-  toast('🎬 Composition ' + qCfg.label + ' en cours… (~' + Math.round(totalDuration) + 's)');
+  if(audioSrc) audioSrc.start(0);
+  recorder.start(200); // chunk toutes les 200ms
 
-  await new Promise((resolve) => {
-    const FPS = 30, frameDur = Math.round(1e6/FPS);
-    let fc = 0, done = false;
+  // ── 12. Boucle rAF pendant totalDuration secondes ──
+  await new Promise(resolve => {
     const t0 = performance.now();
-
     function rAF(){
-      if(done) return;
-      const elapsed = (performance.now()-t0)/1000;
-      const pct = Math.min(99, Math.round(18 + elapsed/totalDuration*81));
-      if(compFill) compFill.style.width=pct+'%';
-      if(compPct) compPct.textContent=pct+'%';
-
+      const elapsed = (performance.now() - t0) / 1000;
+      const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
+      if(compFill) compFill.style.width = pct + '%';
+      if(compPct)  compPct.textContent  = pct + '%';
       drawFrame(elapsed);
-
-      // Encoder la frame (sans condition sur encodeQueueSize pour éviter les frames manquantes)
-      const ts = Math.round(elapsed*1e6);
-      try {
-        const vf = new VideoFrame(canvas, { timestamp:ts, duration:frameDur });
-        vEnc.encode(vf, { keyFrame: fc%60===0 });
-        vf.close();
-        fc++;
-      } catch(e){ console.warn('VideoFrame encode error:', e); }
-
-      // Si play() a échoué (paused), forcer la position de lecture frame par frame
-      if(hedraVid.paused && elapsed < totalDuration - 0.1){
-        hedraVid.currentTime = Math.min(elapsed, totalDuration - 0.01);
-      }
-
-      // NE PAS utiliser hedraVid.ended : peut être true immédiatement si le codec
-      // Hedra n'est pas supporté par le navigateur → provoque une vidéo vide (186ko)
-      const finished = elapsed >= totalDuration + 0.3 || !!vEncError;
-      if(finished){
-        done = true;
-        if(compFill) compFill.style.width='100%';
-        if(compPct) compPct.textContent='100%';
-        vEnc.flush().then(()=>{
-          try{
-            muxer.finalize();
-            const blob = new Blob([target.buffer], { type:'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            results.composedUrl = url;
-            document.getElementById('hedraVideo').src = url;
-            URL.revokeObjectURL(hedraObjUrl);
-            const sizeMb = (blob.size/1024/1024).toFixed(1);
-            toast('✓ MP4 ' + qCfg.label + ' prêt (' + sizeMb + ' Mo) — téléchargement…');
-            const a = document.createElement('a');
-            a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.mp4';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          } catch(e){
-            toast('⚠️ Finalisation MP4 échouée : ' + e.message);
-            console.error('muxer.finalize error:', e);
-          }
-          resetBtn(); resolve();
-        }).catch(e=>{ toast('⚠️ vEnc.flush error: '+e.message); resetBtn(); resolve(); });
-      } else {
+      if(elapsed < totalDuration + 0.2){
         requestAnimationFrame(rAF);
+      } else {
+        resolve();
       }
     }
     requestAnimationFrame(rAF);
   });
+
+  // ── 13. Arrêter l'enregistrement et récupérer le blob ──
+  setStage('Finalisation…', 99);
+  await new Promise(resolve => {
+    recorder.onstop = resolve;
+    recorder.stop();
+  });
+  if(audioCtx) audioCtx.close();
+  hedraVid.pause();
+  if(gpVid) gpVid.pause();
+  URL.revokeObjectURL(hedraObjUrl);
+
+  const blob = new Blob(chunks, { type: chosenMime });
+  if(blob.size < 50000){
+    toast('⚠️ Vidéo trop petite (' + Math.round(blob.size/1024) + 'ko) — essaie de relancer');
+    resetBtn(); return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  results.composedUrl = url;
+  document.getElementById('hedraVideo').src = url;
+  const sizeMb = (blob.size / 1024 / 1024).toFixed(1);
+  const label = qCfg.label + (isWebm ? ' (WebM)' : '');
+  toast('✓ Vidéo ' + label + ' prête (' + sizeMb + ' Mo) — téléchargement…');
+  if(compFill) compFill.style.width = '100%';
+  if(compPct) compPct.textContent = '100%';
+
+  const a = document.createElement('a');
+  a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.' + fileExt;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  resetBtn();
 }
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
