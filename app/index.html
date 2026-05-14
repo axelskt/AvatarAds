@@ -959,6 +959,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                       <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.85);border-radius:1px"></div>
                     </div>
                   </div>
+                  <!-- Zoom strip (visible only while dragging a handle) -->
+                  <div id="silenceZoomWrap" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:4px 6px;position:relative">
+                    <canvas id="silenceZoomCanvas" width="600" height="40" style="width:100%;border-radius:4px;display:block"></canvas>
+                    <div id="silenceZoomLabel" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--orange);margin-top:2px">0.0s</div>
+                  </div>
                   <!-- Trim time labels -->
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
                     <span id="silTrimStartLabel" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">0.0s</span>
@@ -2504,8 +2509,9 @@ function enterApp(profile){
   const upgBtn   = document.getElementById('btnUpgradePlan');
   const upgLabel = document.getElementById('btnUpgradePlanLabel');
   if(upgBtn && upgLabel){
-    const showUpg = profile.plan === 'starter' || profile.plan === 'pro';
+    const showUpg = profile.plan !== 'elite';
     upgBtn.style.display = showUpg ? 'flex' : 'none';
+    if(profile.plan === 'free')    upgLabel.textContent = '→ Starter';
     if(profile.plan === 'starter') upgLabel.textContent = '→ Pro';
     if(profile.plan === 'pro')     upgLabel.textContent = '→ Elite';
   }
@@ -3602,12 +3608,13 @@ function startPreviewAnim(audioEl){
         wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
       }
       if(groupIdx !== lastGroup || wordInGroup !== lastWordInGroup){
+        const groupChanged = groupIdx !== lastGroup;
         lastGroup = groupIdx;
         lastWordInGroup = wordInGroup;
         const wordStart = groupIdx * wpg;
         const shown = [];
         for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
-        updateSubPreviewWithWords(shown, wordInGroup);
+        updateSubPreviewWithWords(shown, wordInGroup, groupChanged);
       }
       previewInterval = requestAnimationFrame(rafLoop);
     };
@@ -3643,7 +3650,7 @@ function stopPreviewAnim(){
   updateSubPreview();
 }
 
-function updateSubPreviewWithWords(shown, activeIdx){
+function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
   const el = document.getElementById('subsContent');
   if(!el) return;
   const style = selSubStyle || 'hormozi';
@@ -3670,8 +3677,14 @@ function updateSubPreviewWithWords(shown, activeIdx){
   });
   const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
   el.innerHTML = html;
-  el.className = '';
-  if(animClass){ void el.offsetWidth; el.className = animClass; }
+  if(triggerAnim){
+    // New group → restart the entry animation
+    el.className = '';
+    if(animClass){ void el.offsetWidth; el.className = animClass; }
+  } else {
+    // Same group, karaoke word highlight only → keep animation class, no restart
+    if(animClass && !el.className) el.className = animClass;
+  }
 }
 
 const publishUrls = {
@@ -4350,6 +4363,64 @@ function handleSilenceGameplayFile(file){
 // ── Silence trim handles ──
 let _silTrimDragging = false;
 
+// ── Silence waveform zoom strip ──
+function _showSilenceZoom(tSec){
+  if(!silenceAudioBuffer) return;
+  const zWrap  = document.getElementById('silenceZoomWrap');
+  const zCanvas = document.getElementById('silenceZoomCanvas');
+  const zLabel  = document.getElementById('silenceZoomLabel');
+  if(!zWrap || !zCanvas) return;
+  zWrap.style.display = 'block';
+
+  const dur     = silenceAudioBuffer.duration;
+  const sr      = silenceAudioBuffer.sampleRate;
+  const ch      = silenceAudioBuffer.getChannelData(0);
+  const W       = zCanvas.width, H = zCanvas.height;
+  const ctx     = zCanvas.getContext('2d');
+  const windowS = Math.min(4, dur * 0.15); // ±2s window (max 4s total)
+  const t0      = Math.max(0, tSec - windowS / 2);
+  const t1      = Math.min(dur, t0 + windowS);
+  const s0      = Math.floor(t0 * sr);
+  const s1      = Math.floor(t1 * sr);
+  const step    = Math.max(1, Math.floor((s1 - s0) / W));
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#12141a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw zoomed waveform
+  ctx.fillStyle = 'rgba(255,107,53,0.55)';
+  for(let x = 0; x < W; x++){
+    const si = s0 + Math.floor((x / W) * (s1 - s0));
+    let max = 0;
+    for(let k = 0; k < step && si + k < ch.length; k++) max = Math.max(max, Math.abs(ch[si + k]));
+    const barH = Math.max(1, max * (H - 4));
+    ctx.fillRect(x, (H - barH) / 2, 1, barH);
+  }
+
+  // Draw cursor line at exact tSec
+  const cursorX = Math.round(((tSec - t0) / (t1 - t0)) * W);
+  ctx.strokeStyle = '#ff6b35';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cursorX, 0); ctx.lineTo(cursorX, H); ctx.stroke();
+
+  // Time ticks
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '9px monospace';
+  for(let ti = Math.ceil(t0 * 2) / 2; ti <= t1; ti += 0.5){
+    const tx = Math.round(((ti - t0) / (t1 - t0)) * W);
+    ctx.fillRect(tx, 0, 1, 6);
+    ctx.fillText(ti.toFixed(1) + 's', tx + 2, 14);
+  }
+
+  if(zLabel) zLabel.textContent = tSec.toFixed(2) + 's';
+}
+
+function _hideSilenceZoom(){
+  const zWrap = document.getElementById('silenceZoomWrap');
+  if(zWrap) zWrap.style.display = 'none';
+}
+
 function _initSilenceTrimHandles(){
   const wrap = document.getElementById('silenceTrimWrap');
   const hL   = document.getElementById('silTrimHandleL');
@@ -4371,9 +4442,12 @@ function _initSilenceTrimHandles(){
       const effEnd = silenceTrimEnd === Infinity ? dur : silenceTrimEnd;
       if(isLeft){
         silenceTrimStart = Math.max(0, Math.min(t, effEnd - 0.3));
+        _showSilenceZoom(silenceTrimStart);
       } else {
         silenceTrimEnd = Math.max(silenceTrimStart + 0.3, t);
         if(silenceAudioBuffer && silenceTrimEnd >= silenceAudioBuffer.duration - 0.05) silenceTrimEnd = Infinity;
+        const effT = silenceTrimEnd === Infinity ? dur : silenceTrimEnd;
+        _showSilenceZoom(effT);
       }
       _updateSilenceTrimUI();
     };
@@ -4382,6 +4456,7 @@ function _initSilenceTrimHandles(){
       document.removeEventListener('mouseup', onUp);
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onUp);
+      _hideSilenceZoom();
     };
     el.addEventListener('mousedown', e => {
       e.preventDefault();
