@@ -435,7 +435,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
 <!-- GUEST BANNER -->
 <div class="guest-banner" id="guestBanner">
-  <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · Téléchargement bloqué · 2 min offertes</div>
+  <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · 2 vidéos offertes</div>
   <button class="btn-guest-upgrade" onclick="showPaywall()">Voir les plans · dès 19,99€/mois →</button>
 </div>
 
@@ -2135,7 +2135,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- GUEST -->
     <button onclick="loginGuest()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
-      🚀 Commencer gratuitement <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
+      🚀 Essai gratuit — 2 vidéos <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
     </button>
     <div style="text-align:center;margin-top:14px">
       <a href="https://avatarads.iamanager.fr#pricing" style="font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)">Voir les plans →</a>
@@ -2496,7 +2496,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div>
     <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">14,99€/mois</strong> en annuel · Sans engagement</div>
     <button class="btn-paywall" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">Voir tous les plans →</button>
-    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai (watermark)</button>
+    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
   </div>
 </div>
 
@@ -2513,7 +2513,7 @@ const OPENAI_PROXY = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY     = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
 
 // Minutes de vidéo par plan (stockées en secondes dans Supabase)
-const PLAN_SECONDS = { free: 120, starter: 300, pro: 600, elite: 1500 };
+const PLAN_SECONDS = { free: 40, starter: 300, pro: 600, elite: 1500 };
 const PLAN_PRICES  = { starter: '19,99€', pro: '38,99€', elite: '59,99€' };
 const OWNER_EMAIL  = 'axel.skotnicki@gmail.com';
 
@@ -2641,7 +2641,7 @@ async function loadProfile(user){
   if(!profile){
     // Créer le profil manuellement si le trigger n'a pas fonctionné
     const { data } = await sb.from('profiles').insert({
-      id: user.id, email: user.email, plan: 'free', credits_remaining: 2, credits_total: 2
+      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40
     }).select().single();
     profile = data;
   }
