@@ -1676,6 +1676,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Validation du script</div>
             <div class="gp-step" id="gp2"><div class="gp-icon">🎤</div>Voix ElevenLabs TTS</div>
             <div class="gp-step" id="gp3"><div class="gp-icon">🎭</div>Lipsync avatar IA</div>
+            <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:6px auto 0">
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
+                <span>Hedra génère…</span><span id="hedraProgressPct">0%</span>
+              </div>
+              <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
+                <div id="hedraProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .4s ease"></div>
+              </div>
+            </div>
             <div class="gp-step" id="gp4"><div class="gp-icon">💬</div>Sous-titres Hormozi</div>
             <div class="gp-step" id="gp5"><div class="gp-icon">✅</div>Finalisation</div>
           </div>
@@ -2551,6 +2559,13 @@ function enterApp(profile){
     if(profile.plan === 'free')    upgLabel.textContent = '→ Starter';
     if(profile.plan === 'starter') upgLabel.textContent = '→ Pro';
     if(profile.plan === 'pro')     upgLabel.textContent = '→ Elite';
+  }
+  // Silence tool panel : open by default for PRO/Elite, closed for others
+  if(!['pro','elite'].includes(profile.plan)){
+    const sPanel = document.getElementById('silenceToolPanel');
+    const sArrow = document.getElementById('silenceToolArrow');
+    if(sPanel) sPanel.style.display = 'none';
+    if(sArrow) sArrow.style.transform = '';
   }
   updateLivePreview();
   checkSetupNeeded();
@@ -3862,16 +3877,11 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
     else if(style==='mrbeast') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
-  const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
+  // During animated preview, never apply entry animation class (would re-trigger on every word)
+  const animClass = (animEnabled && selAnim !== 'none' && !previewPlaying) ? 'sub-anim-'+selAnim : '';
+  el.className = '';
   el.innerHTML = html;
-  if(triggerAnim){
-    // New group → restart the entry animation
-    el.className = '';
-    if(animClass){ void el.offsetWidth; el.className = animClass; }
-  } else {
-    // Same group, karaoke word highlight only → keep animation class, no restart
-    if(animClass && !el.className) el.className = animClass;
-  }
+  if(animClass && triggerAnim){ void el.offsetWidth; el.className = animClass; }
 }
 
 const publishUrls = {
@@ -4221,6 +4231,11 @@ let _ffmpegInst         = null;
 let _ffmpegReady        = false;
 
 function toggleSilenceTool(){
+  // PRO/Elite only
+  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+    openUpgradeModal();
+    return;
+  }
   const panel = document.getElementById('silenceToolPanel');
   const arrow = document.getElementById('silenceToolArrow');
   const open = panel.style.display !== 'none';
@@ -4237,6 +4252,9 @@ function _updateSilenceSourceLabel(){
 }
 
 async function analyzeSilences(){
+  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+    openUpgradeModal(); return;
+  }
   const file = mp4AudioFile || window._voiceFileRef;
   if(!file){ toast('⚠️ Upload un fichier audio dans Voix d\'abord'); return; }
   const btn = document.getElementById('silenceAnalyzeBtn');
@@ -5598,6 +5616,11 @@ Style: authentique, comme un vrai témoignage, direct, sans fioritures.`}
 let voiceMode = 'elevenlabs';
 
 function toggleGameplayAudio(){
+  // PRO/Elite only
+  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+    openUpgradeModal();
+    return;
+  }
   voiceMode = voiceMode === 'gameplay' ? 'elevenlabs' : 'gameplay';
   const sw    = document.getElementById('gpAudioSwitch');
   const thumb = document.getElementById('gpAudioThumb');
@@ -5766,8 +5789,6 @@ async function callHedra(audioBlob){
       generated_video_inputs: {
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze',
         aspect_ratio: aspectRatio,
-        resolution: '720p',
-        duration_ms: durationMs,
         character_orientation: 'video'
       }
     };
@@ -5787,7 +5808,11 @@ async function callHedra(audioBlob){
 
     // ── 5. Polling (GET /generations/{id}/status) ──
     const gpIcon = document.getElementById('gp3')?.querySelector('.gp-icon');
-    for(let i = 0; i < 60; i++){
+    const hedraBar = document.getElementById('hedraProgressBar');
+    const hedraBarFill = document.getElementById('hedraProgressFill');
+    const hedraBarPct = document.getElementById('hedraProgressPct');
+    if(hedraBar) hedraBar.style.display = 'block';
+    for(let i = 0; i < 72; i++){
       await wait(5000);
       const pollRes = await hGet('/generations/' + genId + '/status');
       if(!pollRes.ok) continue;
@@ -5795,26 +5820,40 @@ async function callHedra(audioBlob){
       const status = (pollData.status || pollData.state || '').toLowerCase();
       const prog = Math.round((pollData.progress || 0) * 100);
       if(gpIcon) gpIcon.textContent = prog > 0 ? prog + '%' : '⏳';
+      if(hedraBarFill) hedraBarFill.style.width = prog + '%';
+      if(hedraBarPct) hedraBarPct.textContent = prog + '%';
+
+      // finalizing = almost done, keep polling
+      if(status === 'finalizing' || status === 'processing' || status === 'queued') continue;
 
       if(status === 'complete' || status === 'completed' || status === 'succeeded'){
+        if(hedraBar) hedraBar.style.display = 'none';
+        // URL is directly in the status response — no need to fetch /assets
+        const videoUrl = pollData.url || pollData.download_url || pollData.video_url || pollData.streaming_url || '';
+        if(videoUrl) return videoUrl;
+        // Fallback: try fetching the asset if provided
         const assetId = pollData.asset_id;
         if(assetId){
-          const assetRes = await hGet('/assets/' + assetId);
-          if(assetRes.ok){
-            const assetData = await assetRes.json();
-            const videoUrl = assetData.url || assetData.download_url || assetData.presigned_url || '';
-            if(videoUrl) return videoUrl;
-          }
+          try{
+            const assetRes = await hGet('/assets/' + assetId);
+            if(assetRes.ok){
+              const assetData = await assetRes.json();
+              return assetData.url || assetData.download_url || assetData.presigned_url || '';
+            }
+          }catch(e){ console.warn('Asset fetch fallback failed:', e); }
         }
-        return pollData.url || pollData.video_url || '';
+        toast('⚠️ Hedra : vidéo générée mais URL introuvable');
+        return '';
       }
       if(status === 'failed' || status === 'error' || status === 'cancelled'){
-        const reason = pollData.error || pollData.message || '';
+        if(hedraBar) hedraBar.style.display = 'none';
+        const reason = pollData.error_message || pollData.error || pollData.message || '';
         toast('✗ Hedra génération échouée' + (reason ? ' : ' + reason.slice(0,60) : ''));
         return '';
       }
     }
-    toast('⚠️ Hedra timeout (5 min) — vérifie app.hedra.com');
+    if(hedraBar) hedraBar.style.display = 'none';
+    toast('⚠️ Hedra timeout (6 min) — vérifie app.hedra.com');
     return '';
   } catch(e){
     toast('⚠️ Hedra erreur : ' + (e.message || e));
