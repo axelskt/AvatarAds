@@ -910,13 +910,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <span style="font-size:16px">🔇</span>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Nettoie l'audio · Synchro gameplay automatique</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Nettoie l'audio · supprime les pauses</div>
                   </div>
                 </div>
-                <span id="silenceToolArrow" style="font-size:12px;color:var(--text3);transition:transform .25s">›</span>
+                <span id="silenceToolArrow" style="font-size:12px;color:var(--text3);transition:transform .25s;transform:rotate(90deg)">›</span>
               </div>
 
-              <div id="silenceToolPanel" style="display:none;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <div id="silenceToolPanel" style="display:block;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
 
                 <!-- Source info -->
                 <div id="silenceSourceInfo" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg4);border-radius:7px">
@@ -924,7 +924,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
 
                 <!-- Gameplay upload -->
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">🎮 Gameplay à synchroniser <span style="opacity:.6">(optionnel)</span></div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">🎮 Synchronise le gameplay à la voix <span style="opacity:.6">(optionnel)</span></div>
                 <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:12px">
                   <div id="silenceGpDropContent"><div style="font-size:20px">🎮</div><div style="font-size:11px;font-weight:600;margin-top:4px">Glisse ton gameplay ici</div><div style="font-size:9px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div></div>
                   <div id="silenceGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
@@ -2297,6 +2297,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     </div><!-- /grid -->
 
+    <div id="upgradeModalTestRow" style="display:none;justify-content:center;gap:8px;margin-top:8px">
+      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prévisualiser en tant que :</span>
+      <button onclick="previewUpgradeAs('starter')" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer">Starter</button>
+      <button onclick="previewUpgradeAs('pro')" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;color:#a855f7;font-family:var(--mono);font-size:10px;cursor:pointer">Pro</button>
+    </div>
     <button class="btn-credits-close" onclick="closeUpgradeModal()">Fermer</button>
   </div>
 </div>
@@ -2706,10 +2711,12 @@ function openUpgradeModal(){
     grid.style.gridTemplateColumns = '1fr 1fr';
     document.getElementById('upgradeModalTitle').textContent = 'Améliore ton plan ou recharge des minutes';
   } else {
-    // Elite — credits only
+    // Elite — credits only + boutons test pour prévisualiser
     leftCol.style.display = 'none';
     grid.style.gridTemplateColumns = '1fr';
     document.getElementById('upgradeModalTitle').textContent = 'Recharge des minutes';
+    const testRow = document.getElementById('upgradeModalTestRow');
+    if(testRow) testRow.style.display = 'flex';
   }
 
   document.getElementById('upgradeModal').style.display = 'flex';
@@ -2717,6 +2724,24 @@ function openUpgradeModal(){
 
 function closeUpgradeModal(){
   document.getElementById('upgradeModal').style.display = 'none';
+}
+
+function previewUpgradeAs(fakePlan){
+  // Simule un plan différent pour voir le rendu du modal (Elite seulement)
+  const upg = UPGRADE_PLANS[fakePlan];
+  if(!upg) return;
+  document.getElementById('upgradePlanBadge').textContent = upg.label;
+  document.getElementById('upgradePlanPrice').textContent = upg.price;
+  const feat = document.getElementById('upgradePlanFeatures');
+  feat.innerHTML = upg.features.map(f =>
+    `<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)">
+      <span style="font-size:14px;flex-shrink:0">${f.icon}</span>
+      <span>${f.text}</span>
+    </div>`
+  ).join('');
+  document.getElementById('upgradeModalLeft').style.display = 'block';
+  document.getElementById('upgradeModalGrid').style.gridTemplateColumns = '1fr 1fr';
+  document.getElementById('upgradeModalTitle').textContent = 'Améliore ton plan ou recharge des minutes';
 }
 
 function goUpgradePlan(){
@@ -3486,7 +3511,15 @@ function toggleSubtitles(){
 }
 
 function handleAvatarFile(file){
-  if(!file || !file.type.startsWith('image/')) return;
+  if(!file) return;
+  if(file.type.startsWith('video/')){
+    toast('⚠️ L\'avatar doit être une image JPG/PNG. Pour le gameplay, glisse ta vidéo dans la section "Style" → Gameplay.');
+    return;
+  }
+  if(!file.type.startsWith('image/')){
+    toast('⚠️ Format non supporté — utilise une image JPG ou PNG.');
+    return;
+  }
   // Reset crop à 0 (centré) pour le nouvel avatar
   cfg.avCropX = 0; cfg.avCropY = 0;
   const url = URL.createObjectURL(file);
