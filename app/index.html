@@ -6265,6 +6265,17 @@ function showResults(){
     document.getElementById('audioEl').src=url;
   }
 
+  // ── Sauvegarder en cache pour réutilisation ──
+  if(results.hedraUrl){
+    try {
+      localStorage.setItem('avatarads_lastHedra', JSON.stringify({
+        url: results.hedraUrl,
+        date: new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+        script: (results.script||'').slice(0,80)
+      }));
+    } catch(e){}
+  }
+
   // Show video if available, else show Hedra manual workflow
   if(results.hedraUrl){
     document.getElementById('downloadCard').style.display='block';
@@ -6307,6 +6318,7 @@ function loadHedraVideoFromUrl(){
   const input=document.getElementById('hedraVideoUrlInput');
   if(!input||!input.value.trim()){toast('⚠️ Colle une URL valide'); return;}
   results.hedraUrl=input.value.trim();
+  try{ localStorage.setItem('avatarads_lastHedra', JSON.stringify({ url:results.hedraUrl, date:new Date().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}), script:'' })); }catch(e){}
   document.getElementById('hedraManualCard').style.display='none';
   document.getElementById('genStatusCard').style.display='none';
   document.getElementById('downloadCard').style.display='block';
