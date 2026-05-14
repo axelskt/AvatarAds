@@ -1713,7 +1713,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                 </div>
               </div>
-              <button onclick="downloadVideo()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger la vidéo</button>
+              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">🎬 Composer & Télécharger</button>
+              <div id="composeProgressWrap" style="display:none;margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
+                  <span>Composition en cours…</span><span id="composeProgressPct">0%</span>
+                </div>
+                <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
+                  <div id="composeProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .2s ease"></div>
+                </div>
+              </div>
               <button onclick="genSubtitlesFromAudio()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📝 Générer sous-titres depuis l'audio</button>
             </div>
 
@@ -5545,7 +5553,14 @@ async function startGeneration(){
   // STEP 2: Voice
   setStep('gp2','on');
   let audioBlob=null;
-  if(voiceMode === 'gameplay'){
+  if(mp4AudioEnabled && mp4AudioFile){
+    // Use the uploaded MP4/audio file directly as audio source for Hedra lipsync
+    audioBlob = mp4AudioFile;
+    // Pre-populate word editor from existing transcript if available
+    const ta = document.getElementById('voiceTranscriptTA');
+    if(ta && ta.value.trim()) populateWordEditor(ta.value.trim());
+    else populateWordEditor(finalScript);
+  } else if(voiceMode === 'gameplay'){
     audioBlob = await extractGameplayAudio();
   } else if(K.el){
     audioBlob = await callElevenLabs(finalScript);
@@ -5880,10 +5895,6 @@ function showResults(){
     document.getElementById('genStatusCard').style.display='none';
     document.getElementById('hedraVideo').src=results.hedraUrl;
     updateGuestWatermarks();
-    // Auto-download
-    const a=document.createElement('a');
-    a.href=results.hedraUrl; a.download='avatarads-video.mp4';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   } else {
     document.getElementById('downloadCard').style.display='none';
     // Show Hedra manual workflow only if there's audio (voice was generated)
@@ -5990,11 +6001,199 @@ function toggleAudio(){
   document.getElementById('audioEl').onended=()=>{audioPlaying=false;document.getElementById('playAudioBtn').textContent='▶';};
 }
 function downloadVideo(){
-  if(!results.hedraUrl) return;
-  const a=document.createElement('a');
-  a.href=results.hedraUrl; a.download='avatarads-video.mp4';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  if(guestMode) toast('💧 Vidéo téléchargée avec watermark — passe à un plan payant pour la version HD sans watermark');
+  // Legacy — redirige vers composition
+  composeVideo(document.getElementById('composeBtn'));
+}
+
+// ══════════════════════════════════════════
+// ── COMPOSITION VIDÉO (canvas + MediaRecorder) ──
+// ══════════════════════════════════════════
+async function composeVideo(btn){
+  if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
+  if(btn){ btn.disabled = true; btn.innerHTML = '⏳ Chargement…'; }
+  const compBar  = document.getElementById('composeProgressWrap');
+  const compFill = document.getElementById('composeProgressFill');
+  const compPct  = document.getElementById('composeProgressPct');
+  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger'; } if(compBar) compBar.style.display='none'; };
+
+  const isSquare = cfg.format === 'square';
+  const W = 1080, H = isSquare ? 1080 : 1920;
+
+  toast('🎬 Chargement de la vidéo Hedra…');
+
+  // 1. Fetch Hedra video as blob (avoid CORS canvas taint)
+  let hedraObjUrl;
+  try {
+    const r = await fetch(results.hedraUrl);
+    hedraObjUrl = URL.createObjectURL(await r.blob());
+  } catch(e) {
+    toast('⚠️ CORS bloqué — téléchargement direct de la vidéo Hedra brute');
+    const a = document.createElement('a'); a.href=results.hedraUrl; a.download='avatarads-hedra.mp4';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    resetBtn(); return;
+  }
+
+  // 2. Hedra video element
+  const hedraVid = document.createElement('video');
+  hedraVid.src = hedraObjUrl; hedraVid.muted = true;
+  try {
+    await new Promise((res,rej) => { hedraVid.onloadedmetadata=res; hedraVid.onerror=rej; hedraVid.load(); });
+  } catch(e) { toast('⚠️ Vidéo Hedra illisible : '+e.message); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
+  const totalDuration = hedraVid.duration || 30;
+
+  // 3. Gameplay video (if loaded and visible)
+  const gpVideoEl = document.getElementById('gpVideo');
+  const gpZoneEl  = document.getElementById('gameplayZone');
+  const hasGp = !!(gpVideoEl?.src && gpZoneEl?.style.display !== 'none');
+  let gpVid = null;
+  if(hasGp){
+    gpVid = document.createElement('video');
+    gpVid.src = gpVideoEl.src; gpVid.muted = true; gpVid.loop = true;
+    await new Promise(res => { gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
+    if(!gpVid.videoWidth) gpVid = null; // load failed
+  }
+
+  // 4. Layout: mirror preview split ratio
+  const avZoneEl = document.getElementById('avZone');
+  const avFlex = parseFloat(avZoneEl?.style.flex) || 60;
+  const gpFlex = parseFloat(gpZoneEl?.style.flex) || 40;
+  const avH = gpVid ? Math.round(H * avFlex / (avFlex + gpFlex)) : H;
+  const gpH = H - avH;
+
+  // 5. Canvas + MediaRecorder
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const captureStream = canvas.captureStream(30);
+
+  // 6. Audio → stream
+  let audioEl2 = null;
+  if(results.audioBlob){
+    try {
+      audioEl2 = document.createElement('audio');
+      audioEl2.src = URL.createObjectURL(results.audioBlob);
+      const aCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = aCtx.createMediaElementSource(audioEl2);
+      const dest = aCtx.createMediaStreamDestination();
+      src.connect(dest);
+      dest.stream.getAudioTracks().forEach(t => captureStream.addTrack(t));
+    } catch(e) { console.warn('Audio stream setup failed:', e); }
+  }
+
+  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
+    .find(m => { try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || 'video/webm';
+  const chunks = [];
+  const recorder = new MediaRecorder(captureStream, { mimeType, videoBitsPerSecond: 8000000 });
+  recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    results.composedUrl = url;
+    document.getElementById('hedraVideo').src = url;
+    URL.revokeObjectURL(hedraObjUrl);
+    resetBtn();
+    toast('✓ Vidéo composée — téléchargement…');
+    const a = document.createElement('a'); a.href=url; a.download='avatarads-video.webm';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  // 7. Subtitle words from wordEditor chips
+  const wordChips = document.querySelectorAll('#wordEditor span');
+  const words = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
+  const wpg = cfg.subWpg || 2;
+  const wordInterval = words.length > 0 ? totalDuration / words.length : 99;
+
+  // 8. Start playback + recording
+  if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
+  if(btn) btn.innerHTML = '🔴 Composition…';
+  toast('🎬 Composition en cours… (~'+ Math.round(totalDuration) +'s)');
+  hedraVid.play().catch(()=>{});
+  if(gpVid) gpVid.play().catch(()=>{});
+  if(audioEl2) audioEl2.play().catch(()=>{});
+  recorder.start(200);
+  const startTime = performance.now();
+
+  // 9. Render loop
+  (function renderFrame(){
+    const elapsed = (performance.now() - startTime) / 1000;
+    const pct = Math.min(100, Math.round(elapsed / totalDuration * 100));
+    if(compFill) compFill.style.width = pct + '%';
+    if(compPct) compPct.textContent = pct + '%';
+
+    // Background
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    if(gpVid){
+      ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,avH); ctx.clip();
+      _cvCover(ctx, hedraVid, 0, 0, W, avH);
+      ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(0,avH,W,gpH); ctx.clip();
+      _cvCover(ctx, gpVid, 0, avH, W, gpH);
+      ctx.restore();
+    } else {
+      _cvCover(ctx, hedraVid, 0, 0, W, H);
+    }
+
+    // Subtitles
+    if(words.length > 0){
+      const wordIdx  = Math.min(Math.floor(elapsed / wordInterval), words.length - 1);
+      const grpStart = Math.floor(wordIdx / wpg) * wpg;
+      const shown    = words.slice(grpStart, Math.min(grpStart + wpg, words.length));
+      _cvSubs(ctx, shown, wordIdx - grpStart, W, H);
+    }
+
+    if(elapsed >= totalDuration + 0.3 || hedraVid.ended){
+      recorder.stop();
+    } else {
+      requestAnimationFrame(renderFrame);
+    }
+  })();
+}
+
+// Cover-fit un élément vidéo dans une zone (object-fit:cover)
+function _cvCover(ctx, vid, x, y, w, h){
+  if(!vid?.videoWidth || !vid?.videoHeight) return;
+  const vr = vid.videoWidth / vid.videoHeight, cr = w / h;
+  let sx=0, sy=0, sw=vid.videoWidth, sh=vid.videoHeight;
+  if(vr > cr){ sw=Math.round(vid.videoHeight*cr); sx=Math.round((vid.videoWidth-sw)/2); }
+  else        { sh=Math.round(vid.videoWidth/cr);  sy=Math.round((vid.videoHeight-sh)/2); }
+  ctx.drawImage(vid, sx, sy, sw, sh, x, y, w, h);
+}
+
+// Dessine les sous-titres sur le canvas avec le style actuel
+function _cvSubs(ctx, shown, activeIdx, W, H){
+  if(!shown?.length) return;
+  const scale = H / 1920;
+  const sz    = Math.max(24, Math.round((cfg.subSize||72) * scale * 0.85));
+  const posY  = Math.round(H * ((cfg.subPos||75) / 100));
+  const posX  = Math.round(W * ((cfg.subPosX||50) / 100));
+  const c1    = subColors.c1 || '#FFE500';
+  const c2    = subColors.c2 || '#ffffff';
+  const stroke = Math.max(2, Math.round(sz / 12));
+
+  ctx.save();
+  ctx.font = `900 ${sz}px Impact,sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.lineJoin = 'round';
+
+  // Measure total width for centering
+  const gap = Math.round(sz * 0.2);
+  const widths = shown.map(w => ctx.measureText(w).width + gap);
+  const totalW = widths.reduce((a,b)=>a+b,0);
+  let x = posX - totalW / 2;
+
+  shown.forEach((word, i) => {
+    const color = (i === activeIdx) ? c1 : c2;
+    ctx.lineWidth = stroke;
+    ctx.strokeStyle = '#000';
+    ctx.strokeText(word, x, posY);
+    ctx.fillStyle = color;
+    ctx.fillText(word, x, posY);
+    x += widths[i];
+  });
+  ctx.restore();
 }
 
 // ── SOCIAL PUBLISH ──
