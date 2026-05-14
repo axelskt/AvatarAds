@@ -5485,31 +5485,56 @@ async function callElevenLabs(text){
 }
 
 async function callHedra(audioBlob){
-  // Hedra API v2 — api.hedra.com — header X-API-Key
-  // Flow : 1) Upload audio asset → 2) Upload image asset (optionnel) → 3) POST /generations → 4) Poll GET /generations/{id}
-  // Note : CORS peut bloquer depuis le navigateur. En prod → backend proxy.
-  const BASE = 'https://api.hedra.com/web-app/public';
-  const headers = {'X-API-Key': K.hedra};
+  // Hedra API v2 — via proxy Supabase Edge Function (contourne le CORS de api.hedra.com)
+  // Flow : 1) Upload audio → 2) Upload image avatar (optionnel) → 3) POST /generations → 4) Poll
+  const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
+  const hedraKey = K.hedra;
+
+  // Helper : appel proxy GET
+  async function hGet(path){
+    const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
+      method: 'GET',
+      headers: { 'x-hedra-key': hedraKey, 'apikey': SUPABASE_KEY }
+    });
+    return r;
+  }
+
+  // Helper : appel proxy POST JSON
+  async function hPost(path, body){
+    const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
+      method: 'POST',
+      headers: { 'x-hedra-key': hedraKey, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return r;
+  }
+
+  // Helper : appel proxy POST FormData (upload fichier)
+  async function hUpload(path, formData){
+    const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
+      method: 'POST',
+      headers: { 'x-hedra-key': hedraKey, 'apikey': SUPABASE_KEY },
+      body: formData
+    });
+    return r;
+  }
 
   try {
     // ── 1. Upload audio ──
     const audioFd = new FormData();
     audioFd.append('file', audioBlob, 'voice.mp3');
-    const audioUpRes = await fetch(`${BASE}/assets/upload`, {
-      method: 'POST',
-      headers,
-      body: audioFd
-    });
+    const audioUpRes = await hUpload('/assets/upload', audioFd);
     if (!audioUpRes.ok) {
       const err = await audioUpRes.text();
-      toast('⚠️ Hedra CORS/erreur audio : ' + audioUpRes.status);
+      toast('⚠️ Hedra audio upload erreur ' + audioUpRes.status);
       console.error('Hedra audio upload:', err);
       return '';
     }
     const audioAsset = await audioUpRes.json();
     const audioId = audioAsset.id || audioAsset.asset_id;
+    if(!audioId){ toast('⚠️ Hedra : pas d\'audioId reçu'); return ''; }
 
-    // ── 2. Upload image avatar (si URL fournie ou on skip) ──
+    // ── 2. Upload image avatar (si dispo) ──
     let imageId = null;
     const avatarImgUrl = (document.getElementById('f-avatarimg')||{value:''}).value.trim();
     if (avatarImgUrl) {
@@ -5517,11 +5542,7 @@ async function callHedra(audioBlob){
         const imgBlob = await fetch(avatarImgUrl).then(r => r.blob());
         const imgFd = new FormData();
         imgFd.append('file', imgBlob, 'avatar.jpg');
-        const imgUpRes = await fetch(`${BASE}/assets/upload`, {
-          method: 'POST',
-          headers,
-          body: imgFd
-        });
+        const imgUpRes = await hUpload('/assets/upload', imgFd);
         if (imgUpRes.ok) {
           const imgAsset = await imgUpRes.json();
           imageId = imgAsset.id || imgAsset.asset_id;
@@ -5529,11 +5550,9 @@ async function callHedra(audioBlob){
       } catch(e) { console.warn('Image upload skip:', e); }
     }
 
-    // ── 3. Generate avatar video ──
+    // ── 3. Générer la vidéo ──
     const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
-
-    const durationMs = parseInt(document.getElementById('f-hedra-duration')?.value || '30000');
-
+    const durationMs  = parseInt(document.getElementById('f-hedra-duration')?.value || '30000');
     const genBody = {
       type: 'video',
       ai_model_id: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3
@@ -5546,40 +5565,38 @@ async function callHedra(audioBlob){
         character_orientation: 'video'
       }
     };
-    // Priorité : avatar Hedra pré-défini > photo uploadée
     if(selHedraChar && !selHedraChar.isPlaceholder && selHedraChar.id){
       genBody.character_id = selHedraChar.id;
     } else if(imageId){
       genBody.start_keyframe_id = imageId;
     }
 
-    const genRes = await fetch(`${BASE}/generations`, {
-      method: 'POST',
-      headers: {...headers, 'Content-Type': 'application/json'},
-      body: JSON.stringify(genBody)
-    });
+    const genRes = await hPost('/generations', genBody);
     if (!genRes.ok) {
       const err = await genRes.text();
-      toast('⚠️ Hedra génération erreur : ' + genRes.status);
+      toast('⚠️ Hedra génération erreur ' + genRes.status);
       console.error('Hedra generate:', err);
       return '';
     }
     const genData = await genRes.json();
     const genId = genData.id;
-    if (!genId) return '';
+    if (!genId){ toast('⚠️ Hedra : pas de génération ID'); return ''; }
 
-    // ── 4. Poll status ──
-    for (let i = 0; i < 40; i++) {
+    // ── 4. Polling ──
+    const gpIcon = document.getElementById('gp3')?.querySelector('.gp-icon');
+    for (let i = 0; i < 60; i++) {
       await wait(4000);
-      const pollRes = await fetch(`${BASE}/generations/${genId}`, { headers });
+      const pollRes = await hGet('/generations/' + genId);
       if (!pollRes.ok) continue;
       const pollData = await pollRes.json();
       const status = pollData.status;
+      const prog = Math.round((pollData.progress || 0) * 100);
+      if(gpIcon) gpIcon.textContent = prog + '%';
+
       if (status === 'complete' || status === 'completed') {
-        // Récupère l'URL de la vidéo depuis l'asset
         const assetId = pollData.asset_id;
         if (assetId) {
-          const assetRes = await fetch(`${BASE}/assets/${assetId}`, { headers });
+          const assetRes = await hGet('/assets/' + assetId);
           if (assetRes.ok) {
             const assetData = await assetRes.json();
             return assetData.url || assetData.download_url || '';
@@ -5588,17 +5605,14 @@ async function callHedra(audioBlob){
         return pollData.url || pollData.video_url || '';
       }
       if (status === 'failed' || status === 'error') {
-        toast('✗ Hedra génération échouée');
+        toast('✗ Hedra : génération échouée');
         return '';
       }
-      // Update progress
-      const prog = pollData.progress || 0;
-      document.getElementById('gp3').querySelector('.gp-icon').textContent = prog + '%';
     }
-    toast('⚠️ Hedra timeout — vérifie hedra.com/app');
+    toast('⚠️ Hedra timeout (4 min) — vérifie app.hedra.com');
     return '';
   } catch(e) {
-    toast('⚠️ Hedra CORS bloqué — nécessite un backend proxy');
+    toast('⚠️ Hedra erreur : ' + (e.message || e));
     console.error('Hedra error:', e);
     return '';
   }
