@@ -1224,6 +1224,26 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <input type="hidden" id="timingBtnFixe">
             <input type="hidden" id="secPerGroupRow">
 
+            <!-- TIMING SYNC SLIDER -->
+            <div class="fld" style="margin-bottom:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:13px">⏱️</span>
+                  <span style="font-size:11px;font-weight:700;color:var(--text)">Synchronisation sous-titres</span>
+                </div>
+                <span style="font-size:10px;font-family:var(--mono);color:var(--orange2)" id="subSyncValLabel">+300ms</span>
+              </div>
+              <input type="range" id="subSyncSlider" min="-1000" max="1500" step="50" value="300"
+                oninput="cfg.subAdvanceMs=+this.value;document.getElementById('subSyncValLabel').textContent=(+this.value>=0?'+':'')+this.value+'ms';updateSubPreview();updateLivePreview()"
+                style="width:100%;accent-color:var(--orange)">
+              <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px">
+                <span>Avance −1s</span><span style="color:var(--text3)">Décalage → retard</span><span>+1.5s</span>
+              </div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px;line-height:1.5">
+                💡 Si les sous-titres avancent trop → déplace vers la gauche.<br>S'ils sont en retard → déplace vers la droite.
+              </div>
+            </div>
+
             <!-- ANIMATIONS -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
@@ -1675,6 +1695,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="font-size:28px;margin-bottom:10px">🎬</div>
             <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours...</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">~45–90s selon les APIs</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.35);border-radius:10px;max-width:340px;width:100%">
+            <span style="font-size:16px;flex-shrink:0">⚠️</span>
+            <span style="font-size:12px;font-family:var(--mono);color:#ff8a94;font-weight:600;line-height:1.4">Ne pas quitter ou rafraîchir cette page pendant la génération</span>
           </div>
           <div class="genprog" id="genprog">
             <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Validation du script</div>
@@ -3138,6 +3162,8 @@ function _applySubPreset(p){
   // Couleurs
   if(p.c1){ subColors.c1=p.c1; const ci=document.getElementById('color-c1'); if(ci) ci.value=p.c1; const ch=document.getElementById('color-c1-hex'); if(ch) ch.value=p.c1; }
   if(p.c2){ subColors.c2=p.c2; const ci=document.getElementById('color-c2'); if(ci) ci.value=p.c2; const ch=document.getElementById('color-c2-hex'); if(ch) ch.value=p.c2; }
+  // Sync slider
+  if(p.advanceMs !== undefined){ cfg.subAdvanceMs=p.advanceMs; const sl=document.getElementById('subSyncSlider'); if(sl) sl.value=p.advanceMs; const vl=document.getElementById('subSyncValLabel'); if(vl) vl.textContent=(p.advanceMs>=0?'+':'')+p.advanceMs+'ms'; }
   updateSubPreview(); updateLivePreview();
 }
 
@@ -3228,7 +3254,7 @@ function resetSubStyle(){
   _applySubPreset({
     style:'hormozi', anim:'none', wpg:2, animEnabled:false,
     size:72, pos:75, posX:50, lineH:1.0, scaleX:1.0,
-    c1:'#FFE500', c2:'#ffffff'
+    c1:'#FFE500', c2:'#ffffff', advanceMs:300
   });
   toast('↺ Style réinitialisé par défaut');
 }
@@ -3418,7 +3444,17 @@ async function whisperTranscribe(){
       toast('⚠️ Aucun texte détecté par Whisper');
     }
   } catch(e){
-    const msg = String(e.message || e).slice(0, 120);
+    let raw = String(e.message || e);
+    let msg = raw.slice(0, 200);
+    try {
+      const errObj = JSON.parse(raw);
+      const errMsg = errObj?.error?.message || '';
+      if(errObj?.error?.type === 'insufficient_quota' || errMsg.includes('quota') || errMsg.includes('billing') || raw.includes('quota') || raw.includes('billing')){
+        msg = 'Quota OpenAI dépassé. Recharge ton compte sur platform.openai.com/billing';
+      } else {
+        msg = (errMsg || raw).slice(0, 150);
+      }
+    } catch(_){}
     toast('⚠️ Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
@@ -4351,6 +4387,8 @@ let silenceTrimEnd      = Infinity; // seconds cap at end (Infinity = full)
 let silenceGameplayFile = null;   // optional gameplay file for sync
 let _ffmpegInst         = null;
 let _ffmpegReady        = false;
+let _silenceLastSilences = [];    // dernières silences pour redraw playhead
+let _silencePlayheadRaf = null;   // rAF ID pour animation playhead
 
 function toggleSilenceTool(){
   // PRO/Elite only
@@ -4403,6 +4441,7 @@ async function analyzeSilences(){
     _drawSilenceWave(silenceAudioBuffer, silences);
     document.getElementById('silenceWaveWrap').style.display = 'block';
     _initSilenceTrimHandles();
+    _initSilencePlayheadClick();
     _updateSilenceTrimUI();
 
     // Stats
@@ -4479,9 +4518,10 @@ function _silencesToKeep(silences, totalDur){
   return keep;
 }
 
-function _drawSilenceWave(buffer, silences){
+function _drawSilenceWave(buffer, silences, playheadOrigTime){
   const canvas = document.getElementById('silenceWaveCanvas');
   if(!canvas) return;
+  _silenceLastSilences = silences; // mémoriser pour redraw
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const data = buffer.getChannelData(0);
@@ -4513,6 +4553,60 @@ function _drawSilenceWave(buffer, silences){
     ctx.beginPath(); ctx.moveTo((s.start/dur)*W,0); ctx.lineTo((s.start/dur)*W,H); ctx.stroke();
     ctx.beginPath(); ctx.moveTo((s.end/dur)*W,0); ctx.lineTo((s.end/dur)*W,H); ctx.stroke();
   }
+  // Playhead blanc (position dans l'audio original)
+  if(playheadOrigTime !== undefined && playheadOrigTime >= 0 && dur > 0){
+    const phX = Math.round((playheadOrigTime / dur) * W);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(255,255,255,0.6)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.moveTo(phX, 0); ctx.lineTo(phX, H); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Triangle indicateur en haut
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(phX-6,0); ctx.lineTo(phX+6,0); ctx.lineTo(phX,9); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Convertit temps audio clean → temps audio original (en tenant compte des silences supprimés)
+function _cleanTimeToOrigTime(cleanTime){
+  let acc = 0;
+  for(const seg of silenceKeepSegs){
+    const d = seg.end - seg.start;
+    if(cleanTime <= acc + d) return seg.start + (cleanTime - acc);
+    acc += d;
+  }
+  return silenceAudioBuffer ? silenceAudioBuffer.duration : 0;
+}
+// Convertit temps audio original → temps audio clean
+function _origTimeToCleanTime(origTime){
+  let acc = 0;
+  for(const seg of silenceKeepSegs){
+    if(origTime < seg.start) return acc;
+    if(origTime <= seg.end) return acc + (origTime - seg.start);
+    acc += seg.end - seg.start;
+  }
+  return acc;
+}
+
+// Initialise le clic-pour-chercher sur le waveform
+function _initSilencePlayheadClick(){
+  const canvas = document.getElementById('silenceWaveCanvas');
+  if(!canvas || canvas._playheadClickBound) return;
+  canvas._playheadClickBound = true;
+  canvas.style.cursor = 'pointer';
+  canvas.addEventListener('click', (e)=>{
+    if(!silenceAudioBuffer || !_cleanAudioEl) return;
+    const rect = canvas.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const origTime = ratio * silenceAudioBuffer.duration;
+    const cleanTime = _origTimeToCleanTime(origTime);
+    _cleanAudioEl.currentTime = Math.max(0, Math.min(_cleanAudioEl.duration||9999, cleanTime));
+    // Redessiner immédiatement
+    _drawSilenceWave(silenceAudioBuffer, _silenceLastSilences, origTime);
+  });
 }
 
 async function exportCleanAudio(){
@@ -4833,7 +4927,8 @@ async function playCleanAudio(){
   const btn = document.getElementById('silenceListenBtn');
   if(_cleanAudioEl && !_cleanAudioEl.paused){
     _cleanAudioEl.pause();
-    if(btn){ btn.textContent='▶ Écouter'; btn.onmouseover=null; btn.onmouseout=null; }
+    if(_silencePlayheadRaf){ cancelAnimationFrame(_silencePlayheadRaf); _silencePlayheadRaf=null; }
+    if(btn){ btn.textContent='▶ Écouter'; }
     return;
   }
   if(!silenceAudioBuffer || !silenceKeepSegs.length){ toast('⚠️ Lance l\'analyse d\'abord'); return; }
@@ -4845,9 +4940,23 @@ async function playCleanAudio(){
     const url = URL.createObjectURL(wavBlob);
     if(_cleanAudioEl){ _cleanAudioEl.pause(); }
     _cleanAudioEl = new Audio(url);
-    _cleanAudioEl.onended = () => { if(btn){ btn.textContent='▶ Écouter'; btn.disabled=false; } };
+    _cleanAudioEl.onended = () => {
+      if(btn){ btn.textContent='▶ Écouter'; btn.disabled=false; }
+      if(_silencePlayheadRaf){ cancelAnimationFrame(_silencePlayheadRaf); _silencePlayheadRaf=null; }
+      // Redessiner sans playhead à la fin
+      if(silenceAudioBuffer) _drawSilenceWave(silenceAudioBuffer, _silenceLastSilences);
+    };
     _cleanAudioEl.play();
     if(btn){ btn.textContent='⏹ Stop'; btn.disabled=false; }
+    _initSilencePlayheadClick();
+    // Lancer le RAF d'animation du playhead
+    function _animPlayhead(){
+      if(!_cleanAudioEl || _cleanAudioEl.paused || _cleanAudioEl.ended){ _silencePlayheadRaf=null; return; }
+      const origTime = _cleanTimeToOrigTime(_cleanAudioEl.currentTime);
+      if(silenceAudioBuffer) _drawSilenceWave(silenceAudioBuffer, _silenceLastSilences, origTime);
+      _silencePlayheadRaf = requestAnimationFrame(_animPlayhead);
+    }
+    _silencePlayheadRaf = requestAnimationFrame(_animPlayhead);
   } catch(e) {
     toast('⚠️ ' + e.message);
     if(btn){ btn.textContent='▶ Écouter'; btn.disabled=false; }
@@ -5650,6 +5759,12 @@ async function startGeneration(){
   document.getElementById('genProgArea').style.display='flex';
   document.getElementById('resultArea').style.display='none';
   resetProgSteps();
+  // Empêcher de quitter pendant la génération
+  window._generationInProgress = true;
+  window.onbeforeunload = (e) => {
+    const msg = 'La vidéo est en cours de génération. Quitter la page va annuler la génération.';
+    e.preventDefault(); e.returnValue = msg; return msg;
+  };
 
   let finalScript = script;
 
@@ -5992,6 +6107,9 @@ async function callHedra(audioBlob){
 }
 
 function showResults(){
+  // Libérer le verrou de génération
+  window._generationInProgress = false;
+  window.onbeforeunload = null;
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='block';
   refreshPublishButtons();
@@ -6119,7 +6237,7 @@ function downloadVideo(){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ── COMPOSITION VIDÉO — WebCodecs MP4 (fallback: MediaRecorder WebM)
+// ── COMPOSITION VIDÉO — WebCodecs MP4 (H.264 avc1.640029 + AAC via mp4-muxer)
 // Layout split, zoom/crop, hook, sous-titres (style/anim/couleurs/pos)
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
@@ -6174,27 +6292,12 @@ async function composeVideo(btn){
   const avH = gpVid ? Math.round(H * avFlex / (avFlex + gpFlex)) : H;
   const gpH = H - avH;
 
-  // 5. Canvas + MediaRecorder
+  // 5. Canvas (WebCodecs path — pas de captureStream nécessaire)
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const captureStream = canvas.captureStream(30);
 
-  // 6. Audio → stream
-  let audioEl2 = null;
-  if(results.audioBlob){
-    try {
-      audioEl2 = document.createElement('audio');
-      audioEl2.src = URL.createObjectURL(results.audioBlob);
-      const aCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = aCtx.createMediaElementSource(audioEl2);
-      const dest = aCtx.createMediaStreamDestination();
-      src.connect(dest);
-      dest.stream.getAudioTracks().forEach(t => captureStream.addTrack(t));
-    } catch(e) { console.warn('Audio stream setup failed:', e); }
-  }
-
-  // 7. Subtitle words
+  // 6. Sous-titres / mots
   const wordChips   = document.querySelectorAll('#wordEditor span');
   const words       = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
   const wpg         = Math.max(1, cfg.subWpg || 2);
@@ -6234,17 +6337,33 @@ async function composeVideo(btn){
     if(needWatermark) _cvWatermark(ctx, W, H);
   }
 
-  // 8. Choose path: WebCodecs → MP4 | fallback → MediaRecorder WebM
+  // 7. Chargement mp4-muxer + encodage WebCodecs → MP4
   if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
   if(btn) btn.innerHTML = '🔴 Composition…';
 
-  const canWebCodecs = typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined' && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined';
+  // ── Détection WebCodecs + mp4-muxer ──
+  const canWebCodecs = typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined'
+                    && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined';
   let mp4Muxer = null;
   if(canWebCodecs){
+    // Essayer plusieurs CDN
+    const CDN_URLS = [
+      'https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.esm.min.js',
+      'https://esm.sh/mp4-muxer@4',
+      'https://unpkg.com/mp4-muxer@4/build/mp4-muxer.esm.min.js',
+    ];
+    for(const url of CDN_URLS){
+      try { mp4Muxer = await import(url); if(mp4Muxer?.Muxer) break; } catch(e){ console.warn('mp4-muxer CDN failed:',url,e); mp4Muxer=null; }
+    }
+    if(!mp4Muxer?.Muxer){ console.warn('All mp4-muxer CDNs failed, falling back to MediaRecorder'); mp4Muxer=null; }
+  }
+  // Vérifier que VideoEncoder supporte AVC à cette résolution
+  if(mp4Muxer && canWebCodecs){
     try {
-      const mod = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.esm.min.js');
-      mp4Muxer = mod;
-    } catch(e){ console.warn('mp4-muxer load failed, falling back to WebM:', e); }
+      // Level 4.1 = max 2048×1080@60fps ou 1920×1080 → OK pour 1080×1920
+      const supported = await VideoEncoder.isConfigSupported({ codec:'avc1.640029', width:W, height:H });
+      if(!supported?.supported){ console.warn('avc1.640029 not supported, falling back'); mp4Muxer=null; }
+    } catch(e){ console.warn('isConfigSupported failed:', e); }
   }
 
   if(mp4Muxer){
@@ -6259,9 +6378,9 @@ async function composeVideo(btn){
       fastStart: 'in-memory',
     });
 
-    // VideoEncoder
+    // VideoEncoder — avc1.640029 = High Profile Level 4.1 (OK jusqu'à 1080×1920@30fps)
     const vEnc = new VideoEncoder({ output:(c,m)=>muxer.addVideoChunk(c,m), error:e=>console.error('VEnc:',e) });
-    vEnc.configure({ codec:'avc1.4d001f', width:W, height:H, bitrate:8_000_000, framerate:30, hardwareAcceleration:'prefer-hardware' });
+    vEnc.configure({ codec:'avc1.640029', width:W, height:H, bitrate:8_000_000, framerate:30 });
 
     // Pre-encode audio via OfflineAudioContext
     if(results.audioBlob){
@@ -6313,36 +6432,12 @@ async function composeVideo(btn){
     })();
 
   } else {
-    // ── PATH B : MediaRecorder fallback → WebM ──
-    toast('🎬 Composition WebM en cours… (~'+ Math.round(totalDuration) +'s)');
-    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
-      .find(m=>{ try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;} })||'';
-    const chunks=[];
-    const recOpts={videoBitsPerSecond:8000000}; if(mimeType) recOpts.mimeType=mimeType;
-    const recorder=new MediaRecorder(captureStream, recOpts);
-    recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
-    recorder.onstop=()=>{
-      const blob=new Blob(chunks,{type:mimeType||'video/webm'});
-      const url=URL.createObjectURL(blob);
-      results.composedUrl=url; document.getElementById('hedraVideo').src=url;
-      URL.revokeObjectURL(hedraObjUrl); resetBtn();
-      const ext=mimeType.includes('mp4')?'mp4':'webm';
-      toast('✓ Vidéo composée — téléchargement…');
-      const a=document.createElement('a'); a.href=url; a.download=`avatarads-video.${ext}`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    };
-    hedraVid.play().catch(()=>{}); if(gpVid) gpVid.play().catch(()=>{});
-    if(audioEl2) audioEl2.play().catch(()=>{});
-    recorder.start(200);
-    const t0=performance.now();
-    (function rAF(){
-      const elapsed=(performance.now()-t0)/1000;
-      const pct=Math.min(100,Math.round(elapsed/totalDuration*100));
-      if(compFill) compFill.style.width=pct+'%'; if(compPct) compPct.textContent=pct+'%';
-      drawFrame(elapsed);
-      if(elapsed>=totalDuration+0.3||hedraVid.ended) recorder.stop();
-      else requestAnimationFrame(rAF);
-    })();
+    // ── Pas de WebCodecs / mp4-muxer disponible ──
+    URL.revokeObjectURL(hedraObjUrl); resetBtn();
+    toast('⚠️ Ton navigateur ne supporte pas l\'encodage MP4 natif (WebCodecs). Utilise Chrome 94+ ou Edge 94+.');
+    // Proposer de télécharger la vidéo Hedra brute
+    const a=document.createElement('a'); a.href=results.hedraUrl; a.download='avatarads-hedra.mp4';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 }
 
