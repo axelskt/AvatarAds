@@ -1801,8 +1801,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </button>
                 </div>
               </div>
-              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">🎬 Composer & Télécharger MP4</button>
-              <div id="composeProgressWrap" style="display:none;margin-bottom:10px">
+              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger</button>
+              <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
                 </div>
@@ -1810,7 +1810,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="composeProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .2s ease"></div>
                 </div>
               </div>
-              <button onclick="genSubtitlesFromAudio()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📝 Générer sous-titres depuis l'audio</button>
             </div>
 
             <!-- HEDRA WORKFLOW -->
@@ -6465,7 +6464,7 @@ async function composeVideo(btn){
   const compFill = document.getElementById('composeProgressFill');
   const compPct  = document.getElementById('composeProgressPct');
   const resetBtn = () => {
-    if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger MP4'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='⬇ Télécharger'; }
     if(compBar) compBar.style.display='none';
   };
   const setStage = (label, pct) => {
@@ -6607,22 +6606,27 @@ async function composeVideo(btn){
   const fileExt = isWebm ? 'webm' : 'mp4';
 
   // ── 9. AudioContext pour mixer audio dans le stream ──
-  let audioCtx = null, audioSrc = null;
+  // On utilise un élément <audio> comme source : plus fiable pour le sync avec MediaRecorder
+  let audioCtx = null, audioEl2 = null;
   const videoStream = canvas.captureStream(30);
   let combinedStream = videoStream;
   if(_audioBlobToEncode){
     try {
+      const audioUrl2 = URL.createObjectURL(_audioBlobToEncode);
+      audioEl2 = new Audio(audioUrl2);
+      audioEl2.preload = 'auto';
+      // Attendre que l'audio soit prêt
+      await new Promise(res => { audioEl2.oncanplaythrough = res; audioEl2.onerror = res; audioEl2.load(); setTimeout(res, 3000); });
       audioCtx = new AudioContext();
+      if(audioCtx.state === 'suspended') await audioCtx.resume();
       const dest = audioCtx.createMediaStreamDestination();
-      const audioBuf = await audioCtx.decodeAudioData(await _audioBlobToEncode.arrayBuffer());
-      audioSrc = audioCtx.createBufferSource();
-      audioSrc.buffer = audioBuf;
-      audioSrc.connect(dest);
+      const src = audioCtx.createMediaElementSource(audioEl2);
+      src.connect(dest);
       combinedStream = new MediaStream([
         ...videoStream.getVideoTracks(),
         ...dest.stream.getAudioTracks(),
       ]);
-    } catch(e){ console.warn('Audio mix failed, vidéo muette:', e); }
+    } catch(e){ console.warn('Audio mix failed, vidéo muette:', e); audioEl2 = null; }
   }
 
   // ── 10. MediaRecorder ──
@@ -6643,12 +6647,13 @@ async function composeVideo(btn){
   setStage('Composition ' + qCfg.label + '…', 18);
   toast('🎬 Composition ' + qCfg.label + ' (~' + Math.round(totalDuration) + 's en temps réel)…');
   hedraVid.currentTime = 0;
-  await Promise.race([
+  if(audioEl2) audioEl2.currentTime = 0;
+  // Démarrer vidéo + audio + enregistrement ensemble
+  await Promise.all([
     hedraVid.play().catch(()=>{}),
-    new Promise(r => setTimeout(r, 5000))
+    audioEl2 ? audioEl2.play().catch(()=>{}) : Promise.resolve(),
   ]);
   if(gpVid){ gpVid.currentTime=0; gpVid.play().catch(()=>{}); }
-  if(audioSrc) audioSrc.start(0);
   recorder.start(200); // chunk toutes les 200ms
 
   // ── 12. Boucle rAF pendant totalDuration secondes ──
@@ -6675,6 +6680,7 @@ async function composeVideo(btn){
     recorder.onstop = resolve;
     recorder.stop();
   });
+  if(audioEl2){ audioEl2.pause(); }
   if(audioCtx) audioCtx.close();
   hedraVid.pause();
   if(gpVid) gpVid.pause();
