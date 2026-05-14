@@ -6081,20 +6081,23 @@ async function composeVideo(btn){
     } catch(e) { console.warn('Audio stream setup failed:', e); }
   }
 
-  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']
-    .find(m => { try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || 'video/webm';
+  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1','video/mp4']
+    .find(m => { try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || '';
   const chunks = [];
-  const recorder = new MediaRecorder(captureStream, { mimeType, videoBitsPerSecond: 8000000 });
+  const recOpts = { videoBitsPerSecond: 8000000 };
+  if(mimeType) recOpts.mimeType = mimeType;
+  const recorder = new MediaRecorder(captureStream, recOpts);
   recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: mimeType });
+    const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
     const url = URL.createObjectURL(blob);
     results.composedUrl = url;
     document.getElementById('hedraVideo').src = url;
     URL.revokeObjectURL(hedraObjUrl);
     resetBtn();
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     toast('✓ Vidéo composée — téléchargement…');
-    const a = document.createElement('a'); a.href=url; a.download='avatarads-video.webm';
+    const a = document.createElement('a'); a.href=url; a.download=`avatarads-video.${ext}`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
@@ -6102,6 +6105,13 @@ async function composeVideo(btn){
   const wordChips = document.querySelectorAll('#wordEditor span');
   const words = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
   const wpg = Math.max(1, cfg.subWpg || 2);
+  const totalGroups = Math.ceil(words.length / wpg);
+  // subAdvanceMs : offset d'avance sur le timing
+  const subAdvSec = (cfg.subAdvanceMs || 0) / 1000;
+  // Timing mode : 'fixe' (N sec/groupe) ou 'proportionnel' (répartition sur durée)
+  const isFixedMode = (cfg.subTimingMode || 'proportionnel') === 'fixe';
+  const secPerGroup = cfg.subSecPerGroup || 1.2;
+  // wordInterval en mode proportionnel (secondes par mot)
   const wordInterval = words.length > 0 ? totalDuration / words.length : 99;
 
   // 8. Start playback + recording
@@ -6145,13 +6155,30 @@ async function composeVideo(btn){
 
     // Draw subtitles with proper style + animation
     if(words.length > 0){
-      const wordIdx  = Math.min(Math.floor(elapsed / wordInterval), words.length - 1);
-      const grpIdx   = Math.floor(wordIdx / wpg);
+      // Elapsed with advance offset (même logique que le preview animé)
+      const subElapsed = Math.max(0, elapsed + subAdvSec);
+      let grpIdx, wordInGroup;
+      if(isFixedMode){
+        grpIdx      = Math.min(totalGroups-1, Math.floor(subElapsed / secPerGroup));
+        const gProg = (subElapsed / secPerGroup) - grpIdx;
+        wordInGroup = Math.min(wpg-1, Math.floor(gProg * wpg));
+      } else {
+        const prog  = Math.min(1, subElapsed / totalDuration);
+        const rawG  = prog * totalGroups;
+        grpIdx      = Math.min(totalGroups-1, Math.floor(rawG));
+        const gProg = rawG - grpIdx;
+        wordInGroup = Math.min(wpg-1, Math.floor(gProg * wpg));
+      }
       if(grpIdx !== _lastGrpIdx){ _lastGrpIdx = grpIdx; _lastGrpTime = elapsed; }
       const grpStart = grpIdx * wpg;
       const shown    = words.slice(grpStart, Math.min(grpStart + wpg, words.length));
       const animElapsed = elapsed - _lastGrpTime;
-      _cvSubs(ctx, shown, wordIdx - grpStart, animElapsed, W, H);
+      _cvSubs(ctx, shown, wordInGroup, animElapsed, W, H);
+    }
+
+    // Watermark pour les utilisateurs free/guest
+    if(guestMode || (currentMember && currentMember.plan === 'free')){
+      _cvWatermark(ctx, W, H);
     }
 
     if(elapsed >= totalDuration + 0.3 || hedraVid.ended){
@@ -6310,6 +6337,25 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       }
       x += widths[i];
     });
+  }
+  ctx.restore();
+}
+
+function _cvWatermark(ctx, W, H){
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  const sz = Math.round(W * 0.042);
+  ctx.font = `700 ${sz}px var(--font,sans-serif)`;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Répéter en diagonale
+  ctx.translate(W/2, H/2);
+  ctx.rotate(-Math.PI/6);
+  for(let ry=-2; ry<=2; ry++){
+    for(let rx=-1; rx<=1; rx++){
+      ctx.fillText('AvatarAds • Mode Essai', rx*W*0.7, ry*H*0.22);
+    }
   }
   ctx.restore();
 }
