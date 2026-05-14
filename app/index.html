@@ -1207,6 +1207,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
               <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
+                <button onclick="resetSubStyle()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↺ Défaut</button>
                 <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
                 <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
               </div>
@@ -1298,11 +1299,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="gen-right" id="genRight">
         <div class="preview-area" id="previewArea" style="flex-direction:column;gap:10px;align-items:center">
 
-          <!-- GAMEPLAY SOUND TOGGLE -->
-          <button id="gp-sound-btn" onclick="toggleGameplaySound()" style="display:none;align-items:center;gap:6px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">
-            <svg id="gp-sound-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-            <span id="gp-sound-label">Son gameplay : OFF</span>
-          </button>
+          <!-- gp-sound-btn supprimé -->
 
           <!-- PLATFORM TABS -->
           <!-- Tabs for 9:16 short-form content -->
@@ -3089,6 +3086,16 @@ function _applySubPreset(p){
   if(p.c1){ subColors.c1=p.c1; const ci=document.getElementById('color-c1'); if(ci) ci.value=p.c1; const ch=document.getElementById('color-c1-hex'); if(ch) ch.value=p.c1; }
   if(p.c2){ subColors.c2=p.c2; const ci=document.getElementById('color-c2'); if(ci) ci.value=p.c2; const ch=document.getElementById('color-c2-hex'); if(ch) ch.value=p.c2; }
   updateSubPreview(); updateLivePreview();
+}
+
+// Réinitialise le style des sous-titres aux valeurs par défaut
+function resetSubStyle(){
+  _applySubPreset({
+    style:'hormozi', anim:'none', wpg:2, animEnabled:false,
+    size:72, pos:75, posX:50, lineH:1.0, scaleX:1.0,
+    c1:'#FFE500', c2:'#ffffff'
+  });
+  toast('↺ Style réinitialisé par défaut');
 }
 
 // Compat : au chargement on migre l'ancien preset unique vers le nouveau format
@@ -5665,10 +5672,12 @@ async function callElevenLabs(text){
 }
 
 async function callHedra(audioBlob){
-  // Hedra API v2 — via proxy Supabase Edge Function (contourne le CORS de api.hedra.com)
-  // Flow : 1) Upload audio → 2) Upload image avatar (optionnel) → 3) POST /generations → 4) Poll
-  const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
+  // Hedra API — via proxy Supabase Edge Function (contourne le CORS de api.hedra.com)
+  // Flow correct : 1) POST /assets (créer) → 2) POST /assets/{id}/upload (fichier)
+  //               → 3) POST /generations → 4) GET /generations/{id}/status (poll)
+  const PROXY    = SUPABASE_URL + '/functions/v1/hedra-proxy';
   const hedraKey = K.hedra;
+  const MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2'; // Hedra Character 3
 
   // Helper : appel proxy GET
   async function hGet(path){
@@ -5700,42 +5709,59 @@ async function callHedra(audioBlob){
   }
 
   try {
-    // ── 1. Upload audio ──
+    // ── 1. Créer l'asset audio (POST /assets) ──
+    const createAudioRes = await hPost('/assets', { type: 'audio', name: 'voice.mp3' });
+    if(!createAudioRes.ok){ toast('⚠️ Hedra create asset ' + createAudioRes.status); return ''; }
+    const audioAsset = await createAudioRes.json();
+    const audioId = audioAsset.id;
+    if(!audioId){ toast('⚠️ Hedra : pas d\'asset ID audio'); return ''; }
+
+    // ── 2. Uploader le fichier audio (POST /assets/{id}/upload) ──
     const audioFd = new FormData();
     audioFd.append('file', audioBlob, 'voice.mp3');
-    const audioUpRes = await hUpload('/assets/upload', audioFd);
-    if (!audioUpRes.ok) {
-      const err = await audioUpRes.text();
-      toast('⚠️ Hedra audio upload erreur ' + audioUpRes.status);
-      console.error('Hedra audio upload:', err);
-      return '';
-    }
-    const audioAsset = await audioUpRes.json();
-    const audioId = audioAsset.id || audioAsset.asset_id;
-    if(!audioId){ toast('⚠️ Hedra : pas d\'audioId reçu'); return ''; }
+    const uploadRes = await hUpload('/assets/' + audioId + '/upload', audioFd);
+    if(!uploadRes.ok){ toast('⚠️ Hedra upload audio ' + uploadRes.status); return ''; }
 
-    // ── 2. Upload image avatar (si dispo) ──
+    // ── 3. Avatar image (optionnel) ──
     let imageId = null;
-    const avatarImgUrl = (document.getElementById('f-avatarimg')||{value:''}).value.trim();
-    if (avatarImgUrl) {
-      try {
-        const imgBlob = await fetch(avatarImgUrl).then(r => r.blob());
-        const imgFd = new FormData();
-        imgFd.append('file', imgBlob, 'avatar.jpg');
-        const imgUpRes = await hUpload('/assets/upload', imgFd);
-        if (imgUpRes.ok) {
-          const imgAsset = await imgUpRes.json();
-          imageId = imgAsset.id || imgAsset.asset_id;
+    const avatarImgUrl = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
+    if(avatarImgUrl){
+      try{
+        const imgBlob = await fetch(avatarImgUrl).then(r=>r.blob());
+        const createImgRes = await hPost('/assets', { type: 'image', name: 'avatar.jpg' });
+        if(createImgRes.ok){
+          const imgAsset = await createImgRes.json();
+          if(imgAsset.id){
+            const imgFd = new FormData();
+            imgFd.append('file', imgBlob, 'avatar.jpg');
+            const imgUp = await hUpload('/assets/' + imgAsset.id + '/upload', imgFd);
+            if(imgUp.ok) imageId = imgAsset.id;
+          }
         }
-      } catch(e) { console.warn('Image upload skip:', e); }
+      }catch(e){ console.warn('Image avatar skip:', e); }
+    }
+    // Utilise aussi selAvatar.localFile si pas d'URL distante
+    if(!imageId && selAvatar && selAvatar.localFile){
+      try{
+        const createImgRes = await hPost('/assets', { type: 'image', name: 'avatar.jpg' });
+        if(createImgRes.ok){
+          const imgAsset = await createImgRes.json();
+          if(imgAsset.id){
+            const imgFd = new FormData();
+            imgFd.append('file', selAvatar.localFile, 'avatar.jpg');
+            const imgUp = await hUpload('/assets/' + imgAsset.id + '/upload', imgFd);
+            if(imgUp.ok) imageId = imgAsset.id;
+          }
+        }
+      }catch(e){ console.warn('Avatar localFile upload skip:', e); }
     }
 
-    // ── 3. Générer la vidéo ──
+    // ── 4. Générer la vidéo (POST /generations) ──
     const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
     const durationMs  = parseInt(document.getElementById('f-hedra-duration')?.value || '30000');
     const genBody = {
       type: 'video',
-      ai_model_id: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3
+      ai_model_id: MODEL_ID,
       audio_id: audioId,
       generated_video_inputs: {
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze',
@@ -5745,53 +5771,52 @@ async function callHedra(audioBlob){
         character_orientation: 'video'
       }
     };
-    if(selHedraChar && !selHedraChar.isPlaceholder && selHedraChar.id){
-      genBody.character_id = selHedraChar.id;
-    } else if(imageId){
-      genBody.start_keyframe_id = imageId;
-    }
+    if(imageId) genBody.start_keyframe_id = imageId;
 
     const genRes = await hPost('/generations', genBody);
-    if (!genRes.ok) {
+    if(!genRes.ok){
       const err = await genRes.text();
-      toast('⚠️ Hedra génération erreur ' + genRes.status);
+      toast('⚠️ Hedra génération erreur ' + genRes.status + ' — ' + err.slice(0,80));
       console.error('Hedra generate:', err);
       return '';
     }
     const genData = await genRes.json();
     const genId = genData.id;
-    if (!genId){ toast('⚠️ Hedra : pas de génération ID'); return ''; }
+    if(!genId){ toast('⚠️ Hedra : pas de génération ID'); return ''; }
+    toast('⏳ Hedra génère ta vidéo… (~2 min)');
 
-    // ── 4. Polling ──
+    // ── 5. Polling (GET /generations/{id}/status) ──
     const gpIcon = document.getElementById('gp3')?.querySelector('.gp-icon');
-    for (let i = 0; i < 60; i++) {
-      await wait(4000);
-      const pollRes = await hGet('/generations/' + genId);
-      if (!pollRes.ok) continue;
+    for(let i = 0; i < 60; i++){
+      await wait(5000);
+      const pollRes = await hGet('/generations/' + genId + '/status');
+      if(!pollRes.ok) continue;
       const pollData = await pollRes.json();
-      const status = pollData.status;
+      const status = (pollData.status || pollData.state || '').toLowerCase();
       const prog = Math.round((pollData.progress || 0) * 100);
-      if(gpIcon) gpIcon.textContent = prog + '%';
+      if(gpIcon) gpIcon.textContent = prog > 0 ? prog + '%' : '⏳';
 
-      if (status === 'complete' || status === 'completed') {
+      if(status === 'complete' || status === 'completed' || status === 'succeeded'){
         const assetId = pollData.asset_id;
-        if (assetId) {
+        if(assetId){
           const assetRes = await hGet('/assets/' + assetId);
-          if (assetRes.ok) {
+          if(assetRes.ok){
             const assetData = await assetRes.json();
-            return assetData.url || assetData.download_url || '';
+            const videoUrl = assetData.url || assetData.download_url || assetData.presigned_url || '';
+            if(videoUrl) return videoUrl;
           }
         }
         return pollData.url || pollData.video_url || '';
       }
-      if (status === 'failed' || status === 'error') {
-        toast('✗ Hedra : génération échouée');
+      if(status === 'failed' || status === 'error' || status === 'cancelled'){
+        const reason = pollData.error || pollData.message || '';
+        toast('✗ Hedra génération échouée' + (reason ? ' : ' + reason.slice(0,60) : ''));
         return '';
       }
     }
-    toast('⚠️ Hedra timeout (4 min) — vérifie app.hedra.com');
+    toast('⚠️ Hedra timeout (5 min) — vérifie app.hedra.com');
     return '';
-  } catch(e) {
+  } catch(e){
     toast('⚠️ Hedra erreur : ' + (e.message || e));
     console.error('Hedra error:', e);
     return '';
