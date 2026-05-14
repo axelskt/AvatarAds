@@ -1741,7 +1741,25 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   </div>
                 </div>
               </div>
-              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">🎬 Composer & Télécharger</button>
+              <!-- Sélecteur qualité -->
+              <div style="margin-bottom:10px">
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Qualité d'export</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px" id="qualityBtns">
+                  <button onclick="setQuality(720,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                    <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Rapide</div>
+                  </button>
+                  <button onclick="setQuality(1080,this)" class="qual-btn on" id="qualBtn1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                    <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ TikTok</div>
+                  </button>
+                  <button onclick="setQuality(1440,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                    <div style="font-weight:700">2K</div><div style="font-size:9px;margin-top:1px">🔥 Pro</div>
+                  </button>
+                  <button onclick="setQuality(2160,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                    <div style="font-weight:700">4K</div><div style="font-size:9px;margin-top:1px">💎 Max</div>
+                  </button>
+                </div>
+              </div>
+              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">🎬 Composer & Télécharger MP4</button>
               <div id="composeProgressWrap" style="display:none;margin-bottom:10px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span>Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -6233,7 +6251,24 @@ function downloadVideo(){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ── COMPOSITION VIDÉO — WebCodecs MP4 (H.264 avc1.640029 + AAC via mp4-muxer)
+// ── Qualité d'export ──
+let _composeQuality = 1080; // défaut 1080p
+function setQuality(q, btn){
+  _composeQuality = q;
+  document.querySelectorAll('.qual-btn').forEach(b=>{
+    b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+  });
+  btn.style.background='var(--orange-dim)'; btn.style.borderColor='rgba(255,107,53,0.5)'; btn.style.color='var(--orange2)';
+}
+// Config par qualité : {W, H, bitrate, codec (H.264 High Profile), label}
+const QUALITY_CONFIGS = {
+  720:  { W:720,  H:1280, br:4_000_000,  codec:'avc1.640020', label:'720p'  },  // Level 3.2
+  1080: { W:1080, H:1920, br:8_000_000,  codec:'avc1.640028', label:'1080p' },  // Level 4.0
+  1440: { W:1440, H:2560, br:16_000_000, codec:'avc1.640033', label:'2K'    },  // Level 5.1
+  2160: { W:2160, H:3840, br:40_000_000, codec:'avc1.640034', label:'4K'    },  // Level 5.2
+};
+
+// ── COMPOSITION VIDÉO — WebCodecs MP4 (H.264 + AAC via mp4-muxer)
 // Layout split, zoom/crop, hook, sous-titres (style/anim/couleurs/pos)
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
@@ -6242,10 +6277,12 @@ async function composeVideo(btn){
   const compBar  = document.getElementById('composeProgressWrap');
   const compFill = document.getElementById('composeProgressFill');
   const compPct  = document.getElementById('composeProgressPct');
-  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger'; } if(compBar) compBar.style.display='none'; };
+  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='🎬 Composer & Télécharger MP4'; } if(compBar) compBar.style.display='none'; };
 
+  // Qualité sélectionnée
+  const qCfg = QUALITY_CONFIGS[_composeQuality] || QUALITY_CONFIGS[1080];
   const isSquare = cfg.format === 'square';
-  const W = 1080, H = isSquare ? 1080 : 1920;
+  const W = qCfg.W, H = isSquare ? qCfg.W : qCfg.H;
 
   toast('🎬 Chargement de la vidéo Hedra…');
 
@@ -6333,108 +6370,149 @@ async function composeVideo(btn){
     if(needWatermark) _cvWatermark(ctx, W, H);
   }
 
-  // 7. Chargement mp4-muxer + encodage WebCodecs → MP4
+  // 7. Encodage WebCodecs + mp4-muxer → MP4
   if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
-  if(btn) btn.innerHTML = '🔴 Composition…';
+  if(btn) btn.innerHTML = '🔴 Composition ' + qCfg.label + '…';
+  toast('🎬 Composition ' + qCfg.label + ' en cours… (~' + Math.round(totalDuration) + 's)');
 
-  // ── Détection WebCodecs + mp4-muxer ──
-  const canWebCodecs = typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined'
-                    && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined';
+  // ── Charger mp4-muxer depuis CDN ──
   let mp4Muxer = null;
-  if(canWebCodecs){
-    // Essayer plusieurs CDN
-    const CDN_URLS = [
-      'https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.esm.min.js',
-      'https://esm.sh/mp4-muxer@4',
-      'https://unpkg.com/mp4-muxer@4/build/mp4-muxer.esm.min.js',
-    ];
-    for(const url of CDN_URLS){
-      try { mp4Muxer = await import(url); if(mp4Muxer?.Muxer) break; } catch(e){ console.warn('mp4-muxer CDN failed:',url,e); mp4Muxer=null; }
-    }
-    if(!mp4Muxer?.Muxer){ console.warn('All mp4-muxer CDNs failed, falling back to MediaRecorder'); mp4Muxer=null; }
+  const CDN_URLS = [
+    'https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.esm.min.js',
+    'https://unpkg.com/mp4-muxer@4/build/mp4-muxer.esm.min.js',
+    'https://esm.sh/mp4-muxer@4',
+  ];
+  for(const url of CDN_URLS){
+    try { const m = await import(url); if(m?.Muxer){ mp4Muxer=m; break; } } catch(e){ console.warn('CDN fail:',url,e); }
   }
-  // Vérifier que VideoEncoder supporte AVC à cette résolution
-  if(mp4Muxer && canWebCodecs){
-    try {
-      // Level 4.1 = max 2048×1080@60fps ou 1920×1080 → OK pour 1080×1920
-      const supported = await VideoEncoder.isConfigSupported({ codec:'avc1.640029', width:W, height:H });
-      if(!supported?.supported){ console.warn('avc1.640029 not supported, falling back'); mp4Muxer=null; }
-    } catch(e){ console.warn('isConfigSupported failed:', e); }
-  }
+  if(!mp4Muxer?.Muxer){ toast('⚠️ Impossible de charger mp4-muxer (vérif connexion)'); URL.revokeObjectURL(hedraObjUrl); resetBtn(); return; }
 
-  if(mp4Muxer){
-    // ── PATH A : WebCodecs + mp4-muxer → fichier .mp4 natif ──
-    toast('🎬 Composition MP4 en cours… (~'+ Math.round(totalDuration) +'s)');
-    const { Muxer, ArrayBufferTarget } = mp4Muxer;
-    const target = new ArrayBufferTarget();
-    const muxer = new Muxer({
-      target,
-      video: { codec:'avc', width:W, height:H },
-      audio: results.audioBlob ? { codec:'aac', sampleRate:48000, numberOfChannels:1 } : undefined,
-      fastStart: 'in-memory',
-    });
-
-    // VideoEncoder — avc1.640029 = High Profile Level 4.1 (OK jusqu'à 1080×1920@30fps)
-    const vEnc = new VideoEncoder({ output:(c,m)=>muxer.addVideoChunk(c,m), error:e=>console.error('VEnc:',e) });
-    vEnc.configure({ codec:'avc1.640029', width:W, height:H, bitrate:8_000_000, framerate:30 });
-
-    // Pre-encode audio via OfflineAudioContext
-    if(results.audioBlob){
-      try {
-        const aEnc = new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:e=>console.error('AEnc:',e) });
-        aEnc.configure({ codec:'mp4a.40.2', sampleRate:48000, numberOfChannels:1, bitrate:128_000 });
-        const raw = await results.audioBlob.arrayBuffer();
-        const tmpCtx = new AudioContext();
-        const decoded = await tmpCtx.decodeAudioData(raw); tmpCtx.close();
-        const off = new OfflineAudioContext(1, Math.ceil(48000*(totalDuration+0.5)), 48000);
-        const src = off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start();
-        const rendered = await off.startRendering();
-        const pcm = rendered.getChannelData(0);
-        const CS = 2048;
-        for(let i=0;i<pcm.length;i+=CS){
-          const len=Math.min(CS,pcm.length-i);
-          const ad = new AudioData({ format:'f32-planar', sampleRate:48000, numberOfFrames:len, numberOfChannels:1,
-            timestamp:Math.round(i/48000*1e6), data:pcm.subarray(i,i+len) });
-          aEnc.encode(ad); ad.close();
-        }
-        await aEnc.flush();
-      } catch(e){ console.warn('Audio encode error:', e); }
-    }
-
-    // Real-time video encoding via rAF
-    hedraVid.play().catch(()=>{}); if(gpVid) gpVid.play().catch(()=>{});
-    const t0 = performance.now(); let fc=0;
-    (function rAF(){
-      const elapsed = (performance.now()-t0)/1000;
-      const pct = Math.min(100,Math.round(elapsed/totalDuration*100));
-      if(compFill) compFill.style.width=pct+'%'; if(compPct) compPct.textContent=pct+'%';
-      drawFrame(elapsed);
-      if(vEnc.encodeQueueSize < 10){
-        const vf = new VideoFrame(canvas,{timestamp:Math.round(elapsed*1e6), duration:Math.round(1e6/30)});
-        vEnc.encode(vf,{keyFrame:fc%60===0}); vf.close(); fc++;
-      }
-      if(elapsed>=totalDuration+0.2||hedraVid.ended){
-        vEnc.flush().then(()=>{
-          muxer.finalize();
-          const blob=new Blob([target.buffer],{type:'video/mp4'});
-          const url=URL.createObjectURL(blob);
-          results.composedUrl=url; document.getElementById('hedraVideo').src=url;
-          URL.revokeObjectURL(hedraObjUrl); resetBtn();
-          toast('✓ Vidéo MP4 prête — téléchargement…');
-          const a=document.createElement('a'); a.href=url; a.download='avatarads-video.mp4';
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        });
-      } else requestAnimationFrame(rAF);
-    })();
-
-  } else {
-    // ── Pas de WebCodecs / mp4-muxer disponible ──
-    URL.revokeObjectURL(hedraObjUrl); resetBtn();
-    toast('⚠️ Ton navigateur ne supporte pas l\'encodage MP4 natif (WebCodecs). Utilise Chrome 94+ ou Edge 94+.');
-    // Proposer de télécharger la vidéo Hedra brute
-    const a=document.createElement('a'); a.href=results.hedraUrl; a.download='avatarads-hedra.mp4';
+  // ── Vérifier support VideoEncoder ──
+  if(typeof VideoEncoder === 'undefined'){
+    toast('⚠️ WebCodecs non supporté — utilise Chrome 94+ ou Edge 94+');
+    const a=document.createElement('a'); a.href=hedraObjUrl; a.download='avatarads-hedra.mp4';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(hedraObjUrl),5000); resetBtn(); return;
   }
+  // Tester le codec sur la résolution choisie
+  let finalCodec = qCfg.codec;
+  try {
+    const sup = await VideoEncoder.isConfigSupported({ codec: qCfg.codec, width: W, height: H });
+    if(!sup?.supported){
+      // Fallback vers codec moins strict
+      const fallbacks = ['avc1.640028','avc1.4d0028','avc1.42003e'];
+      for(const fc of fallbacks){
+        const s2 = await VideoEncoder.isConfigSupported({ codec:fc, width:W, height:H });
+        if(s2?.supported){ finalCodec=fc; break; }
+      }
+    }
+  } catch(e){ console.warn('isConfigSupported error:', e); }
+
+  // ── Créer le muxer ──
+  const { Muxer, ArrayBufferTarget } = mp4Muxer;
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    video: { codec:'avc', width:W, height:H },
+    audio: results.audioBlob ? { codec:'aac', sampleRate:48000, numberOfChannels:1 } : undefined,
+    fastStart: 'in-memory',
+  });
+
+  // ── VideoEncoder ──
+  let vEncError = null;
+  const vEnc = new VideoEncoder({
+    output: (chunk, meta) => { try{ muxer.addVideoChunk(chunk, meta); }catch(e){ vEncError=e; } },
+    error: (e) => { vEncError=e; console.error('VideoEncoder error:', e); }
+  });
+  try {
+    vEnc.configure({ codec: finalCodec, width: W, height: H, bitrate: qCfg.br, framerate: 30 });
+  } catch(e) {
+    toast('⚠️ VideoEncoder config failed: ' + e.message);
+    URL.revokeObjectURL(hedraObjUrl); resetBtn(); return;
+  }
+
+  // ── Pré-encoder l'audio (OfflineAudioContext → AAC) ──
+  if(results.audioBlob){
+    try {
+      const aEnc = new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:e=>console.warn('AEnc:',e) });
+      aEnc.configure({ codec:'mp4a.40.2', sampleRate:48000, numberOfChannels:1, bitrate:128_000 });
+      const raw = await results.audioBlob.arrayBuffer();
+      const tmpCtx = new AudioContext();
+      const decoded = await tmpCtx.decodeAudioData(raw.slice(0)); tmpCtx.close();
+      const sr = 48000, dur = decoded.duration + 0.5;
+      const off = new OfflineAudioContext(1, Math.ceil(sr * dur), sr);
+      const src2 = off.createBufferSource(); src2.buffer = decoded; src2.connect(off.destination); src2.start();
+      const rendered = await off.startRendering();
+      const pcm = rendered.getChannelData(0);
+      const CS = 4096;
+      for(let i=0; i<pcm.length; i+=CS){
+        const len = Math.min(CS, pcm.length-i);
+        const ad = new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:len, numberOfChannels:1,
+          timestamp: Math.round(i/sr*1e6), data: pcm.subarray(i, i+len) });
+        aEnc.encode(ad); ad.close();
+      }
+      await aEnc.flush();
+    } catch(e){ console.warn('Audio encode failed (vidéo sera muette):', e); }
+  }
+
+  // ── Boucle rAF : encoder les frames vidéo en temps réel ──
+  hedraVid.currentTime = 0;
+  await hedraVid.play().catch(()=>{});
+  if(gpVid){ gpVid.currentTime=0; gpVid.play().catch(()=>{}); }
+
+  await new Promise((resolve) => {
+    const FPS = 30, frameDur = Math.round(1e6/FPS);
+    let fc = 0, done = false;
+    const t0 = performance.now();
+
+    function rAF(){
+      if(done) return;
+      const elapsed = (performance.now()-t0)/1000;
+      const pct = Math.min(99, Math.round(elapsed/totalDuration*100));
+      if(compFill) compFill.style.width=pct+'%';
+      if(compPct) compPct.textContent=pct+'%';
+
+      drawFrame(elapsed);
+
+      // Encoder la frame (sans condition sur encodeQueueSize pour éviter les frames manquantes)
+      const ts = Math.round(elapsed*1e6);
+      try {
+        const vf = new VideoFrame(canvas, { timestamp:ts, duration:frameDur });
+        vEnc.encode(vf, { keyFrame: fc%60===0 });
+        vf.close();
+        fc++;
+      } catch(e){ console.warn('VideoFrame encode error:', e); }
+
+      const finished = elapsed >= totalDuration + 0.3 || hedraVid.ended || !!vEncError;
+      if(finished){
+        done = true;
+        if(compFill) compFill.style.width='100%';
+        if(compPct) compPct.textContent='100%';
+        vEnc.flush().then(()=>{
+          try{
+            muxer.finalize();
+            const blob = new Blob([target.buffer], { type:'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            results.composedUrl = url;
+            document.getElementById('hedraVideo').src = url;
+            URL.revokeObjectURL(hedraObjUrl);
+            const sizeMb = (blob.size/1024/1024).toFixed(1);
+            toast('✓ MP4 ' + qCfg.label + ' prêt (' + sizeMb + ' Mo) — téléchargement…');
+            const a = document.createElement('a');
+            a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.mp4';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          } catch(e){
+            toast('⚠️ Finalisation MP4 échouée : ' + e.message);
+            console.error('muxer.finalize error:', e);
+          }
+          resetBtn(); resolve();
+        }).catch(e=>{ toast('⚠️ vEnc.flush error: '+e.message); resetBtn(); resolve(); });
+      } else {
+        requestAnimationFrame(rAF);
+      }
+    }
+    requestAnimationFrame(rAF);
+  });
 }
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
