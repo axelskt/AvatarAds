@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AvatarAds — Créateur de vidéos IA</title>
+<meta name="description" content="Crée du contenu faceless viral en quelques minutes : avatar IA, voix clonée, sous-titres automatiques.">
+<meta property="og:title" content="AvatarAds — Créateur de vidéos IA">
+<meta property="og:description" content="Crée du contenu faceless viral en quelques minutes. Avatar IA · Voix clonée · Sous-titres.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://avatarads.fr/app/">
+<meta property="og:image" content="https://avatarads.fr/og-image.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1307,9 +1316,42 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Qualité d'export MP4</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px" id="qualityBtnsStep4">
+                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Rapide</div>
+                </button>
+                <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ TikTok</div>
+                </button>
+                <button onclick="setQuality(1440,this)" class="qual-btn" data-q="1440" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">2K</div><div style="font-size:9px;margin-top:1px">🔥 Pro</div>
+                </button>
+                <button onclick="setQuality(2160,this)" class="qual-btn" data-q="2160" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">4K</div><div style="font-size:9px;margin-top:1px">💎 Max</div>
+                </button>
+              </div>
+            </div>
+
           </div>
 
         </div><!-- /gen-form -->
+
+        <!-- BANDEAU RÉUTILISER — visible seulement à l'étape 4 si une vidéo est en cache -->
+        <div id="reuseBar" style="display:none;padding:8px 16px;background:rgba(0,217,126,0.08);border-top:1px solid rgba(0,217,126,0.2)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">♻️</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:var(--green)">Dernière vidéo disponible</div>
+              <div id="reuseBarDate" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></div>
+            </div>
+            <button onclick="reuseLastVideo()" style="padding:7px 14px;background:rgba(0,217,126,0.15);border:1px solid rgba(0,217,126,0.35);border-radius:8px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+              ♻️ Réutiliser
+            </button>
+          </div>
+        </div>
 
         <div class="gen-footer" id="genFooter">
           <div id="footerBtns">
@@ -1745,16 +1787,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="margin-bottom:10px">
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Qualité d'export</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px" id="qualityBtns">
-                  <button onclick="setQuality(720,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                     <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Rapide</div>
                   </button>
-                  <button onclick="setQuality(1080,this)" class="qual-btn on" id="qualBtn1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" id="qualBtn1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                     <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ TikTok</div>
                   </button>
-                  <button onclick="setQuality(1440,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <button onclick="setQuality(1440,this)" class="qual-btn" data-q="1440" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                     <div style="font-weight:700">2K</div><div style="font-size:9px;margin-top:1px">🔥 Pro</div>
                   </button>
-                  <button onclick="setQuality(2160,this)" class="qual-btn" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <button onclick="setQuality(2160,this)" class="qual-btn" data-q="2160" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                     <div style="font-weight:700">4K</div><div style="font-size:9px;margin-top:1px">💎 Max</div>
                   </button>
                 </div>
@@ -1762,7 +1804,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">🎬 Composer & Télécharger MP4</button>
               <div id="composeProgressWrap" style="display:none;margin-bottom:10px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
-                  <span>Composition en cours…</span><span id="composeProgressPct">0%</span>
+                  <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
                 </div>
                 <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
                   <div id="composeProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .2s ease"></div>
@@ -2650,6 +2692,8 @@ function enterApp(profile){
   }
   updateLivePreview();
   checkSetupNeeded();
+  // ── Verrouillage qualité selon plan ──
+  _updateQualityLocks(profile.plan);
   const credits = profile.plan === 'elite' ? '∞' : profile.credits_remaining;
   toast('✓ Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
 }
@@ -2956,6 +3000,49 @@ function refreshYoutubeView(){
 }
 
 // ── STEPS ──
+function _updateReuseBar(){
+  try {
+    const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
+    const bar = document.getElementById('reuseBar');
+    if(!bar) return;
+    if(cache && cache.url && step === 4){
+      const lbl = document.getElementById('reuseBarDate');
+      if(lbl) lbl.textContent = (cache.date || '') + (cache.script ? ' · «' + cache.script + '…»' : '');
+      bar.style.display = 'block';
+    } else {
+      bar.style.display = 'none';
+    }
+  } catch(e){}
+}
+
+function reuseLastVideo(){
+  try {
+    const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
+    if(!cache || !cache.url){ toast('⚠️ Aucune vidéo en cache'); return; }
+    results.hedraUrl = cache.url;
+    // Afficher les résultats directement sans regénérer
+    document.getElementById('reuseBar').style.display = 'none';
+    document.getElementById('genProgArea').style.display = 'none';
+    document.getElementById('resultArea').style.display = 'block';
+    document.getElementById('downloadCard').style.display = 'block';
+    document.getElementById('hedraManualCard').style.display = 'none';
+    document.getElementById('genStatusCard').style.display = 'none';
+    document.getElementById('hedraVideo').src = cache.url;
+    document.getElementById('mainBtn').style.display = 'block';
+    document.getElementById('mainBtn').textContent = '+ Nouvelle vidéo';
+    document.getElementById('mainBtn').onclick = resetAll;
+    document.getElementById('backBtn').style.display = 'none';
+    // Mettre en place l'audio si disponible
+    if(results.audioBlob){
+      const url = URL.createObjectURL(results.audioBlob);
+      document.getElementById('audioEl').src = url;
+    }
+    updateGuestWatermarks();
+    refreshPublishButtons && refreshPublishButtons();
+    toast('♻️ Vidéo rechargée depuis le cache — 0 crédit consommé !');
+  } catch(e){ toast('⚠️ Erreur réutilisation : ' + e.message); }
+}
+
 function updateSteps(){
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
@@ -2973,6 +3060,7 @@ function updateSteps(){
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
   if(step===5) btn.style.display='none';
+  _updateReuseBar();
 }
 function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
 function nextStep(){
@@ -3904,7 +3992,7 @@ function toggleGameplayPause(e){
 
 let previewAudio = null;
 
-function togglePreviewPlay(){
+async function togglePreviewPlay(){
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
   previewPlaying = !previewPlaying;
@@ -3915,7 +4003,13 @@ function togglePreviewPlay(){
     btn.style.color = 'var(--orange2)';
     // Identifier l'audio AVANT startPreviewAnim pour la sync
     let activeAudio = null;
-    if(mp4AudioEnabled && mp4AudioFile){
+    // Priorité : audio sans silences (si l'outil silence a été appliqué)
+    const _cleanUrl = silenceKeepSegs.length > 0 ? await _getOrBuildCleanBlobUrl() : null;
+    if(_cleanUrl){
+      const cleanEl = new Audio(_cleanUrl);
+      cleanEl.currentTime = 0; cleanEl.play().catch(()=>{});
+      activeAudio = cleanEl;
+    } else if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
       if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); activeAudio = el; }
     } else if(results && results.audioBlob){
@@ -4475,6 +4569,15 @@ async function analyzeSilences(){
     document.getElementById('silenceResultsRow').style.display = 'flex';
     toast(`✓ Analyse terminée · ${silences.length} silence${silences.length!==1?'s':''} supprimé${silences.length!==1?'s':''} · Clique sur un bouton pour télécharger`);
 
+    // ── Stocker l'audio nettoyé pour l'aperçu animé et la composition ──
+    try {
+      const cleanedBuf = await _reconstructAudio(silenceAudioBuffer, silenceKeepSegs);
+      const wavBlob = _encodeWAV(cleanedBuf);
+      if(_silenceCleanBlobUrl) URL.revokeObjectURL(_silenceCleanBlobUrl);
+      _silenceCleanBlobUrl = URL.createObjectURL(wavBlob);
+      _silenceCleanDur     = cleanedBuf.duration;
+    } catch(e){ console.warn('Clean audio blob failed:', e); }
+
   } catch(e){
     toast('⚠️ Erreur : ' + (e.message||e));
     console.error(e);
@@ -4937,9 +5040,26 @@ function _updateSilenceTrimUI(){
   silenceKeepSegs = silenceOrigKeepSegs
     .map(s => ({ start: Math.max(s.start, silenceTrimStart), end: Math.min(s.end, effEnd) }))
     .filter(s => s.end > s.start + 0.01);
+
+  // Invalider le blob nettoyé (trim a changé → recalculer au prochain aperçu)
+  if(_silenceCleanBlobUrl){ URL.revokeObjectURL(_silenceCleanBlobUrl); _silenceCleanBlobUrl = null; _silenceCleanDur = 0; }
 }
 // ── Silence : écouter le résultat nettoyé ──
 let _cleanAudioEl = null;
+let _silenceCleanBlobUrl = null;   // URL persistante pour aperçu animé + composition
+let _silenceCleanDur     = 0;      // durée du clean audio (sans silences)
+
+// Retourne (et mémoïse) l'URL du blob audio nettoyé
+async function _getOrBuildCleanBlobUrl(){
+  if(_silenceCleanBlobUrl) return _silenceCleanBlobUrl;
+  if(!silenceAudioBuffer || !silenceKeepSegs.length) return null;
+  const cleaned = await _reconstructAudio(silenceAudioBuffer, silenceKeepSegs);
+  const wavBlob = _encodeWAV(cleaned);
+  _silenceCleanBlobUrl = URL.createObjectURL(wavBlob);
+  _silenceCleanDur     = cleaned.duration;
+  return _silenceCleanBlobUrl;
+}
+
 async function playCleanAudio(){
   const btn = document.getElementById('silenceListenBtn');
   if(_cleanAudioEl && !_cleanAudioEl.paused){
@@ -6089,7 +6209,18 @@ async function callHedra(audioBlob){
         if(hedraBar) hedraBar.style.display = 'none';
         // URL is directly in the status response — no need to fetch /assets
         const videoUrl = pollData.url || pollData.download_url || pollData.video_url || pollData.streaming_url || '';
-        if(videoUrl) return videoUrl;
+        if(videoUrl){
+          // ── Sauvegarder en cache pour réutilisation (économie de crédits) ──
+          try {
+            localStorage.setItem('avatarads_lastHedra', JSON.stringify({
+              url: videoUrl,
+              date: new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+              script: (results.script||'').slice(0,80)
+            }));
+            _updateReuseBar();
+          } catch(e){}
+          return videoUrl;
+        }
         // Fallback: try fetching the asset if provided
         const assetId = pollData.asset_id;
         if(assetId){
@@ -6253,12 +6384,67 @@ function downloadVideo(){
 // ══════════════════════════════════════════════════════════════════
 // ── Qualité d'export ──
 let _composeQuality = 1080; // défaut 1080p
-function setQuality(q, btn){
-  _composeQuality = q;
-  document.querySelectorAll('.qual-btn').forEach(b=>{
-    b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+
+// Affiche le verrou 🔒 sur les qualités inaccessibles et met à jour le défaut
+function _updateQualityLocks(plan){
+  const isProOrElite = ['pro','elite'].includes(plan);
+  const isElite = plan === 'elite';
+  document.querySelectorAll('.qual-btn').forEach(btn => {
+    const q = parseInt(btn.dataset.q || '0');
+    const locked = (q===1080 && !isProOrElite) || ((q===1440||q===2160) && !isElite);
+    // Cherche ou crée le badge lock
+    let badge = btn.querySelector('.qual-lock');
+    if(locked){
+      if(!badge){
+        badge = document.createElement('div');
+        badge.className = 'qual-lock';
+        badge.style.cssText = 'font-size:8px;margin-top:1px;color:#ff6b6b';
+        btn.appendChild(badge);
+      }
+      badge.textContent = '🔒 ' + (q===1080 ? 'Pro+' : 'Élite');
+      btn.style.opacity = '0.55';
+    } else {
+      if(badge) badge.remove();
+      btn.style.opacity = '1';
+    }
   });
-  btn.style.background='var(--orange-dim)'; btn.style.borderColor='rgba(255,107,53,0.5)'; btn.style.color='var(--orange2)';
+  // Si le plan est Free/Starter, forcer le défaut sur 720p
+  if(!isProOrElite && _composeQuality !== 720){
+    _composeQuality = 720;
+    document.querySelectorAll('.qual-btn').forEach(b => {
+      const bq = parseInt(b.dataset.q||'0');
+      if(bq===720){
+        b.style.background='var(--orange-dim)'; b.style.borderColor='rgba(255,107,53,0.5)'; b.style.color='var(--orange2)';
+      } else {
+        b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+      }
+    });
+  }
+}
+
+function setQuality(q, btn){
+  // ── Vérification plan ──
+  const plan = currentMember?.plan || 'free';
+  const isProOrElite = ['pro','elite'].includes(plan);
+  const isElite = plan === 'elite';
+  if(q === 1080 && !isProOrElite){
+    toast('⚠️ 1080p réservé aux plans Pro & Élite');
+    openUpgradeModal(); return;
+  }
+  if((q === 1440 || q === 2160) && !isElite){
+    toast('⚠️ 2K/4K réservé au plan Élite');
+    openUpgradeModal(); return;
+  }
+  _composeQuality = q;
+  // Sync tous les boutons qual-btn par data-q
+  document.querySelectorAll('.qual-btn').forEach(b=>{
+    const bq = parseInt(b.dataset.q || '0');
+    if(bq === q){
+      b.style.background='var(--orange-dim)'; b.style.borderColor='rgba(255,107,53,0.5)'; b.style.color='var(--orange2)';
+    } else {
+      b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+    }
+  });
 }
 // Config par qualité : {W, H, bitrate, codec (H.264 High Profile), label}
 const QUALITY_CONFIGS = {
@@ -6372,10 +6558,19 @@ async function composeVideo(btn){
 
   // 7. Encodage WebCodecs + mp4-muxer → MP4
   if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
-  if(btn) btn.innerHTML = '🔴 Composition ' + qCfg.label + '…';
-  toast('🎬 Composition ' + qCfg.label + ' en cours… (~' + Math.round(totalDuration) + 's)');
+  if(btn) btn.innerHTML = '⏳ Préparation…';
+
+  // Helper pour label étape
+  const setStage = (label, pct) => {
+    const stageLbl = document.getElementById('composeProgressStage');
+    if(stageLbl) stageLbl.textContent = label;
+    if(compPct) compPct.textContent = (pct||0) + '%';
+    if(compFill) compFill.style.width = (pct||0) + '%';
+    if(btn) btn.innerHTML = '⏳ ' + label;
+  };
 
   // ── Charger mp4-muxer depuis CDN ──
+  setStage('Chargement mp4-muxer…', 2);
   let mp4Muxer = null;
   const CDN_URLS = [
     'https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.esm.min.js',
@@ -6388,6 +6583,7 @@ async function composeVideo(btn){
   if(!mp4Muxer?.Muxer){ toast('⚠️ Impossible de charger mp4-muxer (vérif connexion)'); URL.revokeObjectURL(hedraObjUrl); resetBtn(); return; }
 
   // ── Vérifier support VideoEncoder ──
+  setStage('Vérification codec…', 5);
   if(typeof VideoEncoder === 'undefined'){
     toast('⚠️ WebCodecs non supporté — utilise Chrome 94+ ou Edge 94+');
     const a=document.createElement('a'); a.href=hedraObjUrl; a.download='avatarads-hedra.mp4';
@@ -6432,11 +6628,18 @@ async function composeVideo(btn){
   }
 
   // ── Pré-encoder l'audio (OfflineAudioContext → AAC) ──
-  if(results.audioBlob){
+  setStage('Encodage audio…', 10);
+  // Priorité : audio nettoyé (silences supprimés) si disponible
+  let _audioBlobToEncode = results.audioBlob;
+  if(silenceKeepSegs.length > 0 && silenceAudioBuffer){
+    const cleanUrl = await _getOrBuildCleanBlobUrl();
+    if(cleanUrl) _audioBlobToEncode = await fetch(cleanUrl).then(r => r.blob());
+  }
+  if(_audioBlobToEncode){
     try {
       const aEnc = new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:e=>console.warn('AEnc:',e) });
       aEnc.configure({ codec:'mp4a.40.2', sampleRate:48000, numberOfChannels:1, bitrate:128_000 });
-      const raw = await results.audioBlob.arrayBuffer();
+      const raw = await _audioBlobToEncode.arrayBuffer();
       const tmpCtx = new AudioContext();
       const decoded = await tmpCtx.decodeAudioData(raw.slice(0)); tmpCtx.close();
       const sr = 48000, dur = decoded.duration + 0.5;
@@ -6454,11 +6657,21 @@ async function composeVideo(btn){
       await aEnc.flush();
     } catch(e){ console.warn('Audio encode failed (vidéo sera muette):', e); }
   }
+  if(_silenceCleanBlobUrl && silenceKeepSegs.length > 0){
+    toast('✂️ Silences supprimés appliqués à la composition');
+  }
 
   // ── Boucle rAF : encoder les frames vidéo en temps réel ──
+  setStage('Initialisation vidéo…', 15);
   hedraVid.currentTime = 0;
-  await hedraVid.play().catch(()=>{});
+  // Play avec timeout 8s pour éviter le blocage si le navigateur bloque autoplay
+  await Promise.race([
+    hedraVid.play().catch(()=>{}),
+    new Promise(r => setTimeout(r, 8000))
+  ]);
   if(gpVid){ gpVid.currentTime=0; gpVid.play().catch(()=>{}); }
+  setStage('Composition ' + qCfg.label + '…', 18);
+  toast('🎬 Composition ' + qCfg.label + ' en cours… (~' + Math.round(totalDuration) + 's)');
 
   await new Promise((resolve) => {
     const FPS = 30, frameDur = Math.round(1e6/FPS);
@@ -6468,7 +6681,7 @@ async function composeVideo(btn){
     function rAF(){
       if(done) return;
       const elapsed = (performance.now()-t0)/1000;
-      const pct = Math.min(99, Math.round(elapsed/totalDuration*100));
+      const pct = Math.min(99, Math.round(18 + elapsed/totalDuration*81));
       if(compFill) compFill.style.width=pct+'%';
       if(compPct) compPct.textContent=pct+'%';
 
@@ -6483,7 +6696,14 @@ async function composeVideo(btn){
         fc++;
       } catch(e){ console.warn('VideoFrame encode error:', e); }
 
-      const finished = elapsed >= totalDuration + 0.3 || hedraVid.ended || !!vEncError;
+      // Si play() a échoué (paused), forcer la position de lecture frame par frame
+      if(hedraVid.paused && elapsed < totalDuration - 0.1){
+        hedraVid.currentTime = Math.min(elapsed, totalDuration - 0.01);
+      }
+
+      // NE PAS utiliser hedraVid.ended : peut être true immédiatement si le codec
+      // Hedra n'est pas supporté par le navigateur → provoque une vidéo vide (186ko)
+      const finished = elapsed >= totalDuration + 0.3 || !!vEncError;
       if(finished){
         done = true;
         if(compFill) compFill.style.width='100%';
