@@ -6660,24 +6660,30 @@ async function composeVideo(btn){
   toast('🎬 Composition ' + qCfg.label + ' (~' + Math.round(totalDuration) + 's en temps réel)…');
   hedraVid.currentTime = 0;
   if(audioEl2) audioEl2.currentTime = 0;
-  // Démarrer vidéo + audio + enregistrement ensemble
+  if(gpVid){ gpVid.currentTime=0; }
+
+  // Démarrer vidéo + audio ensemble, puis recorder immédiatement
+  recorder.start(200);
   await Promise.all([
     hedraVid.play().catch(()=>{}),
     audioEl2 ? audioEl2.play().catch(()=>{}) : Promise.resolve(),
+    gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
   ]);
-  if(gpVid){ gpVid.currentTime=0; gpVid.play().catch(()=>{}); }
-  recorder.start(200); // chunk toutes les 200ms
 
-  // ── 12. Boucle rAF pendant totalDuration secondes ──
+  // ── 12. Boucle rAF — utilise hedraVid.currentTime comme référence de sync ──
   await new Promise(resolve => {
-    const t0 = performance.now();
     function rAF(){
-      const elapsed = (performance.now() - t0) / 1000;
+      // hedraVid.currentTime est la vraie horloge — évite tout décalage
+      const elapsed = hedraVid.currentTime || 0;
       const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
       if(compFill) compFill.style.width = pct + '%';
       if(compPct)  compPct.textContent  = pct + '%';
       drawFrame(elapsed);
-      if(elapsed < totalDuration + 0.2){
+      // Synchroniser audioEl2 si dérive > 150ms
+      if(audioEl2 && Math.abs(audioEl2.currentTime - elapsed) > 0.15){
+        audioEl2.currentTime = elapsed;
+      }
+      if(elapsed < totalDuration - 0.1 || hedraVid.readyState < 2){
         requestAnimationFrame(rAF);
       } else {
         resolve();
