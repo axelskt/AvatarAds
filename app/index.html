@@ -483,15 +483,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="view on" id="v-generator">
       <div class="gen-left">
         <div class="steps-bar">
-          <div class="step on" id="st-1"><div class="step-n">1</div>Produit</div>
+          <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Produit</div>
           <div class="step-line"></div>
-          <div class="step" id="st-2"><div class="step-n">2</div>Avatar</div>
+          <div class="step" id="st-2" onclick="goToStep(2)" style="cursor:pointer"><div class="step-n">2</div>Avatar</div>
           <div class="step-line"></div>
-          <div class="step" id="st-3"><div class="step-n">3</div>Voix</div>
+          <div class="step" id="st-3" onclick="goToStep(3)" style="cursor:pointer"><div class="step-n">3</div>Voix</div>
           <div class="step-line"></div>
-          <div class="step" id="st-4"><div class="step-n">4</div>Style</div>
+          <div class="step" id="st-4" onclick="goToStep(4)" style="cursor:pointer"><div class="step-n">4</div>Style</div>
           <div class="step-line"></div>
-          <div class="step" id="st-5"><div class="step-n">5</div>Générer</div>
+          <div class="step" id="st-5" onclick="goToStep(5)" style="cursor:pointer"><div class="step-n">5</div>Générer</div>
         </div>
 
         <div class="gen-form">
@@ -3073,6 +3073,19 @@ function nextStep(){
   }
 }
 function prevStep(){ if(step>1){step--;updateSteps();} }
+function goToStep(n){
+  // On peut aller sur une étape déjà visitée (≤ step actuel) ou revenir depuis l'étape 5
+  if(n >= 1 && n <= step){
+    step = n;
+    // Si on quitte l'étape 5 (résultats), masquer resultArea et réafficher le form
+    document.getElementById('resultArea').style.display='none';
+    document.getElementById('genProgArea').style.display='none';
+    document.getElementById('mainBtn').style.display='block';
+    document.getElementById('mainBtn').textContent = n < 4 ? 'Continuer →' : '🚀 Générer la vidéo';
+    document.getElementById('mainBtn').onclick = handleMainBtn;
+    updateSteps();
+  }
+}
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
 function pickAvatar(el,emo,name,desc){
