@@ -880,52 +880,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
                 <audio id="mp4AudioEl" style="display:none"></audio>
-
-                <!-- Trimmer visuel style iPhone -->
+                <!-- Écouter + Mute -->
                 <div id="mp4TrimPanel" style="display:none">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;text-transform:uppercase">✂️ Sélection audio</div>
-                    <div style="display:flex;gap:6px;align-items:center">
-                      <span id="mp4TrimStartVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">0s</span>
-                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">→</span>
-                      <span id="mp4TrimEndVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">—</span>
-                    </div>
-                  </div>
-
-                  <!-- Waveform trimmer container -->
-                  <div id="mp4TrimmerWrap" style="position:relative;height:64px;border-radius:10px;overflow:hidden;background:#0d0f12;cursor:crosshair;touch-action:none">
-                    <!-- Waveform canvas -->
-                    <canvas id="mp4WaveCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
-                    <!-- Left dark overlay -->
-                    <div id="mp4OverlayLeft" style="position:absolute;top:0;left:0;height:100%;background:rgba(0,0,0,0.65);pointer-events:none;width:0"></div>
-                    <!-- Right dark overlay -->
-                    <div id="mp4OverlayRight" style="position:absolute;top:0;right:0;height:100%;background:rgba(0,0,0,0.65);pointer-events:none;width:0"></div>
-                    <!-- Selected region border top/bottom -->
-                    <div id="mp4TrimRegion" style="position:absolute;top:0;height:100%;border-top:2px solid var(--orange);border-bottom:2px solid var(--orange);box-sizing:border-box;pointer-events:none"></div>
-                    <!-- Left handle -->
-                    <div id="mp4HandleL" style="position:absolute;top:0;left:0;width:18px;height:100%;background:var(--orange);cursor:col-resize;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:none">
-                      <div style="display:flex;gap:2px">
-                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
-                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
-                      </div>
-                    </div>
-                    <!-- Right handle -->
-                    <div id="mp4HandleR" style="position:absolute;top:0;right:0;width:18px;height:100%;background:var(--orange);cursor:col-resize;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:none">
-                      <div style="display:flex;gap:2px">
-                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
-                        <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.9);border-radius:1px"></div>
-                      </div>
-                    </div>
-                    <!-- Playhead -->
-                    <div id="mp4Playhead" style="display:none;position:absolute;top:0;width:2px;height:100%;background:#fff;pointer-events:none;z-index:15;box-shadow:0 0 4px rgba(255,255,255,0.6)"></div>
-                  </div>
-
-                  <!-- Preview + Reset -->
-                  <div style="display:flex;gap:8px;margin-top:10px">
+                  <div style="display:flex;gap:8px;margin-top:8px">
                     <button onclick="previewMp4Audio()" id="mp4PreviewBtn" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">▶ Écouter la sélection</button>
                     <button onclick="resetMp4Trim()" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">↺ Reset</button>
-                    <button onclick="toggleMp4Mute()" id="mp4MuteBtn" style="display:none;padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" title="Activer/couper le son de l'audio MP4">🔊</button>
+                    <button onclick="toggleMp4Mute()" id="mp4MuteBtn" style="display:none;padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" title="Activer/couper le son">🔊</button>
                   </div>
+                  <!-- hidden elements kept for JS compat -->
+                  <canvas id="mp4WaveCanvas" style="display:none"></canvas>
+                  <div id="mp4TrimmerWrap" style="display:none"><div id="mp4HandleL"></div><div id="mp4HandleR"></div><div id="mp4OverlayLeft"></div><div id="mp4OverlayRight"></div><div id="mp4TrimRegion"></div><div id="mp4Playhead"></div></div>
+                  <span id="mp4TrimStartVal" style="display:none"></span>
+                  <span id="mp4TrimEndVal" style="display:none"></span>
                 </div>
 
                 <div style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
@@ -972,24 +938,42 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   🔇 Supprimer les silences automatiquement
                 </button>
 
-                <!-- Waveform -->
+                <!-- Waveform + trim handles -->
                 <div id="silenceWaveWrap" style="display:none;margin-top:12px">
-                  <canvas id="silenceWaveCanvas" width="600" height="60" style="width:100%;border-radius:8px;display:block"></canvas>
-                  <div style="display:flex;gap:14px;margin-top:5px">
-                    <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(255,107,53,0.85);border-radius:2px"></div>Audio gardé</div>
-                    <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(255,71,87,0.5);border-radius:2px"></div>Silence supprimé</div>
+                  <div id="silenceTrimWrap" style="position:relative;user-select:none">
+                    <canvas id="silenceWaveCanvas" width="600" height="60" style="width:100%;border-radius:8px;display:block"></canvas>
+                    <!-- dark overlays for trimmed zones -->
+                    <div id="silTrimOverlayL" style="position:absolute;top:0;left:0;height:60px;background:rgba(0,0,0,0.55);border-radius:8px 0 0 8px;pointer-events:none;width:0"></div>
+                    <div id="silTrimOverlayR" style="position:absolute;top:0;right:0;height:60px;background:rgba(0,0,0,0.55);border-radius:0 8px 8px 0;pointer-events:none;width:0"></div>
+                    <!-- Left trim handle -->
+                    <div id="silTrimHandleL" style="position:absolute;top:0;left:0;width:14px;height:60px;background:var(--orange);cursor:col-resize;z-index:10;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;gap:2px;touch-action:none">
+                      <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.85);border-radius:1px"></div>
+                      <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.85);border-radius:1px"></div>
+                    </div>
+                    <!-- Right trim handle -->
+                    <div id="silTrimHandleR" style="position:absolute;top:0;right:0;width:14px;height:60px;background:var(--orange);cursor:col-resize;z-index:10;border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:center;gap:2px;touch-action:none">
+                      <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.85);border-radius:1px"></div>
+                      <div style="width:1.5px;height:18px;background:rgba(255,255,255,0.85);border-radius:1px"></div>
+                    </div>
                   </div>
+                  <!-- Trim time labels -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                    <span id="silTrimStartLabel" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">0.0s</span>
+                    <div style="display:flex;gap:14px">
+                      <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(50,215,75,0.85);border-radius:2px"></div>Audio gardé</div>
+                      <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(255,71,87,0.5);border-radius:2px"></div>Silence supprimé</div>
+                    </div>
+                    <span id="silTrimEndLabel" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">—</span>
+                  </div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:2px">✂️ Glisse les poignées oranges pour rogner le début et la fin</div>
                 </div>
 
                 <!-- Stats -->
                 <div id="silenceStats" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg4);border-radius:8px;font-size:12px;font-family:var(--mono);color:var(--text2);line-height:1.6"></div>
 
-                <!-- Download buttons -->
+                <!-- Download button (audio only, gameplay synchro removed) -->
                 <div id="silenceResultsRow" style="display:none;flex-direction:column;gap:8px;margin-top:10px">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                    <button id="silenceExportAudioBtn" onclick="exportCleanAudio()" style="padding:10px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">⬇ Audio nettoyé</button>
-                    <button id="silenceExportVideoBtn" onclick="exportCleanGameplay()" style="padding:10px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">⬇ Gameplay synchro</button>
-                  </div>
+                  <button id="silenceExportAudioBtn" onclick="exportCleanAudio()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">⬇ Télécharger l'audio nettoyé</button>
                   <div id="silenceExportStatus" style="display:none;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center"></div>
                 </div>
 
@@ -1211,7 +1195,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
               </div>
               <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
-              <div style="display:flex;justify-content:flex-end;margin-top:7px">
+              <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
+                <button onclick="loadSubPreset();toast('✓ Preset appliqué !')" title="Appliquer le preset sauvegardé" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
                 <button onclick="saveSubPreset()" title="Sauvegarder ce style comme preset par défaut" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
               </div>
             </div>
@@ -1255,8 +1240,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
+                <!-- Générer depuis le script -->
+                <button onclick="applyScriptAsSubtitles()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
+                  📝 <span>Générer les sous-titres depuis mon script</span>
+                </button>
                 <!-- Whisper IA — Elite/Pro uniquement -->
-                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:18px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
+                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
                 <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
@@ -2904,12 +2893,17 @@ function applyTranscript(){
   const text = ta.value.trim();
   populateWordEditor(text);
   pendingTranscript = text;
-  // Fermer le panneau
-  const panel = document.getElementById('transcriptPanel');
-  const btn = document.getElementById('transcriptPanelBtn');
-  if(panel) panel.style.display = 'none';
-  if(btn) btn.textContent = '🎙️ Générer depuis l\'audio';
-  toast('✓ Transcript appliqué comme sous-titres');
+  updateSubPreview();
+  toast('✓ Sous-titres appliqués !');
+}
+function applyScriptAsSubtitles(){
+  const script = (document.getElementById('voiceTranscriptTA')?.value?.trim()) ||
+                 (document.getElementById('f-script')?.value?.trim());
+  if(!script){ toast('⚠️ Écris ton script dans l\'étape Voix d\'abord'); return; }
+  const ta = document.getElementById('transcriptInput');
+  if(ta) ta.value = script;
+  applyTranscript();
+  toast('✓ Sous-titres générés depuis le script !');
 }
 function syncVoiceTranscript(text){
   pendingTranscript = text;
@@ -3246,7 +3240,9 @@ function updateGpZoom(){
 function toggleGameplaySound(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  vid.muted = !vid.muted;
+  const newMuted = !vid.muted;
+  vid.muted = newMuted;
+  if(!newMuted){ vid.volume = 1; if(vid.paused) vid.play().catch(()=>{}); }
   const btn   = document.getElementById('gp-sound-btn');
   const icon  = document.getElementById('gp-sound-icon');
   const label = document.getElementById('gp-sound-label');
@@ -3331,7 +3327,7 @@ function startPreviewAnim(audioEl){
     const tiTa = document.getElementById('transcriptInput');
     const vTa  = document.getElementById('voiceTranscriptTA');
     const src  = (tiTa && tiTa.value.trim()) || (vTa && vTa.value.trim()) || pendingTranscript || '';
-    if(src) allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:'"«»]/g,''));
+    if(src) allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
     else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
   }
   const wpg = Math.max(1, cfg.subWpg || 2);
@@ -3423,18 +3419,21 @@ function updateSubPreviewWithWords(shown, activeIdx){
   const c1 = subColors.c1||'#FFE500', c2 = subColors.c2||'#ffffff';
   const glow1 = '0 0 '+Math.round(sz*.6)+'px '+c1+',0 0 '+Math.round(sz*1.2)+'px '+c1;
   const glow2 = '0 0 '+Math.round(sz*.6)+'px '+c2+',0 0 '+Math.round(sz*1.2)+'px '+c2;
+  // Preserve subLineH and subScaleX just like updateSubPreview
+  const lineH = cfg.subLineH || 1.0;
+  const sc = lineH > 1.0 ? `transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;` : '';
+  const base = 'display:inline-block;' + sc;
   // Si activeIdx fourni → karaoke : mot actif = c1, autres = c2
-  // Sinon (aperçu statique) → premier mot = c1
   const getActive = (i) => (activeIdx !== undefined && activeIdx !== null) ? i === activeIdx : i === 0;
   let html = '';
   shown.forEach((w,i)=>{
     const active = getActive(i);
-    if(style==='tiktok') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${active?'#fff':'#000'};background:${active?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;font-weight:900">${w}</span>`;
-    else if(style==='neon') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px;display:inline-block">${w}</span>`;
-    else if(style==='iman') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px;display:inline-block">${w}</span>`;
-    else if(style==='podcast') html+=`<span style="font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px;display:inline-block">${w}</span>`;
-    else if(style==='mrbeast') html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px;display:inline-block">${w}</span>`;
-    else html+=`<span style="font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px;display:inline-block">${w}</span>`;
+    if(style==='tiktok') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${active?'#fff':'#000'};background:${active?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;font-weight:900">${w}</span>`;
+    else if(style==='neon') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px">${w}</span>`;
+    else if(style==='iman') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
+    else if(style==='podcast') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
+    else if(style==='mrbeast') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
+    else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
   const animClass = animEnabled && selAnim !== 'none' ? 'sub-anim-'+selAnim : '';
   el.innerHTML = html;
@@ -3780,7 +3779,10 @@ function selectVoiceMode(mode){
 // ── SILENCE REMOVAL + GAMEPLAY SYNC ──
 // ══════════════════════════════════════════
 let silenceAudioBuffer  = null;   // decoded AudioBuffer of source
-let silenceKeepSegs     = [];     // [{start,end}] seconds to keep
+let silenceKeepSegs     = [];     // [{start,end}] seconds to keep (after trim)
+let silenceOrigKeepSegs = [];     // keepSegs before manual trim
+let silenceTrimStart    = 0;      // seconds to skip at start
+let silenceTrimEnd      = Infinity; // seconds cap at end (Infinity = full)
 let silenceGameplayFile = null;   // optional gameplay file for sync
 let _ffmpegInst         = null;
 let _ffmpegReady        = false;
@@ -3819,11 +3821,16 @@ async function analyzeSilences(){
     const padSec    = 0.05;
 
     const silences = _detectSilences(silenceAudioBuffer, threshDb, minDurSec, padSec);
-    silenceKeepSegs = _silencesToKeep(silences, silenceAudioBuffer.duration);
+    silenceOrigKeepSegs = _silencesToKeep(silences, silenceAudioBuffer.duration);
+    silenceTrimStart = 0;
+    silenceTrimEnd = Infinity;
+    silenceKeepSegs = silenceOrigKeepSegs.slice();
 
     // Waveform
     _drawSilenceWave(silenceAudioBuffer, silences);
     document.getElementById('silenceWaveWrap').style.display = 'block';
+    _initSilenceTrimHandles();
+    _updateSilenceTrimUI();
 
     // Stats
     const totalCut = silences.reduce((a,s) => a + (s.end - s.start), 0);
@@ -3918,7 +3925,7 @@ function _drawSilenceWave(buffer, silences){
     for(let i = x*step; i < (x+1)*step && i < data.length; i++)
       max = Math.max(max, Math.abs(data[i]));
     const barH = Math.max(1, max * H * 0.92);
-    ctx.fillStyle = inSil ? 'rgba(255,71,87,0.5)' : 'rgba(255,107,53,0.85)';
+    ctx.fillStyle = inSil ? 'rgba(255,71,87,0.5)' : 'rgba(50,215,75,0.85)';
     ctx.fillRect(x, (H - barH) / 2, 1, barH);
   }
   // Silence region overlay (dark red tint)
@@ -4106,6 +4113,84 @@ function handleSilenceGameplayFile(file){
   // Activer le split screen pour montrer le gameplay dans le preview
   if(!splitOn) toggleSplit();
   toast('🎮 Gameplay synchro avec le preview — visible dans l\'aperçu');
+}
+// ── Silence trim handles ──
+let _silTrimDragging = false;
+
+function _initSilenceTrimHandles(){
+  const wrap = document.getElementById('silenceTrimWrap');
+  const hL   = document.getElementById('silTrimHandleL');
+  const hR   = document.getElementById('silTrimHandleR');
+  if(!wrap || !hL || !hR) return;
+  // Remove old listeners by cloning
+  const newHL = hL.cloneNode(true);
+  const newHR = hR.cloneNode(true);
+  hL.parentNode.replaceChild(newHL, hL);
+  hR.parentNode.replaceChild(newHR, hR);
+
+  function makeDrag(el, isLeft){
+    const onMove = ev => {
+      const rect = wrap.getBoundingClientRect();
+      const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const dur = silenceAudioBuffer ? silenceAudioBuffer.duration : 60;
+      const t = frac * dur;
+      const effEnd = silenceTrimEnd === Infinity ? dur : silenceTrimEnd;
+      if(isLeft){
+        silenceTrimStart = Math.max(0, Math.min(t, effEnd - 0.3));
+      } else {
+        silenceTrimEnd = Math.max(silenceTrimStart + 0.3, t);
+        if(silenceAudioBuffer && silenceTrimEnd >= silenceAudioBuffer.duration - 0.05) silenceTrimEnd = Infinity;
+      }
+      _updateSilenceTrimUI();
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    };
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      document.addEventListener('touchmove', onMove, {passive:false});
+      document.addEventListener('touchend', onUp);
+    }, {passive:false});
+  }
+
+  makeDrag(document.getElementById('silTrimHandleL'), true);
+  makeDrag(document.getElementById('silTrimHandleR'), false);
+}
+
+function _updateSilenceTrimUI(){
+  if(!silenceAudioBuffer) return;
+  const dur = silenceAudioBuffer.duration;
+  const effEnd = silenceTrimEnd === Infinity ? dur : Math.min(silenceTrimEnd, dur);
+  const leftPct  = (silenceTrimStart / dur) * 100;
+  const rightPct = ((dur - effEnd) / dur) * 100;
+
+  const hL  = document.getElementById('silTrimHandleL');
+  const hR  = document.getElementById('silTrimHandleR');
+  const ovL = document.getElementById('silTrimOverlayL');
+  const ovR = document.getElementById('silTrimOverlayR');
+  const lbl = document.getElementById('silTrimStartLabel');
+  const rbl = document.getElementById('silTrimEndLabel');
+
+  if(hL)  hL.style.left   = leftPct  + '%';
+  if(hR)  hR.style.right  = rightPct + '%';
+  if(ovL) ovL.style.width = leftPct  + '%';
+  if(ovR) ovR.style.width = rightPct + '%';
+  if(lbl) lbl.textContent = silenceTrimStart.toFixed(1) + 's';
+  if(rbl) rbl.textContent = effEnd.toFixed(1) + 's';
+
+  // Re-clip keepSegs to [silenceTrimStart, effEnd]
+  silenceKeepSegs = silenceOrigKeepSegs
+    .map(s => ({ start: Math.max(s.start, silenceTrimStart), end: Math.min(s.end, effEnd) }))
+    .filter(s => s.end > s.start + 0.01);
 }
 // ── end silence removal ──
 
@@ -4693,7 +4778,7 @@ function _renderWordChips(text){
   editor.innerHTML = '';
   words.forEach((word) => {
     const chip = document.createElement('span');
-    chip.textContent = word.toUpperCase().replace(/[.,!?;:'"«»]/g,'');
+    chip.textContent = word.toUpperCase().replace(/[.,!?;:"«»]/g,'');
     chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
     chip.ondblclick = () => { chip.remove(); };
     chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
