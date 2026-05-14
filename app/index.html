@@ -934,6 +934,93 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- ══ SILENCE REMOVAL ══ -->
+            <div class="fld" style="margin-top:18px">
+              <div onclick="toggleSilenceTool()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:16px">🔇</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Supprimer les silences</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Nettoie l'audio · Synchro gameplay automatique</div>
+                  </div>
+                </div>
+                <span id="silenceToolArrow" style="font-size:12px;color:var(--text3);transition:transform .25s">›</span>
+              </div>
+
+              <div id="silenceToolPanel" style="display:none;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+
+                <!-- Source audio info -->
+                <div id="silenceSourceInfo" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg4);border-radius:7px">
+                  🎙️ Source : <span id="silenceSourceLabel">aucun fichier audio détecté</span>
+                </div>
+
+                <!-- Sliders -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Seuil silence</span>
+                      <span id="silenceThresholdVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">-40 dB</span>
+                    </div>
+                    <input type="range" id="silenceThresholdSlider" min="-60" max="-15" value="-40" step="1" oninput="document.getElementById('silenceThresholdVal').textContent=this.value+' dB'" style="width:100%;accent-color:var(--orange)">
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Durée min</span>
+                      <span id="silenceMinDurVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">400 ms</span>
+                    </div>
+                    <input type="range" id="silenceMinDurSlider" min="100" max="2000" value="400" step="50" oninput="document.getElementById('silenceMinDurVal').textContent=this.value+' ms'" style="width:100%;accent-color:var(--orange)">
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Marge (respiration)</span>
+                      <span id="silencePaddingVal" style="font-size:10px;font-family:var(--mono);color:var(--orange2)">80 ms</span>
+                    </div>
+                    <input type="range" id="silencePaddingSlider" min="0" max="400" value="80" step="10" oninput="document.getElementById('silencePaddingVal').textContent=this.value+' ms'" style="width:100%;accent-color:var(--orange)">
+                  </div>
+                </div>
+
+                <!-- Analyze button -->
+                <button id="silenceAnalyzeBtn" onclick="analyzeSilences()" style="width:100%;padding:10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.4);border-radius:9px;color:var(--orange2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:12px" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">🔍 Analyser les silences</button>
+
+                <!-- Waveform canvas -->
+                <div id="silenceWaveWrap" style="display:none;margin-bottom:12px">
+                  <canvas id="silenceWaveCanvas" width="600" height="72" style="width:100%;border-radius:8px;display:block;cursor:pointer" title="Clique pour re-analyser"></canvas>
+                  <div style="display:flex;gap:14px;margin-top:5px">
+                    <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(0,217,126,0.8);border-radius:2px"></div>Gardé</div>
+                    <div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:var(--text3)"><div style="width:8px;height:8px;background:rgba(255,71,87,0.7);border-radius:2px"></div>Silence supprimé</div>
+                  </div>
+                </div>
+
+                <!-- Stats -->
+                <div id="silenceStats" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--bg4);border-radius:8px;font-size:12px;font-family:var(--mono);color:var(--text2);line-height:1.6"></div>
+
+                <!-- Gameplay upload + export (shown after analysis) -->
+                <div id="silenceResultsRow" style="display:none;flex-direction:column;gap:10px">
+                  <div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">🎮 Gameplay à synchroniser <span style="color:var(--text3)">(optionnel — si tu as uploadé un split-screen il est déjà pris en compte)</span></div>
+                    <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s">
+                      <div id="silenceGpDropContent"><div style="font-size:22px">🎮</div><div style="font-size:11px;font-weight:600;margin-top:4px">Upload le gameplay à couper</div><div style="font-size:9px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div></div>
+                      <div id="silenceGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
+                    </div>
+                    <input type="file" id="silenceGpFileIn" accept="video/*" style="display:none" onchange="handleSilenceGameplayFile(this.files[0])">
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <button id="silenceExportAudioBtn" onclick="exportCleanAudio()" style="padding:10px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                      ⬇ Audio nettoyé
+                    </button>
+                    <button id="silenceExportVideoBtn" onclick="exportCleanGameplay()" style="padding:10px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                      ⬇ Gameplay synchro
+                    </button>
+                  </div>
+
+                  <div id="silenceExportStatus" style="display:none;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center"></div>
+                </div>
+
+              </div>
+            </div>
+            <!-- /SILENCE REMOVAL -->
+
           </div>
 
           <!-- STEP 4 -->
@@ -2754,6 +2841,7 @@ let clonedVoiceId = null;
 function handleVoiceFile(file){
   if(!file) return;
   voiceFile = file;
+  window._voiceFileRef = file; // used by silence removal tool
   document.getElementById('voiceFileName').textContent = file.name;
   document.getElementById('voiceDropContent').style.display = 'none';
   document.getElementById('voiceFileInfo').style.display = 'block';
@@ -3719,6 +3807,302 @@ function selectVoiceMode(mode){
     if(btnMp4)  { btnMp4.style.background='var(--bg3)'; btnMp4.style.border='2px solid var(--border)'; btnMp4.style.color='var(--text2)'; }
   }
 }
+
+// ══════════════════════════════════════════
+// ── SILENCE REMOVAL + GAMEPLAY SYNC ──
+// ══════════════════════════════════════════
+let silenceAudioBuffer  = null;   // decoded AudioBuffer of source
+let silenceKeepSegs     = [];     // [{start,end}] seconds to keep
+let silenceGameplayFile = null;   // optional gameplay file for sync
+let _ffmpegInst         = null;
+let _ffmpegReady        = false;
+
+function toggleSilenceTool(){
+  const panel = document.getElementById('silenceToolPanel');
+  const arrow = document.getElementById('silenceToolArrow');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
+  if(!open) _updateSilenceSourceLabel();
+}
+
+function _updateSilenceSourceLabel(){
+  const el = document.getElementById('silenceSourceLabel');
+  if(!el) return;
+  const f = mp4AudioFile || window._voiceFileRef;
+  el.textContent = f ? ('📂 ' + f.name) : 'aucun fichier audio détecté — upload dans Voix d\'abord';
+}
+
+async function analyzeSilences(){
+  const file = mp4AudioFile || window._voiceFileRef;
+  if(!file){ toast('⚠️ Upload un fichier audio dans Voix d\'abord'); return; }
+  const btn = document.getElementById('silenceAnalyzeBtn');
+  btn.textContent = '⏳ Analyse en cours...'; btn.disabled = true;
+  try {
+    const arrayBuf = await file.arrayBuffer();
+    const actx = new AudioContext();
+    silenceAudioBuffer = await actx.decodeAudioData(arrayBuf);
+    actx.close();
+
+    const threshDb  = parseFloat(document.getElementById('silenceThresholdSlider').value);
+    const minDurSec = parseFloat(document.getElementById('silenceMinDurSlider').value) / 1000;
+    const padSec    = parseFloat(document.getElementById('silencePaddingSlider').value) / 1000;
+
+    const silences = _detectSilences(silenceAudioBuffer, threshDb, minDurSec, padSec);
+    silenceKeepSegs = _silencesToKeep(silences, silenceAudioBuffer.duration);
+
+    // Draw waveform
+    _drawSilenceWave(silenceAudioBuffer, silences);
+    document.getElementById('silenceWaveWrap').style.display = 'block';
+
+    // Stats
+    const totalCut  = silences.reduce((a,s) => a + (s.end - s.start), 0);
+    const cleanDur  = silenceAudioBuffer.duration - totalCut;
+    const statsEl   = document.getElementById('silenceStats');
+    statsEl.style.display = 'block';
+    statsEl.innerHTML = `<span style="color:var(--green)">✓</span> <strong>${silences.length}</strong> silence${silences.length!==1?'s':''} détecté${silences.length!==1?'s':''} · <strong>${totalCut.toFixed(1)}s</strong> supprimées · Durée finale : <strong>${cleanDur.toFixed(1)}s</strong>`;
+
+    document.getElementById('silenceResultsRow').style.display = 'flex';
+    if(!silences.length) toast('ℹ️ Aucun silence détecté — essaie un seuil plus haut');
+    else toast(`✓ ${silences.length} silence${silences.length!==1?'s':''} détecté${silences.length!==1?'s':''} · ${totalCut.toFixed(1)}s à supprimer`);
+  } catch(e){
+    toast('⚠️ Erreur analyse : ' + (e.message||e));
+    console.error(e);
+  } finally {
+    btn.textContent = '🔍 Analyser les silences'; btn.disabled = false;
+  }
+}
+
+function _detectSilences(buffer, threshDb, minDurSec, padSec){
+  const data     = buffer.getChannelData(0);
+  const sr       = buffer.sampleRate;
+  const winSz    = Math.max(1, Math.floor(sr * 0.01)); // 10ms windows
+  const thresh   = Math.pow(10, threshDb / 20);
+  const silences = [];
+  let inSil = false, silStart = 0;
+
+  for(let i = 0; i < data.length; i += winSz){
+    let sum = 0;
+    const end = Math.min(i + winSz, data.length);
+    for(let j = i; j < end; j++) sum += data[j] * data[j];
+    const rms = Math.sqrt(sum / (end - i));
+    const t   = i / sr;
+
+    if(rms < thresh){
+      if(!inSil){ inSil = true; silStart = t; }
+    } else {
+      if(inSil){
+        inSil = false;
+        const dur = t - silStart;
+        if(dur >= minDurSec){
+          const s = Math.min(buffer.duration, silStart + padSec);
+          const e = Math.max(0,            t       - padSec);
+          if(e > s + 0.02) silences.push({start: s, end: e});
+        }
+      }
+    }
+  }
+  // trailing silence
+  if(inSil){
+    const dur = buffer.duration - silStart;
+    if(dur >= minDurSec){
+      const s = Math.min(buffer.duration, silStart + padSec);
+      if(buffer.duration > s + 0.02) silences.push({start: s, end: buffer.duration});
+    }
+  }
+  return silences;
+}
+
+function _silencesToKeep(silences, totalDur){
+  if(!silences.length) return [{start:0, end:totalDur}];
+  const keep = [];
+  let pos = 0;
+  for(const s of silences){
+    if(s.start > pos + 0.01) keep.push({start: pos, end: s.start});
+    pos = s.end;
+  }
+  if(pos < totalDur - 0.01) keep.push({start: pos, end: totalDur});
+  return keep;
+}
+
+function _drawSilenceWave(buffer, silences){
+  const canvas = document.getElementById('silenceWaveCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const data = buffer.getChannelData(0);
+  const dur  = buffer.duration;
+
+  ctx.fillStyle = '#0d0f12';
+  ctx.fillRect(0, 0, W, H);
+
+  const step = Math.max(1, Math.floor(data.length / W));
+  for(let x = 0; x < W; x++){
+    const t = (x / W) * dur;
+    const inSil = silences.some(s => t >= s.start && t <= s.end);
+    let max = 0;
+    for(let i = x*step; i < (x+1)*step && i < data.length; i++)
+      max = Math.max(max, Math.abs(data[i]));
+    const barH = Math.max(1, max * H * 0.92);
+    ctx.fillStyle = inSil ? 'rgba(255,71,87,0.75)' : 'rgba(0,217,126,0.75)';
+    ctx.fillRect(x, (H - barH) / 2, 1, barH);
+  }
+  // Silence region overlay
+  ctx.fillStyle = 'rgba(255,71,87,0.10)';
+  for(const s of silences){
+    ctx.fillRect((s.start/dur)*W, 0, ((s.end-s.start)/dur)*W, H);
+  }
+}
+
+async function exportCleanAudio(){
+  if(!silenceAudioBuffer||!silenceKeepSegs.length){ toast('⚠️ Lance d\'abord l\'analyse'); return; }
+  const btn = document.getElementById('silenceExportAudioBtn');
+  btn.textContent = '⏳ Export...'; btn.disabled = true;
+  try {
+    const cleaned = await _reconstructAudio(silenceAudioBuffer, silenceKeepSegs);
+    const wavBlob = _encodeWAV(cleaned);
+    _triggerDownload(wavBlob, 'audio_nettoye.wav');
+    toast('✓ Audio nettoyé téléchargé !');
+  } catch(e){ toast('⚠️ ' + e.message); }
+  finally { btn.textContent = '⬇ Audio nettoyé'; btn.disabled = false; }
+}
+
+async function _reconstructAudio(srcBuf, keepSegs){
+  const totalDur = keepSegs.reduce((a,s) => a + (s.end - s.start), 0);
+  const sr = srcBuf.sampleRate, ch = srcBuf.numberOfChannels;
+  const offline = new OfflineAudioContext(ch, Math.ceil(totalDur * sr), sr);
+  let off = 0;
+  for(const seg of keepSegs){
+    const src = offline.createBufferSource();
+    src.buffer = srcBuf;
+    src.connect(offline.destination);
+    src.start(off, seg.start, seg.end - seg.start);
+    off += seg.end - seg.start;
+  }
+  return await offline.startRendering();
+}
+
+function _encodeWAV(buf){
+  const ch = buf.numberOfChannels, sr = buf.sampleRate;
+  const chData = Array.from({length:ch}, (_,i) => buf.getChannelData(i));
+  const n = chData[0].length, bAlign = ch * 2, dataSz = n * bAlign;
+  const ab = new ArrayBuffer(44 + dataSz);
+  const v  = new DataView(ab);
+  const ws = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4,36+dataSz,true); ws(8,'WAVE');
+  ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+  v.setUint16(22,ch,true); v.setUint32(24,sr,true);
+  v.setUint32(28,sr*bAlign,true); v.setUint16(32,bAlign,true);
+  v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,dataSz,true);
+  let off = 44;
+  for(let i=0;i<n;i++) for(let c=0;c<ch;c++){
+    const s = Math.max(-1,Math.min(1,chData[c][i]));
+    v.setInt16(off, s<0?s*0x8000:s*0x7FFF, true); off+=2;
+  }
+  return new Blob([ab], {type:'audio/wav'});
+}
+
+function _triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+async function _loadFFmpeg(){
+  if(_ffmpegReady) return;
+  const statusEl = document.getElementById('silenceExportStatus');
+  if(statusEl){ statusEl.style.display='block'; statusEl.textContent='⏳ Chargement FFmpeg (~25 MB, une seule fois)...'; }
+  // Load ffmpeg.wasm v0.11.6 (no SharedArrayBuffer required)
+  await new Promise((resolve, reject) => {
+    if(window.FFmpeg){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  const { createFFmpeg, fetchFile } = window.FFmpeg;
+  _ffmpegInst = createFFmpeg({
+    log: false,
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+  });
+  window._ffFetchFile = fetchFile;
+  await _ffmpegInst.load();
+  _ffmpegReady = true;
+  if(statusEl) statusEl.textContent = '';
+}
+
+async function exportCleanGameplay(){
+  if(!silenceKeepSegs.length){ toast('⚠️ Lance d\'abord l\'analyse audio'); return; }
+  const gpFile = silenceGameplayFile || gameplayFile;
+  if(!gpFile){ toast('⚠️ Upload un fichier gameplay'); return; }
+
+  const btn    = document.getElementById('silenceExportVideoBtn');
+  const status = document.getElementById('silenceExportStatus');
+  btn.textContent = '⏳ Chargement...'; btn.disabled = true;
+  if(status){ status.style.display='block'; status.textContent='⏳ Chargement FFmpeg...'; }
+
+  try {
+    await _loadFFmpeg();
+    if(status) status.textContent = '⏳ Traitement vidéo en cours...';
+
+    const ff = _ffmpegInst;
+    ff.FS('writeFile', 'gp_in.mp4', await window._ffFetchFile(gpFile));
+
+    // Build trim filter for each keep segment
+    const segs = silenceKeepSegs;
+    if(segs.length === 1 && segs[0].start < 0.05 && segs[0].end >= silenceAudioBuffer.duration - 0.1){
+      // No real cut needed
+      toast('ℹ️ Aucun silence à supprimer dans le gameplay');
+      ff.FS('unlink','gp_in.mp4');
+      return;
+    }
+
+    let vParts = '', aParts = '';
+    segs.forEach((s,i) => {
+      vParts += `[0:v]trim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},setpts=PTS-STARTPTS[v${i}];`;
+      aParts += `[0:a]atrim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},asetpts=PTS-STARTPTS[a${i}];`;
+    });
+    const vIns = segs.map((_,i)=>`[v${i}]`).join('');
+    const aIns = segs.map((_,i)=>`[a${i}]`).join('');
+    const filterComplex = vParts + aParts +
+      `${vIns}concat=n=${segs.length}:v=1:a=0[outv];` +
+      `${aIns}concat=n=${segs.length}:v=0:a=1[outa]`;
+
+    await ff.run(
+      '-i','gp_in.mp4',
+      '-filter_complex', filterComplex,
+      '-map','[outv]','-map','[outa]',
+      '-c:v','libx264','-preset','fast','-crf','23',
+      '-c:a','aac','-b:a','192k',
+      'gp_out.mp4'
+    );
+
+    const data = ff.FS('readFile','gp_out.mp4');
+    _triggerDownload(new Blob([data.buffer],{type:'video/mp4'}), 'gameplay_synchro.mp4');
+    ff.FS('unlink','gp_in.mp4'); ff.FS('unlink','gp_out.mp4');
+    if(status){ status.textContent='✓ Gameplay synchro prêt !'; status.style.color='var(--green)'; }
+    toast('✓ Gameplay synchro téléchargé — même durée que l\'audio nettoyé !');
+  } catch(e){
+    toast('⚠️ Erreur vidéo : ' + (e.message||e).slice(0,100));
+    console.error(e);
+    if(status){ status.textContent = '⚠️ Erreur — voir la console'; status.style.color='var(--red)'; }
+  } finally {
+    btn.textContent = '⬇ Gameplay synchro'; btn.disabled = false;
+  }
+}
+
+function handleSilenceGameplayFile(file){
+  if(!file) return;
+  silenceGameplayFile = file;
+  const drop = document.getElementById('silenceGpDropContent');
+  const info = document.getElementById('silenceGpFileInfo');
+  const name = document.getElementById('silenceGpFileName');
+  if(drop) drop.style.display='none';
+  if(info) info.style.display='block';
+  if(name) name.textContent = file.name;
+}
+// ── end silence removal ──
 
 let mp4AudioMuted = false;
 function toggleMp4Mute(){
