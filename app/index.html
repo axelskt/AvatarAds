@@ -1289,6 +1289,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button onclick="applyScriptAsSubtitles()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
                   📝 <span>Générer les sous-titres depuis mon script</span>
                 </button>
+                <!-- Tap Sync manuel — gratuit -->
+                <button onclick="startTapSync()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
+                  🥁 <span>Tap Sync — synchroniser manuellement</span>
+                </button>
                 <!-- Whisper IA — Elite/Pro uniquement -->
                 <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
@@ -7544,6 +7548,155 @@ function pickLibraryAvatarFromModal(card, path, name){
   pickLibraryAvatar(card, path, name);
   setTimeout(closeAvatarModal, 400);
 }
+
+// ── TAP SYNC ──────────────────────────────────────────────────────────────
+let _tapSyncActive  = false;
+let _tapSyncGroups  = [];
+let _tapSyncTimes   = [];
+let _tapSyncIdx     = 0;
+let _tapSyncAudio   = null;
+
+function startTapSync(){
+  // Récupérer les mots du word editor
+  let allWords = [];
+  document.querySelectorAll('#wordEditor span').forEach(c=>{
+    const t = c.textContent.trim(); if(t) allWords.push(t);
+  });
+  if(!allWords.length){
+    const ta = document.getElementById('transcriptInput');
+    const src = (ta && ta.value.trim()) || pendingTranscript || '';
+    if(!src){ toast('⚠️ Applique d\'abord ton transcript'); return; }
+    allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
+  }
+
+  // Récupérer l'audio
+  const audioSrc = document.getElementById('mp4AudioEl')?.src || document.getElementById('audioEl')?.src;
+  if(!audioSrc){ toast('⚠️ Pas d\'audio disponible — upload ou génère d\'abord'); return; }
+
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  _tapSyncGroups = [];
+  for(let i = 0; i < allWords.length; i += wpg)
+    _tapSyncGroups.push(allWords.slice(i, i + wpg));
+
+  _tapSyncTimes  = [];
+  _tapSyncIdx    = 0;
+  _tapSyncActive = true;
+
+  // Audio dédié pour le tap sync
+  _tapSyncAudio = new Audio(audioSrc);
+  _tapSyncAudio.currentTime = mp4AudioTrimSt || 0;
+
+  _tapSyncRenderUI();
+  document.getElementById('tapSyncOverlay').style.display = 'flex';
+
+  // Démarrer la lecture après un court délai
+  setTimeout(()=>{
+    _tapSyncAudio.play().catch(()=>{});
+    // Premier groupe = dès le début
+    _tapSyncTimes.push(_tapSyncAudio.currentTime);
+    _tapSyncIdx = 1;
+    _tapSyncRenderUI();
+  }, 500);
+
+  // Spacebar global
+  document.addEventListener('keydown', _tapSyncKeydown);
+
+  // Auto-finish quand l'audio se termine
+  _tapSyncAudio.onended = ()=>{ if(_tapSyncActive) _tapSyncFinish(); };
+}
+
+function _tapSyncKeydown(e){
+  if(!_tapSyncActive) return;
+  if(e.code === 'Space'){ e.preventDefault(); _tapSyncTap(); }
+  if(e.code === 'Escape'){ _tapSyncCancel(); }
+}
+
+function _tapSyncTap(){
+  if(!_tapSyncActive || !_tapSyncAudio) return;
+  const t = _tapSyncAudio.currentTime;
+  _tapSyncTimes.push(t);
+  _tapSyncIdx++;
+  if(_tapSyncIdx > _tapSyncGroups.length){ _tapSyncFinish(); return; }
+  _tapSyncRenderUI();
+  // Flash feedback
+  const tapBtn = document.getElementById('tapSyncBtn');
+  if(tapBtn){ tapBtn.style.background='var(--orange)'; setTimeout(()=>{ tapBtn.style.background=''; }, 120); }
+}
+
+function _tapSyncRenderUI(){
+  const cur  = document.getElementById('tapSyncCurrent');
+  const next = document.getElementById('tapSyncNext');
+  const prog = document.getElementById('tapSyncProg');
+  const grpN = document.getElementById('tapSyncGrpN');
+  const idx  = _tapSyncIdx;
+  const total = _tapSyncGroups.length;
+  if(cur)  cur.textContent  = idx < total ? _tapSyncGroups[idx].join(' ') : '✓ FIN';
+  if(next) next.textContent = idx + 1 < total ? _tapSyncGroups[idx + 1].join(' ') : '';
+  if(prog) prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
+  if(grpN) grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
+}
+
+function _tapSyncFinish(){
+  if(!_tapSyncActive) return;
+  _tapSyncActive = false;
+  document.removeEventListener('keydown', _tapSyncKeydown);
+  if(_tapSyncAudio){ _tapSyncAudio.pause(); _tapSyncAudio = null; }
+  document.getElementById('tapSyncOverlay').style.display = 'none';
+
+  // Convertir les tap times en whisperWordTimestamps
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  const timestamps = [];
+  _tapSyncGroups.forEach((group, gi) => {
+    const groupStart = _tapSyncTimes[gi]   ?? 0;
+    const groupEnd   = _tapSyncTimes[gi+1] ?? (groupStart + 1.5);
+    const wordDur    = (groupEnd - groupStart) / group.length;
+    group.forEach((word, wi) => {
+      timestamps.push({ word, start: groupStart + wi * wordDur, end: groupStart + (wi+1) * wordDur });
+    });
+  });
+  whisperWordTimestamps = timestamps;
+  toast('✅ Tap Sync enregistré — ' + _tapSyncGroups.length + ' groupes synchronisés !');
+}
+
+function _tapSyncCancel(){
+  _tapSyncActive = false;
+  document.removeEventListener('keydown', _tapSyncKeydown);
+  if(_tapSyncAudio){ _tapSyncAudio.pause(); _tapSyncAudio = null; }
+  document.getElementById('tapSyncOverlay').style.display = 'none';
+  toast('Tap Sync annulé');
+}
 </script>
+
+<!-- ── TAP SYNC OVERLAY ── -->
+<div id="tapSyncOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;gap:0;backdrop-filter:blur(8px)">
+  <div style="width:100%;max-width:420px;padding:32px 28px;display:flex;flex-direction:column;align-items:center;gap:20px">
+
+    <!-- Titre -->
+    <div style="font-size:13px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync</div>
+    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);text-align:center">Appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-family:var(--mono)">Espace</kbd> ou le bouton au bon moment</div>
+
+    <!-- Groupe actuel — le suivant à afficher -->
+    <div style="text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">PROCHAIN GROUPE →</div>
+      <div id="tapSyncCurrent" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;text-align:center">…</div>
+      <div id="tapSyncNext" style="font-size:15px;color:var(--text3);font-family:var(--mono);letter-spacing:1px"></div>
+    </div>
+
+    <!-- Barre de progression -->
+    <div style="width:100%;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .1s"></div>
+    </div>
+    <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
+
+    <!-- Bouton TAP -->
+    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:22px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .1s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
+      ↵ &nbsp;Groupe suivant
+    </button>
+
+    <!-- Annuler -->
+    <button onclick="_tapSyncCancel()" style="background:transparent;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;cursor:pointer;padding:4px 12px">✕ Annuler</button>
+  </div>
+</div>
+
 </body>
 </html>
