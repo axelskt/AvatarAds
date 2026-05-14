@@ -1,18 +1,18 @@
 // Supabase Edge Function — Hedra API proxy
 // Contourne le CORS de api.hedra.com qui n'autorise que app.hedra.com comme origin.
+// La clé Hedra est stockée dans les secrets Supabase (HEDRA_API_KEY).
 // Déployé à : https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/hedra-proxy
 //
-// Appel : POST ?path=/assets/upload  (multipart → upload fichier)
-//         POST ?path=/generations    (JSON → créer génération)
-//         GET  ?path=/generations/ID (JSON → polling statut)
-//         GET  ?path=/assets/ID      (JSON → récupérer URL asset)
-// Header requis : x-hedra-key: <clé API Hedra du client>
+// Appel : POST ?path=/assets          (multipart → upload image)
+//         POST ?path=/assets/ID/upload (multipart → upload audio)
+//         POST ?path=/generations      (JSON → créer génération)
+//         GET  ?path=/generations/ID/status (JSON → polling statut)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-hedra-key',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
@@ -27,7 +27,13 @@ serve(async (req: Request) => {
   try {
     const url      = new URL(req.url)
     const hedraPath = url.searchParams.get('path') ?? '/'
-    const hedraKey  = req.headers.get('x-hedra-key') ?? Deno.env.get('HEDRA_API_KEY') ?? ''
+    // Clé uniquement depuis les secrets Supabase (plus jamais côté client)
+    const hedraKey  = Deno.env.get('HEDRA_API_KEY') ?? ''
+    if (!hedraKey) {
+      return new Response(JSON.stringify({ error: 'HEDRA_API_KEY not configured in Supabase secrets' }), {
+        status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
     const ct        = req.headers.get('content-type') ?? ''
 
     let hedraRes: Response
