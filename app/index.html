@@ -6001,13 +6001,14 @@ function toggleAudio(){
   document.getElementById('audioEl').onended=()=>{audioPlaying=false;document.getElementById('playAudioBtn').textContent='▶';};
 }
 function downloadVideo(){
-  // Legacy — redirige vers composition
   composeVideo(document.getElementById('composeBtn'));
 }
 
-// ══════════════════════════════════════════
-// ── COMPOSITION VIDÉO (canvas + MediaRecorder) ──
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
+// ── COMPOSITION VIDÉO — canvas + MediaRecorder ──
+// Reproduit fidèlement : layout split, zoom/crop, hook, sous-titres
+// (style, animation, couleurs, position, scaleX, lineH)
+// ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
   if(btn){ btn.disabled = true; btn.innerHTML = '⏳ Chargement…'; }
@@ -6100,7 +6101,7 @@ async function composeVideo(btn){
   // 7. Subtitle words from wordEditor chips
   const wordChips = document.querySelectorAll('#wordEditor span');
   const words = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
-  const wpg = cfg.subWpg || 2;
+  const wpg = Math.max(1, cfg.subWpg || 2);
   const wordInterval = words.length > 0 ? totalDuration / words.length : 99;
 
   // 8. Start playback + recording
@@ -6113,34 +6114,44 @@ async function composeVideo(btn){
   recorder.start(200);
   const startTime = performance.now();
 
-  // 9. Render loop
+  // 9. Render loop — subtitle animation state
+  let _lastGrpIdx = -1, _lastGrpTime = 0;
+
   (function renderFrame(){
     const elapsed = (performance.now() - startTime) / 1000;
     const pct = Math.min(100, Math.round(elapsed / totalDuration * 100));
     if(compFill) compFill.style.width = pct + '%';
     if(compPct) compPct.textContent = pct + '%';
 
-    // Background
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
 
+    // Draw avatar (Hedra lipsync) zone
+    _cvDrawZone(ctx, hedraVid,
+      {x:0, y:0, w:W, h:avH},
+      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100,
+      cfg.avCropX||0, cfg.avCropY||0, W, H);
+
+    // Draw gameplay zone (if any)
     if(gpVid){
-      ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,avH); ctx.clip();
-      _cvCover(ctx, hedraVid, 0, 0, W, avH);
-      ctx.restore();
-      ctx.save(); ctx.beginPath(); ctx.rect(0,avH,W,gpH); ctx.clip();
-      _cvCover(ctx, gpVid, 0, avH, W, gpH);
-      ctx.restore();
-    } else {
-      _cvCover(ctx, hedraVid, 0, 0, W, H);
+      _cvDrawZone(ctx, gpVid,
+        {x:0, y:avH, w:W, h:gpH},
+        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100,
+        cfg.gpCropX||0, cfg.gpCropY||0, W, H);
     }
 
-    // Subtitles
+    // Draw hook text (top overlay)
+    _cvHook(ctx, W, H);
+
+    // Draw subtitles with proper style + animation
     if(words.length > 0){
       const wordIdx  = Math.min(Math.floor(elapsed / wordInterval), words.length - 1);
-      const grpStart = Math.floor(wordIdx / wpg) * wpg;
+      const grpIdx   = Math.floor(wordIdx / wpg);
+      if(grpIdx !== _lastGrpIdx){ _lastGrpIdx = grpIdx; _lastGrpTime = elapsed; }
+      const grpStart = grpIdx * wpg;
       const shown    = words.slice(grpStart, Math.min(grpStart + wpg, words.length));
-      _cvSubs(ctx, shown, wordIdx - grpStart, W, H);
+      const animElapsed = elapsed - _lastGrpTime;
+      _cvSubs(ctx, shown, wordIdx - grpStart, animElapsed, W, H);
     }
 
     if(elapsed >= totalDuration + 0.3 || hedraVid.ended){
@@ -6151,49 +6162,169 @@ async function composeVideo(btn){
   })();
 }
 
-// Cover-fit un élément vidéo dans une zone (object-fit:cover)
-function _cvCover(ctx, vid, x, y, w, h){
-  if(!vid?.videoWidth || !vid?.videoHeight) return;
-  const vr = vid.videoWidth / vid.videoHeight, cr = w / h;
-  let sx=0, sy=0, sw=vid.videoWidth, sh=vid.videoHeight;
-  if(vr > cr){ sw=Math.round(vid.videoHeight*cr); sx=Math.round((vid.videoWidth-sw)/2); }
-  else        { sh=Math.round(vid.videoWidth/cr);  sy=Math.round((vid.videoHeight-sh)/2); }
-  ctx.drawImage(vid, sx, sy, sw, sh, x, y, w, h);
+// ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
+// zone:{x,y,w,h} en pixels canvas — zoomH/zoomW en % — cropX/cropY en pixels espace phone 393px
+function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH){
+  const srcW = src.videoWidth || src.naturalWidth || 0;
+  const srcH = src.videoHeight || src.naturalHeight || 0;
+  if(!srcW || !srcH) return;
+  // Conversion pixel espace phone (393×852) → pixels canvas
+  const px = canvasW / 393, py = canvasH / 852;
+  // Taille de l'élément affiché (zoom% de la zone)
+  const dw = zone.w * (zoomW / 100);
+  const dh = zone.h * (zoomH / 100);
+  // Centre de la zone + offset crop
+  const cx = zone.x + zone.w / 2 + cropX * px;
+  const cy = zone.y + zone.h / 2 + cropY * py;
+  const dx = cx - dw / 2, dy = cy - dh / 2;
+  // Cover-fit source dans (dw × dh)
+  const scale = Math.max(dw / srcW, dh / srcH);
+  const srcCW = dw / scale, srcCH = dh / scale;
+  const srcX  = (srcW - srcCW) / 2, srcY = (srcH - srcCH) / 2;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(zone.x, zone.y, zone.w, zone.h); ctx.clip();
+  ctx.drawImage(src, srcX, srcY, srcCW, srcCH, dx, dy, dw, dh);
+  ctx.restore();
 }
 
-// Dessine les sous-titres sur le canvas avec le style actuel
-function _cvSubs(ctx, shown, activeIdx, W, H){
-  if(!shown?.length) return;
-  const scale = H / 1920;
-  const sz    = Math.max(24, Math.round((cfg.subSize||72) * scale * 0.85));
-  const posY  = Math.round(H * ((cfg.subPos||75) / 100));
-  const posX  = Math.round(W * ((cfg.subPosX||50) / 100));
-  const c1    = subColors.c1 || '#FFE500';
-  const c2    = subColors.c2 || '#ffffff';
-  const stroke = Math.max(2, Math.round(sz / 12));
-
+// ── Texte hook en haut (miroir de #hookOverlay)
+function _cvHook(ctx, W, H){
+  const el = document.getElementById('hookOverlay');
+  if(!el || el.style.display === 'none') return;
+  const text = document.getElementById('hookText')?.textContent?.trim();
+  if(!text) return;
+  const sz = Math.round(16 * W / 393);
   ctx.save();
   ctx.font = `900 ${sz}px Impact,sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, Math.round(sz/16));
+  ctx.strokeStyle = '#000'; ctx.strokeText(text, W/2, Math.round(28 * H/852));
+  ctx.fillStyle = '#fff';   ctx.fillText(text,   W/2, Math.round(28 * H/852));
+  ctx.restore();
+}
+
+// ── Sous-titres sur canvas : styles, animations, scaleX, lineH
+function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
+  if(!shown?.length) return;
+  const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
+  const posY     = Math.round(H * ((cfg.subPos||75) / 100));
+  const posX     = Math.round(W * ((cfg.subPosX||50) / 100));
+  const scaleX   = cfg.subScaleX || 1.0;
+  const c1       = subColors.c1 || '#FFE500';
+  const c2       = subColors.c2 || '#ffffff';
+  const strokeW  = Math.max(2, Math.round(sz / 12));
+  const style    = selSubStyle || 'hormozi';
+  const gap      = Math.round(sz * 0.22);
+  const ANIM_DUR = 0.25;
+  const t        = Math.min(1, animElapsed / ANIM_DUR);
+
+  // ── Calcul transform d'animation (entrée du groupe)
+  let animSY = 1, animTy = 0, animOpacity = 1;
+  if(animEnabled && selAnim !== 'none'){
+    if(selAnim === 'pop'){
+      const ease = 1 - Math.pow(1 - t, 3);
+      animSY = 0.5 + 0.5 * ease;
+    } else if(selAnim === 'bounce'){
+      const bounce = t < 0.36 ? 7.56*t*t
+        : t < 0.72 ? 7.56*(t-.54)*(t-.54)+.75
+        : t < 0.9  ? 7.56*(t-.81)*(t-.81)+.9375
+        :             7.56*(t-.945)*(t-.945)+.984;
+      animSY = 0.3 + 0.7 * bounce;
+    } else if(selAnim === 'slide'){
+      animTy = (1 - (1 - Math.pow(1-t,3))) * sz * 1.5; // glisse depuis le bas
+    } else if(selAnim === 'fade'){
+      animOpacity = t;
+    }
+  }
+
+  ctx.save();
+  ctx.globalAlpha = animOpacity;
+
+  // scaleX (compression horizontale) centré sur posX
+  if(scaleX !== 1){
+    ctx.translate(posX, 0);
+    ctx.scale(scaleX, 1);
+    ctx.translate(-posX, 0);
+  }
+  // Animation Y (scale + translate)
+  if(animSY !== 1 || animTy !== 0){
+    ctx.translate(0, posY + animTy);
+    ctx.scale(1, animSY);
+    ctx.translate(0, -posY);
+  }
+
   ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
   ctx.lineJoin = 'round';
 
-  // Measure total width for centering
-  const gap = Math.round(sz * 0.2);
-  const widths = shown.map(w => ctx.measureText(w).width + gap);
-  const totalW = widths.reduce((a,b)=>a+b,0);
-  let x = posX - totalW / 2;
+  if(style === 'tiktok'){
+    // Chaque mot a un fond coloré
+    ctx.font = `900 ${Math.round(sz*.85)}px 'Arial Black',Arial,sans-serif`;
+    const pad = Math.round(sz * 0.15);
+    const widths = shown.map(w => ctx.measureText(w).width + pad*2);
+    const totalW = widths.reduce((a,b)=>a+b,0) + (shown.length-1)*Math.round(sz*.15);
+    let x = posX - totalW/2;
+    shown.forEach((word,i)=>{
+      const active = i===activeIdx;
+      const bg = active ? c1 : c2;
+      const ph = Math.round(sz*1.15), pw = widths[i];
+      const r  = Math.round(sz*.1);
+      ctx.fillStyle = bg;
+      _cvRoundRect(ctx, x, posY-ph/2, pw, ph, r);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'center';
+      ctx.fillText(word, x+pw/2, posY);
+      x += pw + Math.round(sz*.15);
+    });
+  } else {
+    // Styles avec texte coloré + stroke (hormozi / neon / iman / podcast / mrbeast)
+    let font;
+    if(style==='hormozi'||style==='mrbeast') font=`900 ${sz}px Impact,sans-serif`;
+    else if(style==='neon')   font=`900 ${sz}px Impact,sans-serif`;
+    else                      font=`900 ${sz}px 'Arial Black',Arial,sans-serif`;
+    ctx.font = font;
+    ctx.textAlign = 'left';
 
-  shown.forEach((word, i) => {
-    const color = (i === activeIdx) ? c1 : c2;
-    ctx.lineWidth = stroke;
-    ctx.strokeStyle = '#000';
-    ctx.strokeText(word, x, posY);
-    ctx.fillStyle = color;
-    ctx.fillText(word, x, posY);
-    x += widths[i];
-  });
+    const widths = shown.map(w => ctx.measureText(w).width + gap);
+    const totalW = widths.reduce((a,b)=>a+b,0);
+    let x = posX - totalW/2;
+
+    shown.forEach((word,i)=>{
+      const active = i===activeIdx;
+      const color  = active ? c1 : c2;
+
+      if(style==='neon'){
+        ctx.shadowColor = color;
+        ctx.shadowBlur  = Math.round(sz * 0.7);
+        ctx.fillStyle   = color;
+        ctx.fillText(word, x, posY);
+        ctx.shadowBlur  = Math.round(sz * 1.4);
+        ctx.fillText(word, x, posY);
+        ctx.shadowBlur  = 0;
+      } else {
+        ctx.lineWidth   = strokeW;
+        ctx.strokeStyle = '#000';
+        ctx.strokeText(word, x, posY);
+        ctx.fillStyle   = color;
+        ctx.fillText(word, x, posY);
+      }
+      x += widths[i];
+    });
+  }
   ctx.restore();
+}
+
+function _cvRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
 }
 
 // ── SOCIAL PUBLISH ──
