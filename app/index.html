@@ -693,6 +693,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button id="resetAvatarBtn" onclick="resetAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,0.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">↺ Recadrer</button>
                 <button id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer avatar</button>
               </div>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button onclick="openAvatarPresetPicker()" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↩ Avatars sauvegardés</button>
+                <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">💾 Sauvegarder avatar</button>
+              </div>
             </div>
 
             <!-- BIBLIOTHÈQUE D'AVATARS (bouton ouverture modale) -->
@@ -2319,6 +2323,32 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
+<!-- AVATAR PRESET SAVE MODAL -->
+<div id="avatarPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+    <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Sauvegarder avatar</div>
+    <div style="font-size:17px;font-weight:800;margin-bottom:16px">Nomme cet avatar</div>
+    <input id="avatarPresetNameInput" type="text" maxlength="32" placeholder="Ex : Moi studio, Avatar pro…"
+      style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;box-sizing:border-box;margin-bottom:14px"
+      onkeydown="if(event.key==='Enter')confirmSaveAvatarPreset()">
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('avatarPresetSaveModal').style.display='none'" style="flex:1;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Annuler</button>
+      <button onclick="confirmSaveAvatarPreset()" style="flex:1;padding:11px;background:var(--orange);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- AVATAR PRESET PICKER MODAL -->
+<div id="avatarPresetPickerModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:420px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:800">🖼️ Avatars sauvegardés</div>
+      <button onclick="document.getElementById('avatarPresetPickerModal').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="avatarPresetList"></div>
+  </div>
+</div>
+
 <!-- PRESET SAVE MODAL -->
 <div id="subPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)closeSubPresetSave()">
   <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
@@ -3112,6 +3142,88 @@ function _applySubPreset(p){
 }
 
 // Réinitialise le style des sous-titres aux valeurs par défaut
+// ── AVATAR PRESETS ──
+function _getAvatarPresets(){ try{ return JSON.parse(localStorage.getItem('aa_avatar_presets')||'[]'); }catch(e){ return []; } }
+
+function openAvatarPresetSave(){
+  // Doit avoir un avatar chargé
+  const src = document.getElementById('previewAvImg')?.src;
+  if(!src || src.endsWith('/app/') || !selAvatar.localFile && !selAvatar.localUrl){
+    toast('⚠️ Charge d\'abord un avatar à sauvegarder'); return;
+  }
+  document.getElementById('avatarPresetSaveModal').style.display = 'flex';
+  const inp = document.getElementById('avatarPresetNameInput');
+  if(inp){ inp.value = selAvatar.name || ''; setTimeout(()=>inp.focus(),80); }
+}
+
+async function confirmSaveAvatarPreset(){
+  const inp  = document.getElementById('avatarPresetNameInput');
+  const name = inp?.value.trim() || ('Avatar ' + (new Date().toLocaleDateString('fr')));
+  document.getElementById('avatarPresetSaveModal').style.display = 'none';
+
+  // Compresser l'image en JPEG 70% max 600px pour localStorage (~50-100KB base64)
+  const imgEl = document.getElementById('avatarPreviewImg') || document.getElementById('previewAvImg');
+  if(!imgEl || !imgEl.src){ toast('⚠️ Aucune image à sauvegarder'); return; }
+  try {
+    const cv = document.createElement('canvas');
+    const maxSide = 600;
+    const img = new Image(); img.crossOrigin='anonymous';
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=imgEl.src; });
+    const r = Math.min(1, maxSide/Math.max(img.naturalWidth||1, img.naturalHeight||1));
+    cv.width=Math.round((img.naturalWidth||400)*r); cv.height=Math.round((img.naturalHeight||400)*r);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    const dataUrl = cv.toDataURL('image/jpeg', 0.72);
+    const presets = _getAvatarPresets();
+    presets.unshift({ name, dataUrl, date: Date.now() });
+    presets.splice(10); // max 10
+    localStorage.setItem('aa_avatar_presets', JSON.stringify(presets));
+    toast('✓ Avatar "' + name + '" sauvegardé !');
+  } catch(e){ toast('⚠️ Erreur sauvegarde : ' + e.message); }
+}
+
+function openAvatarPresetPicker(){
+  const presets = _getAvatarPresets();
+  const list = document.getElementById('avatarPresetList');
+  if(!list) return;
+  if(!presets.length){
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Aucun avatar sauvegardé.<br>Charge une photo et clique "💾 Sauvegarder avatar".</div>';
+  } else {
+    list.innerHTML = presets.map((p,i) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border)'"
+        onclick="_applyAvatarPreset(${i})">
+        <img src="${p.dataUrl}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${new Date(p.date).toLocaleDateString('fr')}</div>
+        </div>
+        <button onclick="event.stopPropagation();_deleteAvatarPreset(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:4px;flex-shrink:0" title="Supprimer">🗑</button>
+      </div>`).join('');
+  }
+  document.getElementById('avatarPresetPickerModal').style.display = 'flex';
+}
+
+function _applyAvatarPreset(idx){
+  const presets = _getAvatarPresets();
+  const p = presets[idx]; if(!p) return;
+  document.getElementById('avatarPresetPickerModal').style.display = 'none';
+  // Convertir dataUrl → File puis appliquer comme handleAvatarFile
+  fetch(p.dataUrl).then(r=>r.blob()).then(blob=>{
+    const file = new File([blob], p.name+'.jpg', { type:'image/jpeg' });
+    handleAvatarFile(file);
+    // Override le nom affiché
+    const nameEl = document.getElementById('avatarPreviewName');
+    if(nameEl) nameEl.textContent = p.name;
+  }).catch(e=>toast('⚠️ Erreur chargement preset : '+e.message));
+}
+
+function _deleteAvatarPreset(idx){
+  const presets = _getAvatarPresets();
+  presets.splice(idx,1);
+  localStorage.setItem('aa_avatar_presets', JSON.stringify(presets));
+  openAvatarPresetPicker(); // refresh
+}
+
 function resetSubStyle(){
   _applySubPreset({
     style:'hormozi', anim:'none', wpg:2, animEnabled:false,
@@ -3588,8 +3700,10 @@ function handleAvatarFile(file){
     // Boutons recadrer / supprimer
     const resetBtn   = document.getElementById('resetAvatarBtn');
     const removeBtn2 = document.getElementById('removeAvatarBtn');
+    const saveAvBtn  = document.getElementById('saveAvatarPresetBtn');
     if(resetBtn)   resetBtn.style.display   = 'block';
     if(removeBtn2) removeBtn2.style.display = 'block';
+    if(saveAvBtn)  saveAvBtn.style.display  = 'block';
     updateLivePreview();
   }catch(e){
     console.error('handleAvatarFile error:', e);
@@ -6005,9 +6119,8 @@ function downloadVideo(){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ── COMPOSITION VIDÉO — canvas + MediaRecorder ──
-// Reproduit fidèlement : layout split, zoom/crop, hook, sous-titres
-// (style, animation, couleurs, position, scaleX, lineH)
+// ── COMPOSITION VIDÉO — WebCodecs MP4 (fallback: MediaRecorder WebM)
+// Layout split, zoom/crop, hook, sous-titres (style/anim/couleurs/pos)
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
@@ -6081,112 +6194,156 @@ async function composeVideo(btn){
     } catch(e) { console.warn('Audio stream setup failed:', e); }
   }
 
-  const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1','video/mp4']
-    .find(m => { try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || '';
-  const chunks = [];
-  const recOpts = { videoBitsPerSecond: 8000000 };
-  if(mimeType) recOpts.mimeType = mimeType;
-  const recorder = new MediaRecorder(captureStream, recOpts);
-  recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
-  recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    results.composedUrl = url;
-    document.getElementById('hedraVideo').src = url;
-    URL.revokeObjectURL(hedraObjUrl);
-    resetBtn();
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    toast('✓ Vidéo composée — téléchargement…');
-    const a = document.createElement('a'); a.href=url; a.download=`avatarads-video.${ext}`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  };
-
-  // 7. Subtitle words from wordEditor chips
-  const wordChips = document.querySelectorAll('#wordEditor span');
-  const words = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
-  const wpg = Math.max(1, cfg.subWpg || 2);
+  // 7. Subtitle words
+  const wordChips   = document.querySelectorAll('#wordEditor span');
+  const words       = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
+  const wpg         = Math.max(1, cfg.subWpg || 2);
   const totalGroups = Math.ceil(words.length / wpg);
-  // subAdvanceMs : offset d'avance sur le timing
-  const subAdvSec = (cfg.subAdvanceMs || 0) / 1000;
-  // Timing mode : 'fixe' (N sec/groupe) ou 'proportionnel' (répartition sur durée)
+  const subAdvSec   = (cfg.subAdvanceMs || 0) / 1000;
   const isFixedMode = (cfg.subTimingMode || 'proportionnel') === 'fixe';
   const secPerGroup = cfg.subSecPerGroup || 1.2;
-  // wordInterval en mode proportionnel (secondes par mot)
   const wordInterval = words.length > 0 ? totalDuration / words.length : 99;
+  const needWatermark = guestMode || (currentMember && currentMember.plan === 'free');
 
-  // 8. Start playback + recording
-  if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
-  if(btn) btn.innerHTML = '🔴 Composition…';
-  toast('🎬 Composition en cours… (~'+ Math.round(totalDuration) +'s)');
-  hedraVid.play().catch(()=>{});
-  if(gpVid) gpVid.play().catch(()=>{});
-  if(audioEl2) audioEl2.play().catch(()=>{});
-  recorder.start(200);
-  const startTime = performance.now();
-
-  // 9. Render loop — subtitle animation state
+  // Shared render function (writes to canvas — same for both encode paths)
   let _lastGrpIdx = -1, _lastGrpTime = 0;
-
-  (function renderFrame(){
-    const elapsed = (performance.now() - startTime) / 1000;
-    const pct = Math.min(100, Math.round(elapsed / totalDuration * 100));
-    if(compFill) compFill.style.width = pct + '%';
-    if(compPct) compPct.textContent = pct + '%';
-
+  function drawFrame(elapsed){
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
-
-    // Draw avatar (Hedra lipsync) zone
-    _cvDrawZone(ctx, hedraVid,
-      {x:0, y:0, w:W, h:avH},
-      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100,
-      cfg.avCropX||0, cfg.avCropY||0, W, H);
-
-    // Draw gameplay zone (if any)
-    if(gpVid){
-      _cvDrawZone(ctx, gpVid,
-        {x:0, y:avH, w:W, h:gpH},
-        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100,
-        cfg.gpCropX||0, cfg.gpCropY||0, W, H);
-    }
-
-    // Draw hook text (top overlay)
+    _cvDrawZone(ctx, hedraVid, {x:0,y:0,w:W,h:avH},
+      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H);
+    if(gpVid)
+      _cvDrawZone(ctx, gpVid, {x:0,y:avH,w:W,h:gpH},
+        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
     _cvHook(ctx, W, H);
-
-    // Draw subtitles with proper style + animation
     if(words.length > 0){
-      // Elapsed with advance offset (même logique que le preview animé)
-      const subElapsed = Math.max(0, elapsed + subAdvSec);
-      let grpIdx, wordInGroup;
+      const sub = Math.max(0, elapsed + subAdvSec);
+      let gi, wi;
       if(isFixedMode){
-        grpIdx      = Math.min(totalGroups-1, Math.floor(subElapsed / secPerGroup));
-        const gProg = (subElapsed / secPerGroup) - grpIdx;
-        wordInGroup = Math.min(wpg-1, Math.floor(gProg * wpg));
+        gi = Math.min(totalGroups-1, Math.floor(sub/secPerGroup));
+        wi = Math.min(wpg-1, Math.floor(((sub/secPerGroup)-gi)*wpg));
       } else {
-        const prog  = Math.min(1, subElapsed / totalDuration);
-        const rawG  = prog * totalGroups;
-        grpIdx      = Math.min(totalGroups-1, Math.floor(rawG));
-        const gProg = rawG - grpIdx;
-        wordInGroup = Math.min(wpg-1, Math.floor(gProg * wpg));
+        const p = Math.min(1, sub/totalDuration), rg = p*totalGroups;
+        gi = Math.min(totalGroups-1, Math.floor(rg));
+        wi = Math.min(wpg-1, Math.floor((rg-gi)*wpg));
       }
-      if(grpIdx !== _lastGrpIdx){ _lastGrpIdx = grpIdx; _lastGrpTime = elapsed; }
-      const grpStart = grpIdx * wpg;
-      const shown    = words.slice(grpStart, Math.min(grpStart + wpg, words.length));
-      const animElapsed = elapsed - _lastGrpTime;
-      _cvSubs(ctx, shown, wordInGroup, animElapsed, W, H);
+      if(gi !== _lastGrpIdx){ _lastGrpIdx=gi; _lastGrpTime=elapsed; }
+      const gs = gi*wpg;
+      _cvSubs(ctx, words.slice(gs, Math.min(gs+wpg,words.length)), wi, elapsed-_lastGrpTime, W, H);
+    }
+    if(needWatermark) _cvWatermark(ctx, W, H);
+  }
+
+  // 8. Choose path: WebCodecs → MP4 | fallback → MediaRecorder WebM
+  if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
+  if(btn) btn.innerHTML = '🔴 Composition…';
+
+  const canWebCodecs = typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined' && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined';
+  let mp4Muxer = null;
+  if(canWebCodecs){
+    try {
+      const mod = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.esm.min.js');
+      mp4Muxer = mod;
+    } catch(e){ console.warn('mp4-muxer load failed, falling back to WebM:', e); }
+  }
+
+  if(mp4Muxer){
+    // ── PATH A : WebCodecs + mp4-muxer → fichier .mp4 natif ──
+    toast('🎬 Composition MP4 en cours… (~'+ Math.round(totalDuration) +'s)');
+    const { Muxer, ArrayBufferTarget } = mp4Muxer;
+    const target = new ArrayBufferTarget();
+    const muxer = new Muxer({
+      target,
+      video: { codec:'avc', width:W, height:H },
+      audio: results.audioBlob ? { codec:'aac', sampleRate:48000, numberOfChannels:1 } : undefined,
+      fastStart: 'in-memory',
+    });
+
+    // VideoEncoder
+    const vEnc = new VideoEncoder({ output:(c,m)=>muxer.addVideoChunk(c,m), error:e=>console.error('VEnc:',e) });
+    vEnc.configure({ codec:'avc1.4d001f', width:W, height:H, bitrate:8_000_000, framerate:30, hardwareAcceleration:'prefer-hardware' });
+
+    // Pre-encode audio via OfflineAudioContext
+    if(results.audioBlob){
+      try {
+        const aEnc = new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:e=>console.error('AEnc:',e) });
+        aEnc.configure({ codec:'mp4a.40.2', sampleRate:48000, numberOfChannels:1, bitrate:128_000 });
+        const raw = await results.audioBlob.arrayBuffer();
+        const tmpCtx = new AudioContext();
+        const decoded = await tmpCtx.decodeAudioData(raw); tmpCtx.close();
+        const off = new OfflineAudioContext(1, Math.ceil(48000*(totalDuration+0.5)), 48000);
+        const src = off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start();
+        const rendered = await off.startRendering();
+        const pcm = rendered.getChannelData(0);
+        const CS = 2048;
+        for(let i=0;i<pcm.length;i+=CS){
+          const len=Math.min(CS,pcm.length-i);
+          const ad = new AudioData({ format:'f32-planar', sampleRate:48000, numberOfFrames:len, numberOfChannels:1,
+            timestamp:Math.round(i/48000*1e6), data:pcm.subarray(i,i+len) });
+          aEnc.encode(ad); ad.close();
+        }
+        await aEnc.flush();
+      } catch(e){ console.warn('Audio encode error:', e); }
     }
 
-    // Watermark pour les utilisateurs free/guest
-    if(guestMode || (currentMember && currentMember.plan === 'free')){
-      _cvWatermark(ctx, W, H);
-    }
+    // Real-time video encoding via rAF
+    hedraVid.play().catch(()=>{}); if(gpVid) gpVid.play().catch(()=>{});
+    const t0 = performance.now(); let fc=0;
+    (function rAF(){
+      const elapsed = (performance.now()-t0)/1000;
+      const pct = Math.min(100,Math.round(elapsed/totalDuration*100));
+      if(compFill) compFill.style.width=pct+'%'; if(compPct) compPct.textContent=pct+'%';
+      drawFrame(elapsed);
+      if(vEnc.encodeQueueSize < 10){
+        const vf = new VideoFrame(canvas,{timestamp:Math.round(elapsed*1e6), duration:Math.round(1e6/30)});
+        vEnc.encode(vf,{keyFrame:fc%60===0}); vf.close(); fc++;
+      }
+      if(elapsed>=totalDuration+0.2||hedraVid.ended){
+        vEnc.flush().then(()=>{
+          muxer.finalize();
+          const blob=new Blob([target.buffer],{type:'video/mp4'});
+          const url=URL.createObjectURL(blob);
+          results.composedUrl=url; document.getElementById('hedraVideo').src=url;
+          URL.revokeObjectURL(hedraObjUrl); resetBtn();
+          toast('✓ Vidéo MP4 prête — téléchargement…');
+          const a=document.createElement('a'); a.href=url; a.download='avatarads-video.mp4';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        });
+      } else requestAnimationFrame(rAF);
+    })();
 
-    if(elapsed >= totalDuration + 0.3 || hedraVid.ended){
-      recorder.stop();
-    } else {
-      requestAnimationFrame(renderFrame);
-    }
-  })();
+  } else {
+    // ── PATH B : MediaRecorder fallback → WebM ──
+    toast('🎬 Composition WebM en cours… (~'+ Math.round(totalDuration) +'s)');
+    const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+      .find(m=>{ try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;} })||'';
+    const chunks=[];
+    const recOpts={videoBitsPerSecond:8000000}; if(mimeType) recOpts.mimeType=mimeType;
+    const recorder=new MediaRecorder(captureStream, recOpts);
+    recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
+    recorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:mimeType||'video/webm'});
+      const url=URL.createObjectURL(blob);
+      results.composedUrl=url; document.getElementById('hedraVideo').src=url;
+      URL.revokeObjectURL(hedraObjUrl); resetBtn();
+      const ext=mimeType.includes('mp4')?'mp4':'webm';
+      toast('✓ Vidéo composée — téléchargement…');
+      const a=document.createElement('a'); a.href=url; a.download=`avatarads-video.${ext}`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+    hedraVid.play().catch(()=>{}); if(gpVid) gpVid.play().catch(()=>{});
+    if(audioEl2) audioEl2.play().catch(()=>{});
+    recorder.start(200);
+    const t0=performance.now();
+    (function rAF(){
+      const elapsed=(performance.now()-t0)/1000;
+      const pct=Math.min(100,Math.round(elapsed/totalDuration*100));
+      if(compFill) compFill.style.width=pct+'%'; if(compPct) compPct.textContent=pct+'%';
+      drawFrame(elapsed);
+      if(elapsed>=totalDuration+0.3||hedraVid.ended) recorder.stop();
+      else requestAnimationFrame(rAF);
+    })();
+  }
 }
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
