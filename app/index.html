@@ -1207,8 +1207,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
               <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
-                <button onclick="loadSubPreset();toast('✓ Preset appliqué !')" title="Appliquer le preset sauvegardé" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
-                <button onclick="saveSubPreset()" title="Sauvegarder ce style comme preset par défaut" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
+                <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
+                <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
               </div>
             </div>
 
@@ -2301,6 +2301,41 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
+<!-- PRESET SAVE MODAL -->
+<div id="subPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)closeSubPresetSave()">
+  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+    <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Nouveau preset</div>
+    <div style="font-size:17px;font-weight:800;margin-bottom:16px">Nomme ton preset</div>
+    <input id="subPresetNameInput" type="text" maxlength="32" placeholder="Ex : TikTok orange, Hormozi bold…"
+      style="width:100%;box-sizing:border-box;padding:10px 12px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;margin-bottom:14px"
+      onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"
+      onkeydown="if(event.key==='Enter')confirmSaveSubPreset()">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeSubPresetSave()" style="flex:1;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer">Annuler</button>
+      <button onclick="confirmSaveSubPreset()" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(255,107,53,0.35)">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESET PICKER MODAL -->
+<div id="subPresetPickerModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)closeSubPresetPicker()">
+  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Mes presets</div>
+        <div style="font-size:17px;font-weight:800">Choisir un preset</div>
+      </div>
+      <button onclick="closeSubPresetPicker()" style="background:var(--bg4);border:1px solid var(--border);border-radius:7px;color:var(--text3);padding:5px 10px;cursor:pointer;font-size:11px">✕</button>
+    </div>
+    <div id="subPresetPickerList" style="display:flex;flex-direction:column;gap:8px">
+      <!-- Populated by JS -->
+    </div>
+    <div id="subPresetPickerEmpty" style="display:none;text-align:center;padding:30px 0;font-family:var(--mono);font-size:12px;color:var(--text3)">
+      Aucun preset sauvegardé.<br>Crée ton premier preset avec 💾
+    </div>
+  </div>
+</div>
+
 <!-- PAYWALL MODAL -->
 <div class="paywall-overlay" id="paywallOverlay" onclick="if(event.target===this)closePaywall()">
   <div class="paywall-box">
@@ -2913,8 +2948,15 @@ function pickSub(el,style){
   updateSubPreview();
   updateLivePreview();
 }
-function saveSubPreset(){
-  const preset = {
+// ── PRESETS SOUS-TITRES (multi-presets nommés) ──
+function _getSubPresets(){
+  try{ return JSON.parse(localStorage.getItem('aa_sub_presets') || '[]'); }catch(e){ return []; }
+}
+function _saveSubPresets(arr){
+  localStorage.setItem('aa_sub_presets', JSON.stringify(arr));
+}
+function _currentSubPresetData(){
+  return {
     style: selSubStyle,
     anim: selAnim,
     wpg: cfg.subWpg || 2,
@@ -2927,9 +2969,105 @@ function saveSubPreset(){
     c1: subColors.c1 || '#FFE500',
     c2: subColors.c2 || '#ffffff',
   };
-  localStorage.setItem('aa_sub_preset', JSON.stringify(preset));
-  toast('💾 Preset sauvegardé (style · position · couleurs)');
 }
+
+// Ouvre la modale de nommage
+function openSubPresetSave(){
+  const inp = document.getElementById('subPresetNameInput');
+  if(inp) inp.value = '';
+  document.getElementById('subPresetSaveModal').style.display = 'flex';
+  setTimeout(()=>{ if(inp) inp.focus(); }, 80);
+}
+function closeSubPresetSave(){
+  document.getElementById('subPresetSaveModal').style.display = 'none';
+}
+function confirmSaveSubPreset(){
+  const inp  = document.getElementById('subPresetNameInput');
+  const name = (inp ? inp.value.trim() : '') || ('Preset ' + (new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})));
+  const presets = _getSubPresets();
+  // Remplace si même nom, sinon ajoute
+  const idx = presets.findIndex(p => p.name === name);
+  const data = { name, ..._currentSubPresetData() };
+  if(idx >= 0) presets[idx] = data; else presets.push(data);
+  _saveSubPresets(presets);
+  closeSubPresetSave();
+  toast('💾 Preset "' + name + '" sauvegardé');
+}
+
+// Ouvre le picker de presets
+function openSubPresetPicker(){
+  const presets = _getSubPresets();
+  const list  = document.getElementById('subPresetPickerList');
+  const empty = document.getElementById('subPresetPickerEmpty');
+  if(!list) return;
+  if(!presets.length){
+    list.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+  } else {
+    if(empty) empty.style.display = 'none';
+    list.innerHTML = presets.map((p, i) => {
+      const styleLabel = { hormozi:'Hormozi', tiktok:'TikTok', neon:'Néon', iman:'Iman', podcast:'Podcast', mrbeast:'MrBeast' }[p.style] || p.style;
+      const animLabel  = p.anim && p.anim !== 'none' ? ' · ' + p.anim : '';
+      const posLabel   = 'Y:' + (p.pos||75) + '% X:' + (p.posX||50) + '%';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .18s"
+        onmouseover="this.style.borderColor='var(--orange)';this.style.background='rgba(255,107,53,0.05)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'"
+        onclick="applySubPresetByIndex(${i})">
+        <div style="width:36px;height:36px;background:${p.c1||'#FFE500'};border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#000;letter-spacing:-0.5px">Aa</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${styleLabel}${animLabel} · ${posLabel} · ${p.size||72}px</div>
+        </div>
+        <button onclick="event.stopPropagation();deleteSubPresetByIndex(${i})" style="flex-shrink:0;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;transition:all .15s"
+          onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('subPresetPickerModal').style.display = 'flex';
+}
+function closeSubPresetPicker(){
+  document.getElementById('subPresetPickerModal').style.display = 'none';
+}
+function applySubPresetByIndex(i){
+  const presets = _getSubPresets();
+  if(!presets[i]) return;
+  _applySubPreset(presets[i]);
+  closeSubPresetPicker();
+  toast('✓ Preset "' + presets[i].name + '" appliqué');
+}
+function deleteSubPresetByIndex(i){
+  const presets = _getSubPresets();
+  const name = presets[i]?.name || '';
+  presets.splice(i, 1);
+  _saveSubPresets(presets);
+  openSubPresetPicker(); // refresh list
+  toast('🗑 Preset "' + name + '" supprimé');
+}
+function _applySubPreset(p){
+  if(!p) return;
+  // Style
+  if(p.style){ selSubStyle=p.style; const el=document.getElementById('sc-'+p.style); if(el){ document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); } }
+  // Animation
+  if(p.anim !== undefined) selAnim = p.anim;
+  if(p.animEnabled !== undefined) animEnabled = p.animEnabled;
+  // Words per group
+  if(p.wpg){ cfg.subWpg=p.wpg; const sl=document.getElementById('subWpg'); if(sl){ sl.value=p.wpg; const vl=document.getElementById('subWpgVal'); if(vl) vl.textContent=p.wpg; } }
+  // Size
+  if(p.size){ cfg.subSize=p.size; const sl=document.getElementById('subSize'); if(sl){ sl.value=p.size; const vl=document.getElementById('subSizeVal'); if(vl) vl.textContent=p.size+'px'; } }
+  // Position exacte
+  if(p.pos !== undefined){ cfg.subPos=p.pos; const sl=document.getElementById('subPos'); if(sl){ sl.value=p.pos; const vl=document.getElementById('subPosVal'); if(vl) vl.textContent=p.pos+'%'; } }
+  if(p.posX !== undefined){ cfg.subPosX=p.posX; const sl=document.getElementById('subPosX'); if(sl){ sl.value=p.posX; const vl=document.getElementById('subPosXVal'); if(vl) vl.textContent=p.posX+'%'; } }
+  // Stretch
+  if(p.lineH !== undefined){ cfg.subLineH=p.lineH; const sl=document.getElementById('subLineH'); if(sl){ sl.value=Math.round(p.lineH*10); const vl=document.getElementById('subLineHVal'); if(vl) vl.textContent=p.lineH.toFixed(1)+'×'; } }
+  if(p.scaleX !== undefined){ cfg.subScaleX=p.scaleX; const sl=document.getElementById('subScaleX'); if(sl){ sl.value=Math.round(p.scaleX*10); const vl=document.getElementById('subScaleXVal'); if(vl) vl.textContent=p.scaleX.toFixed(1)+'×'; } }
+  // Couleurs
+  if(p.c1){ subColors.c1=p.c1; const ci=document.getElementById('color-c1'); if(ci) ci.value=p.c1; const ch=document.getElementById('color-c1-hex'); if(ch) ch.value=p.c1; }
+  if(p.c2){ subColors.c2=p.c2; const ci=document.getElementById('color-c2'); if(ci) ci.value=p.c2; const ch=document.getElementById('color-c2-hex'); if(ch) ch.value=p.c2; }
+  updateSubPreview(); updateLivePreview();
+}
+
+// Compat : au chargement on migre l'ancien preset unique vers le nouveau format
+function saveSubPreset(){ openSubPresetSave(); } // alias legacy
 // Restaurer le nom business depuis localStorage au chargement
 (function(){
   const saved = localStorage.getItem('aa_bizname');
@@ -2943,30 +3081,24 @@ function saveSubPreset(){
 })();
 
 function loadSubPreset(){
+  // Migration : si ancien format (objet unique) → convertit en tableau nommé
   try{
-    const saved = localStorage.getItem('aa_sub_preset');
-    if(!saved) return;
-    const p = JSON.parse(saved);
-    // Style
-    if(p.style){ selSubStyle=p.style; const el=document.getElementById('sc-'+p.style); if(el){ document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); } }
-    // Animation
-    if(p.anim !== undefined) selAnim = p.anim;
-    if(p.animEnabled !== undefined) animEnabled = p.animEnabled;
-    // Words per group
-    if(p.wpg){ cfg.subWpg=p.wpg; const sl=document.getElementById('subWpg'); if(sl){ sl.value=p.wpg; const vl=document.getElementById('subWpgVal'); if(vl) vl.textContent=p.wpg; } }
-    // Size
-    if(p.size){ cfg.subSize=p.size; const sl=document.getElementById('subSize'); if(sl){ sl.value=p.size; const vl=document.getElementById('subSizeVal'); if(vl) vl.textContent=p.size+'px'; } }
-    // Position
-    if(p.pos !== undefined){ cfg.subPos=p.pos; const sl=document.getElementById('subPos'); if(sl){ sl.value=p.pos; const vl=document.getElementById('subPosVal'); if(vl) vl.textContent=p.pos+'%'; } }
-    if(p.posX !== undefined){ cfg.subPosX=p.posX; const sl=document.getElementById('subPosX'); if(sl){ sl.value=p.posX; const vl=document.getElementById('subPosXVal'); if(vl) vl.textContent=p.posX+'%'; } }
-    // Stretch
-    if(p.lineH !== undefined){ cfg.subLineH=p.lineH; const sl=document.getElementById('subLineH'); if(sl){ sl.value=Math.round(p.lineH*10); const vl=document.getElementById('subLineHVal'); if(vl) vl.textContent=p.lineH.toFixed(1)+'×'; } }
-    if(p.scaleX !== undefined){ cfg.subScaleX=p.scaleX; const sl=document.getElementById('subScaleX'); if(sl){ sl.value=Math.round(p.scaleX*10); const vl=document.getElementById('subScaleXVal'); if(vl) vl.textContent=p.scaleX.toFixed(1)+'×'; } }
-    // Colors
-    if(p.c1){ subColors.c1=p.c1; const ci=document.getElementById('color-c1'); if(ci) ci.value=p.c1; const ch=document.getElementById('color-c1-hex'); if(ch) ch.value=p.c1; }
-    if(p.c2){ subColors.c2=p.c2; const ci=document.getElementById('color-c2'); if(ci) ci.value=p.c2; const ch=document.getElementById('color-c2-hex'); if(ch) ch.value=p.c2; }
-    updateSubPreview(); updateLivePreview();
+    const old = localStorage.getItem('aa_sub_preset');
+    if(old){
+      const p = JSON.parse(old);
+      if(p && typeof p === 'object' && !Array.isArray(p)){
+        const existing = _getSubPresets();
+        if(!existing.find(x => x.name === 'Mon preset')){
+          existing.unshift({ name: 'Mon preset', ...p });
+          _saveSubPresets(existing);
+        }
+        localStorage.removeItem('aa_sub_preset');
+      }
+    }
   }catch(e){}
+  // Applique le premier preset automatiquement au démarrage (comme avant)
+  const presets = _getSubPresets();
+  if(presets.length) _applySubPreset(presets[0]);
 }
 function pickAnim(el,anim,label){
   document.querySelectorAll('.anim-card').forEach(c=>c.classList.remove('on'));
