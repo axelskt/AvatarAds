@@ -3019,30 +3019,42 @@ function reuseLastVideo(){
     const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
     if(!cache || !cache.url){ toast('⚠️ Aucune vidéo en cache'); return; }
     results.hedraUrl = cache.url;
-    // Afficher les résultats directement sans regénérer
-    document.getElementById('reuseBar').style.display = 'none';
-    document.getElementById('genProgArea').style.display = 'none';
-    document.getElementById('resultArea').style.display = 'block';
-    document.getElementById('downloadCard').style.display = 'block';
-    document.getElementById('hedraManualCard').style.display = 'none';
-    document.getElementById('genStatusCard').style.display = 'none';
-    document.getElementById('hedraVideo').src = cache.url;
-    document.getElementById('mainBtn').style.display = 'block';
-    document.getElementById('mainBtn').textContent = '+ Nouvelle vidéo';
-    document.getElementById('mainBtn').onclick = resetAll;
-    document.getElementById('backBtn').style.display = 'none';
-    // Mettre en place l'audio si disponible
     if(results.audioBlob){
       const url = URL.createObjectURL(results.audioBlob);
       document.getElementById('audioEl').src = url;
     }
     updateGuestWatermarks();
     refreshPublishButtons && refreshPublishButtons();
+    step = 5;
+    _showResultArea();
     toast('♻️ Vidéo rechargée depuis le cache — 0 crédit consommé !');
   } catch(e){ toast('⚠️ Erreur réutilisation : ' + e.message); }
 }
 
+// Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
+function _showResultArea(){
+  document.getElementById('genProgArea').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'block';
+  document.getElementById('reuseBar').style.display = 'none';
+  document.getElementById('downloadCard').style.display = results.hedraUrl ? 'block' : 'none';
+  document.getElementById('hedraManualCard').style.display = results.hedraUrl ? 'none' : 'block';
+  document.getElementById('genStatusCard').style.display = 'none';
+  if(results.hedraUrl) document.getElementById('hedraVideo').src = results.hedraUrl;
+  document.getElementById('mainBtn').style.display = 'block';
+  document.getElementById('mainBtn').textContent = '+ Nouvelle vidéo';
+  document.getElementById('mainBtn').onclick = resetAll;
+  document.getElementById('backBtn').style.display = 'none';
+  // Onglets : 1-4 marqués done, 5 = on
+  for(let i=1;i<=5;i++){
+    const st=document.getElementById('st-'+i);
+    if(!st) continue;
+    st.classList.remove('on','done');
+    if(i<5) st.classList.add('done'); else st.classList.add('on');
+  }
+}
+
 function updateSteps(){
+  if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
     const st=document.getElementById('st-'+i);
@@ -3055,12 +3067,31 @@ function updateSteps(){
   }
   const btn=document.getElementById('mainBtn');
   const back=document.getElementById('backBtn');
-  back.style.display=step>1&&step<5?'block':'none';
+  back.style.display=step>1?'block':'none';
+  btn.style.display='block';
+  btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
-  if(step===5) btn.style.display='none';
+  // Masquer la zone résultat si on revient dans le form
+  document.getElementById('resultArea').style.display='none';
+  document.getElementById('genProgArea').style.display='none';
   _updateReuseBar();
 }
+
+function goToStep(n){
+  // Accessible : étapes déjà visitées ou résultats si vidéo disponible
+  const maxStep = results.hedraUrl ? 5 : step;
+  if(n < 1 || n > maxStep) return;
+  if(n === 5 && results.hedraUrl){
+    step = 5;
+    _showResultArea();
+    _updateReuseBar();
+    return;
+  }
+  step = n;
+  updateSteps();
+}
+
 function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
 function nextStep(){
   if(step<4){
@@ -3073,19 +3104,6 @@ function nextStep(){
   }
 }
 function prevStep(){ if(step>1){step--;updateSteps();} }
-function goToStep(n){
-  // On peut aller sur une étape déjà visitée (≤ step actuel) ou revenir depuis l'étape 5
-  if(n >= 1 && n <= step){
-    step = n;
-    // Si on quitte l'étape 5 (résultats), masquer resultArea et réafficher le form
-    document.getElementById('resultArea').style.display='none';
-    document.getElementById('genProgArea').style.display='none';
-    document.getElementById('mainBtn').style.display='block';
-    document.getElementById('mainBtn').textContent = n < 4 ? 'Continuer →' : '🚀 Générer la vidéo';
-    document.getElementById('mainBtn').onclick = handleMainBtn;
-    updateSteps();
-  }
-}
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
 function pickAvatar(el,emo,name,desc){
@@ -6268,8 +6286,6 @@ function showResults(){
   // Libérer le verrou de génération
   window._generationInProgress = false;
   window.onbeforeunload = null;
-  document.getElementById('genProgArea').style.display='none';
-  document.getElementById('resultArea').style.display='block';
   refreshPublishButtons();
 
   // Audio setup for preview sync
@@ -6289,34 +6305,22 @@ function showResults(){
     } catch(e){}
   }
 
-  // Show video if available, else show Hedra manual workflow
-  if(results.hedraUrl){
-    document.getElementById('downloadCard').style.display='block';
-    document.getElementById('hedraManualCard').style.display='none';
-    document.getElementById('genStatusCard').style.display='none';
-    document.getElementById('hedraVideo').src=results.hedraUrl;
-    updateGuestWatermarks();
-  } else {
-    document.getElementById('downloadCard').style.display='none';
-    // Show Hedra manual workflow only if there's audio (voice was generated)
+  step = 5;
+  _showResultArea();
+  updateGuestWatermarks();
+
+  // Si pas de vidéo Hedra, corriger l'affichage du workflow manuel après _showResultArea
+  if(!results.hedraUrl){
     if(results.audioBlob || voiceMode==='gameplay'){
-      document.getElementById('hedraManualCard').style.display='block';
       const dlAudioBtn=document.getElementById('downloadAudioBtn');
       if(dlAudioBtn) dlAudioBtn.style.display = results.audioBlob ? 'inline-block':'none';
-    } else {
-      document.getElementById('hedraManualCard').style.display='none';
     }
     const genStatusCard=document.getElementById('genStatusCard');
     const hs=document.getElementById('hedraStatus');
-    genStatusCard.style.display='block';
-    hs.className='hedra-status';
-    hs.textContent='🎭 Suis les étapes ci-dessous pour créer ta vidéo lipsync (2 min)';
+    if(genStatusCard) genStatusCard.style.display='block';
+    if(hs){ hs.className='hedra-status'; hs.textContent='🎭 Suis les étapes ci-dessous pour créer ta vidéo lipsync (2 min)'; }
   }
 
-  document.getElementById('mainBtn').style.display='block';
-  document.getElementById('mainBtn').textContent='+ Nouvelle vidéo';
-  document.getElementById('mainBtn').onclick=resetAll;
-  document.getElementById('backBtn').style.display='none';
   toast('✓ Génération terminée !');
 }
 
