@@ -3556,9 +3556,10 @@ async function whisperTranscribe(){
     fd.append('file', mp4AudioFile, mp4AudioFile.name);
     fd.append('model', 'whisper-1');
     fd.append('language', 'fr');
+    fd.append('response_format', 'verbose_json');
+    fd.append('timestamp_granularities[]', 'word');
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
       method: 'POST',
-      
       body: fd
     });
     if(!resp.ok){
@@ -3567,6 +3568,16 @@ async function whisperTranscribe(){
     }
     const data = await resp.json();
     const text = (data.text || '').trim();
+    // Stocker les timestamps par mot pour sync sous-titres précise
+    if(data.words && data.words.length){
+      whisperWordTimestamps = data.words.map(w => ({
+        word: w.word.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(),
+        start: w.start,
+        end: w.end
+      })).filter(w => w.word);
+    } else {
+      whisperWordTimestamps = [];
+    }
     if(text){
       populateWordEditor(text);
       pendingTranscript = text;
@@ -3575,7 +3586,8 @@ async function whisperTranscribe(){
       const ta = document.getElementById('transcriptInput');
       if(ta) ta.value = text;
       _renderWordChips(text);
-      toast('✓ Whisper IA — transcript appliqué aux sous-titres !');
+      const hasTS = whisperWordTimestamps.length > 0;
+      toast('✓ Whisper IA — transcript ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
     } else {
       toast('⚠️ Aucun texte détecté par Whisper');
     }
@@ -4094,8 +4106,17 @@ function startPreviewAnim(audioEl){
       const advanceSec = (cfg.subAdvanceMs || 0) / 1000;
       const elapsed = Math.max(0, audioEl.currentTime - startOffset + advanceSec);
       let groupIdx, wordInGroup;
-      if((cfg.subTimingMode || 'proportionnel') === 'fixe'){
-        // Mode fixe : 1 groupe toutes les N secondes (utile pour MP4 perso)
+
+      if(whisperWordTimestamps.length >= allWords.length && allWords.length > 0){
+        // ── Mode Whisper timestamps : précision mot par mot ──
+        let wi = whisperWordTimestamps.findIndex((w, i) =>
+          elapsed >= w.start && (i === whisperWordTimestamps.length - 1 || elapsed < whisperWordTimestamps[i + 1].start)
+        );
+        if(wi < 0) wi = elapsed < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
+        groupIdx   = Math.min(totalGroups - 1, Math.floor(wi / wpg));
+        wordInGroup = wi % wpg;
+      } else if((cfg.subTimingMode || 'proportionnel') === 'fixe'){
+        // Mode fixe : 1 groupe toutes les N secondes
         const secPerGroup = cfg.subSecPerGroup || 1.2;
         groupIdx = Math.min(totalGroups - 1, Math.floor(elapsed / secPerGroup));
         const groupProgress = (elapsed / secPerGroup) - groupIdx;
@@ -4108,6 +4129,7 @@ function startPreviewAnim(audioEl){
         const groupProgress = rawGroup - groupIdx;
         wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
       }
+
       if(groupIdx !== lastGroup || wordInGroup !== lastWordInGroup){
         const groupChanged = groupIdx !== lastGroup;
         lastGroup = groupIdx;
@@ -4522,6 +4544,7 @@ function selectVoiceMode(mode){
 // ══════════════════════════════════════════
 let silenceAudioBuffer  = null;   // decoded AudioBuffer of source
 let silenceKeepSegs     = [];     // [{start,end}] seconds to keep (after trim)
+let whisperWordTimestamps = [];   // [{word, start, end}] — timestamps Whisper par mot
 let silenceOrigKeepSegs = [];     // keepSegs before manual trim
 let silenceTrimStart    = 0;      // seconds to skip at start
 let silenceTrimEnd      = Infinity; // seconds cap at end (Infinity = full)
@@ -5269,6 +5292,7 @@ function applyMp4Transcript(text){
 function handleMp4AudioFile(file){
   if(!file) return;
   mp4AudioFile = file;
+  whisperWordTimestamps = []; // reset timestamps à chaque nouvel audio
   const el = document.getElementById('mp4AudioEl');
   el.src = URL.createObjectURL(file);
   el.load();
@@ -6390,6 +6414,7 @@ function genSubtitlesFromAudio(){
 function resetAll(){
   step=1; updateSteps();
   results={script:'',audioBlob:null,hedraUrl:''};
+  whisperWordTimestamps = [];
   document.getElementById('previewArea').style.display='flex';
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='none';
@@ -6589,7 +6614,15 @@ async function composeVideo(btn){
     if(words.length > 0){
       const sub = Math.max(0, elapsed + subAdvSec);
       let gi, wi;
-      if(isFixedMode){
+      if(whisperWordTimestamps.length >= words.length){
+        // ── Mode Whisper timestamps : sync mot par mot ──
+        let wordIdx = whisperWordTimestamps.findIndex((w, i) =>
+          sub >= w.start && (i === whisperWordTimestamps.length - 1 || sub < whisperWordTimestamps[i + 1].start)
+        );
+        if(wordIdx < 0) wordIdx = sub < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
+        gi = Math.min(totalGroups-1, Math.floor(wordIdx / wpg));
+        wi = wordIdx % wpg;
+      } else if(isFixedMode){
         gi = Math.min(totalGroups-1, Math.floor(sub/secPerGroup));
         wi = Math.min(wpg-1, Math.floor(((sub/secPerGroup)-gi)*wpg));
       } else {
