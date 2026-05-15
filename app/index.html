@@ -6853,19 +6853,16 @@ async function composeVideo(btn){
     gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
   ]);
 
-  // ── 12. Boucle rAF — utilise hedraVid.currentTime comme référence de sync ──
+  // ── 12. Boucle rAF — utilise hedraVid.currentTime comme horloge vidéo ──
   await new Promise(resolve => {
     function rAF(){
-      // hedraVid.currentTime est la vraie horloge — évite tout décalage
       const elapsed = hedraVid.currentTime || 0;
       const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
       if(compFill) compFill.style.width = pct + '%';
       if(compPct)  compPct.textContent  = pct + '%';
       drawFrame(elapsed);
-      // Synchroniser audioEl2 si dérive > 150ms
-      if(audioEl2 && Math.abs(audioEl2.currentTime - elapsed) > 0.15){
-        audioEl2.currentTime = elapsed;
-      }
+      // ⚠️ PAS de resync audioEl2.currentTime ici — le seek coupe le flux AudioContext
+      // hedraVid et audioEl2 sont lancés ensemble via Promise.all, ils restent synchro naturellement
       if(elapsed < totalDuration - 0.1 || hedraVid.readyState < 2){
         requestAnimationFrame(rAF);
       } else {
