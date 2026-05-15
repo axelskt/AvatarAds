@@ -1300,6 +1300,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <!-- hidden word storage for subtitle sync -->
               <div id="wordEditor" style="display:none"></div>
+              <div id="wordEditorHint" style="display:none;margin-top:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.5">
+                · entre les mots = cliquer pour couper le groupe &nbsp;↵ = coupure active &nbsp;·&nbsp; double-clic sur un mot = supprimer
+              </div>
             </div>
 
             <!-- ROGNAGE -->
@@ -4077,7 +4080,7 @@ async function togglePreviewPlay(){
 function startPreviewAnim(audioEl){
   // Récupère les vrais mots
   let allWords = [];
-  document.querySelectorAll('#wordEditor span').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
+  document.querySelectorAll('#wordEditor span.word-chip').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
   if(!allWords.length){
     // Fallback: read from transcript inputs
     const tiTa = document.getElementById('transcriptInput');
@@ -4088,14 +4091,17 @@ function startPreviewAnim(audioEl){
   }
   const wpg = Math.max(1, cfg.subWpg || 2);
   const totalWords = allWords.length;
-  const totalGroups = Math.ceil(totalWords / wpg);
-  previewWordIndex = 0;
+  const customGroups = _getWordGroups();
+  const groups      = customGroups || _buildWpgGroups(allWords, wpg);
+  const totalGroups = groups.length;
+  const wordMap     = _buildWordMap(groups);
+  previewWordIndex  = 0;
 
   const gpVid = document.getElementById('gpVideo');
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
 
   // Affiche le premier groupe immédiatement
-  updateSubPreviewWithWords(allWords.slice(0, wpg));
+  updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
 
   const audioDur = audioEl ? (audioEl.duration||0) - (mp4AudioTrimSt||0) : 0;
   const hasAudio = audioEl && audioDur > 1;
@@ -4112,36 +4118,33 @@ function startPreviewAnim(audioEl){
       let groupIdx, wordInGroup;
 
       if(whisperWordTimestamps.length >= allWords.length && allWords.length > 0){
-        // ── Mode Whisper timestamps : précision mot par mot ──
+        // ── Mode Whisper/Tap timestamps : précision mot par mot ──
         let wi = whisperWordTimestamps.findIndex((w, i) =>
           elapsed >= w.start && (i === whisperWordTimestamps.length - 1 || elapsed < whisperWordTimestamps[i + 1].start)
         );
         if(wi < 0) wi = elapsed < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
-        groupIdx   = Math.min(totalGroups - 1, Math.floor(wi / wpg));
-        wordInGroup = wi % wpg;
+        const m = wordMap[wi] || {gi:0, wi:0};
+        groupIdx = m.gi; wordInGroup = m.wi;
       } else if((cfg.subTimingMode || 'proportionnel') === 'fixe'){
         // Mode fixe : 1 groupe toutes les N secondes
         const secPerGroup = cfg.subSecPerGroup || 1.2;
         groupIdx = Math.min(totalGroups - 1, Math.floor(elapsed / secPerGroup));
         const groupProgress = (elapsed / secPerGroup) - groupIdx;
-        wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+        wordInGroup = Math.min((groups[groupIdx]||[]).length - 1, Math.floor(groupProgress * (groups[groupIdx]||[1]).length));
       } else {
         // Mode proportionnel : répartition sur la durée totale
         const progress = Math.min(1, elapsed / audioDur);
         const rawGroup = progress * totalGroups;
         groupIdx = Math.min(totalGroups - 1, Math.floor(rawGroup));
         const groupProgress = rawGroup - groupIdx;
-        wordInGroup = Math.min(wpg - 1, Math.floor(groupProgress * wpg));
+        wordInGroup = Math.min((groups[groupIdx]||[]).length - 1, Math.floor(groupProgress * (groups[groupIdx]||[1]).length));
       }
 
       if(groupIdx !== lastGroup || wordInGroup !== lastWordInGroup){
         const groupChanged = groupIdx !== lastGroup;
         lastGroup = groupIdx;
         lastWordInGroup = wordInGroup;
-        const wordStart = groupIdx * wpg;
-        const shown = [];
-        for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
-        updateSubPreviewWithWords(shown, wordInGroup, groupChanged);
+        updateSubPreviewWithWords(groups[groupIdx] || [], wordInGroup, groupChanged);
       }
       previewInterval = requestAnimationFrame(rafLoop);
     };
@@ -4152,10 +4155,7 @@ function startPreviewAnim(audioEl){
     let groupIdx = 0;
     const tick = () => {
       if(!previewPlaying){ clearInterval(_tickInterval); _tickInterval=null; return; }
-      const wordStart = (groupIdx % totalGroups) * wpg;
-      const shown = [];
-      for(let i=0;i<wpg;i++) shown.push(allWords[(wordStart+i) % totalWords]);
-      updateSubPreviewWithWords(shown);
+      updateSubPreviewWithWords(groups[groupIdx % totalGroups] || []);
       groupIdx++;
     };
     tick();
@@ -5741,22 +5741,79 @@ function _renderWordChips(text){
   const words = text.trim().split(/[\s\n]+/).filter(w => w);
   const editor = document.getElementById('wordEditor');
   editor.innerHTML = '';
-  words.forEach((word) => {
+  editor.style.display = 'block';
+  const hint = document.getElementById('wordEditorHint');
+  if(hint) hint.style.display = 'block';
+  words.forEach((word, i) => {
     const chip = document.createElement('span');
+    chip.className = 'word-chip';
     chip.textContent = word.toUpperCase().replace(/[.,!?;:"«»]/g,'');
     chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
     chip.ondblclick = () => { chip.remove(); };
     chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
     chip.onmouseout = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
     editor.appendChild(chip);
+    // Séparateur cliquable entre les mots
+    if(i < words.length - 1){
+      const sep = document.createElement('span');
+      sep.className = 'word-sep';
+      sep.dataset.break = 'false';
+      sep.textContent = '·';
+      sep.title = 'Cliquer pour créer un nouveau groupe de sous-titre ici';
+      sep.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;cursor:pointer;font-size:11px;color:var(--text3);border-radius:50%;margin:0 1px;transition:all .15s;vertical-align:middle;user-select:none';
+      sep.onclick = () => {
+        const active = sep.dataset.break === 'true';
+        sep.dataset.break = active ? 'false' : 'true';
+        sep.textContent = active ? '·' : '↵';
+        sep.style.color  = active ? 'var(--text3)' : 'var(--orange)';
+        sep.style.background = active ? 'transparent' : 'rgba(255,107,53,0.15)';
+        sep.style.fontWeight = active ? '400' : '900';
+      };
+      sep.onmouseover = () => { if(sep.dataset.break !== 'true') sep.style.color='var(--text2)'; };
+      sep.onmouseout  = () => { if(sep.dataset.break !== 'true') sep.style.color='var(--text3)'; };
+      editor.appendChild(sep);
+    }
   });
+}
+
+// Retourne les groupes personnalisés si des ↵ ont été posés, sinon null
+function _getWordGroups(){
+  const editor = document.getElementById('wordEditor');
+  if(!editor) return null;
+  const children = [...editor.children];
+  const hasBreak = children.some(el => el.classList.contains('word-sep') && el.dataset.break === 'true');
+  if(!hasBreak) return null;
+  const groups = []; let current = [];
+  children.forEach(el => {
+    if(el.classList.contains('word-chip')){
+      const t = el.textContent.trim(); if(t) current.push(t);
+    } else if(el.classList.contains('word-sep') && el.dataset.break === 'true'){
+      if(current.length){ groups.push(current); current = []; }
+    }
+  });
+  if(current.length) groups.push(current);
+  return groups.length > 1 ? groups : null;
+}
+
+// Découpe un tableau de mots en groupes de taille wpg
+function _buildWpgGroups(words, wpg){
+  const g = [];
+  for(let i=0; i<words.length; i+=wpg) g.push(words.slice(i, i+wpg));
+  return g;
+}
+
+// Map : index mot plat → {gi: groupIdx, wi: wordInGroupIdx}
+function _buildWordMap(groups){
+  const map = [];
+  groups.forEach((g, gi) => g.forEach((_, wi) => map.push({gi, wi})));
+  return map;
 }
 function onWordTextEdit(value){
   _renderWordChips(value);
 }
 
 function getEditedWords(){
-  const chips = document.getElementById('wordEditor').querySelectorAll('span');
+  const chips = document.getElementById('wordEditor').querySelectorAll('span.word-chip');
   if(chips.length) return [...chips].map(c => c.textContent).join(' ');
   const tiTa = document.getElementById('transcriptInput');
   return (tiTa && tiTa.value.trim()) || '';
@@ -6596,10 +6653,13 @@ async function composeVideo(btn){
   const ctx = canvas.getContext('2d');
 
   // ── 6. Mots / sous-titres ──
-  const wordChips   = document.querySelectorAll('#wordEditor span');
+  const wordChips   = document.querySelectorAll('#wordEditor span.word-chip');
   const words       = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
   const wpg         = Math.max(1, cfg.subWpg || 2);
-  const totalGroups = Math.ceil(words.length / wpg);
+  const customGroups = _getWordGroups();
+  const groups      = customGroups || _buildWpgGroups(words, wpg);
+  const totalGroups = groups.length;
+  const wordMap     = _buildWordMap(groups);
   const subAdvSec   = (cfg.subAdvanceMs || 0) / 1000;
   const isFixedMode = (cfg.subTimingMode || 'proportionnel') === 'fixe';
   const secPerGroup = cfg.subSecPerGroup || 1.2;
@@ -6619,24 +6679,25 @@ async function composeVideo(btn){
       const sub = Math.max(0, elapsed + subAdvSec);
       let gi, wi;
       if(whisperWordTimestamps.length >= words.length){
-        // ── Mode Whisper timestamps : sync mot par mot ──
+        // ── Mode Whisper/Tap timestamps : sync mot par mot ──
         let wordIdx = whisperWordTimestamps.findIndex((w, i) =>
           sub >= w.start && (i === whisperWordTimestamps.length - 1 || sub < whisperWordTimestamps[i + 1].start)
         );
         if(wordIdx < 0) wordIdx = sub < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
-        gi = Math.min(totalGroups-1, Math.floor(wordIdx / wpg));
-        wi = wordIdx % wpg;
+        const m = wordMap[wordIdx] || {gi:0, wi:0};
+        gi = m.gi; wi = m.wi;
       } else if(isFixedMode){
         gi = Math.min(totalGroups-1, Math.floor(sub/secPerGroup));
-        wi = Math.min(wpg-1, Math.floor(((sub/secPerGroup)-gi)*wpg));
+        const gLen = (groups[gi]||[1]).length;
+        wi = Math.min(gLen-1, Math.floor(((sub/secPerGroup)-gi)*gLen));
       } else {
         const p = Math.min(1, sub/totalDuration), rg = p*totalGroups;
         gi = Math.min(totalGroups-1, Math.floor(rg));
-        wi = Math.min(wpg-1, Math.floor((rg-gi)*wpg));
+        const gLen = (groups[gi]||[1]).length;
+        wi = Math.min(gLen-1, Math.floor((rg-gi)*gLen));
       }
       if(gi !== _lastGrpIdx){ _lastGrpIdx=gi; _lastGrpTime=elapsed; }
-      const gs = gi*wpg;
-      _cvSubs(ctx, words.slice(gs, Math.min(gs+wpg,words.length)), wi, elapsed-_lastGrpTime, W, H);
+      _cvSubs(ctx, groups[gi] || [], wi, elapsed-_lastGrpTime, W, H);
     }
     if(needWatermark) _cvWatermark(ctx, W, H);
   }
@@ -7574,9 +7635,7 @@ function startTapSync(){
   if(!audioSrc){ toast('⚠️ Pas d\'audio disponible — upload ou génère d\'abord'); return; }
 
   const wpg = Math.max(1, cfg.subWpg || 2);
-  _tapSyncGroups = [];
-  for(let i = 0; i < allWords.length; i += wpg)
-    _tapSyncGroups.push(allWords.slice(i, i + wpg));
+  _tapSyncGroups = _getWordGroups() || _buildWpgGroups(allWords, wpg);
 
   _tapSyncTimes  = [];
   _tapSyncIdx    = 0;
