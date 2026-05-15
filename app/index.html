@@ -5018,7 +5018,7 @@ function handleSilenceGameplayFile(file){
   // Le même fichier est partagé entre les deux sections
   handleGameplayFile(file);
   // Activer le split screen pour montrer le gameplay dans le preview
-  if(!splitOn) toggleSplit();
+  if(!splitEnabled) toggleSplit();
   toast('🎮 Gameplay synchro avec le preview — visible dans l\'aperçu');
 }
 // ── Silence trim handles ──
@@ -6068,7 +6068,7 @@ function toggleChip(el){ el.classList.toggle('on'); }
 
 // ── GPT-4o SCRIPT ──
 async function generateScript(){
-  const product=document.getElementById('f-product').value||'ce produit';
+  const product=document.getElementById('f-product')?.value||'ce produit';
   const niche=document.getElementById('f-niche').value||'e-commerce';
   const duration=document.getElementById('f-duration').value;
   const angles=[...document.querySelectorAll('.chip.on')].map(c=>c.textContent).join(', ')||'résultats rapides';
@@ -6190,7 +6190,7 @@ async function startGeneration(){
 
   // Add to library
   library.unshift({
-    emo:selAvatar.emo, name:document.getElementById('f-product').value||'Vidéo',
+    emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
     status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
     script:finalScript, hedraUrl
