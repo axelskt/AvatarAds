@@ -6314,16 +6314,16 @@ const HEDRA_MODELS = {
   elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3 (actuel)
   default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-1 — à remplacer après listHedraModels()
 };
-// Lance listHedraModels() dans la console pour obtenir les IDs disponibles
-async function listHedraModels(){
+// Lance window.listHedraModels() dans la console pour obtenir les IDs disponibles
+window.listHedraModels = async function(){
   const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
   const r = await fetch(PROXY + '?path=' + encodeURIComponent('/models'), { method:'GET' });
   const data = await r.json();
-  const videoModels = (Array.isArray(data) ? data : data.models || [])
-    .filter(m => (m.type||'').includes('video') || (m.name||'').toLowerCase().includes('character') || (m.name||'').toLowerCase().includes('avatar') || (m.name||'').toLowerCase().includes('omnia'));
-  console.table(videoModels.map(m => ({ id: m.id, name: m.name, type: m.type })));
-  console.log('Tous les modèles:', JSON.stringify(data, null, 2));
-}
+  const all = Array.isArray(data) ? data : (data.models || data.data || []);
+  console.table(all.map(m => ({ id: m.id, name: m.name, type: m.type, credits_per_second: m.credits_per_second })));
+  console.log('RAW:', JSON.stringify(data, null, 2));
+  return all;
+};
 
 async function callHedra(audioBlob){
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
