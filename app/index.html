@@ -6119,7 +6119,19 @@ async function startGeneration(){
   setStep('gp3','on');
   let hedraUrl='';
   if(audioBlob){
-    hedraUrl=await callHedra(audioBlob);
+    // Si silences supprimés → envoyer l'audio nettoyé à Hedra
+    // (sinon les lèvres sont calées sur l'audio avec silences → désync)
+    let hedraAudioBlob = audioBlob;
+    if(silenceKeepSegs.length > 0 && silenceAudioBuffer){
+      try {
+        const cleanUrl = await _getOrBuildCleanBlobUrl();
+        if(cleanUrl){
+          hedraAudioBlob = await fetch(cleanUrl).then(r => r.blob());
+          toast('✂️ Audio nettoyé (sans silences) envoyé à Hedra — lipsync précis');
+        }
+      } catch(e){ console.warn('Clean audio for Hedra failed, using original:', e); }
+    }
+    hedraUrl = await callHedra(hedraAudioBlob);
   }
   setStep('gp3','done');
 
