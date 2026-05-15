@@ -6468,15 +6468,18 @@ async function callHedra(audioBlob){
         // URL is directly in the status response — no need to fetch /assets
         const videoUrl = pollData.url || pollData.download_url || pollData.video_url || pollData.streaming_url || '';
         if(videoUrl){
-          // ── Sauvegarder en cache pour réutilisation (économie de crédits) ──
+          // ── Pré-fetcher le blob immédiatement pour éviter expiration URL + CORS au téléchargement ──
           try {
-            localStorage.setItem('avatarads_lastHedra', JSON.stringify({
-              url: videoUrl,
-              date: new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
-              script: (results.script||'').slice(0,80)
-            }));
-            _updateReuseBar();
-          } catch(e){}
+            if(gpIcon) gpIcon.textContent = '📥';
+            const vRes = await fetch(videoUrl);
+            if(vRes.ok){
+              const vBlob = await vRes.blob();
+              const localUrl = URL.createObjectURL(vBlob);
+              if(hedraBar) hedraBar.style.display = 'none';
+              return localUrl; // blob:// local → jamais d'expiration ni CORS
+            }
+          } catch(e){ console.warn('Pre-fetch blob failed, using remote URL:', e); }
+          if(hedraBar) hedraBar.style.display = 'none';
           return videoUrl;
         }
         // Fallback: try fetching the asset if provided
