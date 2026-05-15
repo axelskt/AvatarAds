@@ -3036,20 +3036,48 @@ function reuseLastVideo(){
   try {
     const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
     if(!cache || !cache.url){ toast('⚠️ Aucune vidéo en cache'); return; }
+
+    // ── Restaurer toutes les variables d'état depuis le cache ──
     results.hedraUrl = cache.url;
-    // Restaurer le script depuis le cache pour permettre la restauration du Tap Sync
-    if(!results.script && cache.script) results.script = cache.script;
-    if(results.audioBlob){
-      const url = URL.createObjectURL(results.audioBlob);
-      document.getElementById('audioEl').src = url;
-    }
+    if(cache.script)   results.script = cache.script;
+    if(cache.whisperWordTimestamps?.length) whisperWordTimestamps = cache.whisperWordTimestamps;
+    if(cache.wordGroups?.length){ _wordGroups = cache.wordGroups; _renderGroupEditor(); }
+    if(cache.silenceKeepSegs?.length) silenceKeepSegs = cache.silenceKeepSegs;
+    if(cache.voiceMode)    voiceMode    = cache.voiceMode;
+    if(cache.selVoiceId)   selVoiceId   = cache.selVoiceId;
+    if(cache.selSubStyle)  selSubStyle  = cache.selSubStyle;
+    if(cache.selAnim)      selAnim      = cache.selAnim;
+    if(cache.animEnabled      !== undefined) animEnabled      = cache.animEnabled;
+    if(cache.subtitlesEnabled !== undefined) subtitlesEnabled = cache.subtitlesEnabled;
+    if(cache.splitEnabled     !== undefined) splitEnabled     = cache.splitEnabled;
+    if(cache.splitSwapped     !== undefined) splitSwapped     = cache.splitSwapped;
+    if(cache.currentPlatform)  currentPlatform  = cache.currentPlatform;
+    if(cache.mp4AudioTrimSt)   mp4AudioTrimSt   = cache.mp4AudioTrimSt;
+    if(cache.mp4AudioTrimEnd)  mp4AudioTrimEnd  = cache.mp4AudioTrimEnd;
+    if(cache.mp4AudioEnabled !== undefined) mp4AudioEnabled = cache.mp4AudioEnabled;
+    if(cache.cfg)       Object.assign(cfg, cache.cfg);
+    if(cache.subColors){ subColors.c1 = cache.subColors.c1; subColors.c2 = cache.subColors.c2; }
+    if(cache.selAvatar) Object.assign(selAvatar, cache.selAvatar);
+
+    // ── Restaurer les champs formulaire ──
+    const fs = document.getElementById('f-script');
+    const fh = document.getElementById('f-hook');
+    const fc = document.getElementById('f-cta');
+    const fd = document.getElementById('f-duration');
+    if(fs && cache.fields?.script)   fs.value = cache.fields.script;
+    if(fh && cache.fields?.hook)     fh.value = cache.fields.hook;
+    if(fc && cache.fields?.cta)      fc.value = cache.fields.cta;
+    if(fd && cache.fields?.duration) fd.value = cache.fields.duration;
+
+    // ── Affichage ──
     updateGuestWatermarks();
     refreshPublishButtons && refreshPublishButtons();
+    updateLivePreview && updateLivePreview();
     step = 5;
     _showResultArea();
-    // Restaurer le Tap Sync automatiquement si disponible pour ce script
-    if(!whisperWordTimestamps.length) _tryRestoreTapSync(cache.script || results.script);
-    toast('♻️ Vidéo rechargée depuis le cache — 0 crédit consommé !');
+
+    const dateStr = cache.date ? ' · ' + cache.date : '';
+    toast('♻️ Session complète restaurée' + dateStr + ' — 0 crédit consommé !');
   } catch(e){ toast('⚠️ Erreur réutilisation : ' + e.message); }
 }
 
@@ -6470,16 +6498,7 @@ function showResults(){
     document.getElementById('audioEl').src=url;
   }
 
-  // ── Sauvegarder en cache pour réutilisation ──
-  if(results.hedraUrl){
-    try {
-      localStorage.setItem('avatarads_lastHedra', JSON.stringify({
-        url: results.hedraUrl,
-        date: new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
-        script: (results.script||'').slice(0,80)
-      }));
-    } catch(e){}
-  }
+  // ── Sauvegarder en cache (géré par _saveSession via avatarads_lastHedra) ──
 
   step = 5;
   _showResultArea();
@@ -6570,54 +6589,55 @@ function genSubtitlesFromAudio(){
 // ══════════════════════════════════════════════════
 //  SESSION PERSISTENCE — sauvegarde/restauration
 // ══════════════════════════════════════════════════
+function _buildSessionState(){
+  return {
+    v: 3,
+    ts: Date.now(),
+    fields: {
+      script:   document.getElementById('f-script')  ?.value || '',
+      hook:     document.getElementById('f-hook')    ?.value || '',
+      cta:      document.getElementById('f-cta')     ?.value || '',
+      duration: document.getElementById('f-duration')?.value || ''
+    },
+    script:   results.script   || '',
+    hedraUrl: results.hedraUrl || '',
+    whisperWordTimestamps,
+    wordGroups: _wordGroups || null,
+    silenceKeepSegs,
+    voiceMode,
+    selVoiceId,
+    selSubStyle,
+    selAnim,
+    animEnabled,
+    subtitlesEnabled,
+    splitEnabled,
+    splitSwapped,
+    currentPlatform,
+    mp4AudioTrimSt,
+    mp4AudioTrimEnd,
+    mp4AudioEnabled,
+    cfg: JSON.parse(JSON.stringify(cfg)),
+    subColors: { c1: subColors.c1, c2: subColors.c2 },
+    selAvatar: {
+      emo:      selAvatar.emo      || '',
+      name:     selAvatar.name     || '',
+      desc:     selAvatar.desc     || '',
+      localUrl: selAvatar.localUrl || null
+    }
+  };
+}
+
 function _saveSession(){
   try {
-    const state = {
-      v: 3,
-      ts: Date.now(),
-      // Champs du formulaire
-      fields: {
-        script:   document.getElementById('f-script')  ?.value || '',
-        hook:     document.getElementById('f-hook')    ?.value || '',
-        cta:      document.getElementById('f-cta')     ?.value || '',
-        duration: document.getElementById('f-duration')?.value || ''
-      },
-      // Résultat de génération
-      script:   results.script   || '',
-      hedraUrl: results.hedraUrl || '',
-      // Sous-titres
-      whisperWordTimestamps,
-      wordGroups: _wordGroups || null,
-      // Silences
-      silenceKeepSegs,
-      // Voix
-      voiceMode,
-      selVoiceId,
-      // Sous-titres style
-      selSubStyle,
-      selAnim,
-      animEnabled,
-      subtitlesEnabled,
-      // Mise en page
-      splitEnabled,
-      splitSwapped,
-      currentPlatform,
-      // Audio trim
-      mp4AudioTrimSt,
-      mp4AudioTrimEnd,
-      mp4AudioEnabled,
-      // Config globale
-      cfg: JSON.parse(JSON.stringify(cfg)),
-      subColors: { c1: subColors.c1, c2: subColors.c2 },
-      // Avatar (sans File/Blob)
-      selAvatar: {
-        emo:      selAvatar.emo      || '',
-        name:     selAvatar.name     || '',
-        desc:     selAvatar.desc     || '',
-        localUrl: selAvatar.localUrl || null
-      }
-    };
+    const state = _buildSessionState();
     localStorage.setItem('avatarads_session', JSON.stringify(state));
+    // Si une vidéo Hedra est présente, sauvegarder aussi dans le cache de réutilisation
+    if(state.hedraUrl){
+      const reuseCache = Object.assign({}, state, {
+        date: new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      });
+      localStorage.setItem('avatarads_lastHedra', JSON.stringify(reuseCache));
+    }
   } catch(e){ console.warn('_saveSession:', e); }
 }
 
