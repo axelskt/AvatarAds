@@ -2668,6 +2668,7 @@ function enterApp(profile){
   currentMember = profile;
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
+  window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   const planColors = { free:'var(--text3)', starter:'#4dabf7', pro:'#a855f7', elite:'var(--orange)' };
   const planLabels = { free:'Free', starter:'Starter', pro:'Pro', elite:'Elite' };
   const displayName = profile.first_name || (profile.email||'').split('@')[0];
@@ -6306,12 +6307,32 @@ async function callElevenLabs(text){
   }catch(e){ toast('✗ ElevenLabs : '+e.message); return null; }
 }
 
+// Modèles Hedra par plan utilisateur
+// Elite → meilleur modèle (Character-3 / Hedra Omnia)
+// Autres → modèle standard (Character-1 / Hedra Avatar)
+const HEDRA_MODELS = {
+  elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3 (actuel)
+  default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-1 — à remplacer après listHedraModels()
+};
+// Lance listHedraModels() dans la console pour obtenir les IDs disponibles
+async function listHedraModels(){
+  const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
+  const r = await fetch(PROXY + '?path=' + encodeURIComponent('/models'), { method:'GET' });
+  const data = await r.json();
+  const videoModels = (Array.isArray(data) ? data : data.models || [])
+    .filter(m => (m.type||'').includes('video') || (m.name||'').toLowerCase().includes('character') || (m.name||'').toLowerCase().includes('avatar') || (m.name||'').toLowerCase().includes('omnia'));
+  console.table(videoModels.map(m => ({ id: m.id, name: m.name, type: m.type })));
+  console.log('Tous les modèles:', JSON.stringify(data, null, 2));
+}
+
 async function callHedra(audioBlob){
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
   // Flow : 1) POST /assets (créer) → 2) POST /assets/{id}/upload (fichier)
   //        → 3) POST /generations → 4) GET /generations/{id}/status (poll)
   const PROXY    = SUPABASE_URL + '/functions/v1/hedra-proxy';
-  const MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2'; // Hedra Character 3
+  // Sélection du modèle selon le plan de l'utilisateur
+  const userPlan = (window._userPlan || '').toLowerCase();
+  const MODEL_ID = (userPlan === 'elite') ? HEDRA_MODELS.elite : HEDRA_MODELS.default;
 
   // Helper : appel proxy GET
   async function hGet(path){
