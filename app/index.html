@@ -1300,8 +1300,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <!-- hidden word storage for subtitle sync -->
               <div id="wordEditor" style="display:none"></div>
-              <div id="wordEditorHint" style="display:none;margin-top:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.5">
-                · entre les mots = cliquer pour couper le groupe &nbsp;↵ = coupure active &nbsp;·&nbsp; double-clic sur un mot = supprimer
+              <div id="wordEditorHint" style="display:none;margin-top:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
+                🖱 Glisser un mot vers un autre groupe · ⊕ fusionner deux groupes · double-clic pour supprimer un mot
               </div>
             </div>
 
@@ -4080,19 +4080,24 @@ async function togglePreviewPlay(){
 function startPreviewAnim(audioEl){
   // Récupère les vrais mots
   let allWords = [];
-  document.querySelectorAll('#wordEditor span.word-chip').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
-  if(!allWords.length){
-    // Fallback: read from transcript inputs
-    const tiTa = document.getElementById('transcriptInput');
-    const vTa  = document.getElementById('voiceTranscriptTA');
-    const src  = (tiTa && tiTa.value.trim()) || (vTa && vTa.value.trim()) || pendingTranscript || '';
-    if(src) allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
-    else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
-  }
+  // Lire les mots depuis _wordGroups (priorité) ou DOM ou fallback
   const wpg = Math.max(1, cfg.subWpg || 2);
-  const totalWords = allWords.length;
-  const customGroups = _getWordGroups();
-  const groups      = customGroups || _buildWpgGroups(allWords, wpg);
+  let groups;
+  if(_wordGroups && _wordGroups.length){
+    groups = _wordGroups;
+  } else {
+    document.querySelectorAll('#wordEditor span.word-chip').forEach(c=>{ const t=c.textContent.trim(); if(t) allWords.push(t); });
+    if(!allWords.length){
+      const tiTa = document.getElementById('transcriptInput');
+      const vTa  = document.getElementById('voiceTranscriptTA');
+      const src  = (tiTa && tiTa.value.trim()) || (vTa && vTa.value.trim()) || pendingTranscript || '';
+      if(src) allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
+      else allWords = ["PASSE","À","L'ACTION","MAINTENANT","RÉSULTATS","GARANTIS"];
+    }
+    groups = _buildWpgGroups(allWords, wpg);
+  }
+  allWords = groups.flat();
+  const totalWords  = allWords.length;
   const totalGroups = groups.length;
   const wordMap     = _buildWordMap(groups);
   previewWordIndex  = 0;
@@ -5737,62 +5742,92 @@ function populateWordEditor(text){
   if(vTa) vTa.value = text;
   _renderWordChips(text);
 }
+// ── Stockage des groupes de sous-titres ──────────────────────────────────
+let _wordGroups = null; // array of arrays : [["MONTE","DANS","TA"], ["CHAMBRE","PEU"], ...]
+
 function _renderWordChips(text){
-  const words = text.trim().split(/[\s\n]+/).filter(w => w);
+  // Initialise les groupes depuis le texte brut, découpé par wpg
+  const words = text.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  _wordGroups = _buildWpgGroups(words, wpg);
+  _renderGroupEditor();
+}
+
+function _renderGroupEditor(){
   const editor = document.getElementById('wordEditor');
+  if(!editor || !_wordGroups) return;
   editor.innerHTML = '';
   editor.style.display = 'block';
   const hint = document.getElementById('wordEditorHint');
   if(hint) hint.style.display = 'block';
-  words.forEach((word, i) => {
-    const chip = document.createElement('span');
-    chip.className = 'word-chip';
-    chip.textContent = word.toUpperCase().replace(/[.,!?;:"«»]/g,'');
-    chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono)';
-    chip.ondblclick = () => { chip.remove(); };
-    chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
-    chip.onmouseout = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
-    editor.appendChild(chip);
-    // Séparateur cliquable entre les mots
-    if(i < words.length - 1){
-      const sep = document.createElement('span');
-      sep.className = 'word-sep';
-      sep.dataset.break = 'false';
-      sep.textContent = '·';
-      sep.title = 'Cliquer pour créer un nouveau groupe de sous-titre ici';
-      sep.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;cursor:pointer;font-size:11px;color:var(--text3);border-radius:50%;margin:0 1px;transition:all .15s;vertical-align:middle;user-select:none';
-      sep.onclick = () => {
-        const active = sep.dataset.break === 'true';
-        sep.dataset.break = active ? 'false' : 'true';
-        sep.textContent = active ? '·' : '↵';
-        sep.style.color  = active ? 'var(--text3)' : 'var(--orange)';
-        sep.style.background = active ? 'transparent' : 'rgba(255,107,53,0.15)';
-        sep.style.fontWeight = active ? '400' : '900';
-      };
-      sep.onmouseover = () => { if(sep.dataset.break !== 'true') sep.style.color='var(--text2)'; };
-      sep.onmouseout  = () => { if(sep.dataset.break !== 'true') sep.style.color='var(--text3)'; };
-      editor.appendChild(sep);
+
+  _wordGroups.forEach((group, gi) => {
+    // Ligne de groupe
+    const row = document.createElement('div');
+    row.dataset.gi = gi;
+    row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:38px;transition:border-color .15s';
+    // Numéro de groupe
+    const label = document.createElement('span');
+    label.textContent = (gi+1);
+    label.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700';
+    row.appendChild(label);
+
+    // Drop zone
+    row.ondragover = e => { e.preventDefault(); row.style.borderColor='var(--orange)'; row.style.background='rgba(255,107,53,0.06)'; };
+    row.ondragleave = () => { row.style.borderColor='var(--border)'; row.style.background='var(--bg3)'; };
+    row.ondrop = e => {
+      e.preventDefault(); row.style.borderColor='var(--border)'; row.style.background='var(--bg3)';
+      const fromGi = +e.dataTransfer.getData('wg_gi');
+      const fromWi = +e.dataTransfer.getData('wg_wi');
+      if(fromGi === gi) return;
+      const word = _wordGroups[fromGi].splice(fromWi, 1)[0];
+      if(word) _wordGroups[gi].push(word);
+      _wordGroups = _wordGroups.filter(g=>g.length>0);
+      _renderGroupEditor();
+    };
+
+    group.forEach((word, wi) => {
+      const chip = document.createElement('span');
+      chip.className = 'word-chip';
+      chip.textContent = word;
+      chip.draggable = true;
+      chip.title = 'Glisser vers un autre groupe · double-clic pour supprimer';
+      chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:grab;transition:all .15s;font-family:var(--mono);user-select:none';
+      chip.ondragstart = e => { e.dataTransfer.setData('wg_gi', gi); e.dataTransfer.setData('wg_wi', wi); setTimeout(()=>chip.style.opacity='.35', 0); };
+      chip.ondragend   = () => { chip.style.opacity='1'; };
+      chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
+      chip.onmouseout  = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
+      chip.ondblclick  = () => { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); _renderGroupEditor(); };
+      row.appendChild(chip);
+    });
+
+    // Bouton fusionner avec le suivant
+    if(gi < _wordGroups.length - 1){
+      const mergeBtn = document.createElement('button');
+      mergeBtn.textContent = '⊕';
+      mergeBtn.title = 'Fusionner avec le groupe suivant';
+      mergeBtn.style.cssText = 'margin-left:auto;padding:2px 7px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;flex-shrink:0';
+      mergeBtn.onmouseover = () => { mergeBtn.style.borderColor='var(--orange)';mergeBtn.style.color='var(--orange2)'; };
+      mergeBtn.onmouseout  = () => { mergeBtn.style.borderColor='var(--border2)';mergeBtn.style.color='var(--text3)'; };
+      mergeBtn.onclick = () => { _wordGroups[gi] = [..._wordGroups[gi], ..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
+      row.appendChild(mergeBtn);
     }
+    editor.appendChild(row);
   });
+
+  // Bouton + nouveau groupe vide
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '+ Nouveau groupe vide';
+  addBtn.style.cssText = 'width:100%;padding:6px;background:transparent;border:1px dashed var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;margin-top:2px';
+  addBtn.onmouseover = () => { addBtn.style.borderColor='var(--orange)';addBtn.style.color='var(--orange2)'; };
+  addBtn.onmouseout  = () => { addBtn.style.borderColor='var(--border2)';addBtn.style.color='var(--text3)'; };
+  addBtn.onclick = () => { _wordGroups.push(['…']); _renderGroupEditor(); };
+  editor.appendChild(addBtn);
 }
 
-// Retourne les groupes personnalisés si des ↵ ont été posés, sinon null
+// Retourne les groupes (depuis _wordGroups ou null si non initialisé)
 function _getWordGroups(){
-  const editor = document.getElementById('wordEditor');
-  if(!editor) return null;
-  const children = [...editor.children];
-  const hasBreak = children.some(el => el.classList.contains('word-sep') && el.dataset.break === 'true');
-  if(!hasBreak) return null;
-  const groups = []; let current = [];
-  children.forEach(el => {
-    if(el.classList.contains('word-chip')){
-      const t = el.textContent.trim(); if(t) current.push(t);
-    } else if(el.classList.contains('word-sep') && el.dataset.break === 'true'){
-      if(current.length){ groups.push(current); current = []; }
-    }
-  });
-  if(current.length) groups.push(current);
-  return groups.length > 1 ? groups : null;
+  return (_wordGroups && _wordGroups.length > 0) ? _wordGroups : null;
 }
 
 // Découpe un tableau de mots en groupes de taille wpg
@@ -5813,6 +5848,7 @@ function onWordTextEdit(value){
 }
 
 function getEditedWords(){
+  if(_wordGroups && _wordGroups.length) return _wordGroups.flat().join(' ');
   const chips = document.getElementById('wordEditor').querySelectorAll('span.word-chip');
   if(chips.length) return [...chips].map(c => c.textContent).join(' ');
   const tiTa = document.getElementById('transcriptInput');
@@ -6476,6 +6512,7 @@ function resetAll(){
   step=1; updateSteps();
   results={script:'',audioBlob:null,hedraUrl:''};
   whisperWordTimestamps = [];
+  _wordGroups = null;
   document.getElementById('previewArea').style.display='flex';
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='none';
@@ -6653,11 +6690,10 @@ async function composeVideo(btn){
   const ctx = canvas.getContext('2d');
 
   // ── 6. Mots / sous-titres ──
-  const wordChips   = document.querySelectorAll('#wordEditor span.word-chip');
-  const words       = Array.from(wordChips).map(s => s.textContent.trim()).filter(Boolean);
-  const wpg         = Math.max(1, cfg.subWpg || 2);
-  const customGroups = _getWordGroups();
-  const groups      = customGroups || _buildWpgGroups(words, wpg);
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
+    : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
+  const words       = groups.flat();
   const totalGroups = groups.length;
   const wordMap     = _buildWordMap(groups);
   const subAdvSec   = (cfg.subAdvanceMs || 0) / 1000;
