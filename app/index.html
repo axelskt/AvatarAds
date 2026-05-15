@@ -4048,6 +4048,7 @@ function toggleGameplayPause(e){
 }
 
 let previewAudio = null;
+let _previewUsingCleanAudio = false; // true quand on joue l'audio nettoyé (silences supprimés)
 
 async function togglePreviewPlay(){
   stopPreviewAnim();
@@ -4058,14 +4059,17 @@ async function togglePreviewPlay(){
     btn.textContent = '⏸ Pause';
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange2)';
-    // Identifier l'audio AVANT startPreviewAnim pour la sync
     let activeAudio = null;
-    // Priorité : audio sans silences (si l'outil silence a été appliqué)
-    const _cleanUrl = silenceKeepSegs.length > 0 ? await _getOrBuildCleanBlobUrl() : null;
-    if(_cleanUrl){
-      const cleanEl = new Audio(_cleanUrl);
+    _previewUsingCleanAudio = false;
+    // Priorité : audio sans silences
+    const cleanUrl = silenceKeepSegs.length > 0 ? await _getOrBuildCleanBlobUrl() : null;
+    if(cleanUrl){
+      const cleanEl = new Audio(cleanUrl);
+      // Attendre que la durée soit disponible avant de lancer l'anim
+      await new Promise(r => { cleanEl.onloadedmetadata = r; cleanEl.onerror = r; setTimeout(r, 800); });
       cleanEl.currentTime = 0; cleanEl.play().catch(()=>{});
       activeAudio = cleanEl;
+      _previewUsingCleanAudio = true;
     } else if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
       if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); activeAudio = el; }
@@ -4116,24 +4120,29 @@ function startPreviewAnim(audioEl){
   // Affiche le premier groupe immédiatement
   updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
 
-  const audioDur = audioEl ? (audioEl.duration||0) - (mp4AudioTrimSt||0) : 0;
-  const hasAudio = audioEl && audioDur > 1;
+  // audioDur : durée réelle de l'audio joué (robuste pour tous les cas)
+  let audioDur = 0;
+  if(_previewUsingCleanAudio){
+    audioDur = _silenceCleanDur || (audioEl?.duration || 0);
+  } else if(audioEl){
+    audioDur = (audioEl.duration || 0) - (mp4AudioTrimSt || 0);
+  }
+  const hasAudio = audioEl && audioDur > 0.5;
 
   if(hasAudio){
-    // Sync via requestAnimationFrame — précision maximale
     let lastGroup = -1;
     let lastWordInGroup = -1;
-    const startOffset = mp4AudioTrimSt || 0;
+    const startOffset = _previewUsingCleanAudio ? 0 : (mp4AudioTrimSt || 0);
     const rafLoop = () => {
       if(!previewPlaying) return;
       const advanceSec = (cfg.subAdvanceMs || 0) / 1000;
-      const elapsed = Math.max(0, audioEl.currentTime - startOffset + advanceSec);
+      // elapsed = temps écoulé depuis le début de la lecture (0 → audioDur)
+      const elapsed = Math.max(0, audioEl.currentTime - startOffset);
       let groupIdx, wordInGroup;
 
-      if(whisperWordTimestamps.length > 0 && !_silenceCleanBlobUrl){
-        // ── Mode Whisper timestamps : utiliser currentTime absolu du fichier ──
-        // (les timestamps Whisper sont absolus, pas relatifs au trim)
-        const wt = (audioEl ? audioEl.currentTime : 0) + (cfg.subAdvanceMs||0)/1000;
+      if(whisperWordTimestamps.length > 0 && !_previewUsingCleanAudio){
+        // ── Mode Whisper : currentTime absolu du fichier (timestamps Whisper = absolus) ──
+        const wt = audioEl.currentTime + advanceSec;
         let wi = whisperWordTimestamps.findIndex((w, i) =>
           wt >= w.start && (i === whisperWordTimestamps.length - 1 || wt < whisperWordTimestamps[i + 1].start)
         );
@@ -4165,8 +4174,11 @@ function startPreviewAnim(audioEl){
     };
     previewInterval = requestAnimationFrame(rafLoop);
   } else {
-    // Pas d'audio — interval calculé sur 160 mots/min
-    const msPerGroup = wpg * 375;
+    // Pas d'audio détecté — estimer la durée ou utiliser 160 mots/min
+    const estDur = _silenceCleanDur || 0;
+    const msPerGroup = estDur > 1
+      ? Math.round((estDur / totalGroups) * 1000)
+      : wpg * 375; // fallback : ~160 mots/min
     let groupIdx = 0;
     const tick = () => {
       if(!previewPlaying){ clearInterval(_tickInterval); _tickInterval=null; return; }
@@ -4175,7 +4187,7 @@ function startPreviewAnim(audioEl){
     };
     tick();
     let _tickInterval = setInterval(tick, msPerGroup);
-    previewInterval = _tickInterval; // pour stopPreviewAnim
+    previewInterval = _tickInterval;
   }
 }
 
