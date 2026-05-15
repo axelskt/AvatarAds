@@ -2710,6 +2710,8 @@ function enterApp(profile){
   _updateQualityLocks(profile.plan);
   const credits = profile.plan === 'elite' ? '∞' : profile.credits_remaining;
   toast('✓ Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
+  // ── Restaurer la session précédente ──
+  setTimeout(_restoreSession, 120);
 }
 
 // ── DEDUCT MINUTES ──
@@ -2777,6 +2779,7 @@ function loginGuest(){
   updateLivePreview();
   checkSetupNeeded();
   toast('🎯 Mode essai activé — watermark visible sur les vidéos');
+  setTimeout(_restoreSession, 120);
 }
 
 function updateGuestWatermarks(){
@@ -3034,6 +3037,8 @@ function reuseLastVideo(){
     const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
     if(!cache || !cache.url){ toast('⚠️ Aucune vidéo en cache'); return; }
     results.hedraUrl = cache.url;
+    // Restaurer le script depuis le cache pour permettre la restauration du Tap Sync
+    if(!results.script && cache.script) results.script = cache.script;
     if(results.audioBlob){
       const url = URL.createObjectURL(results.audioBlob);
       document.getElementById('audioEl').src = url;
@@ -3042,6 +3047,8 @@ function reuseLastVideo(){
     refreshPublishButtons && refreshPublishButtons();
     step = 5;
     _showResultArea();
+    // Restaurer le Tap Sync automatiquement si disponible pour ce script
+    if(!whisperWordTimestamps.length) _tryRestoreTapSync(cache.script || results.script);
     toast('♻️ Vidéo rechargée depuis le cache — 0 crédit consommé !');
   } catch(e){ toast('⚠️ Erreur réutilisation : ' + e.message); }
 }
@@ -5854,6 +5861,9 @@ function _renderGroupEditor(){
   addBtn.onmouseout  = () => { addBtn.style.borderColor='var(--border2)';addBtn.style.color='var(--text3)'; };
   addBtn.onclick = () => { _wordGroups.push(['…']); _renderGroupEditor(); };
   editor.appendChild(addBtn);
+
+  // Sauvegarde auto après chaque modification des groupes
+  _saveSession && _saveSession();
 }
 
 // Retourne les groupes (depuis _wordGroups ou null si non initialisé)
@@ -6306,7 +6316,9 @@ async function callHedra(audioBlob){
 
   try {
     // ── 1. Créer l'asset audio (POST /assets) ──
-    const createAudioRes = await hPost('/assets', { type: 'audio', name: 'voice.mp3' });
+    const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav' : 'mp3';
+    const audioFname = 'voice.' + audioExt;
+    const createAudioRes = await hPost('/assets', { type: 'audio', name: audioFname });
     if(!createAudioRes.ok){ toast('⚠️ Hedra create asset ' + createAudioRes.status); return ''; }
     const audioAsset = await createAudioRes.json();
     const audioId = audioAsset.id;
@@ -6314,7 +6326,7 @@ async function callHedra(audioBlob){
 
     // ── 2. Uploader le fichier audio (POST /assets/{id}/upload) ──
     const audioFd = new FormData();
-    audioFd.append('file', audioBlob, 'voice.mp3');
+    audioFd.append('file', audioBlob, audioFname);
     const uploadRes = await hUpload('/assets/' + audioId + '/upload', audioFd);
     if(!uploadRes.ok){ toast('⚠️ Hedra upload audio ' + uploadRes.status); return ''; }
 
@@ -6473,6 +6485,9 @@ function showResults(){
   _showResultArea();
   updateGuestWatermarks();
 
+  // Restaurer le Tap Sync si déjà fait sur ce script
+  if(!whisperWordTimestamps.length) _tryRestoreTapSync(results.script);
+
   // Si pas de vidéo Hedra, corriger l'affichage du workflow manuel après _showResultArea
   if(!results.hedraUrl){
     if(results.audioBlob || voiceMode==='gameplay'){
@@ -6485,6 +6500,7 @@ function showResults(){
     if(hs){ hs.className='hedra-status'; hs.textContent='🎭 Suis les étapes ci-dessous pour créer ta vidéo lipsync (2 min)'; }
   }
 
+  _saveSession();
   toast('✓ Génération terminée !');
 }
 
@@ -6551,11 +6567,125 @@ function genSubtitlesFromAudio(){
   toast('📝 Génération des sous-titres depuis AssemblyAI — fonctionnalité bientôt disponible');
 }
 
+// ══════════════════════════════════════════════════
+//  SESSION PERSISTENCE — sauvegarde/restauration
+// ══════════════════════════════════════════════════
+function _saveSession(){
+  try {
+    const state = {
+      v: 3,
+      ts: Date.now(),
+      // Champs du formulaire
+      fields: {
+        script:   document.getElementById('f-script')  ?.value || '',
+        hook:     document.getElementById('f-hook')    ?.value || '',
+        cta:      document.getElementById('f-cta')     ?.value || '',
+        duration: document.getElementById('f-duration')?.value || ''
+      },
+      // Résultat de génération
+      script:   results.script   || '',
+      hedraUrl: results.hedraUrl || '',
+      // Sous-titres
+      whisperWordTimestamps,
+      wordGroups: _wordGroups || null,
+      // Silences
+      silenceKeepSegs,
+      // Voix
+      voiceMode,
+      selVoiceId,
+      // Sous-titres style
+      selSubStyle,
+      selAnim,
+      animEnabled,
+      subtitlesEnabled,
+      // Mise en page
+      splitEnabled,
+      splitSwapped,
+      currentPlatform,
+      // Audio trim
+      mp4AudioTrimSt,
+      mp4AudioTrimEnd,
+      mp4AudioEnabled,
+      // Config globale
+      cfg: JSON.parse(JSON.stringify(cfg)),
+      subColors: { c1: subColors.c1, c2: subColors.c2 },
+      // Avatar (sans File/Blob)
+      selAvatar: {
+        emo:      selAvatar.emo      || '',
+        name:     selAvatar.name     || '',
+        desc:     selAvatar.desc     || '',
+        localUrl: selAvatar.localUrl || null
+      }
+    };
+    localStorage.setItem('avatarads_session', JSON.stringify(state));
+  } catch(e){ console.warn('_saveSession:', e); }
+}
+
+function _restoreSession(){
+  try {
+    const saved = JSON.parse(localStorage.getItem('avatarads_session') || 'null');
+    if(!saved || saved.v !== 3) return;
+
+    // ── Champs formulaire ──
+    const fs = document.getElementById('f-script');
+    const fh = document.getElementById('f-hook');
+    const fc = document.getElementById('f-cta');
+    const fd = document.getElementById('f-duration');
+    if(fs && saved.fields?.script)   fs.value = saved.fields.script;
+    if(fh && saved.fields?.hook)     fh.value = saved.fields.hook;
+    if(fc && saved.fields?.cta)      fc.value = saved.fields.cta;
+    if(fd && saved.fields?.duration) fd.value = saved.fields.duration;
+
+    // ── Variables d'état ──
+    if(saved.script)   results.script   = saved.script;
+    if(saved.hedraUrl) results.hedraUrl = saved.hedraUrl;
+    if(saved.whisperWordTimestamps?.length) whisperWordTimestamps = saved.whisperWordTimestamps;
+    if(saved.wordGroups?.length){ _wordGroups = saved.wordGroups; _renderGroupEditor(); }
+    if(saved.silenceKeepSegs?.length) silenceKeepSegs = saved.silenceKeepSegs;
+    if(saved.voiceMode)    voiceMode    = saved.voiceMode;
+    if(saved.selVoiceId)   selVoiceId   = saved.selVoiceId;
+    if(saved.selSubStyle)  selSubStyle  = saved.selSubStyle;
+    if(saved.selAnim)      selAnim      = saved.selAnim;
+    if(saved.animEnabled      !== undefined) animEnabled      = saved.animEnabled;
+    if(saved.subtitlesEnabled !== undefined) subtitlesEnabled = saved.subtitlesEnabled;
+    if(saved.splitEnabled     !== undefined) splitEnabled     = saved.splitEnabled;
+    if(saved.splitSwapped     !== undefined) splitSwapped     = saved.splitSwapped;
+    if(saved.currentPlatform)  currentPlatform  = saved.currentPlatform;
+    if(saved.mp4AudioTrimSt)   mp4AudioTrimSt   = saved.mp4AudioTrimSt;
+    if(saved.mp4AudioTrimEnd)  mp4AudioTrimEnd  = saved.mp4AudioTrimEnd;
+    if(saved.mp4AudioEnabled !== undefined) mp4AudioEnabled = saved.mp4AudioEnabled;
+    if(saved.cfg)       Object.assign(cfg, saved.cfg);
+    if(saved.subColors){ subColors.c1 = saved.subColors.c1; subColors.c2 = saved.subColors.c2; }
+    if(saved.selAvatar) Object.assign(selAvatar, saved.selAvatar);
+
+    // ── Affichage ──
+    if(saved.hedraUrl){
+      step = 5;
+      _showResultArea();
+      const ageSec = Math.round((Date.now() - (saved.ts||0)) / 1000);
+      const ageStr = ageSec < 60 ? ageSec+'s' : Math.round(ageSec/60)+'min';
+      toast('♻️ Session restaurée (' + ageStr + ') — vidéo, timings et réglages récupérés');
+    } else if(saved.script || saved.fields?.script){
+      toast('📝 Brouillon restauré — ' + (saved.fields?.script||saved.script).slice(0,40) + '…');
+    }
+
+    updateLivePreview && updateLivePreview();
+  } catch(e){ console.warn('_restoreSession:', e); }
+}
+
+// Auto-save toutes les 15s si une génération est en cours ou terminée
+setInterval(() => {
+  if(results.script || results.hedraUrl || whisperWordTimestamps.length || document.getElementById('f-script')?.value)
+    _saveSession();
+}, 15000);
+
 function resetAll(){
   step=1; updateSteps();
   results={script:'',audioBlob:null,hedraUrl:''};
   whisperWordTimestamps = [];
   _wordGroups = null;
+  silenceKeepSegs = [];
+  try { localStorage.removeItem('avatarads_session'); localStorage.removeItem('avatarads_tapSync'); } catch(e){}
   document.getElementById('previewArea').style.display='flex';
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='none';
@@ -7793,7 +7923,26 @@ function _tapSyncFinish(){
     });
   });
   whisperWordTimestamps = timestamps;
+
+  // ── Sauvegarde session complète ──
+  _saveSession();
+
   toast('✅ Tap Sync enregistré — ' + _tapSyncGroups.length + ' groupes synchronisés !');
+}
+
+// Restaure le tap sync depuis la session unifiée si le script correspond
+function _tryRestoreTapSync(scriptHint){
+  try {
+    const saved = JSON.parse(localStorage.getItem('avatarads_session') || 'null');
+    if(!saved || !saved.whisperWordTimestamps?.length) return false;
+    const hint    = (scriptHint   || '').slice(0, 80).trim();
+    const saved80 = (saved.script || '').slice(0, 80).trim();
+    if(hint && saved80 && hint !== saved80) return false;
+    whisperWordTimestamps = saved.whisperWordTimestamps;
+    if(saved.wordGroups?.length){ _wordGroups = saved.wordGroups; _renderGroupEditor(); }
+    toast('🥁 Tap Sync restauré automatiquement !');
+    return true;
+  } catch(e){ return false; }
 }
 
 function _tapSyncCancel(){
