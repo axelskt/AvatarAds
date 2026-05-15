@@ -1298,10 +1298,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
                 <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
               </div>
-              <!-- hidden word storage for subtitle sync -->
-              <div id="wordEditor" style="display:none"></div>
-              <div id="wordEditorHint" style="display:none;margin-top:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
-                🖱 Glisser un mot vers un autre groupe · ⊕ fusionner deux groupes · double-clic pour supprimer un mot
+              <!-- Éditeur de groupes — collapsible -->
+              <div id="wordEditorWrap" style="margin-top:6px">
+                <button id="wordEditorToggle" onclick="toggleWordEditor()" style="display:none;width:100%;padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;text-align:left;display:none;align-items:center;justify-content:space-between" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                  <span>✏️ Éditer les groupes de sous-titres</span>
+                  <span id="wordEditorChevron" style="font-size:10px;transition:transform .2s">▼</span>
+                </button>
+                <div id="wordEditorBody" style="display:none;margin-top:6px">
+                  <div id="wordEditorHint" style="margin-bottom:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
+                    🖱 Glisser un mot vers un autre groupe · ⊕ fusionner · double-clic pour supprimer
+                  </div>
+                  <div id="wordEditor"></div>
+                </div>
               </div>
             </div>
 
@@ -4122,13 +4130,15 @@ function startPreviewAnim(audioEl){
       const elapsed = Math.max(0, audioEl.currentTime - startOffset + advanceSec);
       let groupIdx, wordInGroup;
 
-      if(whisperWordTimestamps.length >= allWords.length && allWords.length > 0){
-        // ── Mode Whisper/Tap timestamps : précision mot par mot ──
+      if(whisperWordTimestamps.length > 0 && !_silenceCleanBlobUrl){
+        // ── Mode Whisper timestamps : utiliser currentTime absolu du fichier ──
+        // (les timestamps Whisper sont absolus, pas relatifs au trim)
+        const wt = (audioEl ? audioEl.currentTime : 0) + (cfg.subAdvanceMs||0)/1000;
         let wi = whisperWordTimestamps.findIndex((w, i) =>
-          elapsed >= w.start && (i === whisperWordTimestamps.length - 1 || elapsed < whisperWordTimestamps[i + 1].start)
+          wt >= w.start && (i === whisperWordTimestamps.length - 1 || wt < whisperWordTimestamps[i + 1].start)
         );
-        if(wi < 0) wi = elapsed < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
-        const m = wordMap[wi] || {gi:0, wi:0};
+        if(wi < 0) wi = wt < (whisperWordTimestamps[0]?.start || 0) ? 0 : whisperWordTimestamps.length - 1;
+        const m = wordMap[Math.min(wi, wordMap.length - 1)] || {gi:0, wi:0};
         groupIdx = m.gi; wordInGroup = m.wi;
       } else if((cfg.subTimingMode || 'proportionnel') === 'fixe'){
         // Mode fixe : 1 groupe toutes les N secondes
@@ -5753,13 +5763,22 @@ function _renderWordChips(text){
   _renderGroupEditor();
 }
 
+function toggleWordEditor(){
+  const body = document.getElementById('wordEditorBody');
+  const chev = document.getElementById('wordEditorChevron');
+  if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
 function _renderGroupEditor(){
   const editor = document.getElementById('wordEditor');
   if(!editor || !_wordGroups) return;
   editor.innerHTML = '';
-  editor.style.display = 'block';
-  const hint = document.getElementById('wordEditorHint');
-  if(hint) hint.style.display = 'block';
+  // Afficher le bouton toggle (caché par défaut, visible après premier rendu)
+  const toggleBtn = document.getElementById('wordEditorToggle');
+  if(toggleBtn) toggleBtn.style.display = 'flex';
 
   _wordGroups.forEach((group, gi) => {
     // Ligne de groupe
@@ -6714,13 +6733,14 @@ async function composeVideo(btn){
     if(words.length > 0){
       const sub = Math.max(0, elapsed + subAdvSec);
       let gi, wi;
-      if(whisperWordTimestamps.length >= words.length){
-        // ── Mode Whisper/Tap timestamps : sync mot par mot ──
+      if(whisperWordTimestamps.length > 0){
+        // ── Mode Whisper/Tap timestamps : currentTime absolu de la vidéo Hedra ──
+        const wt = Math.max(0, elapsed + subAdvSec);
         let wordIdx = whisperWordTimestamps.findIndex((w, i) =>
-          sub >= w.start && (i === whisperWordTimestamps.length - 1 || sub < whisperWordTimestamps[i + 1].start)
+          wt >= w.start && (i === whisperWordTimestamps.length - 1 || wt < whisperWordTimestamps[i + 1].start)
         );
-        if(wordIdx < 0) wordIdx = sub < whisperWordTimestamps[0].start ? 0 : whisperWordTimestamps.length - 1;
-        const m = wordMap[wordIdx] || {gi:0, wi:0};
+        if(wordIdx < 0) wordIdx = wt < (whisperWordTimestamps[0]?.start || 0) ? 0 : whisperWordTimestamps.length - 1;
+        const m = wordMap[Math.min(wordIdx, wordMap.length - 1)] || {gi:0, wi:0};
         gi = m.gi; wi = m.wi;
       } else if(isFixedMode){
         gi = Math.min(totalGroups-1, Math.floor(sub/secPerGroup));
