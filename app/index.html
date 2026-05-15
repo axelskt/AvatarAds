@@ -6311,8 +6311,9 @@ async function callElevenLabs(text){
 // Elite → meilleur modèle (Character-3 / Hedra Omnia)
 // Autres → modèle standard (Character-1 / Hedra Avatar)
 const HEDRA_MODELS = {
-  elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-3 (actuel)
-  default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Character-1 — à remplacer après listHedraModels()
+  elite:   'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — dialogue ultra-réaliste (Elite)
+  default: '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — longform standard (Free/Starter/Pro)
+  // character3: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — ancien modèle
 };
 // Lance window.listHedraModels() dans la console pour obtenir les IDs disponibles
 window.listHedraModels = async function(){
