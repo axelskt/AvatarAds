@@ -6705,7 +6705,9 @@ async function composeVideo(btn){
     gpVid = document.createElement('video');
     gpVid.src = gpVideoEl.src; gpVid.muted = true; gpVid.loop = true;
     await new Promise(res => { gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
-    if(!gpVid.videoWidth) gpVid = null;
+    if(!gpVid.videoWidth){ gpVid = null; toast('⚠️ Gameplay introuvable — vidéo avatar seule (re-upload le fichier)'); }
+  } else if(gpVideoEl?.src && gpZoneEl?.style.display === 'none'){
+    toast('⚠️ Gameplay désactivé — re-upload si tu veux l\'inclure');
   }
 
   // ── 4. Layout split ──
