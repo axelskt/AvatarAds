@@ -717,21 +717,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </button>
             </div>
 
-            <!-- SÉLECTEUR MODÈLE IA -->
-            <div class="fld" style="margin-bottom:16px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">🤖 Modèle IA Avatar</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="modelBtns">
-                <button onclick="pickModel('character3',this)" id="modelBtn-character3" class="model-btn on" style="padding:9px 6px;background:var(--orange-dim);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700;font-size:11px">Character 3</div>
-                  <div style="font-size:9px;margin-top:2px;opacity:.8">Hedra · 8 cr/s · ✅ Défaut</div>
-                </button>
-                <button onclick="pickModel('kling',this)" id="modelBtn-kling" class="model-btn" style="padding:9px 6px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700;font-size:11px">Kling Standard</div>
-                  <div style="font-size:9px;margin-top:2px;opacity:.8">Kling AI · 8 cr/s · 🧪 Test</div>
-                </button>
-              </div>
-            </div>
-
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">📐 Hauteur de l'avatar</div>
@@ -1358,6 +1343,23 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </button>
               </div>
               <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">Source avatar : ~540p (Hedra) · upscale canvas uniquement</div>
+            </div>
+
+            <!-- SÉLECTEUR MODÈLE IA -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🤖 Modèle IA Avatar</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <button onclick="pickModel('character3',this)" id="modelBtn-character3" class="model-btn on" style="padding:9px 6px;background:var(--orange-dim);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700;font-size:11px">Character 3</div>
+                  <div style="font-size:9px;margin-top:2px;opacity:.8">Hedra · ✅ Défaut</div>
+                </button>
+                <button onclick="pickModel('kling',this)" id="modelBtn-kling" class="model-btn" style="padding:9px 6px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700;font-size:11px">Kling Standard</div>
+                  <div style="font-size:9px;margin-top:2px;opacity:.8">Kling AI · 🧪 Test</div>
+                </button>
+              </div>
+            </div>
+
             </div>
 
           </div>
