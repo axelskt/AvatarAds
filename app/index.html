@@ -405,10 +405,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div style="font-size:12px;font-weight:600;color:var(--text)" id="memberName">—</div>
       <div id="memberPlanBadge" style="font-size:9px;font-family:var(--mono);letter-spacing:.8px;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:var(--bg4);border:1px solid var(--border2);color:var(--text3)">FREE</div>
       <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-      <div style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="opacity:.5"><path d="M6 1l1.35 2.73L10.5 4.3l-2.25 2.19.53 3.09L6 8.1l-2.78 1.48.53-3.09L1.5 4.3l3.15-.57L6 1z" fill="currentColor"/></svg>
+      <div style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px" id="memberQuotaBox">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="opacity:.5"><path d="M2 2h8v8H2z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
-        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">restant</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
       </div>
       <button id="btnUpgradePlan" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);border-radius:8px;padding:4px 10px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)';this.style.borderColor='rgba(168,85,247,0.6)'" onmouseout="this.style.background='rgba(168,85,247,0.12)';this.style.borderColor='rgba(168,85,247,0.35)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
@@ -436,7 +436,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 <!-- GUEST BANNER -->
 <div class="guest-banner" id="guestBanner">
   <div class="guest-banner-text">🎯 <strong>Mode Essai</strong> — Watermark actif · 2 vidéos offertes</div>
-  <button class="btn-guest-upgrade" onclick="showPaywall()">Voir les plans · dès 19,99€/mois →</button>
+  <button class="btn-guest-upgrade" onclick="showPaywall()">Voir les plans · dès 29,99€/mois →</button>
 </div>
 
 <!-- LAYOUT -->
@@ -505,10 +505,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="fld" style="margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Durée cible</div>
               <select id="f-duration" style="font-size:14px;padding:12px 14px;border-radius:10px">
-                <option>15 secondes</option>
-                <option selected>20 secondes</option>
-                <option>30 secondes</option>
-                <option>60 secondes</option>
+                <option value="15">15 secondes</option>
+                <option value="20" selected>20 secondes</option>
+                <option value="30">30 secondes</option>
+                <option value="40">40 secondes 👑</option>
               </select>
             </div>
             <div class="fld" style="margin-bottom:20px">
@@ -2164,6 +2164,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
     </div>
 
+    <!-- Hedra API Key (Plan BYOK) -->
+    <div class="setup-field" id="byok-section">
+      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Clé API Hedra <span style="color:var(--orange);font-size:9px;margin-left:4px;font-weight:700">PLAN BYOK</span></span>
+        <a href="https://hedra.com/settings/api" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
+      </div>
+      <div class="setup-input" style="position:relative">
+        <input type="password" id="inp-hedra-key" placeholder="hdk_xxxxxxxxxxxxxxxxxxxxxxxx" style="padding-right:70px">
+        <button onclick="toggleHedraKeyVisibility()" id="btn-show-key" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
+      </div>
+      <div class="setup-hint" id="byok-status" style="display:none;color:var(--green)">✓ Clé Hedra configurée — tu utilises ton propre compte Hedra</div>
+      <div class="setup-hint">Entre ta clé API Hedra pour utiliser tes propres crédits (Plan BYOK à 9,99€/mois).<br>Crée un compte sur <a href="https://hedra.com" target="_blank">hedra.com</a> et récupère ta clé dans Settings → API.</div>
+    </div>
+
+    <div class="setup-divider"></div>
+
     <!-- YouTube Client ID (optionnel) -->
     <div class="setup-field">
       <div class="setup-label">
@@ -2308,7 +2324,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(168,85,247,0.08) 0%,transparent 60%);pointer-events:none"></div>
         <div style="position:relative">
           <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;color:#c084fc" id="upgradePlanBadge">Passer en Pro</div>
-          <div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;line-height:1" id="upgradePlanPrice">38,99€</div>
+          <div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;line-height:1" id="upgradePlanPrice">49,99€</div>
           <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:20px">/mois · sans engagement</div>
           <div id="upgradePlanFeatures" style="display:flex;flex-direction:column;gap:9px;margin-bottom:24px">
             <!-- Populated dynamically -->
@@ -2473,25 +2489,25 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
       <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
         <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">19,99€</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 min · 0,67€/j</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 vidéos · 20s max</div>
       </div>
       <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
         <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">PRO</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">38,99€</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">10 min · 1,30€/j</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 vidéos · 30s max</div>
       </div>
       <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
         <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">ELITE</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">59,99€</div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">25 min + 4K + BloxAI Pro</div></div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 vidéos · 40s max</div></div>
       </div>
     </div>
-    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">14,99€/mois</strong> en annuel · Sans engagement</div>
+    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">22,49€/mois</strong> en annuel · Sans engagement</div>
     <button class="btn-paywall" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">Voir tous les plans →</button>
     <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
   </div>
@@ -2511,7 +2527,7 @@ const EL_PROXY     = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
 
 // Minutes de vidéo par plan (stockées en secondes dans Supabase)
 const PLAN_SECONDS = { free: 40, starter: 300, pro: 600, elite: 1500 };
-const PLAN_PRICES  = { starter: '19,99€', pro: '38,99€', elite: '59,99€' };
+const PLAN_PRICES  = { starter: '29,99€', pro: '49,99€', elite: '89,99€' };
 const OWNER_EMAIL  = 'axel.skotnicki@gmail.com';
 
 function secsToDisplay(s){ // "4 min 30s" ou "2 min"
@@ -2567,7 +2583,77 @@ let results = {script:'', audioBlob:null, hedraUrl:''};
 let library = [];
 
 // Member session
-let currentMember = null; // {id, email, plan, credits_remaining, is_owner}
+let currentMember = null; // {id, email, plan, credits_remaining, is_owner, videos_used, quota_reset_date}
+
+// ── QUOTAS PAR PLAN ──
+const PLAN_QUOTAS = {
+  free:    { videos: 2,   maxDuration: 15 },
+  byok:    { videos: 999, maxDuration: 30 }, // illimité — clé Hedra personnelle
+  starter: { videos: 5,   maxDuration: 20 },
+  pro:     { videos: 15,  maxDuration: 30 },
+  elite:   { videos: 30,  maxDuration: 40 },
+};
+
+function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
+
+function _videosRemaining(){
+  const plan  = (currentMember?.plan || 'free').toLowerCase();
+  const quota = _getPlanQuota(plan);
+  if(quota.videos >= 999) return 999;
+  return Math.max(0, quota.videos - (currentMember?.videos_used || 0));
+}
+
+async function _checkAndResetQuota(){
+  if(!currentMember) return;
+  const resetDate = currentMember.quota_reset_date;
+  const now = new Date();
+  const isOldMonth = !resetDate || new Date(resetDate).getMonth() !== now.getMonth()
+                     || new Date(resetDate).getFullYear() !== now.getFullYear();
+  if(isOldMonth){
+    const today = now.toISOString().split('T')[0];
+    await sb.from('profiles').update({ videos_used: 0, quota_reset_date: today }).eq('id', currentMember.id);
+    currentMember.videos_used = 0;
+    currentMember.quota_reset_date = today;
+  }
+}
+
+async function _incrementVideosUsed(){
+  if(!currentMember) return;
+  const newCount = (currentMember.videos_used || 0) + 1;
+  await sb.from('profiles').update({ videos_used: newCount }).eq('id', currentMember.id);
+  currentMember.videos_used = newCount;
+  _updateQuotaDisplay();
+}
+
+function _updateQuotaDisplay(){
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  const quota = _getPlanQuota(plan);
+  const remaining = _videosRemaining();
+  const creditsEl = document.getElementById('memberCredits');
+  const labelEl   = document.getElementById('memberCreditsLabel');
+  const boxEl     = document.getElementById('memberQuotaBox');
+  if(!creditsEl) return;
+
+  if(plan === 'byok'){
+    creditsEl.textContent = '∞';
+    if(labelEl) labelEl.textContent = 'vidéos (BYOK)';
+    if(boxEl) boxEl.style.borderColor = 'var(--border)';
+  } else {
+    creditsEl.textContent = remaining + ' / ' + quota.videos;
+    if(labelEl) labelEl.textContent = 'vidéos ce mois';
+    // Colorier selon urgence
+    if(boxEl){
+      if(remaining === 0)      boxEl.style.borderColor = 'rgba(255,80,80,0.5)';
+      else if(remaining <= 2)  boxEl.style.borderColor = 'rgba(255,180,0,0.5)';
+      else                     boxEl.style.borderColor = 'var(--border)';
+    }
+    if(creditsEl){
+      if(remaining === 0)     creditsEl.style.color = '#ff5050';
+      else if(remaining <= 2) creditsEl.style.color = '#ffb400';
+      else                    creditsEl.style.color = 'var(--text2)';
+    }
+  }
+}
 
 // ── AUTH TAB SWITCH ──
 function switchAuthTab(tab){
@@ -2600,6 +2686,26 @@ async function authLogin(){
     errEl.style.display='block'; btn.textContent='Se connecter →'; btn.disabled=false; return;
   }
   await loadProfile(data.user);
+}
+
+// ── RESET PASSWORD ──
+async function authResetPassword(){
+  const email = document.getElementById('auth-email').value.trim();
+  const errEl = document.getElementById('auth-error');
+  if(!email){
+    errEl.textContent = 'Entre ton adresse email pour recevoir le lien de réinitialisation.';
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){
+    errEl.textContent = error.message; errEl.style.display = 'block';
+  } else {
+    errEl.style.cssText = 'display:block;background:rgba(0,217,126,0.08);border-color:rgba(0,217,126,0.3);color:#00d97e';
+    errEl.textContent = '📧 Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.';
+  }
 }
 
 // ── SIGNUP ──
@@ -2651,13 +2757,16 @@ function enterApp(profile){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
+  window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
   const planColors = { free:'var(--text3)', starter:'#4dabf7', pro:'#a855f7', elite:'var(--orange)' };
   const planLabels = { free:'Free', starter:'Starter', pro:'Pro', elite:'Elite' };
   const displayName = profile.first_name || (profile.email||'').split('@')[0];
   const nameDisplay = profile.is_owner ? '👑 ' + displayName : displayName;
   document.getElementById('memberName').textContent = nameDisplay;
-  document.getElementById('memberCredits').textContent =
-    profile.plan === 'elite' ? '25 min' : secsToDisplay(profile.credits_remaining || 0);
+  // Quota vidéos — reset mensuel + affichage
+  _checkAndResetQuota().then(() => _updateQuotaDisplay());
+  // Bloquer la durée selon le plan
+  _updateDurationLock(profile.plan);
   const badge = document.getElementById('memberPlanBadge');
   if(badge){
     badge.textContent = planLabels[profile.plan] || profile.plan;
@@ -2799,10 +2908,10 @@ function closeBuyCredits(){
 const UPGRADE_PLANS = {
   starter: {
     label: 'Passer en Pro', badge: 'PRO',
-    price: '38,99€',
+    price: '49,99€',
     features: [
-      { icon: '⏱', text: '<strong>10 min</strong> / mois incluses' },
-      { icon: '🎬', text: 'Vidéos jusqu\'à <strong>10 min</strong>' },
+      { icon: '🎬', text: '<strong>15 vidéos</strong> / mois incluses' },
+      { icon: '⏱', text: 'Vidéos jusqu\'à <strong>30 secondes</strong>' },
       { icon: '🤖', text: 'Génération IA illimitée' },
       { icon: '📱', text: 'Toutes les publications sociales' },
       { icon: '🔮', text: 'Avatar lipsync inclus' },
@@ -2810,12 +2919,12 @@ const UPGRADE_PLANS = {
   },
   pro: {
     label: 'Passer en Elite', badge: 'ELITE',
-    price: '59,99€',
+    price: '89,99€',
     features: [
-      { icon: '⏱', text: '<strong>25 min</strong> / mois incluses' },
-      { icon: '🎬', text: 'Vidéos jusqu\'à <strong>25 min</strong>' },
+      { icon: '🎬', text: '<strong>30 vidéos</strong> / mois incluses' },
+      { icon: '⏱', text: 'Vidéos jusqu\'à <strong>40 secondes</strong>' },
       { icon: '4️⃣', text: 'Export <strong>4K</strong> inclus' },
-      { icon: '🤖', text: 'BloxAI Pro inclus' },
+      { icon: '🤖', text: 'Meilleure qualité avatar' },
       { icon: '👑', text: 'Accès prioritaire aux nouvelles fonctions' },
     ],
   },
@@ -2904,16 +3013,43 @@ function openSetup(){
   const ytc = localStorage.getItem('yt_client_id')||'';
   const el = document.getElementById('inp-yt-client');
   if(el) el.value = ytc;
+  // Charger la clé Hedra BYOK depuis le profil
+  const hedraEl = document.getElementById('inp-hedra-key');
+  const statusEl = document.getElementById('byok-status');
+  if(hedraEl && window._userHedraKey){
+    hedraEl.value = window._userHedraKey;
+    if(statusEl) statusEl.style.display = 'block';
+  }
 }
 function closeSetup(){ document.getElementById('setupOverlay').style.display='none'; }
 function loadKeysToInputs(){ openSetup(); } // compat alias
-function saveKeys(){
+function toggleHedraKeyVisibility(){
+  const inp = document.getElementById('inp-hedra-key');
+  const btn = document.getElementById('btn-show-key');
+  if(!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  if(btn) btn.textContent = inp.type === 'password' ? 'Voir' : 'Cacher';
+}
+async function saveKeys(){
   const ytEl = document.getElementById('inp-yt-client');
   if(ytEl){ const v=ytEl.value.trim(); if(v) localStorage.setItem('yt_client_id',v); else localStorage.removeItem('yt_client_id'); }
   ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
     const el = document.getElementById('inp-wh-'+p);
     if(el){ const v=el.value.trim(); if(v) localStorage.setItem('aa_wh_'+p,v); else localStorage.removeItem('aa_wh_'+p); }
   });
+  // Sauvegarder la clé Hedra BYOK dans Supabase
+  const hedraKeyEl = document.getElementById('inp-hedra-key');
+  if(hedraKeyEl && currentMember){
+    const newKey = hedraKeyEl.value.trim();
+    const { error } = await sb.from('profiles').update({ hedra_api_key: newKey || null }).eq('id', currentMember.id);
+    if(!error){
+      window._userHedraKey = newKey || null;
+      const statusEl = document.getElementById('byok-status');
+      if(statusEl) statusEl.style.display = newKey ? 'block' : 'none';
+    } else {
+      toast('⚠️ Erreur sauvegarde clé Hedra : ' + error.message); return;
+    }
+  }
   refreshDots();
   refreshSocialCards();
   refreshPublishButtons();
@@ -3053,6 +3189,7 @@ function reuseLastVideo(){
     if(fd && cache.fields?.duration) fd.value = cache.fields.duration;
 
     // ── Affichage ──
+    _syncUIFromState();
     updateGuestWatermarks();
     refreshPublishButtons && refreshPublishButtons();
     updateLivePreview && updateLivePreview();
@@ -6142,8 +6279,10 @@ async function startGeneration(){
   if(audioBlob){
     // Si silences supprimés → envoyer l'audio nettoyé à Hedra
     // (sinon les lèvres sont calées sur l'audio avec silences → désync)
+    // ⚠️ Uniquement en mode MP4 : silenceAudioBuffer = même fichier que audioBlob
+    // En mode ElevenLabs/Clone, silenceAudioBuffer = fichier de référence vocal ≠ audio généré
     let hedraAudioBlob = audioBlob;
-    if(silenceKeepSegs.length > 0 && silenceAudioBuffer){
+    if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
       try {
         const cleanUrl = await _getOrBuildCleanBlobUrl();
         if(cleanUrl){
@@ -6300,6 +6439,23 @@ const HEDRA_MODELS = {
   // character3:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s
   // klingPro:     '0451ceea-a7b5-4275-a970-82bf4ef38055', // Kling AI Avatar v2 Pro — 24 cr/s
 };
+
+// 🧪 HELPER TEST — changer de modèle depuis la console sans toucher au code
+// Usage : _setModel('kling') | _setModel('character3') | _setModel('omnia') | _setModel('avatar') | _setModel('reset')
+window._setModel = function(name){
+  const MODELS_MAP = {
+    'kling':      'd7eb3b2e-c8f8-45f9-83db-34f18dd0ba85', // Kling AI Avatar v2 Standard — 8 cr/s
+    'character3': 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s
+    'omnia':      'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — 15 cr/s
+    'avatar':     '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — 7 cr/s
+    'klingpro':   '0451ceea-a7b5-4275-a970-82bf4ef38055', // Kling AI Avatar v2 Pro — 24 cr/s
+  };
+  if(name === 'reset'){ window._testModelId = null; console.log('✅ Modèle reset — config par plan active'); return; }
+  const id = MODELS_MAP[name] || name;
+  window._testModelId = id;
+  console.log('🎬 Modèle forcé :', name, '→', id);
+  console.log('💡 Génère une vidéo maintenant pour tester. _setModel("reset") pour revenir à la config normale.');
+};
 // Lance window.listHedraModels() dans la console pour obtenir les IDs disponibles
 window.listHedraModels = async function(){
   const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
@@ -6316,15 +6472,18 @@ async function callHedra(audioBlob){
   // Flow : 1) POST /assets (créer) → 2) POST /assets/{id}/upload (fichier)
   //        → 3) POST /generations → 4) GET /generations/{id}/status (poll)
   const PROXY    = SUPABASE_URL + '/functions/v1/hedra-proxy';
-  // Sélection du modèle selon le plan de l'utilisateur
+  // Sélection du modèle selon le plan de l'utilisateur (ou override test via _setModel())
   const userPlan = (window._userPlan || '').toLowerCase();
-  const MODEL_ID = (userPlan === 'elite') ? HEDRA_MODELS.elite : HEDRA_MODELS.default;
+  const MODEL_ID = window._testModelId || ((userPlan === 'elite') ? HEDRA_MODELS.elite : HEDRA_MODELS.default);
+
+  // Headers communs — inclut la clé BYOK du user si elle existe
+  const byokHeader = window._userHedraKey ? { 'x-user-hedra-key': window._userHedraKey } : {};
 
   // Helper : appel proxy GET
   async function hGet(path){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'GET',
-      headers: {  }
+      headers: { ...byokHeader }
     });
     return r;
   }
@@ -6333,7 +6492,7 @@ async function callHedra(audioBlob){
   async function hPost(path, body){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...byokHeader },
       body: JSON.stringify(body)
     });
     return r;
@@ -6343,10 +6502,21 @@ async function callHedra(audioBlob){
   async function hUpload(path, formData){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'POST',
-      
+      headers: { ...byokHeader },
       body: formData
     });
     return r;
+  }
+
+  // ── Vérification quota vidéos ──
+  const plan = (window._userPlan || 'free').toLowerCase();
+  if(plan !== 'byok' && !currentMember?.is_owner){
+    const remaining = _videosRemaining();
+    if(remaining <= 0){
+      toast('🚫 Quota atteint — Plus de vidéos disponibles ce mois-ci');
+      openUpgradeModal();
+      return '';
+    }
   }
 
   try {
@@ -6409,7 +6579,8 @@ async function callHedra(audioBlob){
       generated_video_inputs: {
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze',
         aspect_ratio: aspectRatio,
-        character_orientation: 'video'
+        character_orientation: 'video',
+        resolution: '720p'
       }
     };
     if(imageId) genBody.start_keyframe_id = imageId;
@@ -6459,10 +6630,12 @@ async function callHedra(audioBlob){
               const vBlob = await vRes.blob();
               const localUrl = URL.createObjectURL(vBlob);
               if(hedraBar) hedraBar.style.display = 'none';
+              await _incrementVideosUsed(); // ✅ Incrémenter quota après succès
               return localUrl; // blob:// local → jamais d'expiration ni CORS
             }
           } catch(e){ console.warn('Pre-fetch blob failed, using remote URL:', e); }
           if(hedraBar) hedraBar.style.display = 'none';
+          await _incrementVideosUsed(); // ✅ Incrémenter quota après succès
           return videoUrl;
         }
         // Fallback: try fetching the asset if provided
@@ -6574,7 +6747,15 @@ async function retryHedraAuto(btn){
   const origText = btn ? btn.textContent : '';
   if(btn){ btn.textContent='⏳ Génération IA en cours...'; btn.disabled=true; }
   try {
-    const url = await callHedra(results.audioBlob);
+    // Appliquer les silences supprimés si applicable (mode MP4 uniquement)
+    let retryAudioBlob = results.audioBlob;
+    if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
+      try {
+        const cleanUrl = await _getOrBuildCleanBlobUrl();
+        if(cleanUrl) retryAudioBlob = await fetch(cleanUrl).then(r => r.blob());
+      } catch(e){ console.warn('Silence clean for retry failed:', e); }
+    }
+    const url = await callHedra(retryAudioBlob);
     if(url){
       results.hedraUrl = url;
       document.getElementById('hedraManualCard').style.display='none';
@@ -6651,6 +6832,108 @@ function _saveSession(){
   } catch(e){ console.warn('_saveSession:', e); }
 }
 
+// ── Sync DOM visuals to match restored JS state variables ──
+function _syncUIFromState(){
+  try {
+    // 1. Voice mode buttons
+    selectVoiceMode(voiceMode || 'clone');
+
+    // 2. Platform preview tabs
+    if(currentPlatform) setPlatformPreview(currentPlatform);
+
+    // 3. Subtitle style card highlight (cards use id="sc-{style}")
+    if(selSubStyle){
+      document.querySelectorAll('.style-card').forEach(c => c.classList.remove('on'));
+      const sc = document.getElementById('sc-' + selSubStyle);
+      if(sc) sc.classList.add('on');
+    }
+
+    // 4. Animation card highlight + label (cards use id="anim-{anim}")
+    if(selAnim){
+      document.querySelectorAll('.anim-card').forEach(c => c.classList.remove('on'));
+      const ac = document.getElementById('anim-' + selAnim);
+      if(ac){
+        ac.classList.add('on');
+        const lbl = document.getElementById('animLabel');
+        if(lbl) lbl.textContent = ac.querySelector('.sub-name')?.textContent || selAnim;
+      }
+      // Sync anim switch state
+      const sw   = document.getElementById('animSwitch');
+      const th   = document.getElementById('animThumb');
+      const menu = document.getElementById('animMenu');
+      const row  = document.getElementById('animToggleRow');
+      if(animEnabled){
+        if(sw) sw.style.background='var(--orange)'; if(th) th.style.left='21px';
+        if(menu) menu.style.display='block'; if(row) row.style.borderColor='rgba(255,107,53,.4)';
+      } else {
+        if(sw) sw.style.background='var(--bg5)'; if(th) th.style.left='3px';
+        if(menu) menu.style.display='none'; if(row) row.style.borderColor='var(--border)';
+      }
+    }
+
+    // 5. Subtitles toggle — directly set DOM to match subtitlesEnabled
+    {
+      const sw      = document.getElementById('subtitlesSwitch');
+      const thumb   = document.getElementById('subtitlesThumb');
+      const lbl     = document.getElementById('subtitlesToggleLabel');
+      const row     = document.getElementById('subtitlesToggleRow');
+      const overlay = document.getElementById('subsOverlay');
+      if(sw){
+        if(subtitlesEnabled){
+          sw.style.background = 'var(--orange)';
+          if(thumb) thumb.style.left = '21px';
+          if(lbl)   lbl.textContent = 'Activés — style ' + (selSubStyle || 'Hormozi');
+          if(row)   row.style.borderColor = 'rgba(255,107,53,0.3)';
+          if(overlay) overlay.style.visibility = 'visible';
+        } else {
+          sw.style.background = 'var(--bg5)';
+          if(thumb) thumb.style.left = '3px';
+          if(lbl)   lbl.textContent = 'Désactivés';
+          if(row)   row.style.borderColor = 'var(--border)';
+          if(overlay) overlay.style.visibility = 'hidden';
+        }
+      }
+    }
+
+    // 6. Split toggle — directly set DOM to match splitEnabled
+    {
+      const toggle  = document.getElementById('splitToggle');
+      const thumb   = document.getElementById('splitThumb');
+      const opts    = document.getElementById('splitOptions');
+      const row     = document.getElementById('splitToggleRow');
+      const toggle2 = document.getElementById('splitToggleS2');
+      const thumb2  = document.getElementById('splitThumbS2');
+      const row2    = document.getElementById('splitToggleStep2');
+      if(toggle){
+        if(splitEnabled){
+          toggle.style.background = 'var(--orange)'; if(thumb) thumb.style.left = '22px';
+          if(opts) opts.style.display = 'flex';
+          if(row){ row.style.borderColor='rgba(255,107,53,0.4)'; row.style.background='var(--orange-dim)'; }
+          if(toggle2) toggle2.style.background = 'var(--orange)'; if(thumb2) thumb2.style.left = '22px';
+          if(row2){ row2.style.borderColor='rgba(255,107,53,0.4)'; row2.style.background='var(--orange-dim)'; }
+        } else {
+          toggle.style.background = 'var(--bg5)'; if(thumb) thumb.style.left = '3px';
+          if(opts) opts.style.display = 'none';
+          if(row){ row.style.borderColor='var(--border)'; row.style.background=''; }
+          if(toggle2) toggle2.style.background = 'var(--bg5)'; if(thumb2) thumb2.style.left = '3px';
+          if(row2){ row2.style.borderColor='var(--border)'; row2.style.background=''; }
+        }
+      }
+    }
+
+    // 7. Color inputs
+    const c1In  = document.getElementById('color-c1');
+    const c1Hex = document.getElementById('color-c1-hex');
+    const c2In  = document.getElementById('color-c2');
+    const c2Hex = document.getElementById('color-c2-hex');
+    if(c1In  && subColors.c1) c1In.value  = subColors.c1;
+    if(c1Hex && subColors.c1) c1Hex.value = subColors.c1;
+    if(c2In  && subColors.c2) c2In.value  = subColors.c2;
+    if(c2Hex && subColors.c2) c2Hex.value = subColors.c2;
+
+  } catch(e){ console.warn('_syncUIFromState:', e); }
+}
+
 function _restoreSession(){
   try {
     const saved = JSON.parse(localStorage.getItem('avatarads_session') || 'null');
@@ -6699,6 +6982,7 @@ function _restoreSession(){
       toast('📝 Brouillon restauré — ' + (saved.fields?.script||saved.script).slice(0,40) + '…');
     }
 
+    _syncUIFromState();
     updateLivePreview && updateLivePreview();
   } catch(e){ console.warn('_restoreSession:', e); }
 }
@@ -6740,6 +7024,28 @@ function downloadVideo(){
 let _composeQuality = 1080; // défaut 1080p
 
 // Affiche le verrou 🔒 sur les qualités inaccessibles et met à jour le défaut
+function _updateDurationLock(plan){
+  const quota = _getPlanQuota((plan||'free').toLowerCase());
+  const maxSec = quota.maxDuration;
+  const sel = document.getElementById('f-duration');
+  if(!sel) return;
+  Array.from(sel.options).forEach(opt => {
+    const sec = parseInt(opt.value || opt.text);
+    if(sec > maxSec){
+      opt.disabled = true;
+      opt.text = opt.text.replace(' 🔒','') + ' 🔒';
+      opt.style.color = 'var(--text3)';
+    } else {
+      opt.disabled = false;
+      opt.text = opt.text.replace(' 🔒','');
+    }
+  });
+  // Si la valeur sélectionnée dépasse le max, revenir au max autorisé
+  if(parseInt(sel.value) > maxSec){
+    sel.value = maxSec;
+  }
+}
+
 function _updateQualityLocks(plan){
   const isProOrElite = ['pro','elite'].includes(plan);
   const isElite = plan === 'elite';
@@ -6947,7 +7253,8 @@ async function composeVideo(btn){
   // ── 7. Audio blob à utiliser (avec silences supprimés si applicable) ──
   setStage('Préparation audio…', 10);
   let _audioBlobToEncode = results.audioBlob;
-  if(silenceKeepSegs.length > 0 && silenceAudioBuffer){
+  // ⚠️ Même logique que pour Hedra : seulement en mode MP4 (même fichier analysé + encodé)
+  if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
     const cleanUrl = await _getOrBuildCleanBlobUrl();
     if(cleanUrl){
       _audioBlobToEncode = await fetch(cleanUrl).then(r => r.blob());
