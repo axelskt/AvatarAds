@@ -1493,46 +1493,93 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
 
-              <!-- ── INSTAGRAM REELS ── -->
+              <!-- ── INSTAGRAM REELS — tailles en coordonnées NATIVES 393×852 (scale 0.56x) ── -->
               <div id="ui-reels" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
-                <div style="position:absolute;top:0;left:0;right:0;height:26px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 14px 3px;z-index:60">
-                  <span style="font-size:10px;color:#fff;font-weight:700;font-family:var(--font)">14:53</span>
-                  <div style="display:flex;gap:3px;align-items:center">
-                    <svg width="12" height="9" viewBox="0 0 12 9"><rect x="0" y="3" width="2" height="6" fill="white"/><rect x="3" y="2" width="2" height="7" fill="white"/><rect x="6" y="1" width="2" height="8" fill="white"/><rect x="9" y="0" width="2" height="9" fill="white"/></svg>
-                    <div style="width:17px;height:8px;border:1.5px solid rgba(255,255,255,.8);border-radius:2px;position:relative;padding:1px"><div style="background:#fff;height:100%;width:68%;border-radius:1px"></div></div>
+
+                <!-- Gradients haut/bas -->
+                <div style="position:absolute;top:0;left:0;right:0;height:140px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);z-index:41;pointer-events:none"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:220px;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);z-index:41;pointer-events:none"></div>
+
+                <!-- STATUS BAR — top:0, height:54px native -->
+                <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 10px;z-index:60">
+                  <span style="font-size:17px;color:#fff;font-weight:600;font-family:-apple-system,sans-serif;letter-spacing:-.3px">15:20</span>
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <svg width="19" height="14" viewBox="0 0 19 14"><rect x="0" y="5" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="3" width="3" height="11" rx="1" fill="white"/><rect x="9" y="1" width="3" height="13" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="14" rx="1" fill="white"/></svg>
+                    <svg width="22" height="16" viewBox="0 0 22 16" fill="white"><circle cx="11" cy="13.5" r="2"/><path d="M5.5 9.5a7.8 7.8 0 0111 0" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M2 6a13 13 0 0118 0" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+                    <div style="display:flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:#fff;font-family:-apple-system,sans-serif">95%</div>
+                    <div style="width:28px;height:14px;border:1.5px solid rgba(255,255,255,.7);border-radius:3px;padding:2px;position:relative"><div style="background:#fff;height:100%;width:90%;border-radius:1.5px"></div><div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:3px;height:7px;background:rgba(255,255,255,.5);border-radius:1px"></div></div>
                   </div>
                 </div>
-                <div style="position:absolute;top:24px;left:0;right:0;display:flex;align-items:center;padding:4px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent)">
-                  <span style="font-size:13px;color:#fff;margin-right:10px">←</span>
-                  <div style="flex:1;text-align:center">
-                    <div style="display:inline-flex;gap:12px;font-size:10px;font-weight:700;color:#fff">
-                      <span style="opacity:.5">Reels</span>
-                      <div style="display:flex;flex-direction:column;align-items:center;gap:1px"><span>Ami(e)s</span><div style="width:100%;height:1.5px;background:#fff;border-radius:1px"></div></div>
+
+                <!-- NAV BAR — top:54px, height:50px native -->
+                <div style="position:absolute;top:54px;left:0;right:0;height:50px;display:flex;align-items:center;padding:0 20px;z-index:60">
+                  <!-- Flèche retour -->
+                  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5l-8 8 8 8"/></svg>
+                  <!-- Tabs -->
+                  <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:24px">
+                    <span style="font-size:20px;font-weight:700;color:rgba(255,255,255,.45);font-family:-apple-system,sans-serif">Reels</span>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                      <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font-size:20px;font-weight:700;color:#fff;font-family:-apple-system,sans-serif">Ami(e)s</span>
+                        <!-- 3 mini avatars -->
+                        <div style="display:flex">
+                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#f09433,#dc2743);border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">M</div>
+                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#405de6,#833ab4);border:2px solid #000;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">J</div>
+                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#12c2e9,#f64f59);border:2px solid #000;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">S</div>
+                        </div>
+                      </div>
+                      <div style="width:calc(100% - 30px);height:2px;background:#fff;border-radius:1px"></div>
                     </div>
                   </div>
-                  <span style="font-size:13px;color:#fff">📷</span>
+                  <!-- Pas de caméra (non visible dans screenshot) -->
                 </div>
-                <div style="position:absolute;right:7px;bottom:95px;display:flex;flex-direction:column;align-items:center;gap:12px">
-                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="#ed4956"><path d="M13 3.5C10 3.5 7 6.5 7 10.2C7 15 13 21 13 21C13 21 19 15 19 10.2C19 6.5 16 3.5 13 3.5Z"/></svg><div style="font-size:9px;color:#fff;font-family:var(--mono)">2163</div></div>
-                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="white" stroke-width="1.8"><path d="M13 3C8.5 3 5 6.2 5 10.5C5 13 6.2 15.2 8 16.7L7.2 21L11.5 19.8C12 20 12.5 20.1 13 20.1C17.5 20.1 21 16.9 21 12.6C21 8.3 17.5 3 13 3Z"/></svg><div style="font-size:9px;color:#fff;font-family:var(--mono)">16</div></div>
-                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="white" stroke-width="1.8"><path d="M22 4L4 12l7 3 3 7z"/></svg><div style="font-size:9px;color:#fff;font-family:var(--mono)">37</div></div>
-                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="white" stroke-width="1.8"><path d="M5 5l7-3v18l-7-3V5z"/><path d="M12 4l9 4v9l-9 4"/></svg><div style="font-size:9px;color:#fff;font-family:var(--mono)">111</div></div>
-                  <span style="font-size:18px;color:#fff">•••</span>
-                  <div style="width:30px;height:30px;background:var(--orange);border-radius:6px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">A</div>
-                </div>
-                <div style="position:absolute;bottom:62px;left:10px;right:50px">
-                  <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
-                    <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px"><div style="width:100%;height:100%;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">A</div></div>
-                    <span id="ig-handle" style="font-size:11px;font-weight:700;color:#fff">yomidenzel</span>
-                    <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="6" fill="#3797EF"/><path d="M3.5 6l2 2 3-3.5" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+
+                <!-- RIGHT SIDEBAR — coordonnées natives -->
+                <div style="position:absolute;right:14px;bottom:200px;display:flex;flex-direction:column;align-items:center;gap:22px;z-index:50">
+                  <div style="text-align:center">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M18 6C13 6 8 10.5 8 16.5C8 23 18 31 18 31C18 31 28 23 28 16.5C28 10.5 23 6 18 6Z"/></svg>
+                    <div style="font-size:13px;color:#fff;font-family:-apple-system,sans-serif;margin-top:2px">2 163</div>
                   </div>
-                  <div style="font-size:9px;color:rgba(255,255,255,.95);line-height:1.4;margin-bottom:3px">Je dévoile mon programme politique pour 2027</div>
-                  <div style="font-size:8px;color:rgba(255,255,255,.6)">Suivi(e) par <span style="color:#fff;font-weight:600">usawleo</span> et 24 autres</div>
+                  <div style="text-align:center">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M7 6h22a2 2 0 012 2v14a2 2 0 01-2 2H12l-7 5V8a2 2 0 012-2z"/></svg>
+                    <div style="font-size:13px;color:#fff;font-family:-apple-system,sans-serif;margin-top:2px">16</div>
+                  </div>
+                  <div style="text-align:center">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M30 18L6 7l5 11-5 11z"/></svg>
+                    <div style="font-size:13px;color:#fff;font-family:-apple-system,sans-serif;margin-top:2px">37</div>
+                  </div>
+                  <div style="text-align:center">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h20v26l-10-6-10 6V5z"/></svg>
+                    <div style="font-size:13px;color:#fff;font-family:-apple-system,sans-serif;margin-top:2px">111</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:5px;height:5px;background:#fff;border-radius:50%"></div>
+                    <div style="width:5px;height:5px;background:#fff;border-radius:50%"></div>
+                    <div style="width:5px;height:5px;background:#fff;border-radius:50%"></div>
+                  </div>
+                  <div style="width:38px;height:38px;border-radius:8px;background:var(--orange);border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff">A</div>
                 </div>
-                <div style="position:absolute;bottom:10px;left:10px;right:10px;background:rgba(255,255,255,.15);border-radius:20px;padding:7px 14px;display:flex;align-items:center;justify-content:space-between">
-                  <span style="font-size:10px;color:rgba(255,255,255,.6)">Ajouter un commentaire...</span>
-                  <div style="display:flex;gap:6px;font-size:13px">😊❤️</div>
+
+                <!-- BOTTOM INFO — bottom:90px native -->
+                <div style="position:absolute;bottom:90px;left:16px;right:70px;z-index:50">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                    <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2.5px;flex-shrink:0">
+                      <div style="width:100%;height:100%;border-radius:50%;background:#2a2a2a;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff">A</div>
+                    </div>
+                    <span style="font-size:16px;font-weight:700;color:#fff;font-family:-apple-system,sans-serif">axel.ads</span>
+                    <div style="border:1.5px solid rgba(255,255,255,.9);border-radius:7px;padding:3px 12px;flex-shrink:0">
+                      <span style="font-size:13px;color:#fff;font-weight:600;font-family:-apple-system,sans-serif">Suivre</span>
+                    </div>
+                  </div>
+                  <div style="font-size:14px;color:rgba(255,255,255,.95);line-height:1.45;font-family:-apple-system,sans-serif">Commente "PLAN" et je t'envoie les étapes… <span style="font-weight:700">plus</span></div>
                 </div>
+
+                <!-- COMMENT BAR — bottom:14px, height:56px native -->
+                <div style="position:absolute;bottom:14px;left:14px;right:14px;background:rgba(255,255,255,.2);border-radius:30px;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:60">
+                  <span style="font-size:15px;color:rgba(255,255,255,.6);font-family:-apple-system,sans-serif">Ajouter un commentaire...</span>
+                  <div style="display:flex;gap:10px;font-size:22px">😊❤️</div>
+                </div>
+
               </div>
 
               <!-- ── YOUTUBE ── -->
