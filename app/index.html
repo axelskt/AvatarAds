@@ -1493,45 +1493,47 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
 
-              <!-- ── INSTAGRAM REELS — tailles en coordonnées NATIVES 393×852 (scale 0.56x) ── -->
+              <!-- ── INSTAGRAM REELS — coordonnées NATIVES 393×852 (scale 0.56x) ── -->
+              <!-- Sur iPhone : heure à GAUCHE du Dynamic Island, batterie à DROITE, nav SOUS le DI -->
               <div id="ui-reels" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
 
-                <!-- Gradients haut/bas -->
-                <div style="position:absolute;top:0;left:0;right:0;height:140px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);z-index:41;pointer-events:none"></div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:220px;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);z-index:41;pointer-events:none"></div>
+                <!-- Gradient haut -->
+                <div style="position:absolute;top:0;left:0;right:0;height:160px;background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);z-index:41;pointer-events:none"></div>
+                <!-- Gradient bas -->
+                <div style="position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);z-index:41;pointer-events:none"></div>
 
-                <!-- STATUS BAR — top:0, height:54px native -->
-                <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 10px;z-index:60">
+                <!-- HEURE — à gauche du Dynamic Island (top:30px = centre DI) -->
+                <div style="position:absolute;top:30px;left:22px;z-index:60">
                   <span style="font-size:17px;color:#fff;font-weight:600;font-family:-apple-system,sans-serif;letter-spacing:-.3px">15:20</span>
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <svg width="19" height="14" viewBox="0 0 19 14"><rect x="0" y="5" width="3" height="9" rx="1" fill="white"/><rect x="4.5" y="3" width="3" height="11" rx="1" fill="white"/><rect x="9" y="1" width="3" height="13" rx="1" fill="white"/><rect x="13.5" y="0" width="3" height="14" rx="1" fill="white"/></svg>
-                    <svg width="22" height="16" viewBox="0 0 22 16" fill="white"><circle cx="11" cy="13.5" r="2"/><path d="M5.5 9.5a7.8 7.8 0 0111 0" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M2 6a13 13 0 0118 0" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
-                    <div style="display:flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:#fff;font-family:-apple-system,sans-serif">95%</div>
-                    <div style="width:28px;height:14px;border:1.5px solid rgba(255,255,255,.7);border-radius:3px;padding:2px;position:relative"><div style="background:#fff;height:100%;width:90%;border-radius:1.5px"></div><div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:3px;height:7px;background:rgba(255,255,255,.5);border-radius:1px"></div></div>
+                </div>
+
+                <!-- BATTERIE/SIGNAL — à droite du Dynamic Island -->
+                <div style="position:absolute;top:30px;right:22px;display:flex;align-items:center;gap:5px;z-index:60">
+                  <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="2.5" height="8" rx=".8" fill="white"/><rect x="4" y="2.5" width="2.5" height="9.5" rx=".8" fill="white"/><rect x="8" y="1" width="2.5" height="11" rx=".8" fill="white"/><rect x="12" y="0" width="2.5" height="12" rx=".8" fill="white"/></svg>
+                  <svg width="18" height="13" viewBox="0 0 18 13" fill="white"><circle cx="9" cy="11" r="1.8"/><path d="M4.5 7.5a6.4 6.4 0 019 0" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M1.5 4.5a11 11 0 0115 0" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+                  <div style="width:26px;height:13px;border:1.5px solid rgba(255,255,255,.8);border-radius:3px;padding:1.5px;position:relative">
+                    <div style="background:#fff;height:100%;width:92%;border-radius:1.5px"></div>
+                    <div style="position:absolute;right:-3.5px;top:50%;transform:translateY(-50%);width:2.5px;height:6px;background:rgba(255,255,255,.5);border-radius:1px"></div>
                   </div>
                 </div>
 
-                <!-- NAV BAR — top:54px, height:50px native -->
-                <div style="position:absolute;top:54px;left:0;right:0;height:50px;display:flex;align-items:center;padding:0 20px;z-index:60">
-                  <!-- Flèche retour -->
-                  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5l-8 8 8 8"/></svg>
-                  <!-- Tabs -->
-                  <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:24px">
-                    <span style="font-size:20px;font-weight:700;color:rgba(255,255,255,.45);font-family:-apple-system,sans-serif">Reels</span>
+                <!-- NAV "Reels / Ami(e)s" — SOUS le Dynamic Island (top:72px) -->
+                <div style="position:absolute;top:72px;left:0;right:0;display:flex;align-items:center;padding:0 20px;height:46px;z-index:60">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l-7 8 7 8"/></svg>
+                  <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:22px">
+                    <span style="font-size:19px;font-weight:700;color:rgba(255,255,255,.45);font-family:-apple-system,sans-serif">Reels</span>
                     <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-                      <div style="display:flex;align-items:center;gap:7px">
-                        <span style="font-size:20px;font-weight:700;color:#fff;font-family:-apple-system,sans-serif">Ami(e)s</span>
-                        <!-- 3 mini avatars -->
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <span style="font-size:19px;font-weight:700;color:#fff;font-family:-apple-system,sans-serif">Ami(e)s</span>
                         <div style="display:flex">
-                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#f09433,#dc2743);border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">M</div>
-                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#405de6,#833ab4);border:2px solid #000;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">J</div>
-                          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#12c2e9,#f64f59);border:2px solid #000;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">S</div>
+                          <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#f09433,#dc2743);border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">M</div>
+                          <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#405de6,#833ab4);border:2px solid #000;margin-left:-6px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">J</div>
+                          <div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#12c2e9,#f64f59);border:2px solid #000;margin-left:-6px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">S</div>
                         </div>
                       </div>
-                      <div style="width:calc(100% - 30px);height:2px;background:#fff;border-radius:1px"></div>
+                      <div style="width:80px;height:2px;background:#fff;border-radius:1px"></div>
                     </div>
                   </div>
-                  <!-- Pas de caméra (non visible dans screenshot) -->
                 </div>
 
                 <!-- RIGHT SIDEBAR — coordonnées natives -->
