@@ -1334,18 +1334,28 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Qualité d'export MP4</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px" id="qualityBtnsStep4">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="qualityBtnsStep4">
                 <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Rapide</div>
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif Hedra</div>
                 </button>
                 <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ TikTok</div>
+                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Recommandé</div>
                 </button>
-                <button onclick="setQuality(1440,this)" class="qual-btn" data-q="1440" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">2K</div><div style="font-size:9px;margin-top:1px">🔥 Pro</div>
+              </div>
+              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">Source avatar : ~540p (Hedra) · upscale canvas uniquement</div>
+            </div>
+
+            <!-- MODÈLE IA AVATAR -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🤖 Modèle IA Avatar</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <button onclick="pickModel('character3',this)" id="modelBtn-character3" class="model-btn on" style="padding:9px 6px;background:var(--orange-dim);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700;font-size:11px">Character 3</div>
+                  <div style="font-size:9px;margin-top:2px;opacity:.8">Hedra · ✅ Défaut</div>
                 </button>
-                <button onclick="setQuality(2160,this)" class="qual-btn" data-q="2160" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">4K</div><div style="font-size:9px;margin-top:1px">💎 Max</div>
+                <button onclick="pickModel('kling',this)" id="modelBtn-kling" class="model-btn" style="padding:9px 6px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700;font-size:11px">Kling Standard</div>
+                  <div style="font-size:9px;margin-top:2px;opacity:.8">Kling AI · 🧪 Test</div>
                 </button>
               </div>
             </div>
@@ -6432,8 +6442,8 @@ async function callElevenLabs(text){
 // Elite → meilleur modèle (Character-3 / Hedra Omnia)
 // Autres → modèle standard (Character-1 / Hedra Avatar)
 const HEDRA_MODELS = {
-  elite:   'd7eb3b2e-c8f8-45f9-83db-34f18dd0ba85', // TEST — Kling Standard tous plans
-  default: 'd7eb3b2e-c8f8-45f9-83db-34f18dd0ba85', // Kling AI Avatar v2 Standard — 8 cr/s
+  elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
+  default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
   // hedraOmnia:   'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — 15 cr/s (Elite futur)
   // hedraAvatar:  '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — 7 cr/s
   // character3:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s
@@ -6456,6 +6466,24 @@ window._setModel = function(name){
   console.log('🎬 Modèle forcé :', name, '→', id);
   console.log('💡 Génère une vidéo maintenant pour tester. _setModel("reset") pour revenir à la config normale.');
 };
+// ── Sélecteur modèle UI (boutons Character 3 / Kling dans étape 4) ──
+function pickModel(name, el){
+  const ids = {
+    'character3': 'd1dd37a3-e39a-4854-a298-6510289f9cf2',
+    'kling':      'd7eb3b2e-c8f8-45f9-83db-34f18dd0ba85',
+  };
+  document.querySelectorAll('.model-btn').forEach(b => {
+    b.style.background = 'var(--bg4)';
+    b.style.borderColor = 'var(--border2)';
+    b.style.color = 'var(--text3)';
+  });
+  el.style.background = 'var(--orange-dim)';
+  el.style.borderColor = 'rgba(255,107,53,0.5)';
+  el.style.color = 'var(--orange2)';
+  window._testModelId = (name === 'character3') ? null : ids[name];
+  toast('🤖 Modèle : ' + el.querySelector('div').textContent);
+}
+
 // Lance window.listHedraModels() dans la console pour obtenir les IDs disponibles
 window.listHedraModels = async function(){
   const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
