@@ -27,11 +27,12 @@ serve(async (req: Request) => {
   try {
     const url      = new URL(req.url)
     const hedraPath = url.searchParams.get('path') ?? '/'
-    // Clé uniquement depuis les secrets Supabase (plus jamais côté client)
-    const hedraKey  = Deno.env.get('HEDRA_API_KEY') ?? ''
+    // Clé : priorité à la clé BYOK du user, sinon clé plateforme
+    const userKey   = req.headers.get('x-user-hedra-key') ?? ''
+    const hedraKey  = userKey || Deno.env.get('HEDRA_API_KEY') ?? ''
     if (!hedraKey) {
-      return new Response(JSON.stringify({ error: 'HEDRA_API_KEY not configured in Supabase secrets' }), {
-        status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ error: 'Aucune clé Hedra configurée. Configure ta clé dans Connexions → Clé Hedra.' }), {
+        status: 402, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
     const ct        = req.headers.get('content-type') ?? ''
