@@ -29,7 +29,7 @@ serve(async (req: Request) => {
     const hedraPath = url.searchParams.get('path') ?? '/'
     // Clé : priorité à la clé BYOK du user, sinon clé plateforme
     const userKey   = req.headers.get('x-user-hedra-key') ?? ''
-    const hedraKey  = userKey || Deno.env.get('HEDRA_API_KEY') ?? ''
+    const hedraKey  = userKey || (Deno.env.get('HEDRA_API_KEY') ?? '')
     if (!hedraKey) {
       return new Response(JSON.stringify({ error: 'Aucune clé Hedra configurée. Configure ta clé dans Connexions → Clé Hedra.' }), {
         status: 402, headers: { ...CORS, 'Content-Type': 'application/json' },
