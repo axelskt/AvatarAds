@@ -4331,6 +4331,8 @@ function startPreviewAnim(audioEl){
   previewWordIndex  = 0;
 
   const gpVid = document.getElementById('gpVideo');
+  // Si silences actifs en preview → seeking virtuel pour sauter les mêmes silences que l'audio
+  const _gpSilenceSync = _previewUsingCleanAudio && silenceKeepSegs.length > 0 && gpVid && gpVid.src;
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
 
   // Affiche le premier groupe immédiatement
@@ -4385,6 +4387,12 @@ function startPreviewAnim(audioEl){
         lastGroup = groupIdx;
         lastWordInGroup = wordInGroup;
         updateSubPreviewWithWords(groups[groupIdx] || [], wordInGroup, groupChanged);
+      }
+      // Seeking virtuel gameplay : si silences supprimés, on positionne gpVideo
+      // au bon instant du fichier original (même découpe que l'audio nettoyé)
+      if(_gpSilenceSync && gpVid){
+        const origTime = _cleanTimeToOrigTime(elapsed);
+        if(Math.abs(gpVid.currentTime - origTime) > 0.15) gpVid.currentTime = origTime;
       }
       previewInterval = requestAnimationFrame(rafLoop);
     };
