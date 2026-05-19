@@ -2873,6 +2873,7 @@ function enterApp(profile){
   toast('✓ Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
   // ── Restaurer la session précédente ──
   setTimeout(_restoreSession, 120);
+  setTimeout(_restoreFilesFromIDB, 400); // fichiers audio/gameplay depuis IndexedDB
 }
 
 // ── DEDUCT MINUTES ──
@@ -4556,6 +4557,7 @@ function handleGameplayFile(file){
   // Reset crop à 0 (centré) pour le nouveau gameplay
   cfg.gpCropX = 0; cfg.gpCropY = 0;
   gameplayFile = file;
+  _idbSave('gameplay', file); // persistance entre rechargements
   document.getElementById('gameplayFileName').textContent = file.name;
   document.getElementById('gameplayDropContent').style.display = 'none';
   document.getElementById('gameplayFileInfo').style.display = 'block';
@@ -4848,10 +4850,32 @@ async function analyzeSilences(){
   const btn = document.getElementById('silenceAnalyzeBtn');
   btn.innerHTML = '⏳ Analyse en cours...'; btn.disabled = true;
   try {
-    // Decode audio
-    const arrayBuf = await file.arrayBuffer();
+    // Decode audio — fallback FFmpeg pour les .mov/.mkv non supportés nativement
+    let arrayBuf = await file.arrayBuffer();
     const actx = new AudioContext();
-    silenceAudioBuffer = await actx.decodeAudioData(arrayBuf);
+    let decodeOk = false;
+    try {
+      silenceAudioBuffer = await actx.decodeAudioData(arrayBuf.slice(0));
+      decodeOk = true;
+    } catch(decErr){
+      console.warn('decodeAudioData direct failed, trying FFmpeg extract:', decErr);
+    }
+    if(!decodeOk){
+      // Extraction audio WAV via FFmpeg
+      toast('⏳ Extraction audio via FFmpeg...');
+      await _loadFFmpeg();
+      const ff = _ffmpegInst;
+      const ext = (file.name.split('.').pop() || 'mov').toLowerCase();
+      const inName = `sil_in.${ext}`;
+      try { ff.FS('unlink', inName); } catch(e){}
+      try { ff.FS('unlink', 'sil_out.wav'); } catch(e){}
+      ff.FS('writeFile', inName, new Uint8Array(arrayBuf));
+      await ff.run('-i', inName, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '1', 'sil_out.wav');
+      const wavData = ff.FS('readFile', 'sil_out.wav');
+      try { ff.FS('unlink', inName); } catch(e){}
+      try { ff.FS('unlink', 'sil_out.wav'); } catch(e){}
+      silenceAudioBuffer = await actx.decodeAudioData(wavData.buffer.slice(0));
+    }
     actx.close();
 
     // Calibration identique à l'ancien bouton ✂️ (seuil amplitude, 300ms min)
@@ -5560,6 +5584,7 @@ function applyMp4Transcript(text){
 function handleMp4AudioFile(file){
   if(!file) return;
   mp4AudioFile = file;
+  _idbSave('mp4audio', file); // persistance entre rechargements
   whisperWordTimestamps = []; // reset timestamps à chaque nouvel audio
   const el = document.getElementById('mp4AudioEl');
   el.src = URL.createObjectURL(file);
@@ -6918,6 +6943,61 @@ function _buildSessionState(){
   };
 }
 
+// ── IndexedDB — persistance des fichiers (audio, gameplay) entre rechargements ──
+const _IDB_NAME = 'avatarads_files';
+const _IDB_STORE = 'blobs';
+let _idbReady = null;
+function _idbOpen(){
+  if(_idbReady) return _idbReady;
+  _idbReady = new Promise((res, rej) => {
+    const req = indexedDB.open(_IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(_IDB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+  return _idbReady;
+}
+async function _idbSave(key, file){
+  try {
+    const db = await _idbOpen();
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    tx.objectStore(_IDB_STORE).put({ blob: file, name: file.name, type: file.type }, key);
+  } catch(e){ console.warn('idbSave', e); }
+}
+async function _idbLoad(key){
+  try {
+    const db = await _idbOpen();
+    return await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+      req.onsuccess = e => res(e.target.result);
+      req.onerror   = e => rej(e.target.error);
+    });
+  } catch(e){ return null; }
+}
+async function _idbDelete(key){
+  try {
+    const db = await _idbOpen();
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    tx.objectStore(_IDB_STORE).delete(key);
+  } catch(e){}
+}
+// Restaure les fichiers sauvegardés en IndexedDB au chargement
+async function _restoreFilesFromIDB(){
+  try {
+    const [audioEntry, gpEntry] = await Promise.all([_idbLoad('mp4audio'), _idbLoad('gameplay')]);
+    if(audioEntry){
+      const file = new File([audioEntry.blob], audioEntry.name, { type: audioEntry.type });
+      handleMp4AudioFile(file);
+      toast('💾 Audio restauré : ' + audioEntry.name);
+    }
+    if(gpEntry){
+      const file = new File([gpEntry.blob], gpEntry.name, { type: gpEntry.type });
+      handleGameplayFile(file);
+      toast('💾 Gameplay restauré : ' + gpEntry.name);
+    }
+  } catch(e){ console.warn('_restoreFilesFromIDB:', e); }
+}
+
 function _saveSession(){
   try {
     const state = _buildSessionState();
@@ -7100,6 +7180,7 @@ function resetAll(){
   _wordGroups = null;
   silenceKeepSegs = [];
   try { localStorage.removeItem('avatarads_session'); localStorage.removeItem('avatarads_tapSync'); } catch(e){}
+  _idbDelete('mp4audio'); _idbDelete('gameplay'); // nettoie les fichiers persistés
   document.getElementById('previewArea').style.display='flex';
   document.getElementById('genProgArea').style.display='none';
   document.getElementById('resultArea').style.display='none';
