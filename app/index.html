@@ -1822,31 +1822,47 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- GENERATING -->
-        <div id="genProgArea" style="display:none;flex-direction:column;align-items:center;gap:20px">
+        <div id="genProgArea" style="display:none;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
+
+          <!-- Header + chronomètre -->
           <div style="text-align:center">
-            <div style="font-size:28px;margin-bottom:10px">🎬</div>
-            <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours...</div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">~45–90s selon les APIs</div>
+            <div style="font-size:26px;margin-bottom:8px">🎬</div>
+            <div style="font-size:16px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours…</div>
+            <div id="genTimer" style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--orange);letter-spacing:2px;margin:4px 0">0:00</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Nous nous efforçons de réduire au maximum votre temps d'attente ⚡</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.35);border-radius:10px;max-width:340px;width:100%">
-            <span style="font-size:16px;flex-shrink:0">⚠️</span>
-            <span style="font-size:12px;font-family:var(--mono);color:#ff8a94;font-weight:600;line-height:1.4">Ne pas quitter ou rafraîchir cette page pendant la génération</span>
+
+          <!-- Warning -->
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.35);border-radius:10px;max-width:320px;width:100%">
+            <span style="font-size:14px;flex-shrink:0">⚠️</span>
+            <span style="font-size:11px;font-family:var(--mono);color:#ff8a94;font-weight:600;line-height:1.4">Ne pas quitter ou rafraîchir cette page</span>
           </div>
+
+          <!-- Étapes -->
           <div class="genprog" id="genprog">
-            <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Validation du script</div>
-            <div class="gp-step" id="gp2"><div class="gp-icon">🎤</div>Voix ElevenLabs TTS</div>
-            <div class="gp-step" id="gp3"><div class="gp-icon">🎭</div>Lipsync avatar IA</div>
-            <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:6px auto 0">
+            <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Analyse du script</div>
+            <div class="gp-step" id="gp2"><div class="gp-icon">🎙️</div>Audio ElevenLabs</div>
+            <div class="gp-step" id="gp3"><div class="gp-icon">🤖</div>Synchronisation bouche IA</div>
+            <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:4px auto 0">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
-                <span>Hedra génère…</span><span id="hedraProgressPct">0%</span>
+                <span>Rendu IA en cours…</span><span id="hedraProgressPct">0%</span>
               </div>
               <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
                 <div id="hedraProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .4s ease"></div>
               </div>
             </div>
-            <div class="gp-step" id="gp4"><div class="gp-icon">💬</div>Sous-titres Hormozi</div>
+            <div class="gp-step" id="gp4"><div class="gp-icon">✍️</div>Sous-titres & effets</div>
             <div class="gp-step" id="gp5"><div class="gp-icon">✅</div>Finalisation</div>
           </div>
+
+          <!-- Carte tip/pub rotative -->
+          <div id="genTipCard" style="max-width:320px;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--border2);background:var(--bg3)">
+            <div id="genTipInner" style="padding:14px 16px;min-height:90px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:opacity .4s">
+              <div id="genTipBadge" style="font-size:9px;font-family:var(--mono);font-weight:700;letter-spacing:1px;color:var(--orange2);text-transform:uppercase">💡 Astuce</div>
+              <div id="genTipText" style="font-size:12px;font-weight:600;line-height:1.5;color:var(--text)"></div>
+            </div>
+          </div>
+
         </div>
 
         <!-- RESULT -->
@@ -3287,6 +3303,7 @@ function reuseLastVideo(){
 
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
 function _showResultArea(){
+  _stopGenTimer();
   document.getElementById('genProgArea').style.display = 'none';
   document.getElementById('resultArea').style.display = 'block';
   document.getElementById('reuseBar').style.display = 'none';
@@ -6360,6 +6377,7 @@ async function startGeneration(){
   document.getElementById('genProgArea').style.display='flex';
   document.getElementById('resultArea').style.display='none';
   resetProgSteps();
+  _startGenTimer();
   // Empêcher de quitter pendant la génération
   window._generationInProgress = true;
   window.onbeforeunload = (e) => {
@@ -6960,6 +6978,70 @@ function _buildSessionState(){
       localUrl: selAvatar.localUrl || null
     }
   };
+}
+
+// ── Chronomètre + Tips rotatifs pendant la génération ──
+const _GEN_TIPS = [
+  { badge:'💡 Astuce', text:'Ajoute un hook percutant dans les 2 premières secondes — c\'est là que 80% des gens scrollent.' },
+  { badge:'🔥 Stratégie', text:'Les vidéos avec sous-titres obtiennent 40% de vues en plus — toujours activer les sous-titres !' },
+  { badge:'📱 Format', text:'9:16 vertical + premier plan avatar = combo gagnant sur TikTok et Instagram Reels.' },
+  { badge:'🚀 BloxAI', text:'BloxAI regroupe tous tes outils IA en un seul endroit : contenu, copywriting, automatisation. Disponible avec le plan Élite.' },
+  { badge:'📚 Formation', text:'La formation IA LEBD te montre comment générer tes premiers revenus en ligne avec l\'IA en moins de 30 jours.' },
+  { badge:'💡 Astuce', text:'Change l\'angle marketing à chaque vidéo — teste preuve sociale, urgence, curiosité pour voir ce qui convertit le mieux.' },
+  { badge:'🎯 Engagement', text:'Termine toujours ta vidéo avec un CTA clair : "Commente PLAN", "Like si tu veux la suite" — ça multiplie l\'engagement.' },
+  { badge:'🚀 BloxAI', text:'Avec BloxAI Pro, génère tes scripts, tes visuels et tes vidéos depuis une seule interface. Accès avec le plan Élite AvatarAds.' },
+  { badge:'⚡ Pro tip', text:'Poste à 19h–21h en semaine sur TikTok — les algorithmes favorisent les vidéos postées aux heures de pic d\'activité.' },
+  { badge:'📚 Formation', text:'Formation IA LEBD : de 0 à tes premiers clients en ligne grâce à l\'IA. Rejoins des centaines d\'entrepreneurs qui ont déjà sauté le pas.' },
+  { badge:'💡 Astuce', text:'Un avatar qui regarde droit dans la caméra génère 2x plus de rétention qu\'un avatar de profil — choisis bien ta photo.' },
+  { badge:'🎬 AvatarAds', text:'Tu peux sauvegarder ton avatar, ta voix et ton gameplay pour les réutiliser en 1 clic à chaque nouvelle vidéo.' },
+];
+let _genTimerInterval = null;
+let _genTipInterval   = null;
+let _genStartTime     = 0;
+let _genTipIdx        = 0;
+
+function _startGenTimer(){
+  _genStartTime = Date.now();
+  _genTipIdx = Math.floor(Math.random() * _GEN_TIPS.length);
+  _updateGenTip();
+
+  // Chronomètre
+  const timerEl = document.getElementById('genTimer');
+  if(_genTimerInterval) clearInterval(_genTimerInterval);
+  _genTimerInterval = setInterval(() => {
+    const sec = Math.floor((Date.now() - _genStartTime) / 1000);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    if(timerEl) timerEl.textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+
+  // Tips rotatifs toutes les 8s
+  if(_genTipInterval) clearInterval(_genTipInterval);
+  _genTipInterval = setInterval(() => {
+    _genTipIdx = (_genTipIdx + 1) % _GEN_TIPS.length;
+    _updateGenTip();
+  }, 8000);
+}
+
+function _stopGenTimer(){
+  if(_genTimerInterval){ clearInterval(_genTimerInterval); _genTimerInterval = null; }
+  if(_genTipInterval){   clearInterval(_genTipInterval);   _genTipInterval   = null; }
+}
+
+function _updateGenTip(){
+  const tip = _GEN_TIPS[_genTipIdx];
+  const inner = document.getElementById('genTipInner');
+  const badge = document.getElementById('genTipBadge');
+  const text  = document.getElementById('genTipText');
+  if(!inner || !badge || !text) return;
+  inner.style.opacity = '0';
+  setTimeout(() => {
+    badge.textContent = tip.badge;
+    // Couleur badge selon type
+    const isPromo = tip.badge.includes('BloxAI') || tip.badge.includes('Formation');
+    badge.style.color = isPromo ? '#a78bfa' : 'var(--orange2)';
+    text.textContent  = tip.text;
+    inner.style.opacity = '1';
+  }, 220);
 }
 
 // ── IndexedDB — persistance des fichiers (audio, gameplay) entre rechargements ──
@@ -7890,7 +7972,7 @@ function resetProgSteps(){
   ['gp1','gp2','gp3','gp4','gp5'].forEach(id=>{
     const el=document.getElementById(id);
     el.classList.remove('on','done');
-    const icons={gp1:'📝',gp2:'🎤',gp3:'🎭',gp4:'💬',gp5:'✅'};
+    const icons={gp1:'📝',gp2:'🎙️',gp3:'🤖',gp4:'✍️',gp5:'✅'};
     el.querySelector('.gp-icon').textContent=icons[id];
   });
 }
