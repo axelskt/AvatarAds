@@ -2586,6 +2586,14 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const OPENAI_PROXY = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY     = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
 
+// Helper : retourne l'Authorization header avec le JWT de l'user connecté
+// Sans JWT valide → le proxy refusera la requête (401)
+async function getAuthHeader(){
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token || SUPABASE_KEY; // fallback anon si pas de session
+  return { 'Authorization': `Bearer ${token}` };
+}
+
 // Minutes de vidéo par plan (stockées en secondes dans Supabase)
 const PLAN_SECONDS = { free: 40, starter: 300, pro: 600, elite: 1500 };
 const PLAN_PRICES  = { starter: '29,99€', pro: '49,99€', elite: '89,99€' };
@@ -3791,6 +3799,7 @@ async function whisperTranscribe(){
     fd.append('timestamp_granularities[]', 'word');
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
       method: 'POST',
+      headers: await getAuthHeader(),
       body: fd
     });
     if(!resp.ok){
@@ -6269,7 +6278,7 @@ async function generateScript(){
   try{
     const res=await fetch(OPENAI_PROXY+'?path=/v1/chat/completions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{...await getAuthHeader(),'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'gpt-4o',
         max_tokens:500,
@@ -6400,7 +6409,7 @@ async function callGPT(){
   try{
     const res = await fetch(OPENAI_PROXY+'?path=/v1/chat/completions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{...await getAuthHeader(),'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'gpt-4o', max_tokens:400,
         messages:[

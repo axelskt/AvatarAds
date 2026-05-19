@@ -8,10 +8,11 @@
 //   POST ?path=/v1/chat/completions        → GPT-4o (JSON)
 //   POST ?path=/v1/audio/transcriptions    → Whisper (multipart)
 //
-// Header requis pour auth : Authorization: Bearer <SUPABASE_ANON_KEY>
-//   (automatiquement inclus par le client Supabase)
+// Sécurité : seuls les utilisateurs authentifiés (JWT Supabase valide) peuvent appeler ce proxy.
+// L'anon key seule est refusée — il faut un vrai user session token.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +28,31 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: CORS })
   }
 
-  // Clé OpenAI depuis les secrets Supabase
+  // ── Vérification JWT : seuls les users connectés peuvent utiliser le proxy ──
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const token = authHeader.replace('Bearer ', '').trim()
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized — token manquant' }), {
+      status: 401,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const supabaseUrl    = Deno.env.get('SUPABASE_URL') ?? ''
+  const supabaseAnon   = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  const supabase = createClient(supabaseUrl, supabaseAnon, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  })
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
+      status: 401,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // ── Clé OpenAI depuis les secrets Supabase ──
   const openaiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
   if (!openaiKey) {
     return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured in Supabase secrets' }), {
