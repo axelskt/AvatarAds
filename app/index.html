@@ -5107,9 +5107,10 @@ async function _loadFFmpeg(){
   if(statusEl) statusEl.textContent = '';
 }
 
-async function _runGameplayExport(gpFile){
+// returnBlob=true → retourne le Blob (pour composeVideo), false → déclenche le téléchargement
+async function _runGameplayExport(gpFile, { returnBlob = false } = {}){
   const status = document.getElementById('silenceExportStatus');
-  const setStatus = (msg, color='var(--text3)') => { if(status){ status.style.display='block'; status.textContent=msg; status.style.color=color; } };
+  const setStatus = (msg, color='var(--text3)') => { if(status && !returnBlob){ status.style.display='block'; status.textContent=msg; status.style.color=color; } };
   setStatus('⏳ Chargement FFmpeg...');
   await _loadFFmpeg();
   setStatus('⏳ Découpe du gameplay en cours...');
@@ -5165,12 +5166,15 @@ async function _runGameplayExport(gpFile){
 
   if(success){
     const data = ff.FS('readFile','gp_out.mp4');
-    _triggerDownload(new Blob([data.buffer],{type:'video/mp4'}), 'gameplay_synchro.mp4');
+    const blob = new Blob([data.buffer], {type:'video/mp4'});
     try { ff.FS('unlink','gp_in.mp4'); } catch(e){}
     try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
+    if(returnBlob) return blob;
+    _triggerDownload(blob, 'gameplay_synchro.mp4');
     setStatus('✓ Gameplay synchro téléchargé !', 'var(--green)');
     toast('✓ Gameplay synchro téléchargé — parfaitement aligné avec l\'audio nettoyé !');
   }
+  return null;
 }
 
 async function exportCleanGameplay(){
@@ -7258,9 +7262,30 @@ async function composeVideo(btn){
   const gpZoneEl  = document.getElementById('gameplayZone');
   const hasGp = !!(gpVideoEl?.src && gpZoneEl?.style.display !== 'none');
   let gpVid = null;
+  let _gpCleanBlobUrl = null; // URL temporaire pour le gameplay découpé (à révoquer après)
   if(hasGp){
     gpVid = document.createElement('video');
-    gpVid.src = gpVideoEl.src; gpVid.muted = true; gpVid.loop = true;
+    // Si silences supprimés ET gameplay disponible → découper le gameplay aux mêmes instants
+    const gpFileForCut = silenceGameplayFile || gameplayFile;
+    if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer && gpFileForCut){
+      try {
+        toast('✂️ Découpe gameplay en cours (synchro silences)…');
+        const gpCleanBlob = await _runGameplayExport(gpFileForCut, { returnBlob: true });
+        if(gpCleanBlob){
+          _gpCleanBlobUrl = URL.createObjectURL(gpCleanBlob);
+          gpVid.src = _gpCleanBlobUrl;
+          toast('✅ Gameplay découpé — synchro parfaite avec l\'audio');
+        } else {
+          gpVid.src = gpVideoEl.src; // fallback
+        }
+      } catch(e){
+        console.warn('Gameplay silence cut failed, using original:', e);
+        gpVid.src = gpVideoEl.src;
+      }
+    } else {
+      gpVid.src = gpVideoEl.src;
+    }
+    gpVid.muted = true; gpVid.loop = true;
     await new Promise(res => { gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
     if(!gpVid.videoWidth){ gpVid = null; toast('⚠️ Gameplay introuvable — vidéo avatar seule (re-upload le fichier)'); }
   } else if(gpVideoEl?.src && gpZoneEl?.style.display === 'none'){
@@ -7443,6 +7468,7 @@ async function composeVideo(btn){
   hedraVid.pause();
   if(gpVid) gpVid.pause();
   URL.revokeObjectURL(hedraObjUrl);
+  if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
 
   const blob = new Blob(chunks, { type: chosenMime });
   if(blob.size < 50000){
