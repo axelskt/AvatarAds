@@ -7684,17 +7684,47 @@ async function composeVideo(btn){
     resetBtn(); return;
   }
 
-  const url = URL.createObjectURL(blob);
+  // ── Post-traitement FFmpeg : VFR → CFR 30fps + AAC 48kHz (compatibilité TikTok) ──
+  let finalBlob = blob;
+  try {
+    setStage('Optimisation TikTok (CFR 30fps)…', 99);
+    toast('🎵 Optimisation TikTok en cours…');
+    await _loadFFmpeg();
+    const ff = _ffmpegInst;
+    const inExt = isWebm ? 'webm' : 'mp4';
+    try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
+    try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+    ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await blob.arrayBuffer()));
+    await ff.run(
+      '-i', 'cfr_in.' + inExt,
+      '-vf', 'fps=30',                    // force CFR 30fps
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+      '-c:a', 'aac', '-ar', '48000', '-b:a', '192k',
+      '-movflags', '+faststart',
+      '-y', 'cfr_out.mp4'
+    );
+    const outData = ff.FS('readFile', 'cfr_out.mp4');
+    finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
+    try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
+    try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+    toast('✅ Optimisation TikTok OK — 30fps constant + AAC 48kHz');
+  } catch(ffErr){
+    console.warn('FFmpeg CFR post-process failed, using original:', ffErr);
+    toast('⚠️ Optimisation TikTok ignorée — fichier original utilisé');
+    finalBlob = blob;
+  }
+
+  const url = URL.createObjectURL(finalBlob);
   results.composedUrl = url;
   document.getElementById('hedraVideo').src = url;
-  const sizeMb = (blob.size / 1024 / 1024).toFixed(1);
+  const sizeMb = (finalBlob.size / 1024 / 1024).toFixed(1);
   const label = qCfg.label + (isWebm ? ' (WebM)' : '');
   toast('✓ Vidéo ' + label + ' prête (' + sizeMb + ' Mo) — téléchargement…');
   if(compFill) compFill.style.width = '100%';
   if(compPct) compPct.textContent = '100%';
 
   const a = document.createElement('a');
-  a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.' + fileExt;
+  a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   resetBtn();
 }
