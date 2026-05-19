@@ -734,6 +734,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <input type="range" id="avWidthSlider" min="10" max="400" value="100" step="5" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
+
+            <!-- Ratio Avatar / Gameplay — visible seulement si split actif -->
+            <div id="avSplitRatioRow" style="display:none;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+                <div class="flbl" style="font-size:10px;margin:0">🎮 Ratio Avatar / Gameplay</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="splitRatioVal2">35 / 65</span>
+              </div>
+              <input type="range" id="splitRatio2" min="20" max="70" value="35" step="5"
+                oninput="cfg.splitRatio=+this.value;
+                  document.getElementById('splitRatioVal2').textContent=this.value+' / '+(100-this.value);
+                  const sr=document.getElementById('splitRatio'); if(sr){sr.value=this.value; document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);}
+                  updateLivePreview()"
+                style="width:100%;accent-color:var(--orange)">
+            </div>
           </div>
 
           <!-- STEP 3 -->
@@ -4526,6 +4540,7 @@ function toggleSplit(){
   const thumb2  = document.getElementById('splitThumbS2');
   const row2    = document.getElementById('splitToggleStep2');
 
+  const ratioRow = document.getElementById('avSplitRatioRow');
   if(splitEnabled){
     // Étape 4
     toggle.style.background = 'var(--orange)';
@@ -4537,6 +4552,8 @@ function toggleSplit(){
     if(toggle2){ toggle2.style.background = 'var(--orange)'; }
     if(thumb2){ thumb2.style.left = '22px'; thumb2.style.opacity = '1'; }
     if(row2){ row2.style.borderColor = 'rgba(255,107,53,0.4)'; row2.style.background = 'var(--orange-dim)'; }
+    // Ratio slider étape 2
+    if(ratioRow) ratioRow.style.display = 'block';
   } else {
     // Étape 4
     toggle.style.background = 'var(--bg5)';
@@ -4548,6 +4565,8 @@ function toggleSplit(){
     if(toggle2){ toggle2.style.background = 'var(--bg5)'; }
     if(thumb2){ thumb2.style.left = '3px'; thumb2.style.opacity = '.4'; }
     if(row2){ row2.style.borderColor = 'var(--border)'; row2.style.background = 'var(--bg3)'; }
+    // Ratio slider étape 2
+    if(ratioRow) ratioRow.style.display = 'none';
   }
   updateLivePreview();
 }
@@ -7085,19 +7104,28 @@ function _syncUIFromState(){
       const thumb2  = document.getElementById('splitThumbS2');
       const row2    = document.getElementById('splitToggleStep2');
       if(toggle){
+        const ratioRow2 = document.getElementById('avSplitRatioRow');
         if(splitEnabled){
           toggle.style.background = 'var(--orange)'; if(thumb) thumb.style.left = '22px';
           if(opts) opts.style.display = 'flex';
           if(row){ row.style.borderColor='rgba(255,107,53,0.4)'; row.style.background='var(--orange-dim)'; }
           if(toggle2) toggle2.style.background = 'var(--orange)'; if(thumb2) thumb2.style.left = '22px';
           if(row2){ row2.style.borderColor='rgba(255,107,53,0.4)'; row2.style.background='var(--orange-dim)'; }
+          if(ratioRow2) ratioRow2.style.display = 'block';
         } else {
           toggle.style.background = 'var(--bg5)'; if(thumb) thumb.style.left = '3px';
           if(opts) opts.style.display = 'none';
           if(row){ row.style.borderColor='var(--border)'; row.style.background=''; }
           if(toggle2) toggle2.style.background = 'var(--bg5)'; if(thumb2) thumb2.style.left = '3px';
           if(row2){ row2.style.borderColor='var(--border)'; row2.style.background=''; }
+          if(ratioRow2) ratioRow2.style.display = 'none';
         }
+        // Sync valeur des deux sliders ratio
+        const ratio = cfg.splitRatio || 35;
+        const sr1 = document.getElementById('splitRatio'); const sr2 = document.getElementById('splitRatio2');
+        const sv1 = document.getElementById('splitRatioVal'); const sv2 = document.getElementById('splitRatioVal2');
+        if(sr1) sr1.value = ratio; if(sv1) sv1.textContent = ratio+' / '+(100-ratio);
+        if(sr2) sr2.value = ratio; if(sv2) sv2.textContent = ratio+' / '+(100-ratio);
       }
     }
 
