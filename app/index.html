@@ -1355,7 +1355,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div style="font-weight:700">540p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif</div>
                 </button>
                 <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">BYOK+</div>
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">Starter+</div>
                 </button>
                 <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Pro+</div>
@@ -7365,17 +7365,17 @@ function _updateDurationLock(plan){
 
 function _updateQualityLocks(plan){
   // 540p : tous les plans
-  // 720p : byok, pro, elite
+  // 720p : starter, byok, pro, elite
   // 1080p : pro, elite uniquement
   const p = (plan||'free').toLowerCase();
-  const can720  = ['byok','pro','elite'].includes(p);
+  const can720  = ['starter','byok','pro','elite'].includes(p);
   const can1080 = ['pro','elite'].includes(p);
 
   document.querySelectorAll('.qual-btn').forEach(btn => {
     const q = parseInt(btn.dataset.q || '0');
     let locked = false;
     let lockLabel = '';
-    if(q === 720  && !can720 ){ locked = true; lockLabel = '🔒 BYOK+'; }
+    if(q === 720  && !can720 ){ locked = true; lockLabel = '🔒 Starter+'; }
     if(q === 1080 && !can1080){ locked = true; lockLabel = '🔒 Pro+';  }
     let badge = btn.querySelector('.qual-lock');
     if(locked){
@@ -7412,9 +7412,9 @@ function _updateQualityLocks(plan){
 function setQuality(q, btn){
   // ── Vérification plan ──
   const plan = (currentMember?.plan || 'free').toLowerCase();
-  const can720  = ['byok','pro','elite'].includes(plan);
+  const can720  = ['starter','byok','pro','elite'].includes(plan);
   const can1080 = ['pro','elite'].includes(plan);
-  if(q === 720  && !can720 ){ toast('⚠️ 720p réservé aux plans BYOK, Pro & Élite'); openUpgradeModal(); return; }
+  if(q === 720  && !can720 ){ toast('⚠️ 720p réservé aux plans Starter et supérieurs'); openUpgradeModal(); return; }
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
   _composeQuality = q;
   // Sync tous les boutons qual-btn par data-q
