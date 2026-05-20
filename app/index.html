@@ -1523,7 +1523,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
-                  <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;pointer-events:none;z-index:3"></video>
+                  <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:3"></video>
                 </div>
 
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
@@ -6215,31 +6215,35 @@ function updateGpCrop(){
 }
 
 function updateAvatarCrop(){
-  const img = document.getElementById('previewAvImg');
-  if(!img) return;
-  const h = cfg.avZoom || 100;
-  const w = cfg.avWidth || cfg.avZoom || 100;
+  const h  = cfg.avZoom  || 100;
+  const w  = cfg.avWidth || cfg.avZoom || 100;
   const tx = cfg.avCropX || 0;
   const ty = cfg.avCropY || 0;
-  img.style.maxWidth = 'none';
-  img.style.maxHeight = 'none';
-  img.style.objectFit = 'cover';
-  if(h === 100 && w === 100 && tx === 0 && ty === 0){
-    // Centrage parfait par défaut
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.top = '0';
-    img.style.left = '0';
-    img.style.transform = 'none';
-  } else {
-    img.style.width = w + '%';
-    img.style.height = h + '%';
-    img.style.top = '50%';
-    img.style.left = '50%';
-    img.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+
+  function _applyCrop(el){
+    if(!el) return;
+    el.style.maxWidth  = 'none';
+    el.style.maxHeight = 'none';
+    el.style.objectFit = 'cover';
+    if(h === 100 && w === 100 && tx === 0 && ty === 0){
+      el.style.width     = '100%';
+      el.style.height    = '100%';
+      el.style.top       = '0';
+      el.style.left      = '0';
+      el.style.transform = 'none';
+    } else {
+      el.style.width     = w + '%';
+      el.style.height    = h + '%';
+      el.style.top       = '50%';
+      el.style.left      = '50%';
+      el.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+    }
+    el.style.transformOrigin = 'center center';
+    el.style.objectPosition  = 'center top';
   }
-  img.style.transformOrigin = 'center center';
-  img.style.objectPosition = 'center top';
+
+  _applyCrop(document.getElementById('previewAvImg'));
+  _applyCrop(document.getElementById('bypassPreviewVid'));
 }
 
 // ── DRAG-TO-CROP ──
