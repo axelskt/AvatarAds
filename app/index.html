@@ -2040,7 +2040,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="ph-title">Bibliothèque</div>
             <div class="ph-sub" id="libCount">0 vidéo générée</div>
           </div>
-          <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px" onclick="nav('generator',document.querySelector('.nav-i'))">✨ Nouvelle vidéo</button>
+          <div style="display:flex;gap:8px">
+            <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 14px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
+              📥 Importer Hedra
+            </button>
+            <input type="file" id="libImportInput" accept="video/*" style="display:none" onchange="importHedraToLibrary(this.files[0])">
+            <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px" onclick="nav('generator',document.querySelector('.nav-i'))">✨ Nouvelle vidéo</button>
+          </div>
         </div>
         <div class="lib-grid" id="libGrid">
           <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px">
@@ -6601,23 +6607,18 @@ async function startGeneration(){
   results={script:finalScript, audioBlob, hedraUrl};
   showResults();
 
-  // ── Auto-composer et télécharger dès que Hedra a la vidéo ──
-  if(hedraUrl){
-    const compBtn = document.getElementById('composeBtn');
-    await composeVideo(compBtn);
-  }
-
-  // ── Persister le blob Hedra dans IndexedDB (survit aux rechargements) ──
+  // ── Persister le blob Hedra dans IndexedDB AVANT la composition (survit aux rechargements) ──
   let hedraIdbKey = null;
   if(hedraUrl){
     try {
       const hedraBlob = await fetch(hedraUrl).then(r => r.blob());
       hedraIdbKey = 'hedra_lib_' + Date.now();
       await _idbSave(hedraIdbKey, new File([hedraBlob], 'avatar.mp4', { type: 'video/mp4' }));
+      toast('💾 Lipsync sauvegardé — récupérable depuis la bibliothèque si bug');
     } catch(e){ console.warn('hedra IDB save failed:', e); }
   }
 
-  // Add to library
+  // ── Ajouter à la bibliothèque immédiatement (avant composition, pour garantir la sauvegarde) ──
   library.unshift({
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
@@ -6626,6 +6627,12 @@ async function startGeneration(){
     date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
   });
   _saveLibrary();
+
+  // ── Auto-composer et télécharger dès que Hedra a la vidéo ──
+  if(hedraUrl){
+    const compBtn = document.getElementById('composeBtn');
+    await composeVideo(compBtn);
+  }
 }
 
 async function callGPT(){
@@ -6914,7 +6921,7 @@ async function callHedra(audioBlob){
       ai_model_id: MODEL_ID,
       audio_id: audioId,
       generated_video_inputs: {
-        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze',
+        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, static background, no camera movement, background objects completely still, no scene motion',
         aspect_ratio: aspectRatio,
         character_orientation: 'video',
         resolution: '720p'
@@ -8325,6 +8332,35 @@ function renderLibrary(){
       </div>
     </div>
   `).join('');
+}
+
+// ── Importer une vidéo Hedra externe dans la bibliothèque ──
+async function importHedraToLibrary(file){
+  if(!file || !file.type.startsWith('video/')) { toast('⚠️ Sélectionne un fichier vidéo MP4'); return; }
+  toast('⏳ Import en cours…');
+  try {
+    const idbKey = 'hedra_lib_' + Date.now();
+    await _idbSave(idbKey, new File([file], 'avatar.mp4', { type: 'video/mp4' }));
+
+    // Nom par défaut = nom du fichier sans extension
+    const name = file.name.replace(/\.[^.]+$/, '') || 'Vidéo importée';
+
+    library.unshift({
+      emo: '🎬', name,
+      tags: ['short', '—'],
+      status: 'done', style: 'IMPORT', bg: randBg(),
+      script: '', hedraUrl: '', hedraIdbKey: idbKey,
+      date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+    });
+    _saveLibrary();
+    renderLibrary();
+    toast('✅ Vidéo importée — clique 🔄 Re-composer pour ajouter sous-titres & effets');
+  } catch(e){
+    console.error('importHedraToLibrary:', e);
+    toast('⚠️ Erreur lors de l\'import');
+  }
+  // Reset input pour permettre re-import du même fichier
+  document.getElementById('libImportInput').value = '';
 }
 
 // ── Re-composer depuis la bibliothèque ──
