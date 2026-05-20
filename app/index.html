@@ -6607,12 +6607,22 @@ async function startGeneration(){
     await composeVideo(compBtn);
   }
 
+  // ── Persister le blob Hedra dans IndexedDB (survit aux rechargements) ──
+  let hedraIdbKey = null;
+  if(hedraUrl){
+    try {
+      const hedraBlob = await fetch(hedraUrl).then(r => r.blob());
+      hedraIdbKey = 'hedra_lib_' + Date.now();
+      await _idbSave(hedraIdbKey, new File([hedraBlob], 'avatar.mp4', { type: 'video/mp4' }));
+    } catch(e){ console.warn('hedra IDB save failed:', e); }
+  }
+
   // Add to library
   library.unshift({
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
     status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
-    script:finalScript, hedraUrl,
+    script:finalScript, hedraUrl, hedraIdbKey,
     date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
   });
   _saveLibrary();
@@ -8307,11 +8317,70 @@ function renderLibrary(){
         <div class="vid-status">
           <div class="sdot ok"></div>
           <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span>
-          ${v.hedraUrl?`<span style="margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--orange2);cursor:pointer" onclick="window.open('${v.hedraUrl}')">⬇ MP4</span>`:''}
         </div>
+        ${v.hedraIdbKey ? `
+        <button onclick="recomposeFromLibrary(${i})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
+          🔄 Re-composer
+        </button>` : ''}
       </div>
     </div>
   `).join('');
+}
+
+// ── Re-composer depuis la bibliothèque ──
+async function recomposeFromLibrary(idx){
+  const entry = library[idx];
+  if(!entry){ toast('⚠️ Entrée introuvable'); return; }
+
+  toast('⏳ Chargement du lipsync…');
+
+  // 1. Tenter de récupérer le blob Hedra depuis IndexedDB
+  let hedraBlob = null;
+  if(entry.hedraIdbKey){
+    try {
+      const stored = await _idbLoad(entry.hedraIdbKey);
+      if(stored?.blob) hedraBlob = stored.blob;
+    } catch(e){ console.warn('IDB load hedra failed:', e); }
+  }
+
+  // 2. Si l'URL blob courante est encore valide (même session), l'utiliser en fallback
+  if(!hedraBlob && entry.hedraUrl && entry.hedraUrl.startsWith('blob:')){
+    try {
+      const r = await fetch(entry.hedraUrl);
+      if(r.ok) hedraBlob = await r.blob();
+    } catch(e){}
+  }
+
+  if(!hedraBlob){
+    toast('⚠️ Vidéo introuvable — le cache a peut-être été vidé. Régénère la vidéo.');
+    return;
+  }
+
+  const blobUrl = URL.createObjectURL(hedraBlob);
+
+  // 3. Restaurer le script dans l'éditeur si dispo
+  if(entry.script){
+    results.script = entry.script;
+    populateWordEditor(entry.script);
+  }
+
+  // 4. Charger le lipsync dans results + afficher l'aperçu
+  results.hedraUrl = blobUrl;
+  results.audioBlob = results.audioBlob || null; // garder si déjà présent
+
+  // Précharger la vidéo dans l'élément hedraVideo
+  const hv = document.getElementById('hedraVideo');
+  if(hv){ hv.src = blobUrl; }
+
+  // 5. Naviguer vers le générateur, étape Style (4)
+  nav('generator', document.querySelector('.nav-i'));
+  await wait(80);
+  goToStep(4);
+
+  // 6. Afficher le résultat (carte téléchargement)
+  showResults();
+
+  toast('✅ Lipsync restauré — modifie tes sous-titres, gameplay, qualité puis clique ⬇ Télécharger');
 }
 
 // ── UTILS ──
