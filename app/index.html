@@ -748,7 +748,56 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   updateLivePreview()"
                 style="width:100%;accent-color:var(--orange)">
             </div>
-          </div>
+
+            <!-- ══ BYPASS HEDRA — vidéo avatar existante ══ -->
+            <div style="display:flex;align-items:center;gap:10px;margin:20px 0 14px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou réutilise une vidéo existante</span>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+
+            <div onclick="toggleBypassHedra()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="bypassHedraToggleRow" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="if(!window._bypassHedraOn)this.style.borderColor='var(--border)'">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:18px">🎬</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700">Utiliser ma vidéo avatar existante</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="bypassHedraSubLabel">Importe une vidéo Hedra · 0 crédit · téléchargements illimités</div>
+                </div>
+              </div>
+              <div id="bypassHedraSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                <div id="bypassHedraThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+              </div>
+            </div>
+
+            <div id="bypassHedraPanel" style="display:none;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <!-- Dropzone vidéo -->
+              <div id="bypassHedraDropzone" onclick="document.getElementById('bypassHedraFileIn').click()"
+                ondragover="event.preventDefault();this.style.borderColor='var(--orange)'"
+                ondragleave="this.style.borderColor='var(--border2)'"
+                ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleBypassHedraFile(event.dataTransfer.files[0])"
+                style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:10px">
+                <div id="bypassHedraDropContent">
+                  <div style="font-size:28px;margin-bottom:8px">🎬</div>
+                  <div style="font-size:13px;font-weight:700;margin-bottom:4px">Glisse ta vidéo avatar ici</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — vidéo Hedra ou autre avatar</div>
+                  <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:11px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                </div>
+                <div id="bypassHedraFileInfo" style="display:none">
+                  <div style="font-size:28px;margin-bottom:6px">✅</div>
+                  <div id="bypassHedraFileName" style="font-size:12px;font-weight:600;margin-bottom:2px"></div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--green)">Vidéo chargée — 0 crédit à la génération</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
+                </div>
+              </div>
+              <input type="file" id="bypassHedraFileIn" accept="video/*" style="display:none" onchange="handleBypassHedraFile(this.files[0])">
+
+              <div style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
+                ✅ Mode actif — Hedra ignoré · Génère un audio, choisis tes sous-titres &amp; ton gameplay, puis télécharge. Aucun crédit débité.
+              </div>
+            </div>
+            <!-- /BYPASS HEDRA -->
+
+          </div><!-- /fs-2 -->
 
           <!-- STEP 3 -->
           <div id="fs-3" style="display:none">
@@ -4726,6 +4775,48 @@ function toggleSplit(){
   updateLivePreview();
 }
 
+// ── BYPASS HEDRA — réutilise une vidéo avatar existante (0 crédit) ──
+window._bypassHedraOn   = false;
+window._bypassHedraFile = null;
+window._bypassHedraUrl  = null;
+
+function toggleBypassHedra(){
+  window._bypassHedraOn = !window._bypassHedraOn;
+  const sw    = document.getElementById('bypassHedraSwitch');
+  const thumb = document.getElementById('bypassHedraThumb');
+  const panel = document.getElementById('bypassHedraPanel');
+  const row   = document.getElementById('bypassHedraToggleRow');
+  if(window._bypassHedraOn){
+    sw.style.background    = 'var(--green)';
+    thumb.style.left       = '21px';
+    thumb.style.opacity    = '1';
+    panel.style.display    = 'block';
+    row.style.borderColor  = 'rgba(0,217,126,0.4)';
+    row.style.background   = 'rgba(0,217,126,0.05)';
+  } else {
+    sw.style.background    = 'var(--bg5)';
+    thumb.style.left       = '3px';
+    thumb.style.opacity    = '.4';
+    panel.style.display    = 'none';
+    row.style.borderColor  = 'var(--border)';
+    row.style.background   = 'var(--bg3)';
+  }
+}
+
+function handleBypassHedraFile(file){
+  if(!file || !file.type.startsWith('video/')) return;
+  window._bypassHedraFile = file;
+  if(window._bypassHedraUrl) URL.revokeObjectURL(window._bypassHedraUrl);
+  window._bypassHedraUrl = URL.createObjectURL(file);
+  document.getElementById('bypassHedraFileName').textContent = file.name;
+  document.getElementById('bypassHedraDropContent').style.display = 'none';
+  document.getElementById('bypassHedraFileInfo').style.display   = 'block';
+  // Précharger la vidéo dans le player résultat pour preview
+  const hv = document.getElementById('hedraVideo');
+  if(hv) hv.src = window._bypassHedraUrl;
+  toast('✅ Vidéo avatar chargée — 0 crédit à la génération');
+}
+
 function _syncGpSizeStep3(){
   const panel = document.getElementById('gpSizeStep3');
   if(!panel) return;
@@ -6571,14 +6662,17 @@ async function startGeneration(){
   }
   setStep('gp2','done');
 
-  // STEP 3: Hedra (via proxy — clé côté serveur)
+  // STEP 3: Hedra (via proxy — clé côté serveur) ou bypass si vidéo existante
   setStep('gp3','on');
   let hedraUrl='';
-  if(audioBlob){
-    // Si silences supprimés → envoyer l'audio nettoyé à Hedra
-    // (sinon les lèvres sont calées sur l'audio avec silences → désync)
-    // ⚠️ Uniquement en mode MP4 : silenceAudioBuffer = même fichier que audioBlob
-    // En mode ElevenLabs/Clone, silenceAudioBuffer = fichier de référence vocal ≠ audio généré
+
+  if(window._bypassHedraOn && window._bypassHedraUrl){
+    // ── MODE BYPASS : vidéo existante, 0 crédit ──
+    hedraUrl = window._bypassHedraUrl;
+    toast('⚡ Bypass Hedra — vidéo avatar existante utilisée (0 crédit)');
+    setStep('gp3','done');
+  } else if(audioBlob){
+    // ── MODE NORMAL : générer via Hedra API ──
     let hedraAudioBlob = audioBlob;
     if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
       try {
@@ -6590,8 +6684,10 @@ async function startGeneration(){
       } catch(e){ console.warn('Clean audio for Hedra failed, using original:', e); }
     }
     hedraUrl = await callHedra(hedraAudioBlob);
+    setStep('gp3','done');
+  } else {
+    setStep('gp3','done');
   }
-  setStep('gp3','done');
 
   // STEP 4: Subs
   setStep('gp4','on');
