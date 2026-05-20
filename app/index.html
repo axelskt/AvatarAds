@@ -4786,7 +4786,7 @@ function _bypassMonthKey(){
 }
 function _bypassLimit(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  if(p === 'elite')   return 50;
+  if(p === 'elite')   return 70;
   if(p === 'pro')     return 25;
   if(p === 'starter') return 10;
   if(p === 'byok')    return 25; // même que pro
@@ -8599,7 +8599,7 @@ function renderLibrary(){
         </div>
         ${v.hedraIdbKey ? `
         <button onclick="recomposeFromLibrary(${i})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
-          🔄 Re-composer
+          🎬 Utiliser cette vidéo
         </button>` : ''}
       </div>
     </div>
@@ -8635,12 +8635,18 @@ async function importHedraToLibrary(file){
   document.getElementById('libImportInput').value = '';
 }
 
-// ── Re-composer depuis la bibliothèque ──
+// ── Utiliser une vidéo depuis la bibliothèque → aller dans Avatar avec bypass pré-rempli ──
 async function recomposeFromLibrary(idx){
   const entry = library[idx];
   if(!entry){ toast('⚠️ Entrée introuvable'); return; }
 
-  toast('⏳ Chargement du lipsync…');
+  // Vérifier que le plan est éligible au bypass
+  if(_bypassLimit() <= 0){
+    toast('⛔ Cette fonctionnalité est réservée aux plans Starter, Pro et Élite');
+    openUpgradeModal(); return;
+  }
+
+  toast('⏳ Chargement de la vidéo…');
 
   // 1. Tenter de récupérer le blob Hedra depuis IndexedDB
   let hedraBlob = null;
@@ -8651,7 +8657,7 @@ async function recomposeFromLibrary(idx){
     } catch(e){ console.warn('IDB load hedra failed:', e); }
   }
 
-  // 2. Si l'URL blob courante est encore valide (même session), l'utiliser en fallback
+  // 2. Fallback : URL blob de session encore valide
   if(!hedraBlob && entry.hedraUrl && entry.hedraUrl.startsWith('blob:')){
     try {
       const r = await fetch(entry.hedraUrl);
@@ -8664,38 +8670,50 @@ async function recomposeFromLibrary(idx){
     return;
   }
 
-  const blobUrl = URL.createObjectURL(hedraBlob);
+  // 3. Créer un File + blobUrl pour le bypass
+  const hedraFile = new File([hedraBlob], entry.name + '.mp4', { type: 'video/mp4' });
+  const blobUrl   = URL.createObjectURL(hedraBlob);
 
-  // 3. Restaurer le script dans l'éditeur si dispo
-  if(entry.script){
-    results.script = entry.script;
-    populateWordEditor(entry.script);
+  // 4. Activer le mode bypass Hedra programmatiquement
+  if(!window._bypassHedraOn){
+    // Simuler l'activation du toggle sans clic
+    window._bypassHedraOn = true;
+    const sw    = document.getElementById('bypassHedraSwitch');
+    const thumb = document.getElementById('bypassHedraThumb');
+    const panel = document.getElementById('bypassHedraPanel');
+    const row   = document.getElementById('bypassHedraToggleRow');
+    if(sw)    { sw.style.background   = 'var(--green)'; }
+    if(thumb) { thumb.style.left      = '21px'; thumb.style.opacity = '1'; }
+    if(panel) { panel.style.display   = 'block'; }
+    if(row)   { row.style.borderColor = 'rgba(0,217,126,0.4)'; row.style.background = 'rgba(0,217,126,0.05)'; }
   }
 
-  // 4a. Restaurer l'audio depuis IDB si disponible
-  if(entry.audioIdbKey){
-    try {
-      const stored = await _idbLoad(entry.audioIdbKey);
-      if(stored?.blob) results.audioBlob = stored.blob;
-    } catch(e){ console.warn('IDB load audio failed:', e); }
-  }
+  // 5. Pré-remplir le champ bypass avec la vidéo
+  window._bypassHedraFile = hedraFile;
+  if(window._bypassHedraUrl) URL.revokeObjectURL(window._bypassHedraUrl);
+  window._bypassHedraUrl = blobUrl;
 
-  // 4b. Charger le lipsync dans results + afficher l'aperçu
-  results.hedraUrl = blobUrl;
+  // Mettre à jour l'UI dropzone
+  const nameEl    = document.getElementById('bypassHedraFileName');
+  const dropCont  = document.getElementById('bypassHedraDropContent');
+  const fileInfo  = document.getElementById('bypassHedraFileInfo');
+  if(nameEl)   nameEl.textContent       = hedraFile.name;
+  if(dropCont) dropCont.style.display   = 'none';
+  if(fileInfo) fileInfo.style.display   = 'block';
 
-  // Précharger la vidéo dans l'élément hedraVideo
+  // Précharger le player résultat
   const hv = document.getElementById('hedraVideo');
-  if(hv){ hv.src = blobUrl; }
+  if(hv) hv.src = blobUrl;
 
-  // 5. Naviguer vers le générateur, étape Style (4)
+  // Mettre à jour le label quota
+  _updateBypassUI();
+
+  // 6. Naviguer vers le générateur, étape Avatar (2)
   nav('generator', document.querySelector('.nav-i'));
   await wait(80);
-  goToStep(4);
+  goToStep(2);
 
-  // 6. Afficher le résultat (carte téléchargement)
-  showResults();
-
-  toast('✅ Lipsync restauré — modifie tes sous-titres, gameplay, qualité puis clique ⬇ Télécharger');
+  toast('✅ Vidéo chargée dans Avatar — configure ton script & voix, puis clique Générer');
 }
 
 // ── UTILS ──
