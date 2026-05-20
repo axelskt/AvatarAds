@@ -3623,8 +3623,14 @@ async function confirmSaveAvatarPreset(){
     cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
     const dataUrl = cv.toDataURL('image/jpeg', 0.72);
     const presets = _getAvatarPresets();
+    const plan = (currentMember?.plan||'free').toLowerCase();
+    const maxAv = plan==='elite' ? 999 : plan==='pro'||plan==='byok' ? 3 : 2;
+    if(presets.length >= maxAv){
+      toast('⚠️ Limite atteinte — ' + maxAv + ' presets max sur ton plan' + (plan==='pro'?' · Passe en Élite pour illimité':''));
+      openUpgradeModal(); return;
+    }
     presets.unshift({ name, dataUrl, date: Date.now() });
-    presets.splice(10); // max 10
+    presets.splice(50); // max technique
     localStorage.setItem('aa_avatar_presets', JSON.stringify(presets));
     toast('✓ Avatar "' + name + '" sauvegardé !');
   } catch(e){ toast('⚠️ Erreur sauvegarde : ' + e.message); }
@@ -3777,10 +3783,33 @@ function applyColorPreset(name){
 let voiceFile = null;
 let clonedVoiceId = null;
 
-// Restore saved voice from localStorage
+// ── VOIX CLONÉES — stockage multi-voix ──
+function _getClonedVoices(){ try{ return JSON.parse(localStorage.getItem('aa_cloned_voices')||'[]'); }catch(e){ return []; } }
+function _saveClonedVoices(arr){ localStorage.setItem('aa_cloned_voices', JSON.stringify(arr)); }
+function _maxVoices(){
+  const p = (currentMember?.plan||'free').toLowerCase();
+  return p === 'elite' ? 999 : p === 'pro' || p === 'byok' ? 2 : 1;
+}
+
+// Migration ancienne clé → nouveau format tableau
 (function(){
-  const saved = localStorage.getItem('avatarads_voice');
-  if(saved){ try{ const d=JSON.parse(saved); clonedVoiceId=d.voice_id; selVoiceId=d.voice_id; document.addEventListener('DOMContentLoaded',()=>showSavedVoiceBanner(d)); }catch(e){} }
+  const old = localStorage.getItem('avatarads_voice');
+  if(old){
+    try{
+      const d = JSON.parse(old);
+      if(d.voice_id){
+        const arr = _getClonedVoices();
+        if(!arr.find(v=>v.voice_id===d.voice_id)){
+          arr.unshift({voice_id:d.voice_id, name:'Ma voix', date:d.date||new Date().toLocaleDateString('fr-FR')});
+          _saveClonedVoices(arr);
+        }
+        localStorage.removeItem('avatarads_voice');
+      }
+    }catch(e){}
+  }
+  // Restaurer voix active
+  const voices = _getClonedVoices();
+  if(voices.length){ clonedVoiceId=voices[0].voice_id; selVoiceId=voices[0].voice_id; document.addEventListener('DOMContentLoaded',()=>showSavedVoiceBanner()); }
 })();
 
 function handleVoiceFile(file){
@@ -3974,32 +4003,73 @@ async function cloneVoice(){
     btn.textContent='Cloner ma voix →'; btn.disabled=false;
     selVoiceId=clonedVoiceId;
     toast('✓ Voix clonée ! Écoute les 3 variations.');
-    // Save to localStorage
-    const saveData = {voice_id: clonedVoiceId, date: new Date().toLocaleDateString('fr-FR')};
-    localStorage.setItem('avatarads_voice', JSON.stringify(saveData));
-    showSavedVoiceBanner(saveData);
+    // Save dans le tableau de voix clonées (avec gate plan)
+    const voices = _getClonedVoices();
+    const maxV = _maxVoices();
+    const existingIdx = voices.findIndex(v => v.voice_id === clonedVoiceId);
+    if(existingIdx >= 0) voices.splice(existingIdx, 1); // évite les doublons
+    if(voices.length >= maxV){
+      toast('⚠️ Limite atteinte — ' + maxV + ' voix clonée(s) max sur ton plan. Passe en Élite pour en sauvegarder plus.');
+      openUpgradeModal();
+    } else {
+      voices.unshift({voice_id: clonedVoiceId, name: 'Ma voix — ' + new Date().toLocaleDateString('fr'), date: new Date().toLocaleDateString('fr-FR')});
+      _saveClonedVoices(voices);
+    }
+    showSavedVoiceBanner();
   }catch(e){ toast('✗ Erreur : '+e.message); btn.textContent='Cloner ma voix →'; btn.disabled=false; status.textContent=''; }
 }
 
-function showSavedVoiceBanner(data){
+function showSavedVoiceBanner(){
   const banner = document.getElementById('savedVoiceBanner');
   const dateEl = document.getElementById('savedVoiceDate');
-  if(banner){ banner.style.display = 'flex'; }
-  if(dateEl && data.date) dateEl.textContent = 'Clonée le ' + data.date;
+  const voices = _getClonedVoices();
+  if(!voices.length){ if(banner) banner.style.display='none'; return; }
+  if(banner) banner.style.display='flex';
+  const active = voices[0];
+  if(dateEl) dateEl.textContent = (voices.length > 1 ? voices.length + ' voix sauvegardées · ' : '') + 'Clonée le ' + active.date;
+  // Chips voix supplémentaires
+  let chipsEl = document.getElementById('savedVoiceChips');
+  if(!chipsEl){
+    chipsEl = document.createElement('div');
+    chipsEl.id = 'savedVoiceChips';
+    chipsEl.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;';
+    banner.after(chipsEl);
+  }
+  if(voices.length <= 1){ chipsEl.style.display='none'; return; }
+  chipsEl.style.display = 'flex';
+  chipsEl.innerHTML = voices.map((v,i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:${i===0?'var(--orange-dim)':'var(--bg3)'};border:1px solid ${i===0?'rgba(255,107,53,0.4)':'var(--border)'};border-radius:20px;cursor:pointer;font-size:11px;font-family:var(--mono)"
+      onclick="useSavedVoice('${v.voice_id}')">
+      🎙️ ${v.name}${i===0?' <span style="color:var(--orange2)">✓</span>':''}
+    </div>
+    <button onclick="clearSavedVoice('${v.voice_id}')" style="margin-left:-4px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 2px" title="Supprimer">✕</button>
+  `).join('');
 }
-function useSavedVoice(){
-  const saved = localStorage.getItem('avatarads_voice');
-  if(!saved) return;
-  const data = JSON.parse(saved);
-  clonedVoiceId = data.voice_id;
-  selVoiceId = data.voice_id;
-  toast('✓ Voix clonée rechargée !');
+function useSavedVoice(voiceId){
+  const voices = _getClonedVoices();
+  const v = voiceId ? voices.find(x=>x.voice_id===voiceId) : voices[0];
+  if(!v) return;
+  clonedVoiceId = v.voice_id; selVoiceId = v.voice_id;
+  // Mettre en premier dans la liste
+  const arr = [v, ...voices.filter(x=>x.voice_id!==v.voice_id)];
+  _saveClonedVoices(arr);
+  showSavedVoiceBanner();
+  toast('✓ Voix "' + v.name + '" sélectionnée !');
 }
-function clearSavedVoice(){
-  localStorage.removeItem('avatarads_voice');
-  const banner = document.getElementById('savedVoiceBanner');
-  if(banner) banner.style.display = 'none';
-  clonedVoiceId = null;
+function clearSavedVoice(voiceId){
+  let voices = _getClonedVoices();
+  voices = voiceId ? voices.filter(v=>v.voice_id!==voiceId) : [];
+  _saveClonedVoices(voices);
+  if(!voices.length){
+    const banner = document.getElementById('savedVoiceBanner');
+    if(banner) banner.style.display='none';
+    const chips = document.getElementById('savedVoiceChips');
+    if(chips) chips.style.display='none';
+    clonedVoiceId = null;
+  } else {
+    clonedVoiceId = voices[0].voice_id; selVoiceId = voices[0].voice_id;
+    showSavedVoiceBanner();
+  }
 }
 
 function toggleSample(btn){
