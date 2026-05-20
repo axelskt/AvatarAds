@@ -4387,6 +4387,13 @@ function startPreviewAnim(audioEl){
   previewWordIndex  = 0;
 
   const gpVid = document.getElementById('gpVideo');
+  // Si un audio MP4 est actif → on mute le gameplay (l'audio MP4 est prioritaire)
+  if(gpVid && (mp4AudioEnabled && mp4AudioFile || results?.audioBlob)){
+    gpVid.muted = true;
+    // Mettre à jour le bouton son gameplay si présent
+    const soundLabel = document.getElementById('gp-sound-label');
+    if(soundLabel) soundLabel.textContent = 'Son gameplay : OFF';
+  }
   // Si silences actifs en preview → seeking virtuel pour sauter les mêmes silences que l'audio
   const _gpSilenceSync = _previewUsingCleanAudio && silenceKeepSegs.length > 0 && gpVid && gpVid.src;
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
@@ -7522,7 +7529,7 @@ async function composeVideo(btn){
     } else {
       gpVid.src = gpVideoEl.src;
     }
-    gpVid.muted = true; gpVid.loop = true;
+    gpVid.muted = true; gpVid.loop = true; // Audio gameplay toujours muté — l'audio MP4/voix est prioritaire
     await new Promise(res => { gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
     if(!gpVid.videoWidth){ gpVid = null; toast('⚠️ Gameplay introuvable — vidéo avatar seule (re-upload le fichier)'); }
   } else if(gpVideoEl?.src && gpZoneEl?.style.display === 'none'){
