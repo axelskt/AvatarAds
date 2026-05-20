@@ -1938,6 +1938,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
                   <div id="composeProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .2s ease"></div>
                 </div>
+                <button id="composeCancelBtn" onclick="window._composeCancelled=true;this.style.display='none';document.getElementById('composeBtn').disabled=false;document.getElementById('composeBtn').innerHTML='⬇ Télécharger';document.getElementById('composeProgressWrap').style.display='none';toast('⚠️ Composition annulée — clique Télécharger pour réessayer')" style="display:none;width:100%;margin-top:6px;padding:7px;background:var(--bg4);border:1px solid rgba(255,71,87,0.3);border-radius:8px;color:var(--red);font-family:var(--mono);font-size:11px;cursor:pointer">✕ Annuler la composition</button>
               </div>
             </div>
 
@@ -7608,14 +7609,67 @@ const QUALITY_CONFIGS = {
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
+  window._composeCancelled = false;
   if(btn){ btn.disabled = true; btn.innerHTML = '⏳ Chargement…'; }
-  const compBar  = document.getElementById('composeProgressWrap');
-  const compFill = document.getElementById('composeProgressFill');
-  const compPct  = document.getElementById('composeProgressPct');
+  const compBar     = document.getElementById('composeProgressWrap');
+  const compFill    = document.getElementById('composeProgressFill');
+  const compPct     = document.getElementById('composeProgressPct');
+  const cancelBtn   = document.getElementById('composeCancelBtn');
   const resetBtn = () => {
     if(btn){ btn.disabled=false; btn.innerHTML='⬇ Télécharger'; }
     if(compBar) compBar.style.display='none';
+    if(cancelBtn) cancelBtn.style.display='none';
   };
+
+  // Afficher le bouton Annuler après 4s (Safari peut geler)
+  const _cancelTimer = setTimeout(() => { if(cancelBtn) cancelBtn.style.display='block'; }, 4000);
+
+  // Timeout global 90s — évite les freezes infinis (Safari / AudioContext sans geste user)
+  let _globalTimeout;
+  const _globalAbort = new Promise((_, rej) => {
+    _globalTimeout = setTimeout(() => rej(new Error('TIMEOUT')), 90000);
+  });
+
+  try {
+    await Promise.race([_composeVideoInner(btn, compBar, compFill, compPct, resetBtn), _globalAbort]);
+  } catch(e){
+    clearTimeout(_cancelTimer);
+    if(cancelBtn) cancelBtn.style.display='none';
+    if(e.message === 'TIMEOUT' || window._composeCancelled){
+      toast('⚠️ Composition bloquée — téléchargement direct…');
+      _fallbackDownloadHedra();
+    } else {
+      console.error('composeVideo outer error:', e);
+    }
+    resetBtn();
+  } finally {
+    clearTimeout(_globalTimeout);
+    clearTimeout(_cancelTimer);
+    if(cancelBtn) cancelBtn.style.display='none';
+  }
+}
+
+function _fallbackDownloadHedra(){
+  if(!results?.hedraUrl) return;
+  try {
+    if(results.hedraUrl.startsWith('blob:')){
+      const a = document.createElement('a');
+      a.href = results.hedraUrl; a.download = 'avatarads-avatar.mp4';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    } else {
+      fetch(results.hedraUrl).then(r=>r.blob()).then(blob=>{
+        const u = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href=u; a.download='avatarads-avatar.mp4';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(u), 5000);
+      }).catch(()=>toast('✗ Téléchargement impossible'));
+    }
+  } catch(e){ toast('✗ Téléchargement impossible'); }
+}
+
+async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
+  if(!results.hedraUrl){ return; }
   const setStage = (label, pct) => {
     const stageLbl = document.getElementById('composeProgressStage');
     if(stageLbl) stageLbl.textContent = label;
@@ -7821,7 +7875,10 @@ async function composeVideo(btn){
       // Attendre que l'audio soit prêt
       await new Promise(res => { audioEl2.oncanplaythrough = res; audioEl2.onerror = res; audioEl2.load(); setTimeout(res, 3000); });
       audioCtx = new AudioContext();
-      if(audioCtx.state === 'suspended') await audioCtx.resume();
+      // Safari gèle sur resume() sans geste user → timeout 2s
+      if(audioCtx.state === 'suspended'){
+        await Promise.race([audioCtx.resume(), new Promise(r => setTimeout(r, 2000))]);
+      }
       const dest = audioCtx.createMediaStreamDestination();
       const src = audioCtx.createMediaElementSource(audioEl2);
       src.connect(dest);
@@ -7871,6 +7928,7 @@ async function composeVideo(btn){
       drawFrame(elapsed);
       // ⚠️ PAS de resync audioEl2.currentTime ici — le seek coupe le flux AudioContext
       // hedraVid et audioEl2 sont lancés ensemble via Promise.all, ils restent synchro naturellement
+      if(window._composeCancelled){ resolve(); return; }
       if(elapsed < totalDuration - 0.1 || hedraVid.readyState < 2){
         requestAnimationFrame(rAF);
       } else {
