@@ -1021,6 +1021,36 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <!-- /SILENCE REMOVAL -->
 
+            <!-- GAMEPLAY SIZE — affiché si un gameplay est chargé -->
+            <div id="gpSizeStep3" class="fld" style="display:none;margin-top:18px">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                <span style="font-size:15px">🎮</span>
+                <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom gameplay</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom gameplay</div>
+                    <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
+                  </div>
+                  <input type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
+                    oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
+                    style="width:100%;accent-color:var(--orange)">
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur gameplay</div>
+                    <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
+                  </div>
+                  <input type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
+                    oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal3').textContent=this.value+'%';const s4=document.getElementById('gpWidthSlider');if(s4){s4.value=this.value;document.getElementById('gpWidthVal').textContent=this.value+'%'}updateGpCrop()"
+                    style="width:100%;accent-color:var(--orange)">
+                </div>
+                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;padding:6px 8px;background:var(--bg4);border-radius:7px">✋ Glisse directement sur le preview pour recadrer</div>
+              </div>
+            </div>
+            <!-- /GAMEPLAY SIZE -->
+
           </div>
 
           <!-- STEP 4 -->
@@ -1858,9 +1888,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="gp-step" id="gp5"><div class="gp-icon">✅</div>Finalisation</div>
           </div>
 
-          <!-- Carte tip/pub rotative -->
+          <!-- Carte PROMO (BloxAI / Formation) — header séparé -->
+          <div id="genPromoCard" style="max-width:320px;width:100%;border-radius:12px;overflow:hidden;border:1px solid rgba(167,139,250,0.35);background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(139,92,246,0.04))">
+            <div id="genPromoInner" style="padding:12px 16px;display:flex;flex-direction:column;gap:5px;transition:opacity .35s">
+              <div id="genPromoBadge" style="font-size:9px;font-family:var(--mono);font-weight:700;letter-spacing:1px;color:#a78bfa;text-transform:uppercase">🚀 BloxAI</div>
+              <div id="genPromoText" style="font-size:12px;font-weight:600;line-height:1.5;color:var(--text)"></div>
+            </div>
+          </div>
+
+          <!-- Carte conseils rotatifs (uniquement les astuces) -->
           <div id="genTipCard" style="max-width:320px;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--border2);background:var(--bg3)">
-            <div id="genTipInner" style="padding:14px 16px;min-height:90px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:opacity .4s">
+            <div id="genTipInner" style="padding:14px 16px;min-height:80px;display:flex;flex-direction:column;justify-content:center;gap:6px;transition:opacity .4s">
               <div id="genTipBadge" style="font-size:9px;font-family:var(--mono);font-weight:700;letter-spacing:1px;color:var(--orange2);text-transform:uppercase">💡 Astuce</div>
               <div id="genTipText" style="font-size:12px;font-weight:600;line-height:1.5;color:var(--text)"></div>
             </div>
@@ -4140,6 +4178,7 @@ function removeGameplay(){
   if(removeBtn) removeBtn.style.display='none';
   const gpZone = document.getElementById('gameplayZone');
   if(gpZone) gpZone.style.display='none';
+  _syncGpSizeStep3();
   updateLivePreview();
   toast('✕ Gameplay supprimé');
 }
@@ -4680,6 +4719,21 @@ function toggleSplit(){
   updateLivePreview();
 }
 
+function _syncGpSizeStep3(){
+  const panel = document.getElementById('gpSizeStep3');
+  if(!panel) return;
+  if(gameplayFile){
+    panel.style.display = 'block';
+    // Synchronise les sliders Step3 avec les valeurs courantes
+    const zs = document.getElementById('gpZoomSlider3');
+    const ws = document.getElementById('gpWidthSlider3');
+    if(zs){ zs.value = cfg.gpZoom || 100; document.getElementById('gpZoomVal3').textContent = (cfg.gpZoom||100)+'%'; }
+    if(ws){ ws.value = cfg.gpWidth || 100; document.getElementById('gpWidthVal3').textContent = (cfg.gpWidth||100)+'%'; }
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
 function handleGameplayFile(file){
   if(!file || !file.type.startsWith('video/')) return;
   // Reset crop à 0 (centré) pour le nouveau gameplay
@@ -4704,6 +4758,7 @@ function handleGameplayFile(file){
   if(soundBtn) soundBtn.style.display = 'flex';
   const removeGpBtn = document.getElementById('removeGameplayBtn');
   if(removeGpBtn) removeGpBtn.style.display = 'block';
+  _syncGpSizeStep3();
   updateLivePreview();
 }
 
@@ -5007,9 +5062,9 @@ async function analyzeSilences(){
     actx.close();
 
     // Calibration identique à l'ancien bouton ✂️ (seuil amplitude, 300ms min)
-    const threshDb  = -36;  // ≈ amplitude 0.015 (identique à l'ancien autoTrimSilence)
-    const minDurSec = 0.3;
-    const padSec    = 0.05;
+    const threshDb  = -38;  // légèrement plus sensible pour attraper les micro-silences
+    const minDurSec = 0.15; // réduit de 300ms → 150ms pour plus de rythme
+    const padSec    = 0.04;
 
     const silences = _detectSilences(silenceAudioBuffer, threshDb, minDurSec, padSec);
     silenceOrigKeepSegs = _silencesToKeep(silences, silenceAudioBuffer.duration);
@@ -7090,29 +7145,39 @@ function _buildSessionState(){
 }
 
 // ── Chronomètre + Tips rotatifs pendant la génération ──
+// Astuces marketing (carte orange)
 const _GEN_TIPS = [
   { badge:'💡 Astuce', text:'Ajoute un hook percutant dans les 2 premières secondes — c\'est là que 80% des gens scrollent.' },
   { badge:'🔥 Stratégie', text:'Les vidéos avec sous-titres obtiennent 40% de vues en plus — toujours activer les sous-titres !' },
   { badge:'📱 Format', text:'9:16 vertical + premier plan avatar = combo gagnant sur TikTok et Instagram Reels.' },
-  { badge:'🚀 BloxAI', text:'BloxAI analyse ton compte et génère ton contenu personnalisé automatiquement — scripts, visuels et stratégie adaptés à ta niche.' },
-  { badge:'📚 IA LEBD', text:'Apprends à monétiser ton trafic avec l\'IA. Rejoins @ialebd.axel sur Instagram et découvre comment transformer tes vues en revenus.' },
   { badge:'💡 Astuce', text:'Change l\'angle marketing à chaque vidéo — teste preuve sociale, urgence, curiosité pour voir ce qui convertit le mieux.' },
   { badge:'🎯 Engagement', text:'Termine toujours ta vidéo avec un CTA clair : "Commente PLAN", "Like si tu veux la suite" — ça multiplie l\'engagement.' },
-  { badge:'🚀 BloxAI', text:'BloxAI analyse ton audience et crée ton plan de contenu sur-mesure. Arrête de deviner ce qui marche — laisse l\'IA décider pour toi.' },
   { badge:'⚡ Pro tip', text:'Poste à 19h–21h en semaine sur TikTok — les algorithmes favorisent les vidéos postées aux heures de pic d\'activité.' },
-  { badge:'📚 IA LEBD', text:'Tu crées du contenu mais tu ne monétises pas encore ? Suis @ialebd.axel sur Instagram — la méthode pour transformer ton audience en business.' },
   { badge:'💡 Astuce', text:'Un avatar qui regarde droit dans la caméra génère 2x plus de rétention qu\'un avatar de profil — choisis bien ta photo.' },
   { badge:'🎬 AvatarAds', text:'Tu peux sauvegarder ton avatar, ta voix et ton gameplay pour les réutiliser en 1 clic à chaque nouvelle vidéo.' },
 ];
+
+// Promos partenaires (carte violette en header)
+const _GEN_PROMOS = [
+  { badge:'🚀 BloxAI', text:'BloxAI analyse ton compte et génère ton contenu personnalisé automatiquement — scripts, visuels et stratégie adaptés à ta niche.' },
+  { badge:'📚 IA LEBD', text:'Apprends à monétiser ton trafic avec l\'IA. Rejoins @ialebd.axel sur Instagram et découvre comment transformer tes vues en revenus.' },
+  { badge:'🚀 BloxAI', text:'BloxAI analyse ton audience et crée ton plan de contenu sur-mesure. Arrête de deviner ce qui marche — laisse l\'IA décider pour toi.' },
+  { badge:'📚 IA LEBD', text:'Tu crées du contenu mais tu ne monétises pas encore ? Suis @ialebd.axel sur Instagram — la méthode pour transformer ton audience en business.' },
+];
+
 let _genTimerInterval = null;
 let _genTipInterval   = null;
+let _genPromoInterval = null;
 let _genStartTime     = 0;
 let _genTipIdx        = 0;
+let _genPromoIdx      = 0;
 
 function _startGenTimer(){
   _genStartTime = Date.now();
-  _genTipIdx = Math.floor(Math.random() * _GEN_TIPS.length);
+  _genTipIdx   = Math.floor(Math.random() * _GEN_TIPS.length);
+  _genPromoIdx = Math.floor(Math.random() * _GEN_PROMOS.length);
   _updateGenTip();
+  _updateGenPromo();
 
   // Chronomètre
   const timerEl = document.getElementById('genTimer');
@@ -7123,21 +7188,29 @@ function _startGenTimer(){
     if(timerEl) timerEl.textContent = m + ':' + String(s).padStart(2,'0');
   }, 1000);
 
-  // Tips rotatifs toutes les 8s
+  // Astuces rotatifs toutes les 8s
   if(_genTipInterval) clearInterval(_genTipInterval);
   _genTipInterval = setInterval(() => {
     _genTipIdx = (_genTipIdx + 1) % _GEN_TIPS.length;
     _updateGenTip();
   }, 8000);
+
+  // Promos rotatifs toutes les 14s
+  if(_genPromoInterval) clearInterval(_genPromoInterval);
+  _genPromoInterval = setInterval(() => {
+    _genPromoIdx = (_genPromoIdx + 1) % _GEN_PROMOS.length;
+    _updateGenPromo();
+  }, 14000);
 }
 
 function _stopGenTimer(){
-  if(_genTimerInterval){ clearInterval(_genTimerInterval); _genTimerInterval = null; }
-  if(_genTipInterval){   clearInterval(_genTipInterval);   _genTipInterval   = null; }
+  if(_genTimerInterval) { clearInterval(_genTimerInterval); _genTimerInterval = null; }
+  if(_genTipInterval)   { clearInterval(_genTipInterval);   _genTipInterval   = null; }
+  if(_genPromoInterval) { clearInterval(_genPromoInterval); _genPromoInterval = null; }
 }
 
 function _updateGenTip(){
-  const tip = _GEN_TIPS[_genTipIdx];
+  const tip   = _GEN_TIPS[_genTipIdx];
   const inner = document.getElementById('genTipInner');
   const badge = document.getElementById('genTipBadge');
   const text  = document.getElementById('genTipText');
@@ -7145,12 +7218,24 @@ function _updateGenTip(){
   inner.style.opacity = '0';
   setTimeout(() => {
     badge.textContent = tip.badge;
-    // Couleur badge selon type
-    const isPromo = tip.badge.includes('BloxAI') || tip.badge.includes('Formation');
-    badge.style.color = isPromo ? '#a78bfa' : 'var(--orange2)';
+    badge.style.color = 'var(--orange2)';
     text.textContent  = tip.text;
     inner.style.opacity = '1';
   }, 220);
+}
+
+function _updateGenPromo(){
+  const promo = _GEN_PROMOS[_genPromoIdx];
+  const inner = document.getElementById('genPromoInner');
+  const badge = document.getElementById('genPromoBadge');
+  const text  = document.getElementById('genPromoText');
+  if(!inner || !badge || !text) return;
+  inner.style.opacity = '0';
+  setTimeout(() => {
+    badge.textContent = promo.badge;
+    text.textContent  = promo.text;
+    inner.style.opacity = '1';
+  }, 200);
 }
 
 // ── IndexedDB — persistance des fichiers (audio, gameplay) entre rechargements ──
