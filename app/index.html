@@ -791,7 +791,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <input type="file" id="bypassHedraFileIn" accept="video/*" style="display:none" onchange="handleBypassHedraFile(this.files[0])">
 
-              <div style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
+              <div id="bypassQuotaInfo" style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
                 ✅ Mode actif — Hedra ignoré · Génère un audio, choisis tes sous-titres &amp; ton gameplay, puis télécharge. Aucun crédit débité.
               </div>
             </div>
@@ -2972,7 +2972,7 @@ function enterApp(profile){
   const nameDisplay = profile.is_owner ? '👑 ' + displayName : displayName;
   document.getElementById('memberName').textContent = nameDisplay;
   // Quota vidéos — reset mensuel + affichage
-  _checkAndResetQuota().then(() => _updateQuotaDisplay());
+  _checkAndResetQuota().then(() => { _updateQuotaDisplay(); _updateBypassUI(); });
   // Bloquer la durée selon le plan
   _updateDurationLock(profile.plan);
   const badge = document.getElementById('memberPlanBadge');
@@ -4775,12 +4775,73 @@ function toggleSplit(){
   updateLivePreview();
 }
 
-// ── BYPASS HEDRA — réutilise une vidéo avatar existante (0 crédit) ──
+// ── BYPASS HEDRA — réutilise une vidéo avatar existante (0 crédit, quota mensuel) ──
 window._bypassHedraOn   = false;
 window._bypassHedraFile = null;
 window._bypassHedraUrl  = null;
 
+function _bypassMonthKey(){
+  const d = new Date();
+  return 'aa_bypass_' + d.getFullYear() + '_' + (d.getMonth()+1);
+}
+function _bypassLimit(){
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  if(p === 'elite')   return 50;
+  if(p === 'pro')     return 25;
+  if(p === 'starter') return 10;
+  if(p === 'byok')    return 25; // même que pro
+  return 0; // free → pas de bypass
+}
+function _bypassUsed(){
+  try { return parseInt(localStorage.getItem(_bypassMonthKey()) || '0', 10); } catch(e){ return 0; }
+}
+function _bypassRemaining(){
+  const lim = _bypassLimit();
+  if(lim <= 0) return 0;
+  return Math.max(0, lim - _bypassUsed());
+}
+function _bypassIncrement(){
+  try {
+    const k = _bypassMonthKey();
+    localStorage.setItem(k, String(_bypassUsed() + 1));
+  } catch(e){}
+}
+function _updateBypassUI(){
+  const rem   = _bypassRemaining();
+  const lim   = _bypassLimit();
+  const label = document.getElementById('bypassHedraSubLabel');
+  const info  = document.getElementById('bypassQuotaInfo');
+  if(label){
+    if(lim <= 0){
+      label.textContent = '⛔ Non disponible sur ton plan actuel';
+      label.style.color = 'var(--red)';
+    } else {
+      label.textContent = `Importe une vidéo Hedra · 0 crédit · ${rem}/${lim} re-compositions ce mois`;
+      label.style.color = rem <= 2 ? 'var(--orange2)' : '';
+    }
+  }
+  if(info){
+    if(lim <= 0){
+      info.textContent = '⛔ Upgrade ton plan pour accéder à cette fonctionnalité.';
+      info.style.color = 'var(--red)';
+    } else {
+      info.textContent = `✅ Mode actif — ${rem} re-composition${rem!==1?'s':''} restante${rem!==1?'s':''} ce mois (${lim} max/${_getPlanName()}).`;
+      info.style.color = rem <= 2 ? 'var(--orange2)' : 'var(--green)';
+    }
+  }
+}
+function _getPlanName(){
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  return p === 'elite' ? 'Élite' : p === 'pro' ? 'Pro' : p === 'starter' ? 'Starter' : p === 'byok' ? 'BYOK' : 'Free';
+}
+
 function toggleBypassHedra(){
+  // Vérifier que le plan est éligible
+  if(_bypassLimit() <= 0){
+    toast('⛔ Cette fonctionnalité est réservée aux plans Starter, Pro et Élite');
+    openUpgradeModal();
+    return;
+  }
   window._bypassHedraOn = !window._bypassHedraOn;
   const sw    = document.getElementById('bypassHedraSwitch');
   const thumb = document.getElementById('bypassHedraThumb');
@@ -4801,6 +4862,7 @@ function toggleBypassHedra(){
     row.style.borderColor  = 'var(--border)';
     row.style.background   = 'var(--bg3)';
   }
+  _updateBypassUI();
 }
 
 function handleBypassHedraFile(file){
@@ -6667,9 +6729,19 @@ async function startGeneration(){
   let hedraUrl='';
 
   if(window._bypassHedraOn && window._bypassHedraUrl){
-    // ── MODE BYPASS : vidéo existante, 0 crédit ──
+    // ── MODE BYPASS : vidéo existante, 0 crédit — vérifier quota ──
+    if(_bypassLimit() <= 0){
+      toast('⛔ Cette fonctionnalité n\'est pas disponible sur ton plan');
+      openUpgradeModal(); return;
+    }
+    if(_bypassRemaining() <= 0){
+      toast('⛔ Limite atteinte — ' + _bypassLimit() + ' re-compositions/mois sur ton plan ' + _getPlanName());
+      openUpgradeModal(); return;
+    }
     hedraUrl = window._bypassHedraUrl;
-    toast('⚡ Bypass Hedra — vidéo avatar existante utilisée (0 crédit)');
+    _bypassIncrement();
+    _updateBypassUI();
+    toast('⚡ Bypass Hedra — ' + _bypassRemaining() + ' re-composition' + (_bypassRemaining()!==1?'s':'') + ' restante' + (_bypassRemaining()!==1?'s':'') + ' ce mois');
     setStep('gp3','done');
   } else if(audioBlob){
     // ── MODE NORMAL : générer via Hedra API ──
