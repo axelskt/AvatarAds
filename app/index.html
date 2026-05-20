@@ -4876,7 +4876,51 @@ function handleBypassHedraFile(file){
   // Précharger la vidéo dans le player résultat pour preview
   const hv = document.getElementById('hedraVideo');
   if(hv) hv.src = window._bypassHedraUrl;
+  // Injecter une thumbnail dans le preview phone
+  _setBypassPreviewThumbnail(window._bypassHedraUrl);
   toast('✅ Vidéo avatar chargée — 0 crédit à la génération');
+}
+
+// ── Extrait une frame de la vidéo bypass et l'affiche dans le preview phone ──
+async function _setBypassPreviewThumbnail(videoUrl){
+  try {
+    const vid = document.createElement('video');
+    vid.src = videoUrl;
+    vid.muted = true;
+    vid.playsInline = true;
+    await new Promise(res => {
+      vid.onloadeddata = res;
+      vid.onerror = res;
+      setTimeout(res, 4000);
+      vid.load();
+    });
+    vid.currentTime = 0.05;
+    await new Promise(res => { vid.onseeked = res; setTimeout(res, 1500); });
+    const W = vid.videoWidth  || 360;
+    const H = vid.videoHeight || 640;
+    const canvas = document.createElement('canvas');
+    canvas.width  = W;
+    canvas.height = H;
+    canvas.getContext('2d').drawImage(vid, 0, 0, W, H);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    vid.src = '';
+    // Afficher dans previewAvImg (même slot que les avatars photo)
+    const avImg   = document.getElementById('previewAvImg');
+    const avEmoji = document.getElementById('previewAvEmoji');
+    if(avImg){
+      avImg.src              = dataUrl;
+      avImg.style.display    = 'block';
+      avImg.style.width      = '100%';
+      avImg.style.height     = '100%';
+      avImg.style.objectFit  = 'cover';
+      avImg.style.position   = 'absolute';
+      avImg.style.top        = '0';
+      avImg.style.left       = '0';
+    }
+    if(avEmoji) avEmoji.style.display = 'none';
+  } catch(e){
+    console.warn('bypass preview thumbnail failed:', e);
+  }
 }
 
 function _syncGpSizeStep3(){
@@ -8707,6 +8751,9 @@ async function recomposeFromLibrary(idx){
 
   // Mettre à jour le label quota
   _updateBypassUI();
+
+  // Injecter la thumbnail dans le preview phone
+  _setBypassPreviewThumbnail(blobUrl);
 
   // 6. Naviguer vers le générateur, étape Avatar (2)
   nav('generator', document.querySelector('.nav-i'));
