@@ -6545,6 +6545,12 @@ async function startGeneration(){
   results={script:finalScript, audioBlob, hedraUrl};
   showResults();
 
+  // ── Auto-composer et télécharger dès que Hedra a la vidéo ──
+  if(hedraUrl){
+    const compBtn = document.getElementById('composeBtn');
+    await composeVideo(compBtn);
+  }
+
   // Add to library
   library.unshift({
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
@@ -7547,9 +7553,27 @@ async function composeVideo(btn){
     if(!r.ok) throw new Error('HTTP ' + r.status);
     hedraObjUrl = URL.createObjectURL(await r.blob());
   } catch(e) {
-    toast('⚠️ Impossible de charger la vidéo Hedra — téléchargement brut');
-    const a = document.createElement('a'); a.href=results.hedraUrl; a.download='avatarads-hedra.mp4';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    // Si fetch échoue (CORS, expiration…) → télécharger directement le blob Hedra brut
+    toast('⚠️ Composition impossible — téléchargement direct de la vidéo Hedra…');
+    try {
+      // Si c'est déjà un blob:// local, le forcer en download
+      if(results.hedraUrl.startsWith('blob:')){
+        const a = document.createElement('a');
+        a.href = results.hedraUrl; a.download = 'avatarads-avatar.mp4';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      } else {
+        // URL distante — re-fetch via proxy si besoin
+        const r2 = await fetch(results.hedraUrl);
+        const blob2 = await r2.blob();
+        const localUrl = URL.createObjectURL(blob2);
+        const a = document.createElement('a');
+        a.href = localUrl; a.download = 'avatarads-avatar.mp4';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(localUrl), 5000);
+      }
+    } catch(e2){
+      toast('✗ Impossible de télécharger la vidéo — réessaie dans quelques secondes');
+    }
     resetBtn(); return;
   }
 
