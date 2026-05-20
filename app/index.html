@@ -3420,7 +3420,20 @@ function _showResultArea(){
   document.getElementById('downloadCard').style.display = results.hedraUrl ? 'block' : 'none';
   document.getElementById('hedraManualCard').style.display = results.hedraUrl ? 'none' : 'block';
   document.getElementById('genStatusCard').style.display = 'none';
-  if(results.hedraUrl) document.getElementById('hedraVideo').src = results.hedraUrl;
+  if(results.hedraUrl){
+    document.getElementById('hedraVideo').src = results.hedraUrl;
+    // Afficher la vidéo générée dans le preview phone
+    const bpv = document.getElementById('bypassPreviewVid');
+    if(bpv && bpv.src !== results.hedraUrl){
+      bpv.src = results.hedraUrl;
+      bpv.style.display = 'block';
+      bpv.play().catch(()=>{});
+      const avImg   = document.getElementById('previewAvImg');
+      const avEmoji = document.getElementById('previewAvEmoji');
+      if(avImg)   avImg.style.display   = 'none';
+      if(avEmoji) avEmoji.style.display = 'none';
+    }
+  }
   document.getElementById('mainBtn').style.display = 'block';
   document.getElementById('mainBtn').textContent = '+ Nouvelle vidéo';
   document.getElementById('mainBtn').onclick = resetAll;
@@ -6313,14 +6326,14 @@ function updateLivePreview(){
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
   const bpv = document.getElementById('bypassPreviewVid');
-  // Si bypass actif avec vidéo chargée → afficher le video element, masquer img/emoji
-  if(window._bypassHedraOn && window._bypassHedraUrl){
-    if(bpv && bpv.src !== window._bypassHedraUrl){
-      bpv.src = window._bypassHedraUrl;
-      bpv.play().catch(()=>{});
+  // Vidéo à afficher dans le preview : vidéo générée OU bypass
+  const previewVidUrl = (results && results.hedraUrl) || (window._bypassHedraOn && window._bypassHedraUrl) || null;
+  if(previewVidUrl){
+    if(bpv){
+      if(bpv.src !== previewVidUrl){ bpv.src = previewVidUrl; bpv.play().catch(()=>{}); }
+      bpv.style.display = 'block';
     }
-    if(bpv)     bpv.style.display   = 'block';
-    if(avImg)   avImg.style.display  = 'none';
+    if(avImg)   avImg.style.display   = 'none';
     if(avEmoji) avEmoji.style.display = 'none';
   } else {
     // Mode normal : cacher bypassPreviewVid
@@ -7704,6 +7717,9 @@ setInterval(() => {
 function resetAll(){
   step=1; updateSteps();
   results={script:'',audioBlob:null,hedraUrl:''};
+  // Vider le preview vidéo phone
+  const bpv = document.getElementById('bypassPreviewVid');
+  if(bpv){ bpv.pause(); bpv.src=''; bpv.style.display='none'; }
   whisperWordTimestamps = [];
   _wordGroups = null;
   silenceKeepSegs = [];
