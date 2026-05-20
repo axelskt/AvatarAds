@@ -1523,6 +1523,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
+                  <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;pointer-events:none;z-index:3"></video>
                 </div>
 
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
@@ -4862,8 +4863,6 @@ function toggleBypassHedra(){
     panel.style.display    = 'none';
     row.style.borderColor  = 'var(--border)';
     row.style.background   = 'var(--bg3)';
-    // Effacer la thumbnail bypass du preview
-    window._bypassPreviewDataUrl = null;
     updateLivePreview();
   }
   _updateBypassUI();
@@ -4885,35 +4884,17 @@ function handleBypassHedraFile(file){
   toast('✅ Vidéo avatar chargée — 0 crédit à la génération');
 }
 
-// ── Extrait une frame de la vidéo bypass et l'affiche dans le preview phone ──
-async function _setBypassPreviewThumbnail(videoUrl){
-  try {
-    const vid = document.createElement('video');
-    vid.src = videoUrl;
-    vid.muted = true;
-    vid.playsInline = true;
-    await new Promise(res => {
-      vid.onloadeddata = res;
-      vid.onerror = res;
-      setTimeout(res, 4000);
-      vid.load();
-    });
-    vid.currentTime = 0.05;
-    await new Promise(res => { vid.onseeked = res; setTimeout(res, 1500); });
-    const W = vid.videoWidth  || 360;
-    const H = vid.videoHeight || 640;
-    const canvas = document.createElement('canvas');
-    canvas.width  = W;
-    canvas.height = H;
-    canvas.getContext('2d').drawImage(vid, 0, 0, W, H);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    vid.src = '';
-    // Stocker et déclencher le preview via updateLivePreview
-    window._bypassPreviewDataUrl = dataUrl;
-    updateLivePreview();
-  } catch(e){
-    console.warn('bypass preview thumbnail failed:', e);
-  }
+// ── Affiche la vidéo bypass directement dans le preview phone ──
+function _setBypassPreviewThumbnail(videoUrl){
+  const bpv     = document.getElementById('bypassPreviewVid');
+  const avImg   = document.getElementById('previewAvImg');
+  const avEmoji = document.getElementById('previewAvEmoji');
+  if(!bpv) return;
+  bpv.src = videoUrl;
+  bpv.style.display = 'block';
+  bpv.play().catch(()=>{});
+  if(avImg)   avImg.style.display   = 'none';
+  if(avEmoji) avEmoji.style.display = 'none';
 }
 
 function _syncGpSizeStep3(){
@@ -6331,22 +6312,34 @@ function updateLivePreview(){
   // 1. Avatar — uploaded file OU Hedra char thumbnail OU emoji
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
-  const previewSrc = (selAvatar && selAvatar.localUrl) || (selHedraChar && selHedraChar.thumbnailUrl) || (window._bypassHedraOn && window._bypassPreviewDataUrl) || null;
-  if(previewSrc){
-    if(avImg){
-      avImg.style.display = 'block';
-      if(avImg.src !== previewSrc){
-        avImg.src = previewSrc;
-        avImg.style.objectPosition = selHedraChar ? 'center 15%' : 'center center';
-        avImg.style.width  = '100%';
-        avImg.style.height = '100%';
-      }
-      updateAvatarCrop();
+  const bpv = document.getElementById('bypassPreviewVid');
+  // Si bypass actif avec vidéo chargée → afficher le video element, masquer img/emoji
+  if(window._bypassHedraOn && window._bypassHedraUrl){
+    if(bpv && bpv.src !== window._bypassHedraUrl){
+      bpv.src = window._bypassHedraUrl;
+      bpv.play().catch(()=>{});
     }
+    if(bpv)     bpv.style.display   = 'block';
+    if(avImg)   avImg.style.display  = 'none';
     if(avEmoji) avEmoji.style.display = 'none';
   } else {
-    if(avImg)   avImg.style.display = 'none';
-    if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = (selAvatar && selAvatar.emo) || '👩‍💼'; }
+    // Mode normal : cacher bypassPreviewVid
+    if(bpv){ bpv.style.display = 'none'; if(bpv.src){ bpv.pause(); bpv.src = ''; } }
+    const previewSrc = (selAvatar && selAvatar.localUrl) || (selHedraChar && selHedraChar.thumbnailUrl) || null;
+    if(previewSrc){
+      if(avImg){
+        avImg.style.display = 'block';
+        if(avImg.src !== previewSrc){
+          avImg.src = previewSrc;
+          avImg.style.objectPosition = selHedraChar ? 'center 15%' : 'center center';
+        }
+        updateAvatarCrop();
+      }
+      if(avEmoji) avEmoji.style.display = 'none';
+    } else {
+      if(avImg)   avImg.style.display = 'none';
+      if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = (selAvatar && selAvatar.emo) || '👩‍💼'; }
+    }
   }
 
   // 2. Split screen
