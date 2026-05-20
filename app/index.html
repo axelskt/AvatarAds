@@ -4776,9 +4776,10 @@ function toggleSplit(){
 }
 
 // ── BYPASS HEDRA — réutilise une vidéo avatar existante (0 crédit, quota mensuel) ──
-window._bypassHedraOn   = false;
-window._bypassHedraFile = null;
-window._bypassHedraUrl  = null;
+window._bypassHedraOn        = false;
+window._bypassHedraFile      = null;
+window._bypassHedraUrl       = null;
+window._bypassPreviewDataUrl = null;
 
 function _bypassMonthKey(){
   const d = new Date();
@@ -4861,6 +4862,9 @@ function toggleBypassHedra(){
     panel.style.display    = 'none';
     row.style.borderColor  = 'var(--border)';
     row.style.background   = 'var(--bg3)';
+    // Effacer la thumbnail bypass du preview
+    window._bypassPreviewDataUrl = null;
+    updateLivePreview();
   }
   _updateBypassUI();
 }
@@ -4904,20 +4908,9 @@ async function _setBypassPreviewThumbnail(videoUrl){
     canvas.getContext('2d').drawImage(vid, 0, 0, W, H);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     vid.src = '';
-    // Afficher dans previewAvImg (même slot que les avatars photo)
-    const avImg   = document.getElementById('previewAvImg');
-    const avEmoji = document.getElementById('previewAvEmoji');
-    if(avImg){
-      avImg.src              = dataUrl;
-      avImg.style.display    = 'block';
-      avImg.style.width      = '100%';
-      avImg.style.height     = '100%';
-      avImg.style.objectFit  = 'cover';
-      avImg.style.position   = 'absolute';
-      avImg.style.top        = '0';
-      avImg.style.left       = '0';
-    }
-    if(avEmoji) avEmoji.style.display = 'none';
+    // Stocker et déclencher le preview via updateLivePreview
+    window._bypassPreviewDataUrl = dataUrl;
+    updateLivePreview();
   } catch(e){
     console.warn('bypass preview thumbnail failed:', e);
   }
@@ -6338,13 +6331,15 @@ function updateLivePreview(){
   // 1. Avatar — uploaded file OU Hedra char thumbnail OU emoji
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
-  const previewSrc = (selAvatar && selAvatar.localUrl) || (selHedraChar && selHedraChar.thumbnailUrl) || null;
+  const previewSrc = (selAvatar && selAvatar.localUrl) || (selHedraChar && selHedraChar.thumbnailUrl) || (window._bypassHedraOn && window._bypassPreviewDataUrl) || null;
   if(previewSrc){
     if(avImg){
       avImg.style.display = 'block';
       if(avImg.src !== previewSrc){
         avImg.src = previewSrc;
         avImg.style.objectPosition = selHedraChar ? 'center 15%' : 'center center';
+        avImg.style.width  = '100%';
+        avImg.style.height = '100%';
       }
       updateAvatarCrop();
     }
