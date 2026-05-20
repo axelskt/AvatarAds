@@ -1072,9 +1072,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             <!-- GAMEPLAY SIZE — affiché si un gameplay est chargé -->
             <div id="gpSizeStep3" class="fld" style="display:none;margin-top:18px">
-              <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-                <span style="font-size:15px">🎮</span>
-                <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom gameplay</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="font-size:15px">🎮</span>
+                  <div>
+                    <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom gameplay</div>
+                    <div id="gpStep3FileLabel" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px"></div>
+                  </div>
+                </div>
+                <button onclick="removeGameplay()" style="font-size:10px;font-family:var(--mono);color:var(--red,#ff6b6b);background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:6px;padding:3px 8px;cursor:pointer">✕ Retirer</button>
               </div>
               <div style="display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
                 <div>
@@ -4242,6 +4248,8 @@ function removeAvatar(){
 }
 function removeGameplay(){
   gameplayFile = null;
+  const lbl3 = document.getElementById('gpStep3FileLabel');
+  if(lbl3) lbl3.textContent = '';
   document.getElementById('gameplayDropContent').style.display='';
   document.getElementById('gameplayFileInfo').style.display='none';
   const removeBtn = document.getElementById('removeGameplayBtn');
@@ -4949,6 +4957,8 @@ function handleGameplayFile(file){
   if(soundBtn) soundBtn.style.display = 'flex';
   const removeGpBtn = document.getElementById('removeGameplayBtn');
   if(removeGpBtn) removeGpBtn.style.display = 'block';
+  const lbl3 = document.getElementById('gpStep3FileLabel');
+  if(lbl3) lbl3.textContent = '📂 ' + file.name;
   _syncGpSizeStep3();
   updateLivePreview();
 }
