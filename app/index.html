@@ -6607,23 +6607,29 @@ async function startGeneration(){
   results={script:finalScript, audioBlob, hedraUrl};
   showResults();
 
-  // ── Persister le blob Hedra dans IndexedDB AVANT la composition (survit aux rechargements) ──
-  let hedraIdbKey = null;
+  // ── Persister le blob Hedra + audio dans IndexedDB AVANT la composition ──
+  let hedraIdbKey = null, audioIdbKey = null;
   if(hedraUrl){
     try {
       const hedraBlob = await fetch(hedraUrl).then(r => r.blob());
       hedraIdbKey = 'hedra_lib_' + Date.now();
       await _idbSave(hedraIdbKey, new File([hedraBlob], 'avatar.mp4', { type: 'video/mp4' }));
-      toast('💾 Lipsync sauvegardé — récupérable depuis la bibliothèque si bug');
     } catch(e){ console.warn('hedra IDB save failed:', e); }
   }
+  if(audioBlob){
+    try {
+      audioIdbKey = 'audio_lib_' + Date.now();
+      await _idbSave(audioIdbKey, new File([audioBlob], 'voice.mp3', { type: audioBlob.type || 'audio/mpeg' }));
+    } catch(e){ console.warn('audio IDB save failed:', e); }
+  }
+  if(hedraIdbKey) toast('💾 Lipsync sauvegardé — récupérable depuis la bibliothèque si bug');
 
   // ── Ajouter à la bibliothèque immédiatement (avant composition, pour garantir la sauvegarde) ──
   library.unshift({
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
     status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
-    script:finalScript, hedraUrl, hedraIdbKey,
+    script:finalScript, hedraUrl, hedraIdbKey, audioIdbKey,
     date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
   });
   _saveLibrary();
@@ -7879,11 +7885,39 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   const isWebm = chosenMime.startsWith('video/webm');
   const fileExt = isWebm ? 'webm' : 'mp4';
 
-  // ── 9. AudioContext pour mixer audio dans le stream ──
+  // ── 9. Pre-warm : attendre la 1ère frame avant de démarrer le recorder (évite le noir) ──
+  setStage('Chargement 1ère frame…', 13);
+  try {
+    hedraVid.currentTime = 0;
+    await new Promise(res => {
+      hedraVid.onseeked = res;
+      if(hedraVid.readyState >= 2) res(); // déjà prêt
+      setTimeout(res, 1500);
+    });
+    // Dessiner la première frame sur le canvas avant de commencer l'enregistrement
+    drawFrame(0);
+    await wait(80);
+  } catch(e){}
+
+  // ── 10. AudioContext pour mixer audio dans le stream ──
   // On utilise un élément <audio> comme source : plus fiable pour le sync avec MediaRecorder
   let audioCtx = null, audioEl2 = null;
   const videoStream = canvas.captureStream(30);
   let combinedStream = videoStream;
+
+  // Si pas d'audioBlob (ex: re-compose depuis bibliothèque) → extraire l'audio du blob hedra
+  if(!_audioBlobToEncode && hedraObjUrl){
+    try {
+      const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuf = await fetch(hedraObjUrl).then(r => r.arrayBuffer());
+      const decoded  = await tmpCtx.decodeAudioData(arrayBuf);
+      await tmpCtx.close();
+      // Convertir AudioBuffer → WAV blob
+      _audioBlobToEncode = _audioBufferToWavBlob(decoded);
+      toast('🎵 Audio extrait de la vidéo Hedra');
+    } catch(e){ console.warn('Hedra audio extract failed:', e); }
+  }
+
   if(_audioBlobToEncode){
     try {
       const audioUrl2 = URL.createObjectURL(_audioBlobToEncode);
@@ -8019,6 +8053,41 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   resetBtn();
 }
 
+// ── Convertit un AudioBuffer en blob WAV ──
+function _audioBufferToWavBlob(buffer){
+  const numChannels = Math.min(2, buffer.numberOfChannels);
+  const sampleRate  = buffer.sampleRate;
+  const length      = buffer.length;
+  const bitsPerSample = 16;
+  const blockAlign  = numChannels * bitsPerSample / 8;
+  const byteRate    = sampleRate * blockAlign;
+  const dataSize    = length * blockAlign;
+  const ab = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(ab);
+  const w = (o, v) => view.setUint32(o, v, true);
+  const ws = (o, v) => view.setUint16(o, v, true);
+  // RIFF header
+  [82,73,70,70].forEach((b,i)=>view.setUint8(i,b));   // "RIFF"
+  w(4,  36 + dataSize);
+  [87,65,86,69].forEach((b,i)=>view.setUint8(8+i,b)); // "WAVE"
+  [102,109,116,32].forEach((b,i)=>view.setUint8(12+i,b)); // "fmt "
+  w(16, 16); ws(20,1); ws(22, numChannels);
+  w(24, sampleRate); w(28, byteRate); ws(32, blockAlign); ws(34, bitsPerSample);
+  [100,97,116,97].forEach((b,i)=>view.setUint8(36+i,b)); // "data"
+  w(40, dataSize);
+  // PCM samples (interleaved)
+  const channels = Array.from({length: numChannels}, (_,c) => buffer.getChannelData(c));
+  let off = 44;
+  for(let i = 0; i < length; i++){
+    for(let c = 0; c < numChannels; c++){
+      const s = Math.max(-1, Math.min(1, channels[c][i]));
+      view.setInt16(off, s < 0 ? s*32768 : s*32767, true);
+      off += 2;
+    }
+  }
+  return new Blob([ab], { type: 'audio/wav' });
+}
+
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
 // zone:{x,y,w,h} en pixels canvas — zoomH/zoomW en % — cropX/cropY en pixels espace phone 393px
 function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH){
@@ -8061,6 +8130,22 @@ function _cvHook(ctx, W, H){
 }
 
 // ── Sous-titres sur canvas : styles, animations, scaleX, lineH
+// ── Découpe un tableau de mots en lignes selon largeur max ──
+function _splitSubLines(widths, maxW){
+  const lines = []; // chaque ligne = tableau d'indices
+  let cur = [], curW = 0;
+  for(let i = 0; i < widths.length; i++){
+    if(cur.length > 0 && curW + widths[i] > maxW){
+      lines.push(cur);
+      cur = [i]; curW = widths[i];
+    } else {
+      cur.push(i); curW += widths[i];
+    }
+  }
+  if(cur.length) lines.push(cur);
+  return lines;
+}
+
 function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   if(!shown?.length) return;
   const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
@@ -8074,8 +8159,10 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   const gap      = Math.round(sz * 0.22);
   const ANIM_DUR = 0.25;
   const t        = Math.min(1, animElapsed / ANIM_DUR);
+  const maxLineW = W * 0.88; // jamais plus de 88% de la largeur canvas
+  const lineH    = Math.round(sz * 1.38); // interligne entre les lignes wrappées
 
-  // ── Calcul transform d'animation (entrée du groupe)
+  // ── Animation ──
   let animSY = 1, animTy = 0, animOpacity = 1;
   if(animEnabled && selAnim !== 'none'){
     if(selAnim === 'pop'){
@@ -8088,7 +8175,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         :             7.56*(t-.945)*(t-.945)+.984;
       animSY = 0.3 + 0.7 * bounce;
     } else if(selAnim === 'slide'){
-      animTy = (1 - (1 - Math.pow(1-t,3))) * sz * 1.5; // glisse depuis le bas
+      animTy = (1 - (1 - Math.pow(1-t,3))) * sz * 1.5;
     } else if(selAnim === 'fade'){
       animOpacity = t;
     }
@@ -8096,45 +8183,40 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
 
   ctx.save();
   ctx.globalAlpha = animOpacity;
-
-  // scaleX (compression horizontale) centré sur posX
-  if(scaleX !== 1){
-    ctx.translate(posX, 0);
-    ctx.scale(scaleX, 1);
-    ctx.translate(-posX, 0);
-  }
-  // Animation Y (scale + translate)
-  if(animSY !== 1 || animTy !== 0){
-    ctx.translate(0, posY + animTy);
-    ctx.scale(1, animSY);
-    ctx.translate(0, -posY);
-  }
-
+  if(scaleX !== 1){ ctx.translate(posX,0); ctx.scale(scaleX,1); ctx.translate(-posX,0); }
+  if(animSY !== 1 || animTy !== 0){ ctx.translate(0,posY+animTy); ctx.scale(1,animSY); ctx.translate(0,-posY); }
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
 
   if(style === 'tiktok'){
-    // Chaque mot a un fond coloré
-    ctx.font = `900 ${Math.round(sz*.85)}px 'Arial Black',Arial,sans-serif`;
-    const pad = Math.round(sz * 0.15);
+    const tSz = Math.round(sz*.85);
+    ctx.font = `900 ${tSz}px 'Arial Black',Arial,sans-serif`;
+    const pad  = Math.round(sz * 0.15);
+    const gapT = Math.round(sz * 0.15);
     const widths = shown.map(w => ctx.measureText(w).width + pad*2);
-    const totalW = widths.reduce((a,b)=>a+b,0) + (shown.length-1)*Math.round(sz*.15);
-    let x = posX - totalW/2;
-    shown.forEach((word,i)=>{
-      const active = i===activeIdx;
-      const bg = active ? c1 : c2;
-      const ph = Math.round(sz*1.15), pw = widths[i];
-      const r  = Math.round(sz*.1);
-      ctx.fillStyle = bg;
-      _cvRoundRect(ctx, x, posY-ph/2, pw, ph, r);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.textAlign = 'center';
-      ctx.fillText(word, x+pw/2, posY);
-      x += pw + Math.round(sz*.15);
+    const lines  = _splitSubLines(widths.map((w,i)=>w+gapT), maxLineW);
+    const nLines = lines.length;
+    const startY = posY - ((nLines-1)*lineH)/2;
+
+    lines.forEach((lineIdxs, li)=>{
+      const lineY  = startY + li * lineH;
+      const lineW  = lineIdxs.reduce((a,i)=>a+widths[i]+gapT,0) - gapT;
+      let x = posX - lineW/2;
+      lineIdxs.forEach(i=>{
+        const active = i===activeIdx;
+        const bg = active ? c1 : c2;
+        const ph = Math.round(sz*1.15), pw = widths[i];
+        const r  = Math.round(sz*.1);
+        ctx.fillStyle = bg;
+        _cvRoundRect(ctx, x, lineY-ph/2, pw, ph, r);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.fillText(shown[i], x+pw/2, lineY);
+        x += pw + gapT;
+      });
     });
   } else {
-    // Styles avec texte coloré + stroke (hormozi / neon / iman / podcast / mrbeast)
     let font;
     if(style==='hormozi'||style==='mrbeast') font=`900 ${sz}px Impact,sans-serif`;
     else if(style==='neon')   font=`900 ${sz}px Impact,sans-serif`;
@@ -8143,29 +8225,33 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
     ctx.textAlign = 'left';
 
     const widths = shown.map(w => ctx.measureText(w).width + gap);
-    const totalW = widths.reduce((a,b)=>a+b,0);
-    let x = posX - totalW/2;
+    const lines  = _splitSubLines(widths, maxLineW);
+    const nLines = lines.length;
+    const startY = posY - ((nLines-1)*lineH)/2;
 
-    shown.forEach((word,i)=>{
-      const active = i===activeIdx;
-      const color  = active ? c1 : c2;
+    lines.forEach((lineIdxs, li)=>{
+      const lineY = startY + li * lineH;
+      const lineW = lineIdxs.reduce((a,i)=>a+widths[i],0);
+      let x = posX - lineW/2;
+      // Clamp x pour ne jamais dépasser les bords
+      x = Math.max(W*0.05, Math.min(W*0.95 - lineW, x));
 
-      if(style==='neon'){
-        ctx.shadowColor = color;
-        ctx.shadowBlur  = Math.round(sz * 0.7);
-        ctx.fillStyle   = color;
-        ctx.fillText(word, x, posY);
-        ctx.shadowBlur  = Math.round(sz * 1.4);
-        ctx.fillText(word, x, posY);
-        ctx.shadowBlur  = 0;
-      } else {
-        ctx.lineWidth   = strokeW;
-        ctx.strokeStyle = '#000';
-        ctx.strokeText(word, x, posY);
-        ctx.fillStyle   = color;
-        ctx.fillText(word, x, posY);
-      }
-      x += widths[i];
+      lineIdxs.forEach(i=>{
+        const active = i===activeIdx;
+        const color  = active ? c1 : c2;
+        if(style==='neon'){
+          ctx.shadowColor = color; ctx.shadowBlur = Math.round(sz*.7); ctx.fillStyle = color;
+          ctx.fillText(shown[i], x, lineY);
+          ctx.shadowBlur = Math.round(sz*1.4); ctx.fillText(shown[i], x, lineY);
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.lineWidth = strokeW; ctx.strokeStyle = '#000';
+          ctx.strokeText(shown[i], x, lineY);
+          ctx.fillStyle = color;
+          ctx.fillText(shown[i], x, lineY);
+        }
+        x += widths[i];
+      });
     });
   }
   ctx.restore();
@@ -8418,9 +8504,16 @@ async function recomposeFromLibrary(idx){
     populateWordEditor(entry.script);
   }
 
-  // 4. Charger le lipsync dans results + afficher l'aperçu
+  // 4a. Restaurer l'audio depuis IDB si disponible
+  if(entry.audioIdbKey){
+    try {
+      const stored = await _idbLoad(entry.audioIdbKey);
+      if(stored?.blob) results.audioBlob = stored.blob;
+    } catch(e){ console.warn('IDB load audio failed:', e); }
+  }
+
+  // 4b. Charger le lipsync dans results + afficher l'aperçu
   results.hedraUrl = blobUrl;
-  results.audioBlob = results.audioBlob || null; // garder si déjà présent
 
   // Précharger la vidéo dans l'élément hedraVideo
   const hv = document.getElementById('hedraVideo');
