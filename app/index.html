@@ -3431,9 +3431,10 @@ function _showResultArea(){
     // Afficher la vidéo générée dans le preview phone
     const bpv = document.getElementById('bypassPreviewVid');
     if(bpv && bpv.src !== results.hedraUrl){
-      bpv.src = results.hedraUrl;
+      bpv.src  = results.hedraUrl;
+      bpv.loop = false;
       bpv.style.display = 'block';
-      bpv.play().catch(()=>{});
+      bpv.load();
       const avImg   = document.getElementById('previewAvImg');
       const avEmoji = document.getElementById('previewAvEmoji');
       if(avImg)   avImg.style.display   = 'none';
@@ -4540,6 +4541,16 @@ async function togglePreviewPlay(){
       if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
     }
     previewAudio = activeAudio;
+    // Quand l'audio se termine → tout stopper
+    if(activeAudio){
+      activeAudio.onended = () => {
+        previewPlaying = false;
+        stopPreviewAnim();
+        if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
+        const b = document.getElementById('previewPlayBtn');
+        if(b){ b.textContent='▶ Aperçu animé'; b.style.borderColor='var(--border2)'; b.style.color='var(--text2)'; }
+      };
+    }
     startPreviewAnim(activeAudio);
   } else {
     btn.textContent = '▶ Aperçu animé';
@@ -4584,6 +4595,9 @@ function startPreviewAnim(audioEl){
   // Si silences actifs en preview → seeking virtuel pour sauter les mêmes silences que l'audio
   const _gpSilenceSync = _previewUsingCleanAudio && silenceKeepSegs.length > 0 && gpVid && gpVid.src;
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
+  // Lancer la vidéo avatar en sync avec l'audio
+  const bpv = document.getElementById('bypassPreviewVid');
+  if(bpv && bpv.src){ bpv.currentTime=0; bpv.play().catch(()=>{}); }
 
   // Affiche le premier groupe immédiatement
   updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
@@ -4666,15 +4680,15 @@ function startPreviewAnim(audioEl){
 }
 
 function stopPreviewAnim(){
-  if(previewInterval){ clearInterval(previewInterval); previewInterval = null; }
-  const gpVid = document.getElementById('gpVideo');
-  if(gpVid) gpVid.pause();
-  // Annule le rAF ou clearInterval selon le type
   if(typeof previewInterval === 'number'){
     cancelAnimationFrame(previewInterval);
     clearInterval(previewInterval);
-    previewInterval = null;
   }
+  previewInterval = null;
+  const gpVid = document.getElementById('gpVideo');
+  if(gpVid) gpVid.pause();
+  const bpv = document.getElementById('bypassPreviewVid');
+  if(bpv && !bpv.paused) bpv.pause();
   updateSubPreview();
 }
 
@@ -4905,15 +4919,17 @@ function handleBypassHedraFile(file){
   toast('✅ Vidéo avatar chargée — 0 crédit à la génération');
 }
 
-// ── Affiche la vidéo bypass directement dans le preview phone ──
+// ── Affiche la vidéo bypass/générée dans le preview phone (pausée par défaut) ──
 function _setBypassPreviewThumbnail(videoUrl){
   const bpv     = document.getElementById('bypassPreviewVid');
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
   if(!bpv) return;
-  bpv.src = videoUrl;
+  bpv.src   = videoUrl;
+  bpv.loop  = false;
   bpv.style.display = 'block';
-  bpv.play().catch(()=>{});
+  // Charger sans jouer — juste afficher la 1ère frame
+  bpv.load();
   if(avImg)   avImg.style.display   = 'none';
   if(avEmoji) avEmoji.style.display = 'none';
 }
@@ -6344,7 +6360,7 @@ function updateLivePreview(){
   const previewVidUrl = (results && results.hedraUrl) || (window._bypassHedraOn && window._bypassHedraUrl) || null;
   if(previewVidUrl){
     if(bpv){
-      if(bpv.src !== previewVidUrl){ bpv.src = previewVidUrl; bpv.play().catch(()=>{}); }
+      if(bpv.src !== previewVidUrl){ bpv.src = previewVidUrl; bpv.loop = false; bpv.load(); }
       bpv.style.display = 'block';
     }
     if(avImg)   avImg.style.display   = 'none';
