@@ -1350,15 +1350,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Qualité d'export MP4</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="qualityBtnsStep4">
-                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif Hedra</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px" id="qualityBtnsStep4">
+                <button onclick="setQuality(540,this)" class="qual-btn on" data-q="540" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">540p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif</div>
                 </button>
-                <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Recommandé</div>
+                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">BYOK+</div>
+                </button>
+                <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Pro+</div>
                 </button>
               </div>
-              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">Source avatar : ~540p (Hedra) · upscale canvas uniquement</div>
+              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">540p natif Hedra · 720p upscale canvas · 1080p upscale Pro/Élite</div>
             </div>
 
             <!-- MODÈLE IA AVATAR -->
@@ -2681,6 +2684,18 @@ let splitEnabled = false;
 let results = {script:'', audioBlob:null, hedraUrl:''};
 let library = [];
 
+// ── LIBRARY PERSISTENCE (localStorage) ──
+function _saveLibrary(){
+  try{ localStorage.setItem('aa_library', JSON.stringify(library)); }catch(e){}
+}
+function _loadLibrary(){
+  try{
+    const raw = localStorage.getItem('aa_library');
+    if(raw){ library = JSON.parse(raw); }
+  }catch(e){ library = []; }
+}
+_loadLibrary();
+
 // Member session
 let currentMember = null; // {id, email, plan, credits_remaining, is_owner, videos_used, quota_reset_date}
 
@@ -3812,11 +3827,11 @@ function autoGenSubtitles(){
   }
 }
 async function whisperTranscribe(){
-  // Gate Elite / Pro
+  // Gate Pro / Elite / BYOK
   const plan = currentMember?.plan || 'free';
-  if(!['pro','elite'].includes(plan)){
+  if(!['pro','elite','byok'].includes(plan)){
     showPaywall();
-    toast('⚠️ Whisper IA disponible avec le plan Elite');
+    toast('⚠️ Whisper IA disponible avec les plans Pro, Élite et BYOK');
     return;
   }
   if(!mp4AudioFile){ toast('⚠️ Upload un fichier audio MP4 dans l\'étape Voix d\'abord'); return; }
@@ -4878,7 +4893,7 @@ function _updateSilenceSourceLabel(){
 }
 
 async function analyzeSilences(){
-  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+  if(currentMember && !['pro','elite','byok'].includes(currentMember.plan)){
     openUpgradeModal(); return;
   }
   const file = mp4AudioFile || window._voiceFileRef;
@@ -6458,8 +6473,10 @@ async function startGeneration(){
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
     status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
-    script:finalScript, hedraUrl
+    script:finalScript, hedraUrl,
+    date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
   });
+  _saveLibrary();
 }
 
 async function callGPT(){
@@ -6638,14 +6655,16 @@ async function callHedra(audioBlob){
   const userPlan = (window._userPlan || '').toLowerCase();
   const MODEL_ID = window._testModelId || ((userPlan === 'elite') ? HEDRA_MODELS.elite : HEDRA_MODELS.default);
 
-  // Headers communs — inclut la clé BYOK du user si elle existe
+  // Headers communs — JWT + clé BYOK si présente
+  const authHdr = await getAuthHeader(); // JWT session token
   const byokHeader = window._userHedraKey ? { 'x-user-hedra-key': window._userHedraKey } : {};
+  const commonHeaders = { ...authHdr, ...byokHeader };
 
   // Helper : appel proxy GET
   async function hGet(path){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'GET',
-      headers: { ...byokHeader }
+      headers: { ...commonHeaders }
     });
     return r;
   }
@@ -6654,7 +6673,7 @@ async function callHedra(audioBlob){
   async function hPost(path, body){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...byokHeader },
+      headers: { 'Content-Type': 'application/json', ...commonHeaders },
       body: JSON.stringify(body)
     });
     return r;
@@ -6664,14 +6683,21 @@ async function callHedra(audioBlob){
   async function hUpload(path, formData){
     const r = await fetch(PROXY + '?path=' + encodeURIComponent(path), {
       method: 'POST',
-      headers: { ...byokHeader },
+      headers: { ...commonHeaders },
       body: formData
     });
     return r;
   }
 
-  // ── Vérification quota vidéos ──
+  // ── Vérification clé BYOK obligatoire ──
   const plan = (window._userPlan || 'free').toLowerCase();
+  if(plan === 'byok' && !window._userHedraKey){
+    toast('⚠️ Plan BYOK : configure ta clé Hedra dans Connexions → Clé API Hedra');
+    goToStep(6); // aller sur l'onglet Connexions
+    return '';
+  }
+
+  // ── Vérification quota vidéos ──
   if(plan !== 'byok' && !currentMember?.is_owner){
     const remaining = _videosRemaining();
     if(remaining <= 0){
@@ -7312,7 +7338,7 @@ function downloadVideo(){
 
 // ══════════════════════════════════════════════════════════════════
 // ── Qualité d'export ──
-let _composeQuality = 1080; // défaut 1080p
+let _composeQuality = 540; // défaut 540p (ajusté selon plan au login)
 
 // Affiche le verrou 🔒 sur les qualités inaccessibles et met à jour le défaut
 function _updateDurationLock(plan){
@@ -7338,12 +7364,19 @@ function _updateDurationLock(plan){
 }
 
 function _updateQualityLocks(plan){
-  const isProOrElite = ['pro','elite'].includes(plan);
-  const isElite = plan === 'elite';
+  // 540p : tous les plans
+  // 720p : byok, pro, elite
+  // 1080p : pro, elite uniquement
+  const p = (plan||'free').toLowerCase();
+  const can720  = ['byok','pro','elite'].includes(p);
+  const can1080 = ['pro','elite'].includes(p);
+
   document.querySelectorAll('.qual-btn').forEach(btn => {
     const q = parseInt(btn.dataset.q || '0');
-    const locked = (q===1080 && !isProOrElite) || ((q===1440||q===2160) && !isElite);
-    // Cherche ou crée le badge lock
+    let locked = false;
+    let lockLabel = '';
+    if(q === 720  && !can720 ){ locked = true; lockLabel = '🔒 BYOK+'; }
+    if(q === 1080 && !can1080){ locked = true; lockLabel = '🔒 Pro+';  }
     let badge = btn.querySelector('.qual-lock');
     if(locked){
       if(!badge){
@@ -7352,40 +7385,37 @@ function _updateQualityLocks(plan){
         badge.style.cssText = 'font-size:8px;margin-top:1px;color:#ff6b6b';
         btn.appendChild(badge);
       }
-      badge.textContent = '🔒 ' + (q===1080 ? 'Pro+' : 'Élite');
+      badge.textContent = lockLabel;
       btn.style.opacity = '0.55';
     } else {
       if(badge) badge.remove();
       btn.style.opacity = '1';
     }
   });
-  // Si le plan est Free/Starter, forcer le défaut sur 720p
-  if(!isProOrElite && _composeQuality !== 720){
-    _composeQuality = 720;
-    document.querySelectorAll('.qual-btn').forEach(b => {
-      const bq = parseInt(b.dataset.q||'0');
-      if(bq===720){
-        b.style.background='var(--orange-dim)'; b.style.borderColor='rgba(255,107,53,0.5)'; b.style.color='var(--orange2)';
-      } else {
-        b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
-      }
-    });
-  }
+
+  // Définir la qualité par défaut selon plan et corriger si hors limite
+  const defaultQ = can1080 ? 1080 : (can720 ? 720 : 540);
+  const maxQ     = defaultQ;
+  // Toujours appliquer le defaultQ du plan (sélection automatique au login)
+  _composeQuality = Math.min(_composeQuality > 540 ? _composeQuality : defaultQ, maxQ);
+  // Sync visuel des boutons
+  document.querySelectorAll('.qual-btn').forEach(b => {
+    const bq = parseInt(b.dataset.q||'0');
+    if(bq === _composeQuality){
+      b.style.background='var(--orange-dim)'; b.style.borderColor='rgba(255,107,53,0.5)'; b.style.color='var(--orange2)';
+    } else {
+      b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+    }
+  });
 }
 
 function setQuality(q, btn){
   // ── Vérification plan ──
-  const plan = currentMember?.plan || 'free';
-  const isProOrElite = ['pro','elite'].includes(plan);
-  const isElite = plan === 'elite';
-  if(q === 1080 && !isProOrElite){
-    toast('⚠️ 1080p réservé aux plans Pro & Élite');
-    openUpgradeModal(); return;
-  }
-  if((q === 1440 || q === 2160) && !isElite){
-    toast('⚠️ 2K/4K réservé au plan Élite');
-    openUpgradeModal(); return;
-  }
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  const can720  = ['byok','pro','elite'].includes(plan);
+  const can1080 = ['pro','elite'].includes(plan);
+  if(q === 720  && !can720 ){ toast('⚠️ 720p réservé aux plans BYOK, Pro & Élite'); openUpgradeModal(); return; }
+  if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
   _composeQuality = q;
   // Sync tous les boutons qual-btn par data-q
   document.querySelectorAll('.qual-btn').forEach(b=>{
@@ -7399,10 +7429,9 @@ function setQuality(q, btn){
 }
 // Config par qualité : {W, H, bitrate, codec (H.264 High Profile), label}
 const QUALITY_CONFIGS = {
+  540:  { W:540,  H:960,  br:2_000_000,  codec:'avc1.64001e', label:'540p'  },  // Level 3.0 — natif Hedra
   720:  { W:720,  H:1280, br:4_000_000,  codec:'avc1.640020', label:'720p'  },  // Level 3.2
   1080: { W:1080, H:1920, br:8_000_000,  codec:'avc1.640028', label:'1080p' },  // Level 4.0
-  1440: { W:1440, H:2560, br:16_000_000, codec:'avc1.640033', label:'2K'    },  // Level 5.1
-  2160: { W:2160, H:3840, br:40_000_000, codec:'avc1.640034', label:'4K'    },  // Level 5.2
 };
 
 // ── COMPOSITION VIDÉO — MediaRecorder (canvas.captureStream + AudioContext)
@@ -7429,7 +7458,7 @@ async function composeVideo(btn){
   if(compBar){ compBar.style.display='block'; compFill.style.width='0%'; compPct.textContent='0%'; }
 
   // Qualité sélectionnée
-  const qCfg = QUALITY_CONFIGS[_composeQuality] || QUALITY_CONFIGS[1080];
+  const qCfg = QUALITY_CONFIGS[_composeQuality] || QUALITY_CONFIGS[540];
   const isSquare = cfg.format === 'square';
   const W = qCfg.W, H = isSquare ? qCfg.W : qCfg.H;
 
@@ -8030,7 +8059,7 @@ function renderLibrary(){
       </div>
       <div class="vid-meta">
         <div class="vid-title">${v.name}</div>
-        <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}</div>
+        <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
         <div class="vid-status">
           <div class="sdot ok"></div>
           <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span>
