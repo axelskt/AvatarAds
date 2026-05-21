@@ -460,6 +460,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
         Images IA
       </div>
+      <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
+        Affiliation
+      </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-gl">Ressources</div>
@@ -2053,7 +2057,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="result-card">
               <div class="result-title">📱 Publier sur les réseaux</div>
               <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Publie ta vidéo directement sur tes comptes connectés.</div>
-              <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier sur YouTube Shorts</button>
+              <button id="yt-result-upload-btn" onclick="uploadToYoutube()" style="display:none;width:100%;padding:13px;background:rgba(255,0,0,0.12);border:1px solid rgba(255,0,0,0.3);border-radius:10px;color:#ff6060;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:all .2s">▶️ Publier sur YouTube Shorts</button>
               <div id="yt-result-status" style="font-size:11px;font-family:var(--mono);text-align:center;margin-bottom:12px"></div>
 
               <!-- TikTok -->
@@ -2241,6 +2245,97 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
       </div>
     </div><!-- /youtube -->
+
+    <!-- ══ AFFILIATION ══ -->
+    <div class="view" id="v-affiliation">
+      <div class="lib-view" style="width:100%;max-width:680px;margin:0 auto;padding-bottom:40px">
+
+        <!-- HERO -->
+        <div style="background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,107,53,0.04));border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:28px;margin-bottom:20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:10px">💸</div>
+          <div style="font-size:20px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px">Programme d'Affiliation</div>
+          <div style="font-size:13px;color:var(--text2);max-width:420px;margin:0 auto">Gagne <strong style="color:var(--orange)">30% de commission récurrente</strong> sur chaque abonnement que tu parraine — à vie, sans limite.</div>
+        </div>
+
+        <!-- STATS -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--orange)">30%</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">COMMISSION</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Sur chaque paiement, à vie</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--green)">∞</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">COOKIE</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Pas d'expiration</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--text)">50€</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">MINIMUM</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Virement le 1er du mois</div>
+          </div>
+        </div>
+
+        <!-- LIEN AFFILIÉ -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+          <div class="flbl" style="margin-bottom:10px">🔗 Ton lien d'affiliation unique</div>
+          <div style="display:flex;gap:8px">
+            <input id="affLink" readonly style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none" value="Chargement…">
+            <button onclick="copyAffLink()" style="padding:10px 16px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Copier</button>
+          </div>
+          <!-- Partage -->
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button onclick="shareAff('twitter')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#1da1f2';this.style.color='#1da1f2'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">𝕏 Twitter</button>
+            <button onclick="shareAff('facebook')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#1877f2';this.style.color='#1877f2'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📘 Facebook</button>
+            <button onclick="shareAff('tiktok')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--text)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">🎵 TikTok</button>
+          </div>
+        </div>
+
+        <!-- STATS FILLEULS -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+          <div class="flbl" style="margin-bottom:14px">📊 Tes statistiques</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:var(--bg3);border-radius:10px;padding:14px">
+              <div style="font-size:24px;font-weight:800" id="affStatRefs">—</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Filleuls inscrits</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:14px">
+              <div style="font-size:24px;font-weight:800;color:var(--orange)" id="affStatEarnings">—</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Gains estimés</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:var(--mono)">Les conversions sont calculées une fois Stripe connecté · Paiement le 1er du mois via virement</div>
+        </div>
+
+        <!-- COMMENT ÇA MARCHE -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+          <div class="flbl" style="margin-bottom:14px">⚡ Comment ça marche</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">1</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Partage ton lien</div><div style="font-size:11px;color:var(--text3)">Sur TikTok, YouTube, Instagram, ta newsletter — partout</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">2</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Ils s'inscrivent</div><div style="font-size:11px;color:var(--text3)">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">3</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Tu gagnes 30% à vie</div><div style="font-size:11px;color:var(--text3)">Sur chaque renouvellement mensuel ou annuel — sans limite</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAIEMENT -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px">
+          <div class="flbl" style="margin-bottom:10px">💳 Recevoir mes paiements</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Indique ton email PayPal ou IBAN pour recevoir tes commissions le 1er de chaque mois (minimum 50€)</div>
+          <input id="affPaymentInfo" placeholder="PayPal : ton@email.com  ou  IBAN : FR76..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;box-sizing:border-box;margin-bottom:10px" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
+          <button onclick="saveAffPayment()" style="padding:9px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">Sauvegarder</button>
+        </div>
+
+      </div>
+    </div><!-- /affiliation -->
 
     <!-- ══ IMAGES IA ══ -->
     <div class="view" id="v-imagegen">
@@ -3044,7 +3139,8 @@ async function loadProfile(user){
   if(!profile){
     // Créer le profil manuellement si le trigger n'a pas fonctionné
     const { data } = await sb.from('profiles').insert({
-      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40
+      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40,
+      referred_by: localStorage.getItem('aa_ref') || null
     }).select().single();
     profile = data;
   }
@@ -3406,6 +3502,65 @@ async function testKey(k){
 }
 
 // ── NAV ──
+// ══ AFFILIATION ══
+function _affCode(userId){ return userId.replace(/-/g,'').substring(0,10).toUpperCase(); }
+function _affLink(code){ return 'https://avatarads.iamanager.fr/?ref=' + code; }
+
+function initAffiliation(){
+  if(!currentMember) return;
+  const code = _affCode(currentMember.id);
+  const link = _affLink(code);
+  const inp  = document.getElementById('affLink');
+  if(inp) inp.value = link;
+  // Charger stats filleuls depuis Supabase
+  sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', currentMember.id).then(({count})=>{
+    const el = document.getElementById('affStatRefs');
+    if(el) el.textContent = count || 0;
+    // Estimation gains (sans Stripe : juste infostatif)
+    const earn = document.getElementById('affStatEarnings');
+    if(earn) earn.textContent = '—';
+  });
+  // Charger le moyen de paiement sauvegardé
+  const saved = localStorage.getItem('aff_payment_' + currentMember.id);
+  if(saved){ const pi = document.getElementById('affPaymentInfo'); if(pi) pi.value = saved; }
+}
+
+function copyAffLink(){
+  if(!currentMember) return;
+  const link = _affLink(_affCode(currentMember.id));
+  navigator.clipboard.writeText(link).then(()=> toast('✅ Lien copié !'));
+}
+
+function shareAff(platform){
+  if(!currentMember) return;
+  const link = encodeURIComponent(_affLink(_affCode(currentMember.id)));
+  const msg  = encodeURIComponent('🚀 Génère des vidéos virales avec un avatar IA en quelques minutes — AvatarAds ');
+  const urls = {
+    twitter:  'https://twitter.com/intent/tweet?text=' + msg + link,
+    facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + link,
+    tiktok:   'https://www.tiktok.com' // pas de share URL directe, copier le lien
+  };
+  if(platform === 'tiktok'){ copyAffLink(); toast('🎵 Lien copié — colle-le dans ta bio TikTok'); return; }
+  window.open(urls[platform], '_blank');
+}
+
+function saveAffPayment(){
+  if(!currentMember) return;
+  const val = document.getElementById('affPaymentInfo')?.value.trim();
+  if(!val){ toast('⚠️ Remplis ton moyen de paiement'); return; }
+  localStorage.setItem('aff_payment_' + currentMember.id, val);
+  // Sauvegarder aussi dans Supabase (colonne affiliate_payment dans profiles)
+  sb.from('profiles').update({ affiliate_payment: val }).eq('id', currentMember.id).then(()=>{
+    toast('✅ Moyen de paiement sauvegardé');
+  });
+}
+
+// Capturer le ?ref= à l'arrivée sur la page et le stocker
+(function(){
+  const ref = new URLSearchParams(window.location.search).get('ref');
+  if(ref) localStorage.setItem('aa_ref', ref);
+})();
+
 // ── GÉNÉRATEUR D'IMAGES IA (DALL-E 3) ──
 async function generateImage(){
   const prompt = document.getElementById('imgPrompt').value.trim();

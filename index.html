@@ -859,5 +859,21 @@ document.querySelectorAll('a[href^="#"]').forEach(a=>{
   });
 });
 </script>
+<script>
+// Capturer le ?ref= et le passer à l'app via localStorage
+(function(){
+  var ref = new URLSearchParams(window.location.search).get('ref');
+  if(ref){ localStorage.setItem('aa_ref', ref); }
+  // Ajouter ?ref= aux liens vers l'app pour le conserver
+  var ref2 = ref || localStorage.getItem('aa_ref');
+  if(ref2){
+    document.querySelectorAll('a[href*="./app"]').forEach(function(a){
+      var url = new URL(a.href, location.href);
+      url.searchParams.set('ref', ref2);
+      a.href = url.toString();
+    });
+  }
+})();
+</script>
 </body>
 </html>
