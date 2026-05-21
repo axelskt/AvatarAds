@@ -3460,6 +3460,22 @@ const CLIPS_TIER_ACCESS = {
   byok:    ['starter', 'pro'],
 };
 
+// Durée max du clip gameplay (secondes) — s'applique UNIQUEMENT sans avatar sélectionné
+// Avec avatar → lipsync Hedra, pas de limite clip ici
+const CLIP_MAX_DURATION = {
+  free:    0,    // bloqué
+  starter: 40,   // 40 secondes
+  pro:     70,   // 70 secondes
+  elite:   120,  // 2 minutes
+  byok:    70,   // même que pro
+};
+
+// Retourne la durée max clip en secondes pour le plan actuel (0 = bloqué)
+function _clipMaxDuration(){
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  return CLIP_MAX_DURATION[p] ?? 0;
+}
+
 // Retourne les tiers accessibles pour le plan actuel
 function _clipsAccessTiers(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -3469,6 +3485,16 @@ function _clipsAccessTiers(){
 // Vérifie si un clip (avec son tier) est accessible
 function _clipAccessible(clipTier){
   return _clipsAccessTiers().includes(clipTier || 'starter');
+}
+
+// Tire un offset aléatoire valide dans un clip source (durée totale connue)
+// Retourne { start, end } en secondes — garanti que end <= totalDuration
+function _clipRandomSegment(totalDurationSec){
+  const dur = _clipMaxDuration();
+  if(!dur || totalDurationSec <= dur) return { start: 0, end: Math.min(dur, totalDurationSec) };
+  const maxStart = totalDurationSec - dur;
+  const start = Math.floor(Math.random() * maxStart);
+  return { start, end: start + dur };
 }
 
 // Structure d'exemple pour la future bibliothèque de clips
