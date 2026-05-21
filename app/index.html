@@ -7802,6 +7802,18 @@ async function startGeneration(){
   setStep('gp3','on');
   let hedraUrl='';
 
+  // ── Détermine si un vrai avatar est sélectionné pour le lipsync Hedra ──
+  const _avatarImgUrl = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
+  const _hasRealAvatar = !!(selAvatar.localFile || selAvatar.localUrl || _avatarImgUrl);
+
+  // Adapter le label Step 3 selon le mode
+  const gp3El = document.getElementById('gp3');
+  if(gp3El){
+    if(window._bypassHedraOn) gp3El.innerHTML = '<div class="gp-icon">⚡</div>Re-composition vidéo';
+    else if(_hasRealAvatar)   gp3El.innerHTML = '<div class="gp-icon">🤖</div>Lipsync avatar (Hedra)';
+    else                      gp3El.innerHTML = '<div class="gp-icon">🎙️</div>Audio sur gameplay';
+  }
+
   if(window._bypassHedraOn && window._bypassHedraUrl){
     // ── MODE BYPASS : vidéo existante, 0 crédit — vérifier quota ──
     if(_bypassLimit() <= 0){
@@ -7817,8 +7829,9 @@ async function startGeneration(){
     _updateBypassUI();
     toast('⚡ Bypass Hedra — ' + _bypassRemaining() + ' re-composition' + (_bypassRemaining()!==1?'s':'') + ' restante' + (_bypassRemaining()!==1?'s':'') + ' ce mois');
     setStep('gp3','done');
-  } else if(audioBlob){
-    // ── MODE NORMAL : générer via Hedra API ──
+
+  } else if(audioBlob && _hasRealAvatar){
+    // ── MODE LIPSYNC : avatar sélectionné → Hedra génère la vidéo animée ──
     let hedraAudioBlob = audioBlob;
     if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
       try {
@@ -7831,6 +7844,14 @@ async function startGeneration(){
     }
     hedraUrl = await callHedra(hedraAudioBlob);
     setStep('gp3','done');
+
+  } else if(audioBlob && !_hasRealAvatar){
+    // ── MODE AUDIO SEUL : pas d'avatar sélectionné (gameplay/POV/enregistreur) ──
+    // On skip Hedra — l'audio est posé directement sur le gameplay/fond
+    // hedraUrl reste '' → la composition utilisera audioBlob + gameplay
+    setStep('gp3','done');
+    toast('🎙️ Pas d\'avatar — audio posé sur le gameplay directement');
+
   } else {
     setStep('gp3','done');
   }
