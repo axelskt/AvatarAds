@@ -3503,16 +3503,37 @@ function _clipRandomSegment(totalDurationSec){
 // → évite que la musique / effets sonores du gameplay parasitent la vidéo finale
 const CLIP_STRIP_AUDIO = true; // ne jamais passer à false
 
-// Structure d'exemple pour la future bibliothèque de clips
-// (sera peuplée quand on build la feature gameplay presets)
-// const PRESET_CLIPS = [
-//   { id: 'subway_1',  tier: 'starter', label: 'Subway Surfers',      category: 'gaming' },
-//   { id: 'minecraft', tier: 'starter', label: 'Minecraft parkour',   category: 'gaming' },
-//   { id: 'pov_cafe',  tier: 'pro',     label: 'POV Café du matin',   category: 'lifestyle' },
-//   { id: 'pov_urban', tier: 'pro',     label: 'POV Marche urbaine',  category: 'lifestyle' },
-//   { id: 'rayban_1',  tier: 'elite',   label: 'POV Ray-Ban Meta — Rue Paris', category: 'premium' },
-//   { id: 'rayban_2',  tier: 'elite',   label: 'POV Vision Pro — Interface', category: 'premium' },
-// ];
+// ── Bibliothèque de clips preset ─────────────────────────────────────────────
+const R2_BASE = 'https://pub-03f99b27ce3f4ff0a8b75ec097c1a64b.r2.dev';
+
+const PRESET_CLIPS = [
+  // ── STARTER — Gaming ──────────────────────────────────────────────────────
+  { id: 'minecraft_parkour', tier: 'starter', label: 'Minecraft Parkour',  category: 'gaming',    emoji: '⛏️',  segments: 8 },
+  { id: 'subway_surfer',     tier: 'starter', label: 'Subway Surfers',     category: 'gaming',    emoji: '🛹',  segments: 8 },
+  { id: 'gta5_ramp',         tier: 'starter', label: 'GTA 5 Mega Ramp',    category: 'gaming',    emoji: '🚗',  segments: 8 },
+  { id: 'trackmania',        tier: 'starter', label: 'Trackmania',         category: 'gaming',    emoji: '🏎️', segments: 8 },
+  // ── STARTER — ASMR ────────────────────────────────────────────────────────
+  { id: 'soap_cutting',      tier: 'starter', label: 'Soap Cutting ASMR',  category: 'asmr',      emoji: '🧼',  segments: 8 },
+  { id: 'slime_asmr1',       tier: 'starter', label: 'Slime ASMR',         category: 'asmr',      emoji: '🟢',  segments: 8 },
+  { id: 'slime_asmr2',       tier: 'starter', label: 'Slime ASMR 2',       category: 'asmr',      emoji: '🫧',  segments: 8 },
+  // ── PRO — Lifestyle / POV ─────────────────────────────────────────────────
+  { id: 'ruban_driving',     tier: 'pro',     label: 'Ruban Driving',      category: 'lifestyle', emoji: '🛣️', segments: 8 },
+  { id: 'driving_seoul',     tier: 'pro',     label: 'Driving Seoul',      category: 'lifestyle', emoji: '🌆',  segments: 8 },
+  { id: 'walking_pov',       tier: 'pro',     label: 'Walking POV',        category: 'lifestyle', emoji: '🚶',  segments: 8 },
+];
+
+// Retourne l'URL d'un segment aléatoire pour un clip donné
+function _clipUrl(clipId) {
+  const clip = PRESET_CLIPS.find(c => c.id === clipId);
+  if (!clip) return null;
+  const seg = Math.floor(Math.random() * clip.segments);
+  return `${R2_BASE}/${clipId}_${String(seg).padStart(2,'0')}.mp4`;
+}
+
+// Retourne tous les clips accessibles pour le plan actuel
+function _accessibleClips() {
+  return PRESET_CLIPS.filter(c => _clipAccessible(c.tier));
+}
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
