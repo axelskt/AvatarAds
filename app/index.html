@@ -346,6 +346,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .gp-step.done .gp-icon{background:var(--green);color:#000}
 .gp-step.on .gp-icon{background:var(--orange);color:#fff}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes recPulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
 .spinner{width:12px;height:12px;border:2px solid rgba(255,107,53,.3);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
 
 /* TOAST */
@@ -459,6 +460,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="nav('imagegen',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
         Images IA
+      </div>
+      <div class="nav-i" onclick="nav('recorder',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="5" height="7" rx="2.5"/><path d="M2.5 7.5A4.5 4.5 0 0011 9.5M7.5 11v2.5M5.5 13.5h4"/></svg>
+        Enregistreur
       </div>
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
@@ -2418,6 +2423,81 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
     </div><!-- /imagegen -->
 
+    <!-- ══════════════════════════════════════════════════════ ENREGISTREUR ══ -->
+    <div class="view" id="v-recorder">
+      <div class="lib-view" style="width:100%;max-width:680px;margin:0 auto">
+
+        <div class="ph" style="margin-bottom:20px">
+          <div>
+            <div class="ph-title">🎙️ Enregistreur vocal</div>
+            <div class="ph-sub">Enregistre ta voix, supprime les silences, remplace des passages — puis injecte directement dans le générateur</div>
+          </div>
+        </div>
+
+        <!-- MAIN CARD -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px;margin-bottom:14px">
+
+          <!-- WAVEFORM + TIME -->
+          <div style="position:relative;margin-bottom:16px">
+            <canvas id="recWaveform" height="80" style="width:100%;display:block;border-radius:10px;background:var(--bg3);cursor:crosshair"></canvas>
+            <div id="recCursorHint" style="display:none;position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,.5);padding:2px 8px;border-radius:4px;pointer-events:none">Clique pour positionner le curseur</div>
+          </div>
+
+          <!-- TIME ROW -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <div style="font-size:28px;font-weight:900;letter-spacing:-1.5px;font-family:var(--mono)" id="recTimeDisplay">0:00</div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+              <div id="recDurDisplay" style="font-size:11px;font-family:var(--mono);color:var(--text3)">—</div>
+              <div id="recStatsDisplay" style="display:none;font-size:10px;font-family:var(--mono);color:var(--green)"></div>
+            </div>
+          </div>
+
+          <!-- RECORD BUTTON -->
+          <div style="display:flex;justify-content:center;margin-bottom:24px">
+            <button id="recMainBtn" onclick="recToggle()" style="width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all .2s;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.4);color:#ef4444;position:relative">
+              <span id="recMainBtnIcon">⏺</span>
+              <div id="recPulse" style="display:none;position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(239,68,68,0.35);animation:recPulse 1.2s ease-out infinite"></div>
+            </button>
+          </div>
+
+          <!-- CONTROLS ROW -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:90px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+              ▶ Écouter
+            </button>
+            <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:90px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+              ✂️ Remplacer
+            </button>
+            <button id="recSilenceBtn" onclick="recToggleSilence()" style="padding:10px 14px;background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
+              🔇 Silences ON
+            </button>
+          </div>
+
+        </div><!-- /main card -->
+
+        <!-- REPLACE MODE BANNER -->
+        <div id="recReplaceBanner" style="display:none;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.3);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:none">
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px;color:var(--orange2)">✂️ Mode Remplacement actif</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">Clique sur la waveform pour positionner le curseur, puis lance l'enregistrement</div>
+          <div style="display:flex;gap:8px">
+            <button id="recReplaceStartBtn" onclick="recStartReplacing()" style="flex:1;padding:10px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔴 Enregistrer depuis le curseur</button>
+            <button onclick="recCancelReplace()" style="padding:10px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">Annuler</button>
+          </div>
+        </div>
+
+        <!-- ACTIONS BOTTOM -->
+        <div style="display:flex;gap:10px">
+          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:12px 18px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px">
+            ⬇ WAV
+          </button>
+          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,107,53,0.3)" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+            🚀 Utiliser dans le générateur
+          </button>
+        </div>
+
+      </div>
+    </div><!-- /recorder -->
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -3811,6 +3891,432 @@ async function generateImage(){
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ── ENREGISTREUR VOCAL ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── État ──
+let recCtx            = null;
+let recStream         = null;
+let recMediaRecorder  = null;
+let recChunks         = [];
+let recAudioBuffer    = null;   // buffer traité (silences supprimés)
+let recRawBuffer      = null;   // buffer brut
+let recSilenceOn      = true;
+let recState          = 'idle'; // idle | recording | processing | recorded | playing | replacing
+let recPlaySrc        = null;
+let recPlayStartedAt  = 0;
+let recPlayOffset     = 0;
+let recAnimId         = null;
+let recRecStartTime   = 0;
+let recLiveAnalyser   = null;
+let recLiveData       = null;
+let recLiveHistory    = [];
+let recReplaceCursor  = 0;      // secondes
+let recInReplace      = false;
+let recReplaceStream  = null;
+let recReplaceRecorder= null;
+let recReplaceChunks  = [];
+
+// ── Init ──
+function recInit(){
+  const canvas = document.getElementById('recWaveform');
+  if(!canvas) return;
+  canvas.addEventListener('click', recCanvasClick);
+  canvas.addEventListener('mousemove', recCanvasHover);
+  recDrawIdle();
+  recUpdateUI();
+}
+
+// ── Waveform helpers ──
+function recDrawIdle(){
+  const canvas = document.getElementById('recWaveform');
+  if(!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  for(let i=0;i<W;i+=3){
+    const h = 4 + Math.random()*6;
+    ctx.fillRect(i, (H-h)/2, 1.5, h);
+  }
+}
+
+function recRenderWaveform(buffer, cursorSec){
+  const canvas = document.getElementById('recWaveform');
+  if(!canvas||!buffer) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  const ctx2d = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const data = buffer.getChannelData(0);
+  const step = Math.max(1, Math.floor(data.length/W));
+  ctx2d.clearRect(0,0,W,H);
+  const playRatio = (cursorSec!=null && buffer.duration>0) ? cursorSec/buffer.duration : -1;
+  for(let i=0;i<W;i++){
+    let peak=0;
+    for(let j=0;j<step;j++) peak=Math.max(peak,Math.abs(data[i*step+j]||0));
+    const h = Math.max(2, peak*H*0.88);
+    const played = playRatio>=0 && i/W<=playRatio;
+    ctx2d.fillStyle = played ? 'rgba(255,107,53,0.9)' : 'rgba(255,255,255,0.2)';
+    ctx2d.fillRect(i, (H-h)/2, 1.2, h);
+  }
+  // Curseur playback
+  if(playRatio>=0){
+    const cx = playRatio*W;
+    ctx2d.strokeStyle='#fff'; ctx2d.lineWidth=1.5;
+    ctx2d.beginPath(); ctx2d.moveTo(cx,0); ctx2d.lineTo(cx,H); ctx2d.stroke();
+  }
+  // Curseur remplacement (orange pointillé)
+  if(recInReplace && buffer.duration>0){
+    const rcx=(recReplaceCursor/buffer.duration)*W;
+    ctx2d.strokeStyle='#ff6b35'; ctx2d.lineWidth=2;
+    ctx2d.setLineDash([4,3]);
+    ctx2d.beginPath(); ctx2d.moveTo(rcx,0); ctx2d.lineTo(rcx,H); ctx2d.stroke();
+    ctx2d.setLineDash([]);
+  }
+}
+
+function recRenderLive(){
+  const canvas = document.getElementById('recWaveform');
+  if(!canvas||!recLiveAnalyser) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  const ctx2d = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  recLiveAnalyser.getFloatTimeDomainData(recLiveData);
+  let peak=0;
+  for(let i=0;i<recLiveData.length;i++) peak=Math.max(peak,Math.abs(recLiveData[i]));
+  recLiveHistory.push(peak);
+  if(recLiveHistory.length>W) recLiveHistory.shift();
+  ctx2d.clearRect(0,0,W,H);
+  const bw = W/Math.max(W,recLiveHistory.length);
+  for(let i=0;i<recLiveHistory.length;i++){
+    const h = Math.max(2, recLiveHistory[i]*H*0.88);
+    const alpha = 0.35 + (i/recLiveHistory.length)*0.65;
+    ctx2d.fillStyle=`rgba(239,68,68,${alpha})`;
+    ctx2d.fillRect(i*bw, (H-h)/2, Math.max(1,bw-0.5), h);
+  }
+}
+
+function recCanvasClick(e){
+  if(!recAudioBuffer||recState==='recording') return;
+  const rect=e.target.getBoundingClientRect();
+  const ratio=(e.clientX-rect.left)/rect.width;
+  const t=ratio*recAudioBuffer.duration;
+  recReplaceCursor=t; recPlayOffset=t;
+  if(recState==='playing'){ recStopPlayback(); recPlayOffset=t; recStartPlayback(); }
+  else{ recRenderWaveform(recAudioBuffer,t); _recUpdateTime(t); }
+}
+function recCanvasHover(e){
+  const hint=document.getElementById('recCursorHint');
+  if(hint) hint.style.display = recAudioBuffer?'block':'none';
+}
+
+function _recUpdateTime(cur, total){
+  const fmt=s=>{ const m=Math.floor(s/60), sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; };
+  const el=document.getElementById('recTimeDisplay'); if(el) el.textContent=fmt(cur||0);
+  if(total!=null){ const d=document.getElementById('recDurDisplay'); if(d) d.textContent='/ '+fmt(total); }
+}
+
+// ── Enregistrement ──
+async function recToggle(){
+  if(recState==='idle'||recState==='recorded') await recStartRecording();
+  else if(recState==='recording') recStopRecording();
+}
+
+async function recStartRecording(){
+  try{
+    if(recState==='playing') recStopPlayback();
+    recStream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    recCtx = new AudioContext();
+    recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
+    recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
+    const src = recCtx.createMediaStreamSource(recStream);
+    src.connect(recLiveAnalyser);
+    recChunks=[];
+    recMediaRecorder = new MediaRecorder(recStream, {mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    recMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recChunks.push(e.data); };
+    recMediaRecorder.onstop = recOnStop;
+    recMediaRecorder.start(100);
+    recRecStartTime=Date.now(); recLiveHistory=[];
+    recState='recording'; recUpdateUI();
+    recLiveLoop();
+    toast('🔴 Enregistrement en cours…');
+  }catch(e){
+    toast('⚠️ Micro inaccessible — '+e.message);
+  }
+}
+
+function recStopRecording(){
+  if(recMediaRecorder&&recMediaRecorder.state!=='inactive') recMediaRecorder.stop();
+  if(recStream) recStream.getTracks().forEach(t=>t.stop());
+  recState='processing'; recUpdateUI();
+  cancelAnimationFrame(recAnimId);
+}
+
+async function recOnStop(){
+  const blob = new Blob(recChunks, {type:'audio/webm'});
+  const arrBuf = await blob.arrayBuffer();
+  recRawBuffer = await recCtx.decodeAudioData(arrBuf);
+  const processed = recSilenceOn ? _recRemoveSilence(recRawBuffer) : recRawBuffer;
+  recAudioBuffer = processed;
+  const removed = recRawBuffer.duration - recAudioBuffer.duration;
+  const stats=document.getElementById('recStatsDisplay');
+  if(stats){
+    if(removed>0.3){ stats.textContent='✂️ '+removed.toFixed(1)+'s de silences supprimés'; stats.style.display='block'; }
+    else{ stats.style.display='none'; }
+  }
+  recPlayOffset=0;
+  recState='recorded'; recUpdateUI();
+  recRenderWaveform(recAudioBuffer, 0);
+  _recUpdateTime(0, recAudioBuffer.duration);
+  document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
+  toast('✅ Enregistrement prêt');
+}
+
+function recLiveLoop(){
+  if(recState!=='recording') return;
+  recRenderLive();
+  const elapsed=(Date.now()-recRecStartTime)/1000;
+  _recUpdateTime(elapsed);
+  recAnimId=requestAnimationFrame(recLiveLoop);
+}
+
+// ── Suppression silences ──
+function _recRemoveSilence(buffer, threshold=0.007, minSilMs=380, keepSilMs=80){
+  const sr=buffer.sampleRate;
+  const input=buffer.getChannelData(0);
+  const winSamples=Math.round(sr*0.022); // ~22ms windows
+  const minSilWin=Math.round(minSilMs/22);
+  const keepSilWin=Math.round(keepSilMs/22);
+  const kept=[]; let silWin=0;
+  for(let i=0;i<input.length;i+=winSamples){
+    const chunk=input.slice(i,Math.min(i+winSamples,input.length));
+    let rms=0; for(let j=0;j<chunk.length;j++) rms+=chunk[j]*chunk[j];
+    rms=Math.sqrt(rms/chunk.length);
+    if(rms>=threshold){ silWin=0; kept.push(chunk); }
+    else{ silWin++; if(silWin<=keepSilWin) kept.push(chunk); }
+  }
+  // Couper silence de fin
+  while(kept.length>0){
+    const last=kept[kept.length-1]; let rms=0;
+    for(let j=0;j<last.length;j++) rms+=last[j]*last[j];
+    if(Math.sqrt(rms/last.length)<threshold) kept.pop(); else break;
+  }
+  const totalLen=Math.max(1,kept.reduce((s,c)=>s+c.length,0));
+  const result=recCtx.createBuffer(1,totalLen,sr);
+  const out=result.getChannelData(0); let off=0;
+  for(const chunk of kept){ out.set(chunk,off); off+=chunk.length; }
+  return result;
+}
+
+// ── Playback ──
+function recPlayPause(){
+  if(recState==='playing') recStopPlayback();
+  else if(recState==='recorded') recStartPlayback();
+}
+
+function recStartPlayback(){
+  if(!recAudioBuffer||!recCtx) return;
+  recPlaySrc=recCtx.createBufferSource();
+  recPlaySrc.buffer=recAudioBuffer;
+  recPlaySrc.connect(recCtx.destination);
+  recPlaySrc.start(0, Math.min(recPlayOffset, recAudioBuffer.duration-0.01));
+  recPlayStartedAt=recCtx.currentTime-recPlayOffset;
+  recPlaySrc.onended=()=>{
+    if(recState==='playing'){ recState='recorded'; recPlayOffset=0; recRenderWaveform(recAudioBuffer,0); recUpdateUI(); _recUpdateTime(0,recAudioBuffer.duration); }
+  };
+  recState='playing'; recUpdateUI(); recPlayLoop();
+}
+
+function recStopPlayback(){
+  if(recPlaySrc){ try{recPlaySrc.stop();}catch(e){} recPlaySrc=null; }
+  recPlayOffset=Math.min((recCtx?recCtx.currentTime-recPlayStartedAt:0), recAudioBuffer?.duration||0);
+  recState='recorded'; recUpdateUI(); cancelAnimationFrame(recAnimId);
+  recRenderWaveform(recAudioBuffer, recPlayOffset);
+}
+
+function recPlayLoop(){
+  if(recState!=='playing'||!recCtx||!recAudioBuffer) return;
+  const t=recCtx.currentTime-recPlayStartedAt;
+  recRenderWaveform(recAudioBuffer,t);
+  _recUpdateTime(t,recAudioBuffer.duration);
+  recAnimId=requestAnimationFrame(recPlayLoop);
+}
+
+// ── Mode remplacement ──
+function recEnterReplace(){
+  if(!recAudioBuffer) return;
+  if(recState==='playing') recStopPlayback();
+  recInReplace=true; recUpdateUI();
+  recRenderWaveform(recAudioBuffer, recPlayOffset);
+  const banner=document.getElementById('recReplaceBanner');
+  if(banner) banner.style.display='block';
+  toast('Clique sur la waveform pour positionner le curseur ✂️');
+}
+
+function recCancelReplace(){
+  recInReplace=false;
+  const banner=document.getElementById('recReplaceBanner');
+  if(banner) banner.style.display='none';
+  recUpdateUI();
+  recRenderWaveform(recAudioBuffer, recPlayOffset);
+}
+
+async function recStartReplacing(){
+  try{
+    recReplaceStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    recReplaceChunks=[];
+    recReplaceRecorder=new MediaRecorder(recReplaceStream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    recReplaceRecorder.ondataavailable=e=>{ if(e.data.size>0) recReplaceChunks.push(e.data); };
+    recReplaceRecorder.onstop=recOnReplaceStop;
+    recReplaceRecorder.start(100);
+    const startBtn=document.getElementById('recReplaceStartBtn');
+    if(startBtn){ startBtn.textContent='⏹ Arrêter le remplacement'; startBtn.onclick=recStopReplacing; }
+    toast('🔴 Remplacement en cours depuis '+_recFmt(recReplaceCursor)+'…');
+  }catch(e){ toast('⚠️ Micro inaccessible'); recCancelReplace(); }
+}
+
+function recStopReplacing(){
+  if(recReplaceRecorder&&recReplaceRecorder.state!=='inactive') recReplaceRecorder.stop();
+  if(recReplaceStream) recReplaceStream.getTracks().forEach(t=>t.stop());
+}
+
+async function recOnReplaceStop(){
+  const blob=new Blob(recReplaceChunks,{type:'audio/webm'});
+  const arrBuf=await blob.arrayBuffer();
+  const tmpCtx=new AudioContext();
+  const newBuf=await tmpCtx.decodeAudioData(arrBuf);
+  const sr=recAudioBuffer.sampleRate;
+  const orig=recAudioBuffer.getChannelData(0);
+  const cursorSamples=Math.round(recReplaceCursor*sr);
+  const afterSamples=Math.round((recReplaceCursor+newBuf.duration)*sr);
+  const before=orig.slice(0,cursorSamples);
+  // Resample new buffer si sampleRate différent
+  let newData;
+  if(newBuf.sampleRate===sr){ newData=newBuf.getChannelData(0); }
+  else{
+    const ratio=newBuf.sampleRate/sr;
+    newData=new Float32Array(Math.round(newBuf.getChannelData(0).length/ratio));
+    const src=newBuf.getChannelData(0);
+    for(let i=0;i<newData.length;i++) newData[i]=src[Math.round(i*ratio)]||0;
+  }
+  const after=afterSamples<orig.length ? orig.slice(afterSamples) : new Float32Array(0);
+  const total=before.length+newData.length+after.length;
+  const spliced=recCtx.createBuffer(1,Math.max(1,total),sr);
+  const out=spliced.getChannelData(0);
+  out.set(before,0); out.set(newData,before.length); out.set(after,before.length+newData.length);
+  recAudioBuffer=recSilenceOn?_recRemoveSilence(spliced):spliced;
+  const stats=document.getElementById('recStatsDisplay');
+  if(stats) stats.style.display='none';
+  recInReplace=false;
+  const banner=document.getElementById('recReplaceBanner');
+  if(banner) banner.style.display='none';
+  recPlayOffset=recReplaceCursor;
+  recState='recorded'; recUpdateUI();
+  recRenderWaveform(recAudioBuffer,recPlayOffset);
+  _recUpdateTime(recPlayOffset,recAudioBuffer.duration);
+  document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
+  toast('✅ Passage remplacé');
+}
+
+function recToggleSilence(){
+  recSilenceOn=!recSilenceOn;
+  const btn=document.getElementById('recSilenceBtn');
+  if(btn){
+    btn.textContent=recSilenceOn?'🔇 Silences ON':'🔇 Silences OFF';
+    btn.style.background=recSilenceOn?'rgba(0,217,126,0.08)':'rgba(255,255,255,0.04)';
+    btn.style.borderColor=recSilenceOn?'rgba(0,217,126,0.25)':'var(--border2)';
+    btn.style.color=recSilenceOn?'var(--green)':'var(--text3)';
+  }
+  if(recRawBuffer&&recState==='recorded'){
+    recAudioBuffer=recSilenceOn?_recRemoveSilence(recRawBuffer):recRawBuffer;
+    recPlayOffset=0;
+    recRenderWaveform(recAudioBuffer,0);
+    _recUpdateTime(0,recAudioBuffer.duration);
+    document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
+    const removed=recRawBuffer.duration-recAudioBuffer.duration;
+    const stats=document.getElementById('recStatsDisplay');
+    if(stats){ if(recSilenceOn&&removed>0.3){stats.textContent='✂️ '+removed.toFixed(1)+'s supprimés';stats.style.display='block';}else{stats.style.display='none';} }
+  }
+}
+
+// ── Téléchargement ──
+function recDownload(){
+  if(!recAudioBuffer) return;
+  const wav=_recToWav(recAudioBuffer);
+  const url=URL.createObjectURL(wav);
+  const a=document.createElement('a'); a.href=url; a.download='enregistrement-avatarads.wav'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+// ── Utiliser dans le générateur ──
+async function recUseInGenerator(){
+  if(!recAudioBuffer) return;
+  const wav=_recToWav(recAudioBuffer);
+  const file=new File([wav],'voix-enregistree.wav',{type:'audio/wav'});
+  // Injecte dans le générateur en bypassant ElevenLabs (même chemin que MP4 audio)
+  window.mp4AudioFile=file;
+  window.mp4AudioEnabled=true;
+  // Afficher le nom dans la zone voix
+  const fn=document.getElementById('voiceFileName');
+  const vdi=document.getElementById('voiceDropContent');
+  const vfi=document.getElementById('voiceFileInfo');
+  if(fn) fn.textContent='🎙️ voix-enregistree.wav ('+_recFmt(recAudioBuffer.duration)+')';
+  if(vdi) vdi.style.display='none';
+  if(vfi) vfi.style.display='block';
+  const navEl=document.querySelector('.nav-i[onclick*="generator"]');
+  nav('generator',navEl);
+  await new Promise(r=>setTimeout(r,80));
+  goToStep(3);
+  toast('✅ Audio injecté — passe à l\'étape Génération');
+}
+
+// ── WAV encoder ──
+function _recToWav(buffer){
+  const sr=buffer.sampleRate, samples=buffer.getChannelData(0), len=samples.length;
+  const ab=new ArrayBuffer(44+len*2), v=new DataView(ab);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+len*2,true);
+  ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,len*2,true);
+  for(let i=0;i<len;i++) v.setInt16(44+i*2,Math.max(-32768,Math.min(32767,Math.round(samples[i]*32767))),true);
+  return new Blob([ab],{type:'audio/wav'});
+}
+
+function _recFmt(s){ const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
+
+// ── UI update ──
+function recUpdateUI(){
+  const mainBtn=document.getElementById('recMainBtn');
+  const mainIcon=document.getElementById('recMainBtnIcon');
+  const pulse=document.getElementById('recPulse');
+  const playBtn=document.getElementById('recPlayBtn');
+  const replBtn=document.getElementById('recReplaceBtn');
+  const dlBtn=document.getElementById('recDownloadBtn');
+  const useBtn=document.getElementById('recUseBtn');
+  const has=!!recAudioBuffer;
+  const isRec=recState==='recording';
+  const isPlay=recState==='playing';
+  const isProc=recState==='processing';
+  if(mainIcon) mainIcon.textContent=isRec?'⏹':isProc?'⏳':'⏺';
+  if(mainBtn){
+    mainBtn.disabled=isProc;
+    mainBtn.style.background=isRec?'rgba(239,68,68,0.25)':'rgba(239,68,68,0.12)';
+    mainBtn.style.borderColor=isRec?'rgba(239,68,68,0.7)':'rgba(239,68,68,0.4)';
+  }
+  if(pulse) pulse.style.display=isRec?'block':'none';
+  if(playBtn){ playBtn.disabled=!has||isRec||isProc; playBtn.innerHTML=isPlay?'⏸ Pause':'▶ Écouter'; }
+  if(replBtn){ replBtn.disabled=!has||isRec||isProc; }
+  if(dlBtn) dlBtn.disabled=!has||isRec||isProc;
+  if(useBtn) useBtn.disabled=!has||isRec||isProc;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+
 function nav(id,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
@@ -3820,6 +4326,7 @@ function nav(id,el){
   if(id==='youtube')    refreshYoutubeView();
   if(id==='imagegen')   _updateImgQuotaLabel();
   if(id==='affiliation') initAffiliation();
+  if(id==='recorder')   recInit();
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
