@@ -229,6 +229,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
   <div class="nav-links">
     <a href="#how">Comment ça marche</a>
     <a href="#pricing">Tarifs</a>
+    <a href="#affiliation" style="color:var(--orange);font-weight:700">Affiliation</a>
     <a href="#faq">FAQ</a>
   </div>
   <div class="nav-actions">
@@ -844,6 +845,82 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
 
   </div>
 </section>
+
+<!-- AFFILIATION -->
+<section id="affiliation" style="padding:100px 0 80px">
+  <div class="container" style="text-align:center">
+    <div class="eyebrow">Programme Affilié</div>
+    <h2>Recommande AvatarAds.<br><em>Touche 30% à vie.</em></h2>
+    <p class="section-sub" style="margin:0 auto 56px;max-width:480px">Commission récurrente chaque mois, automatiquement, pour toujours. Zéro effort après le partage de ton lien.</p>
+
+    <!-- CALCULATEUR SLIDER -->
+    <div style="max-width:620px;margin:0 auto 56px;background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px 44px">
+      <p style="margin:0 0 24px;font-size:14px;color:rgba(255,255,255,0.45);font-family:'Inter',sans-serif" id="refSliderLabel">Si je ramène <strong style="color:#fff" id="refCount">50</strong> filleuls/mois</p>
+
+      <!-- Slider -->
+      <div style="position:relative;margin-bottom:28px">
+        <input type="range" id="refSlider" min="1" max="500" value="50"
+          style="width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--orange) 0%,var(--orange) 10%,rgba(255,255,255,0.12) 10%,rgba(255,255,255,0.12) 100%)"
+          oninput="updateRefCalc(this.value)">
+        <div style="display:flex;justify-content:space-between;margin-top:10px">
+          <span style="font-size:11px;color:rgba(255,255,255,0.25);font-family:'Inter',sans-serif">0</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.25);font-family:'Inter',sans-serif">250</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.25);font-family:'Inter',sans-serif">500</span>
+        </div>
+      </div>
+
+      <!-- Montant -->
+      <div style="margin-bottom:8px">
+        <span id="refAmount" style="font-size:56px;font-weight:900;color:var(--orange);font-family:'Inter',sans-serif;letter-spacing:-2px;line-height:1">750€</span>
+        <span style="font-size:16px;color:rgba(255,255,255,0.4);font-family:'Inter',sans-serif;margin-left:4px">/mois</span>
+      </div>
+      <p id="refAnnual" style="margin:0;font-size:14px;color:rgba(255,255,255,0.35);font-family:'Inter',sans-serif">9 000€ par an</p>
+    </div>
+
+    <!-- 3 stats -->
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:48px">
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px 32px;min-width:160px">
+        <div style="font-size:28px;font-weight:900;color:#fff;font-family:'Inter',sans-serif;letter-spacing:-1px">30%</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);font-family:'Inter',sans-serif;margin-top:4px">Commission récurrente</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px 32px;min-width:160px">
+        <div style="font-size:28px;font-weight:900;color:#fff;font-family:'Inter',sans-serif;letter-spacing:-1px">0€</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);font-family:'Inter',sans-serif;margin-top:4px">Pour commencer</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px 32px;min-width:160px">
+        <div style="font-size:28px;font-weight:900;color:#fff;font-family:'Inter',sans-serif;letter-spacing:-1px">∞</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);font-family:'Inter',sans-serif;margin-top:4px">Durée des commissions</div>
+      </div>
+    </div>
+
+    <a href="./app/" style="display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:var(--orange);color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:800;border-radius:12px;text-decoration:none;letter-spacing:-0.2px;box-shadow:0 8px 28px rgba(255,107,53,0.35);transition:all .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 36px rgba(255,107,53,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 28px rgba(255,107,53,0.35)'">
+      Créer mon compte affilié →
+    </a>
+  </div>
+</section>
+
+<style>
+#refSlider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--orange);cursor:pointer;box-shadow:0 0 0 4px rgba(255,107,53,0.2)}
+#refSlider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--orange);cursor:pointer;border:none;box-shadow:0 0 0 4px rgba(255,107,53,0.2)}
+</style>
+
+<script>
+function updateRefCalc(val){
+  val = parseInt(val);
+  document.getElementById('refCount').textContent = val;
+  // Revenus basés sur mix de plans : 70% Starter (29.99€), 25% Pro (49.99€), 5% Élite (89.99€)
+  const avgPlan = 0.70 * 29.99 + 0.25 * 49.99 + 0.05 * 89.99;
+  const monthly = Math.round(val * avgPlan * 0.30);
+  const annual  = Math.round(monthly * 12);
+  document.getElementById('refAmount').textContent = monthly.toLocaleString('fr-FR') + '€';
+  document.getElementById('refAnnual').textContent  = annual.toLocaleString('fr-FR') + '€ par an';
+  // Update slider gradient
+  const pct = (val / 500 * 100).toFixed(1);
+  document.getElementById('refSlider').style.background =
+    `linear-gradient(to right,var(--orange) 0%,var(--orange) ${pct}%,rgba(255,255,255,0.12) ${pct}%,rgba(255,255,255,0.12) 100%)`;
+}
+updateRefCalc(50);
+</script>
 
 <!-- FAQ -->
 <section id="faq" style="padding-top:0">
