@@ -456,13 +456,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="13" height="10" rx="1.5"/><path d="M5 1v2M10 1v2"/></svg>
         Bibliothèque
       </div>
-      <div class="nav-i" onclick="nav('social',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11.5" cy="3.5" r="1.8"/><circle cx="3.5" cy="7.5" r="1.8"/><circle cx="11.5" cy="11.5" r="1.8"/><path d="M5.2 6.6l4.6-2.2M5.2 8.4l4.6 2.2"/></svg>
-        Réseaux sociaux
-      </div>
-      <div class="nav-i" onclick="nav('youtube',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="13" height="8" rx="1.5"/><path d="M6 6.5l3.5 1.5L6 9.5z" fill="currentColor" stroke="none"/></svg>
-        YouTube Shorts
+      <div class="nav-i" onclick="nav('imagegen',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
+        Images IA
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
@@ -2246,6 +2242,77 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
     </div><!-- /youtube -->
 
+    <!-- ══ IMAGES IA ══ -->
+    <div class="view" id="v-imagegen">
+      <div class="lib-view" style="width:100%;max-width:700px;margin:0 auto">
+        <div class="ph" style="margin-bottom:20px">
+          <div>
+            <div class="ph-title">🎨 Générateur d'images IA</div>
+            <div class="ph-sub">Crée des visuels pour tes publicités, thumbnails ou posts — propulsé par DALL-E 3</div>
+          </div>
+        </div>
+
+        <!-- PROMPT -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+          <div class="flbl" style="margin-bottom:8px">Décris l'image que tu veux</div>
+          <textarea id="imgPrompt" placeholder="Ex: Un entrepreneur souriant devant un laptop, style UGC, fond épuré blanc, lumière naturelle, réaliste..." style="width:100%;min-height:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:12px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+
+          <!-- Style + Format -->
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <div class="flbl" style="font-size:10px;margin-bottom:6px">Style</div>
+              <select id="imgStyle" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none">
+                <option value="">Naturel (défaut)</option>
+                <option value="vivid">Vivid — couleurs intenses</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:140px">
+              <div class="flbl" style="font-size:10px;margin-bottom:6px">Format</div>
+              <select id="imgSize" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none">
+                <option value="1024x1024">Carré 1:1</option>
+                <option value="1024x1792">Portrait 9:16 (Stories/TikTok)</option>
+                <option value="1792x1024">Paysage 16:9 (YouTube)</option>
+              </select>
+            </div>
+          </div>
+
+          <button onclick="generateImage()" id="imgGenBtn" style="margin-top:14px;width:100%;padding:13px;background:var(--orange);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            🎨 Générer l'image
+          </button>
+        </div>
+
+        <!-- RÉSULTAT -->
+        <div id="imgResult" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center">
+          <img id="imgOutput" style="max-width:100%;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4)" alt="Image générée">
+          <div style="display:flex;gap:10px;margin-top:14px;justify-content:center">
+            <a id="imgDownloadBtn" download="avatarads-image.png" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--orange);border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;text-decoration:none">⬇ Télécharger</a>
+            <button onclick="document.getElementById('imgPrompt').focus()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">✏️ Modifier</button>
+          </div>
+        </div>
+
+        <!-- SUGGESTIONS -->
+        <div style="margin-top:16px">
+          <div class="flbl" style="font-size:10px;margin-bottom:10px;color:var(--text3)">SUGGESTIONS RAPIDES</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px" id="imgSuggestions"></div>
+          <script>
+            (function(){
+              var suggestions = ['Avatar UGC réaliste, fond blanc','Mockup iPhone avec app business','Entrepreneur souriant, style pub Facebook','Graphique gains crypto, style TikTok','Before/After transformation physique','Thumbnail YouTube motivationnel'];
+              var c = document.getElementById('imgSuggestions');
+              suggestions.forEach(function(s){
+                var b = document.createElement('button');
+                b.textContent = s;
+                b.style.cssText = 'padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s';
+                b.onmouseover = function(){ this.style.borderColor='var(--orange)'; this.style.color='var(--orange2)'; };
+                b.onmouseout  = function(){ this.style.borderColor='var(--border2)'; this.style.color='var(--text2)'; };
+                b.onclick = function(){ document.getElementById('imgPrompt').value = s; };
+                c.appendChild(b);
+              });
+            })();
+          </script>
+        </div>
+      </div>
+    </div><!-- /imagegen -->
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -3339,6 +3406,42 @@ async function testKey(k){
 }
 
 // ── NAV ──
+// ── GÉNÉRATEUR D'IMAGES IA (DALL-E 3) ──
+async function generateImage(){
+  const prompt = document.getElementById('imgPrompt').value.trim();
+  if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
+  const btn = document.getElementById('imgGenBtn');
+  btn.textContent = '⏳ Génération en cours…'; btn.disabled = true;
+  document.getElementById('imgResult').style.display = 'none';
+  try {
+    const session = (await sb.auth.getSession()).data.session;
+    const token   = session?.access_token;
+    if(!token){ toast('⚠️ Connecte-toi pour générer des images'); btn.textContent='🎨 Générer l\'image'; btn.disabled=false; return; }
+
+    const size  = document.getElementById('imgSize').value || '1024x1024';
+    const style = document.getElementById('imgStyle').value || 'natural';
+    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, style: style||'natural', response_format: 'url' })
+    });
+    const data = await res.json();
+    if(data.error){ toast('⚠️ ' + (data.error.message||'Erreur génération')); return; }
+    const url = data.data?.[0]?.url;
+    if(!url){ toast('⚠️ Aucune image retournée'); return; }
+    const img = document.getElementById('imgOutput');
+    img.src = url;
+    document.getElementById('imgDownloadBtn').href = url;
+    document.getElementById('imgResult').style.display = 'block';
+    toast('✅ Image générée !');
+  } catch(e){
+    console.error('generateImage:', e);
+    toast('⚠️ Erreur : ' + e.message);
+  } finally {
+    btn.textContent = '🎨 Générer l\'image'; btn.disabled = false;
+  }
+}
+
 function nav(id,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
