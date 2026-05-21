@@ -2380,9 +2380,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <!-- RÉSULTAT -->
         <div id="imgResult" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center">
           <img id="imgOutput" style="max-width:100%;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4)" alt="Image générée">
-          <div style="display:flex;gap:10px;margin-top:14px;justify-content:center">
-            <a id="imgDownloadBtn" download="avatarads-image.png" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--orange);border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;text-decoration:none">⬇ Télécharger</a>
-            <button onclick="document.getElementById('imgPrompt').focus()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">✏️ Modifier</button>
+          <!-- CTA principal : utiliser comme avatar -->
+          <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;box-shadow:0 6px 20px rgba(255,107,53,0.35);transition:all .2s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 28px rgba(255,107,53,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(255,107,53,0.35)'">
+            🚀 Sauvegarder comme avatar &amp; créer une vidéo
+          </button>
+          <div style="display:flex;gap:10px;margin-top:10px;justify-content:center">
+            <a id="imgDownloadBtn" download="avatarads-image.png" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;text-decoration:none">⬇ Télécharger</a>
+            <button onclick="document.getElementById('imgPrompt').focus()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">✏️ Nouvelle image</button>
           </div>
         </div>
 
@@ -3527,6 +3531,35 @@ function _addImgBonusCredits(qty){
   localStorage.setItem('aa_img_bonus', String(current + qty));
   _updateImgQuotaLabel();
   toast('✅ +' + qty + ' crédits images ajoutés !');
+}
+
+// ── Utiliser l'image générée comme avatar directement ──
+async function useImageAsAvatar(){
+  const imgEl = document.getElementById('imgOutput');
+  if(!imgEl || !imgEl.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  const btn = document.getElementById('imgUseAsAvatarBtn');
+  const origTxt = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML = '⏳ Chargement…'; btn.disabled = true; }
+  try {
+    // Fetche l'image en blob (contourne CORS via le proxy ou directement si même origine)
+    const res  = await fetch(imgEl.src);
+    const blob = await res.blob();
+    const ext  = blob.type.includes('png') ? 'png' : 'jpg';
+    const file = new File([blob], 'avatarads-ia.' + ext, { type: blob.type });
+    // Applique comme avatar (même chemin que l'import manuel)
+    handleAvatarFile(file);
+    // Navigue vers le générateur → Step 2 (Avatar)
+    const navEl = document.querySelector('.nav-i[onclick*="generator"]') || document.querySelector('.nav-i');
+    nav('generator', navEl);
+    await new Promise(r => setTimeout(r, 80));
+    goToStep(2);
+    toast('✅ Avatar chargé — configure ton script & ta voix, puis clique Générer');
+  } catch(e){
+    console.error('useImageAsAvatar:', e);
+    toast('⚠️ Impossible de charger l\'image — télécharge-la manuellement puis importe-la');
+  } finally {
+    if(btn){ btn.innerHTML = origTxt; btn.disabled = false; }
+  }
 }
 
 
