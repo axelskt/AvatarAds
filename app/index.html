@@ -3563,34 +3563,35 @@ function saveAffPayment(){
 })();
 
 // ── GÉNÉRATEUR D'IMAGES IA (DALL-E 3) ──
-// ── Quotas images IA par jour ──
-function _updateImgQuotaLabel(){
-  const el = document.getElementById('imgQuotaLabel');
-  if(!el) return;
-  const lim = _imgDayLimit();
-  if(lim<=0){ el.textContent='⛔ Disponible à partir du plan Starter'; el.style.color='var(--red,#ff6b6b)'; return; }
-  const rem = _imgDayRemaining();
-  el.textContent = rem+' / '+lim+' images restantes aujourd\'hui';
-  el.style.color = rem<=1 ? 'var(--orange2)' : 'var(--text3)';
-}
-function _imgDayKey(){ const d=new Date(); return 'aa_img_'+d.getFullYear()+'_'+(d.getMonth()+1)+'_'+d.getDate(); }
-function _imgDayLimit(){
+// ── Crédits images IA par mois (1 crédit = 1 image, reset le 1er du mois) ──
+function _imgMonthKey(){ const d=new Date(); return 'aa_img_'+d.getFullYear()+'_'+(d.getMonth()+1); }
+function _imgMonthLimit(){
   const p=(currentMember?.plan||'free').toLowerCase();
   if(p==='elite')   return 50;
   if(p==='pro')     return 20;
-  if(p==='starter') return 5;
+  if(p==='starter') return 10;
   return 0; // free → pas d'accès
 }
-function _imgDayUsed(){ try{ return parseInt(localStorage.getItem(_imgDayKey())||'0',10); }catch(e){ return 0; } }
-function _imgDayRemaining(){ return Math.max(0, _imgDayLimit()-_imgDayUsed()); }
-function _imgDayIncrement(){ try{ localStorage.setItem(_imgDayKey(), String(_imgDayUsed()+1)); }catch(e){} }
+function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
+function _imgMonthRemaining(){ return Math.max(0, _imgMonthLimit()-_imgMonthUsed()); }
+function _imgMonthIncrement(){ try{ localStorage.setItem(_imgMonthKey(), String(_imgMonthUsed()+1)); }catch(e){} }
+
+function _updateImgQuotaLabel(){
+  const el = document.getElementById('imgQuotaLabel');
+  if(!el) return;
+  const lim = _imgMonthLimit();
+  if(lim<=0){ el.textContent='⛔ Disponible à partir du plan Starter'; el.style.color='var(--red,#ff6b6b)'; return; }
+  const rem = _imgMonthRemaining();
+  el.textContent = rem+' / '+lim+' crédits images ce mois';
+  el.style.color = rem<=2 ? 'var(--orange)' : 'var(--text3)';
+}
 
 async function generateImage(){
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
-  // Vérif quota
-  if(_imgDayLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
-  if(_imgDayRemaining()<=0){ toast('⛔ Limite atteinte — '+_imgDayLimit()+' images/jour sur ton plan · Reviens demain'); openUpgradeModal(); return; }
+  // Vérif crédits mensuels
+  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
+  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois — reviens le 1er ou change de plan'); openUpgradeModal(); return; }
   const btn = document.getElementById('imgGenBtn');
   btn.textContent = '⏳ Génération en cours…'; btn.disabled = true;
   document.getElementById('imgResult').style.display = 'none';
@@ -3601,23 +3602,24 @@ async function generateImage(){
 
     const size  = document.getElementById('imgSize').value || '1024x1024';
     const style = document.getElementById('imgStyle').value || 'natural';
+    // Enrichissement automatique du prompt pour une qualité maximale
+    const enhancedPrompt = prompt + ', 4K, ultra haute définition, hyperréaliste, qualité professionnelle, haute résolution, détails nets';
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size, style: style||'natural', response_format: 'url' })
+      body: JSON.stringify({ model: 'dall-e-3', prompt: enhancedPrompt, n: 1, size, style: style||'natural', response_format: 'url' })
     });
     const data = await res.json();
     if(data.error){ toast('⚠️ ' + (data.error.message||'Erreur génération')); return; }
     const url = data.data?.[0]?.url;
     if(!url){ toast('⚠️ Aucune image retournée'); return; }
-    _imgDayIncrement();
+    _imgMonthIncrement();
     const img = document.getElementById('imgOutput');
     img.src = url;
     document.getElementById('imgDownloadBtn').href = url;
     document.getElementById('imgResult').style.display = 'block';
-    const rem = _imgDayRemaining();
-    toast('✅ Image générée · ' + rem + ' restante' + (rem!==1?'s':'') + ' aujourd\'hui');
-    // Mettre à jour le label du bouton
+    const rem = _imgMonthRemaining();
+    toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':'') + ' ce mois');
     _updateImgQuotaLabel();
   } catch(e){
     console.error('generateImage:', e);
