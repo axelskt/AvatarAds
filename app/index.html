@@ -3449,6 +3449,40 @@ function closePaywall(){
 
 // ── BUY CREDITS ──
 // LemonSqueezy variant IDs pour les packs de minutes (à remplir après création dans LS)
+// ── CLIPS PRESETS — Système de tiers par plan ──────────────────────────────
+// Chaque clip a un `tier` : 'starter' | 'pro' | 'elite'
+// Accès cumulatif : starter voit starter, pro voit starter+pro, élite voit tout
+const CLIPS_TIER_ACCESS = {
+  free:    [],           // pas d'accès
+  starter: ['starter'],
+  pro:     ['starter', 'pro'],
+  elite:   ['starter', 'pro', 'elite'],
+  byok:    ['starter', 'pro'],
+};
+
+// Retourne les tiers accessibles pour le plan actuel
+function _clipsAccessTiers(){
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  return CLIPS_TIER_ACCESS[p] || [];
+}
+
+// Vérifie si un clip (avec son tier) est accessible
+function _clipAccessible(clipTier){
+  return _clipsAccessTiers().includes(clipTier || 'starter');
+}
+
+// Structure d'exemple pour la future bibliothèque de clips
+// (sera peuplée quand on build la feature gameplay presets)
+// const PRESET_CLIPS = [
+//   { id: 'subway_1',  tier: 'starter', label: 'Subway Surfers',      category: 'gaming' },
+//   { id: 'minecraft', tier: 'starter', label: 'Minecraft parkour',   category: 'gaming' },
+//   { id: 'pov_cafe',  tier: 'pro',     label: 'POV Café du matin',   category: 'lifestyle' },
+//   { id: 'pov_urban', tier: 'pro',     label: 'POV Marche urbaine',  category: 'lifestyle' },
+//   { id: 'rayban_1',  tier: 'elite',   label: 'POV Ray-Ban Meta — Rue Paris', category: 'premium' },
+//   { id: 'rayban_2',  tier: 'elite',   label: 'POV Vision Pro — Interface', category: 'premium' },
+// ];
+// ────────────────────────────────────────────────────────────────────────────
+
 const CREDIT_PACK_URLS = {
   pack_s: 'https://avatarads.lemonsqueezy.com/buy/PLACEHOLDER_PACK_S', // Pack S  – 5 min – 9,99€
   pack_m: 'https://avatarads.lemonsqueezy.com/buy/PLACEHOLDER_PACK_M', // Pack M – 15 min – 24,99€
