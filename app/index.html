@@ -3497,6 +3497,12 @@ function _clipRandomSegment(totalDurationSec){
   return { start, end: start + dur };
 }
 
+// ⚠️ RÈGLE ABSOLUE — le son des clips source est TOUJOURS supprimé
+// Seule la piste audio de l'user (voix enregistrée ou ElevenLabs) est conservée
+// ffmpeg.wasm : toujours passer -an sur le clip source avant composition
+// → évite que la musique / effets sonores du gameplay parasitent la vidéo finale
+const CLIP_STRIP_AUDIO = true; // ne jamais passer à false
+
 // Structure d'exemple pour la future bibliothèque de clips
 // (sera peuplée quand on build la feature gameplay presets)
 // const PRESET_CLIPS = [
