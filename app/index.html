@@ -2392,7 +2392,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div style="display:flex;flex-wrap:wrap;gap:8px" id="imgSuggestions"></div>
           <script>
             (function(){
-              var suggestions = ['Avatar UGC réaliste, fond blanc','Mockup iPhone avec app business','Entrepreneur souriant, style pub Facebook','Graphique gains crypto, style TikTok','Before/After transformation physique','Thumbnail YouTube motivationnel'];
+              var suggestions = [
+                'Un homme en studio moderne assis devant son MacBook, lumière cinématique, fond sombre épuré, style publicité tech, réaliste 4K',
+                'Un homme en extérieur qui parle face caméra avec un microphone-cravate, tenue décontractée professionnelle, fond urbain flou, style UGC authentique',
+                'Un entrepreneur confiant debout dans un loft minimaliste, costume ouvert sans cravate, lumière naturelle dorée, style personal branding',
+                'Avatar UGC réaliste, fond blanc studio','Mockup iPhone avec app business','Thumbnail YouTube motivationnel'
+              ];
               var c = document.getElementById('imgSuggestions');
               suggestions.forEach(function(s){
                 var b = document.createElement('button');
@@ -3719,8 +3724,8 @@ function _updateImgQuotaLabel(){
   const lim   = _imgMonthLimit();
   const bonus = _imgBonus();
   const rem   = _imgMonthRemaining();
-  if(lim<=0 && bonus<=0){
-    el.textContent = '⛔ Disponible à partir du plan Starter · Recharger →';
+  if(lim<=0){
+    el.textContent = '⛔ Disponible à partir du plan Starter · Upgrade →';
     el.style.color = 'var(--red,#ff6b6b)';
     return;
   }
@@ -3732,9 +3737,10 @@ function _updateImgQuotaLabel(){
 async function generateImage(){
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
-  // Vérif crédits (mensuel + bonus)
-  if(_imgMonthLimit()<=0 && _imgBonus()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal('images'); return; }
-  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois'); openUpgradeModal('images'); return; }
+  // Vérif plan (Free bloqué même avec bonus)
+  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
+  // Vérif crédits restants (mensuel + bonus)
+  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
   const btn = document.getElementById('imgGenBtn');
   btn.textContent = '⏳ Génération en cours…'; btn.disabled = true;
   document.getElementById('imgResult').style.display = 'none';
