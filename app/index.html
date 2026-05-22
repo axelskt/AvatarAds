@@ -162,6 +162,14 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .av-card{border:1.5px solid var(--border);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;transition:all .15s;background:var(--bg3);text-align:center}
 .av-card:hover{border-color:var(--border2)}
 .av-card.on{border-color:var(--orange);background:var(--orange-dim)}
+.clip-tab{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--text3);font-family:var(--mono);cursor:pointer;white-space:nowrap;transition:all .15s}
+.clip-tab:hover{border-color:var(--border2);color:var(--text2)}
+.clip-tab.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.clip-card{border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .15s;background:var(--bg3);display:flex;align-items:center;gap:10px;position:relative}
+.clip-card:hover:not(.locked){border-color:var(--border2)}
+.clip-card.on{border-color:var(--orange);background:var(--orange-dim)}
+.clip-card.locked{opacity:.45;cursor:not-allowed}
+.clip-tier-badge{font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;font-family:var(--mono);flex-shrink:0}
 .av-face{padding:12px 0 6px;font-size:36px;display:flex;align-items:center;justify-content:center;position:relative}
 .av-name{font-size:11px;font-weight:600;padding-bottom:4px}
 .av-sub{font-size:9px;font-family:var(--mono);color:var(--text3);padding-bottom:8px}
@@ -663,6 +671,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
+
+            <!-- ── CLIP PICKER ─────────────────────────────────────────────── -->
+            <div id="clipPickerSection" style="margin-bottom:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text2)">🎬 CLIP GAMEPLAY</span>
+                <span id="clipDurLabel" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></span>
+              </div>
+
+              <!-- Tabs catégories -->
+              <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px">
+                <button onclick="filterClips('all')"     id="clipTab-all"       class="clip-tab on"    >Tous</button>
+                <button onclick="filterClips('gaming')"  id="clipTab-gaming"    class="clip-tab"       >🎮 Gaming</button>
+                <button onclick="filterClips('asmr')"    id="clipTab-asmr"      class="clip-tab"       >🧼 ASMR</button>
+                <button onclick="filterClips('lifestyle')"id="clipTab-lifestyle" class="clip-tab"       >🚶 Lifestyle</button>
+              </div>
+
+              <!-- Grille clips -->
+              <div id="clipGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
+
+              <!-- Clip sélectionné -->
+              <div id="clipSelectedBadge" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);border-radius:8px;display:none;align-items:center;justify-content:space-between">
+                <span id="clipSelectedLabel" style="font-size:12px;font-weight:600;color:var(--orange);font-family:var(--mono)"></span>
+                <button onclick="clearSelectedClip()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou ajoute un avatar</span>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
 
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
             <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
@@ -3534,6 +3573,128 @@ function _clipUrl(clipId) {
 function _accessibleClips() {
   return PRESET_CLIPS.filter(c => _clipAccessible(c.tier));
 }
+
+// ── CLIP PICKER UI ──────────────────────────────────────────────────────────
+let _selectedClipId = null;
+let _currentClipCategory = 'all';
+
+function _tierBadgeHtml(tier) {
+  const styles = {
+    starter: 'background:rgba(77,171,247,0.15);color:#4db7f7;border:1px solid rgba(77,171,247,0.3)',
+    pro:     'background:rgba(255,107,53,0.15);color:var(--orange);border:1px solid rgba(255,107,53,0.3)',
+    elite:   'background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.3)',
+  };
+  const labels = { starter:'S', pro:'P', elite:'✦' };
+  return `<span class="clip-tier-badge" style="${styles[tier]||''}">${labels[tier]||tier}</span>`;
+}
+
+function renderClipGrid(category) {
+  _currentClipCategory = category;
+  const grid = document.getElementById('clipGrid');
+  if (!grid) return;
+  const clips = category === 'all' ? PRESET_CLIPS : PRESET_CLIPS.filter(c => c.category === category);
+  const maxDur = _clipMaxDuration();
+
+  // Durée label
+  const durEl = document.getElementById('clipDurLabel');
+  if (durEl) durEl.textContent = maxDur ? `max ${maxDur}s selon ton plan` : '⛔ upgrade requis';
+
+  grid.innerHTML = clips.map(clip => {
+    const accessible = _clipAccessible(clip.tier);
+    const isOn = _selectedClipId === clip.id;
+    return `<div class="clip-card${isOn?' on':''}${!accessible?' locked':''}"
+      onclick="${accessible ? `selectClip('${clip.id}','${clip.label}')` : `toast('⛔ Clip ${clip.tier} — upgrade ton plan')`}"
+      title="${accessible ? clip.label : 'Non disponible sur ton plan'}">
+      <span style="font-size:20px">${clip.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clip.label}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${clip.category}</div>
+      </div>
+      ${_tierBadgeHtml(clip.tier)}
+      ${!accessible ? '<span style="font-size:12px">🔒</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function filterClips(category) {
+  document.querySelectorAll('.clip-tab').forEach(t => t.classList.remove('on'));
+  const tab = document.getElementById('clipTab-' + category);
+  if (tab) tab.classList.add('on');
+  renderClipGrid(category);
+}
+
+function selectClip(id, label) {
+  if (_clipMaxDuration() === 0) { toast('⛔ Clips disponibles à partir du plan Starter'); openUpgradeModal(); return; }
+  _selectedClipId = (_selectedClipId === id) ? null : id; // toggle
+  renderClipGrid(_currentClipCategory);
+  const badge = document.getElementById('clipSelectedBadge');
+  const lbl   = document.getElementById('clipSelectedLabel');
+  if (_selectedClipId) {
+    const clip = PRESET_CLIPS.find(c => c.id === id);
+    if (lbl) lbl.textContent = `${clip?.emoji || '🎬'} ${label} · segment aléatoire · ${_clipMaxDuration()}s`;
+    if (badge) badge.style.display = 'flex';
+  } else {
+    if (badge) badge.style.display = 'none';
+  }
+}
+
+function clearSelectedClip() {
+  _selectedClipId = null;
+  const badge = document.getElementById('clipSelectedBadge');
+  if (badge) badge.style.display = 'none';
+  renderClipGrid(_currentClipCategory);
+}
+
+// Appelé au nav vers generator / step 2
+function initClipPicker() {
+  renderClipGrid('all');
+}
+
+// ── FFMPEG.WASM — composition clip + audio ──────────────────────────────────
+let _ffmpegInstance = null;
+let _ffmpegLoaded   = false;
+
+async function _loadFfmpeg() {
+  if (_ffmpegLoaded) return _ffmpegInstance;
+  toast('⏳ Chargement ffmpeg…');
+  const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+  const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+  _ffmpegInstance = new FFmpeg();
+  _ffmpegInstance._fetchFile = fetchFile;
+  await _ffmpegInstance.load({
+    coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+  });
+  _ffmpegLoaded = true;
+  return _ffmpegInstance;
+}
+
+// Compose clip R2 + audioBlob → blob URL MP4
+async function _composeClipWithAudio(clipId, audioBlob) {
+  const ffmpeg = await _loadFfmpeg();
+  const fetchFile = ffmpeg._fetchFile;
+  const clipUrl = _clipUrl(clipId); // segment aléatoire
+  const maxDur  = _clipMaxDuration();
+
+  toast('📥 Téléchargement du clip…');
+  await ffmpeg.writeFile('clip.mp4', await fetchFile(clipUrl));
+  await ffmpeg.writeFile('audio.wav', await fetchFile(audioBlob));
+
+  toast('🎬 Composition vidéo…');
+  // Coupe clip à maxDur, colle audio dessus (pas de son clip = -an déjà fait à la source)
+  await ffmpeg.exec([
+    '-i', 'clip.mp4',
+    '-i', 'audio.wav',
+    '-t', String(maxDur),
+    '-c:v', 'copy',
+    '-c:a', 'aac', '-b:a', '128k',
+    '-map', '0:v:0', '-map', '1:a:0',
+    '-shortest',
+    'output.mp4'
+  ]);
+
+  const data = await ffmpeg.readFile('output.mp4');
+  return URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+}
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
@@ -4414,6 +4575,7 @@ function nav(id,el){
   if(id==='imagegen')   _updateImgQuotaLabel();
   if(id==='affiliation') initAffiliation();
   if(id==='recorder')   recInit();
+  if(id==='generator')  setTimeout(initClipPicker, 50);
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
@@ -7933,11 +8095,21 @@ async function startGeneration(){
     setStep('gp3','done');
 
   } else if(audioBlob && !_hasRealAvatar){
-    // ── MODE AUDIO SEUL : pas d'avatar sélectionné (gameplay/POV/enregistreur) ──
-    // On skip Hedra — l'audio est posé directement sur le gameplay/fond
-    // hedraUrl reste '' → la composition utilisera audioBlob + gameplay
+    // ── MODE CLIP + AUDIO : pas d'avatar, clip gameplay sélectionné ──
+    setStep('gp3','on');
+    if(_selectedClipId && _clipMaxDuration() > 0){
+      try {
+        const composedUrl = await _composeClipWithAudio(_selectedClipId, audioBlob);
+        hedraUrl = composedUrl; // réutilise hedraUrl pour l'affichage résultat
+        toast('✅ Clip composé avec ta voix');
+      } catch(e) {
+        console.error('ffmpeg compose error:', e);
+        toast('⚠️ Erreur composition — vérifie ta connexion');
+      }
+    } else {
+      toast('🎙️ Aucun clip sélectionné — audio seul généré');
+    }
     setStep('gp3','done');
-    toast('🎙️ Pas d\'avatar — audio posé sur le gameplay directement');
 
   } else {
     setStep('gp3','done');
