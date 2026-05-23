@@ -16,7 +16,7 @@
 <link rel="shortcut icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -293,11 +293,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .hedra-status.polling{color:var(--orange2)}
 .hedra-status.done{color:var(--green);border-color:rgba(0,217,126,0.2)}
 .hedra-status.err{color:var(--red)}
+/* ══ LIB VIDEO PICKER ══ */
+.lvp-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:all .15s}
+.lvp-item:hover{border-color:rgba(255,107,53,0.45);background:rgba(255,107,53,0.06)}
+@keyframes lvpUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.lvp-sheet{animation:lvpUp .22s ease}
 
 /* ══ LIBRARY ══ */
 .lib-view{flex-direction:column;overflow-y:auto;padding:24px}
 .lib-view::-webkit-scrollbar{width:4px}
 .lib-view::-webkit-scrollbar-thumb{background:var(--bg4)}
+
+/* ══ EXPRESS VIEW ══ */
+.exp-drop{border:2px dashed var(--border2);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative}
+.exp-drop:hover,.exp-drop.drag-over{border-color:var(--orange);background:rgba(255,107,53,0.05)}
+.exp-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.exp-vidinfo{display:none;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px 16px}
+.exp-vidthumb{width:44px;height:44px;border-radius:8px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.exp-vidmeta{flex:1;overflow:hidden}
+.exp-vidname{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-vidsize{font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px}
+.exp-prog-wrap{display:none;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:12px}
+.exp-prog-stage{font-size:12px;font-family:var(--mono);color:var(--text2);margin-bottom:10px}
+.exp-prog-row{display:flex;align-items:center;gap:10px}
+.exp-prog-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.exp-prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:3px;transition:width .15s}
+.exp-prog-pct{font-size:11px;font-family:var(--mono);color:var(--text3);min-width:32px;text-align:right}
+.exp-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 22px;margin-bottom:14px}
+.exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.exp-wpg-chip{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;transition:all .15s}
+.exp-wpg-chip:hover{border-color:var(--border2);color:var(--text2)}
+.exp-wpg-chip.on{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
 .ph-title{font-size:20px;font-weight:800;letter-spacing:-0.5px}
 .ph-sub{font-size:12px;color:var(--text2);margin-top:3px}
@@ -400,6 +426,37 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
 .av-modal-card img{width:100%;height:260px;object-fit:contain;object-position:center center;display:block;background:#111}
 .av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
+/* ── Recorder timeline ── */
+.rec-timeline{display:none;flex-wrap:nowrap;gap:3px;background:var(--bg4);border-radius:9px;padding:5px;min-height:38px;margin-top:10px;overflow:hidden}
+.rec-seg{flex:1;border-radius:6px;cursor:default;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 5px;min-width:24px;transition:filter .15s}
+.rec-seg:hover{filter:brightness(1.15)}
+.rec-seg-lbl{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.rec-seg-del{background:rgba(0,0,0,0.45);border:none;border-radius:4px;color:rgba(255,255,255,0.9);font-size:10px;cursor:pointer;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;transition:background .12s}
+.rec-seg-del:hover{background:rgba(220,30,30,0.7)}
+/* ── Library filter tabs ── */
+.lib-filter-tab{padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.lib-filter-tab:hover{border-color:var(--border3);color:var(--text2)}
+.lib-filter-tab.on{background:var(--bg4);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
+/* ── Image Generator premium ── */
+.img-style-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:12px 10px;cursor:pointer;transition:all .18s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.img-style-card:hover{border-color:var(--border3);background:var(--bg4)}
+.img-style-card.on{border-color:rgba(255,107,53,0.55);background:rgba(255,107,53,0.07);box-shadow:0 0 0 3px rgba(255,107,53,0.12)}
+.img-style-card .isc-icon{font-size:20px;line-height:1}
+.img-style-card .isc-label{font-size:11px;font-weight:700;color:var(--text2);line-height:1.2}
+.img-style-card .isc-sub{font-size:9px;font-family:var(--mono);color:var(--text3);line-height:1}
+.img-style-card.on .isc-label{color:var(--orange2)}
+.img-fmt-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:11px 10px;cursor:pointer;transition:all .18s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.img-fmt-card:hover{border-color:var(--border3)}
+.img-fmt-card.on{border-color:rgba(255,107,53,0.55);background:rgba(255,107,53,0.07);box-shadow:0 0 0 3px rgba(255,107,53,0.12)}
+.img-fmt-card .ifc-preview{display:flex;align-items:center;justify-content:center}
+.img-fmt-card .ifc-label{font-size:11px;font-weight:700;color:var(--text2)}
+.img-fmt-card .ifc-sub{font-size:9px;font-family:var(--mono);color:var(--text3)}
+.img-fmt-card.on .ifc-label{color:var(--orange2)}
+.img-hist-thumb{border-radius:8px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border);aspect-ratio:1;background:var(--bg3);transition:all .15s}
+.img-hist-thumb:hover{border-color:var(--border3);transform:scale(1.03)}
+.img-hist-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.img-loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit}
+@keyframes imgPulse{0%,100%{opacity:.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
 </style>
 </head>
 <body>
@@ -476,6 +533,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
         Affiliation
+      </div>
+      <div class="nav-i" onclick="nav('express',this)" style="margin-top:6px;border-top:1px solid var(--border);padding-top:10px">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
+        ⚡ Express
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
@@ -834,6 +895,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
               </div>
               <input type="file" id="bypassHedraFileIn" accept="video/*" style="display:none" onchange="handleBypassHedraFile(this.files[0])">
+
+              <!-- Bibliothèque picker -->
+              <button onclick="openLibVideoPicker()" style="width:100%;padding:8px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;margin-bottom:10px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+                <span style="font-size:13px">📚</span> ou utilise une vidéo depuis la bibliothèque
+              </button>
 
               <div id="bypassQuotaInfo" style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
                 ✅ Mode actif — Hedra ignoré · Génère un audio, choisis tes sous-titres &amp; ton gameplay, puis télécharge. Aucun crédit débité.
@@ -1258,12 +1324,36 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 -->
+            <div class="fld" style="margin-bottom:18px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Clip Gameplay</div>
+              <!-- Aucun clip -->
+              <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
+                <span style="font-size:20px;opacity:.45">🎬</span>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Aucun clip</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — joue en fond</div>
+                </div>
+                <button onclick="openClipPickerModal()" style="padding:6px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">+ Choisir</button>
+              </div>
+              <!-- Clip actif -->
+              <div id="activeClipRowS4" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
+                <span id="activeClipEmoS4" style="font-size:20px">🎬</span>
+                <div style="flex:1;min-width:0">
+                  <div id="activeClipNameS4" style="font-size:12px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire · fond vidéo</div>
+                </div>
+                <button onclick="openClipPickerModal()" style="padding:5px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Changer</button>
+                <button onclick="clearSelectedClip()" style="padding:5px 8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:7px;color:var(--red);font-family:var(--mono);font-size:10px;cursor:pointer">✕</button>
+              </div>
+            </div>
+
             <!-- STYLE SOUS-TITRES -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div class="flbl" style="font-size:11px;margin:0">Style des sous-titres</div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
                 <div class="sub-card style-card on" id="sc-hormozi" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
                   <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
@@ -1287,6 +1377,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div class="sub-card style-card" id="sc-podcast" onclick="pickSub(this,'podcast')">
                   <div class="sub-name">Podcast</div>
                   <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
+                </div>
+                <div class="sub-card style-card" id="sc-badis" onclick="pickSub(this,'badis')">
+                  <div class="sub-name">Badis ✍️</div>
+                  <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
                 </div>
               </div>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
@@ -1314,6 +1408,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="display:flex;gap:5px;flex-wrap:wrap">
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);width:100%;margin-bottom:3px">Presets :</div>
                 <button onclick="applyColorPreset('hormozi')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Hormozi</button>
+                <button onclick="applyColorPreset('badis')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Badis</button>
                 <button onclick="applyColorPreset('mrbeast')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FFD700;display:inline-block"></span>MrBeast</button>
                 <button onclick="applyColorPreset('iman')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#fff;border:1px solid #444;display:inline-block"></span>Iman</button>
                 <button onclick="applyColorPreset('neon')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#00FF87;display:inline-block"></span>Neon</button>
@@ -1483,8 +1578,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button onclick="setQuality(540,this)" class="qual-btn on" data-q="540" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700">540p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif</div>
                 </button>
-                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">Starter+</div>
+                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
+                  <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Recommandé</div>
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">✨ Starter+</div>
                 </button>
                 <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Pro+</div>
@@ -1573,6 +1669,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
+                  <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
                   <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:3"></video>
                 </div>
 
@@ -2138,15 +2235,23 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div class="ph">
           <div>
             <div class="ph-title">Bibliothèque</div>
-            <div class="ph-sub" id="libCount">0 vidéo générée</div>
+            <div class="ph-sub" id="libCount">0 élément</div>
           </div>
           <div style="display:flex;gap:8px">
             <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 14px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
-              📥 Importer Hedra
+              📥 Importer
             </button>
             <input type="file" id="libImportInput" accept="video/*" style="display:none" onchange="importHedraToLibrary(this.files[0])">
             <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px" onclick="nav('generator',document.querySelector('.nav-i'))">✨ Nouvelle vidéo</button>
           </div>
+        </div>
+        <!-- Filter tabs -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="lib-filter-tab on" id="libTab-all"     onclick="libSetTab('all')">Tout</button>
+          <button class="lib-filter-tab"    id="libTab-avatar"  onclick="libSetTab('avatar')">🎭 Avatars</button>
+          <button class="lib-filter-tab"    id="libTab-video"   onclick="libSetTab('video')">🎬 Vidéos</button>
+          <button class="lib-filter-tab"    id="libTab-audio"   onclick="libSetTab('audio')">🎙️ Audio</button>
+          <button class="lib-filter-tab"    id="libTab-image"   onclick="libSetTab('image')">🖼️ Images</button>
         </div>
         <div class="lib-grid" id="libGrid">
           <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px">
@@ -2370,12 +2475,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
         </div>
 
-        <!-- PAIEMENT -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px">
-          <div class="flbl" style="margin-bottom:10px">💳 Recevoir mes paiements</div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Indique ton email PayPal ou IBAN pour recevoir tes commissions le 1er de chaque mois (minimum 50€)</div>
-          <input id="affPaymentInfo" placeholder="PayPal : ton@email.com  ou  IBAN : FR76..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;box-sizing:border-box;margin-bottom:10px" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'">
-          <button onclick="saveAffPayment()" style="padding:9px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">Sauvegarder</button>
+        <!-- CALCULATEUR DE REVENUS -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px">
+          <div class="flbl" style="margin-bottom:16px">📊 Simulateur de revenus</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--text3);margin-bottom:16px;text-align:center">Si je ramène <strong id="affCalcCount" style="color:var(--text);font-size:15px">10</strong> filleuls/mois</div>
+          <input type="range" id="affCalcSlider" min="0" max="500" value="10" oninput="affUpdateCalc(this.value)"
+            style="width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--orange) 2%,rgba(255,255,255,0.12) 2%,rgba(255,255,255,0.12) 100%);margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:20px"><span>0</span><span>250</span><span>500</span></div>
+          <div style="text-align:center">
+            <div id="affCalcMonthly" style="font-size:40px;font-weight:900;letter-spacing:-2px;color:var(--orange);line-height:1">114€</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:4px">/mois</div>
+            <div id="affCalcYearly" style="font-size:12px;font-family:var(--mono);color:var(--text2)">1 368€ par an</div>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.6">
+            Calcul basé sur 30% · mix Starter/Pro/Elite · prix moyen 38€/mois · récurrent à vie
+          </div>
         </div>
 
       </div>
@@ -2383,82 +2497,117 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- ══ IMAGES IA ══ -->
     <div class="view" id="v-imagegen">
-      <div class="lib-view" style="width:100%;max-width:700px;margin:0 auto">
-        <div class="ph" style="margin-bottom:20px">
-          <div>
-            <div class="ph-title">🎨 Générateur d'images IA</div>
-            <div class="ph-sub">Crée des visuels pour tes publicités, thumbnails ou posts — propulsé par DALL-E 3</div>
+      <div class="lib-view" style="width:100%;max-width:720px;margin:0 auto;padding-bottom:40px">
+
+        <!-- HEADER -->
+        <div style="margin-bottom:24px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:320px;height:80px;background:radial-gradient(ellipse,rgba(255,107,53,0.1) 0%,transparent 70%);pointer-events:none"></div>
+          <div style="text-align:center;position:relative;padding:4px 0">
+            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:20px;padding:4px 12px;font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:0.8px;margin-bottom:10px">
+              <svg width="6" height="6" viewBox="0 0 6 6" fill="var(--orange)"><circle cx="3" cy="3" r="3"/></svg>
+              DALL-E 3 · 4K ULTRA
+            </div>
+            <div style="font-size:26px;font-weight:900;letter-spacing:-1.2px;background:linear-gradient(135deg,var(--text) 30%,var(--orange2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-bottom:6px">Générateur d'images IA</div>
+            <div style="font-size:12px;color:var(--text3)">Visuels pros pour tes pubs, thumbnails et posts en un clic</div>
           </div>
+        </div>
+
+        <!-- STYLE PRESETS -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px 18px 14px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 5c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4-4-1.8-4-4z"/><path d="M5 3v2l1.5 1.5"/></svg>
+            Style visuel
+          </div>
+          <div id="imgStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
+        <!-- FORMAT -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px 18px 14px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5"/></svg>
+            Format
+          </div>
+          <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
         </div>
 
         <!-- PROMPT -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
-          <div class="flbl" style="margin-bottom:8px">Décris l'image que tu veux</div>
-          <textarea id="imgPrompt" placeholder="Ex: Un entrepreneur souriant devant un laptop, style UGC, fond épuré blanc, lumière naturelle, réaliste..." style="width:100%;min-height:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:12px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box" onfocus="this.style.borderColor='var(--border3)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-
-          <!-- Style + Format -->
-          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-            <div style="flex:1;min-width:140px">
-              <div class="flbl" style="font-size:10px;margin-bottom:6px">Style</div>
-              <select id="imgStyle" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none">
-                <option value="">Naturel (défaut)</option>
-                <option value="vivid">Vivid — couleurs intenses</option>
-              </select>
-            </div>
-            <div style="flex:1;min-width:140px">
-              <div class="flbl" style="font-size:10px;margin-bottom:6px">Format</div>
-              <select id="imgSize" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none">
-                <option value="1024x1024">Carré 1:1</option>
-                <option value="1024x1792">Portrait 9:16 (Stories/TikTok)</option>
-                <option value="1792x1024">Paysage 16:9 (YouTube)</option>
-              </select>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px 18px 16px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 2.5h7M1.5 5h5M1.5 7.5h6"/></svg>
+            Décris l'image
+          </div>
+          <div style="position:relative">
+            <textarea id="imgPrompt" placeholder="Ex: Un entrepreneur souriant en studio moderne, fond épuré, lumière naturelle, style publicité tech…" style="width:100%;min-height:96px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13px;padding:13px 13px 38px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.55" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border2)'" oninput="_imgUpdateCharCount(this)"></textarea>
+            <div style="position:absolute;bottom:10px;left:12px;right:10px;display:flex;align-items:center;justify-content:space-between;pointer-events:none">
+              <span id="imgCharCount" style="font-size:10px;font-family:var(--mono);color:var(--text3)">0 / 1000</span>
+              <button onclick="enhanceImagePrompt()" id="imgEnhanceBtn" style="pointer-events:all;display:flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.22);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,107,53,0.16)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 1v1.5M5 7.5V9M1 5h1.5M7.5 5H9M2.5 2.5l1 1M6.5 6.5l1 1M2.5 7.5l1-1M6.5 3.5l1-1"/></svg>
+                ✦ Améliorer
+              </button>
             </div>
           </div>
 
-          <button onclick="generateImage()" id="imgGenBtn" style="margin-top:14px;width:100%;padding:13px;background:var(--orange);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-            🎨 Générer l'image
+          <!-- Inspirations rapides -->
+          <div id="imgSuggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+
+          <!-- Generate -->
+          <button onclick="generateImage()" id="imgGenBtn" style="margin-top:16px;width:100%;padding:15px;background:linear-gradient(135deg,var(--orange) 0%,#d93a15 100%);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.3px;box-shadow:0 6px 22px rgba(255,107,53,0.32)" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 32px rgba(255,107,53,0.48)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 22px rgba(255,107,53,0.32)'">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg>
+            Générer l'image
           </button>
-          <div id="imgQuotaLabel" onclick="openUpgradeModal('images')" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
+          <div id="imgQuotaLabel" onclick="openUpgradeModal('images')" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
         </div>
 
         <!-- RÉSULTAT -->
-        <div id="imgResult" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center">
-          <img id="imgOutput" style="max-width:100%;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4)" alt="Image générée">
-          <!-- CTA principal : utiliser comme avatar -->
-          <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;box-shadow:0 6px 20px rgba(255,107,53,0.35);transition:all .2s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 28px rgba(255,107,53,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(255,107,53,0.35)'">
-            🚀 Sauvegarder comme avatar &amp; créer une vidéo
-          </button>
-          <div style="display:flex;gap:10px;margin-top:10px;justify-content:center">
-            <a id="imgDownloadBtn" download="avatarads-image.png" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;text-decoration:none">⬇ Télécharger</a>
-            <button onclick="document.getElementById('imgPrompt').focus()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">✏️ Nouvelle image</button>
+        <div id="imgResult" style="display:none;margin-bottom:10px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;overflow:hidden">
+            <!-- Image zone -->
+            <div style="position:relative;background:var(--bg4);min-height:200px">
+              <img id="imgOutput" style="width:100%;display:block" alt="Image générée">
+              <!-- Loading overlay -->
+              <div id="imgLoadingOverlay" class="img-loading-overlay" style="display:none;border-radius:0">
+                <div style="width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin 0.9s linear infinite"></div>
+                <div style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,0.7)">Génération en cours…</div>
+              </div>
+              <!-- Badges -->
+              <div id="imgBadges" style="position:absolute;top:12px;left:12px;display:flex;gap:6px"></div>
+              <!-- Regenerate -->
+              <div style="position:absolute;top:12px;right:12px">
+                <button onclick="generateImage()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;color:rgba(255,255,255,0.85);font-family:var(--mono);font-size:10px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.55)'">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 5A3.5 3.5 0 1 0 5 1.5"/><path d="M1.5 2.5v2.5h2.5"/></svg>
+                  Regénérer
+                </button>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div style="padding:16px 18px">
+              <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;box-shadow:0 6px 20px rgba(255,107,53,0.32);transition:all .2s;margin-bottom:10px" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 9px 28px rgba(255,107,53,0.48)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(255,107,53,0.32)'">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
+                Utiliser comme avatar &amp; créer une vidéo
+              </button>
+              <div style="display:flex;gap:8px">
+                <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
+                  Télécharger
+                </a>
+                <button onclick="_imgCopyUrl()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="7" height="7" rx="1.2"/><path d="M4 4V2.5A1.5 1.5 0 002.5 1h0A1.5 1.5 0 001 2.5V8a1.5 1.5 0 001.5 1.5H4"/></svg>
+                  Copier l'URL
+                </button>
+                <button onclick="_imgNewPrompt()" style="padding:11px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" title="Nouveau prompt">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9.5L8.5 3l1-.5a1 1 0 011 1L10 4.5 3.5 11H2V9.5z"/><path d="M7 4l1.5 1.5"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- SUGGESTIONS -->
-        <div style="margin-top:16px">
-          <div class="flbl" style="font-size:10px;margin-bottom:10px;color:var(--text3)">SUGGESTIONS RAPIDES</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px" id="imgSuggestions"></div>
-          <script>
-            (function(){
-              var suggestions = [
-                'Un homme en studio moderne assis devant son MacBook, lumière cinématique, fond sombre épuré, style publicité tech, réaliste 4K',
-                'Un homme en extérieur qui parle face caméra avec un microphone-cravate, tenue décontractée professionnelle, fond urbain flou, style UGC authentique',
-                'Un entrepreneur confiant debout dans un loft minimaliste, costume ouvert sans cravate, lumière naturelle dorée, style personal branding',
-                'Avatar UGC réaliste, fond blanc studio','Mockup iPhone avec app business','Thumbnail YouTube motivationnel'
-              ];
-              var c = document.getElementById('imgSuggestions');
-              suggestions.forEach(function(s){
-                var b = document.createElement('button');
-                b.textContent = s;
-                b.style.cssText = 'padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s';
-                b.onmouseover = function(){ this.style.borderColor='var(--orange)'; this.style.color='var(--orange2)'; };
-                b.onmouseout  = function(){ this.style.borderColor='var(--border2)'; this.style.color='var(--text2)'; };
-                b.onclick = function(){ document.getElementById('imgPrompt').value = s; };
-                c.appendChild(b);
-              });
-            })();
-          </script>
+        <!-- HISTORIQUE LOCAL -->
+        <div id="imgHistoryWrap" style="display:none">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Récentes</div>
+          <div id="imgHistoryGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
         </div>
+
       </div>
     </div><!-- /imagegen -->
 
@@ -2501,21 +2650,28 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- CONTROLS ROW -->
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:90px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
               ▶ Écouter
             </button>
-            <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:90px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+            <button id="recSplitBtn" onclick="recSplitAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Coupe l'audio au curseur — supprime ensuite le segment voulu">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l5 5m0 0l5 5M6 6l5-5M6 6L1 11"/><circle cx="2" cy="2" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="11" r="1.5" fill="currentColor" stroke="none"/></svg>
+              Couper ici
+            </button>
+            <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
               ✂️ Remplacer
             </button>
-            <button id="recSilenceBtn" onclick="recToggleSilence()" style="padding:10px 14px;background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
+            <button id="recSilenceBtn" onclick="recToggleSilence()" style="padding:10px 12px;background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
               🔇 Silences ON
             </button>
           </div>
 
+          <!-- TIMELINE SEGMENTS (CapCut-style) -->
+          <div id="recTimeline" class="rec-timeline"></div>
+
         </div><!-- /main card -->
 
         <!-- REPLACE MODE BANNER -->
-        <div id="recReplaceBanner" style="display:none;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.3);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:none">
+        <div id="recReplaceBanner" style="display:none;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.3);border-radius:12px;padding:14px 18px;margin-bottom:14px">
           <div style="font-size:12px;font-weight:700;margin-bottom:4px;color:var(--orange2)">✂️ Mode Remplacement actif</div>
           <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">Clique sur la waveform pour positionner le curseur, puis lance l'enregistrement</div>
           <div style="display:flex;gap:8px">
@@ -2525,17 +2681,197 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- ACTIONS BOTTOM -->
-        <div style="display:flex;gap:10px">
-          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:12px 18px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px">
-            ⬇ WAV
+        <div style="display:flex;gap:8px">
+          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" title="Télécharger en WAV">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1v8M3.5 6l3 3 3-3M1.5 10.5v.5a1 1 0 001 1h9a1 1 0 001-1v-.5"/></svg>
+            WAV
           </button>
-          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,107,53,0.3)" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
-            🚀 Utiliser dans le générateur
+          <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" title="Sauvegarder dans la bibliothèque">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg>
+            Bibliothèque
+          </button>
+          <button id="recResetBtn" onclick="recReset()" disabled style="padding:12px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px" title="Réinitialiser / supprimer l'enregistrement" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h8M5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M10.5 3.5l-.6 7a1 1 0 01-1 .9H4.1a1 1 0 01-1-.9l-.6-7"/></svg>
+          </button>
+          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 6px 20px rgba(255,107,53,0.3)" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5,1 5,6.5 2,6.5 8.5,12 8.5,6.5 11,6.5"/></svg>
+            Utiliser dans le générateur
           </button>
         </div>
 
       </div>
     </div><!-- /recorder -->
+
+    <!-- ══ EXPRESS ══ -->
+    <div class="view" id="v-express">
+      <div class="lib-view" style="width:100%;max-width:700px;margin:0 auto">
+
+        <!-- Header -->
+        <div class="ph" style="margin-bottom:20px">
+          <div>
+            <div class="ph-title" style="display:flex;align-items:center;gap:10px">⚡ Express <span style="font-size:11px;font-family:var(--mono);background:linear-gradient(135deg,var(--orange),#e03e1a);color:#fff;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.3px">VSL</span></div>
+            <div class="ph-sub">Importe ta vidéo prête · Sous-titres Whisper · Effets IA · Export direct</div>
+          </div>
+        </div>
+
+        <!-- ① Source vidéo -->
+        <div class="exp-section">
+          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">1</span> Vidéo source</div>
+          <div id="expDropZone" class="exp-drop" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expOnDrop(event)">
+            <input type="file" accept="video/mp4,video/quicktime,video/webm,video/avi,video/*" onchange="_expOnFileInput(this)">
+            <div style="font-size:34px;margin-bottom:10px">🎬</div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px">Glisse ta vidéo ici</div>
+            <div style="font-size:12px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · WebM — ou clique pour parcourir</div>
+          </div>
+          <div id="expVidInfo" class="exp-vidinfo">
+            <div class="exp-vidthumb">🎬</div>
+            <div class="exp-vidmeta">
+              <div class="exp-vidname" id="expVidName">—</div>
+              <div class="exp-vidsize" id="expVidSize">—</div>
+            </div>
+            <button onclick="_expClearVideo()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕ Changer</button>
+          </div>
+        </div>
+
+        <!-- ② Transcription -->
+        <div class="exp-section">
+          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">2</span> Transcription des sous-titres</div>
+          <button id="expWhisperBtn" onclick="expressWhisper()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.04));border:1.5px solid rgba(255,107,53,0.4);border-radius:13px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.8)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.4)'">
+            <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-family:var(--mono)">PRO</span></div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale · timestamps mot par mot</div>
+          </button>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">ou manuellement</div>
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+          </div>
+          <textarea id="expTranscriptTA" placeholder="Colle ton transcript ici..." style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 13px;outline:none;resize:none;line-height:1.7;transition:border-color .15s" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          <button onclick="expApplyTranscript()" style="margin-top:8px;padding:9px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--border3)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">✓ Appliquer le transcript</button>
+          <div id="expWordPreview" style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;display:none">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Mots détectés</div>
+            <div id="expWordPreviewText" style="font-size:12px;color:var(--text2);line-height:1.9"></div>
+          </div>
+        </div>
+
+        <!-- ③ Style sous-titres -->
+        <div class="exp-section">
+          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">3</span> Style des sous-titres</div>
+          <div class="sub-grid">
+            <div class="sub-card style-card on" id="sc-exp-hormozi" onclick="pickSub(this,'hormozi')">
+              <div class="sub-name">Hormozi</div>
+              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-mrbeast" onclick="pickSub(this,'mrbeast')">
+              <div class="sub-name">MrBeast</div>
+              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFD700;-webkit-text-stroke:.5px #000;font-style:italic">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#FF0000;-webkit-text-stroke:.5px #000;margin-left:3px;font-style:italic">ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-iman" onclick="pickSub(this,'iman')">
+              <div class="sub-name">Iman</div>
+              <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;letter-spacing:1px">PASSE ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-tiktok" onclick="pickSub(this,'tiktok')">
+              <div class="sub-name">TikTok Pills</div>
+              <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-neon" onclick="pickSub(this,'neon')">
+              <div class="sub-name">Néon</div>
+              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:11px;color:#00FF87;text-shadow:0 0 8px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#BF5FFF;text-shadow:0 0 8px #BF5FFF;margin-left:3px">ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-podcast" onclick="pickSub(this,'podcast')">
+              <div class="sub-name">Podcast</div>
+              <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-badis" onclick="pickSub(this,'badis')">
+              <div class="sub-name">Badis ✍️</div>
+              <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <div class="flbl" style="margin-bottom:8px">Mots par sous-titre</div>
+            <div style="display:flex;gap:6px">
+              <div class="exp-wpg-chip" id="expWpg1" onclick="expSetWpg(this,1)">1 mot</div>
+              <div class="exp-wpg-chip on" id="expWpg2" onclick="expSetWpg(this,2)">2 mots</div>
+              <div class="exp-wpg-chip" id="expWpg3" onclick="expSetWpg(this,3)">3 mots</div>
+              <div class="exp-wpg-chip" id="expWpg4" onclick="expSetWpg(this,4)">4 mots</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ Gameplay / B-roll (optionnel) -->
+        <div class="exp-section">
+          <div class="exp-section-title" style="justify-content:space-between">
+            <span><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">4</span> Gameplay / B-roll</span>
+            <span style="font-size:9px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:10px">Optionnel</span>
+          </div>
+          <div id="expGpDropZone" class="exp-drop" style="padding:22px 16px" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expGpOnDrop(event)">
+            <input type="file" accept="video/*" onchange="_expGpFileInput(this)">
+            <div style="font-size:28px;margin-bottom:8px">🎮</div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:3px">Ajoute un fond gameplay</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Minecraft · Subway Surfers · GTA… affiché sous ta vidéo</div>
+          </div>
+          <div id="expGpInfo" class="exp-vidinfo" style="display:none">
+            <div class="exp-vidthumb">🎮</div>
+            <div class="exp-vidmeta">
+              <div class="exp-vidname" id="expGpName">—</div>
+              <div class="exp-vidsize" id="expGpSize">—</div>
+            </div>
+            <button onclick="_expClearGameplay()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕</button>
+          </div>
+          <!-- Split slider -->
+          <div id="expGpSplitWrap" style="display:none;margin-top:14px">
+            <div class="flbl" style="margin-bottom:8px">Répartition écran — <span id="expGpSplitLbl" style="color:var(--orange2)">60% vidéo / 40% gameplay</span></div>
+            <input type="range" id="expGpSplitSlider" min="30" max="80" value="60" oninput="expGpSplitChange(this)" style="width:100%;accent-color:var(--orange)">
+          </div>
+        </div>
+
+        <!-- ⑤ Effets IA — VSL style -->
+        <div class="exp-section">
+          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ Nouveau</span></div>
+
+          <!-- Bouton générer -->
+          <button id="expGenEffectsBtn" onclick="expressGenerateEffects()" style="width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
+            <div style="display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800">✨ Analyser & Générer les effets IA</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Zoom punch-in · Hook texte · Vignette · Shake · Rythmé VSL</div>
+          </button>
+
+          <!-- Liste des effets (cachée jusqu'à génération) -->
+          <div id="expEffectsWrap" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="expEffectsCount">— effets générés</div>
+              <button onclick="expressGenerateEffects()" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);padding:4px 10px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">↺ Régénérer</button>
+            </div>
+            <div id="expEffectsList" style="display:flex;flex-direction:column;gap:6px"></div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:10px;text-align:center">Clique ✕ pour supprimer un effet · Toggle ON/OFF pour désactiver temporairement</div>
+          </div>
+
+          <!-- État vide -->
+          <div id="expEffectsEmpty" style="padding:20px;background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:8px">🎬</div>
+            <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Transcris ta vidéo (étape 2) puis génère les effets</div>
+          </div>
+        </div>
+
+        <!-- ⑥ Exporter -->
+        <div class="exp-section" style="margin-bottom:40px">
+          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">6</span> Exporter</div>
+          <div style="display:flex;gap:6px;margin-bottom:18px">
+            <button class="qual-btn" data-q="540" onclick="setQuality(540,this)" style="padding:7px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:20px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">540p</button>
+            <button class="qual-btn" data-q="720" onclick="setQuality(720,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">720p</button>
+            <button class="qual-btn" data-q="1080" onclick="setQuality(1080,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">1080p <span style="font-size:9px;opacity:.6">PRO</span></button>
+          </div>
+          <button id="expComposeBtn" onclick="expressCompose()" disabled style="width:100%;padding:15px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .25s;box-shadow:0 4px 20px rgba(255,107,53,.3);letter-spacing:-.2px;opacity:.4" onmouseover="if(!this.disabled)this.style.opacity='.9'" onmouseout="if(!this.disabled)this.style.opacity='1'">⚡ Appliquer & Télécharger</button>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:8px">La vidéo se télécharge automatiquement · temps réel</div>
+          <div id="expProgWrap" class="exp-prog-wrap">
+            <div class="exp-prog-stage" id="expProgStage">Composition en cours…</div>
+            <div class="exp-prog-row">
+              <div class="exp-prog-bar"><div class="exp-prog-fill" id="expProgFill"></div></div>
+              <div class="exp-prog-pct" id="expProgPct">0%</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /express -->
 
   </div><!-- /main -->
 </div><!-- /layout -->
@@ -2627,7 +2963,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       🚀 Essai gratuit — 2 vidéos <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">(watermark)</span>
     </button>
     <div style="text-align:center;margin-top:14px">
-      <a href="https://avatarads.iamanager.fr#pricing" style="font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)">Voir les plans →</a>
+      <a href="https://avatarads.fr#pricing" style="font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)">Voir les plans →</a>
     </div>
   </div>
 </div>
@@ -2899,9 +3235,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- TAB: Crédits images -->
         <div id="packTabImages" style="display:none">
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px">Les crédits images ne se réinitialisent pas — ils s'ajoutent à ton quota mensuel et ne expirent jamais.</div>
 
-          <!-- Pack Spark · 5€ · +10 images -->
+          <!-- Pack Spark · 4,99€ · +10 images -->
           <div class="credits-pack" onclick="buyImageCredits('img_s')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✨</div>
@@ -2912,14 +3247,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">5€</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">4,99€</div>
                 <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack">Acheter</button>
             </div>
           </div>
 
-          <!-- Pack Flash · 10€ · +25 images -->
+          <!-- Pack Flash · 9,99€ · +25 images -->
           <div class="credits-pack popular" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
             <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--orange),#d93a15);color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
             <div style="display:flex;align-items:center;gap:14px">
@@ -2931,14 +3266,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">10€</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">9,99€</div>
                 <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack">Acheter</button>
             </div>
           </div>
 
-          <!-- Pack Storm · 15€ · +40 images -->
+          <!-- Pack Storm · 14,99€ · +40 images -->
           <div class="credits-pack" onclick="buyImageCredits('img_l')">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🌩️</div>
@@ -2949,7 +3284,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">15€</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">14,99€</div>
                 <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 4px 14px rgba(168,85,247,0.35)">Acheter</button>
@@ -3050,28 +3385,28 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="paywall-title" id="paywallTitle">Passe à l'accès complet</div>
     <div class="paywall-sub" id="paywallSub">Choisis le plan qui correspond à ton usage. Tous les APIs sont inclus, zéro configuration.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
-      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
+      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.fr#pricing','_blank')">
         <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
         <div style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 vidéos · 20s max</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 avatars · 40s max</div>
       </div>
-      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
+      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="window.open('https://avatarads.fr#pricing','_blank')">
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
-        <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">PRO</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">PRO</div>
         <div style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 vidéos · 30s max</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 avatars · 70s max</div>
       </div>
-      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">
-        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">ELITE</div>
+      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://avatarads.fr#pricing','_blank')">
+        <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">ELITE ✦</div>
         <div style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 vidéos · 40s max</div></div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 avatars · 120s max</div>
       </div>
     </div>
     <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Ou dès <strong style="color:var(--text2)">22,49€/mois</strong> en annuel · Sans engagement</div>
-    <button class="btn-paywall" onclick="window.open('https://avatarads.iamanager.fr#pricing','_blank')">Voir tous les plans →</button>
+    <button class="btn-paywall" onclick="window.open('https://avatarads.fr#pricing','_blank')">Voir tous les plans →</button>
     <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
   </div>
 </div>
@@ -3276,8 +3611,15 @@ async function authLogin(){
   btn.textContent='Connexion...'; btn.disabled=true; errEl.style.display='none';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
   if(error){
-    errEl.textContent = error.message === 'Invalid login credentials'
-      ? 'Email ou mot de passe incorrect.' : error.message;
+    const _authErr = {
+      'Invalid login credentials':   'Email ou mot de passe incorrect.',
+      'Email not confirmed':          '📧 Confirme ton email avant de te connecter. Vérifie ta boîte mail.',
+      'User not found':               'Aucun compte trouvé avec cet email.',
+      'Too many requests':            'Trop de tentatives. Réessaie dans quelques minutes.',
+      'Invalid email':                'Adresse email invalide.',
+      'Password should be at least 6 characters': 'Mot de passe trop court (6 caractères min).',
+    };
+    errEl.textContent = _authErr[error.message] || error.message;
     errEl.style.display='block'; btn.textContent='Se connecter →'; btn.disabled=false; return;
   }
   await loadProfile(data.user);
@@ -3629,19 +3971,115 @@ function selectClip(id, label) {
   renderClipGrid(_currentClipCategory);
   const badge = document.getElementById('clipSelectedBadge');
   const lbl   = document.getElementById('clipSelectedLabel');
+  const noRow = document.getElementById('noClipRowS4');
+  const actRow= document.getElementById('activeClipRowS4');
+  const actNm = document.getElementById('activeClipNameS4');
+  const actEmo= document.getElementById('activeClipEmoS4');
+
   if (_selectedClipId) {
     const clip = PRESET_CLIPS.find(c => c.id === id);
     if (lbl) lbl.textContent = `${clip?.emoji || '🎬'} ${label} · segment aléatoire · ${_clipMaxDuration()}s`;
     if (badge) badge.style.display = 'flex';
+    // Mise à jour Step 4
+    if (actNm)  actNm.textContent  = `${clip?.emoji || '🎬'} ${label}`;
+    if (actEmo) actEmo.textContent = clip?.emoji || '🎬';
+    if (noRow)  noRow.style.display  = 'none';
+    if (actRow) actRow.style.display = 'flex';
+    // Preview dans le phone
+    _showClipPreview(id);
   } else {
     if (badge) badge.style.display = 'none';
+    if (noRow)  noRow.style.display  = 'flex';
+    if (actRow) actRow.style.display = 'none';
+    _hideClipPreview();
   }
+}
+
+function _showClipPreview(clipId) {
+  const url = _clipUrl(clipId);
+  if (!url) return;
+  const vid = document.getElementById('clipPreviewVid');
+  if (!vid) return;
+  vid.src = url;
+  vid.style.display = 'block';
+  vid.play().catch(()=>{});
+}
+
+function _hideClipPreview() {
+  const vid = document.getElementById('clipPreviewVid');
+  if (!vid) return;
+  vid.pause();
+  vid.src = '';
+  vid.style.display = 'none';
+}
+
+// Ouvre un modal de sélection de clip (utilisable depuis étape 2 et étape 4)
+function openClipPickerModal() {
+  document.getElementById('_clipPickerModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = '_clipPickerModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+
+  const cats = ['all','gaming','asmr','lifestyle'];
+  const catLabels = { all:'Tous', gaming:'🎮 Gaming', asmr:'🧼 ASMR', lifestyle:'🚶 Lifestyle' };
+  let activeCat = 'all';
+
+  function renderModalClips(cat) {
+    activeCat = cat;
+    const clips = cat === 'all' ? PRESET_CLIPS : PRESET_CLIPS.filter(c => c.category === cat);
+    const maxDur = _clipMaxDuration();
+    return clips.map(clip => {
+      const ok = _clipAccessible(clip.tier);
+      const isOn = _selectedClipId === clip.id;
+      return `<div onclick="${ok ? `_pickClipFromModal('${clip.id}','${clip.label}')` : `toast('⛔ Clip ${clip.tier} — upgrade ton plan')`}"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isOn?'rgba(255,107,53,0.1)':'var(--bg3)'};border:1.5px solid ${isOn?'rgba(255,107,53,0.45)':'var(--border)'};border-radius:10px;cursor:pointer;margin-bottom:7px;transition:all .15s;${!ok?'opacity:.5':''}">
+        <span style="font-size:22px">${clip.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clip.label}</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">${clip.category} · max ${maxDur}s</div>
+        </div>
+        ${isOn ? '<span style="font-size:16px">✅</span>' : (ok ? '<span style="font-size:10px;font-family:var(--mono);color:var(--orange2);font-weight:700">Choisir →</span>' : '<span style="font-size:12px">🔒</span>')}
+      </div>`;
+    }).join('');
+  }
+
+  modal.innerHTML = `
+    <div class="lvp-sheet" style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:78vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0">
+        <div>
+          <div style="font-size:14px;font-weight:800">🎬 Choisir un clip</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Joue en fond de ta vidéo · segment aléatoire</div>
+        </div>
+        <button onclick="document.getElementById('_clipPickerModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="display:flex;gap:5px;margin-bottom:12px;flex-shrink:0;overflow-x:auto;padding-bottom:2px" id="cpmTabs">
+        ${cats.map(c=>`<button onclick="document.getElementById('cpmTabs').querySelectorAll('button').forEach(b=>b.style.background='var(--bg4)');this.style.background='var(--orange-dim)';document.getElementById('cpmList').innerHTML=window._cpmRender('${c}')" style="padding:5px 12px;background:${c==='all'?'var(--orange-dim)':'var(--bg4)'};border:1px solid ${c==='all'?'rgba(255,107,53,0.35)':'var(--border2)'};border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;color:${c==='all'?'var(--orange2)':'var(--text3)'};cursor:pointer;white-space:nowrap">${catLabels[c]}</button>`).join('')}
+      </div>
+      <div id="cpmList" style="overflow-y:auto;flex:1">${renderModalClips('all')}</div>
+      ${_selectedClipId ? `<button onclick="clearSelectedClip();document.getElementById('_clipPickerModal').remove()" style="margin-top:10px;width:100%;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">✕ Supprimer le clip</button>` : ''}
+    </div>`;
+
+  window._cpmRender = renderModalClips;
+  document.body.appendChild(modal);
+}
+
+function _pickClipFromModal(id, label) {
+  document.getElementById('_clipPickerModal')?.remove();
+  // Reset toggle si déjà sélectionné pour forcer re-sélection
+  if(_selectedClipId === id) _selectedClipId = null;
+  selectClip(id, label);
 }
 
 function clearSelectedClip() {
   _selectedClipId = null;
-  const badge = document.getElementById('clipSelectedBadge');
-  if (badge) badge.style.display = 'none';
+  const badge  = document.getElementById('clipSelectedBadge');
+  const noRow  = document.getElementById('noClipRowS4');
+  const actRow = document.getElementById('activeClipRowS4');
+  if (badge)  badge.style.display  = 'none';
+  if (noRow)  noRow.style.display  = 'flex';
+  if (actRow) actRow.style.display = 'none';
+  _hideClipPreview();
   renderClipGrid(_currentClipCategory);
 }
 
@@ -3819,7 +4257,7 @@ function previewUpgradeAs(fakePlan){
 }
 
 function goUpgradePlan(){
-  window.open('https://avatarads.iamanager.fr#pricing', '_blank');
+  window.open('https://avatarads.fr#pricing', '_blank');
   closeUpgradeModal();
 }
 function buyCredits(pack){
@@ -4003,13 +4441,27 @@ function initAffiliation(){
   sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', currentMember.id).then(({count})=>{
     const el = document.getElementById('affStatRefs');
     if(el) el.textContent = count || 0;
-    // Estimation gains (sans Stripe : juste infostatif)
     const earn = document.getElementById('affStatEarnings');
     if(earn) earn.textContent = '—';
   });
-  // Charger le moyen de paiement sauvegardé
-  const saved = localStorage.getItem('aff_payment_' + currentMember.id);
-  if(saved){ const pi = document.getElementById('affPaymentInfo'); if(pi) pi.value = saved; }
+  // Init calculateur
+  affUpdateCalc(10);
+}
+
+function affUpdateCalc(val){
+  val = parseInt(val) || 0;
+  // Prix moyen pondéré : 70% Starter (29,99€) + 25% Pro (49,99€) + 5% Élite (89,99€)
+  const avgPlan = 0.70 * 29.99 + 0.25 * 49.99 + 0.05 * 89.99;
+  const monthly = Math.round(val * avgPlan * 0.30);
+  const yearly  = monthly * 12;
+  const fmt = n => n >= 1000 ? Math.floor(n/1000).toLocaleString('fr-FR') + ' ' + (n%1000 > 0 ? (n%1000).toString().padStart(3,'0') : '000') + '€' : n + '€';
+  const fmtSimple = n => n.toLocaleString('fr-FR') + '€';
+  // Slider gradient
+  const slider = document.getElementById('affCalcSlider');
+  if(slider){ slider.value = val; const pct=(val/500*100).toFixed(1); slider.style.background=`linear-gradient(to right,var(--orange) ${pct}%,rgba(255,255,255,0.12) ${pct}%,rgba(255,255,255,0.12) 100%)`; }
+  const countEl   = document.getElementById('affCalcCount');   if(countEl)   countEl.textContent = val;
+  const monthlyEl = document.getElementById('affCalcMonthly'); if(monthlyEl) monthlyEl.textContent = fmtSimple(monthly);
+  const yearlyEl  = document.getElementById('affCalcYearly');  if(yearlyEl)  yearlyEl.textContent  = fmtSimple(yearly) + ' par an';
 }
 
 function copyAffLink(){
@@ -4095,25 +4547,214 @@ function _updateImgQuotaLabel(){
   el.style.color = rem<=2 ? 'var(--orange)' : 'var(--text3)';
 }
 
-async function generateImage(){
-  const prompt = document.getElementById('imgPrompt').value.trim();
-  if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
-  // Vérif plan (Free bloqué même avec bonus)
-  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
-  // Vérif crédits restants (mensuel + bonus)
-  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
-  const btn = document.getElementById('imgGenBtn');
-  btn.textContent = '⏳ Génération en cours…'; btn.disabled = true;
-  document.getElementById('imgResult').style.display = 'none';
+// ═══════════════════════════════════════════════════════════════════
+// ── IMAGE GENERATOR — Premium UI helpers ────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+
+const _IMG_STYLES = [
+  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Hyper-réaliste',   api:'natural', suffix:', hyperréaliste, lumière naturelle, style photo' },
+  { id:'cinema',  icon:'🎬', label:'Cinéma',       sub:'Dramatique',       api:'vivid',   suffix:', style cinématique, couleurs dramatiques, bokeh professionnel' },
+  { id:'studio',  icon:'💡', label:'Studio',       sub:'Fond épuré',       api:'natural', suffix:', fond blanc studio, éclairage professionnel, qualité advertising' },
+  { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', style UGC authentique, casual, lumière naturelle de jour' },
+  { id:'premium', icon:'✨', label:'Premium',      sub:'Haut de gamme',    api:'vivid',   suffix:', style luxury brand, composition élégante, couleurs riches' },
+  { id:'dark',    icon:'🌑', label:'Dark Luxury',  sub:'Sombre & chic',    api:'natural', suffix:', fond sombre, ambiance luxe, éclairage contrasté, éditorial' },
+];
+
+const _IMG_FORMATS = [
+  { id:'square',   label:'Carré',    sub:'1:1 · Universel',  value:'1024x1024',  w:1,  h:1  },
+  { id:'portrait', label:'Portrait', sub:'9:16 · Stories',   value:'1024x1792',  w:9,  h:16 },
+  { id:'land',     label:'Paysage',  sub:'16:9 · YouTube',   value:'1792x1024',  w:16, h:9  },
+];
+
+let _imgSelectedStyleId    = 'photo';
+let _imgSelectedStyleApi   = 'natural';
+let _imgSelectedStyleSuffix= _IMG_STYLES[0].suffix;
+let _imgSelectedStyleLabel = _IMG_STYLES[0].label;
+let _imgSelectedFormat     = '1024x1024';
+let _imgSelectedFormatId   = 'square';
+
+function _imgFmtLabel(val){ return (_IMG_FORMATS.find(f=>f.value===val)||{sub:'Carré'}).sub; }
+
+function _imgInitStyleGrid(){
+  const g = document.getElementById('imgStyleGrid'); if(!g) return;
+  g.innerHTML = '';
+  _IMG_STYLES.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'img-style-card' + (s.id===_imgSelectedStyleId?' on':'');
+    el.innerHTML = '<div class="isc-icon">'+s.icon+'</div><div class="isc-label">'+s.label+'</div><div class="isc-sub">'+s.sub+'</div>';
+    el.onclick = () => _imgPickStyle(s.id);
+    g.appendChild(el);
+  });
+}
+
+function _imgPickStyle(id){
+  const s = _IMG_STYLES.find(x=>x.id===id); if(!s) return;
+  _imgSelectedStyleId     = id;
+  _imgSelectedStyleApi    = s.api;
+  _imgSelectedStyleSuffix = s.suffix;
+  _imgSelectedStyleLabel  = s.label;
+  document.querySelectorAll('#imgStyleGrid .img-style-card').forEach(el => {
+    el.classList.toggle('on', el.querySelector('.isc-label').textContent === s.label);
+  });
+}
+
+function _imgInitFormatGrid(){
+  const g = document.getElementById('imgFormatGrid'); if(!g) return;
+  g.innerHTML = '';
+  _IMG_FORMATS.forEach(f => {
+    const maxDim = 28;
+    const ratio  = f.w / f.h;
+    let pw, ph;
+    if(ratio >= 1){ pw = maxDim; ph = Math.round(maxDim / ratio); }
+    else           { ph = maxDim; pw = Math.round(maxDim * ratio); }
+    const el = document.createElement('div');
+    el.className = 'img-fmt-card' + (f.id===_imgSelectedFormatId?' on':'');
+    el.innerHTML = '<div class="ifc-preview"><div style="width:'+pw+'px;height:'+ph+'px;border-radius:3px;border:1.5px solid currentColor;opacity:0.6"></div></div><div class="ifc-label">'+f.label+'</div><div class="ifc-sub">'+f.sub+'</div>';
+    el.onclick = () => _imgPickFormat(f.id);
+    g.appendChild(el);
+  });
+}
+
+function _imgPickFormat(id){
+  const f = _IMG_FORMATS.find(x=>x.id===id); if(!f) return;
+  _imgSelectedFormat   = f.value;
+  _imgSelectedFormatId = id;
+  document.querySelectorAll('#imgFormatGrid .img-fmt-card').forEach(el => {
+    el.classList.toggle('on', el.querySelector('.ifc-label').textContent === f.label);
+  });
+}
+
+function _imgUpdateCharCount(el){
+  const c = document.getElementById('imgCharCount');
+  if(c) c.textContent = el.value.length + ' / 1000';
+}
+
+function _imgNewPrompt(){
+  document.getElementById('imgPrompt').value = '';
+  document.getElementById('imgCharCount').textContent = '0 / 1000';
+  document.getElementById('imgPrompt').focus();
+}
+
+function _imgCopyUrl(){
+  const img = document.getElementById('imgOutput');
+  if(!img||!img.src||img.src===window.location.href) return;
+  navigator.clipboard.writeText(img.src).then(()=>toast('✅ URL copiée')).catch(()=>toast('⚠️ Copie impossible'));
+}
+
+function _imgSaveHistory(url, styleLabel, size){
+  try {
+    const history = JSON.parse(localStorage.getItem('imgHistory')||'[]');
+    history.unshift({ url, styleLabel, size, ts: Date.now() });
+    localStorage.setItem('imgHistory', JSON.stringify(history.slice(0,8)));
+  } catch(e){}
+}
+
+function _imgRenderHistory(){
+  try {
+    const history = JSON.parse(localStorage.getItem('imgHistory')||'[]');
+    const wrap = document.getElementById('imgHistoryWrap');
+    const grid = document.getElementById('imgHistoryGrid');
+    if(!wrap||!grid||history.length===0){ if(wrap) wrap.style.display='none'; return; }
+    wrap.style.display = 'block';
+    grid.innerHTML = '';
+    history.slice(0,4).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'img-hist-thumb';
+      div.title = item.styleLabel + ' · ' + _imgFmtLabel(item.size);
+      div.onclick = () => {
+        const img = document.getElementById('imgOutput');
+        img.src = item.url; img.style.display='block';
+        document.getElementById('imgDownloadBtn').href = item.url;
+        document.getElementById('imgResult').style.display = 'block';
+        document.getElementById('imgLoadingOverlay').style.display = 'none';
+      };
+      const img = document.createElement('img');
+      img.src = item.url; img.alt = '';
+      div.appendChild(img);
+      grid.appendChild(div);
+    });
+  } catch(e){}
+}
+
+async function enhanceImagePrompt(){
+  const ta  = document.getElementById('imgPrompt');
+  const btn = document.getElementById('imgEnhanceBtn');
+  const txt = ta.value.trim();
+  if(!txt){ toast('⚠️ Écris d\'abord une idée de base'); return; }
+  btn.textContent = '…'; btn.disabled = true;
   try {
     const session = (await sb.auth.getSession()).data.session;
     const token   = session?.access_token;
-    if(!token){ toast('⚠️ Connecte-toi pour générer des images'); btn.textContent='🎨 Générer l\'image'; btn.disabled=false; return; }
+    if(!token){ toast('⚠️ Connecte-toi d\'abord'); return; }
+    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify({ model:'gpt-4o-mini', max_tokens:200, messages:[
+        { role:'system', content:'Tu es expert en création de prompts DALL-E 3 pour des publicités professionnelles. Améliore le prompt de l\'utilisateur pour qu\'il soit plus précis et donne un résultat visuellement impactant. Réponds UNIQUEMENT avec le prompt amélioré (1 seule ligne, sans guillemets, sans explication).' },
+        { role:'user',   content: txt }
+      ]})
+    });
+    const data = await res.json();
+    const improved = data.choices?.[0]?.message?.content?.trim();
+    if(improved){ ta.value = improved; _imgUpdateCharCount(ta); toast('✨ Prompt amélioré !'); }
+    else toast('⚠️ Impossible d\'améliorer');
+  } catch(e){ toast('⚠️ Erreur : ' + e.message); }
+  finally { btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 1v1.5M5 7.5V9M1 5h1.5M7.5 5H9M2.5 2.5l1 1M6.5 6.5l1 1M2.5 7.5l1-1M6.5 3.5l1-1"/></svg> ✦ Améliorer'; btn.disabled = false; }
+}
 
-    const size  = document.getElementById('imgSize').value || '1024x1024';
-    const style = document.getElementById('imgStyle').value || 'natural';
-    // Enrichissement automatique du prompt pour une qualité maximale
-    const enhancedPrompt = prompt + ', 4K, ultra haute définition, hyperréaliste, qualité professionnelle, haute résolution, détails nets';
+function _imgInitSuggestions(){
+  const suggestions = [
+    'Entrepreneur en studio moderne, MacBook, lumière cinématique, fond sombre',
+    'Face cam UGC outdoor, micro-cravate, tenue casual, fond urbain flou',
+    'Personal branding loft minimaliste, costume ouvert, lumière dorée',
+    'Mockup iPhone 15 Pro sur bureau bois, app business, fond épuré',
+    'Thumbnail YouTube motivationnel, personne confiante, texte bold',
+    'Dark luxury product shot, fond noir, éclairage accent dramatique',
+  ];
+  const c = document.getElementById('imgSuggestions'); if(!c) return;
+  c.innerHTML = '';
+  suggestions.forEach(s => {
+    const b = document.createElement('button');
+    b.textContent = s.length > 40 ? s.slice(0,38)+'…' : s;
+    b.title = s;
+    b.style.cssText = 'padding:5px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;transition:all .15s;white-space:nowrap';
+    b.onmouseover = () => { b.style.borderColor='rgba(255,107,53,0.35)'; b.style.color='var(--orange2)'; };
+    b.onmouseout  = () => { b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; };
+    b.onclick = () => { document.getElementById('imgPrompt').value = s; _imgUpdateCharCount(document.getElementById('imgPrompt')); };
+    c.appendChild(b);
+  });
+}
+
+function initImageGen(){
+  _imgInitStyleGrid();
+  _imgInitFormatGrid();
+  _imgInitSuggestions();
+  _imgRenderHistory();
+  _updateImgQuotaLabel();
+}
+
+async function generateImage(){
+  const prompt = document.getElementById('imgPrompt').value.trim();
+  if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
+  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
+  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
+  const btn = document.getElementById('imgGenBtn');
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
+  btn.disabled = true; btn.style.opacity = '0.75';
+  // Show loading overlay
+  const resultWrap = document.getElementById('imgResult');
+  const overlay    = document.getElementById('imgLoadingOverlay');
+  if(resultWrap.style.display !== 'none') overlay.style.display = 'flex';
+  else { resultWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+  try {
+    const session = (await sb.auth.getSession()).data.session;
+    const token   = session?.access_token;
+    if(!token){ toast('⚠️ Connecte-toi pour générer des images'); return; }
+
+    const size  = _imgSelectedFormat;
+    const style = _imgSelectedStyleApi;
+    const suffix = _imgSelectedStyleSuffix;
+    const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
@@ -4125,17 +4766,34 @@ async function generateImage(){
     if(!url){ toast('⚠️ Aucune image retournée'); return; }
     _imgMonthIncrement();
     const img = document.getElementById('imgOutput');
+    img.style.display = 'block';
     img.src = url;
     document.getElementById('imgDownloadBtn').href = url;
-    document.getElementById('imgResult').style.display = 'block';
+    // Update result badges
+    const badges = document.getElementById('imgBadges');
+    if(badges){
+      badges.innerHTML = '';
+      const bStyle = document.createElement('div');
+      bStyle.textContent = _imgSelectedStyleLabel;
+      bStyle.style.cssText = 'padding:4px 10px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-family:var(--font);color:rgba(255,255,255,0.85);font-weight:600';
+      const bSize = document.createElement('div');
+      bSize.textContent = _imgFmtLabel(size);
+      bSize.style.cssText = bStyle.style.cssText;
+      badges.appendChild(bStyle); badges.appendChild(bSize);
+    }
+    // Save to history
+    _imgSaveHistory(url, _imgSelectedStyleLabel, size);
+    _imgRenderHistory();
     const rem = _imgMonthRemaining();
-    toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':'') + ' ce mois');
+    toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     _updateImgQuotaLabel();
   } catch(e){
     console.error('generateImage:', e);
     toast('⚠️ Erreur : ' + e.message);
   } finally {
-    btn.textContent = '🎨 Générer l\'image'; btn.disabled = false;
+    overlay.style.display = 'none';
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer l\'image';
+    btn.disabled = false; btn.style.opacity = '1';
   }
 }
 
@@ -4165,6 +4823,7 @@ let recInReplace      = false;
 let recReplaceStream  = null;
 let recReplaceRecorder= null;
 let recReplaceChunks  = [];
+let recSegments       = [];     // [{id, start, end}] en samples pour le découpage CapCut-style
 
 // ── Init ──
 function recInit(){
@@ -4315,10 +4974,12 @@ async function recOnStop(){
     else{ stats.style.display='none'; }
   }
   recPlayOffset=0;
+  recSegments=[{ id:Date.now(), start:0, end:recAudioBuffer.length }];
   recState='recorded'; recUpdateUI();
   recRenderWaveform(recAudioBuffer, 0);
   _recUpdateTime(0, recAudioBuffer.duration);
   document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
+  document.getElementById('recTimeline').style.display='none'; // single segment = no timeline yet
   toast('✅ Enregistrement prêt');
 }
 
@@ -4538,29 +5199,161 @@ function _recToWav(buffer){
 function _recFmt(s){ const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
 
 // ── UI update ──
-function recUpdateUI(){
-  const mainBtn=document.getElementById('recMainBtn');
-  const mainIcon=document.getElementById('recMainBtnIcon');
-  const pulse=document.getElementById('recPulse');
-  const playBtn=document.getElementById('recPlayBtn');
-  const replBtn=document.getElementById('recReplaceBtn');
-  const dlBtn=document.getElementById('recDownloadBtn');
-  const useBtn=document.getElementById('recUseBtn');
-  const has=!!recAudioBuffer;
-  const isRec=recState==='recording';
-  const isPlay=recState==='playing';
-  const isProc=recState==='processing';
-  if(mainIcon) mainIcon.textContent=isRec?'⏹':isProc?'⏳':'⏺';
-  if(mainBtn){
-    mainBtn.disabled=isProc;
-    mainBtn.style.background=isRec?'rgba(239,68,68,0.25)':'rgba(239,68,68,0.12)';
-    mainBtn.style.borderColor=isRec?'rgba(239,68,68,0.7)':'rgba(239,68,68,0.4)';
+// ── ✂️ Découpe CapCut-style ─────────────────────────────────────────
+function recSplitAtCursor(){
+  if(!recAudioBuffer || recSegments.length === 0) return;
+  const sr = recAudioBuffer.sampleRate;
+  const cursorSample = Math.round(recPlayOffset * sr);
+  // Find the segment that contains the cursor
+  const segIdx = recSegments.findIndex(s => cursorSample > s.start + 50 && cursorSample < s.end - 50);
+  if(segIdx < 0){ toast('⚠️ Positionne le curseur à l\'intérieur d\'un segment'); return; }
+  const seg = recSegments[segIdx];
+  const left  = { id: Date.now(),   start: seg.start, end: cursorSample };
+  const right = { id: Date.now()+1, start: cursorSample, end: seg.end };
+  recSegments.splice(segIdx, 1, left, right);
+  _recRenderTimeline();
+  toast('✂️ Coupé — supprime le segment à retirer');
+}
+
+function recDeleteSegment(id){
+  recSegments = recSegments.filter(s => s.id !== id);
+  if(recSegments.length === 0){ recReset(); return; }
+  // Rebuild buffer from remaining segments
+  const sr   = recAudioBuffer.sampleRate;
+  const orig = recAudioBuffer.getChannelData(0);
+  const totalLen = recSegments.reduce((sum, s) => sum + (s.end - s.start), 0);
+  const newBuf = recCtx.createBuffer(1, Math.max(1, totalLen), sr);
+  const out = newBuf.getChannelData(0);
+  let off = 0;
+  for(const seg of recSegments){
+    const chunk = orig.slice(seg.start, seg.end);
+    out.set(chunk, off);
+    off += chunk.length;
   }
-  if(pulse) pulse.style.display=isRec?'block':'none';
-  if(playBtn){ playBtn.disabled=!has||isRec||isProc; playBtn.innerHTML=isPlay?'⏸ Pause':'▶ Écouter'; }
-  if(replBtn){ replBtn.disabled=!has||isRec||isProc; }
-  if(dlBtn) dlBtn.disabled=!has||isRec||isProc;
-  if(useBtn) useBtn.disabled=!has||isRec||isProc;
+  // Re-map segment positions to new buffer offsets
+  let newOff = 0;
+  recSegments = recSegments.map(s => {
+    const len = s.end - s.start;
+    const mapped = { id: s.id, start: newOff, end: newOff + len };
+    newOff += len;
+    return mapped;
+  });
+  recAudioBuffer = newBuf;
+  recRawBuffer   = newBuf; // keep in sync for silence toggle
+  recPlayOffset  = 0;
+  recRenderWaveform(recAudioBuffer, 0);
+  _recUpdateTime(0, recAudioBuffer.duration);
+  document.getElementById('recDurDisplay').textContent = '/ ' + _recFmt(recAudioBuffer.duration);
+  _recRenderTimeline();
+  toast('🗑 Segment supprimé');
+}
+
+function _recRenderTimeline(){
+  const wrap = document.getElementById('recTimeline'); if(!wrap) return;
+  if(!recAudioBuffer || recSegments.length <= 1){ wrap.style.display='none'; return; }
+  wrap.style.display = 'flex';
+  const total = recSegments.reduce((s, seg) => s + (seg.end - seg.start), 0) || 1;
+  const colors = [
+    'rgba(255,107,53,0.75)', 'rgba(77,171,247,0.75)', 'rgba(0,217,126,0.65)',
+    'rgba(168,85,247,0.75)', 'rgba(255,200,50,0.75)', 'rgba(255,82,122,0.7)'
+  ];
+  wrap.innerHTML = recSegments.map((seg, i) => {
+    const flex = ((seg.end - seg.start) / total * 100).toFixed(1);
+    const dur  = ((seg.end - seg.start) / recAudioBuffer.sampleRate).toFixed(1);
+    const col  = colors[i % colors.length];
+    return `<div class="rec-seg" style="flex:${flex};background:${col}" title="Segment ${i+1} · ${dur}s · cliquer ✕ pour supprimer">
+      <span class="rec-seg-lbl">${dur}s</span>
+      <button class="rec-seg-del" onclick="recDeleteSegment(${seg.id})" title="Supprimer ce segment">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── 📚 Sauvegarder dans bibliothèque ────────────────────────────────
+async function recSaveToLibrary(){
+  if(!recAudioBuffer){ toast('⚠️ Pas d\'enregistrement à sauvegarder'); return; }
+  const btn = document.getElementById('recLibBtn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+  try {
+    const wav    = _recToWav(recAudioBuffer);
+    const dur    = _recFmt(recAudioBuffer.duration);
+    const idbKey = 'rec_audio_' + Date.now();
+    await _idbSave(idbKey, new File([wav], 'enregistrement.wav', { type:'audio/wav' }));
+    library.unshift({
+      type:    'audio',
+      emo:     '🎙️',
+      name:    'Enregistrement · ' + dur,
+      tags:    ['audio', dur],
+      status:  'done',
+      style:   'AUDIO',
+      bg:      'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))',
+      script:  '',
+      hedraUrl:'',
+      idbKey,
+      date:    new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+    });
+    _saveLibrary();
+    toast('✅ Audio sauvegardé dans Bibliothèque');
+  } catch(e){
+    console.error('recSaveToLibrary:', e);
+    toast('⚠️ Erreur : ' + e.message);
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg> Bibliothèque';
+    }
+  }
+}
+
+// ── 🗑 Reset ────────────────────────────────────────────────────────
+function recReset(){
+  if(recState==='recording') recStopRecording();
+  if(recState==='playing')   recStopPlayback();
+  if(recAnimId) cancelAnimationFrame(recAnimId);
+  recAudioBuffer  = null;
+  recRawBuffer    = null;
+  recSegments     = [];
+  recPlayOffset   = 0;
+  recInReplace    = false;
+  recState        = 'idle';
+  const stats  = document.getElementById('recStatsDisplay'); if(stats)  { stats.style.display='none'; stats.textContent=''; }
+  const banner = document.getElementById('recReplaceBanner'); if(banner) banner.style.display='none';
+  const tl     = document.getElementById('recTimeline');      if(tl)     tl.style.display='none';
+  const dur    = document.getElementById('recDurDisplay');    if(dur)    dur.textContent='—';
+  recDrawIdle();
+  _recUpdateTime(0);
+  recUpdateUI();
+  toast('🔄 Enregistrement réinitialisé');
+}
+
+function recUpdateUI(){
+  const mainBtn  = document.getElementById('recMainBtn');
+  const mainIcon = document.getElementById('recMainBtnIcon');
+  const pulse    = document.getElementById('recPulse');
+  const playBtn  = document.getElementById('recPlayBtn');
+  const splitBtn = document.getElementById('recSplitBtn');
+  const replBtn  = document.getElementById('recReplaceBtn');
+  const dlBtn    = document.getElementById('recDownloadBtn');
+  const libBtn   = document.getElementById('recLibBtn');
+  const resetBtn = document.getElementById('recResetBtn');
+  const useBtn   = document.getElementById('recUseBtn');
+  const has   = !!recAudioBuffer;
+  const isRec = recState === 'recording';
+  const isPlay= recState === 'playing';
+  const isProc= recState === 'processing';
+  if(mainIcon) mainIcon.textContent = isRec ? '⏹' : isProc ? '⏳' : '⏺';
+  if(mainBtn){
+    mainBtn.disabled = isProc;
+    mainBtn.style.background   = isRec ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.12)';
+    mainBtn.style.borderColor  = isRec ? 'rgba(239,68,68,0.7)'  : 'rgba(239,68,68,0.4)';
+  }
+  if(pulse)    pulse.style.display = isRec ? 'block' : 'none';
+  if(playBtn){ playBtn.disabled = !has||isRec||isProc; playBtn.innerHTML = isPlay ? '⏸ Pause' : '▶ Écouter'; }
+  if(splitBtn) splitBtn.disabled = !has||isRec||isProc;
+  if(replBtn)  replBtn.disabled  = !has||isRec||isProc;
+  if(dlBtn)    dlBtn.disabled    = !has||isRec||isProc;
+  if(libBtn)   libBtn.disabled   = !has||isRec||isProc;
+  if(resetBtn) resetBtn.disabled = !has||isRec||isProc;
+  if(useBtn)   useBtn.disabled   = !has||isRec||isProc;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4572,9 +5365,10 @@ function nav(id,el){
   if(el) el.classList.add('on');
   if(id==='library')    renderLibrary();
   if(id==='youtube')    refreshYoutubeView();
-  if(id==='imagegen')   _updateImgQuotaLabel();
+  if(id==='imagegen')   initImageGen();
   if(id==='affiliation') initAffiliation();
   if(id==='recorder')   recInit();
+  if(id==='express')    initExpress();
   if(id==='generator')  setTimeout(initClipPicker, 50);
 }
 function refreshYoutubeView(){
@@ -4826,6 +5620,8 @@ function clearVoiceMode(){
   if(cloneSection) cloneSection.classList.remove('dimmed');
   if(presetSection) presetSection.classList.remove('dimmed');
 }
+const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'Badis ✍️' };
+function _subStyleLabel(s){ return SUB_STYLE_LABELS[s] || (s ? s.charAt(0).toUpperCase()+s.slice(1) : 'Hormozi'); }
 function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
@@ -4891,7 +5687,7 @@ function openSubPresetPicker(){
   } else {
     if(empty) empty.style.display = 'none';
     list.innerHTML = presets.map((p, i) => {
-      const styleLabel = { hormozi:'Hormozi', tiktok:'TikTok', neon:'Néon', iman:'Iman', podcast:'Podcast', mrbeast:'MrBeast' }[p.style] || p.style;
+      const styleLabel = { hormozi:'Hormozi', tiktok:'TikTok', neon:'Néon', iman:'Iman', podcast:'Podcast', mrbeast:'MrBeast', badis:'Badis ✍️' }[p.style] || p.style;
       const animLabel  = p.anim && p.anim !== 'none' ? ' · ' + p.anim : '';
       const posLabel   = 'Y:' + (p.pos||75) + '% X:' + (p.posX||50) + '%';
       return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .18s"
@@ -5061,6 +5857,8 @@ function saveSubPreset(){ openSubPresetSave(); } // alias legacy
     document.addEventListener('DOMContentLoaded', ()=>{
       const inp = document.getElementById('bizNameInput');
       if(inp) inp.value = saved;
+      // Pré-charger Dancing Script pour que le canvas soit prêt dès le premier rendu
+      document.fonts.load("700 48px 'Dancing Script'").catch(()=>{});
     });
   }
 })();
@@ -5125,6 +5923,7 @@ function toggleAnimMenu(){
 function applyColorPreset(name){
   const presets={
     hormozi:{c1:'#FFE500',c2:'#ffffff'},
+    badis:{c1:'#FFE500',c2:'#ffffff'},
     mrbeast:{c1:'#FFD700',c2:'#FF0000'},
     iman:{c1:'#ffffff',c2:'rgba(255,255,255,0.35)'},
     neon:{c1:'#00FF87',c2:'#BF5FFF'},
@@ -5546,7 +6345,7 @@ function toggleSubtitles(){
   if(subtitlesEnabled){
     sw.style.background = 'var(--orange)';
     thumb.style.left = '21px';
-    lbl.textContent = 'Activés — style ' + (selSubStyle||'Hormozi');
+    lbl.textContent = 'Activés — style ' + _subStyleLabel(selSubStyle);
     row.style.borderColor = 'rgba(255,107,53,0.3)';
     if(overlay) overlay.style.visibility = 'visible';
   } else {
@@ -5963,6 +6762,12 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
     else if(style==='iman') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
     else if(style==='podcast') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
     else if(style==='mrbeast') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
+    else if(style==='badis'){
+      const FR_STOP_L = new Set(['de','du','le','la','les','l','un','une','des','et','ou','que','qui','quoi','dont','à','au','aux','en','sur','sous','dans','par','pour','avec','sans','mais','donc','car','ni','or','je','tu','il','elle','nous','vous','ils','elles','me','te','se','lui','leur','y','plus','moins','très','bien','si','quand','plusieurs','pas','ne','on','ce','ça','cette','ces','mon','ma','mes','ton','ta','tes','son','sa','ses','notre','votre','leurs','même','aussi','encore','déjà','jamais','toujours','souvent','comme','alors','puis','cela','fait','est','sont','ont','avoir']);
+      const isStopL = x => FR_STOP_L.has(x.toLowerCase().replace(/[',\.!?«»]/g,'').replace(/^[jcdlmnst]'/,''));
+      if(isStopL(w)) html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
+      else           html+=`<span style="${base}font-family:'Dancing Script',cursive;font-size:${Math.round(sz*1.25)}px;font-weight:700;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 1px">${w}</span>`;
+    }
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
   // During animated preview, never apply entry animation class (would re-trigger on every word)
@@ -6299,6 +7104,14 @@ function updateSubPreview(){
     podcast: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
     ).join(''),
+    badis: (()=>{
+      const FR_STOP_P = new Set(['de','du','le','la','les','l','un','une','des','et','ou','que','qui','quoi','dont','à','au','aux','en','sur','sous','dans','par','pour','avec','sans','mais','donc','car','ni','or','je','tu','il','elle','nous','vous','ils','elles','me','te','se','lui','leur','y','plus','moins','très','bien','si','quand','plusieurs','pas','ne','on','ce','ça','cette','ces','mon','ma','mes','ton','ta','tes','son','sa','ses','notre','votre','leurs','même','aussi','encore','déjà','jamais','toujours','souvent','comme','alors','puis','cela','fait','est','sont','ont','avoir']);
+      const isStopP = w => FR_STOP_P.has(w.toLowerCase().replace(/[',\.!?«»]/g,'').replace(/^[jcdlmnst]'/,''));
+      return () => shown.map((w,i) => isStopP(w)
+        ? `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
+        : `<span style="${sc2}font-family:'Dancing Script',cursive;font-size:${Math.round(sz*1.25)}px;font-weight:700;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 1px">${w}</span>`
+      ).join('');
+    })(),
   };
 
   const html = (render[style] || render.hormozi)();
@@ -9713,7 +10526,54 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
 
-  if(style === 'tiktok'){
+  if(style === 'badis'){
+    // ── Style Badis : mots-clés en script cursive, liaisons en Impact ──
+    // Mots de liaison français → Impact bold ; sinon → Dancing Script cursive
+    const FR_STOP = new Set([
+      'de','du','le','la','les','l','un','une','des','et','ou','que','qui','quoi','dont',
+      'à','au','aux','en','sur','sous','dans','par','pour','avec','sans','mais','donc',
+      'car','ni','or','je','tu','il','elle','nous','vous','ils','elles','me','te','se',
+      'lui','leur','y','plus','moins','très','bien','si','quand','plusieurs','pas','ne',
+      'on','ce','ça','cette','ces','mon','ma','mes','ton','ta','tes','son','sa','ses',
+      'notre','votre','leurs','même','aussi','encore','déjà','jamais','toujours',
+      'souvent','comme','alors','puis','cela','fait','est','sont','ont','avoir'
+    ]);
+    const cleanWord = w => w.toLowerCase().replace(/[',\.!?«»]/g,'').replace(/^[jcdlmnst]'/, '');
+    const isStop    = w => FR_STOP.has(cleanWord(w));
+    const fontNorm  = `900 ${sz}px Impact,sans-serif`;
+    const fontScript= `700 ${Math.round(sz * 1.25)}px 'Dancing Script',cursive`;
+    const fontFor   = w => isStop(w) ? fontNorm : fontScript;
+
+    ctx.textAlign = 'left';
+    // Mesure chaque mot avec sa propre fonte
+    const wordWidths = shown.map(w => {
+      ctx.font = fontFor(w);
+      return ctx.measureText(w).width + gap;
+    });
+
+    const lines  = _splitSubLines(wordWidths, maxLineW);
+    const nLines = lines.length;
+    const startY = posY - ((nLines - 1) * lineH) / 2;
+
+    lines.forEach((lineIdxs, li) => {
+      const lineY = startY + li * lineH;
+      const lineW = lineIdxs.reduce((a, i) => a + wordWidths[i], 0);
+      let x = posX - lineW / 2;
+      x = Math.max(W * 0.05, Math.min(W * 0.95 - lineW, x));
+
+      lineIdxs.forEach(i => {
+        const active = i === activeIdx;
+        const color  = active ? c1 : c2;
+        ctx.font = fontFor(shown[i]);
+        ctx.lineWidth   = strokeW;
+        ctx.strokeStyle = '#000';
+        ctx.fillStyle   = color;
+        ctx.strokeText(shown[i], x, lineY);
+        ctx.fillText(shown[i], x, lineY);
+        x += wordWidths[i];
+      });
+    });
+  } else if(style === 'tiktok'){
     const tSz = Math.round(sz*.85);
     ctx.font = `900 ${tSz}px 'Arial Black',Arial,sans-serif`;
     const pad  = Math.round(sz * 0.15);
@@ -9926,22 +10786,99 @@ const _LIB_IMPORT_CARD = `
     </div>
   </div>`;
 
+let _libActiveTab = 'all';
+
+function libSetTab(tab){
+  _libActiveTab = tab;
+  document.querySelectorAll('.lib-filter-tab').forEach(btn => {
+    btn.classList.toggle('on', btn.id === 'libTab-' + tab);
+  });
+  renderLibrary();
+}
+
 function renderLibrary(){
-  const grid=document.getElementById('libGrid');
-  document.getElementById('libCount').textContent=library.length+' vidéo'+(library.length>1?'s':'')+' générée'+(library.length>1?'s':'');
-  if(!library.length){
-    grid.innerHTML = _LIB_IMPORT_CARD + `
-      <div style="grid-column:2/-1;display:flex;align-items:center;justify-content:center;padding:40px 20px">
-        <div style="text-align:center">
-          <div style="font-size:36px;margin-bottom:12px">🎬</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">Aucune vidéo pour l'instant</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Lance ton premier avatar<br>ou importe une vidéo Hedra existante →</div>
-        </div>
-      </div>`;
+  const grid = document.getElementById('libGrid');
+
+  // Build filtered list — images come from imgHistory, audio/video from library[]
+  let items = [];
+  if(_libActiveTab === 'all' || _libActiveTab === 'image'){
+    try {
+      const imgHist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
+      imgHist.forEach((img, i) => items.push({
+        _src: 'img', _idx: i,
+        type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
+        style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
+        imgUrl: img.url, date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
+      }));
+    } catch(e){}
+  }
+  if(_libActiveTab === 'all' || _libActiveTab === 'audio'){
+    library.filter(v=>v.type==='audio').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
+  }
+  if(_libActiveTab === 'all' || _libActiveTab === 'avatar'){
+    library.filter(v=>!v.type||v.type==='video-avatar').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
+  }
+  if(_libActiveTab === 'all' || _libActiveTab === 'video'){
+    library.filter(v=>v.type==='video-simple'||v.type==='video-import').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
+  }
+
+  // Update count
+  const countEl = document.getElementById('libCount');
+  if(countEl) countEl.textContent = items.length + ' élément' + (items.length!==1?'s':'');
+
+  // Render
+  if(!items.length && !(_libActiveTab==='all'||_libActiveTab==='avatar')){
+    const emojis = {audio:'🎙️', image:'🖼️', video:'🎬', avatar:'🎭'};
+    const labels = {audio:'audio enregistré', image:'image générée', video:'vidéo importée', avatar:'avatar généré'};
+    grid.innerHTML = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:50px 20px"><div style="text-align:center"><div style="font-size:36px;margin-bottom:12px">${emojis[_libActiveTab]||'📁'}</div><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px">Aucun ${labels[_libActiveTab]||'élément'}</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crée du contenu pour le retrouver ici</div></div></div>`;
+    if(_libActiveTab==='all'||_libActiveTab==='avatar') grid.innerHTML = _LIB_IMPORT_CARD + grid.innerHTML;
     return;
   }
-  grid.innerHTML = _LIB_IMPORT_CARD + library.map((v,i)=>`
-    <div class="vid-card">
+  if(!items.length){
+    grid.innerHTML = _LIB_IMPORT_CARD + `<div style="grid-column:2/-1;display:flex;align-items:center;justify-content:center;padding:40px 20px"><div style="text-align:center"><div style="font-size:36px;margin-bottom:12px">🎬</div><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">Aucune vidéo pour l'instant</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Lance ton premier avatar<br>ou importe une vidéo →</div></div></div>`;
+    return;
+  }
+
+  const prefix = (_libActiveTab==='all'||_libActiveTab==='avatar') ? _LIB_IMPORT_CARD : '';
+  grid.innerHTML = prefix + items.map((v) => {
+    // Image card
+    if(v.type==='image'){
+      return `<div class="vid-card" style="cursor:pointer" onclick="window.open('${v.imgUrl}','_blank')">
+        <div class="vid-thumb" style="background:${v.bg};overflow:hidden;padding:0">
+          <img src="${v.imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
+          <div class="vid-overlay"></div>
+          <div class="vid-badge">${v.style}</div>
+        </div>
+        <div class="vid-meta">
+          <div class="vid-title">${v.name}</div>
+          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <a href="${v.imgUrl}" download="avatarads-image.png" style="flex:1;padding:6px 0;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;text-align:center;text-decoration:none" onclick="event.stopPropagation()">⬇ DL</a>
+          </div>
+        </div>
+      </div>`;
+    }
+    // Audio card
+    if(v.type==='audio'){
+      const ri = v._realIdx;
+      return `<div class="vid-card">
+        <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center">
+          <div style="font-size:42px;z-index:1;position:relative">${v.emo}</div>
+          <div class="vid-overlay"></div>
+          <div class="vid-badge">${v.style}</div>
+        </div>
+        <div class="vid-meta">
+          <div class="vid-title">${v.name}</div>
+          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
+          <button onclick="recPlayLibraryAudio(${ri})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
+            ▶ Écouter / Utiliser
+          </button>
+        </div>
+      </div>`;
+    }
+    // Video/Avatar card
+    const ri = v._realIdx;
+    return `<div class="vid-card">
       <div class="vid-thumb" style="background:${v.bg}">
         <div style="font-size:40px;z-index:1;position:relative">${v.emo}</div>
         <div class="vid-overlay"></div>
@@ -9950,17 +10887,36 @@ function renderLibrary(){
       <div class="vid-meta">
         <div class="vid-title">${v.name}</div>
         <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
-        <div class="vid-status">
-          <div class="sdot ok"></div>
-          <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span>
-        </div>
+        <div class="vid-status"><div class="sdot ok"></div><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span></div>
         ${v.hedraIdbKey ? `
-        <button onclick="recomposeFromLibrary(${i})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
+        <button onclick="recomposeFromLibrary(${ri})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
           🎬 Utiliser cette vidéo
         </button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+}
+
+async function recPlayLibraryAudio(libIdx){
+  const entry = library[libIdx];
+  if(!entry||!entry.idbKey){ toast('⚠️ Audio introuvable'); return; }
+  const rec = await _idbLoad(entry.idbKey);
+  if(!rec){ toast('⚠️ Fichier audio non trouvé en mémoire'); return; }
+  const file = new File([rec.blob||rec], entry.name||'audio.wav', { type:'audio/wav' });
+  // Inject into generator as voice
+  window.mp4AudioFile = file;
+  window.mp4AudioEnabled = true;
+  const fn  = document.getElementById('voiceFileName');
+  const vdi = document.getElementById('voiceDropContent');
+  const vfi = document.getElementById('voiceFileInfo');
+  if(fn)  fn.textContent  = '🎙️ ' + entry.name;
+  if(vdi) vdi.style.display = 'none';
+  if(vfi) vfi.style.display = 'block';
+  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
+  nav('generator', navEl);
+  await new Promise(r=>setTimeout(r,80));
+  goToStep(3);
+  toast('✅ Audio injecté dans le générateur');
 }
 
 // ── Importer une vidéo Hedra externe dans la bibliothèque ──
@@ -10074,6 +11030,75 @@ async function recomposeFromLibrary(idx){
   goToStep(2);
 
   toast('✅ Vidéo chargée dans Avatar — configure ton script & voix, puis clique Générer');
+}
+
+// ── LIB VIDEO PICKER ──
+function openLibVideoPicker(){
+  // Collect all library entries that have a video blob in IDB
+  const videos = library.filter(v => v.hedraIdbKey);
+  if(!videos.length){
+    toast('⚠️ Aucune vidéo en bibliothèque — génère ou importe une vidéo d\'abord');
+    return;
+  }
+
+  // Remove any existing picker
+  document.getElementById('_lvpModal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = '_lvpModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
+
+  modal.innerHTML = `
+    <div class="lvp-sheet" style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:72vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:14px;font-weight:800">📚 Vidéos de la bibliothèque</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${videos.length} vidéo${videos.length!==1?'s':''} disponible${videos.length!==1?'s':''}</div>
+        </div>
+        <button onclick="document.getElementById('_lvpModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      ${videos.map(v => {
+        const ri = library.indexOf(v);
+        return `<div class="lvp-item" onclick="pickLibVideo(${ri})">
+          <div style="font-size:28px;flex-shrink:0">${v.emo||'🎬'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name||'Vidéo'}</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${v.date||''} · ${v.style||'VIDEO'}</div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);font-weight:700;flex-shrink:0;white-space:nowrap">Utiliser →</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  document.body.appendChild(modal);
+}
+
+async function pickLibVideo(idx){
+  document.getElementById('_lvpModal')?.remove();
+  const entry = library[idx];
+  if(!entry){ toast('⚠️ Entrée introuvable'); return; }
+
+  toast('⏳ Chargement de la vidéo…');
+
+  let hedraBlob = null;
+  if(entry.hedraIdbKey){
+    try {
+      const stored = await _idbLoad(entry.hedraIdbKey);
+      if(stored instanceof File || stored instanceof Blob) hedraBlob = stored;
+      else if(stored?.blob) hedraBlob = stored.blob;
+    } catch(e){ console.warn('IDB load failed:', e); }
+  }
+  if(!hedraBlob && entry.hedraUrl?.startsWith('blob:')){
+    try { const r = await fetch(entry.hedraUrl); if(r.ok) hedraBlob = await r.blob(); } catch(e){}
+  }
+  if(!hedraBlob){
+    toast('⚠️ Vidéo introuvable — le cache a peut-être été vidé. Régénère ou ré-importe la vidéo.');
+    return;
+  }
+
+  const file = new File([hedraBlob], (entry.name||'avatar') + '.mp4', { type:'video/mp4' });
+  handleBypassHedraFile(file);
 }
 
 // ── UTILS ──
@@ -10386,6 +11411,579 @@ async function submitBugReport(){
   btn.textContent = 'Envoyer';
   document.getElementById('bugForm').style.display = 'none';
   document.getElementById('bugSuccess').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⚡ EXPRESS VSL — Sous-titres · Effets IA · Gameplay · Export
+// ══════════════════════════════════════════════════════════════
+
+let _expressVideoFile    = null;
+let _expressVideoBlobUrl = null;
+let _expressVideoDuration= 0;
+let _expressEffects      = [];   // [{id,type,start,end,...params,label,enabled}]
+let _expressGameplayFile = null;
+let _expressGameplayBlobUrl = null;
+let _expressGpSplit      = 60;   // % hauteur pour la vidéo principale (reste = gameplay)
+
+// ── Init ──────────────────────────────────────────────────────
+function initExpress(){
+  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('on'));
+  const expCard = document.getElementById('sc-exp-' + (selSubStyle || 'hormozi'));
+  if(expCard) expCard.classList.add('on');
+  _expSyncWpgUI(cfg.subWpg || 2);
+}
+
+function _expUpdateUI(){
+  const hasVideo = !!_expressVideoFile;
+  const dropZone = document.getElementById('expDropZone');
+  const vidInfo  = document.getElementById('expVidInfo');
+  const compBtn  = document.getElementById('expComposeBtn');
+  if(dropZone) dropZone.style.display = hasVideo ? 'none' : 'block';
+  if(vidInfo)  vidInfo.style.display  = hasVideo ? 'flex'  : 'none';
+  if(compBtn){ compBtn.disabled = !hasVideo; compBtn.style.opacity = hasVideo ? '1' : '.4'; }
+}
+
+// ── Video source ──────────────────────────────────────────────
+function _expOnDrop(e){
+  e.preventDefault();
+  document.getElementById('expDropZone')?.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if(file) _expLoadVideo(file);
+}
+function _expOnFileInput(input){ const f = input?.files?.[0]; if(f) _expLoadVideo(f); }
+
+function _expLoadVideo(file){
+  if(!file || !file.type.startsWith('video/')){ toast('⚠️ Importe un fichier vidéo (MP4, MOV, WebM…)'); return; }
+  if(_expressVideoBlobUrl) URL.revokeObjectURL(_expressVideoBlobUrl);
+  _expressVideoFile    = file;
+  _expressVideoBlobUrl = URL.createObjectURL(file);
+  const nameEl = document.getElementById('expVidName');
+  const sizeEl = document.getElementById('expVidSize');
+  if(nameEl) nameEl.textContent = file.name;
+  if(sizeEl) sizeEl.textContent = (file.size/1024/1024).toFixed(1) + ' Mo · ' + (file.type.split('/')[1]||'vidéo').toUpperCase();
+  // Durée
+  const tmpVid = document.createElement('video');
+  tmpVid.onloadedmetadata = () => { _expressVideoDuration = tmpVid.duration || 0; URL.revokeObjectURL(tmpVid.src); };
+  tmpVid.src = _expressVideoBlobUrl; tmpVid.load();
+  _expUpdateUI();
+  toast('✅ Vidéo chargée — transcris-la puis génère les effets IA');
+}
+function _expClearVideo(){
+  if(_expressVideoBlobUrl){ URL.revokeObjectURL(_expressVideoBlobUrl); _expressVideoBlobUrl = null; }
+  _expressVideoFile = null; _expressVideoDuration = 0;
+  _expUpdateUI();
+}
+
+// ── Gameplay B-roll ───────────────────────────────────────────
+function _expGpOnDrop(e){
+  e.preventDefault();
+  document.getElementById('expGpDropZone')?.classList.remove('drag-over');
+  const f = e.dataTransfer?.files?.[0]; if(f) _expLoadGameplay(f);
+}
+function _expGpFileInput(input){ const f = input?.files?.[0]; if(f) _expLoadGameplay(f); }
+
+function _expLoadGameplay(file){
+  if(!file || !file.type.startsWith('video/')){ toast('⚠️ Importe une vidéo gameplay'); return; }
+  if(_expressGameplayBlobUrl) URL.revokeObjectURL(_expressGameplayBlobUrl);
+  _expressGameplayFile    = file;
+  _expressGameplayBlobUrl = URL.createObjectURL(file);
+  const n = document.getElementById('expGpName'), s = document.getElementById('expGpSize');
+  if(n) n.textContent = file.name;
+  if(s) s.textContent = (file.size/1024/1024).toFixed(1) + ' Mo';
+  document.getElementById('expGpDropZone').style.display = 'none';
+  document.getElementById('expGpInfo').style.display     = 'flex';
+  document.getElementById('expGpSplitWrap').style.display = 'block';
+  toast('🎮 Gameplay chargé');
+}
+function _expClearGameplay(){
+  if(_expressGameplayBlobUrl){ URL.revokeObjectURL(_expressGameplayBlobUrl); _expressGameplayBlobUrl = null; }
+  _expressGameplayFile = null;
+  document.getElementById('expGpDropZone').style.display  = 'block';
+  document.getElementById('expGpInfo').style.display      = 'none';
+  document.getElementById('expGpSplitWrap').style.display = 'none';
+}
+function expGpSplitChange(slider){
+  _expressGpSplit = parseInt(slider.value);
+  const lbl = document.getElementById('expGpSplitLbl');
+  if(lbl) lbl.textContent = _expressGpSplit + '% vidéo / ' + (100-_expressGpSplit) + '% gameplay';
+}
+
+// ── Transcription ─────────────────────────────────────────────
+async function expressWhisper(){
+  const plan = (currentMember?.plan||'free').toLowerCase();
+  if(!['pro','elite','byok'].includes(plan)){ showPaywall(); toast('⚠️ Whisper IA — Plan Pro ou Élite requis'); return; }
+  if(!_expressVideoFile){ toast('⚠️ Importe ta vidéo d\'abord'); return; }
+  const btn = document.getElementById('expWhisperBtn');
+  if(btn){ btn.innerHTML='⏳ Transcription en cours…'; btn.disabled=true; }
+  try {
+    const fd = new FormData();
+    const fname = _expressVideoFile.name.replace(/\.(mov|webm|avi|mkv)$/i,'.mp4');
+    fd.append('file', _expressVideoFile, fname);
+    fd.append('model','whisper-1'); fd.append('language','fr');
+    fd.append('response_format','verbose_json');
+    fd.append('timestamp_granularities[]','word');
+    const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
+      method:'POST', headers: await getAuthHeader(), body:fd
+    });
+    if(!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    const text = (data.text||'').trim();
+    whisperWordTimestamps = (data.words||[]).map(w=>({
+      word: w.word.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(),
+      start: w.start, end: w.end
+    })).filter(w=>w.word);
+    if(text){
+      populateWordEditor(text);
+      const ta = document.getElementById('expTranscriptTA');
+      if(ta) ta.value = text;
+      _expShowWordPreview(text);
+      // Mise à jour durée si pas encore connue
+      if(!_expressVideoDuration && whisperWordTimestamps.length)
+        _expressVideoDuration = whisperWordTimestamps[whisperWordTimestamps.length-1].end + 0.5;
+      toast('✓ Whisper IA — transcript' + (whisperWordTimestamps.length ? ' + timestamps !' : ' appliqué !'));
+    } else { toast('⚠️ Aucun texte détecté'); }
+  } catch(e){
+    let msg = String(e.message||e);
+    try{ const j=JSON.parse(msg); msg=(j?.error?.message||msg).slice(0,150); }catch(_){}
+    toast('⚠️ Whisper : '+msg.slice(0,140));
+  } finally {
+    if(btn){ btn.innerHTML='🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-family:var(--mono)">PRO</span>'; btn.disabled=false; }
+  }
+}
+
+function expApplyTranscript(){
+  const ta = document.getElementById('expTranscriptTA');
+  if(!ta?.value.trim()){ toast('⚠️ Tape ou colle ton transcript d\'abord'); return; }
+  populateWordEditor(ta.value.trim());
+  whisperWordTimestamps = [];
+  _expShowWordPreview(ta.value.trim());
+  toast('✓ Sous-titres appliqués !');
+}
+
+function _expShowWordPreview(text){
+  const wrap = document.getElementById('expWordPreview');
+  const inner = document.getElementById('expWordPreviewText');
+  if(!wrap||!inner) return;
+  const words = text.split(/\s+/).filter(Boolean).slice(0, 60);
+  inner.innerHTML = words.map(w=>`<span style="display:inline-block;background:var(--bg4);border:1px solid var(--border);border-radius:5px;padding:1px 7px;margin:2px;font-size:11px;font-family:var(--mono);color:var(--text2)">${w}</span>`).join('') + (text.split(/\s+/).length>60 ? `<span style="font-size:10px;color:var(--text3);font-family:var(--mono)"> …+${text.split(/\s+/).length-60} mots</span>` : '');
+  wrap.style.display = 'block';
+  // Déverrouille le bouton effets
+  const emptyEl = document.getElementById('expEffectsEmpty');
+  if(emptyEl) emptyEl.style.display = 'none';
+}
+
+function expSetWpg(el,n){ cfg.subWpg=n; _expSyncWpgUI(n); }
+function _expSyncWpgUI(n){ [1,2,3,4].forEach(i=>{ const c=document.getElementById('expWpg'+i); if(c) c.classList.toggle('on',i===n); }); }
+
+// ── Effets IA ─────────────────────────────────────────────────
+async function expressGenerateEffects(){
+  const chips = Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean);
+  if(!chips.length){ toast('⚠️ Transcris ta vidéo d\'abord (étape 2)'); return; }
+  const btn = document.getElementById('expGenEffectsBtn');
+  if(btn){ btn.innerHTML='⏳ Analyse IA en cours…'; btn.disabled=true; }
+  try {
+    const transcript = chips.join(' ');
+    const dur = Math.round(_expressVideoDuration || 30);
+    const wts = whisperWordTimestamps;
+    const tsInfo = wts.length > 0
+      ? 'Timestamps disponibles (extraits) : ' + wts.slice(0,30).map(w=>`"${w.word}"@${w.start.toFixed(1)}s`).join(', ')
+      : 'Pas de timestamps — distribue les effets de façon uniforme sur la durée.';
+
+    const prompt = `Tu es un expert en montage vidéo viral TikTok/Reels style VSL ultra-dynamique, comme 1600.agency ou Captions.ai.
+
+Vidéo de ${dur}s. Transcript :
+"${transcript.slice(0,600)}"
+
+${tsInfo}
+
+Génère une liste d'effets visuels percutants, bien rythmés, style VSL commercial.
+
+Effets JSON disponibles :
+{"type":"zoom","start":float,"end":float,"scale":float(1.1-1.4),"label":"FR description courte"}
+{"type":"hook","start":0,"end":float<=3,"text":"TEXTE MAJUSCULE MAX 5 MOTS","label":"FR description"}
+{"type":"vignette","start":0,"end":${dur},"intensity":float(0.3-0.5),"label":"Vignette cinéma"}
+{"type":"shake","start":float,"end":float,"intensity":float(2-5),"label":"FR description courte"}
+
+Règles VSL dynamiques :
+- Vignette permanente (intensity 0.35-0.45) — toujours inclure
+- 1 hook texte impactant en opening (fin avant 3s)
+- 1 zoom punch toutes les 3-6s — scale entre 1.12 et 1.32
+- 2-4 shakes courts (0.3-0.8s) sur les moments d'emphase ou de transition
+- Timing précis selon les timestamps si disponibles
+
+Réponds UNIQUEMENT avec le JSON array valide, sans markdown ni commentaires.`;
+
+    const res = await fetch(OPENAI_PROXY+'?path=/v1/chat/completions', {
+      method:'POST',
+      headers:{...await getAuthHeader(),'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'gpt-4o-mini', messages:[{role:'user',content:prompt}], temperature:0.72, max_tokens:900 })
+    });
+    const data = await res.json();
+    const raw  = data.choices?.[0]?.message?.content || '';
+    const match = raw.match(/\[[\s\S]*\]/);
+    if(!match) throw new Error('Format IA invalide — réessaie');
+    const parsed = JSON.parse(match[0]);
+    _expressEffects = parsed.map((e,i)=>({ ...e, id:'eff_'+Date.now()+'_'+i, enabled:true }));
+    _renderExpressEffects();
+    toast('✨ '+_expressEffects.length+' effets VSL générés — supprime ceux que tu ne veux pas !');
+  } catch(e){
+    console.error('Effects gen:', e);
+    toast('⚠️ Génération effets : '+String(e.message||e).slice(0,120));
+  } finally {
+    if(btn){ btn.innerHTML='✨ Analyser & Générer les effets IA'; btn.disabled=false; }
+  }
+}
+
+const _EFF_ICONS = { zoom:'🔍', hook:'🔥', vignette:'🎭', shake:'⚡' };
+const _EFF_COLORS = { zoom:'rgba(77,171,247,0.12)', hook:'rgba(255,107,53,0.12)', vignette:'rgba(191,95,255,0.12)', shake:'rgba(255,215,0,0.12)' };
+
+function _renderExpressEffects(){
+  const list    = document.getElementById('expEffectsList');
+  const wrap    = document.getElementById('expEffectsWrap');
+  const empty   = document.getElementById('expEffectsEmpty');
+  const countEl = document.getElementById('expEffectsCount');
+  if(!list||!wrap) return;
+  if(!_expressEffects.length){ wrap.style.display='none'; if(empty) empty.style.display='block'; return; }
+  if(empty) empty.style.display='none';
+  wrap.style.display='block';
+  const on = _expressEffects.filter(e=>e.enabled).length;
+  if(countEl) countEl.textContent = on + ' / ' + _expressEffects.length + ' effets actifs';
+  list.innerHTML = _expressEffects.map(e => {
+    const ic   = _EFF_ICONS[e.type] || '🎬';
+    const bg   = _EFF_COLORS[e.type] || 'rgba(255,255,255,0.04)';
+    const dur  = e.start !== undefined ? `${(+e.start).toFixed(1)}s → ${(+e.end).toFixed(1)}s` : '';
+    const detail = e.type==='zoom' ? ` · ×${(+e.scale).toFixed(2)}` : e.type==='shake' ? ` · intensité ${e.intensity}` : e.type==='vignette' ? ` · opacité ${e.intensity}` : '';
+    const textLine = e.text ? `<div style="font-size:11px;font-family:var(--mono);color:var(--orange2);margin-top:2px">"${e.text}"</div>` : '';
+    return `<div id="effcard_${e.id}" style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:${e.enabled?bg:'rgba(255,255,255,0.02)'};border:1px solid ${e.enabled?'var(--border2)':'var(--border)'};border-radius:10px;opacity:${e.enabled?1:0.42};transition:all .15s">
+      <span style="font-size:18px;flex-shrink:0">${ic}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:${e.enabled?'var(--text)':'var(--text3)'}">${e.label||e.type}</div>
+        ${dur ? `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">${dur}${detail}</div>` : ''}
+        ${textLine}
+      </div>
+      <button onclick="expToggleEffect('${e.id}')" style="flex-shrink:0;background:${e.enabled?'rgba(0,217,126,0.1)':'var(--bg4)'};border:1px solid ${e.enabled?'rgba(0,217,126,0.35)':'var(--border)'};border-radius:6px;color:${e.enabled?'var(--green)':'var(--text3)'};padding:3px 9px;cursor:pointer;font-size:10px;font-family:var(--mono);font-weight:700;transition:all .15s">${e.enabled?'ON':'OFF'}</button>
+      <button onclick="expDeleteEffect('${e.id}')" style="flex-shrink:0;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:6px;color:var(--red);padding:4px 11px;cursor:pointer;font-size:13px;transition:all .15s" onmouseover="this.style.background='rgba(255,71,87,0.2)'" onmouseout="this.style.background='rgba(255,71,87,0.08)'">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function expDeleteEffect(id){
+  _expressEffects = _expressEffects.filter(e=>e.id!==id);
+  _renderExpressEffects();
+}
+function expToggleEffect(id){
+  const e = _expressEffects.find(e=>e.id===id);
+  if(e){ e.enabled=!e.enabled; _renderExpressEffects(); }
+}
+
+// ── Draw helpers Express ──────────────────────────────────────
+function _expDrawFrame(ctx, mainVid, gpVid, elapsed, W, H, avH, gpH, effects){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+
+  // Active effects at this time
+  const active = effects.filter(e=>e.enabled && elapsed>=(e.start||0) && elapsed<=(e.end||99999));
+
+  // Zoom (smooth ease in/out)
+  const zEff = active.find(e=>e.type==='zoom');
+  let zScale = 1.0;
+  if(zEff){
+    const dur = Math.max(0.05, zEff.end - zEff.start);
+    const t   = Math.max(0, Math.min(1, (elapsed - zEff.start) / dur));
+    const ease = t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; // easeInOutQuad
+    zScale = 1.0 + ((zEff.scale||1.2) - 1.0) * ease;
+  }
+
+  // Shake (deterministic sin wave)
+  const shEff = active.find(e=>e.type==='shake');
+  const shAmp = shEff ? (shEff.intensity||4) : 0;
+  const shX   = shAmp ? Math.round(Math.sin(elapsed*61)*shAmp) : 0;
+  const shY   = shAmp ? Math.round(Math.cos(elapsed*57)*shAmp*0.55) : 0;
+
+  // Draw main video (zoom crop from center + shake offset)
+  if(mainVid && mainVid.readyState >= 2){
+    const vW = mainVid.videoWidth||W, vH = mainVid.videoHeight||avH;
+    const cropW = vW/zScale, cropH = vH/zScale;
+    const cropX = (vW-cropW)/2, cropY = (vH-cropH)/2;
+    ctx.drawImage(mainVid, cropX, cropY, cropW, cropH, shX, shY, W, avH);
+  }
+
+  // Gameplay
+  if(gpVid && gpH>0 && gpVid.readyState>=2){
+    const gW=gpVid.videoWidth||W, gH=gpVid.videoHeight||gpH;
+    const ratio=Math.max(W/gW, gpH/gH);
+    ctx.drawImage(gpVid, (W-gW*ratio)/2, avH+(gpH-gH*ratio)/2, gW*ratio, gH*ratio);
+  }
+
+  // Vignette
+  const vigEff = effects.find(e=>e.type==='vignette'&&e.enabled);
+  if(vigEff){
+    const g = ctx.createRadialGradient(W/2, H*0.42, H*0.16, W/2, H*0.5, H*0.78);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(1,`rgba(0,0,0,${vigEff.intensity||0.4})`);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+
+  // Hook text overlay
+  const hookEff = effects.find(e=>e.type==='hook'&&e.enabled&&elapsed<=(e.end||3));
+  if(hookEff&&hookEff.text){
+    const fadeIn  = Math.min(1, elapsed/0.18);
+    const fadeOut = elapsed>(hookEff.end-0.2) ? Math.max(0,(hookEff.end-elapsed)/0.2) : 1;
+    const alpha   = fadeIn*fadeOut;
+    if(alpha>0.01){
+      ctx.save(); ctx.globalAlpha=alpha;
+      const fs  = Math.round(W*0.047);
+      ctx.font  = `900 ${fs}px Impact,'Arial Black',sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const txt = hookEff.text.toUpperCase();
+      const tw  = ctx.measureText(txt).width;
+      const px=fs*0.52, py=fs*0.28;
+      const rx=W/2-tw/2-px, ry=H*0.09;
+      const rw=tw+px*2, rh=fs+py*2;
+      // Glow + background
+      ctx.shadowColor='rgba(255,107,53,0.8)'; ctx.shadowBlur=22;
+      ctx.fillStyle='rgba(255,107,53,0.96)';
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(rx,ry,rw,rh,fs*0.22);
+      else ctx.rect(rx,ry,rw,rh);
+      ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#ffffff';
+      ctx.fillText(txt,W/2,ry+rh/2);
+      ctx.restore();
+    }
+  }
+}
+
+// ── Express Compose (pipeline dédié) ─────────────────────────
+async function expressCompose(){
+  if(!_expressVideoBlobUrl){ toast('⚠️ Importe ta vidéo d\'abord'); return; }
+  const wordChips = document.querySelectorAll('#wordEditor span.word-chip');
+  if(!wordChips.length){ toast('⚠️ Transcris ou colle un texte d\'abord (étape 2)'); return; }
+  if(!cfg.format) cfg.format='portrait';
+
+  const btn      = document.getElementById('expComposeBtn');
+  const compBar  = document.getElementById('expProgWrap');
+  const compFill = document.getElementById('expProgFill');
+  const compPct  = document.getElementById('expProgPct');
+  const stageLbl = document.getElementById('expProgStage');
+
+  const resetBtn = () => {
+    if(btn){ btn.disabled=false; btn.innerHTML='⚡ Appliquer & Télécharger'; btn.style.opacity='1'; }
+    if(compBar) compBar.style.display='none';
+  };
+
+  if(btn){ btn.disabled=true; btn.innerHTML='⏳ Composition en cours…'; btn.style.opacity='.7'; }
+  if(compBar){ compBar.style.display='block'; if(compFill) compFill.style.width='0%'; if(compPct) compPct.textContent='0%'; }
+  if(stageLbl) stageLbl.textContent='Démarrage…';
+  window._composeCancelled=false;
+
+  const setStage=(label,pct)=>{
+    if(stageLbl) stageLbl.textContent=label;
+    if(compPct)  compPct.textContent=(pct||0)+'%';
+    if(compFill) compFill.style.width=(pct||0)+'%';
+    if(btn)      btn.innerHTML='⏳ '+label;
+  };
+
+  let _globalTimeout;
+  const _globalAbort = new Promise((_,rej)=>{ _globalTimeout=setTimeout(()=>rej(new Error('TIMEOUT')),150000); });
+
+  try {
+    await Promise.race([_expressComposeInner(setStage, compFill, compPct, resetBtn), _globalAbort]);
+  } catch(e){
+    clearTimeout(_globalTimeout);
+    if(e.message==='TIMEOUT'||window._composeCancelled){
+      toast('⚠️ Composition bloquée — réessaie');
+    } else {
+      console.error('Express compose error:', e);
+      toast('⚠️ Erreur : '+String(e.message||e).slice(0,120));
+    }
+    resetBtn();
+  } finally { clearTimeout(_globalTimeout); }
+}
+
+async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
+  // ── 1. Charger vidéo principale ──
+  setStage('Chargement vidéo…', 3);
+  let mainObjUrl;
+  try {
+    mainObjUrl = URL.createObjectURL(await fetch(_expressVideoBlobUrl).then(r=>r.blob()));
+  } catch(e){ toast('⚠️ Vidéo illisible'); resetBtn(); return; }
+
+  const mainVid = document.createElement('video');
+  mainVid.src=mainObjUrl; mainVid.muted=true; mainVid.crossOrigin='anonymous';
+  setStage('Décodage…',6);
+  try {
+    await new Promise((res,rej)=>{ mainVid.onloadedmetadata=res; mainVid.onerror=rej; mainVid.load(); });
+  } catch(e){ toast('⚠️ Vidéo illisible : '+(e.message||'format inconnu')); resetBtn(); URL.revokeObjectURL(mainObjUrl); return; }
+  const totalDuration = (mainVid.duration&&isFinite(mainVid.duration)) ? mainVid.duration : (_expressVideoDuration||30);
+
+  // ── 2. Charger gameplay si présent ──
+  let gpVid=null, gpObjUrl=null;
+  if(_expressGameplayBlobUrl){
+    try {
+      gpObjUrl = URL.createObjectURL(await fetch(_expressGameplayBlobUrl).then(r=>r.blob()));
+      gpVid = document.createElement('video');
+      gpVid.src=gpObjUrl; gpVid.muted=true; gpVid.loop=true; gpVid.crossOrigin='anonymous';
+      await new Promise(res=>{ gpVid.onloadedmetadata=res; gpVid.onerror=res; gpVid.load(); });
+      if(!gpVid.videoWidth){ gpVid=null; URL.revokeObjectURL(gpObjUrl); }
+    } catch(e){ gpVid=null; }
+  }
+
+  // ── 3. Layout ──
+  const qCfg = QUALITY_CONFIGS[_composeQuality]||QUALITY_CONFIGS[540];
+  const W=qCfg.W, H=qCfg.H;
+  const avH = gpVid ? Math.round(H*_expressGpSplit/100) : H;
+  const gpH = H-avH;
+
+  // ── 4. Canvas ──
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  // ── 5. Mots / groupes ──
+  const wpg = Math.max(1,cfg.subWpg||2);
+  const allWords = Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean);
+  const groups   = (_wordGroups&&_wordGroups.length) ? _wordGroups : _buildWpgGroups(allWords,wpg);
+  const totalGroups=groups.length;
+  const wordMap =_buildWordMap(groups);
+  const subAdvSec=(cfg.subAdvanceMs||0)/1000;
+  const isFixedMode=(cfg.subTimingMode||'proportionnel')==='fixe';
+  const secPerGroup=cfg.subSecPerGroup||1.2;
+  const needWatermark=guestMode||(currentMember&&currentMember.plan==='free');
+  const effects=_expressEffects; // inclut enabled:false → filtrés dans _expDrawFrame
+
+  // ── 6. Extraire audio ──
+  setStage('Extraction audio…',10);
+  let audioEl2=null, audioCtx2=null, audioObjUrl2=null;
+  const videoStream=canvas.captureStream(30);
+  let combinedStream=videoStream;
+  try {
+    const tmpCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const arrayBuf=await fetch(mainObjUrl).then(r=>r.arrayBuffer());
+    const decoded=await tmpCtx.decodeAudioData(arrayBuf);
+    await tmpCtx.close();
+    const wavBlob=_audioBufferToWavBlob(decoded);
+    audioObjUrl2=URL.createObjectURL(wavBlob);
+    audioEl2=new Audio(audioObjUrl2); audioEl2.preload='auto';
+    await new Promise(res=>{ audioEl2.oncanplaythrough=res; audioEl2.onerror=res; audioEl2.load(); setTimeout(res,3000); });
+    audioCtx2=new AudioContext();
+    if(audioCtx2.state==='suspended') await Promise.race([audioCtx2.resume(),new Promise(r=>setTimeout(r,2000))]);
+    const dest=audioCtx2.createMediaStreamDestination();
+    audioCtx2.createMediaElementSource(audioEl2).connect(dest);
+    combinedStream=new MediaStream([...videoStream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+    toast('🎵 Audio extrait');
+  } catch(e){ console.warn('Audio extract failed (Express):', e); }
+
+  // ── 7. MIME + MediaRecorder ──
+  setStage('Encodeur…',14);
+  const mimeList=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=h264,opus','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  let chosenMime='';
+  for(const mt of mimeList){ if(MediaRecorder.isTypeSupported(mt)){ chosenMime=mt; break; } }
+  if(!chosenMime){ toast('⚠️ MediaRecorder non supporté — utilise Chrome'); resetBtn(); URL.revokeObjectURL(mainObjUrl); return; }
+  const isWebm=chosenMime.startsWith('video/webm');
+  let recorder, chunks=[];
+  try {
+    recorder=new MediaRecorder(combinedStream,{mimeType:chosenMime,videoBitsPerSecond:qCfg.br,audioBitsPerSecond:128_000});
+  } catch(e){ toast('⚠️ Encodeur : '+e.message); resetBtn(); URL.revokeObjectURL(mainObjUrl); return; }
+  recorder.ondataavailable=e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
+
+  // ── 8. Pre-warm ──
+  setStage('1ère frame…',13);
+  try { mainVid.currentTime=0; await new Promise(res=>{ mainVid.onseeked=res; if(mainVid.readyState>=2)res(); setTimeout(res,1500); }); } catch(_){}
+  // Draw first frame
+  let _lastGrpIdx=-1, _lastGrpTime=0;
+  function drawFull(elapsed){
+    _expDrawFrame(ctx,mainVid,gpVid,elapsed,W,H,avH,gpH,effects);
+    // Hook par défaut si pas d'effet hook IA
+    const hasHookEffect=effects.some(e=>e.type==='hook'&&e.enabled);
+    if(!hasHookEffect) _cvHook(ctx,W,H);
+    // Sous-titres
+    const words=groups.flat();
+    if(words.length>0){
+      const sub=Math.max(0,elapsed+subAdvSec);
+      let gi,wi;
+      if(whisperWordTimestamps.length>0){
+        const wt=Math.max(0,elapsed+subAdvSec);
+        let wi2=whisperWordTimestamps.findIndex((w,i)=>wt>=w.start&&(i===whisperWordTimestamps.length-1||wt<whisperWordTimestamps[i+1].start));
+        if(wi2<0) wi2=wt<(whisperWordTimestamps[0]?.start||0)?0:whisperWordTimestamps.length-1;
+        const m=wordMap[Math.min(wi2,wordMap.length-1)]||{gi:0,wi:0};
+        gi=m.gi; wi=m.wi;
+      } else if(isFixedMode){
+        gi=Math.min(totalGroups-1,Math.floor(sub/secPerGroup));
+        const gLen=(groups[gi]||[1]).length;
+        wi=Math.min(gLen-1,Math.floor(((sub/secPerGroup)-gi)*gLen));
+      } else {
+        const p=Math.min(1,sub/totalDuration),rg=p*totalGroups;
+        gi=Math.min(totalGroups-1,Math.floor(rg));
+        const gLen=(groups[gi]||[1]).length;
+        wi=Math.min(gLen-1,Math.floor((rg-gi)*gLen));
+      }
+      if(gi!==_lastGrpIdx){ _lastGrpIdx=gi; _lastGrpTime=elapsed; }
+      _cvSubs(ctx,groups[gi]||[],wi,elapsed-_lastGrpTime,W,H);
+    }
+    if(needWatermark) _cvWatermark(ctx,W,H);
+  }
+  drawFull(0);
+  await new Promise(r=>setTimeout(r,80));
+
+  // ── 9. Lancer ──
+  setStage('Composition '+qCfg.label+'…',18);
+  toast('🎬 Express '+qCfg.label+' (~'+Math.round(totalDuration)+'s en temps réel)…');
+  mainVid.currentTime=0; if(audioEl2) audioEl2.currentTime=0; if(gpVid) gpVid.currentTime=0;
+  recorder.start(200);
+  await Promise.all([mainVid.play().catch(()=>{}), audioEl2?audioEl2.play().catch(()=>{}):Promise.resolve(), gpVid?gpVid.play().catch(()=>{}):Promise.resolve()]);
+
+  // ── 10. RAF loop ──
+  await new Promise(resolve=>{
+    function rAF(){
+      const elapsed=mainVid.currentTime||0;
+      const pct=Math.min(99,Math.round(18+elapsed/totalDuration*81));
+      if(compFill) compFill.style.width=pct+'%';
+      if(compPct)  compPct.textContent=pct+'%';
+      drawFull(elapsed);
+      if(window._composeCancelled){ resolve(); return; }
+      if(elapsed<totalDuration-0.1||mainVid.readyState<2){ requestAnimationFrame(rAF); } else { resolve(); }
+    }
+    requestAnimationFrame(rAF);
+  });
+
+  // ── 11. Stop ──
+  setStage('Finalisation…',99);
+  await new Promise(resolve=>{ recorder.onstop=resolve; recorder.stop(); });
+  mainVid.pause(); if(audioEl2) audioEl2.pause(); if(audioCtx2) audioCtx2.close(); if(gpVid) gpVid.pause();
+  URL.revokeObjectURL(mainObjUrl);
+  if(gpObjUrl) URL.revokeObjectURL(gpObjUrl);
+  if(audioObjUrl2) URL.revokeObjectURL(audioObjUrl2);
+
+  const blob=new Blob(chunks,{type:chosenMime});
+  if(blob.size<50000){ toast('⚠️ Vidéo trop petite — réessaie'); resetBtn(); return; }
+
+  // ── 12. FFmpeg CFR 30fps ──
+  let finalBlob=blob;
+  try {
+    setStage('Optimisation TikTok…',99);
+    await _loadFFmpeg();
+    const ff=_ffmpegInst, inExt=isWebm?'webm':'mp4';
+    try{ ff.FS('unlink','exp_in.'+inExt); }catch(_){}
+    try{ ff.FS('unlink','exp_out.mp4'); }catch(_){}
+    ff.FS('writeFile','exp_in.'+inExt,new Uint8Array(await blob.arrayBuffer()));
+    await ff.run('-i','exp_in.'+inExt,'-vf','fps=30','-c:v','libx264','-preset','fast','-crf','20','-c:a','aac','-ar','48000','-b:a','192k','-movflags','+faststart','-y','exp_out.mp4');
+    const out=ff.FS('readFile','exp_out.mp4');
+    finalBlob=new Blob([out.buffer],{type:'video/mp4'});
+    try{ ff.FS('unlink','exp_in.'+inExt); }catch(_){}
+    try{ ff.FS('unlink','exp_out.mp4'); }catch(_){}
+    toast('✅ Optimisation TikTok OK');
+  } catch(e){ console.warn('Express FFmpeg failed:',e); }
+
+  // ── 13. Download ──
+  const url=URL.createObjectURL(finalBlob);
+  const sizeMb=(finalBlob.size/1024/1024).toFixed(1);
+  toast('✓ Express '+qCfg.label+' prête ('+sizeMb+' Mo) — téléchargement…');
+  if(compFill) compFill.style.width='100%'; if(compPct) compPct.textContent='100%';
+  const a=document.createElement('a');
+  a.href=url; a.download='avatarads-express-'+qCfg.label+'.mp4';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  resetBtn();
 }
 </script>
 <!-- BUG REPORT MODAL -->
