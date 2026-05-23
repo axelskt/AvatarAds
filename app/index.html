@@ -1324,30 +1324,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
-            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 -->
-            <div class="fld" style="margin-bottom:18px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Clip Gameplay</div>
-              <!-- Aucun clip -->
-              <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
-                <span style="font-size:20px;opacity:.45">🎬</span>
-                <div style="flex:1">
-                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Aucun clip</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — joue en fond</div>
-                </div>
-                <button onclick="openClipPickerModal()" style="padding:6px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">+ Choisir</button>
-              </div>
-              <!-- Clip actif -->
-              <div id="activeClipRowS4" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
-                <span id="activeClipEmoS4" style="font-size:20px">🎬</span>
-                <div style="flex:1;min-width:0">
-                  <div id="activeClipNameS4" style="font-size:12px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire · fond vidéo</div>
-                </div>
-                <button onclick="openClipPickerModal()" style="padding:5px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Changer</button>
-                <button onclick="clearSelectedClip()" style="padding:5px 8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:7px;color:var(--red);font-family:var(--mono);font-size:10px;cursor:pointer">✕</button>
-              </div>
-            </div>
-
             <!-- STYLE SOUS-TITRES -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1601,6 +1577,30 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div style="font-weight:700;font-size:11px">Kling Standard</div>
                   <div style="font-size:9px;margin-top:2px;opacity:.8">Kling AI · 🧪 Test</div>
                 </button>
+              </div>
+            </div>
+
+            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 (en bas) -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Clip Gameplay</div>
+              <!-- Aucun clip -->
+              <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
+                <span style="font-size:20px;opacity:.45">🎬</span>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Aucun clip</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — joue en fond</div>
+                </div>
+                <button onclick="openClipPickerModal()" style="padding:6px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">+ Choisir</button>
+              </div>
+              <!-- Clip actif -->
+              <div id="activeClipRowS4" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
+                <span id="activeClipEmoS4" style="font-size:20px">🎬</span>
+                <div style="flex:1;min-width:0">
+                  <div id="activeClipNameS4" style="font-size:12px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire · fond vidéo</div>
+                </div>
+                <button onclick="openClipPickerModal()" style="padding:5px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Changer</button>
+                <button onclick="clearSelectedClip()" style="padding:5px 8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:7px;color:var(--red);font-family:var(--mono);font-size:10px;cursor:pointer">✕</button>
               </div>
             </div>
 
@@ -3998,19 +3998,37 @@ function selectClip(id, label) {
 function _showClipPreview(clipId) {
   const url = _clipUrl(clipId);
   if (!url) return;
-  const vid = document.getElementById('clipPreviewVid');
-  if (!vid) return;
-  vid.src = url;
-  vid.style.display = 'block';
-  vid.play().catch(()=>{});
+  // Affiche le clip dans la gameplayZone (bande en bas du phone) sans toucher à l'avatar
+  const gpVid  = document.getElementById('gpVideo');
+  const gpZone = document.getElementById('gameplayZone');
+  const gpEmpty= document.getElementById('gpEmpty');
+  if (!gpVid || !gpZone) return;
+  // Seulement si le split screen n'est pas déjà actif avec un vrai gameplay
+  if (!splitEnabled) {
+    gpZone.style.display = 'flex';
+    gpZone.style.height  = '32%';
+    gpZone.dataset.clipPreviewActive = '1';
+  }
+  gpVid.src = url;
+  gpVid.style.display = 'block';
+  if (gpEmpty) gpEmpty.style.display = 'none';
+  gpVid.play().catch(()=>{});
 }
 
 function _hideClipPreview() {
-  const vid = document.getElementById('clipPreviewVid');
-  if (!vid) return;
-  vid.pause();
-  vid.src = '';
-  vid.style.display = 'none';
+  const gpVid  = document.getElementById('gpVideo');
+  const gpZone = document.getElementById('gameplayZone');
+  const gpEmpty= document.getElementById('gpEmpty');
+  if (!gpVid || !gpZone) return;
+  if (gpZone.dataset.clipPreviewActive === '1') {
+    gpZone.style.display = 'none';
+    gpZone.style.height  = '';
+    delete gpZone.dataset.clipPreviewActive;
+    gpVid.pause();
+    gpVid.src = '';
+    gpVid.style.display = 'none';
+    if (gpEmpty) gpEmpty.style.display = '';
+  }
 }
 
 // Ouvre un modal de sélection de clip (utilisable depuis étape 2 et étape 4)
