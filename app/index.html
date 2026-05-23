@@ -733,29 +733,30 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
 
-            <!-- ── CLIP PICKER ─────────────────────────────────────────────── -->
+            <!-- ── CLIP PICKER compact ──────────────────────────────────────── -->
             <div id="clipPickerSection" style="margin-bottom:16px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text2)">🎬 CLIP GAMEPLAY</span>
-                <span id="clipDurLabel" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></span>
+              <!-- Aucun clip sélectionné -->
+              <div id="clipNoSelRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
+                <span style="font-size:18px;opacity:.5">🎬</span>
+                <div style="flex:1">
+                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Clip gameplay</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — fond vidéo animé</div>
+                </div>
+                <span id="clipDurLabel" style="font-size:9px;font-family:var(--mono);color:var(--text3)"></span>
+                <button onclick="openClipPickerModal()" style="padding:5px 11px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Choisir</button>
               </div>
-
-              <!-- Tabs catégories -->
-              <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px">
-                <button onclick="filterClips('all')"     id="clipTab-all"       class="clip-tab on"    >Tous</button>
-                <button onclick="filterClips('gaming')"  id="clipTab-gaming"    class="clip-tab"       >🎮 Gaming</button>
-                <button onclick="filterClips('asmr')"    id="clipTab-asmr"      class="clip-tab"       >🧼 ASMR</button>
-                <button onclick="filterClips('lifestyle')"id="clipTab-lifestyle" class="clip-tab"       >🚶 Lifestyle</button>
-              </div>
-
-              <!-- Grille clips -->
-              <div id="clipGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
-
               <!-- Clip sélectionné -->
-              <div id="clipSelectedBadge" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);border-radius:8px;display:none;align-items:center;justify-content:space-between">
-                <span id="clipSelectedLabel" style="font-size:12px;font-weight:600;color:var(--orange);font-family:var(--mono)"></span>
+              <div id="clipSelectedBadge" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
+                <span id="clipSelEmo" style="font-size:18px">🎬</span>
+                <div style="flex:1;min-width:0">
+                  <span id="clipSelectedLabel" style="font-size:12px;font-weight:700;color:var(--orange2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"></span>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire</div>
+                </div>
+                <button onclick="openClipPickerModal()" style="padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">Changer</button>
                 <button onclick="clearSelectedClip()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
               </div>
+              <!-- Grid caché — requis pour renderClipGrid() -->
+              <div id="clipGrid" style="display:none"></div>
             </div>
 
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -2703,8 +2704,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div><!-- /recorder -->
 
     <!-- ══ EXPRESS ══ -->
-    <div class="view" id="v-express">
-      <div class="lib-view" style="width:100%;max-width:700px;margin:0 auto">
+    <div class="view" id="v-express" style="display:flex;overflow:hidden">
+
+      <!-- ══ LEFT — Formulaire ══ -->
+      <div style="flex:0 0 400px;overflow-y:auto;padding:24px 20px 40px;border-right:1px solid var(--border)">
 
         <!-- Header -->
         <div class="ph" style="margin-bottom:20px">
@@ -2723,7 +2726,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="font-size:15px;font-weight:700;margin-bottom:4px">Glisse ta vidéo ici</div>
             <div style="font-size:12px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · WebM — ou clique pour parcourir</div>
           </div>
-          <div id="expVidInfo" class="exp-vidinfo">
+          <!-- Depuis bibliothèque -->
+          <button onclick="openExpLibPicker()" style="width:100%;margin-top:8px;padding:8px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+            <span style="font-size:13px">📚</span> ou utilise une vidéo depuis la bibliothèque
+          </button>
+          <div id="expVidInfo" class="exp-vidinfo" style="display:none">
             <div class="exp-vidthumb">🎬</div>
             <div class="exp-vidmeta">
               <div class="exp-vidname" id="expVidName">—</div>
@@ -2797,54 +2804,135 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
         </div>
 
-        <!-- ④ Gameplay / B-roll (optionnel) -->
+        <!-- ④ Split Screen + Gameplay -->
         <div class="exp-section">
           <div class="exp-section-title" style="justify-content:space-between">
-            <span><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">4</span> Gameplay / B-roll</span>
+            <span><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">4</span> Split Screen &amp; Gameplay</span>
             <span style="font-size:9px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:10px">Optionnel</span>
           </div>
-          <div id="expGpDropZone" class="exp-drop" style="padding:22px 16px" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expGpOnDrop(event)">
-            <input type="file" accept="video/*" onchange="_expGpFileInput(this)">
-            <div style="font-size:28px;margin-bottom:8px">🎮</div>
-            <div style="font-size:13px;font-weight:700;margin-bottom:3px">Ajoute un fond gameplay</div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Minecraft · Subway Surfers · GTA… affiché sous ta vidéo</div>
-          </div>
-          <div id="expGpInfo" class="exp-vidinfo" style="display:none">
-            <div class="exp-vidthumb">🎮</div>
-            <div class="exp-vidmeta">
-              <div class="exp-vidname" id="expGpName">—</div>
-              <div class="exp-vidsize" id="expGpSize">—</div>
+
+          <!-- Toggle Split Screen -->
+          <div onclick="toggleExpSplit()" id="expSplitRow" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:10px" onmouseover="if(!window._expSplitOn)this.style.borderColor='var(--border2)'" onmouseout="if(!window._expSplitOn)this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">🎮</span>
+              <div>
+                <div style="font-size:13px;font-weight:700">Split Screen</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ta vidéo + fond gameplay · avatar optionnel</div>
+              </div>
             </div>
-            <button onclick="_expClearGameplay()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕</button>
+            <div id="expSplitSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+              <div id="expSplitThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+            </div>
           </div>
-          <!-- Split slider -->
-          <div id="expGpSplitWrap" style="display:none;margin-top:14px">
-            <div class="flbl" style="margin-bottom:8px">Répartition écran — <span id="expGpSplitLbl" style="color:var(--orange2)">60% vidéo / 40% gameplay</span></div>
-            <input type="range" id="expGpSplitSlider" min="30" max="80" value="60" oninput="expGpSplitChange(this)" style="width:100%;accent-color:var(--orange)">
-          </div>
+
+          <!-- Panel Split (visible quand activé) -->
+          <div id="expSplitPanel" style="display:none;flex-direction:column;gap:12px">
+
+            <!-- Source gameplay : clips presets OU import -->
+            <div>
+              <div class="flbl" style="font-size:10px;margin-bottom:7px">Fond gameplay</div>
+              <!-- Clip sélectionné -->
+              <div id="expClipNoSel" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg4);border:1.5px dashed var(--border2);border-radius:9px">
+                <span style="font-size:16px;opacity:.5">🎬</span>
+                <div style="flex:1;font-size:11px;color:var(--text3);font-family:var(--mono)">Aucun clip</div>
+                <button onclick="openExpClipPicker()" style="padding:5px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer">Choisir clip</button>
+              </div>
+              <div id="expClipActive" style="display:none;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.3);border-radius:9px">
+                <span id="expClipEmo" style="font-size:16px">🎬</span>
+                <div style="flex:1;min-width:0">
+                  <div id="expClipName" style="font-size:11px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">Segment aléatoire</div>
+                </div>
+                <button onclick="openExpClipPicker()" style="padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">Changer</button>
+                <button onclick="_expClearClip()" style="background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer">✕</button>
+              </div>
+              <!-- ou importer fichier -->
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+                <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou importe</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <div id="expGpDropZone" class="exp-drop" style="padding:14px;margin-top:8px" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expGpOnDrop(event)">
+                <input type="file" accept="video/*" onchange="_expGpFileInput(this)">
+                <div style="font-size:20px;margin-bottom:4px">📂</div>
+                <div style="font-size:11px;font-weight:600">Ton propre gameplay</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">MP4 · MOV</div>
+              </div>
+              <div id="expGpInfo" class="exp-vidinfo" style="display:none">
+                <div class="exp-vidthumb">🎮</div>
+                <div class="exp-vidmeta">
+                  <div class="exp-vidname" id="expGpName">—</div>
+                  <div class="exp-vidsize" id="expGpSize">—</div>
+                </div>
+                <button onclick="_expClearGameplay()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕</button>
+              </div>
+            </div>
+
+            <!-- Répartition écran -->
+            <div>
+              <div class="flbl" style="font-size:10px;margin-bottom:6px">Répartition — <span id="expGpSplitLbl" style="color:var(--orange2)">60% vidéo / 40% gameplay</span></div>
+              <input type="range" id="expGpSplitSlider" min="30" max="80" value="60" oninput="expGpSplitChange(this)" style="width:100%;accent-color:var(--orange)">
+            </div>
+
+            <!-- Avatar (optionnel dans split) -->
+            <div>
+              <div class="flbl" style="font-size:10px;margin-bottom:7px">Avatar IA <span style="font-size:9px;font-family:var(--mono);color:var(--text3)">— optionnel, flotte sur le split</span></div>
+              <div id="expAvDropZone" onclick="document.getElementById('expAvFileIn').click()"
+                ondragover="ev=>{ev.preventDefault();this.style.borderColor='var(--orange)'}"
+                ondragleave="this.style.borderColor='var(--border2)'"
+                ondrop="ev=>{ev.preventDefault();this.style.borderColor='var(--border2)';_expHandleAvatar(ev.dataTransfer.files[0])}"
+                style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s">
+                <div id="expAvDropContent">
+                  <div style="font-size:24px;margin-bottom:4px">🖼️</div>
+                  <div style="font-size:11px;font-weight:600">Photo avatar</div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">PNG · JPG · Portrait recommandé</div>
+                </div>
+                <div id="expAvInfo" style="display:none">
+                  <img id="expAvPreview" style="max-height:60px;border-radius:8px;object-fit:cover;margin-bottom:4px">
+                  <div id="expAvName" style="font-size:10px;font-family:var(--mono);color:var(--green)"></div>
+                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
+                </div>
+              </div>
+              <input type="file" id="expAvFileIn" accept="image/*" style="display:none" onchange="_expHandleAvatar(this.files[0])">
+
+              <!-- Recadrage avatar express -->
+              <div id="expAvCropWrap" style="display:none;margin-top:8px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:9px">
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:7px">Position &amp; taille avatar</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                  <div>
+                    <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">Taille — <span id="expAvSizeLbl" style="color:var(--orange2)">35%</span></div>
+                    <input type="range" id="expAvSize" min="10" max="70" value="35" oninput="document.getElementById('expAvSizeLbl').textContent=this.value+'%';_expUpdateExpPreview()" style="width:100%;accent-color:var(--orange)">
+                  </div>
+                  <div>
+                    <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">Position Y — <span id="expAvYLbl" style="color:var(--orange2)">30%</span></div>
+                    <input type="range" id="expAvY" min="0" max="90" value="30" oninput="document.getElementById('expAvYLbl').textContent=this.value+'%';_expUpdateExpPreview()" style="width:100%;accent-color:var(--orange)">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /expSplitPanel -->
         </div>
 
         <!-- ⑤ Effets IA — VSL style -->
         <div class="exp-section">
-          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ Nouveau</span></div>
+          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ 1 crédit</span></div>
 
-          <!-- Bouton générer -->
           <button id="expGenEffectsBtn" onclick="expressGenerateEffects()" style="width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
-            <div style="display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800">✨ Analyser & Générer les effets IA</div>
+            <div style="display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800">✨ Analyser &amp; Générer les effets IA</div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Zoom punch-in · Hook texte · Vignette · Shake · Rythmé VSL</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:20px">🖼️ Coûte 1 crédit image IA</div>
           </button>
 
-          <!-- Liste des effets (cachée jusqu'à génération) -->
           <div id="expEffectsWrap" style="display:none">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
               <div style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="expEffectsCount">— effets générés</div>
-              <button onclick="expressGenerateEffects()" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);padding:4px 10px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">↺ Régénérer</button>
+              <button onclick="expressGenerateEffects()" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);padding:4px 10px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">↺ Régénérer (1 crédit)</button>
             </div>
             <div id="expEffectsList" style="display:flex;flex-direction:column;gap:6px"></div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:10px;text-align:center">Clique ✕ pour supprimer un effet · Toggle ON/OFF pour désactiver temporairement</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:10px;text-align:center">Clique ✕ pour supprimer · Toggle ON/OFF pour désactiver</div>
           </div>
 
-          <!-- État vide -->
           <div id="expEffectsEmpty" style="padding:20px;background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;text-align:center">
             <div style="font-size:22px;margin-bottom:8px">🎬</div>
             <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Transcris ta vidéo (étape 2) puis génère les effets</div>
@@ -2859,7 +2947,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <button class="qual-btn" data-q="720" onclick="setQuality(720,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">720p</button>
             <button class="qual-btn" data-q="1080" onclick="setQuality(1080,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">1080p <span style="font-size:9px;opacity:.6">PRO</span></button>
           </div>
-          <button id="expComposeBtn" onclick="expressCompose()" disabled style="width:100%;padding:15px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .25s;box-shadow:0 4px 20px rgba(255,107,53,.3);letter-spacing:-.2px;opacity:.4" onmouseover="if(!this.disabled)this.style.opacity='.9'" onmouseout="if(!this.disabled)this.style.opacity='1'">⚡ Appliquer & Télécharger</button>
+          <button id="expComposeBtn" onclick="expressCompose()" disabled style="width:100%;padding:15px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .25s;box-shadow:0 4px 20px rgba(255,107,53,.3);letter-spacing:-.2px;opacity:.4" onmouseover="if(!this.disabled)this.style.opacity='.9'" onmouseout="if(!this.disabled)this.style.opacity='1'">⚡ Appliquer &amp; Télécharger</button>
           <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:8px">La vidéo se télécharge automatiquement · temps réel</div>
           <div id="expProgWrap" class="exp-prog-wrap">
             <div class="exp-prog-stage" id="expProgStage">Composition en cours…</div>
@@ -2870,7 +2958,52 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
         </div>
 
-      </div>
+      </div><!-- /left -->
+
+      <!-- ══ RIGHT — Preview téléphone ══ -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:var(--bg)">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:4px">Aperçu en temps réel</div>
+
+        <!-- Phone mockup Express (220×477) -->
+        <div style="position:relative;width:220px;height:477px;flex-shrink:0">
+          <div id="expPhoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.5597);transform-origin:top left">
+            <!-- Dynamic Island -->
+            <div style="position:absolute;top:25px;left:50%;transform:translateX(-50%);width:125px;height:37px;background:#000;border-radius:20px;z-index:99"></div>
+            <!-- Content zone -->
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column">
+              <!-- Zone vidéo principale -->
+              <div id="expPreviewTop" style="flex:1;background:#111;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                <div id="expPreviewPlaceholder" style="text-align:center;color:rgba(255,255,255,.2)">
+                  <div style="font-size:36px">🎬</div>
+                  <div style="font-size:9px;font-family:var(--mono);margin-top:4px">Vidéo ici</div>
+                </div>
+                <video id="expPreviewVid" muted loop playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+                <!-- Sous-titres preview overlay -->
+                <div id="expSubOverlay" style="position:absolute;bottom:12%;left:0;right:0;text-align:center;pointer-events:none;z-index:5;padding:0 10px"></div>
+                <!-- Avatar overlay (split) -->
+                <img id="expAvOverlay" style="display:none;position:absolute;z-index:6;object-fit:cover;border-radius:4px" src="">
+              </div>
+              <!-- Zone gameplay (split screen) -->
+              <div id="expPreviewBottom" style="display:none;background:#0a0a0a;position:relative;overflow:hidden;flex-shrink:0">
+                <div id="expGpPreviewPlaceholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.15)">
+                  <div style="text-align:center"><div style="font-size:20px">🎮</div><div style="font-size:8px;font-family:var(--mono);margin-top:2px">Gameplay</div></div>
+                </div>
+                <video id="expGpPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+              </div>
+              <!-- Overlay UI TikTok -->
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 10px 16px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);z-index:10">
+                <div style="font-size:7px;font-family:var(--mono);color:rgba(255,255,255,.7)">@sofia.ads</div>
+                <div style="font-size:6px;color:rgba(255,255,255,.5);margin-top:2px">Viens en DM si tu veux savoir comment on fait_plus</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton play preview -->
+        <button onclick="_expTogglePreviewPlay()" id="expPreviewPlayBtn" style="padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Lecture preview</button>
+        <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;max-width:200px;line-height:1.5">Les sous-titres s'affichent après la transcription</div>
+      </div><!-- /right -->
+
     </div><!-- /express -->
 
   </div><!-- /main -->
@@ -3969,18 +4102,23 @@ function selectClip(id, label) {
   if (_clipMaxDuration() === 0) { toast('⛔ Clips disponibles à partir du plan Starter'); openUpgradeModal(); return; }
   _selectedClipId = (_selectedClipId === id) ? null : id; // toggle
   renderClipGrid(_currentClipCategory);
-  const badge = document.getElementById('clipSelectedBadge');
-  const lbl   = document.getElementById('clipSelectedLabel');
-  const noRow = document.getElementById('noClipRowS4');
-  const actRow= document.getElementById('activeClipRowS4');
-  const actNm = document.getElementById('activeClipNameS4');
-  const actEmo= document.getElementById('activeClipEmoS4');
+  const badge    = document.getElementById('clipSelectedBadge');
+  const lbl      = document.getElementById('clipSelectedLabel');
+  const noSelRow = document.getElementById('clipNoSelRow');
+  const selEmo   = document.getElementById('clipSelEmo');
+  const noRow    = document.getElementById('noClipRowS4');
+  const actRow   = document.getElementById('activeClipRowS4');
+  const actNm    = document.getElementById('activeClipNameS4');
+  const actEmo   = document.getElementById('activeClipEmoS4');
 
   if (_selectedClipId) {
     const clip = PRESET_CLIPS.find(c => c.id === id);
-    if (lbl) lbl.textContent = `${clip?.emoji || '🎬'} ${label} · segment aléatoire · ${_clipMaxDuration()}s`;
-    if (badge) badge.style.display = 'flex';
-    // Mise à jour Step 4
+    // Step 2 compact row
+    if (lbl)      lbl.textContent      = `${clip?.emoji || '🎬'} ${label} · ${_clipMaxDuration()}s`;
+    if (selEmo)   selEmo.textContent   = clip?.emoji || '🎬';
+    if (noSelRow) noSelRow.style.display = 'none';
+    if (badge)    badge.style.display    = 'flex';
+    // Step 4 row
     if (actNm)  actNm.textContent  = `${clip?.emoji || '🎬'} ${label}`;
     if (actEmo) actEmo.textContent = clip?.emoji || '🎬';
     if (noRow)  noRow.style.display  = 'none';
@@ -3988,9 +4126,10 @@ function selectClip(id, label) {
     // Preview dans le phone
     _showClipPreview(id);
   } else {
-    if (badge) badge.style.display = 'none';
-    if (noRow)  noRow.style.display  = 'flex';
-    if (actRow) actRow.style.display = 'none';
+    if (noSelRow) noSelRow.style.display = 'flex';
+    if (badge)    badge.style.display    = 'none';
+    if (noRow)    noRow.style.display    = 'flex';
+    if (actRow)   actRow.style.display   = 'none';
     _hideClipPreview();
   }
 }
@@ -4091,12 +4230,14 @@ function _pickClipFromModal(id, label) {
 
 function clearSelectedClip() {
   _selectedClipId = null;
-  const badge  = document.getElementById('clipSelectedBadge');
-  const noRow  = document.getElementById('noClipRowS4');
-  const actRow = document.getElementById('activeClipRowS4');
-  if (badge)  badge.style.display  = 'none';
-  if (noRow)  noRow.style.display  = 'flex';
-  if (actRow) actRow.style.display = 'none';
+  const badge    = document.getElementById('clipSelectedBadge');
+  const noSelRow = document.getElementById('clipNoSelRow');
+  const noRow    = document.getElementById('noClipRowS4');
+  const actRow   = document.getElementById('activeClipRowS4');
+  if (badge)    badge.style.display    = 'none';
+  if (noSelRow) noSelRow.style.display = 'flex';
+  if (noRow)    noRow.style.display    = 'flex';
+  if (actRow)   actRow.style.display   = 'none';
   _hideClipPreview();
   renderClipGrid(_currentClipCategory);
 }
@@ -11516,14 +11657,267 @@ function _expLoadGameplay(file){
 function _expClearGameplay(){
   if(_expressGameplayBlobUrl){ URL.revokeObjectURL(_expressGameplayBlobUrl); _expressGameplayBlobUrl = null; }
   _expressGameplayFile = null;
-  document.getElementById('expGpDropZone').style.display  = 'block';
-  document.getElementById('expGpInfo').style.display      = 'none';
-  document.getElementById('expGpSplitWrap').style.display = 'none';
+  document.getElementById('expGpDropZone').style.display = 'block';
+  document.getElementById('expGpInfo').style.display     = 'none';
+  const gpPrev = document.getElementById('expGpPreviewVid');
+  if(gpPrev){ gpPrev.pause(); gpPrev.src=''; gpPrev.style.display='none'; }
+  document.getElementById('expGpPreviewPlaceholder').style.display = 'flex';
+  _expUpdateExpPreview();
 }
 function expGpSplitChange(slider){
   _expressGpSplit = parseInt(slider.value);
   const lbl = document.getElementById('expGpSplitLbl');
   if(lbl) lbl.textContent = _expressGpSplit + '% vidéo / ' + (100-_expressGpSplit) + '% gameplay';
+  _expUpdateExpPreview();
+}
+
+// ── SPLIT SCREEN EXPRESS ──────────────────────────────────────
+window._expSplitOn    = false;
+window._expClipId     = null;
+window._expAvatarFile = null;
+window._expAvatarUrl  = null;
+
+function toggleExpSplit(){
+  window._expSplitOn = !window._expSplitOn;
+  const sw    = document.getElementById('expSplitSwitch');
+  const thumb = document.getElementById('expSplitThumb');
+  const panel = document.getElementById('expSplitPanel');
+  const row   = document.getElementById('expSplitRow');
+  if(window._expSplitOn){
+    if(sw)    sw.style.background = 'var(--green)';
+    if(thumb) { thumb.style.left='21px'; thumb.style.opacity='1'; }
+    if(panel) panel.style.display = 'flex';
+    if(row)   { row.style.borderColor='rgba(0,217,126,0.4)'; row.style.background='rgba(0,217,126,0.04)'; }
+  } else {
+    if(sw)    sw.style.background = 'var(--bg5)';
+    if(thumb) { thumb.style.left='3px'; thumb.style.opacity='.4'; }
+    if(panel) panel.style.display = 'none';
+    if(row)   { row.style.borderColor='var(--border)'; row.style.background='var(--bg3)'; }
+  }
+  _expUpdateExpPreview();
+}
+
+// ── CLIP PICKER EXPRESS ───────────────────────────────────────
+function openExpClipPicker(){
+  document.getElementById('_expClipModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = '_expClipModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+
+  const cats = ['all','gaming','asmr','lifestyle'];
+  const catLabels = { all:'Tous', gaming:'🎮 Gaming', asmr:'🧼 ASMR', lifestyle:'🚶 Lifestyle' };
+
+  function renderItems(cat){
+    const clips = cat==='all' ? PRESET_CLIPS : PRESET_CLIPS.filter(c=>c.category===cat);
+    const maxDur = _clipMaxDuration();
+    return clips.map(clip => {
+      const ok = _clipAccessible(clip.tier);
+      const isOn = window._expClipId === clip.id;
+      return `<div onclick="${ok?`_expPickClip('${clip.id}','${clip.label}','${clip.emoji||'🎬'}')`:''}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isOn?'rgba(255,107,53,0.1)':'var(--bg3)'};border:1.5px solid ${isOn?'rgba(255,107,53,.45)':'var(--border)'};border-radius:10px;cursor:pointer;margin-bottom:7px;transition:all .15s;opacity:${ok?1:.5}">
+        <span style="font-size:20px">${clip.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700">${clip.label}</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">${clip.category} · max ${maxDur}s</div>
+        </div>
+        ${isOn?'<span style="font-size:16px">✅</span>':(ok?'<span style="font-size:10px;font-family:var(--mono);color:var(--orange2);font-weight:700">Choisir →</span>':'<span style="font-size:12px">🔒</span>')}
+      </div>`;
+    }).join('');
+  }
+
+  modal.innerHTML = `
+    <div class="lvp-sheet" style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:78vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0">
+        <div style="font-size:14px;font-weight:800">🎬 Choisir un clip gameplay</div>
+        <button onclick="document.getElementById('_expClipModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="display:flex;gap:5px;margin-bottom:12px;flex-shrink:0;overflow-x:auto" id="_ecpTabs">
+        ${cats.map(c=>`<button onclick="document.getElementById('_ecpTabs').querySelectorAll('button').forEach(b=>b.style.background='var(--bg4)');this.style.background='var(--orange-dim)';document.getElementById('_ecpList').innerHTML=window._ecpRender('${c}')" style="padding:5px 12px;background:${c==='all'?'var(--orange-dim)':'var(--bg4)'};border:1px solid ${c==='all'?'rgba(255,107,53,.35)':'var(--border2)'};border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;color:${c==='all'?'var(--orange2)':'var(--text3)'};cursor:pointer;white-space:nowrap">${catLabels[c]}</button>`).join('')}
+      </div>
+      <div id="_ecpList" style="overflow-y:auto;flex:1">${renderItems('all')}</div>
+    </div>`;
+
+  window._ecpRender = renderItems;
+  document.body.appendChild(modal);
+}
+
+function _expPickClip(id, label, emo){
+  document.getElementById('_expClipModal')?.remove();
+  window._expClipId = id;
+  const noSel  = document.getElementById('expClipNoSel');
+  const active = document.getElementById('expClipActive');
+  const emoEl  = document.getElementById('expClipEmo');
+  const nameEl = document.getElementById('expClipName');
+  if(noSel)  noSel.style.display  = 'none';
+  if(active) active.style.display = 'flex';
+  if(emoEl)  emoEl.textContent    = emo;
+  if(nameEl) nameEl.textContent   = label;
+  // Preview gameplay dans phone
+  const url = _clipUrl(id);
+  if(url){
+    const gpPrev = document.getElementById('expGpPreviewVid');
+    if(gpPrev){ gpPrev.src=url; gpPrev.style.display='block'; gpPrev.play().catch(()=>{}); }
+    const pl = document.getElementById('expGpPreviewPlaceholder');
+    if(pl) pl.style.display='none';
+  }
+  _expUpdateExpPreview();
+  toast('✅ Clip sélectionné — ' + label);
+}
+
+function _expClearClip(){
+  window._expClipId = null;
+  document.getElementById('expClipNoSel').style.display  = 'flex';
+  document.getElementById('expClipActive').style.display = 'none';
+  const gpPrev = document.getElementById('expGpPreviewVid');
+  if(gpPrev){ gpPrev.pause(); gpPrev.src=''; gpPrev.style.display='none'; }
+  document.getElementById('expGpPreviewPlaceholder').style.display='flex';
+  _expUpdateExpPreview();
+}
+
+// ── AVATAR EXPRESS ────────────────────────────────────────────
+function _expHandleAvatar(file){
+  if(!file || !file.type.startsWith('image/')){ toast('⚠️ Importe une image PNG ou JPG'); return; }
+  if(window._expAvatarUrl) URL.revokeObjectURL(window._expAvatarUrl);
+  window._expAvatarFile = file;
+  window._expAvatarUrl  = URL.createObjectURL(file);
+  const prev = document.getElementById('expAvPreview');
+  const name = document.getElementById('expAvName');
+  const drop = document.getElementById('expAvDropContent');
+  const info = document.getElementById('expAvInfo');
+  const crop = document.getElementById('expAvCropWrap');
+  if(prev) prev.src = window._expAvatarUrl;
+  if(name) name.textContent = file.name;
+  if(drop) drop.style.display = 'none';
+  if(info) info.style.display = 'block';
+  if(crop) crop.style.display = 'block';
+  _expUpdateExpPreview();
+  toast('✅ Avatar chargé');
+}
+
+// ── PREVIEW PHONE EXPRESS ─────────────────────────────────────
+function _expUpdateExpPreview(){
+  const top    = document.getElementById('expPreviewTop');
+  const bottom = document.getElementById('expPreviewBottom');
+  const avOv   = document.getElementById('expAvOverlay');
+  if(!top) return;
+
+  if(window._expSplitOn){
+    const ratio = _expressGpSplit || 60;
+    top.style.flex    = ratio + ' 1 0';
+    bottom.style.display = 'flex';
+    bottom.style.flex    = (100-ratio) + ' 1 0';
+  } else {
+    top.style.flex       = '1';
+    bottom.style.display = 'none';
+  }
+
+  // Avatar overlay
+  if(avOv){
+    if(window._expAvatarUrl && window._expSplitOn){
+      avOv.src = window._expAvatarUrl;
+      avOv.style.display = 'block';
+      const size = document.getElementById('expAvSize')?.value || 35;
+      const yPos = document.getElementById('expAvY')?.value || 30;
+      avOv.style.width  = size + '%';
+      avOv.style.top    = yPos + '%';
+      avOv.style.left   = '5%';
+      avOv.style.height = 'auto';
+    } else {
+      avOv.style.display = 'none';
+    }
+  }
+}
+
+function _expTogglePreviewPlay(){
+  const vid = document.getElementById('expPreviewVid');
+  const btn = document.getElementById('expPreviewPlayBtn');
+  if(!vid || !_expressVideoBlobUrl){ toast('⚠️ Charge ta vidéo d\'abord'); return; }
+  if(vid.style.display==='none'||!vid.src){
+    vid.src = _expressVideoBlobUrl;
+    vid.style.display = 'block';
+    document.getElementById('expPreviewPlaceholder').style.display='none';
+  }
+  if(vid.paused){ vid.play(); if(btn) btn.textContent='⏸ Pause'; }
+  else          { vid.pause(); if(btn) btn.textContent='▶ Lecture preview'; }
+}
+
+// Lien entre _expLoadVideo et preview
+const _origExpLoadVideo = _expLoadVideo;
+// Patch: rafraîchit le preview phone quand vidéo chargée
+function _expLoadVideo(file){
+  if(!file || !file.type.startsWith('video/')){ toast('⚠️ Importe un fichier vidéo (MP4, MOV, WebM…)'); return; }
+  if(_expressVideoBlobUrl) URL.revokeObjectURL(_expressVideoBlobUrl);
+  _expressVideoFile    = file;
+  _expressVideoBlobUrl = URL.createObjectURL(file);
+  const nameEl = document.getElementById('expVidName');
+  const sizeEl = document.getElementById('expVidSize');
+  if(nameEl) nameEl.textContent = file.name;
+  if(sizeEl) sizeEl.textContent = (file.size/1024/1024).toFixed(1) + ' Mo · ' + (file.type.split('/')[1]||'vidéo').toUpperCase();
+  const tmpVid = document.createElement('video');
+  tmpVid.onloadedmetadata = () => { _expressVideoDuration = tmpVid.duration || 0; URL.revokeObjectURL(tmpVid.src); };
+  tmpVid.src = _expressVideoBlobUrl; tmpVid.load();
+  _expUpdateUI();
+  // Affiche dans le preview phone
+  const prevVid = document.getElementById('expPreviewVid');
+  if(prevVid){ prevVid.src=_expressVideoBlobUrl; prevVid.style.display='block'; }
+  document.getElementById('expPreviewPlaceholder').style.display='none';
+  toast('✅ Vidéo chargée — transcris-la puis génère les effets IA');
+}
+
+// ── BIBLIOTHÈQUE → EXPRESS ────────────────────────────────────
+function openExpLibPicker(){
+  const videos = library.filter(v => v.hedraIdbKey);
+  if(!videos.length){ toast('⚠️ Aucune vidéo en bibliothèque'); return; }
+  document.getElementById('_expLibModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = '_expLibModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  modal.innerHTML = `
+    <div class="lvp-sheet" style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:70vh;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0">
+        <div style="font-size:14px;font-weight:800">📚 Vidéos de la bibliothèque</div>
+        <button onclick="document.getElementById('_expLibModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1">
+        ${videos.map(v=>{const ri=library.indexOf(v);return `<div class="lvp-item" onclick="_expPickLibVid(${ri})">
+          <div style="font-size:26px;flex-shrink:0">${v.emo||'🎬'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name||'Vidéo'}</div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">${v.date||''} · ${v.style||'VIDEO'}</div>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);font-weight:700;flex-shrink:0">Utiliser →</div>
+        </div>`;}).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function _expPickLibVid(idx){
+  document.getElementById('_expLibModal')?.remove();
+  const entry = library[idx];
+  if(!entry){ toast('⚠️ Entrée introuvable'); return; }
+  toast('⏳ Chargement…');
+  let blob = null;
+  try {
+    const stored = await _idbLoad(entry.hedraIdbKey);
+    if(stored instanceof File||stored instanceof Blob) blob=stored;
+    else if(stored?.blob) blob=stored.blob;
+  } catch(e){}
+  if(!blob && entry.hedraUrl?.startsWith('blob:')){
+    try { const r=await fetch(entry.hedraUrl); if(r.ok) blob=await r.blob(); } catch(e){}
+  }
+  if(!blob){ toast('⚠️ Vidéo introuvable — cache vidé'); return; }
+  const file = new File([blob], (entry.name||'video')+'.mp4', {type:'video/mp4'});
+  _expLoadVideo(file);
+}
+
+// ── EFFETS IA — décompte 1 crédit image ───────────────────────
+function _expDeductImageCredit(){
+  // Déduire 1 crédit image IA
+  if(currentMember){ currentMember.img_credits = Math.max(0,(currentMember.img_credits||0)-1); }
+  // Mettre à jour le badge header si présent
+  _updateImgQuotaLabel?.();
 }
 
 // ── Transcription ─────────────────────────────────────────────
@@ -11597,6 +11991,11 @@ function _expSyncWpgUI(n){ [1,2,3,4].forEach(i=>{ const c=document.getElementByI
 async function expressGenerateEffects(){
   const chips = Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean);
   if(!chips.length){ toast('⚠️ Transcris ta vidéo d\'abord (étape 2)'); return; }
+  // Vérifier & déduire 1 crédit image IA
+  const imgCredits = currentMember?.img_credits || 0;
+  if(imgCredits <= 0){ toast('⛔ Plus de crédits image IA — achète un pack dans Crédits'); return; }
+  _expDeductImageCredit();
+  toast('🖼️ 1 crédit image IA utilisé');
   const btn = document.getElementById('expGenEffectsBtn');
   if(btn){ btn.innerHTML='⏳ Analyse IA en cours…'; btn.disabled=true; }
   try {
