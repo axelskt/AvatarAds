@@ -10998,6 +10998,9 @@ function renderLibrary(){
     return;
   }
 
+  const _delBtn = (src, idx) =>
+    `<button onclick="event.stopPropagation();deleteLibItem('${src}',${idx})" style="position:absolute;top:6px;right:6px;z-index:20;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(220,30,30,0.85)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.65)';this.style.borderColor='rgba(255,255,255,0.2)'">✕</button>`;
+
   const prefix = (_libActiveTab==='all'||_libActiveTab==='avatar') ? _LIB_IMPORT_CARD : '';
   grid.innerHTML = prefix + items.map((v) => {
     // Image card
@@ -11007,6 +11010,7 @@ function renderLibrary(){
           <img src="${v.imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
           <div class="vid-overlay"></div>
           <div class="vid-badge">${v.style}</div>
+          ${_delBtn('img', v._idx)}
         </div>
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
@@ -11025,6 +11029,7 @@ function renderLibrary(){
           <div style="font-size:42px;z-index:1;position:relative">${v.emo}</div>
           <div class="vid-overlay"></div>
           <div class="vid-badge">${v.style}</div>
+          ${_delBtn('lib', ri)}
         </div>
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
@@ -11042,6 +11047,7 @@ function renderLibrary(){
         <div style="font-size:40px;z-index:1;position:relative">${v.emo}</div>
         <div class="vid-overlay"></div>
         <div class="vid-badge">${v.style}</div>
+        ${_delBtn('lib', ri)}
       </div>
       <div class="vid-meta">
         <div class="vid-title">${v.name}</div>
@@ -11054,6 +11060,28 @@ function renderLibrary(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function deleteLibItem(src, idx){
+  if(src === 'img'){
+    try {
+      const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
+      hist.splice(idx, 1);
+      localStorage.setItem('imgHistory', JSON.stringify(hist));
+    } catch(e){}
+  } else {
+    const entry = library[idx];
+    if(!entry) return;
+    // Nettoie les blobs IndexedDB associés
+    const keysToDelete = [entry.hedraIdbKey, entry.audioIdbKey, entry.idbKey].filter(Boolean);
+    for(const k of keysToDelete){
+      try { await _idbDelete(k); } catch(e){}
+    }
+    library.splice(idx, 1);
+    _saveLibrary();
+  }
+  renderLibrary();
+  toast('🗑️ Supprimé de la bibliothèque');
 }
 
 async function recPlayLibraryAudio(libIdx){
