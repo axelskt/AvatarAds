@@ -140,7 +140,7 @@ h2 em{font-style:normal;color:var(--orange)}
 /* PRICING */
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:960px;margin:0 auto}
 @media(max-width:900px){.pricing-grid{grid-template-columns:1fr}}
-.plan-card{border-radius:16px;padding:28px 24px;border:1px solid rgba(255,255,255,0.08);background:#0a0b0e;transition:transform .2s,border-color .2s;position:relative;overflow:hidden}
+.plan-card{border-radius:16px;padding:28px 24px;border:1px solid rgba(255,255,255,0.08);background:#0a0b0e;transition:transform .2s,border-color .2s;position:relative;overflow:visible}
 .plan-card:hover{transform:translateY(-4px)}
 .plan-card.featured{border-color:rgba(255,92,0,0.35);background:linear-gradient(145deg,rgba(255,92,0,0.05),#0a0b0e)}
 .plan-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--orange),transparent)}
@@ -213,6 +213,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
 .marquee-item{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:13px;font-weight:500;color:var(--gray-5)}
 .marquee-item svg{width:14px;height:14px;color:var(--orange);flex-shrink:0}
 @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 20px rgba(255,107,53,0.45),0 4px 16px rgba(255,107,53,0.3)}50%{box-shadow:0 0 36px rgba(255,107,53,0.75),0 4px 20px rgba(255,107,53,0.5)}}
 </style>
 </head>
 <body>
@@ -476,7 +477,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <!-- Mini quota chips -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
           <div style="padding:4px 10px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.25);border-radius:20px;font-size:10px;font-weight:700;color:#4db7f7;font-family:monospace">🎭 5 avatar/mois</div>
-          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 10 simples/mois</div>
+          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 10 vidéos/mois</div>
         </div>
         <div class="plan-features">
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Clip max <strong style="color:#fff">40s</strong> · sans watermark · export vertical</span></div>
@@ -504,19 +505,18 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="plan-divider"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
           <div style="padding:4px 10px;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.35);border-radius:20px;font-size:10px;font-weight:700;color:var(--orange);font-family:monospace">🎭 15 avatar/mois</div>
-          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 30 simples/mois</div>
+          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 30 vidéos/mois</div>
         </div>
         <div class="plan-features">
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Tout Starter + clip max <strong style="color:#fff">70s</strong> · export <strong style="color:#fff">1080p</strong></span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Whisper IA · synchronisation voix/texte pro</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Suppression silences <strong style="color:#fff">avancée</strong> · remplacement segments</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Sous-titres <strong style="color:#fff">styles cinématiques</strong> (karaoke, bounce, glow…)</span></div>
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">2 voix</strong> clonées · <strong style="color:#fff">3 presets</strong> avatar sauvegardés</span></div>
-          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Bibliothèque vidéo · re-compositions <strong style="color:#fff">25/mois</strong></span></div>
+          <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Bibliothèque vidéo · export <strong style="color:#fff">illimité</strong></span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span>Clips presets <span style="background:rgba(77,171,247,0.12);border:1px solid rgba(77,171,247,0.25);color:#4db7f7;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">Starter</span> <span style="color:rgba(255,255,255,0.3);font-size:10px">+</span> <span style="background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);color:var(--orange);font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">Pro</span> — POV, bureau, urban</span></div>
           <div class="plan-feat"><div class="plan-feat-check">✓</div><span><strong style="color:#fff">20 images IA</strong>/mois · DALL-E 3 4K</span></div>
         </div>
-        <a href="./app/" class="btn-plan orange">Commencer →</a>
+        <a href="./app/" class="btn-plan orange" style="box-shadow:0 0 24px rgba(255,107,53,0.5),0 4px 16px rgba(255,107,53,0.35);animation:pulseGlow 2.5s ease-in-out infinite">Commencer →</a>
         <div class="plan-note">Le plus choisi · 3× plus de vidéos avatar que Starter</div>
       </div>
 
@@ -531,14 +531,13 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="plan-divider"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
           <div style="padding:4px 10px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.35);border-radius:20px;font-size:10px;font-weight:700;color:#c084fc;font-family:monospace">🎭 30 avatar/mois</div>
-          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 60 simples/mois</div>
+          <div style="padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);font-family:monospace">🎬 60 vidéos/mois</div>
         </div>
         <div class="plan-features">
           <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Tout Pro + clip max <strong style="color:#fff">120s</strong> · modèle avatar <strong style="color:#c084fc">Élite</strong></span></div>
           <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Meilleur lipsync du marché · rendu <strong style="color:#fff">1080p</strong></span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Voix clonées <strong style="color:#fff">illimitées</strong> · presets avatar <strong style="color:#fff">illimités</strong></span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Re-compositions <strong style="color:#fff">70/mois</strong> · bibliothèque illimitée</span></div>
-          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Tous les clips presets <span style="background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);color:#4db7f7;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">S</span> <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--orange);font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">P</span> <span style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.35);color:#c084fc;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">✦ Élite</span> — clips exclusifs Ray-Ban POV</span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Bibliothèque illimitée · export <strong style="color:#fff">illimité</strong></span></div>
+          <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Tous les clips presets <span style="background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);color:#4db7f7;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">S</span> <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--orange);font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">P</span> <span style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.35);color:#c084fc;font-size:10px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:monospace">✦ Élite</span> — clips exclusifs</span></div>
           <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span>Support prioritaire direct + early access</span></div>
           <div class="plan-feat"><div class="plan-feat-check purple">✓</div><span><strong style="color:#fff">50 images IA</strong>/mois · DALL-E 3 4K</span></div>
         </div>
