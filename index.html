@@ -500,6 +500,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
         <div class="plan-name">Pro</div>
         <div class="plan-desc">Pour les créateurs qui veulent scaler sérieusement.</div>
         <div class="plan-price"><sup>€</sup><span class="price-monthly">49,99</span><span class="price-yearly" style="display:none">36,99</span><sub>/mois</sub></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;margin-top:-6px;margin-bottom:4px">soit <span id="pro-per-day" style="color:#ff8c5a;font-weight:700">1,67€</span>/jour</div>
         <div class="plan-period price-yearly-note" style="display:none;color:var(--orange);font-size:11px">Économise 25% · Facturé annuellement</div>
         <div class="plan-period price-monthly-note">Facturé mensuellement</div>
         <div class="plan-divider"></div>
@@ -1111,6 +1112,9 @@ function setPricingToggle(mode){
   document.getElementById('tog-monthly').style.color = yearly ? 'rgba(255,255,255,0.4)' : '#fff';
   document.getElementById('tog-yearly').style.color  = yearly ? '#fff' : 'rgba(255,255,255,0.4)';
   document.getElementById('tog-knob').style.transform = yearly ? 'translateX(20px)' : 'translateX(0)';
+  // Prix / jour Pro
+  const perDay = document.getElementById('pro-per-day');
+  if(perDay) perDay.textContent = yearly ? '1,22€' : '1,67€';
 }
 
 function toggleFaq(item){
