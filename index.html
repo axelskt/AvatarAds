@@ -65,8 +65,9 @@ h1 em{font-style:normal;color:var(--orange)}
 .hero-sub{font-size:clamp(15px,2vw,18px);font-weight:400;color:var(--gray-4);line-height:1.7;max-width:520px;margin:0 auto 44px}
 .hero-sub strong{color:var(--gray-3);font-weight:500}
 .hero-ctas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:64px}
-.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:var(--white);font-size:15px;font-weight:700;padding:15px 32px;border-radius:10px;border:none;cursor:pointer;transition:all .25s;text-decoration:none;letter-spacing:-.2px;box-shadow:0 0 0 1px rgba(255,92,0,0.4),0 8px 32px rgba(255,92,0,0.2)}
-.btn-primary:hover{background:var(--orange-light);transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,92,0,0.5),0 12px 40px rgba(255,92,0,0.3)}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:var(--white);font-size:15px;font-weight:700;padding:15px 32px;border-radius:10px;border:none;cursor:pointer;transition:all .25s;text-decoration:none;letter-spacing:-.2px;box-shadow:0 0 28px rgba(255,107,53,0.55),0 0 60px rgba(255,107,53,0.25),0 8px 32px rgba(255,92,0,0.3);animation:heroGlow 2.5s ease-in-out infinite}
+.btn-primary:hover{background:var(--orange-light);transform:translateY(-2px);box-shadow:0 0 40px rgba(255,107,53,0.75),0 0 80px rgba(255,107,53,0.35),0 12px 40px rgba(255,92,0,0.4)}
+@keyframes heroGlow{0%,100%{box-shadow:0 0 24px rgba(255,107,53,0.5),0 0 50px rgba(255,107,53,0.2),0 8px 28px rgba(255,92,0,0.25)}50%{box-shadow:0 0 42px rgba(255,107,53,0.8),0 0 80px rgba(255,107,53,0.35),0 8px 36px rgba(255,92,0,0.4)}}
 .btn-ghost{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);color:var(--gray-3);font-size:15px;font-weight:500;padding:15px 28px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all .25s;text-decoration:none}
 .btn-ghost:hover{background:rgba(255,255,255,0.1);color:var(--white);border-color:rgba(255,255,255,0.18)}
 .hero-note{font-size:12px;color:var(--gray-5);font-weight:400}
