@@ -2704,7 +2704,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div><!-- /recorder -->
 
     <!-- ══ EXPRESS ══ -->
-    <div class="view" id="v-express" style="display:flex;overflow:hidden">
+    <div class="view" id="v-express" style="overflow:hidden">
 
       <!-- ══ LEFT — Formulaire ══ -->
       <div style="flex:0 0 400px;overflow-y:auto;padding:24px 20px 40px;border-right:1px solid var(--border)">
@@ -5518,9 +5518,11 @@ function recUpdateUI(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 function nav(id,el){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(v=>{ v.classList.remove('on'); v.style.flexDirection=''; });
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
-  document.getElementById('v-'+id).classList.add('on');
+  const vEl = document.getElementById('v-'+id);
+  vEl.classList.add('on');
+  if(id==='express') vEl.style.flexDirection='row';
   if(el) el.classList.add('on');
   if(id==='library')    renderLibrary();
   if(id==='youtube')    refreshYoutubeView();
