@@ -140,7 +140,7 @@ h2 em{font-style:normal;color:var(--orange)}
 /* PRICING */
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:960px;margin:0 auto}
 @media(max-width:900px){.pricing-grid{grid-template-columns:1fr}}
-.plan-card{border-radius:16px;padding:28px 24px;border:1px solid rgba(255,255,255,0.08);background:#0a0b0e;transition:transform .2s,border-color .2s;position:relative;overflow:visible}
+.plan-card{border-radius:16px;padding:28px 24px;border:1px solid rgba(255,255,255,0.08);background:#0a0b0e;transition:transform .2s,border-color .2s;position:relative;overflow:visible;display:flex;flex-direction:column}
 .plan-card:hover{transform:translateY(-4px)}
 .plan-card.featured{border-color:rgba(255,92,0,0.35);background:linear-gradient(145deg,rgba(255,92,0,0.05),#0a0b0e)}
 .plan-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--orange),transparent)}
@@ -155,11 +155,11 @@ h2 em{font-style:normal;color:var(--orange)}
 .plan-price sub{font-size:13px;font-weight:400;color:var(--gray-4);letter-spacing:0;vertical-align:baseline}
 .plan-period{font-size:11px;color:var(--gray-5);margin:6px 0 20px;font-weight:500}
 .plan-divider{height:1px;background:rgba(255,255,255,0.06);margin-bottom:20px}
-.plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;flex:1}
 .plan-feat{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--gray-4);line-height:1.4}
 .plan-feat-check{width:16px;height:16px;border-radius:50%;background:rgba(255,92,0,0.15);border:1px solid rgba(255,92,0,0.25);display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;margin-top:1px;color:var(--orange)}
 .plan-feat-check.purple{background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.25);color:#a855f7}
-.btn-plan{display:block;width:100%;text-align:center;padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:none;text-decoration:none;letter-spacing:-.2px}
+.btn-plan{display:block;width:100%;text-align:center;padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:none;text-decoration:none;letter-spacing:-.2px;margin-top:auto}
 .btn-plan.orange{background:var(--orange);color:var(--white);box-shadow:0 4px 20px rgba(255,92,0,0.2)}
 .btn-plan.orange:hover{background:var(--orange-light);box-shadow:0 6px 28px rgba(255,92,0,0.35);transform:translateY(-1px)}
 .btn-plan.outline{background:transparent;color:var(--gray-3);border:1px solid rgba(255,255,255,0.12)}
