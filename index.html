@@ -50,7 +50,23 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
 .btn-login:hover{color:var(--white)}
 .btn-cta-nav{font-size:13px;font-weight:600;color:var(--white);background:var(--orange);border:none;border-radius:8px;padding:9px 20px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
 .btn-cta-nav:hover{background:var(--orange-light);transform:translateY(-1px)}
-@media(max-width:768px){nav{padding:0 20px}.nav-links{display:none}}
+@media(max-width:768px){
+  nav{padding:0 16px;height:52px}
+  .nav-links{display:none}
+  .nav-brand{font-size:13px}
+  .btn-login{font-size:12px;padding:6px 10px}
+  .btn-cta-nav{font-size:12px;padding:7px 14px;white-space:nowrap}
+}
+@media(max-width:480px){
+  .nav-cta-long{display:none}
+  .nav-cta-short{display:inline !important}
+  section{padding:52px 16px}
+  .hero-ctas{gap:8px;margin-bottom:36px}
+  .hero-sub{margin-bottom:24px;font-size:14px}
+  .social-proof{gap:12px;margin-top:36px}
+  .demo-section{padding:0 16px 60px}
+  h2{font-size:clamp(26px,6vw,40px)}
+}
 
 /* HERO */
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 60px;position:relative;overflow:hidden}
@@ -236,7 +252,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
   </div>
   <div class="nav-actions">
     <a href="./app/" class="btn-login">Se connecter</a>
-    <a href="./app/" class="btn-cta-nav">Commencer gratuitement →</a>
+    <a href="./app/" class="btn-cta-nav"><span class="nav-cta-long">Commencer gratuitement</span><span class="nav-cta-short" style="display:none">Commencer</span> →</a>
   </div>
 </nav>
 
