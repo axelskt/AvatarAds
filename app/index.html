@@ -11332,6 +11332,7 @@ function connectYoutube(){
     scope: YT_SCOPE,
     include_granted_scopes: 'true'
   });
+  localStorage.setItem('yt_oauth_pending', '1');
   window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 
@@ -11345,6 +11346,9 @@ function disconnectYoutube(){
 function handleYoutubeOAuthRedirect(){
   const hash = window.location.hash;
   if(!hash.includes('access_token=')) return;
+  // Ne traiter que si on avait initié un OAuth YouTube (évite de piéger le login Supabase)
+  if(!localStorage.getItem('yt_oauth_pending')) return;
+  localStorage.removeItem('yt_oauth_pending');
   const params = new URLSearchParams(hash.slice(1));
   const token = params.get('access_token');
   const expiresIn = parseInt(params.get('expires_in')||'3600');
