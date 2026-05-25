@@ -58,14 +58,17 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
   .btn-cta-nav{font-size:12px;padding:7px 14px;white-space:nowrap}
 }
 @media(max-width:480px){
-  .nav-cta-long{display:none}
+  .nav-cta-long{display:none !important}
   .nav-cta-short{display:inline !important}
-  section{padding:52px 16px}
-  .hero-ctas{gap:8px;margin-bottom:36px}
-  .hero-sub{margin-bottom:24px;font-size:14px}
-  .social-proof{gap:12px;margin-top:36px}
-  .demo-section{padding:0 16px 60px}
-  h2{font-size:clamp(26px,6vw,40px)}
+  section{padding:48px 16px !important}
+  .section-affiliation{padding:48px 0 40px !important}
+  .hero{min-height:auto !important;padding:80px 16px 40px !important}
+  .hero-ctas{gap:8px;margin-bottom:28px}
+  .hero-sub{margin-bottom:20px;font-size:14px}
+  .social-proof{gap:10px;margin-top:28px;flex-wrap:wrap}
+  .demo-section{padding:0 16px 48px}
+  h2{font-size:clamp(24px,6vw,38px) !important}
+  .cta-final{padding:56px 16px !important}
 }
 
 /* HERO */
@@ -863,7 +866,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
 </section>
 
 <!-- AFFILIATION -->
-<section id="affiliation" style="padding:100px 0 80px">
+<section id="affiliation" class="section-affiliation" style="padding:100px 0 80px">
   <div class="container" style="text-align:center">
     <div class="eyebrow">Programme Affilié</div>
     <h2>Recommande AvatarAds.<br><em>Touche 30% par mois.</em></h2>
