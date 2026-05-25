@@ -913,6 +913,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 3 -->
           <div id="fs-3" style="display:none">
 
+            <!-- Bannière vidéo bibliothèque active -->
+            <div id="voice-bypass-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;align-items:center;gap:10px">
+              <span style="font-size:20px">🎬</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:700;color:var(--green)">Vidéo bibliothèque chargée</div>
+                <div id="voiceBypassName" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">—</div>
+              </div>
+              <button onclick="_clearBypassState()" style="padding:4px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer">✕</button>
+            </div>
+
             <!-- STATUT SOURCE VOIX (géré depuis l'étape Style) -->
             <div id="voice-gp-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;display:none;align-items:center;gap:10px">
               <span style="font-size:20px">🎮</span>
@@ -8975,6 +8985,8 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
 async function startGeneration(){
   const script = document.getElementById('f-script').value.trim();
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
+  // Reset bypass state à chaque nouvelle génération
+  _clearBypassState();
 
   // ── Vérification minutes ──
   if(currentMember && !guestMode){
@@ -11226,21 +11238,17 @@ async function recomposeFromLibrary(idx){
   // Injecter la thumbnail dans le preview phone
   _setBypassPreviewThumbnail(blobUrl);
 
-  // 5b. Pré-remplir le script original dans l'onglet Produit
-  if(entry.script){
-    const fScript = document.getElementById('f-script');
-    if(fScript){ fScript.value = entry.script; }
-    // Aussi pré-remplir le transcript voix (pour ElevenLabs)
-    const voiceTa = document.getElementById('voiceTranscriptTA');
-    if(voiceTa){ voiceTa.value = entry.script; syncVoiceTranscript(entry.script); }
-    // Pré-remplir le transcript dans le word editor si possible
-    try { if(typeof pendingTranscript !== 'undefined') window.pendingTranscript = entry.script; } catch(e){}
-  }
+  // 5b. Sauvegarder le state bypass en localStorage (persistance refresh/quitter)
+  _saveBypassState(entry);
 
-  // 6. Naviguer vers le générateur, étape 1 (Produit) pour montrer le script pré-rempli
+  // 6. Naviguer vers le générateur, étape 1 (Produit)
   nav('generator', document.querySelector('.nav-i'));
   await wait(80);
   goToStep(1);
+
+  // 7. Pré-remplir APRÈS la navigation (timing critique)
+  await wait(80);
+  _applyBypassScriptAndBanner(entry.script, entry.name);
 
   toast('✅ Script pré-rempli — modifie si besoin, puis va à l\'étape 2 (Avatar déjà chargé)');
 }
@@ -11312,14 +11320,109 @@ async function pickLibVideo(idx){
 
   const file = new File([hedraBlob], (entry.name||'avatar') + '.mp4', { type:'video/mp4' });
   handleBypassHedraFile(file);
+  _saveBypassState(entry);
+  await wait(120);
+  _applyBypassScriptAndBanner(entry.script, entry.name);
+}
 
-  // Pré-remplir le script original dans l'onglet Produit
-  if(entry.script){
+// ── BYPASS PERSISTANCE ──
+function _saveBypassState(entry){
+  try {
+    if(!entry){ localStorage.removeItem('aa_bypass_resume'); return; }
+    localStorage.setItem('aa_bypass_resume', JSON.stringify({
+      hedraIdbKey: entry.hedraIdbKey || null,
+      script: entry.script || '',
+      name:   entry.name   || 'Vidéo'
+    }));
+  } catch(e){}
+}
+
+function _applyBypassScriptAndBanner(script, name){
+  // Pré-remplir le script dans l'onglet Produit
+  if(script){
     const fScript = document.getElementById('f-script');
-    if(fScript){ fScript.value = entry.script; }
+    if(fScript) fScript.value = script;
     const voiceTa = document.getElementById('voiceTranscriptTA');
-    if(voiceTa){ voiceTa.value = entry.script; syncVoiceTranscript(entry.script); }
-    try { if(typeof pendingTranscript !== 'undefined') window.pendingTranscript = entry.script; } catch(e){}
+    if(voiceTa){ voiceTa.value = script; try{ syncVoiceTranscript(script); }catch(e){} }
+    window.pendingTranscript = script;
+  }
+  // Afficher la bannière dans l'onglet Voix
+  const banner  = document.getElementById('voice-bypass-active');
+  const nameEl  = document.getElementById('voiceBypassName');
+  if(banner) banner.style.display = 'flex';
+  if(nameEl)  nameEl.textContent  = 'Audio de : ' + (name || 'vidéo bibliothèque');
+}
+
+function _clearBypassState(){
+  localStorage.removeItem('aa_bypass_resume');
+  const banner = document.getElementById('voice-bypass-active');
+  if(banner) banner.style.display = 'none';
+  // Désactiver aussi le bypass Hedra
+  if(window._bypassHedraOn){
+    window._bypassHedraOn = false;
+    window._bypassHedraFile = null;
+    if(window._bypassHedraUrl){ URL.revokeObjectURL(window._bypassHedraUrl); window._bypassHedraUrl = null; }
+    const sw    = document.getElementById('bypassHedraSwitch');
+    const thumb = document.getElementById('bypassHedraThumb');
+    const panel = document.getElementById('bypassHedraPanel');
+    const row   = document.getElementById('bypassHedraToggleRow');
+    const bpv   = document.getElementById('bypassPreviewVid');
+    if(sw)    { sw.style.background = 'var(--bg5)'; }
+    if(thumb) { thumb.style.left = '3px'; thumb.style.opacity = '.4'; }
+    if(panel) { panel.style.display = 'none'; }
+    if(row)   { row.style.borderColor = 'var(--border)'; row.style.background = ''; }
+    if(bpv)   { bpv.src = ''; bpv.style.display = 'none'; }
+    _updateBypassUI();
+  }
+  toast('✅ Vidéo bibliothèque déchargée');
+}
+
+async function _restoreBypassState(){
+  try {
+    const raw = localStorage.getItem('aa_bypass_resume');
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    if(!saved?.hedraIdbKey) return;
+
+    const stored = await _idbLoad(saved.hedraIdbKey);
+    let blob = null;
+    if(stored instanceof File || stored instanceof Blob) blob = stored;
+    else if(stored?.blob) blob = stored.blob;
+    if(!blob){ localStorage.removeItem('aa_bypass_resume'); return; }
+
+    const file = new File([blob], (saved.name||'avatar')+'.mp4', {type:'video/mp4'});
+
+    // Activer bypass mode
+    window._bypassHedraOn = true;
+    const sw    = document.getElementById('bypassHedraSwitch');
+    const thumb = document.getElementById('bypassHedraThumb');
+    const panel = document.getElementById('bypassHedraPanel');
+    const row   = document.getElementById('bypassHedraToggleRow');
+    if(sw)    { sw.style.background = 'var(--green)'; }
+    if(thumb) { thumb.style.left = '21px'; thumb.style.opacity = '1'; }
+    if(panel) { panel.style.display = 'block'; }
+    if(row)   { row.style.borderColor = 'rgba(0,217,126,0.4)'; row.style.background = 'rgba(0,217,126,0.05)'; }
+
+    window._bypassHedraFile = file;
+    window._bypassHedraUrl = URL.createObjectURL(file);
+
+    const nameEl   = document.getElementById('bypassHedraFileName');
+    const dropCont = document.getElementById('bypassHedraDropContent');
+    const fileInfo = document.getElementById('bypassHedraFileInfo');
+    if(nameEl)   nameEl.textContent     = saved.name + '.mp4';
+    if(dropCont) dropCont.style.display = 'none';
+    if(fileInfo) fileInfo.style.display = 'block';
+
+    const hv = document.getElementById('hedraVideo');
+    if(hv) hv.src = window._bypassHedraUrl;
+    _setBypassPreviewThumbnail(window._bypassHedraUrl);
+    _updateBypassUI();
+
+    _applyBypassScriptAndBanner(saved.script, saved.name);
+    toast('🔄 Vidéo "' + (saved.name||'') + '" restaurée depuis la session précédente');
+  } catch(e){
+    console.warn('_restoreBypassState:', e);
+    localStorage.removeItem('aa_bypass_resume');
   }
 }
 
@@ -11531,6 +11634,9 @@ refreshPublishButtons();
 updateSteps();
 updateLivePreview();
 toggleMp4AudioOption(true);
+
+// 5. Restaurer le bypass state si une vidéo bibliothèque était chargée avant refresh
+setTimeout(_restoreBypassState, 300);
 
 // 4. Handle YouTube OAuth redirect
 handleYoutubeOAuthRedirect();
