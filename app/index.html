@@ -8227,29 +8227,37 @@ function applyMp4Transcript(text){
 function handleMp4AudioFile(file){
   if(!file) return;
   mp4AudioFile = file;
-  _idbSave('mp4audio', file); // persistance entre rechargements
-  whisperWordTimestamps = []; // reset timestamps à chaque nouvel audio
+  try{ _idbSave('mp4audio', file); }catch(e){}
+  whisperWordTimestamps = [];
+  window._mp4ReadyForWhisper = true;
+
+  // ── UI immédiate (pas besoin d'attendre les métadonnées) ──
+  const dropContent = document.getElementById('mp4AudioDropContent');
+  const fileInfo    = document.getElementById('mp4AudioFileInfo');
+  const fileNameEl  = document.getElementById('mp4AudioFileName');
+  if(dropContent) dropContent.style.display = 'none';
+  if(fileInfo)    fileInfo.style.display    = 'block';
+  if(fileNameEl)  fileNameEl.textContent    = file.name;
+
+  // ── Chargement audio (durée + waveform dans le callback) ──
   const el = document.getElementById('mp4AudioEl');
+  if(!el) return;
   el.src = URL.createObjectURL(file);
   el.load();
   el.onloadedmetadata = async ()=>{
     mp4AudioDur     = el.duration;
     mp4AudioTrimSt  = 0;
     mp4AudioTrimEnd = mp4AudioDur;
-    document.getElementById('mp4AudioDropContent').style.display = 'none';
-    document.getElementById('mp4AudioFileInfo').style.display    = 'block';
-    document.getElementById('mp4AudioFileName').textContent      = file.name;
-    document.getElementById('mp4AudioDuration').textContent      = '⏱ ' + Math.round(mp4AudioDur) + 's';
-    document.getElementById('mp4TrimPanel').style.display        = 'block';
+    const durEl  = document.getElementById('mp4AudioDuration');
+    const trimPn = document.getElementById('mp4TrimPanel');
     const muteBtn = document.getElementById('mp4MuteBtn');
+    if(durEl)  durEl.textContent      = '⏱ ' + Math.round(mp4AudioDur) + 's';
+    if(trimPn) trimPn.style.display   = 'block';
     if(muteBtn) muteBtn.style.display = 'block';
-    _mp4UpdateTrimLabels();
-    _mp4UpdateTrimmerUI();
-    await _mp4DrawWaveform(file);
-    _mp4InitDrag();
-    // (silence removal moved to dedicated section below)
-    // Marquer qu'un fichier MP4 est disponible pour Whisper dans Step 4
-    window._mp4ReadyForWhisper = true;
+    try{ _mp4UpdateTrimLabels(); }catch(e){}
+    try{ _mp4UpdateTrimmerUI(); }catch(e){}
+    try{ await _mp4DrawWaveform(file); }catch(e){}
+    try{ _mp4InitDrag(); }catch(e){}
   };
 }
 
@@ -11484,6 +11492,17 @@ function _applyBypassScriptAndBanner(script, name){
   const nameEl  = document.getElementById('voiceBypassName');
   if(banner) banner.style.display = 'flex';
   if(nameEl)  nameEl.textContent  = 'Audio de : ' + (name || 'vidéo bibliothèque');
+
+  // Pré-remplir la section audio MP4 avec la vidéo bypass
+  if(window._bypassHedraFile){
+    const audioFile = new File(
+      [window._bypassHedraFile],
+      '🎬 ' + (name || 'vidéo') + '.mp4',
+      { type: window._bypassHedraFile.type || 'video/mp4' }
+    );
+    selectVoiceMode('mp4');
+    handleMp4AudioFile(audioFile);
+  }
 }
 
 function _clearBypassState(){
