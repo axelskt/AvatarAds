@@ -49,6 +49,7 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
 .btn-login{font-size:13px;font-weight:500;color:var(--gray-3);background:none;border:none;cursor:pointer;padding:8px 16px;transition:color .2s;text-decoration:none;white-space:nowrap}
 .faceless-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .faceless-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 24px;text-align:center}
+.aff-steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:860px;margin:0 auto 48px;text-align:left}
 .btn-login:hover{color:var(--white)}
 .btn-cta-nav{font-size:13px;font-weight:600;color:var(--white);background:var(--orange);border:none;border-radius:8px;padding:9px 20px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
 .btn-cta-nav:hover{background:var(--orange-light);transform:translateY(-1px)}
@@ -65,15 +66,16 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
   section{padding:48px 16px !important}
   .section-affiliation{padding:48px 0 40px !important}
   .hero{min-height:auto !important;padding:80px 16px 40px !important}
-  .hero-ctas{gap:8px;margin-bottom:28px}
+  .hero-ctas{gap:8px;margin-bottom:12px}
   .hero-sub{margin-bottom:20px;font-size:14px}
-  .social-proof{gap:10px;margin-top:28px;flex-wrap:wrap}
+  .social-proof{gap:10px;margin-top:12px;flex-wrap:wrap}
   .demo-section{padding:0 16px 48px}
   h2{font-size:clamp(24px,6vw,38px) !important}
   .cta-final{padding:56px 16px !important}
   .faceless-grid{grid-template-columns:1fr;gap:12px}
   .faceless-card{padding:20px 18px;display:flex;align-items:center;gap:16px;text-align:left}
   .faceless-card>div:first-child{font-size:28px;margin-bottom:0;flex-shrink:0}
+  .aff-steps-grid{grid-template-columns:1fr;gap:12px}
 }
 
 /* HERO */
@@ -283,8 +285,13 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
     <a href="#how" class="btn-ghost">Voir comment ça marche</a>
   </div>
 
+  <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px">
+    <span style="color:#f59e0b;letter-spacing:1px">⭐⭐⭐⭐⭐</span>
+    <span><strong style="color:#fff">4.9/5</strong> · 200+ avis vérifiés</span>
+  </div>
+
   <div class="social-proof">
-    <div class="sp-item"><strong>500+</strong> vidéos générées</div>
+    <div class="sp-item"><strong>500+</strong> Avatar générées</div>
     <div class="sp-divider"></div>
     <div class="sp-item">Vidéo prête en <strong>5 min</strong></div>
     <div class="sp-divider"></div>
@@ -929,7 +936,7 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
       <div class="eyebrow" style="margin-bottom:16px">Comment ça marche</div>
       <h2 style="margin-bottom:12px">Opérationnel en <em>3 étapes</em></h2>
       <p class="section-sub" style="margin:0 auto 48px;max-width:420px">De zéro à revenu passif — plus vite que tu ne le penses.</p>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:860px;margin:0 auto 48px;text-align:left">
+      <div class="aff-steps-grid">
         <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px">
           <span style="display:inline-block;padding:4px 12px;border:1px solid var(--orange);border-radius:20px;font-size:11px;font-weight:700;color:var(--orange);font-family:'Inter',sans-serif;margin-bottom:16px">Étape 01</span>
           <h3 style="font-size:17px;font-weight:800;color:#fff;margin:0 0 10px;font-family:'Inter',sans-serif;letter-spacing:-.3px">Crée ton compte</h3>
