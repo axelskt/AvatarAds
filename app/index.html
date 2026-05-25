@@ -6196,12 +6196,26 @@ async function whisperTranscribe(){
     toast('⚠️ Whisper IA disponible avec les plans Pro, Élite et BYOK');
     return;
   }
-  if(!mp4AudioFile){ toast('⚠️ Upload un fichier audio MP4 dans l\'étape Voix d\'abord'); return; }
+
+  // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync)
+  let audioSrc = mp4AudioFile || (window._bypassHedraOn && window._bypassHedraFile) || null;
+  if(!audioSrc){
+    toast('⚠️ Upload un fichier audio dans l\'étape Voix d\'abord');
+    return;
+  }
+
+  // Vérifier la taille du fichier (limite Whisper : 25 MB, Edge Function : ~20 MB)
+  const MAX_MB = 20;
+  if(audioSrc.size > MAX_MB * 1024 * 1024){
+    toast('⚠️ Fichier trop lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — Whisper accepte max ' + MAX_MB + ' MB. Compresse ou réduis la durée.');
+    return;
+  }
+
   const btn = event?.currentTarget;
   if(btn){ btn.innerHTML = '⏳ Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
   try {
     const fd = new FormData();
-    fd.append('file', mp4AudioFile, mp4AudioFile.name);
+    fd.append('file', audioSrc, audioSrc.name || 'audio.mp4');
     fd.append('model', 'whisper-1');
     fd.append('language', 'fr');
     fd.append('response_format', 'verbose_json');
@@ -6243,15 +6257,20 @@ async function whisperTranscribe(){
   } catch(e){
     let raw = String(e.message || e);
     let msg = raw.slice(0, 200);
-    try {
-      const errObj = JSON.parse(raw);
-      const errMsg = errObj?.error?.message || '';
-      if(errObj?.error?.type === 'insufficient_quota' || errMsg.includes('quota') || errMsg.includes('billing') || raw.includes('quota') || raw.includes('billing')){
-        msg = 'Quota OpenAI dépassé. Recharge ton compte sur platform.openai.com/billing';
-      } else {
-        msg = (errMsg || raw).slice(0, 150);
-      }
-    } catch(_){}
+    // Détection des erreurs fréquentes
+    if(raw.toLowerCase().includes('load failed') || raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('network')){
+      msg = 'Erreur réseau — le fichier est peut-être trop lourd (max 20 MB) ou la connexion a coupé. Réessaie.';
+    } else {
+      try {
+        const errObj = JSON.parse(raw);
+        const errMsg = errObj?.error?.message || '';
+        if(errObj?.error?.type === 'insufficient_quota' || errMsg.includes('quota') || errMsg.includes('billing') || raw.includes('quota') || raw.includes('billing')){
+          msg = 'Quota OpenAI dépassé. Recharge ton compte sur platform.openai.com/billing';
+        } else {
+          msg = (errMsg || raw).slice(0, 150);
+        }
+      } catch(_){}
+    }
     toast('⚠️ Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
