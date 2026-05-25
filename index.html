@@ -47,6 +47,8 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
 .nav-links a:hover{color:var(--white)}
 .nav-actions{display:flex;align-items:center;gap:10px}
 .btn-login{font-size:13px;font-weight:500;color:var(--gray-3);background:none;border:none;cursor:pointer;padding:8px 16px;transition:color .2s;text-decoration:none;white-space:nowrap}
+.faceless-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.faceless-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 24px;text-align:center}
 .btn-login:hover{color:var(--white)}
 .btn-cta-nav{font-size:13px;font-weight:600;color:var(--white);background:var(--orange);border:none;border-radius:8px;padding:9px 20px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
 .btn-cta-nav:hover{background:var(--orange-light);transform:translateY(-1px)}
@@ -69,6 +71,9 @@ nav.scrolled{background:rgba(8,9,10,0.9);backdrop-filter:blur(20px);border-botto
   .demo-section{padding:0 16px 48px}
   h2{font-size:clamp(24px,6vw,38px) !important}
   .cta-final{padding:56px 16px !important}
+  .faceless-grid{grid-template-columns:1fr;gap:12px}
+  .faceless-card{padding:20px 18px;display:flex;align-items:center;gap:16px;text-align:left}
+  .faceless-card>div:first-child{font-size:28px;margin-bottom:0;flex-shrink:0}
 }
 
 /* HERO */
@@ -295,18 +300,18 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
     <h2 style="font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1">Crée du contenu viral<br><em style="color:#ff6b35;font-style:normal">sans montrer ton visage</em></h2>
     <p style="font-size:16px;color:rgba(255,255,255,0.55);max-width:520px;margin:0 auto;line-height:1.6">Un avatar IA parle à ta place. Ta voix clonée. Ton produit. Zéro caméra. Zéro gêne.</p>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 24px;text-align:center">
+  <div class="faceless-grid">
+    <div class="faceless-card">
       <div style="font-size:36px;margin-bottom:14px">🎭</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:8px">Avatar IA à ta place</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.5">Un visage généré parle à la caméra. Toi tu restes invisible.</div>
     </div>
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 24px;text-align:center">
+    <div class="faceless-card">
       <div style="font-size:36px;margin-bottom:14px">🎙️</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:8px">Ta voix, clonée par IA</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.5">L'avatar parle avec ta propre voix. Authentique, sans enregistrement vidéo.</div>
     </div>
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 24px;text-align:center">
+    <div class="faceless-card">
       <div style="font-size:36px;margin-bottom:14px">📱</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:8px">Prêt pour TikTok &amp; Reels</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.5">Format 9:16, sous-titres style Hormozi, gameplay intégré. Publie en 1 clic.</div>
