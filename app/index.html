@@ -11226,12 +11226,23 @@ async function recomposeFromLibrary(idx){
   // Injecter la thumbnail dans le preview phone
   _setBypassPreviewThumbnail(blobUrl);
 
-  // 6. Naviguer vers le générateur, étape Avatar (2)
+  // 5b. Pré-remplir le script original dans l'onglet Produit
+  if(entry.script){
+    const fScript = document.getElementById('f-script');
+    if(fScript){ fScript.value = entry.script; }
+    // Aussi pré-remplir le transcript voix (pour ElevenLabs)
+    const voiceTa = document.getElementById('voiceTranscriptTA');
+    if(voiceTa){ voiceTa.value = entry.script; syncVoiceTranscript(entry.script); }
+    // Pré-remplir le transcript dans le word editor si possible
+    try { if(typeof pendingTranscript !== 'undefined') window.pendingTranscript = entry.script; } catch(e){}
+  }
+
+  // 6. Naviguer vers le générateur, étape 1 (Produit) pour montrer le script pré-rempli
   nav('generator', document.querySelector('.nav-i'));
   await wait(80);
-  goToStep(2);
+  goToStep(1);
 
-  toast('✅ Vidéo chargée dans Avatar — configure ton script & voix, puis clique Générer');
+  toast('✅ Script pré-rempli — modifie si besoin, puis va à l\'étape 2 (Avatar déjà chargé)');
 }
 
 // ── LIB VIDEO PICKER ──
@@ -11301,6 +11312,15 @@ async function pickLibVideo(idx){
 
   const file = new File([hedraBlob], (entry.name||'avatar') + '.mp4', { type:'video/mp4' });
   handleBypassHedraFile(file);
+
+  // Pré-remplir le script original dans l'onglet Produit
+  if(entry.script){
+    const fScript = document.getElementById('f-script');
+    if(fScript){ fScript.value = entry.script; }
+    const voiceTa = document.getElementById('voiceTranscriptTA');
+    if(voiceTa){ voiceTa.value = entry.script; syncVoiceTranscript(entry.script); }
+    try { if(typeof pendingTranscript !== 'undefined') window.pendingTranscript = entry.script; } catch(e){}
+  }
 }
 
 // ── UTILS ──
