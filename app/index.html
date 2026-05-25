@@ -3516,28 +3516,40 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="paywall-icon">⚡</div>
     <div class="paywall-title" id="paywallTitle">Passe à l'accès complet</div>
     <div class="paywall-sub" id="paywallSub">Choisis le plan qui correspond à ton usage. Tous les APIs sont inclus, zéro configuration.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
-      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://whop.com/checkout/plan_YKcdyPT6RRQSi','_blank')">
+
+    <!-- Toggle mensuel / annuel -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px">
+      <span id="paywallLblMonthly" style="font-size:12px;font-family:var(--mono);color:var(--text1);font-weight:700">Mensuel</span>
+      <div onclick="paywallToggleBilling()" style="width:42px;height:24px;border-radius:12px;background:var(--border2);cursor:pointer;position:relative;transition:background .2s" id="paywallBillingToggle">
+        <div id="paywallBillingThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+      </div>
+      <span id="paywallLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel <span style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:4px">-2 mois</span></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <!-- STARTER -->
+      <div id="paywallCardStarter" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('starter')">
         <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPriceStarter" style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
+        <div id="paywallPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 vidéos · Sous-titres</div>
       </div>
-      <div style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="window.open('https://whop.com/checkout/plan_g4BVtDmk6hgjQ','_blank')">
+      <!-- PRO -->
+      <div id="paywallCardPro" style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="paywallCheckout('pro')">
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">PRO</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPricePro" style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
+        <div id="paywallPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 vidéos · Effets IA</div>
       </div>
-      <div style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="window.open('https://whop.com/checkout/plan_w8lh5zpEJFOQR','_blank')">
+      <!-- ELITE -->
+      <div id="paywallCardElite" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('elite')">
         <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">ELITE ✦</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPriceElite" style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
+        <div id="paywallPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 vidéos · VSL · 1080p</div>
       </div>
     </div>
-    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:16px">Sans engagement · Annuel disponible (économise 2 mois)</div>
     <button class="btn-paywall" onclick="window.open('https://whop.com/avatarads','_blank')">Voir tous les plans →</button>
     <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
   </div>
@@ -4299,13 +4311,58 @@ const CREDIT_PACK_URLS = {
   pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – 30 min – 44,99€
 };
 
-// Plans checkout Whop (mensuel)
+// Plans checkout Whop
 const PLAN_CHECKOUT_URLS = {
-  free:    'https://whop.com/checkout/plan_YKcdyPT6RRQSi', // Starter 29,99€/mois
-  starter: 'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', // Pro     49,99€/mois
-  pro:     'https://whop.com/checkout/plan_w8lh5zpEJFOQR', // Élite   89,99€/mois
-  elite:   null,
+  monthly: {
+    free:    'https://whop.com/checkout/plan_YKcdyPT6RRQSi', // Starter 29,99€/mois
+    starter: 'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', // Pro     49,99€/mois
+    pro:     'https://whop.com/checkout/plan_w8lh5zpEJFOQR', // Élite   89,99€/mois
+    elite:   null,
+  },
+  annual: {
+    free:    'https://whop.com/checkout/plan_cNydK89X39PLE', // Starter 299,99€/an
+    starter: 'https://whop.com/checkout/plan_P7WIywSa6YrxT', // Pro     499,99€/an
+    pro:     'https://whop.com/checkout/plan_OvRwm5CW3xcNh', // Élite   899,99€/an
+    elite:   null,
+  },
 };
+
+// Paywall billing toggle (mensuel ↔ annuel)
+let _paywallAnnual = false;
+const _paywallPlans = {
+  starter: { monthly: { price: '29,99€', period: '/mois' }, annual: { price: '299,99€', period: '/an · 24,99€/mois' } },
+  pro:     { monthly: { price: '49,99€', period: '/mois' }, annual: { price: '499,99€', period: '/an · 41,66€/mois' } },
+  elite:   { monthly: { price: '89,99€', period: '/mois' }, annual: { price: '899,99€', period: '/an · 74,99€/mois' } },
+};
+function paywallToggleBilling(){
+  _paywallAnnual = !_paywallAnnual;
+  const thumb  = document.getElementById('paywallBillingThumb');
+  const toggle = document.getElementById('paywallBillingToggle');
+  const lblM   = document.getElementById('paywallLblMonthly');
+  const lblA   = document.getElementById('paywallLblAnnual');
+  if(thumb)  thumb.style.left  = _paywallAnnual ? '21px' : '3px';
+  if(toggle) toggle.style.background = _paywallAnnual ? '#22c55e' : 'var(--border2)';
+  if(lblM)   lblM.style.color  = _paywallAnnual ? 'var(--text3)' : 'var(--text1)';
+  if(lblA)   { lblA.style.color = _paywallAnnual ? 'var(--text1)' : 'var(--text3)'; lblA.style.fontWeight = _paywallAnnual ? '700' : '400'; }
+  ['starter','pro','elite'].forEach(k => {
+    const info = _paywallPlans[k][_paywallAnnual ? 'annual' : 'monthly'];
+    const priceEl  = document.getElementById('paywallPrice'  + k.charAt(0).toUpperCase() + k.slice(1));
+    const periodEl = document.getElementById('paywallPeriod' + k.charAt(0).toUpperCase() + k.slice(1));
+    if(priceEl)  priceEl.textContent  = info.price;
+    if(periodEl) periodEl.textContent = info.period;
+  });
+}
+function paywallCheckout(plan){
+  const billing = _paywallAnnual ? 'annual' : 'monthly';
+  const currentPlan = (currentMember?.plan || 'free').toLowerCase();
+  // Map paywall plan name to PLAN_CHECKOUT_URLS key
+  const keyMap = { starter: 'free', pro: 'starter', elite: 'pro' };
+  // If user clicks their upgrade path use currentPlan key, else map by card
+  const urlKey = keyMap[plan] || currentPlan;
+  const url = PLAN_CHECKOUT_URLS[billing][urlKey];
+  if(url) window.open(url, '_blank');
+  closePaywall();
+}
 
 function openBuyCredits(){
   openUpgradeModal();
@@ -4423,13 +4480,10 @@ function previewUpgradeAs(fakePlan){
 }
 
 function goUpgradePlan(){
-  const plan = (currentMember?.plan || 'free').toLowerCase();
-  const url  = PLAN_CHECKOUT_URLS[plan];
-  if(url){
-    window.open(url, '_blank');
-  } else {
-    window.open('https://avatarads.fr#pricing', '_blank');
-  }
+  const plan    = (currentMember?.plan || 'free').toLowerCase();
+  const billing = _paywallAnnual ? 'annual' : 'monthly';
+  const url     = PLAN_CHECKOUT_URLS[billing][plan];
+  window.open(url || 'https://whop.com/avatarads', '_blank');
   closeUpgradeModal();
 }
 function buyCredits(pack){
