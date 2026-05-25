@@ -12867,21 +12867,36 @@ function startTapSync(){
     allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
   }
 
-  // Récupérer l'audio
-  const audioSrc = document.getElementById('mp4AudioEl')?.src || document.getElementById('audioEl')?.src
-                || (window._bypassHedraOn && window._bypassHedraUrl) || null;
-  if(!audioSrc){ toast('⚠️ Pas d\'audio disponible — génère ou upload ton audio d\'abord'); return; }
+  // Choisir la source audio — même logique que l'aperçu animé
+  if(_tapSyncAudio){ try{_tapSyncAudio.pause();}catch(e){} _tapSyncAudio = null; }
+
+  if(mp4AudioEnabled && mp4AudioFile){
+    // Audio MP4 uploadé manuellement → réutiliser l'élément déjà chargé
+    const el = document.getElementById('mp4AudioEl');
+    if(!el || !el.src){ toast('⚠️ Fichier audio MP4 introuvable'); return; }
+    el.currentTime = mp4AudioTrimSt || 0;
+    _tapSyncAudio = el;
+  } else if(window._bypassHedraOn && window._bypassHedraUrl){
+    // Mode bypass bibliothèque → même approche que l'aperçu animé
+    _tapSyncAudio = new Audio(window._bypassHedraUrl);
+  } else if(results && results.audioBlob){
+    // Audio ElevenLabs généré
+    const el = document.getElementById('audioEl');
+    if(!el || !el.src){ toast('⚠️ Audio généré introuvable'); return; }
+    el.currentTime = 0;
+    _tapSyncAudio = el;
+  } else {
+    toast('⚠️ Pas d\'audio disponible — génère ou upload ton audio d\'abord');
+    return;
+  }
+
+  _tapSyncAudio.onended = ()=>{ if(_tapSyncActive) _tapSyncFinish(); };
 
   const wpg = Math.max(1, cfg.subWpg || 2);
   _tapSyncGroups = _getWordGroups() || _buildWpgGroups(allWords, wpg);
   _tapSyncTimes  = [];
   _tapSyncIdx    = 0;
-  _tapSyncActive = false; // sera true après le Go
-
-  // Préparer l'audio (sans le jouer — attend le clic Go pour contourner Safari autoplay)
-  _tapSyncAudio = new Audio(audioSrc);
-  _tapSyncAudio.currentTime = mp4AudioTrimSt || 0;
-  _tapSyncAudio.onended = ()=>{ if(_tapSyncActive) _tapSyncFinish(); };
+  _tapSyncActive = false;
 
   // Montrer la page d'intro
   const overlay = document.getElementById('tapSyncOverlay');
@@ -12893,7 +12908,7 @@ function startTapSync(){
 }
 
 function _tapSyncGo(){
-  // Appelé depuis le bouton "Go" → user gesture → l'audio peut démarrer
+  // Appelé depuis le bouton "Go" → user gesture direct → play() DOIT être ici (Safari autoplay)
   if(!_tapSyncAudio){ return; }
   _tapSyncActive = true;
 
@@ -12903,15 +12918,16 @@ function _tapSyncGo(){
   if(intro)   intro.style.display   = 'none';
   if(session) session.style.display = 'flex';
 
-  // Démarrer l'audio immédiatement (user gesture direct → Safari OK)
-  _tapSyncAudio.play().catch(e => { console.warn('TapSync audio play failed:', e); toast('⚠️ Impossible de lire l\'audio — vérifie que ton audio est généré'); });
+  // play() appelé directement dans le handler du geste → Safari autoplay OK
+  _tapSyncAudio.play().catch(e => {
+    console.warn('TapSync audio play failed:', e);
+    toast('⚠️ Impossible de lire l\'audio — vérifie que ton audio est chargé');
+  });
 
   // Enregistrer le temps du premier groupe (= début de l'audio)
   _tapSyncTimes.push(_tapSyncAudio.currentTime);
   _tapSyncIdx = 1;
   _tapSyncRenderUI();
-
-  // Spacebar global
   document.addEventListener('keydown', _tapSyncKeydown);
 }
 
@@ -12950,7 +12966,7 @@ function _tapSyncFinish(){
   if(!_tapSyncActive) return;
   _tapSyncActive = false;
   document.removeEventListener('keydown', _tapSyncKeydown);
-  if(_tapSyncAudio){ _tapSyncAudio.pause(); _tapSyncAudio = null; }
+  if(_tapSyncAudio){ try{_tapSyncAudio.pause(); _tapSyncAudio.currentTime=0;}catch(e){} _tapSyncAudio = null; }
   document.getElementById('tapSyncOverlay').style.display = 'none';
 
   // Convertir les tap times en whisperWordTimestamps
@@ -12990,7 +13006,7 @@ function _tryRestoreTapSync(scriptHint){
 function _tapSyncCancel(){
   _tapSyncActive = false;
   document.removeEventListener('keydown', _tapSyncKeydown);
-  if(_tapSyncAudio){ _tapSyncAudio.pause(); _tapSyncAudio = null; }
+  if(_tapSyncAudio){ try{_tapSyncAudio.pause(); _tapSyncAudio.currentTime=0;}catch(e){} _tapSyncAudio = null; }
   document.getElementById('tapSyncOverlay').style.display = 'none';
   toast('Tap Sync annulé');
 }
