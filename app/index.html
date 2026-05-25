@@ -3871,6 +3871,10 @@ function enterApp(profile){
     if(profile.plan === 'starter') upgLabel.textContent = '→ Pro';
     if(profile.plan === 'pro')     upgLabel.textContent = '→ Elite';
   }
+  // Section BYOK — visible uniquement pour les membres du plan byok
+  const byokSection = document.getElementById('byok-section');
+  if(byokSection) byokSection.style.display = profile.plan === 'byok' ? 'block' : 'none';
+
   // Silence tool panel : open by default for PRO/Elite, closed for others
   if(!['pro','elite'].includes(profile.plan)){
     const sPanel = document.getElementById('silenceToolPanel');
@@ -4326,6 +4330,8 @@ const PLAN_CHECKOUT_URLS = {
     elite:   null,
   },
 };
+// BYOK — membres formation uniquement (lien partagé en privé)
+const BYOK_CHECKOUT_URL = 'https://whop.com/checkout/plan_dXRZRYaSF0FGE'; // 9,99€/mois
 
 // Paywall billing toggle (mensuel ↔ annuel)
 let _paywallAnnual = false;
