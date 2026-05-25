@@ -1520,6 +1520,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- EFFETS IA — Pro & Élite -->
+            <div class="fld" style="margin-bottom:18px">
+              <button onclick="expressGenerateEffects()" style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
+                <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800">✨ Analyser &amp; Générer les effets IA <span style="font-size:9px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:700">PRO+</span></div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom punch-in · Hook texte · Vignette · Shake · Rythmé VSL</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,0.2);padding:2px 10px;border-radius:20px">🖼️ 1 crédit image IA</div>
+              </button>
+            </div>
+
             <!-- ROGNAGE -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">✂️ Rognage (clic pour activer, puis glisse sur le preview)</div>
@@ -2906,7 +2915,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- ⑤ Effets IA — VSL style -->
         <div class="exp-section">
-          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ 1 crédit</span></div>
+          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ 1 crédit</span> <span style="font-size:9px;font-family:var(--mono);background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;padding:2px 8px;border-radius:10px;margin-left:4px;font-weight:700">PRO+</span></div>
 
           <button id="expGenEffectsBtn" onclick="expressGenerateEffects()" style="width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
             <div style="display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800">✨ Analyser &amp; Générer les effets IA</div>
@@ -12318,6 +12327,12 @@ function _expSyncWpgUI(n){ [1,2,3,4].forEach(i=>{ const c=document.getElementByI
 
 // ── Effets IA ─────────────────────────────────────────────────
 async function expressGenerateEffects(){
+  // Réservé Pro et Élite uniquement
+  const _plan = (currentMember?.plan || 'free').toLowerCase();
+  if(_plan !== 'pro' && _plan !== 'elite' && _plan !== 'byok'){
+    toast('⛔ Les effets IA sont réservés aux plans Pro et Élite');
+    openUpgradeModal(); return;
+  }
   const chips = Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean);
   if(!chips.length){ toast('⚠️ Transcris ta vidéo d\'abord (étape 2)'); return; }
   // Vérifier & déduire 1 crédit image IA
