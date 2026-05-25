@@ -1460,26 +1460,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <input type="hidden" id="timingBtnFixe">
             <input type="hidden" id="secPerGroupRow">
 
-            <!-- TIMING SYNC SLIDER -->
-            <div class="fld" style="margin-bottom:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div style="display:flex;align-items:center;gap:6px">
-                  <span style="font-size:13px">⏱️</span>
-                  <span style="font-size:11px;font-weight:700;color:var(--text)">Synchronisation sous-titres</span>
-                </div>
-                <span style="font-size:10px;font-family:var(--mono);color:var(--orange2)" id="subSyncValLabel">+300ms</span>
-              </div>
-              <input type="range" id="subSyncSlider" min="-1000" max="1500" step="50" value="300"
-                oninput="cfg.subAdvanceMs=+this.value;document.getElementById('subSyncValLabel').textContent=(+this.value>=0?'+':'')+this.value+'ms';updateSubPreview();updateLivePreview()"
-                style="width:100%;accent-color:var(--orange)">
-              <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px">
-                <span>Avance −1s</span><span style="color:var(--text3)">Décalage → retard</span><span>+1.5s</span>
-              </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px;line-height:1.5">
-                💡 Si les sous-titres avancent trop → déplace vers la gauche.<br>S'ils sont en retard → déplace vers la droite.
-              </div>
-            </div>
-
             <!-- ANIMATIONS -->
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
