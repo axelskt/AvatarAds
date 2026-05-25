@@ -6184,11 +6184,16 @@ async function whisperTranscribe(){
     return;
   }
 
-  // Vérifier la taille du fichier (limite Whisper : 25 MB, Edge Function : ~20 MB)
+  // Si fichier trop lourd → extraire seulement l'audio (vidéo → WAV léger)
   const MAX_MB = 20;
   if(audioSrc.size > MAX_MB * 1024 * 1024){
-    toast('⚠️ Fichier trop lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — Whisper accepte max ' + MAX_MB + ' MB. Compresse ou réduis la durée.');
-    return;
+    toast('📦 Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — extraction audio en cours…');
+    audioSrc = await _extractAudioForWhisper(audioSrc);
+    if(audioSrc.size > MAX_MB * 1024 * 1024){
+      toast('⚠️ Audio trop lourd même après extraction (' + Math.round(audioSrc.size/1024/1024) + ' MB). Durée max ~35 min.');
+      if(btn){ btn.innerHTML = '🎙️ Transcrire automatiquement <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono)">ELITE</span>'; btn.disabled = false; btn.style.opacity = '1'; }
+      return;
+    }
   }
 
   const btn = event?.currentTarget;
@@ -8664,6 +8669,9 @@ function updateLivePreview(){
   const igHandle = document.getElementById('ig-handle');
   if(ttHandle) ttHandle.textContent = '@' + name + '.ads';
   if(igHandle) igHandle.textContent = name + '.ads';
+
+  // Auto-save state
+  _saveGeneratorState();
 }
 
 function updatePreview(){ updateLivePreview(); }
@@ -10576,6 +10584,23 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   resetBtn();
 }
 
+// ── Extrait l'audio d'un fichier vidéo/audio → WAV léger pour Whisper ──
+async function _extractAudioForWhisper(file){
+  try {
+    const arrayBuf = await file.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+    await audioCtx.close();
+    const wavBlob  = _audioBufferToWavBlob(decoded);
+    const sizeMB   = Math.round(wavBlob.size / 1024 / 1024 * 10) / 10;
+    toast('✅ Audio extrait : ' + sizeMB + ' MB (durée : ' + Math.round(decoded.duration) + 's)');
+    return new File([wavBlob], file.name.replace(/\.[^.]+$/, '') + '_audio.wav', { type: 'audio/wav' });
+  } catch(e){
+    console.warn('_extractAudioForWhisper:', e);
+    return file; // fallback
+  }
+}
+
 // ── Convertit un AudioBuffer en blob WAV ──
 function _audioBufferToWavBlob(buffer){
   const numChannels = Math.min(2, buffer.numberOfChannels);
@@ -11324,6 +11349,103 @@ async function pickLibVideo(idx){
   _applyBypassScriptAndBanner(entry.script, entry.name);
 }
 
+// ── GENERATOR STATE PERSISTENCE ──
+let _saveStateTimer = null;
+function _saveGeneratorState(){
+  clearTimeout(_saveStateTimer);
+  _saveStateTimer = setTimeout(() => {
+    try {
+      const w = document.getElementById('phoneWrapper');
+      localStorage.setItem('aa_gen_state', JSON.stringify({
+        cfg: { ...cfg },
+        subColors: { ...subColors },
+        selSubStyle, selAnim, animEnabled, splitEnabled,
+        phoneW: w ? w.offsetWidth  : 220,
+        phoneH: w ? w.offsetHeight : 477,
+      }));
+    } catch(e){}
+  }, 400);
+}
+
+function _syncSlider(id, val, fmtFn, lblId){
+  if(val === undefined || val === null) return;
+  const sl = document.getElementById(id); if(sl) sl.value = val;
+  const vl = document.getElementById(lblId); if(vl) vl.textContent = fmtFn(val);
+}
+
+function _restoreGeneratorState(){
+  try {
+    const raw = localStorage.getItem('aa_gen_state');
+    if(!raw) return;
+    const s = JSON.parse(raw);
+
+    // ── cfg ──
+    if(s.cfg){
+      Object.assign(cfg, s.cfg);
+      _syncSlider('subSize',      cfg.subSize,                    v=>v+'px',                   'subSizeVal');
+      _syncSlider('subPos',       cfg.subPos,                     v=>v+'%',                    'subPosVal');
+      _syncSlider('subPosX',      cfg.subPosX,                    v=>v+'%',                    'subPosXVal');
+      _syncSlider('subWpg',       cfg.subWpg,                     v=>v,                        'subWpgVal');
+      _syncSlider('subLineH',     Math.round((cfg.subLineH||1)*10),v=>(v/10).toFixed(1)+'×',   'subLineHVal');
+      _syncSlider('subScaleX',    Math.round((cfg.subScaleX||1)*10),v=>(v/10).toFixed(1)+'×',  'subScaleXVal');
+      _syncSlider('splitRatio',   cfg.splitRatio,                 v=>v+' / '+(100-v),          'splitRatioVal');
+      _syncSlider('avZoomSlider', cfg.avZoom,                     v=>v+'%',                    'avZoomVal');
+      _syncSlider('avWidthSlider',cfg.avWidth,                    v=>v+'%',                    'avWidthVal');
+      _syncSlider('gpZoom',       cfg.gpZoom,                     v=>v+'%',                    'gpZoomVal');
+      _syncSlider('gpZoom3',      cfg.gpZoom,                     v=>v+'%',                    'gpZoomVal3');
+      _syncSlider('gpWidthSlider',cfg.gpWidth,                    v=>v+'%',                    'gpWidthVal');
+      _syncSlider('gpWidthSlider3',cfg.gpWidth,                   v=>v+'%',                    'gpWidthVal3');
+    }
+
+    // ── Couleurs sous-titres ──
+    if(s.subColors){
+      Object.assign(subColors, s.subColors);
+      ['color-c1','color-c2'].forEach((id,i)=>{
+        const v = i===0 ? subColors.c1 : subColors.c2;
+        const el=document.getElementById(id); if(el) el.value=v;
+        const hex=document.getElementById(id+'-hex'); if(hex) hex.value=v;
+      });
+    }
+
+    // ── Style carte ──
+    if(s.selSubStyle){
+      selSubStyle = s.selSubStyle;
+      const el = document.getElementById('sc-'+selSubStyle);
+      if(el){ document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+    }
+
+    // ── Animation ──
+    if(s.selAnim !== undefined) selAnim = s.selAnim;
+    if(s.animEnabled !== undefined){
+      animEnabled = s.animEnabled;
+      const sw=document.getElementById('animSwitch'), th=document.getElementById('animThumb');
+      const menu=document.getElementById('animMenu'), row=document.getElementById('animToggleRow');
+      if(animEnabled){
+        if(sw) sw.style.background='var(--orange)'; if(th) th.style.left='21px';
+        if(menu) menu.style.display='block'; if(row) row.style.borderColor='rgba(255,107,53,.4)';
+      }
+    }
+
+    // ── Split ──
+    if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
+
+    // ── Taille preview phone ──
+    if(s.phoneW && s.phoneH){
+      const wEl=document.getElementById('phoneWrapper');
+      const ph=document.getElementById('phoneMockup');
+      if(wEl){ wEl.style.width=s.phoneW+'px'; wEl.style.height=s.phoneH+'px'; }
+      if(ph){
+        const nativeW=parseFloat(ph.style.width)||393;
+        ph.style.transform='scale('+(s.phoneW/nativeW).toFixed(4)+')';
+      }
+      const lbl=document.getElementById('previewSizeLabel');
+      if(lbl) lbl.textContent=s.phoneW+' × '+s.phoneH;
+    }
+
+    updateSubPreview(); updateLivePreview();
+  } catch(e){ console.warn('_restoreGeneratorState:', e); }
+}
+
 // ── BYPASS PERSISTANCE ──
 function _saveBypassState(entry){
   try {
@@ -11634,7 +11756,10 @@ updateSteps();
 updateLivePreview();
 toggleMp4AudioOption(true);
 
-// 5. Restaurer le bypass state si une vidéo bibliothèque était chargée avant refresh
+// 5. Restaurer les settings générateur (cfg, couleurs, style, taille preview)
+_restoreGeneratorState();
+
+// 6. Restaurer le bypass state si une vidéo bibliothèque était chargée avant refresh
 setTimeout(_restoreBypassState, 300);
 
 // 4. Handle YouTube OAuth redirect
@@ -11672,6 +11797,7 @@ function stopResize(){
   resizing = false;
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
+  _saveGeneratorState(); // sauvegarder la nouvelle taille du preview
 }
 
 // ── BUG REPORT ──
