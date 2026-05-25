@@ -90,7 +90,7 @@ h1{font-size:clamp(44px,7vw,88px);font-weight:800;letter-spacing:-3px;line-heigh
 h1 em{font-style:normal;color:var(--orange)}
 .hero-sub{font-size:clamp(15px,2vw,18px);font-weight:400;color:var(--gray-4);line-height:1.7;max-width:520px;margin:0 auto 44px}
 .hero-sub strong{color:var(--gray-3);font-weight:500}
-.hero-ctas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:64px}
+.hero-ctas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:32px}
 .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:var(--white);font-size:15px;font-weight:700;padding:15px 32px;border-radius:10px;border:none;cursor:pointer;transition:all .25s;text-decoration:none;letter-spacing:-.2px;box-shadow:0 0 28px rgba(255,107,53,0.55),0 0 60px rgba(255,107,53,0.25),0 8px 32px rgba(255,92,0,0.3);animation:heroGlow 2.5s ease-in-out infinite}
 .btn-primary:hover{background:var(--orange-light);transform:translateY(-2px);box-shadow:0 0 40px rgba(255,107,53,0.75),0 0 80px rgba(255,107,53,0.35),0 12px 40px rgba(255,92,0,0.4)}
 @keyframes heroGlow{0%,100%{box-shadow:0 0 24px rgba(255,107,53,0.5),0 0 50px rgba(255,107,53,0.2),0 8px 28px rgba(255,92,0,0.25)}50%{box-shadow:0 0 42px rgba(255,107,53,0.8),0 0 80px rgba(255,107,53,0.35),0 8px 36px rgba(255,92,0,0.4)}}
@@ -100,7 +100,7 @@ h1 em{font-style:normal;color:var(--orange)}
 .hero-note a{color:var(--gray-4);text-decoration:underline;text-underline-offset:2px}
 
 /* SOCIAL PROOF */
-.social-proof{display:flex;align-items:center;justify-content:center;gap:24px;margin-top:64px;flex-wrap:wrap}
+.social-proof{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:0;flex-wrap:wrap}
 .sp-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-5)}
 .sp-item strong{color:var(--gray-3);font-weight:600}
 .sp-divider{width:1px;height:16px;background:rgba(255,255,255,0.08)}
@@ -285,17 +285,14 @@ footer{padding:36px 48px;border-top:1px solid rgba(255,255,255,0.06);display:fle
     <a href="#how" class="btn-ghost">Voir comment ça marche</a>
   </div>
 
-  <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px">
-    <span style="color:#f59e0b;letter-spacing:1px">⭐⭐⭐⭐⭐</span>
-    <span><strong style="color:#fff">4.9/5</strong> · 200+ avis vérifiés</span>
-  </div>
-
   <div class="social-proof">
+    <div class="sp-item" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;gap:6px">
+      <span>⭐</span><strong style="color:#fff">4.9/5</strong><span style="color:rgba(255,255,255,0.4)">· 200+ avis vérifiés</span>
+    </div>
+    <div class="sp-divider"></div>
     <div class="sp-item"><strong>500+</strong> Avatar générées</div>
     <div class="sp-divider"></div>
     <div class="sp-item">Vidéo prête en <strong>5 min</strong></div>
-    <div class="sp-divider"></div>
-    <div class="sp-item">Sans caméra. <strong>Sans montage.</strong></div>
   </div>
 </section>
 
