@@ -6184,13 +6184,13 @@ async function whisperTranscribe(){
     return;
   }
 
-  // Si fichier trop lourd → extraire seulement l'audio (vidéo → WAV léger)
-  const MAX_MB = 20;
+  // Si fichier trop lourd → extraire + rééchantillonner en 16 kHz mono (WAV léger)
+  const MAX_MB = 24; // limite Whisper = 25 MB, on garde 1 MB de marge
   if(audioSrc.size > MAX_MB * 1024 * 1024){
-    toast('📦 Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — extraction audio en cours…');
+    toast('📦 Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — compression audio en cours…');
     audioSrc = await _extractAudioForWhisper(audioSrc);
     if(audioSrc.size > MAX_MB * 1024 * 1024){
-      toast('⚠️ Audio trop lourd même après extraction (' + Math.round(audioSrc.size/1024/1024) + ' MB). Durée max ~35 min.');
+      toast('⚠️ Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB). Durée max ~12 min pour Whisper.');
       if(btn){ btn.innerHTML = '🎙️ Transcrire automatiquement <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono)">ELITE</span>'; btn.disabled = false; btn.style.opacity = '1'; }
       return;
     }
@@ -6244,7 +6244,7 @@ async function whisperTranscribe(){
     let msg = raw.slice(0, 200);
     // Détection des erreurs fréquentes
     if(raw.toLowerCase().includes('load failed') || raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('network')){
-      msg = 'Erreur réseau — le fichier est peut-être trop lourd (max 20 MB) ou la connexion a coupé. Réessaie.';
+      msg = 'Erreur réseau — connexion coupée ou fichier trop lourd. Réessaie.';
     } else {
       try {
         const errObj = JSON.parse(raw);
@@ -10589,11 +10589,23 @@ async function _extractAudioForWhisper(file){
   try {
     const arrayBuf = await file.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+    const decoded  = await audioCtx.decodeAudioData(arrayBuf.slice(0));
     await audioCtx.close();
-    const wavBlob  = _audioBufferToWavBlob(decoded);
-    const sizeMB   = Math.round(wavBlob.size / 1024 / 1024 * 10) / 10;
-    toast('✅ Audio extrait : ' + sizeMB + ' MB (durée : ' + Math.round(decoded.duration) + 's)');
+
+    // Rééchantillonner en 16 kHz mono — suffisant pour Whisper (speech),
+    // réduit ~10× la taille vs WAV 44 kHz stéréo (32 KB/s → 10 min = 18 MB)
+    const TARGET_SR  = 16000;
+    const numFrames  = Math.ceil(decoded.duration * TARGET_SR);
+    const offCtx     = new OfflineAudioContext(1, numFrames, TARGET_SR);
+    const src        = offCtx.createBufferSource();
+    src.buffer       = decoded;
+    src.connect(offCtx.destination);
+    src.start(0);
+    const resampled  = await offCtx.startRendering();
+
+    const wavBlob = _audioBufferToWavBlob(resampled);
+    const sizeMB  = Math.round(wavBlob.size / 1024 / 1024 * 10) / 10;
+    toast('✅ Audio extrait : ' + sizeMB + ' MB — durée : ' + Math.round(decoded.duration) + 's');
     return new File([wavBlob], file.name.replace(/\.[^.]+$/, '') + '_audio.wav', { type: 'audio/wav' });
   } catch(e){
     console.warn('_extractAudioForWhisper:', e);
