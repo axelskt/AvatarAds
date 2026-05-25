@@ -6744,6 +6744,13 @@ async function togglePreviewPlay(){
     } else if(results && results.audioBlob){
       const el = document.getElementById('audioEl');
       if(el){ el.currentTime = 0; el.play().catch(()=>{}); activeAudio = el; }
+    } else if(window._bypassHedraOn && window._bypassHedraUrl){
+      // Mode bypass : jouer l'audio de la vidéo lipsync pour l'aperçu
+      const bypassAudio = new Audio(window._bypassHedraUrl);
+      await new Promise(r => { bypassAudio.onloadedmetadata = r; bypassAudio.onerror = r; setTimeout(r, 2000); });
+      bypassAudio.currentTime = 0;
+      bypassAudio.play().catch(()=>{});
+      activeAudio = bypassAudio;
     } else {
       const sel = document.querySelector('.voice-row.on audio');
       if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
@@ -10405,7 +10412,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   let combinedStream = videoStream;
 
   // Si pas d'audioBlob (ex: re-compose depuis bibliothèque) → extraire l'audio du blob hedra
-  if(!_audioBlobToEncode && hedraObjUrl){
+  // ⚠️ En mode bypass (vidéo depuis bibliothèque), on NE récupère PAS l'audio lipsync original
+  //    → seule la voix ElevenLabs générée (audioBlob) doit être utilisée
+  if(!_audioBlobToEncode && hedraObjUrl && !window._bypassHedraOn){
     try {
       const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuf = await fetch(hedraObjUrl).then(r => r.arrayBuffer());
@@ -10415,6 +10424,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       _audioBlobToEncode = _audioBufferToWavBlob(decoded);
       toast('🎵 Audio extrait de la vidéo Hedra');
     } catch(e){ console.warn('Hedra audio extract failed:', e); }
+  }
+  // Mode bypass sans voix générée → avertir (la vidéo sera muette)
+  if(window._bypassHedraOn && !_audioBlobToEncode){
+    toast('⚠️ Aucune voix générée — génère ta voix (étape 3) avant d\'exporter pour avoir de l\'audio');
   }
 
   if(_audioBlobToEncode){
