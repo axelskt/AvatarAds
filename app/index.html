@@ -12868,37 +12868,51 @@ function startTapSync(){
   }
 
   // Récupérer l'audio
-  const audioSrc = document.getElementById('mp4AudioEl')?.src || document.getElementById('audioEl')?.src;
-  if(!audioSrc){ toast('⚠️ Pas d\'audio disponible — upload ou génère d\'abord'); return; }
+  const audioSrc = document.getElementById('mp4AudioEl')?.src || document.getElementById('audioEl')?.src
+                || (window._bypassHedraOn && window._bypassHedraUrl) || null;
+  if(!audioSrc){ toast('⚠️ Pas d\'audio disponible — génère ou upload ton audio d\'abord'); return; }
 
   const wpg = Math.max(1, cfg.subWpg || 2);
   _tapSyncGroups = _getWordGroups() || _buildWpgGroups(allWords, wpg);
-
   _tapSyncTimes  = [];
   _tapSyncIdx    = 0;
-  _tapSyncActive = true;
+  _tapSyncActive = false; // sera true après le Go
 
-  // Audio dédié pour le tap sync
+  // Préparer l'audio (sans le jouer — attend le clic Go pour contourner Safari autoplay)
   _tapSyncAudio = new Audio(audioSrc);
   _tapSyncAudio.currentTime = mp4AudioTrimSt || 0;
+  _tapSyncAudio.onended = ()=>{ if(_tapSyncActive) _tapSyncFinish(); };
 
+  // Montrer la page d'intro
+  const overlay = document.getElementById('tapSyncOverlay');
+  const intro   = document.getElementById('tapSyncIntro');
+  const session = document.getElementById('tapSyncSession');
+  if(intro)   intro.style.display   = 'flex';
+  if(session) session.style.display = 'none';
+  overlay.style.display = 'flex';
+}
+
+function _tapSyncGo(){
+  // Appelé depuis le bouton "Go" → user gesture → l'audio peut démarrer
+  if(!_tapSyncAudio){ return; }
+  _tapSyncActive = true;
+
+  // Basculer vers la phase 2 (session)
+  const intro   = document.getElementById('tapSyncIntro');
+  const session = document.getElementById('tapSyncSession');
+  if(intro)   intro.style.display   = 'none';
+  if(session) session.style.display = 'flex';
+
+  // Démarrer l'audio immédiatement (user gesture direct → Safari OK)
+  _tapSyncAudio.play().catch(e => { console.warn('TapSync audio play failed:', e); toast('⚠️ Impossible de lire l\'audio — vérifie que ton audio est généré'); });
+
+  // Enregistrer le temps du premier groupe (= début de l'audio)
+  _tapSyncTimes.push(_tapSyncAudio.currentTime);
+  _tapSyncIdx = 1;
   _tapSyncRenderUI();
-  document.getElementById('tapSyncOverlay').style.display = 'flex';
-
-  // Démarrer la lecture après un court délai
-  setTimeout(()=>{
-    _tapSyncAudio.play().catch(()=>{});
-    // Premier groupe = dès le début
-    _tapSyncTimes.push(_tapSyncAudio.currentTime);
-    _tapSyncIdx = 1;
-    _tapSyncRenderUI();
-  }, 500);
 
   // Spacebar global
   document.addEventListener('keydown', _tapSyncKeydown);
-
-  // Auto-finish quand l'audio se termine
-  _tapSyncAudio.onended = ()=>{ if(_tapSyncActive) _tapSyncFinish(); };
 }
 
 function _tapSyncKeydown(e){
@@ -12983,14 +12997,52 @@ function _tapSyncCancel(){
 </script>
 
 <!-- ── TAP SYNC OVERLAY ── -->
-<div id="tapSyncOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;gap:0;backdrop-filter:blur(8px)">
-  <div style="width:100%;max-width:420px;padding:32px 28px;display:flex;flex-direction:column;align-items:center;gap:20px">
+<div id="tapSyncOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
 
-    <!-- Titre -->
-    <div style="font-size:13px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync</div>
-    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);text-align:center">Appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-family:var(--mono)">Espace</kbd> ou le bouton au bon moment</div>
+  <!-- ── PHASE 1 : INTRO / INSTRUCTIONS ── -->
+  <div id="tapSyncIntro" style="width:100%;max-width:440px;padding:32px 28px;display:flex;flex-direction:column;align-items:center;gap:0">
+    <div style="font-size:28px;margin-bottom:10px">🥁</div>
+    <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:4px;letter-spacing:-0.5px">Tap Sync</div>
+    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);margin-bottom:28px">Synchronise tes sous-titres à la main, en temps réel</div>
 
-    <!-- Groupe actuel — le suivant à afficher -->
+    <!-- Étapes -->
+    <div style="width:100%;display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">1</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">🎧 Mets tes écouteurs</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">L'audio de ta vidéo va se lancer dès que tu cliques <strong style="color:var(--orange2)">Go →</strong>. Tu dois l'entendre clairement.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">2</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">👁 Regarde le mot affiché</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">L'écran te montre <strong style="color:#fff">le groupe de mots suivant</strong> à faire apparaître. Prépare-toi à taper au bon moment.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">3</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">👆 Tape au bon moment</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Clique le gros bouton <strong style="color:#fff">ou appuie sur Espace</strong> exactement quand tu entends le mot dans l'audio. Répète pour chaque groupe.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton GO -->
+    <button onclick="_tapSyncGo()" style="width:100%;padding:18px;background:var(--orange);border:none;border-radius:14px;color:#fff;font-family:var(--font);font-size:17px;font-weight:900;cursor:pointer;letter-spacing:0.5px;transition:opacity .15s;margin-bottom:12px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      🔊 Go — Lancer l'audio →
+    </button>
+    <button onclick="_tapSyncCancel()" style="background:transparent;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;cursor:pointer;padding:4px 12px">✕ Annuler</button>
+  </div>
+
+  <!-- ── PHASE 2 : TAP INTERFACE ── -->
+  <div id="tapSyncSession" style="display:none;width:100%;max-width:420px;padding:32px 28px;flex-direction:column;align-items:center;gap:20px">
+
+    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync — en cours</div>
+
+    <!-- Groupe actuel -->
     <div style="text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
       <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">PROCHAIN GROUPE →</div>
       <div id="tapSyncCurrent" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;text-align:center">…</div>
@@ -13003,14 +13055,16 @@ function _tapSyncCancel(){
     </div>
     <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
 
-    <!-- Bouton TAP -->
-    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:22px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .1s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
-      ↵ &nbsp;Groupe suivant
+    <!-- Bouton TAP principal -->
+    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:26px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
+      ↵ &nbsp;Maintenant !
     </button>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ou appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px">Espace</kbd></div>
 
     <!-- Annuler -->
     <button onclick="_tapSyncCancel()" style="background:transparent;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;cursor:pointer;padding:4px 12px">✕ Annuler</button>
   </div>
+
 </div>
 
 <!-- Legal footer — visible par les bots de vérification Google -->
