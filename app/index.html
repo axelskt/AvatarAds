@@ -518,7 +518,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Voir tous les plans disponibles</div>
               </div>
             </button>
-            <button id="accountMenuCancelBtn" onclick="cancelSubscription();closeAccountMenu()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+            <button id="accountMenuCancelBtn" onclick="cancelSubscription();closeAccountMenu()" style="width:100%;display:none;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
               <span style="font-size:15px">⏸️</span>
               <div>
                 <div style="font-size:12px;font-weight:600;color:#fff">Annuler l'abonnement</div>
@@ -4034,7 +4034,12 @@ async function authLogin(){
   const btn   = document.getElementById('loginBtn');
   if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
   btn.textContent='Connexion...'; btn.disabled=true; errEl.style.display='none';
+  // Message de patience après 4s (cold start Supabase)
+  const slowTimer = setTimeout(() => {
+    if(btn.disabled) btn.textContent='Connexion… (première connexion, patiente 🕐)';
+  }, 4000);
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
+  clearTimeout(slowTimer);
   if(error){
     const _authErr = {
       'Invalid login credentials':   'Email ou mot de passe incorrect.',
@@ -4047,6 +4052,7 @@ async function authLogin(){
     errEl.textContent = _authErr[error.message] || error.message;
     errEl.style.display='block'; btn.textContent='Se connecter →'; btn.disabled=false; return;
   }
+  btn.textContent='Chargement du profil…';
   await loadProfile(data.user);
 }
 
@@ -4096,22 +4102,28 @@ async function authSignup(){
 // ── LOAD PROFILE ──
 async function loadProfile(user){
   if(!user){ return; }
-  // Attendre max 3 secondes que le trigger crée le profil
   let profile = null;
-  for(let i = 0; i < 6; i++){
+  // 1ère tentative directe (user existant = profil déjà là)
+  const { data: first } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(first){
+    enterApp(first);
+    return;
+  }
+  // Nouveau compte : le trigger Supabase peut prendre quelques secondes
+  for(let i = 0; i < 5; i++){
+    await new Promise(r => setTimeout(r, 600));
     const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
     if(data){ profile = data; break; }
-    await new Promise(r => setTimeout(r, 500));
   }
   if(!profile){
-    // Créer le profil manuellement si le trigger n'a pas fonctionné
+    // Fallback : créer le profil manuellement si le trigger n'a pas fonctionné
     const { data } = await sb.from('profiles').insert({
       id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40,
       referred_by: localStorage.getItem('aa_ref') || null
     }).select().single();
     profile = data;
   }
-  enterApp(profile);
+  if(profile) enterApp(profile);
 }
 
 // ── ENTER APP ──
