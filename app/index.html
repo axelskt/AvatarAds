@@ -478,6 +478,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
         <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
       </div>
+      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(168,85,247,0.15));border:1px solid rgba(255,107,53,0.4);border-radius:8px;padding:4px 12px;color:var(--orange);font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.25),rgba(168,85,247,0.25))';this.style.borderColor='var(--orange)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(168,85,247,0.15))';this.style.borderColor='rgba(255,107,53,0.4)'">
+        🚀 Voir les plans
+      </button>
       <button id="btnUpgradePlan" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);border-radius:8px;padding:4px 10px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)';this.style.borderColor='rgba(168,85,247,0.6)'" onmouseout="this.style.background='rgba(168,85,247,0.12)';this.style.borderColor='rgba(168,85,247,0.35)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
@@ -3510,6 +3513,60 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
+<!-- PLANS SHEET -->
+<div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px)" onclick="if(event.target===this)closePlansSheet()">
+  <div id="plansSheetInner" style="position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:28px 24px 48px;max-height:88vh;overflow-y:auto;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,1.25,.4,1)">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px">
+      <div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:-.5px">Nos plans</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--mono)">Crée sans watermark · Sans engagement mensuel</div>
+      </div>
+      <button onclick="closePlansSheet()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--mono);transition:all .15s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕ Fermer</button>
+    </div>
+    <!-- Toggle mensuel/annuel -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px">
+      <span id="sheetLblMonthly" style="font-size:12px;font-family:var(--mono);color:var(--text);font-weight:700">Mensuel</span>
+      <div id="sheetBillingToggle" onclick="sheetToggleBilling()" style="width:42px;height:24px;background:var(--border2);border-radius:12px;cursor:pointer;position:relative;transition:background .2s">
+        <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+      </div>
+      <span id="sheetLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel <span style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.35);color:#22c55e;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:3px">-25%</span></span>
+    </div>
+    <!-- Cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <!-- STARTER -->
+      <div style="border:1px solid var(--border2);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)';this.style.background='var(--bg3)'" onmouseout="this.style.borderColor='var(--border2)';this.style.background=''" onclick="sheetCheckout('starter')">
+        <div style="font-size:10px;font-family:var(--mono);color:#4dabf7;letter-spacing:1px;margin-bottom:8px;font-weight:700">STARTER</div>
+        <div id="sheetPriceStarter" style="font-size:22px;font-weight:900;letter-spacing:-1px">29,99€</div>
+        <div id="sheetPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="sheetDiscountStarter" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-30%</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">5 vidéos/mois<br>Sous-titres animés<br>10 images IA</div>
+        <button style="width:100%;padding:8px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.3);border-radius:8px;color:#4dabf7;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(77,171,247,0.2)'" onmouseout="this.style.background='rgba(77,171,247,0.1)'">Choisir →</button>
+      </div>
+      <!-- PRO -->
+      <div style="border:2px solid var(--orange);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.04);position:relative;transition:all .2s" onclick="sheetCheckout('pro')">
+        <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:800;padding:3px 10px;border-radius:10px;white-space:nowrap">⚡ POPULAIRE</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:8px;font-weight:700">PRO</div>
+        <div id="sheetPricePro" style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
+        <div id="sheetPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="sheetDiscountPro" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-25%</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">15 vidéos/mois<br>Effets VSL · Whisper IA<br>20 images IA</div>
+        <button style="width:100%;padding:8px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Choisir →</button>
+      </div>
+      <!-- ELITE -->
+      <div style="border:1px solid rgba(168,85,247,0.4);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(168,85,247,0.7)';this.style.background='rgba(168,85,247,0.04)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.4)';this.style.background=''" onclick="sheetCheckout('elite')">
+        <div style="font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:1px;margin-bottom:8px;font-weight:700">ELITE ✦</div>
+        <div id="sheetPriceElite" style="font-size:22px;font-weight:900;letter-spacing:-1px">89,99€</div>
+        <div id="sheetPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="sheetDiscountElite" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-26%</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">30 vidéos/mois<br>Export 4K · Clips exclusifs<br>50 images IA</div>
+        <button style="width:100%;padding:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);border-radius:8px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">Choisir →</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono)">✓ Paiement sécurisé Whop · Annulation à tout moment</div>
+  </div>
+</div>
+
 <!-- PAYWALL MODAL -->
 <div class="paywall-overlay" id="paywallOverlay" onclick="if(event.target===this)closePaywall()">
   <div class="paywall-box">
@@ -3860,6 +3917,9 @@ function enterApp(profile){
     if(profile.plan === 'pro') badge.style.background = 'rgba(168,85,247,0.08)';
     if(profile.plan === 'starter') badge.style.background = 'rgba(77,171,247,0.08)';
   }
+  // Bouton "Voir les plans" : visible uniquement pour les free
+  const seePlansBtn = document.getElementById('btnSeePlans');
+  if(seePlansBtn) seePlansBtn.style.display = (!profile.plan || profile.plan === 'free') ? 'flex' : 'none';
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
@@ -3968,6 +4028,50 @@ function showPaywall(){
 }
 function closePaywall(){
   document.getElementById('paywallOverlay').style.display = 'none';
+}
+
+// ── PLANS SHEET ──
+let _sheetAnnual = false;
+function showPlansSheet(){
+  const sheet = document.getElementById('plansSheet');
+  sheet.style.display = 'flex';
+  requestAnimationFrame(() => { document.getElementById('plansSheetInner').style.transform = 'translateY(0)'; });
+}
+function closePlansSheet(){
+  const inner = document.getElementById('plansSheetInner');
+  inner.style.transform = 'translateY(100%)';
+  setTimeout(() => { document.getElementById('plansSheet').style.display = 'none'; }, 380);
+}
+function sheetToggleBilling(){
+  _sheetAnnual = !_sheetAnnual;
+  const thumb  = document.getElementById('sheetBillingThumb');
+  const toggle = document.getElementById('sheetBillingToggle');
+  const lblM   = document.getElementById('sheetLblMonthly');
+  const lblA   = document.getElementById('sheetLblAnnual');
+  if(thumb)  thumb.style.left      = _sheetAnnual ? '21px' : '3px';
+  if(toggle) toggle.style.background = _sheetAnnual ? '#22c55e' : 'var(--border2)';
+  if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
+  if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
+  const plans = { starter: { m:'29,99€', mp:'/mois', a:'249,99€', ap:'/an · 20,83€/mois', d:'-30%' },
+                  pro:     { m:'49,99€', mp:'/mois', a:'449,99€', ap:'/an · 37,50€/mois', d:'-25%' },
+                  elite:   { m:'89,99€', mp:'/mois', a:'799,99€', ap:'/an · 66,67€/mois', d:'-26%' } };
+  ['starter','pro','elite'].forEach(k => {
+    const cap = k.charAt(0).toUpperCase() + k.slice(1);
+    const p = plans[k];
+    const priceEl    = document.getElementById('sheetPrice'    + cap);
+    const periodEl   = document.getElementById('sheetPeriod'   + cap);
+    const discountEl = document.getElementById('sheetDiscount' + cap);
+    if(priceEl)    priceEl.textContent  = _sheetAnnual ? p.a : p.m;
+    if(periodEl)   periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
+    if(discountEl) discountEl.style.display = _sheetAnnual ? 'block' : 'none';
+  });
+}
+function sheetCheckout(plan){
+  const billing = _sheetAnnual ? 'annual' : 'monthly';
+  const keyMap  = { starter:'free', pro:'starter', elite:'pro' };
+  const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
+  if(url) window.open(url, '_blank');
+  closePlansSheet();
 }
 
 // ── BUY CREDITS ──
