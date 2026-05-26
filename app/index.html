@@ -3513,60 +3513,100 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
-<!-- PLANS SHEET -->
-<div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px)" onclick="if(event.target===this)closePlansSheet()">
-  <div id="plansSheetInner" style="position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:28px 24px 48px;max-height:88vh;overflow-y:auto;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,1.25,.4,1)">
+<!-- PLANS SHEET (plein écran, style Submagic) -->
+<div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:9100;background:var(--bg1);overflow-y:auto">
+  <div style="max-width:980px;margin:0 auto;padding:40px 24px 80px">
     <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div>
-        <div style="font-size:19px;font-weight:800;letter-spacing:-.5px">Nos plans</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--mono)">Crée sans watermark · Sans engagement mensuel</div>
+        <div style="font-size:28px;font-weight:900;letter-spacing:-.8px">Commence à créer, aujourd'hui.</div>
+        <div style="font-size:14px;color:var(--text3);margin-top:6px">Essai gratuit avec 2 vidéos · Zéro carte requise</div>
       </div>
-      <button onclick="closePlansSheet()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--mono);transition:all .15s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕ Fermer</button>
+      <button onclick="closePlansSheet()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 16px;color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--mono);transition:all .15s;flex-shrink:0" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">✕ Fermer</button>
     </div>
-    <!-- Toggle mensuel/annuel -->
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px">
-      <span id="sheetLblMonthly" style="font-size:12px;font-family:var(--mono);color:var(--text);font-weight:700">Mensuel</span>
-      <div id="sheetBillingToggle" onclick="sheetToggleBilling()" style="width:42px;height:24px;background:var(--border2);border-radius:12px;cursor:pointer;position:relative;transition:background .2s">
-        <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+    <!-- Toggle -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px">
+      <span id="sheetLblMonthly" style="font-size:14px;font-weight:700;color:var(--text)">Mensuel</span>
+      <div id="sheetBillingToggle" onclick="sheetToggleBilling()" style="width:44px;height:26px;background:var(--orange);border-radius:13px;cursor:pointer;position:relative;transition:background .2s">
+        <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
       </div>
-      <span id="sheetLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel <span style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.35);color:#22c55e;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:3px">-25%</span></span>
+      <span id="sheetLblAnnual" style="font-size:14px;color:var(--text3)">Annuel <span style="background:#22c55e;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:4px">Économise 25%</span></span>
     </div>
     <!-- Cards -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+
       <!-- STARTER -->
-      <div style="border:1px solid var(--border2);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)';this.style.background='var(--bg3)'" onmouseout="this.style.borderColor='var(--border2)';this.style.background=''" onclick="sheetCheckout('starter')">
-        <div style="font-size:10px;font-family:var(--mono);color:#4dabf7;letter-spacing:1px;margin-bottom:8px;font-weight:700">STARTER</div>
-        <div id="sheetPriceStarter" style="font-size:22px;font-weight:900;letter-spacing:-1px">29,99€</div>
-        <div id="sheetPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
-        <div id="sheetSubStarter" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;min-height:12px"></div>
-        <div id="sheetDiscountStarter" style="display:none"></div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">5 AvatarIA</b>/mois<br>🎬 10 vidéos/mois<br>🖼 10 images IA</div>
-        <button style="width:100%;padding:8px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.3);border-radius:8px;color:#4dabf7;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(77,171,247,0.2)'" onmouseout="this.style.background='rgba(77,171,247,0.1)'">Choisir →</button>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column">
+        <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--text2);margin-bottom:6px">STARTER</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.4">Pour démarrer sans se ruiner.</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <div id="sheetPriceStarter" style="font-size:44px;font-weight:900;letter-spacing:-2px;line-height:1">29,99€</div>
+          <div id="sheetPeriodStarter" style="font-size:13px;color:var(--text3)">/mois</div>
+        </div>
+        <div id="sheetSubStarter" style="font-size:11px;color:var(--text3);margin-bottom:6px;min-height:16px;font-family:var(--mono)"></div>
+        <div id="sheetSaveStarter" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:16px;width:fit-content">économise 90€/an</div>
+        <button onclick="sheetCheckout('starter')" style="width:100%;padding:13px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin-bottom:24px" onmouseover="this.style.background='var(--border2)'" onmouseout="this.style.background='var(--bg4)'">Choisir Starter →</button>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">Inclus :</div>
+        <div style="font-size:12px;color:var(--text2);line-height:2;flex:1">
+          <div>🎭 <strong style="color:var(--text)">5 AvatarIA</strong>/mois</div>
+          <div>🎬 10 vidéos générées/mois</div>
+          <div>🖼 10 images IA · DALL-E 3</div>
+          <div>✏️ Sous-titres animés</div>
+          <div>🎙 Voix clonée ElevenLabs</div>
+          <div>✂️ Split-screen · gameplay</div>
+          <div>📤 Export vertical sans watermark</div>
+        </div>
       </div>
-      <!-- PRO -->
-      <div style="border:2px solid var(--orange);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.04);position:relative;transition:all .2s" onclick="sheetCheckout('pro')">
-        <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:800;padding:3px 10px;border-radius:10px;white-space:nowrap">⚡ POPULAIRE</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:8px;font-weight:700">PRO</div>
-        <div id="sheetPricePro" style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-        <div id="sheetPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
-        <div id="sheetSubPro" style="font-size:9px;font-family:var(--mono);color:rgba(255,140,90,0.8);margin-bottom:8px;min-height:12px">soit 1,67€/jour</div>
-        <div id="sheetDiscountPro" style="display:none"></div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">15 AvatarIA</b>/mois<br>🎬 30 vidéos/mois<br>🖼 20 images IA · Effets VSL</div>
-        <button style="width:100%;padding:8px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Choisir →</button>
+
+      <!-- PRO (highlighted) -->
+      <div style="background:var(--bg2);border:2px solid var(--orange);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column;position:relative;box-shadow:0 0 40px rgba(255,107,53,0.15)">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:11px;font-weight:800;padding:5px 16px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 14px rgba(255,107,53,0.4)">⚡ LE PLUS POPULAIRE</div>
+        <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--orange);margin-bottom:6px">PRO</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.4">Pour les créateurs qui veulent scaler.</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <div id="sheetPricePro" style="font-size:44px;font-weight:900;letter-spacing:-2px;line-height:1">49,99€</div>
+          <div id="sheetPeriodPro" style="font-size:13px;color:var(--text3)">/mois</div>
+        </div>
+        <div id="sheetSubPro" style="font-size:11px;color:rgba(255,140,90,0.85);margin-bottom:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour</div>
+        <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:16px;width:fit-content">économise 150€/an</div>
+        <button onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:var(--orange);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:opacity .15s;margin-bottom:24px;box-shadow:0 4px 16px rgba(255,107,53,0.35)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Choisir Pro →</button>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">Tout Starter, plus :</div>
+        <div style="font-size:12px;color:var(--text2);line-height:2;flex:1">
+          <div>🎭 <strong style="color:var(--text)">15 AvatarIA</strong>/mois</div>
+          <div>🎬 30 vidéos générées/mois</div>
+          <div>🖼 20 images IA · DALL-E 3</div>
+          <div>🎵 Whisper IA · sync voix avancée</div>
+          <div>✨ Effets VSL · export 1080p</div>
+          <div>✂️ Suppression silences avancée</div>
+          <div>🎨 Sous-titres styles cinématiques</div>
+        </div>
       </div>
+
       <!-- ELITE -->
-      <div style="border:1px solid rgba(168,85,247,0.4);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(168,85,247,0.7)';this.style.background='rgba(168,85,247,0.04)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.4)';this.style.background=''" onclick="sheetCheckout('elite')">
-        <div style="font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:1px;margin-bottom:8px;font-weight:700">ELITE ✦</div>
-        <div id="sheetPriceElite" style="font-size:22px;font-weight:900;letter-spacing:-1px">89,99€</div>
-        <div id="sheetPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
-        <div id="sheetSubElite" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;min-height:12px"></div>
-        <div id="sheetDiscountElite" style="display:none"></div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">30 AvatarIA</b>/mois<br>🎬 60 vidéos/mois<br>🖼 50 images IA · Export 4K</div>
-        <button style="width:100%;padding:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);border-radius:8px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">Choisir →</button>
+      <div style="background:var(--bg2);border:1px solid rgba(168,85,247,0.4);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column">
+        <div style="font-size:13px;font-weight:800;letter-spacing:.5px;color:#c084fc;margin-bottom:6px">ELITE ✦</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.4">Le maximum pour les plus ambitieux.</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+          <div id="sheetPriceElite" style="font-size:44px;font-weight:900;letter-spacing:-2px;line-height:1">89,99€</div>
+          <div id="sheetPeriodElite" style="font-size:13px;color:var(--text3)">/mois</div>
+        </div>
+        <div id="sheetSubElite" style="font-size:11px;color:var(--text3);margin-bottom:6px;min-height:16px;font-family:var(--mono)"></div>
+        <div id="sheetSaveElite" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:16px;width:fit-content">économise 280€/an</div>
+        <button onclick="sheetCheckout('elite')" style="width:100%;padding:13px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);border-radius:10px;color:#c084fc;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin-bottom:24px" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">Choisir Elite →</button>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">Tout Pro, plus :</div>
+        <div style="font-size:12px;color:var(--text2);line-height:2;flex:1">
+          <div>🎭 <strong style="color:var(--text)">30 AvatarIA</strong>/mois</div>
+          <div>🎬 60 vidéos générées/mois</div>
+          <div>🖼 50 images IA · DALL-E 3</div>
+          <div>🏆 Export 4K · modèle Élite exclusif</div>
+          <div>📚 Bibliothèque clips illimitée</div>
+          <div>⚡ Support prioritaire + early access</div>
+          <div>🎬 Clips presets Starter + Pro + Élite</div>
+        </div>
       </div>
+
     </div>
-    <div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono)">✓ Paiement sécurisé Whop · Annulation à tout moment</div>
+    <div style="text-align:center;margin-top:28px;font-size:12px;color:var(--text3);font-family:var(--mono)">✓ Paiement sécurisé Whop · Annulation à tout moment · APIs inclus</div>
   </div>
 </div>
 
@@ -3947,13 +3987,12 @@ function enterApp(profile){
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
-  // Bouton "Upgrade" : visible pour starter et pro
+  // Bouton "Upgrade" : visible pour starter et pro (PAS free — ils ont btnSeePlans)
   const upgBtn   = document.getElementById('btnUpgradePlan');
   const upgLabel = document.getElementById('btnUpgradePlanLabel');
   if(upgBtn && upgLabel){
-    const showUpg = profile.plan !== 'elite';
+    const showUpg = profile.plan !== 'elite' && profile.plan !== 'free';
     upgBtn.style.display = showUpg ? 'flex' : 'none';
-    if(profile.plan === 'free')    upgLabel.textContent = '→ Starter';
     if(profile.plan === 'starter') upgLabel.textContent = '→ Pro';
     if(profile.plan === 'pro')     upgLabel.textContent = '→ Elite';
   }
@@ -4085,9 +4124,11 @@ function sheetToggleBilling(){
     const priceEl  = document.getElementById('sheetPrice'  + cap);
     const periodEl = document.getElementById('sheetPeriod' + cap);
     const subEl    = document.getElementById('sheetSub'    + cap);
+    const saveEl   = document.getElementById('sheetSave'   + cap);
     if(priceEl)  priceEl.textContent  = _sheetAnnual ? p.a  : p.m;
     if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
     if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : p.ms;
+    if(saveEl)   saveEl.style.display = _sheetAnnual ? 'block' : 'none';
   });
 }
 function sheetCheckout(plan){
