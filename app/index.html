@@ -4171,51 +4171,7 @@ function sheetCheckout(plan){
   const keyMap  = { starter:'free', pro:'starter', elite:'pro' };
   const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
   if(!url) return;
-  const labels = {
-    starter: { name:'Starter', price: _sheetAnnual ? '20,83€' : '29,99€', sub: _sheetAnnual ? 'soit 249,99€/an · -30%' : '', color:'#4dabf7' },
-    pro:     { name:'Pro',     price: _sheetAnnual ? '37,50€' : '49,99€', sub: _sheetAnnual ? 'soit 449,99€/an · 1,23€/jour' : 'soit 1,67€/jour', color:'var(--orange)' },
-    elite:   { name:'Élite ✦', price: _sheetAnnual ? '66,67€' : '89,99€', sub: _sheetAnnual ? 'soit 799,99€/an · -26%' : '', color:'#c084fc' },
-  };
-  const l = labels[plan];
-  // Populate drawer header
-  document.getElementById('checkoutDrawerPlanName').textContent = l.name;
-  document.getElementById('checkoutDrawerPlanName').style.color = l.color;
-  document.getElementById('checkoutDrawerBadge').style.background = l.color;
-  document.getElementById('checkoutDrawerPrice').textContent = l.price + '/mois';
-  document.getElementById('checkoutDrawerSub').textContent   = l.sub;
-  // Direct link fallback button
-  document.getElementById('checkoutDrawerDirectBtn').onclick = () => { window.location.href = url; };
-  // Show drawer
-  const drawer = document.getElementById('checkoutDrawer');
-  const panel  = document.getElementById('checkoutDrawerPanel');
-  const iframe = document.getElementById('checkoutDrawerIframe');
-  const loader = document.getElementById('checkoutDrawerLoader');
-  drawer.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-  // Slide in
-  requestAnimationFrame(() => { panel.style.transform = 'translateX(0)'; });
-  // Load iframe – reset first to clear any previous URL
-  iframe.style.display = 'none';
-  loader.style.display = 'flex';
-  iframe.src = '';
-  setTimeout(() => {
-    iframe.onload = () => {
-      // If whop blocks framing, the iframe will still fire onload (about:blank or error page)
-      // We show the iframe regardless and let the fallback button handle it
-      loader.style.display = 'none';
-      iframe.style.display = 'block';
-    };
-    iframe.src = url;
-  }, 100);
-}
-function closeCheckoutDrawer(){
-  const panel = document.getElementById('checkoutDrawerPanel');
-  panel.style.transform = 'translateX(100%)';
-  setTimeout(() => {
-    document.getElementById('checkoutDrawer').style.display = 'none';
-    document.getElementById('checkoutDrawerIframe').src = '';
-    document.body.style.overflow = '';
-  }, 300);
+  window.location.href = url;
 }
 
 // ── BUY CREDITS ──
