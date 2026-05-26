@@ -3659,9 +3659,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
-<!-- CHECKOUT MODAL -->
-<!-- CHECKOUT MODAL — Submagic style -->
-<div id="checkoutModal2" style="display:none;position:fixed;inset:0;z-index:100000;align-items:center;justify-content:center;padding:20px">
+<!-- CHECKOUT MODAL — kept as empty shell, logic now redirects directly -->
+<div id="checkoutModal2" style="display:none">
   <!-- backdrop -->
   <div onclick="closeCheckoutModal2()" style="position:absolute;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px)"></div>
   <!-- modal box -->
@@ -4341,44 +4340,7 @@ function sheetCheckout(plan){
   const keyMap  = { starter:'free', pro:'starter', elite:'pro' };
   const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
   if(!url) return;
-  const labels = {
-    starter: { name:'AvatarAds Starter', price: _sheetAnnual ? '20,83€' : '29,99€', total: _sheetAnnual ? '249,99€' : '29,99€', sub: _sheetAnnual ? 'soit 249,99€/an · -25%' : '', billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'⚡', color:'#4dabf7', bg:'rgba(77,171,247,0.15)' },
-    pro:     { name:'AvatarAds Pro',     price: _sheetAnnual ? '37,50€' : '49,99€', total: _sheetAnnual ? '449,99€' : '49,99€', sub: _sheetAnnual ? 'soit 449,99€/an · 1,23€/jour' : 'soit 1,67€/jour', billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'🚀', color:'var(--orange)', bg:'rgba(255,107,53,0.15)' },
-    elite:   { name:'AvatarAds Élite',   price: _sheetAnnual ? '66,67€' : '89,99€', total: _sheetAnnual ? '799,99€' : '89,99€', sub: _sheetAnnual ? 'soit 799,99€/an · -25%' : '',  billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'✦', color:'#c084fc', bg:'rgba(192,132,252,0.15)' },
-  };
-  const l = labels[plan];
-  // populate left panel
-  document.getElementById('cm2Price').textContent       = l.price;
-  document.getElementById('cm2Sub').textContent         = l.sub;
-  document.getElementById('cm2PlanName').textContent    = l.name;
-  document.getElementById('cm2PlanName').style.color    = l.color;
-  document.getElementById('cm2Badge').style.background  = l.bg;
-  document.getElementById('cm2Badge').textContent       = l.emoji;
-  document.getElementById('cm2Total').textContent       = l.price + '/mois';
-  document.getElementById('cm2TotalDue').textContent    = l.total;
-  document.getElementById('cm2BillingLabel').textContent = l.billing;
-  // wire payment button → Whop
-  document.getElementById('cm2PayBtn').onclick = () => { window.location.href = url; };
-  // show modal
-  const modal = document.getElementById('checkoutModal2');
-  const box   = document.getElementById('checkoutModal2Box');
-  modal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  requestAnimationFrame(() => {
-    box.style.transform = 'scale(1) translateY(0)';
-    box.style.opacity   = '1';
-  });
-}
-function closeCheckoutModal2(){
-  const modal = document.getElementById('checkoutModal2');
-  const box   = document.getElementById('checkoutModal2Box');
-  box.style.transform = 'scale(0.92) translateY(20px)';
-  box.style.opacity   = '0';
-  setTimeout(() => {
-    modal.style.display = 'none';
-    document.getElementById('cm2Iframe').src = '';
-    document.body.style.overflow = '';
-  }, 280);
+  window.location.href = url;
 }
 
 // ── BUY CREDITS ──
