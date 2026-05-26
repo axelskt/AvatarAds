@@ -185,7 +185,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* ── PAYWALL MODAL ── */
 .paywall-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
-.paywall-box{background:var(--bg2);border:1px solid rgba(255,107,53,0.3);border-radius:18px;padding:36px 32px;max-width:440px;width:100%;text-align:center}
+.paywall-box{background:var(--bg2);border:1px solid rgba(255,107,53,0.3);border-radius:18px;padding:36px 32px;max-width:640px;width:100%;text-align:center}
 .paywall-icon{font-size:48px;margin-bottom:16px}
 .paywall-title{font-size:22px;font-weight:900;letter-spacing:-0.8px;margin-bottom:8px}
 .paywall-sub{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:24px}
@@ -478,8 +478,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
         <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
       </div>
-      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(168,85,247,0.15));border:1px solid rgba(255,107,53,0.4);border-radius:8px;padding:4px 12px;color:var(--orange);font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.25),rgba(168,85,247,0.25))';this.style.borderColor='var(--orange)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(168,85,247,0.15))';this.style.borderColor='rgba(255,107,53,0.4)'">
-        🚀 Voir les plans
+      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.35)" onmouseover="this.style.opacity='.85';this.style.transform='translateY(-1px)'" onmouseout="this.style.opacity='1';this.style.transform='none'">
+        ⬆ Upgrade →
       </button>
       <button id="btnUpgradePlan" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);border-radius:8px;padding:4px 10px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)';this.style.borderColor='rgba(168,85,247,0.6)'" onmouseout="this.style.background='rgba(168,85,247,0.12)';this.style.borderColor='rgba(168,85,247,0.35)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
@@ -3538,9 +3538,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div style="border:1px solid var(--border2);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)';this.style.background='var(--bg3)'" onmouseout="this.style.borderColor='var(--border2)';this.style.background=''" onclick="sheetCheckout('starter')">
         <div style="font-size:10px;font-family:var(--mono);color:#4dabf7;letter-spacing:1px;margin-bottom:8px;font-weight:700">STARTER</div>
         <div id="sheetPriceStarter" style="font-size:22px;font-weight:900;letter-spacing:-1px">29,99€</div>
-        <div id="sheetPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="sheetDiscountStarter" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-30%</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">5 vidéos/mois<br>Sous-titres animés<br>10 images IA</div>
+        <div id="sheetPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="sheetSubStarter" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;min-height:12px"></div>
+        <div id="sheetDiscountStarter" style="display:none"></div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">5 AvatarIA</b>/mois<br>🎬 10 vidéos/mois<br>🖼 10 images IA</div>
         <button style="width:100%;padding:8px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.3);border-radius:8px;color:#4dabf7;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(77,171,247,0.2)'" onmouseout="this.style.background='rgba(77,171,247,0.1)'">Choisir →</button>
       </div>
       <!-- PRO -->
@@ -3548,18 +3549,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:800;padding:3px 10px;border-radius:10px;white-space:nowrap">⚡ POPULAIRE</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:8px;font-weight:700">PRO</div>
         <div id="sheetPricePro" style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-        <div id="sheetPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="sheetDiscountPro" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-25%</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">15 vidéos/mois<br>Effets VSL · Whisper IA<br>20 images IA</div>
+        <div id="sheetPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="sheetSubPro" style="font-size:9px;font-family:var(--mono);color:rgba(255,140,90,0.8);margin-bottom:8px;min-height:12px">soit 1,67€/jour</div>
+        <div id="sheetDiscountPro" style="display:none"></div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">15 AvatarIA</b>/mois<br>🎬 30 vidéos/mois<br>🖼 20 images IA · Effets VSL</div>
         <button style="width:100%;padding:8px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Choisir →</button>
       </div>
       <!-- ELITE -->
       <div style="border:1px solid rgba(168,85,247,0.4);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(168,85,247,0.7)';this.style.background='rgba(168,85,247,0.04)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.4)';this.style.background=''" onclick="sheetCheckout('elite')">
         <div style="font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:1px;margin-bottom:8px;font-weight:700">ELITE ✦</div>
         <div id="sheetPriceElite" style="font-size:22px;font-weight:900;letter-spacing:-1px">89,99€</div>
-        <div id="sheetPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="sheetDiscountElite" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-26%</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">30 vidéos/mois<br>Export 4K · Clips exclusifs<br>50 images IA</div>
+        <div id="sheetPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="sheetSubElite" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;min-height:12px"></div>
+        <div id="sheetDiscountElite" style="display:none"></div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.7;text-align:left">🎭 <b style="color:var(--text)">30 AvatarIA</b>/mois<br>🎬 60 vidéos/mois<br>🖼 50 images IA · Export 4K</div>
         <button style="width:100%;padding:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);border-radius:8px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'">Choisir →</button>
       </div>
     </div>
@@ -3583,31 +3586,52 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <span id="paywallLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel</span>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
       <!-- STARTER -->
-      <div id="paywallCardStarter" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('starter')">
-        <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
-        <div id="paywallPriceStarter" style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
-        <div id="paywallPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="paywallDiscountStarter" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-30%</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 vidéos · Sous-titres</div>
+      <div id="paywallCardStarter" style="border:1px solid var(--border2);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)';this.style.background='var(--bg3)'" onmouseout="this.style.borderColor='var(--border2)';this.style.background=''" onclick="paywallCheckout('starter')">
+        <div style="font-size:10px;font-family:var(--mono);color:#4dabf7;letter-spacing:1px;margin-bottom:8px;font-weight:700">STARTER</div>
+        <div id="paywallPriceStarter" style="font-size:26px;font-weight:900;letter-spacing:-1px">29,99€</div>
+        <div id="paywallPeriodStarter" style="font-size:11px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="paywallSubStarter" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;min-height:13px"></div>
+        <div id="paywallDiscountStarter" style="font-size:10px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-30%</div>
+        <div style="width:100%;height:1px;background:var(--border);margin-bottom:10px"></div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2);line-height:1.7;text-align:left">
+          <div>🎭 <strong style="color:var(--text)">5 AvatarIA</strong>/mois</div>
+          <div>🎬 10 vidéos/mois</div>
+          <div>🖼 10 images IA</div>
+          <div>✏️ Sous-titres animés</div>
+        </div>
       </div>
       <!-- PRO -->
-      <div id="paywallCardPro" style="border:2px solid var(--orange);border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="paywallCheckout('pro')">
-        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">PRO</div>
-        <div id="paywallPricePro" style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
-        <div id="paywallPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="paywallDiscountPro" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-25%</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 vidéos · Effets IA</div>
+      <div id="paywallCardPro" style="border:2px solid var(--orange);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;background:rgba(255,107,53,0.05);position:relative;transition:all .2s" onclick="paywallCheckout('pro')">
+        <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:800;padding:3px 10px;border-radius:10px;white-space:nowrap">⚡ POPULAIRE</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:8px;font-weight:700">PRO</div>
+        <div id="paywallPricePro" style="font-size:26px;font-weight:900;letter-spacing:-1px">49,99€</div>
+        <div id="paywallPeriodPro" style="font-size:11px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="paywallSubPro" style="font-size:9px;font-family:var(--mono);color:rgba(255,140,90,0.8);margin-bottom:4px;min-height:13px">soit 1,67€/jour</div>
+        <div id="paywallDiscountPro" style="font-size:10px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-25%</div>
+        <div style="width:100%;height:1px;background:rgba(255,107,53,0.2);margin-bottom:10px"></div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2);line-height:1.7;text-align:left">
+          <div>🎭 <strong style="color:var(--text)">15 AvatarIA</strong>/mois</div>
+          <div>🎬 30 vidéos/mois</div>
+          <div>🖼 20 images IA</div>
+          <div>✨ Effets VSL · Whisper IA</div>
+        </div>
       </div>
       <!-- ELITE -->
-      <div id="paywallCardElite" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('elite')">
-        <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">ELITE ✦</div>
-        <div id="paywallPriceElite" style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
-        <div id="paywallPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
-        <div id="paywallDiscountElite" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-26%</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 vidéos · VSL · 1080p</div>
+      <div id="paywallCardElite" style="border:1px solid rgba(168,85,247,0.4);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(168,85,247,0.7)';this.style.background='rgba(168,85,247,0.04)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.4)';this.style.background=''" onclick="paywallCheckout('elite')">
+        <div style="font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:1px;margin-bottom:8px;font-weight:700">ELITE ✦</div>
+        <div id="paywallPriceElite" style="font-size:26px;font-weight:900;letter-spacing:-1px">89,99€</div>
+        <div id="paywallPeriodElite" style="font-size:11px;color:var(--text3);margin-bottom:2px">/mois</div>
+        <div id="paywallSubElite" style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;min-height:13px"></div>
+        <div id="paywallDiscountElite" style="font-size:10px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:10px;display:none">-26%</div>
+        <div style="width:100%;height:1px;background:rgba(168,85,247,0.2);margin-bottom:10px"></div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2);line-height:1.7;text-align:left">
+          <div>🎭 <strong style="color:var(--text)">30 AvatarIA</strong>/mois</div>
+          <div>🎬 60 vidéos/mois</div>
+          <div>🖼 50 images IA</div>
+          <div>🏆 Export 4K · Clips exclusifs</div>
+        </div>
       </div>
     </div>
     <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
@@ -4052,18 +4076,18 @@ function sheetToggleBilling(){
   if(toggle) toggle.style.background = _sheetAnnual ? '#22c55e' : 'var(--border2)';
   if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
   if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
-  const plans = { starter: { m:'29,99€', mp:'/mois', a:'249,99€', ap:'/an · 20,83€/mois', d:'-30%' },
-                  pro:     { m:'49,99€', mp:'/mois', a:'449,99€', ap:'/an · 37,50€/mois', d:'-25%' },
-                  elite:   { m:'89,99€', mp:'/mois', a:'799,99€', ap:'/an · 66,67€/mois', d:'-26%' } };
+  const plans = { starter: { m:'29,99€', mp:'/mois', ms:'',              a:'20,83€', ap:'/mois', as:'soit 249,99€/an · -30%' },
+                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour', a:'37,50€', ap:'/mois', as:'soit 449,99€/an · 1,23€/jour' },
+                  elite:   { m:'89,99€', mp:'/mois', ms:'',              a:'66,67€', ap:'/mois', as:'soit 799,99€/an · -26%' } };
   ['starter','pro','elite'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
     const p = plans[k];
-    const priceEl    = document.getElementById('sheetPrice'    + cap);
-    const periodEl   = document.getElementById('sheetPeriod'   + cap);
-    const discountEl = document.getElementById('sheetDiscount' + cap);
-    if(priceEl)    priceEl.textContent  = _sheetAnnual ? p.a : p.m;
-    if(periodEl)   periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
-    if(discountEl) discountEl.style.display = _sheetAnnual ? 'block' : 'none';
+    const priceEl  = document.getElementById('sheetPrice'  + cap);
+    const periodEl = document.getElementById('sheetPeriod' + cap);
+    const subEl    = document.getElementById('sheetSub'    + cap);
+    if(priceEl)  priceEl.textContent  = _sheetAnnual ? p.a  : p.m;
+    if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
+    if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : p.ms;
   });
 }
 function sheetCheckout(plan){
@@ -4434,9 +4458,9 @@ const BYOK_CHECKOUT_URL = 'https://whop.com/checkout/plan_dXRZRYaSF0FGE'; // 9,9
 // Paywall billing toggle (mensuel ↔ annuel)
 let _paywallAnnual = false;
 const _paywallPlans = {
-  starter: { monthly: { price: '29,99€', period: '/mois' }, annual: { price: '249,99€', period: '/an · 20,83€/mois' } },
-  pro:     { monthly: { price: '49,99€', period: '/mois' }, annual: { price: '449,99€', period: '/an · 37,50€/mois' } },
-  elite:   { monthly: { price: '89,99€', period: '/mois' }, annual: { price: '799,99€', period: '/an · 66,67€/mois' } },
+  starter: { monthly: { price: '29,99€', period: '/mois', sub: '' },           annual: { price: '20,83€', period: '/mois', sub: 'soit 249,99€/an · -30%' } },
+  pro:     { monthly: { price: '49,99€', period: '/mois', sub: 'soit 1,67€/jour' }, annual: { price: '37,50€', period: '/mois', sub: 'soit 449,99€/an · 1,23€/jour' } },
+  elite:   { monthly: { price: '89,99€', period: '/mois', sub: '' },           annual: { price: '66,67€', period: '/mois', sub: 'soit 799,99€/an · -26%' } },
 };
 function paywallToggleBilling(){
   _paywallAnnual = !_paywallAnnual;
@@ -4453,10 +4477,12 @@ function paywallToggleBilling(){
     const cap  = k.charAt(0).toUpperCase() + k.slice(1);
     const priceEl    = document.getElementById('paywallPrice'    + cap);
     const periodEl   = document.getElementById('paywallPeriod'   + cap);
+    const subEl      = document.getElementById('paywallSub'      + cap);
     const discountEl = document.getElementById('paywallDiscount' + cap);
     if(priceEl)    priceEl.textContent  = info.price;
     if(periodEl)   periodEl.textContent = info.period;
-    if(discountEl) discountEl.style.display = _paywallAnnual ? 'block' : 'none';
+    if(subEl)      subEl.textContent    = info.sub || '';
+    if(discountEl) discountEl.style.display = _paywallAnnual ? 'none' : 'none'; // géré via sub
   });
 }
 function paywallCheckout(plan){
