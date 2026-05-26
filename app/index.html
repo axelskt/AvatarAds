@@ -4100,6 +4100,8 @@ function loginGuest(){
   document.getElementById('memberBar').style.display = 'flex';
   document.getElementById('memberName').textContent = '🎯 Mode Essai';
   document.getElementById('memberCredits').textContent = '∞';
+  const sp = document.getElementById('btnSeePlans');
+  if(sp) sp.style.display = 'flex';
   updateGuestWatermarks();
   updateLivePreview();
   checkSetupNeeded();
