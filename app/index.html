@@ -3919,15 +3919,7 @@ async function decrementCredit(durationSecs){
 // ── LOGOUT ──
 async function authLogout(){
   await sb.auth.signOut();
-  currentMember = null;
-  guestMode = false;
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('memberBar').style.display = 'none';
-  document.getElementById('guestBanner').style.display = 'none';
-  document.getElementById('auth-email').value = '';
-  document.getElementById('auth-password').value = '';
-  document.getElementById('auth-error').style.display = 'none';
-  toast('✓ Déconnecté');
+  window.location.href = 'https://avatarads.fr';
 }
 
 // ── INIT AUTH (check session au démarrage) ──
