@@ -1150,7 +1150,7 @@ const LANDING_CHECKOUT = {
 };
 function goPlan(plan){
   const billing = currentPricingMode === 'yearly' ? 'annual' : 'monthly';
-  window.open(LANDING_CHECKOUT[billing][plan], '_blank');
+  window.location.href = LANDING_CHECKOUT[billing][plan];
 }
 let currentPricingMode = 'monthly';
 function setPricingToggle(mode){
