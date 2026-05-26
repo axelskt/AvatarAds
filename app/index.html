@@ -511,11 +511,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
           <!-- Menu items -->
           <div style="padding:6px">
-            <button onclick="showPlansSheet();closeAccountMenu()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+            <button onclick="changeSubscription();closeAccountMenu()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
               <span style="font-size:15px">📋</span>
               <div>
                 <div style="font-size:12px;font-weight:600;color:#fff">Changer mon abonnement</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Voir tous les plans disponibles</div>
+                <div id="accountMenuChangeSub" style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Voir tous les plans disponibles</div>
               </div>
             </button>
             <button id="accountMenuCancelBtn" onclick="cancelSubscription();closeAccountMenu()" style="width:100%;display:none;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
@@ -4238,6 +4238,12 @@ function updateAccountMenu(profile){
   // hide cancel button for free users
   const cancelBtn = el('accountMenuCancelBtn');
   if(cancelBtn) cancelBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
+  // update "Changer mon abonnement" sub-label
+  const changeSubLabel = el('accountMenuChangeSub');
+  if(changeSubLabel){
+    const subLabels = { free:'Voir tous les plans disponibles', starter:'Annuler Starter → choisir Pro ou Élite', pro:'Annuler Pro → choisir Élite', elite:'Tu es déjà au plan maximum ✦' };
+    changeSubLabel.textContent = subLabels[profile.plan] || 'Voir tous les plans disponibles';
+  }
 }
 async function resetPassword(){
   const { data: { user } } = await sb.auth.getUser();
@@ -4250,6 +4256,17 @@ async function resetPassword(){
 }
 function cancelSubscription(){
   window.location.href = 'https://whop.com/orders/';
+}
+function changeSubscription(){
+  const plan = currentMember?.plan;
+  // Free/guest → ouvrir la fiche des plans directement
+  if(!plan || plan === 'free'){
+    showPlansSheet();
+    return;
+  }
+  // Payant → envoyer annuler d'abord sur Whop, puis revenir choisir
+  toast('⚠️ Annule ton plan actuel sur Whop, puis reviens choisir ton nouveau plan.');
+  setTimeout(() => { window.location.href = 'https://whop.com/orders/'; }, 1800);
 }
 
 // ── INIT AUTH (check session au démarrage) ──
