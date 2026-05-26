@@ -478,6 +478,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
         <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
       </div>
+      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.3)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🚀 Voir les plans
+      </button>
       <button id="btnUpgradePlan" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);border-radius:8px;padding:4px 10px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.22)';this.style.borderColor='rgba(168,85,247,0.6)'" onmouseout="this.style.background='rgba(168,85,247,0.12)';this.style.borderColor='rgba(168,85,247,0.35)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
@@ -4083,12 +4086,8 @@ function updateGuestWatermarks(){
   if(vw) vw.classList.toggle('active', active);
 }
 
-function showPaywall(){
-  document.getElementById('paywallOverlay').style.display = 'flex';
-}
-function closePaywall(){
-  document.getElementById('paywallOverlay').style.display = 'none';
-}
+function showPaywall(){ showPlansSheet(); }
+function closePaywall(){ closePlansSheet(); }
 
 // ── PLANS SHEET ──
 let _sheetAnnual = false;
