@@ -3523,7 +3523,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div onclick="paywallToggleBilling()" style="width:42px;height:24px;border-radius:12px;background:var(--border2);cursor:pointer;position:relative;transition:background .2s" id="paywallBillingToggle">
         <div id="paywallBillingThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
       </div>
-      <span id="paywallLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel <span style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:4px">-2 mois</span></span>
+      <span id="paywallLblAnnual" style="font-size:12px;font-family:var(--mono);color:var(--text3)">Annuel</span>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
@@ -3531,7 +3531,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div id="paywallCardStarter" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('starter')">
         <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:1px;margin-bottom:6px">STARTER</div>
         <div id="paywallPriceStarter" style="font-size:20px;font-weight:900;letter-spacing:-1px">29,99€</div>
-        <div id="paywallPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPeriodStarter" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="paywallDiscountStarter" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-30%</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">5 vidéos · Sous-titres</div>
       </div>
       <!-- PRO -->
@@ -3539,14 +3540,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">POPULAIRE</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:1px;margin-bottom:6px">PRO</div>
         <div id="paywallPricePro" style="font-size:20px;font-weight:900;letter-spacing:-1px">49,99€</div>
-        <div id="paywallPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPeriodPro" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="paywallDiscountPro" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-25%</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">15 vidéos · Effets IA</div>
       </div>
       <!-- ELITE -->
       <div id="paywallCardElite" style="border:1px solid var(--border2);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'" onclick="paywallCheckout('elite')">
         <div style="font-size:10px;font-family:var(--mono);color:#a855f7;letter-spacing:1px;margin-bottom:6px">ELITE ✦</div>
         <div id="paywallPriceElite" style="font-size:20px;font-weight:900;letter-spacing:-1px">89,99€</div>
-        <div id="paywallPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:8px">/mois</div>
+        <div id="paywallPeriodElite" style="font-size:10px;color:var(--text3);margin-bottom:4px">/mois</div>
+        <div id="paywallDiscountElite" style="font-size:9px;font-family:var(--mono);color:#22c55e;font-weight:700;margin-bottom:6px;display:none">-26%</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text2)">30 vidéos · VSL · 1080p</div>
       </div>
     </div>
@@ -4336,9 +4339,9 @@ const BYOK_CHECKOUT_URL = 'https://whop.com/checkout/plan_dXRZRYaSF0FGE'; // 9,9
 // Paywall billing toggle (mensuel ↔ annuel)
 let _paywallAnnual = false;
 const _paywallPlans = {
-  starter: { monthly: { price: '29,99€', period: '/mois' }, annual: { price: '269,99€', period: '/an · 22,50€/mois' } },
+  starter: { monthly: { price: '29,99€', period: '/mois' }, annual: { price: '249,99€', period: '/an · 20,83€/mois' } },
   pro:     { monthly: { price: '49,99€', period: '/mois' }, annual: { price: '449,99€', period: '/an · 37,50€/mois' } },
-  elite:   { monthly: { price: '89,99€', period: '/mois' }, annual: { price: '809,99€', period: '/an · 67,49€/mois' } },
+  elite:   { monthly: { price: '89,99€', period: '/mois' }, annual: { price: '799,99€', period: '/an · 66,67€/mois' } },
 };
 function paywallToggleBilling(){
   _paywallAnnual = !_paywallAnnual;
@@ -4352,10 +4355,13 @@ function paywallToggleBilling(){
   if(lblA)   { lblA.style.color = _paywallAnnual ? 'var(--text1)' : 'var(--text3)'; lblA.style.fontWeight = _paywallAnnual ? '700' : '400'; }
   ['starter','pro','elite'].forEach(k => {
     const info = _paywallPlans[k][_paywallAnnual ? 'annual' : 'monthly'];
-    const priceEl  = document.getElementById('paywallPrice'  + k.charAt(0).toUpperCase() + k.slice(1));
-    const periodEl = document.getElementById('paywallPeriod' + k.charAt(0).toUpperCase() + k.slice(1));
-    if(priceEl)  priceEl.textContent  = info.price;
-    if(periodEl) periodEl.textContent = info.period;
+    const cap  = k.charAt(0).toUpperCase() + k.slice(1);
+    const priceEl    = document.getElementById('paywallPrice'    + cap);
+    const periodEl   = document.getElementById('paywallPeriod'   + cap);
+    const discountEl = document.getElementById('paywallDiscount' + cap);
+    if(priceEl)    priceEl.textContent  = info.price;
+    if(periodEl)   periodEl.textContent = info.period;
+    if(discountEl) discountEl.style.display = _paywallAnnual ? 'block' : 'none';
   });
 }
 function paywallCheckout(plan){
