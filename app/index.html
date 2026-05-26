@@ -3119,16 +3119,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- Statut APIs intégrées -->
     <div style="background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ Outils IA inclus dans ton abonnement</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Script IA</span>
-        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● ElevenLabs</span>
-        <span style="font-size:11px;font-family:var(--mono);background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.2);color:var(--green);padding:3px 10px;border-radius:20px">● Avatar IA</span>
-      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px">✓ Outils IA inclus dans ton abonnement</div>
+      <div style="font-size:11px;color:var(--green);opacity:.75">Script IA · ElevenLabs · Avatar IA — zéro configuration requise</div>
     </div>
 
     <!-- Hedra API Key (Plan BYOK) -->
-    <div class="setup-field" id="byok-section">
+    <div class="setup-field" id="byok-section" style="display:none">
       <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
         <span>Clé API Hedra <span style="color:var(--orange);font-size:9px;margin-left:4px;font-weight:700">PLAN BYOK</span></span>
         <a href="https://hedra.com/settings/api" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
@@ -4102,6 +4098,8 @@ function loginGuest(){
   document.getElementById('memberCredits').textContent = '∞';
   const sp = document.getElementById('btnSeePlans');
   if(sp) sp.style.display = 'flex';
+  const byok = document.getElementById('byok-section');
+  if(byok) byok.style.display = 'none';
   updateGuestWatermarks();
   updateLivePreview();
   checkSetupNeeded();
