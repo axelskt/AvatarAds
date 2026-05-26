@@ -4124,19 +4124,21 @@ function enterApp(profile){
     if(profile.plan === 'starter') badge.style.background = 'rgba(77,171,247,0.08)';
   }
   // Bouton "Voir les plans" : visible uniquement pour les free
+  // Bouton orange "Voir les plans" : caché (remplacé par btnUpgradePlan pour tous)
   const seePlansBtn = document.getElementById('btnSeePlans');
-  if(seePlansBtn) seePlansBtn.style.display = (!profile.plan || profile.plan === 'free') ? 'flex' : 'none';
+  if(seePlansBtn) seePlansBtn.style.display = 'none';
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
-  // Bouton "Upgrade" : visible pour starter et pro (PAS free — ils ont btnSeePlans)
+  // Bouton "Upgrade" : visible pour tous sauf Elite
   const upgBtn   = document.getElementById('btnUpgradePlan');
   const upgLabel = document.getElementById('btnUpgradePlanLabel');
   if(upgBtn && upgLabel){
-    const showUpg = profile.plan !== 'elite' && profile.plan !== 'free';
+    const showUpg = profile.plan !== 'elite';
     upgBtn.style.display = showUpg ? 'flex' : 'none';
-    if(profile.plan === 'starter') upgLabel.textContent = '→ Pro';
-    if(profile.plan === 'pro')     upgLabel.textContent = '→ Elite';
+    if(!profile.plan || profile.plan === 'free') upgLabel.textContent = 'Voir les plans';
+    if(profile.plan === 'starter')               upgLabel.textContent = '→ Pro';
+    if(profile.plan === 'pro')                   upgLabel.textContent = '→ Elite';
   }
   // Section BYOK — visible uniquement pour les membres du plan byok
   const byokSection = document.getElementById('byok-section');
@@ -4278,7 +4280,11 @@ function loginGuest(){
   document.getElementById('memberName').textContent = '🎯 Mode Essai';
   document.getElementById('memberCredits').textContent = '∞';
   const sp = document.getElementById('btnSeePlans');
-  if(sp) sp.style.display = 'flex';
+  if(sp) sp.style.display = 'none';
+  const upgBtn = document.getElementById('btnUpgradePlan');
+  const upgLabel = document.getElementById('btnUpgradePlanLabel');
+  if(upgBtn){ upgBtn.style.display = 'flex'; }
+  if(upgLabel){ upgLabel.textContent = 'Voir les plans'; }
   const byok = document.getElementById('byok-section');
   if(byok) byok.style.display = 'none';
   updateGuestWatermarks();
