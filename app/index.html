@@ -3683,7 +3683,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div id="cm2Badge" style="width:32px;height:32px;border-radius:8px;background:rgba(255,107,53,0.2);display:flex;align-items:center;justify-content:center;font-size:15px">🚀</div>
         <div>
           <div id="cm2PlanName" style="font-size:14px;font-weight:800;color:#fff">AvatarAds Pro</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4)">Abonnement mensuel · Annulation libre</div>
+          <div id="cm2BillingLabel" style="font-size:11px;color:rgba(255,255,255,0.4)">Abonnement mensuel · Annulation libre</div>
         </div>
       </div>
 
@@ -3710,24 +3710,59 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
     </div>
 
-    <!-- RIGHT — checkout (iframe ou fallback) -->
-    <div style="flex:1;position:relative;min-height:520px;background:#111214">
-      <!-- loader -->
-      <div id="cm2Loader" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-        <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--orange);border-radius:50%;animation:spin 0.75s linear infinite"></div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.3);font-family:var(--mono)">Chargement du paiement…</div>
+    <!-- RIGHT — payment panel -->
+    <div style="flex:1;min-height:520px;background:#111214;display:flex;flex-direction:column;align-items:stretch;justify-content:center;padding:40px 44px">
+      <div style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,0.3);letter-spacing:.6px;margin-bottom:20px">MÉTHODE DE PAIEMENT</div>
+
+      <!-- Apple Pay button (visual) -->
+      <button id="cm2ApplePayBtn" style="width:100%;padding:14px;background:#fff;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;transition:opacity .15s;font-size:17px;font-weight:600;color:#000;letter-spacing:-.3px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M17.05 11.49c-.02-1.93 1.58-2.86 1.65-2.91-1.14-1.66-2.9-1.88-3.52-1.9-1.47-.15-2.9.88-3.65.88-.76 0-1.9-.86-3.14-.84-1.59.03-3.08.94-3.9 2.36-1.68 2.9-.43 7.18 1.19 9.53.8 1.15 1.75 2.44 3 2.39 1.21-.05 1.67-.77 3.13-.77s1.88.77 3.14.74c1.3-.02 2.12-1.16 2.9-2.32.93-1.32 1.3-2.61 1.32-2.68-.03-.01-2.52-.96-2.54-3.82l.42.34zm-4.03-7.04c.65-.8 1.09-1.9.97-3C12.97 1.57 12.1 2 11.44 2.8 10.82 3.54 10.28 4.67 10.42 5.73c1.1.08 2.22-.57 2.6-1.28z"/></svg>
+         Pay
+      </button>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+        <span style="font-size:11px;color:rgba(255,255,255,0.25);font-family:var(--mono)">OU PAYER PAR CARTE</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
       </div>
-      <!-- iframe -->
-      <iframe id="cm2Iframe" src="" style="position:absolute;inset:0;width:100%;height:100%;border:none;display:none" allowpaymentrequest allow="payment"></iframe>
-      <!-- fallback (shown if iframe blocked) -->
-      <div id="cm2Fallback" style="display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;text-align:center">
-        <div style="font-size:40px">💳</div>
-        <div style="font-size:16px;font-weight:700;color:#fff">Finalise ton paiement</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;max-width:280px">Tu vas être redirigé vers la page de paiement sécurisée Whop pour finaliser ton abonnement.</div>
-        <button id="cm2PayBtn" style="padding:14px 32px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:800;font-family:var(--font);cursor:pointer;box-shadow:0 6px 24px rgba(255,107,53,0.4);transition:opacity .15s;width:100%;max-width:260px" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-          Payer maintenant →
-        </button>
-        <div style="font-size:10px;color:rgba(255,255,255,0.2);font-family:var(--mono)">Sécurisé par Whop · Annulation à tout moment</div>
+
+      <!-- Card fields (visual only) -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-family:var(--mono)">Numéro de carte</div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:rgba(255,255,255,0.2);letter-spacing:2px">1234  1234  1234  1234</span>
+          <div style="display:flex;gap:5px">
+            <div style="width:28px;height:18px;background:#1a1f71;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#fff">VISA</div>
+            <div style="width:28px;height:18px;background:rgba(255,255,255,0.08);border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-family:var(--mono)">MM / AA</div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;font-size:13px;color:rgba(255,255,255,0.2)">MM / AA</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-family:var(--mono)">CVC</div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;font-size:13px;color:rgba(255,255,255,0.2)">•••</div>
+        </div>
+      </div>
+
+      <!-- Pay CTA -->
+      <button id="cm2PayBtn" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--orange),#d63a16);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:800;font-family:var(--font);cursor:pointer;box-shadow:0 6px 24px rgba(255,107,53,0.35);transition:opacity .15s;letter-spacing:.2px" onmouseover="this.style.opacity='.87'" onmouseout="this.style.opacity='1'">
+        Payer et s'abonner →
+      </button>
+
+      <!-- Security row -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px">
+        <div style="display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 3v3c0 2.5 1.7 4.8 4 5.4C8.3 10.8 10 8.5 10 6V3L6 1z" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" fill="none"/></svg>
+          <span style="font-size:10px;color:rgba(255,255,255,0.25);font-family:var(--mono)">Paiement sécurisé</span>
+        </div>
+        <div style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></div>
+        <span style="font-size:10px;color:rgba(255,255,255,0.25);font-family:var(--mono)">Sécurisé par <strong style="color:rgba(255,255,255,0.4)">Whop</strong></span>
+        <div style="width:1px;height:10px;background:rgba(255,255,255,0.1)"></div>
+        <span style="font-size:10px;color:rgba(255,255,255,0.25);font-family:var(--mono)">Annulation libre</span>
       </div>
     </div>
   </div>
@@ -4323,23 +4358,25 @@ function sheetCheckout(plan){
   const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
   if(!url) return;
   const labels = {
-    starter: { name:'AvatarAds Starter', price: _sheetAnnual ? '20,83€' : '29,99€', sub: _sheetAnnual ? 'soit 249,99€/an · -25%' : '', emoji:'⚡', color:'#4dabf7', bg:'rgba(77,171,247,0.15)' },
-    pro:     { name:'AvatarAds Pro',     price: _sheetAnnual ? '37,50€' : '49,99€', sub: _sheetAnnual ? 'soit 449,99€/an · 1,23€/jour' : 'soit 1,67€/jour', emoji:'🚀', color:'var(--orange)', bg:'rgba(255,107,53,0.15)' },
-    elite:   { name:'AvatarAds Élite',   price: _sheetAnnual ? '66,67€' : '89,99€', sub: _sheetAnnual ? 'soit 799,99€/an · -25%' : '', emoji:'✦', color:'#c084fc', bg:'rgba(192,132,252,0.15)' },
+    starter: { name:'AvatarAds Starter', price: _sheetAnnual ? '20,83€' : '29,99€', total: _sheetAnnual ? '249,99€' : '29,99€', sub: _sheetAnnual ? 'soit 249,99€/an · -25%' : '', billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'⚡', color:'#4dabf7', bg:'rgba(77,171,247,0.15)' },
+    pro:     { name:'AvatarAds Pro',     price: _sheetAnnual ? '37,50€' : '49,99€', total: _sheetAnnual ? '449,99€' : '49,99€', sub: _sheetAnnual ? 'soit 449,99€/an · 1,23€/jour' : 'soit 1,67€/jour', billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'🚀', color:'var(--orange)', bg:'rgba(255,107,53,0.15)' },
+    elite:   { name:'AvatarAds Élite',   price: _sheetAnnual ? '66,67€' : '89,99€', total: _sheetAnnual ? '799,99€' : '89,99€', sub: _sheetAnnual ? 'soit 799,99€/an · -25%' : '',  billing: _sheetAnnual ? 'Abonnement annuel · Annulation libre' : 'Abonnement mensuel · Annulation libre', emoji:'✦', color:'#c084fc', bg:'rgba(192,132,252,0.15)' },
   };
   const l = labels[plan];
-  const priceStr = l.price + '€'.replace('€€','€');
   // populate left panel
-  document.getElementById('cm2Price').textContent    = l.price;
-  document.getElementById('cm2Sub').textContent      = l.sub;
-  document.getElementById('cm2PlanName').textContent = l.name;
-  document.getElementById('cm2PlanName').style.color = l.color;
-  document.getElementById('cm2Badge').style.background = l.bg;
-  document.getElementById('cm2Badge').textContent    = l.emoji;
-  document.getElementById('cm2Total').textContent    = l.price + '/mois';
-  document.getElementById('cm2TotalDue').textContent = _sheetAnnual ? (parseFloat(l.price.replace(',','.')) * 12).toFixed(2).replace('.',',') + '€' : l.price + '€';
-  // fallback button
-  document.getElementById('cm2PayBtn').onclick = () => { window.location.href = url; };
+  document.getElementById('cm2Price').textContent       = l.price;
+  document.getElementById('cm2Sub').textContent         = l.sub;
+  document.getElementById('cm2PlanName').textContent    = l.name;
+  document.getElementById('cm2PlanName').style.color    = l.color;
+  document.getElementById('cm2Badge').style.background  = l.bg;
+  document.getElementById('cm2Badge').textContent       = l.emoji;
+  document.getElementById('cm2Total').textContent       = l.price + '/mois';
+  document.getElementById('cm2TotalDue').textContent    = l.total;
+  document.getElementById('cm2BillingLabel').textContent = l.billing;
+  // wire payment buttons → Whop
+  const goWhop = () => { window.location.href = url; };
+  document.getElementById('cm2PayBtn').onclick       = goWhop;
+  document.getElementById('cm2ApplePayBtn').onclick  = goWhop;
   // show modal
   const modal = document.getElementById('checkoutModal2');
   const box   = document.getElementById('checkoutModal2Box');
@@ -4349,44 +4386,6 @@ function sheetCheckout(plan){
     box.style.transform = 'scale(1) translateY(0)';
     box.style.opacity   = '1';
   });
-  // try iframe
-  const iframe   = document.getElementById('cm2Iframe');
-  const loader   = document.getElementById('cm2Loader');
-  const fallback = document.getElementById('cm2Fallback');
-  iframe.style.display   = 'none';
-  fallback.style.display = 'none';
-  loader.style.display   = 'flex';
-  iframe.src = '';
-  // detect if iframe is blocked (X-Frame-Options / CSP) via error or empty load
-  let iframeLoaded = false;
-  const iframeTimeout = setTimeout(() => {
-    if(!iframeLoaded){
-      loader.style.display   = 'none';
-      fallback.style.display = 'flex';
-    }
-  }, 5000);
-  iframe.onload = () => {
-    iframeLoaded = true;
-    clearTimeout(iframeTimeout);
-    // try to detect blocked content (blank page)
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      if(!doc || doc.body.innerHTML === ''){
-        loader.style.display   = 'none';
-        fallback.style.display = 'flex';
-        return;
-      }
-    } catch(e){ /* cross-origin — means it DID load, show it */ }
-    loader.style.display  = 'none';
-    iframe.style.display  = 'block';
-  };
-  iframe.onerror = () => {
-    iframeLoaded = true;
-    clearTimeout(iframeTimeout);
-    loader.style.display   = 'none';
-    fallback.style.display = 'flex';
-  };
-  setTimeout(() => { iframe.src = url; }, 80);
 }
 function closeCheckoutModal2(){
   const modal = document.getElementById('checkoutModal2');
