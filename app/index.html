@@ -3607,31 +3607,43 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 </div>
 
 <!-- CHECKOUT MODAL -->
-<div id="checkoutModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:520px;padding:32px;position:relative">
-    <!-- Croix fermer -->
-    <button onclick="document.getElementById('checkoutModal').style.display='none'" style="position:absolute;top:14px;right:14px;background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:13px;transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
-    <!-- Plan info -->
-    <div style="margin-bottom:24px">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">Plan sélectionné</div>
-      <div id="checkoutPlanName" style="font-size:24px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px">Pro</div>
-      <div style="display:flex;align-items:baseline;gap:6px">
-        <div id="checkoutPlanPrice" style="font-size:36px;font-weight:900;letter-spacing:-1px">49,99€/mois</div>
+<!-- CHECKOUT DRAWER (slide-in from right) -->
+<div id="checkoutDrawer" style="display:none;position:fixed;inset:0;z-index:100000">
+  <!-- backdrop -->
+  <div onclick="closeCheckoutDrawer()" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"></div>
+  <!-- panel -->
+  <div id="checkoutDrawerPanel" style="position:absolute;top:0;right:0;height:100%;width:100%;max-width:500px;background:#0e0f11;border-left:1px solid var(--border2);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)">
+    <!-- header -->
+    <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="checkoutDrawerBadge" style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></div>
+        <span style="font-size:13px;font-weight:700;color:var(--text)">Finaliser ton abonnement</span>
       </div>
-      <div id="checkoutPlanSub" style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px"></div>
+      <button onclick="closeCheckoutDrawer()" style="background:var(--bg3);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:13px;transition:all .15s;flex-shrink:0" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
     </div>
-    <div style="border-top:1px solid var(--border);margin-bottom:20px"></div>
-    <!-- Features résumé -->
-    <div style="font-size:12px;color:var(--text2);margin-bottom:24px;display:flex;flex-direction:column;gap:6px">
-      <div>✓ Paiement sécurisé via <strong style="color:var(--text)">Whop</strong></div>
-      <div>✓ Annulation à tout moment depuis ton compte Whop</div>
-      <div>✓ Accès immédiat après paiement</div>
+    <!-- plan summary strip -->
+    <div style="padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:2px;letter-spacing:.5px">PLAN SÉLECTIONNÉ</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span id="checkoutDrawerPlanName" style="font-size:18px;font-weight:900;letter-spacing:-.5px">Pro</span>
+          <span id="checkoutDrawerPrice" style="font-size:13px;font-weight:700;color:var(--text2)">49,99€/mois</span>
+        </div>
+        <div id="checkoutDrawerSub" style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px"></div>
+      </div>
+      <button id="checkoutDrawerDirectBtn" style="padding:10px 18px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:800;font-family:var(--font);cursor:pointer;white-space:nowrap;box-shadow:0 4px 14px rgba(255,107,53,0.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        Ouvrir le paiement ↗
+      </button>
     </div>
-    <!-- Bouton payer -->
-    <button id="checkoutPayBtn" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:800;font-family:var(--font);cursor:pointer;transition:opacity .15s;box-shadow:0 4px 20px rgba(255,107,53,0.4)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-      Payer maintenant →
-    </button>
-    <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--text3);font-family:var(--mono)">Tu seras redirigé vers la page de paiement sécurisée Whop</div>
+    <!-- iframe zone -->
+    <div style="flex:1;position:relative;overflow:hidden">
+      <!-- loader -->
+      <div id="checkoutDrawerLoader" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0e0f11">
+        <div style="width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--orange);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Chargement du paiement…</div>
+      </div>
+      <iframe id="checkoutDrawerIframe" src="" style="width:100%;height:100%;border:none;display:none" allowpaymentrequest></iframe>
+    </div>
   </div>
 </div>
 
@@ -4165,12 +4177,45 @@ function sheetCheckout(plan){
     elite:   { name:'Élite ✦', price: _sheetAnnual ? '66,67€' : '89,99€', sub: _sheetAnnual ? 'soit 799,99€/an · -26%' : '', color:'#c084fc' },
   };
   const l = labels[plan];
-  document.getElementById('checkoutPlanName').textContent  = l.name;
-  document.getElementById('checkoutPlanName').style.color  = l.color;
-  document.getElementById('checkoutPlanPrice').textContent = l.price + '/mois';
-  document.getElementById('checkoutPlanSub').textContent   = l.sub;
-  document.getElementById('checkoutPayBtn').onclick = () => { window.open(url,'_blank'); };
-  document.getElementById('checkoutModal').style.display = 'flex';
+  // Populate drawer header
+  document.getElementById('checkoutDrawerPlanName').textContent = l.name;
+  document.getElementById('checkoutDrawerPlanName').style.color = l.color;
+  document.getElementById('checkoutDrawerBadge').style.background = l.color;
+  document.getElementById('checkoutDrawerPrice').textContent = l.price + '/mois';
+  document.getElementById('checkoutDrawerSub').textContent   = l.sub;
+  // Direct link fallback button
+  document.getElementById('checkoutDrawerDirectBtn').onclick = () => { window.location.href = url; };
+  // Show drawer
+  const drawer = document.getElementById('checkoutDrawer');
+  const panel  = document.getElementById('checkoutDrawerPanel');
+  const iframe = document.getElementById('checkoutDrawerIframe');
+  const loader = document.getElementById('checkoutDrawerLoader');
+  drawer.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  // Slide in
+  requestAnimationFrame(() => { panel.style.transform = 'translateX(0)'; });
+  // Load iframe – reset first to clear any previous URL
+  iframe.style.display = 'none';
+  loader.style.display = 'flex';
+  iframe.src = '';
+  setTimeout(() => {
+    iframe.onload = () => {
+      // If whop blocks framing, the iframe will still fire onload (about:blank or error page)
+      // We show the iframe regardless and let the fallback button handle it
+      loader.style.display = 'none';
+      iframe.style.display = 'block';
+    };
+    iframe.src = url;
+  }, 100);
+}
+function closeCheckoutDrawer(){
+  const panel = document.getElementById('checkoutDrawerPanel');
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(() => {
+    document.getElementById('checkoutDrawer').style.display = 'none';
+    document.getElementById('checkoutDrawerIframe').src = '';
+    document.body.style.overflow = '';
+  }, 300);
 }
 
 // ── BUY CREDITS ──
