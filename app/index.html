@@ -7654,7 +7654,7 @@ function toggleBypassHedra(){
   _updateBypassUI();
 }
 
-function handleBypassHedraFile(file){
+async function handleBypassHedraFile(file){
   if(!file || !file.type.startsWith('video/')) return;
   window._bypassHedraFile = file;
   if(window._bypassHedraUrl) URL.revokeObjectURL(window._bypassHedraUrl);
@@ -7667,6 +7667,14 @@ function handleBypassHedraFile(file){
   if(hv) hv.src = window._bypassHedraUrl;
   // Injecter une thumbnail dans le preview phone
   _setBypassPreviewThumbnail(window._bypassHedraUrl);
+  // ── Persistance : sauvegarder en IDB pour survie aux rechargements ──
+  try {
+    const idbKey = 'bypass_manual_' + Date.now();
+    await _idbSave(idbKey, new File([file], file.name, { type: file.type }));
+    const script = (document.getElementById('f-script')||{}).value?.trim() || '';
+    const name   = file.name.replace(/\.[^/.]+$/, ''); // sans extension
+    _saveBypassState({ hedraIdbKey: idbKey, script, name });
+  } catch(e){ console.warn('bypass IDB save failed:', e); }
   toast('✅ Vidéo avatar chargée — 0 crédit à la génération');
 }
 
@@ -9681,6 +9689,13 @@ async function startGeneration(){
   setStep('gp3','on');
   let hedraUrl='';
 
+  // ── Si bypass était sauvegardé mais pas encore restauré (rechargement rapide), attendre ──
+  if(!window._bypassHedraOn && localStorage.getItem('aa_bypass_resume')){
+    toast('🔄 Restauration de ta vidéo Hedra…');
+    await _restoreBypassState();
+    await wait(200);
+  }
+
   // ── Détermine si un vrai avatar est sélectionné pour le lipsync Hedra ──
   const _avatarImgUrl = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
   const _hasRealAvatar = !!(selAvatar.localFile || selAvatar.localUrl || _avatarImgUrl);
@@ -10220,13 +10235,26 @@ function showResults(){
 
     // Détecter la cause : pas d'avatar vs erreur Hedra (bypass mode = jamais "no avatar")
     const _avatarImgUrl2 = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
-    const _noAvatar = !window._bypassHedraOn && !window._bypassWasOn && !selAvatar.localFile && !selAvatar.localUrl && !_avatarImgUrl2;
+    // Bypass was on (active session) or was on (flag set during this generate call)
+    const _bypassActive = window._bypassHedraOn || window._bypassWasOn;
+    // Also detect: bypass was saved in localStorage but page reloaded before IDB restore finished
+    const _bypassSaved  = !_bypassActive && !!localStorage.getItem('aa_bypass_resume');
+    const _noAvatar = !_bypassActive && !_bypassSaved && !selAvatar.localFile && !selAvatar.localUrl && !_avatarImgUrl2;
     window._bypassWasOn = false; // reset flag
     const noAvatarDiv = document.getElementById('hedraNoAvatarMsg');
     const errDiv      = document.getElementById('hedraErrorMsg');
     const retryBtn    = document.getElementById('retryHedraBtn');
 
-    if(_noAvatar){
+    if(_bypassSaved && !_bypassActive){
+      // Bypass was configured but page reloaded — restore is pending or IDB was cleared
+      if(noAvatarDiv) noAvatarDiv.style.display='none';
+      if(retryBtn)    retryBtn.style.display='none';
+      if(errDiv){
+        errDiv.textContent = '⚠️ Ta vidéo Hedra a été perdue après le rechargement de la page. Retourne à l\'étape Avatar et ré-importe ta vidéo Hedra dans la section "0 crédit".';
+        errDiv.style.display='block';
+      }
+      if(hs){ hs.className='hedra-status'; hs.textContent='⚠️ Vidéo Hedra non trouvée — ré-importe dans Étape Avatar'; }
+    } else if(_noAvatar){
       if(noAvatarDiv) noAvatarDiv.style.display='block';
       if(errDiv)      errDiv.style.display='none';
       if(retryBtn)    retryBtn.style.display='none'; // pas d'avatar = réessayer ne sert à rien
