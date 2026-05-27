@@ -613,6 +613,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5v3M7.5 10h.01"/></svg>
         Report bug
       </div>
+      <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
+        Mon compte
+      </div>
     </div>
   </div>
 
@@ -3568,6 +3572,67 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
   </div>
 </div>
 
+<!-- MON COMPTE OVERLAY -->
+<div class="setup-overlay" id="accountOverlay" style="display:none" onclick="if(event.target===this)closeAccountSettings()">
+  <div class="setup-box" style="max-width:480px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="accountOverlayAvatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c0392b);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">A</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px">Mon compte</div>
+          <div id="accountOverlayEmail" style="font-size:11px;font-family:var(--mono);color:var(--text3)">—</div>
+        </div>
+      </div>
+      <button onclick="closeAccountSettings()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
+    </div>
+
+    <!-- ① Profil -->
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">① Profil</div>
+    <div class="setup-field" style="margin-bottom:10px">
+      <div class="setup-label">Prénom affiché</div>
+      <div class="setup-input"><input type="text" id="accountFirstName" placeholder="Ton prénom"></div>
+    </div>
+    <div class="setup-field" style="margin-bottom:16px">
+      <div class="setup-label">Numéro de téléphone <span style="color:var(--text3);font-size:9px;margin-left:4px">OPTIONNEL</span></div>
+      <div class="setup-input"><input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00"></div>
+    </div>
+    <button onclick="saveAccountProfile()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:20px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+      💾 Sauvegarder le profil
+    </button>
+
+    <div class="setup-divider"></div>
+
+    <!-- ② Email -->
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">② Adresse email de connexion</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:12px">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">EMAIL ACTUEL</div>
+      <div id="accountCurrentEmail" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
+    </div>
+    <div class="setup-field" style="margin-bottom:6px">
+      <div class="setup-label">Nouvel email</div>
+      <div class="setup-input"><input type="email" id="accountNewEmail" placeholder="nouveau@email.com"></div>
+    </div>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.6">
+      Un lien de confirmation sera envoyé à la <strong style="color:var(--text2)">nouvelle adresse</strong>. L'ancien email reste actif jusqu'à confirmation.
+    </div>
+    <button onclick="saveAccountEmail()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#4dabf7';this.style.color='#4dabf7'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+      ✉️ Envoyer le lien de confirmation
+    </button>
+
+    <div class="setup-divider" style="margin-top:20px"></div>
+
+    <!-- ③ Mot de passe -->
+    <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2)">Mot de passe</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Réinitialiser via un lien envoyé par email</div>
+      </div>
+      <button onclick="resetPassword();closeAccountSettings()" style="padding:8px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">Réinitialiser →</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- MOBILE NAV -->
 <div id="mobileNav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 0;z-index:200;justify-content:space-around">
   <div onclick="nav('generator',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--orange2);cursor:pointer;padding:4px 16px">
@@ -5334,6 +5399,64 @@ function openSetup(){
   if(googleSt) googleSt.style.display = googleKey ? 'block' : 'none';
 }
 function closeSetup(){ document.getElementById('setupOverlay').style.display='none'; }
+
+// ── MON COMPTE ──
+function openAccountSettings(){
+  const overlay = document.getElementById('accountOverlay');
+  if(!overlay) return;
+  overlay.style.display = 'flex';
+  // Pré-remplir les champs
+  if(currentMember){
+    const initials = (currentMember.first_name||currentMember.email||'?')[0].toUpperCase();
+    const av = document.getElementById('accountOverlayAvatar');
+    if(av) av.textContent = initials;
+    const emailLbl = document.getElementById('accountOverlayEmail');
+    const curEmail = document.getElementById('accountCurrentEmail');
+    if(emailLbl) emailLbl.textContent = currentMember.email || '';
+    if(curEmail) curEmail.textContent = currentMember.email || '';
+    const nameInp = document.getElementById('accountFirstName');
+    if(nameInp) nameInp.value = currentMember.first_name || '';
+    const phoneInp = document.getElementById('accountPhone');
+    if(phoneInp) phoneInp.value = currentMember.phone || '';
+    const newEmailInp = document.getElementById('accountNewEmail');
+    if(newEmailInp) newEmailInp.value = '';
+  }
+}
+function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
+
+async function saveAccountProfile(){
+  if(!currentMember){ toast('⚠️ Non connecté'); return; }
+  const firstName = (document.getElementById('accountFirstName')?.value||'').trim();
+  const phone     = (document.getElementById('accountPhone')?.value||'').trim();
+  const updates = {};
+  if(firstName) updates.first_name = firstName;
+  updates.phone = phone || null;
+  const { error } = await sb.from('profiles').update(updates).eq('id', currentMember.id);
+  if(error){ toast('⚠️ Erreur : ' + error.message); return; }
+  // Mettre à jour le cache local
+  if(firstName){ currentMember.first_name = firstName; document.getElementById('memberName').textContent = firstName; }
+  currentMember.phone = phone || null;
+  toast('✅ Profil mis à jour');
+}
+
+async function saveAccountEmail(){
+  if(!currentMember){ toast('⚠️ Non connecté'); return; }
+  const newEmail = (document.getElementById('accountNewEmail')?.value||'').trim().toLowerCase();
+  if(!newEmail || !newEmail.includes('@')){ toast('⚠️ Saisis un email valide'); return; }
+  if(newEmail === currentMember.email){ toast('⚠️ C\'est déjà ton adresse email'); return; }
+  const btn = document.querySelector('#accountOverlay button[onclick*="saveAccountEmail"]');
+  if(btn){ btn.textContent = '⏳ Envoi…'; btn.disabled = true; }
+  try {
+    const { error } = await sb.auth.updateUser({ email: newEmail });
+    if(error) throw error;
+    toast('✅ Lien de confirmation envoyé à ' + newEmail + ' — clique dessus pour valider');
+    document.getElementById('accountNewEmail').value = '';
+  } catch(e){
+    toast('⚠️ ' + (e.message || 'Erreur lors du changement d\'email'));
+  } finally {
+    if(btn){ btn.textContent = '✉️ Envoyer le lien de confirmation'; btn.disabled = false; }
+  }
+}
 function loadKeysToInputs(){ openSetup(); } // compat alias
 function toggleHedraKeyVisibility(){
   const inp = document.getElementById('inp-hedra-key');
