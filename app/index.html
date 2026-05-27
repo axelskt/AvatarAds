@@ -11634,19 +11634,29 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // Dimensions paires obligatoires pour H.264
       const safeW = Math.floor(W / 2) * 2;
       const safeH = Math.floor(H / 2) * 2;
-      // Bitrate plafonné à 8 Mbps (au-delà = souvent rejeté par VideoEncoder)
       const safeBr = Math.min(qCfg.br, 8_000_000);
-      // Essayer plusieurs profils H.264 : Baseline d'abord (plus supporté sur Safari)
-      const _codecsToTry = [
-        { codec: 'avc1.42001f', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // Baseline 3.1
-        { codec: 'avc1.4D001F', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // Main 3.1
-        { codec: 'avc1.640028', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // High 4.0
+      // Essayer plusieurs codec strings dans l'ordre :
+      // 1. codec exact de QUALITY_CONFIGS (déjà calibré pour la résolution)
+      // 2. High 4.2 (plus de marge sur 1080p — 1080×1920 est à la limite du Level 4.0)
+      // 3. Main 4.0, High 4.0
+      const _codecStrings = [
+        qCfg.codec,     // ex: 'avc1.640028' pour 1080p — codec natif
+        'avc1.64002A',  // High 4.2
+        'avc1.640029',  // High 4.1
+        'avc1.4D4028',  // Main 4.0 — TikTok-compatible
+        'avc1.640028',  // High 4.0
       ];
       let vcfg = null;
-      for(const _c of _codecsToTry){
+      for(const _codec of _codecStrings){
+        const _c = { codec: _codec, width: safeW, height: safeH, framerate: _fps, bitrate: safeBr };
         try { const { supported } = await VideoEncoder.isConfigSupported(_c); if(supported){ vcfg = _c; break; } } catch(e){}
       }
-      if(!vcfg) throw new Error('H.264 VideoEncoder non supporté sur ce navigateur');
+      // isConfigSupported est parfois buggy sur Safari (retourne false à tort)
+      // → tenter quand même avec le codec natif, les erreurs seront capturées dans la boucle
+      if(!vcfg){
+        vcfg = { codec: qCfg.codec, width: safeW, height: safeH, framerate: _fps, bitrate: safeBr };
+        console.warn('WebCodecs: isConfigSupported a tout rejeté, tentative directe avec', qCfg.codec);
+      }
 
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
       const muxTarget = new ArrayBufferTarget();
