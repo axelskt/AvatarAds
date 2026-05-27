@@ -11697,24 +11697,23 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
   ]);
 
-  // ── 12. Boucle rAF — utilise hedraVid.currentTime comme horloge vidéo ──
+  // ── 12. Boucle à 30fps constant (setInterval 33ms) — évite le VFR du rAF (60/120Hz display) ──
+  // rAF cadencé sur le refresh rate de l'écran → timestamps irréguliers → robot sur TikTok
+  // setInterval(33ms) force exactement 30fps dans le stream canvas → CFR natif
   await new Promise(resolve => {
-    function rAF(){
+    let _lastElapsed = -1;
+    const _frameInterval = setInterval(() => {
       const elapsed = hedraVid.currentTime || 0;
       const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
       if(compFill) compFill.style.width = pct + '%';
       if(compPct)  compPct.textContent  = pct + '%';
-      drawFrame(elapsed);
-      // ⚠️ PAS de resync audioEl2.currentTime ici — le seek coupe le flux AudioContext
-      // hedraVid et audioEl2 sont lancés ensemble via Promise.all, ils restent synchro naturellement
-      if(window._composeCancelled){ resolve(); return; }
-      if(elapsed < totalDuration - 0.1 || hedraVid.readyState < 2){
-        requestAnimationFrame(rAF);
-      } else {
+      if(elapsed !== _lastElapsed){ drawFrame(elapsed); _lastElapsed = elapsed; }
+      if(window._composeCancelled){ clearInterval(_frameInterval); resolve(); return; }
+      if(elapsed >= totalDuration - 0.05 && hedraVid.readyState >= 2){
+        clearInterval(_frameInterval);
         resolve();
       }
-    }
-    requestAnimationFrame(rAF);
+    }, 1000 / 30); // exactement 33.33ms par frame = 30fps constant
   });
 
   // ── 13. Arrêter l'enregistrement et récupérer le blob ──
