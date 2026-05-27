@@ -594,6 +594,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
         ⚡ Express
       </div>
+      <div class="nav-i" onclick="nav('cartoon',this)" style="margin-top:2px">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="6" r="3.5"/><path d="M3 12.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11.5 2.5l1 1M3.5 2.5l-1 1"/></svg>
+        🎭 Cartoon
+      </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-gl">Ressources</div>
@@ -3104,6 +3108,138 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     </div><!-- /express -->
 
+    <!-- ══════════════════════════════════════════════════════
+         🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
+         ══════════════════════════════════════════════════════ -->
+    <div class="view" id="v-cartoon" style="overflow-y:auto">
+      <div style="max-width:480px;margin:0 auto;padding:20px 16px 60px">
+
+        <!-- HEADER -->
+        <div style="text-align:center;margin-bottom:24px;position:relative">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;height:80px;background:radial-gradient(ellipse,rgba(168,85,247,0.12) 0%,transparent 70%);pointer-events:none"></div>
+          <div style="position:relative">
+            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:20px;padding:4px 12px;font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:0.8px;margin-bottom:10px">
+              <svg width="6" height="6" viewBox="0 0 6 6" fill="#c084fc"><circle cx="3" cy="3" r="3"/></svg>
+              IMAGEN 4 · VEO 3.1 FAST · ÉLITE
+            </div>
+            <div style="font-size:26px;font-weight:900;letter-spacing:-1.2px;background:linear-gradient(135deg,var(--text) 30%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-bottom:6px">Avatar Cartoon IA</div>
+            <div style="font-size:12px;color:var(--text3)">Génère une mascotte animée avec voix — sans avatar réel</div>
+          </div>
+        </div>
+
+        <!-- PAYWALL ELITE -->
+        <div id="cartoonPaywall" style="display:none;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.3);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
+          <div style="font-size:32px;margin-bottom:12px">🔒</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Fonctionnalité Élite</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:16px">La génération d'avatars cartoon est réservée au plan Élite.</div>
+          <button onclick="openUpgradeModal()" style="padding:12px 24px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">Passer Élite →</button>
+        </div>
+
+        <!-- CONTENU PRINCIPAL -->
+        <div id="cartoonContent">
+
+          <!-- ── MODULE 1 : GÉNÉRER LE PERSO ── -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+              <div style="width:22px;height:22px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">1</div>
+              <div style="font-size:13px;font-weight:700">Décris ton personnage</div>
+            </div>
+
+            <!-- Style presets -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px" id="cartoonStyleGrid">
+              <button onclick="selectCartoonStyle(this,'pixar')" class="cartoon-style-btn active" data-style="pixar" style="padding:8px 4px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
+                <div style="font-size:16px;margin-bottom:2px">🏆</div>Pixar 3D
+              </button>
+              <button onclick="selectCartoonStyle(this,'flat')" class="cartoon-style-btn" data-style="flat" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
+                <div style="font-size:16px;margin-bottom:2px">🎨</div>Flat 2D
+              </button>
+              <button onclick="selectCartoonStyle(this,'anime')" class="cartoon-style-btn" data-style="anime" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
+                <div style="font-size:16px;margin-bottom:2px">🌸</div>Anime
+              </button>
+              <button onclick="selectCartoonStyle(this,'mascot')" class="cartoon-style-btn" data-style="mascot" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
+                <div style="font-size:16px;margin-bottom:2px">🤖</div>Mascotte
+              </button>
+            </div>
+
+            <!-- Prompt perso -->
+            <textarea id="cartoonCharPrompt" placeholder="Ex: Une chaussure de sport blanche avec des yeux expressifs, des petits bras et jambes, sourire amical, style Pixar 3D…" style="width:100%;min-height:80px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:11px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+
+            <!-- Quick suggestions -->
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+              <button onclick="cartoonQuickPrompt('Un téléphone smartphone avec des bras et un visage souriant, style Pixar 3D coloré')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">📱 Smartphone</button>
+              <button onclick="cartoonQuickPrompt('Une paire de lunettes avec des yeux expressifs et un grand sourire, style mascotte 3D')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">👓 Lunettes</button>
+              <button onclick="cartoonQuickPrompt('Une bouteille de supplément sportif avec des bras musclés et un sourire confiant, style 3D cartoon')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">💪 Fitness</button>
+              <button onclick="cartoonQuickPrompt('Un robot IA amical avec un écran facial expressif, couleurs vives, style Pixar')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🤖 Robot IA</button>
+            </div>
+
+            <!-- Gen image button -->
+            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
+              Générer le personnage
+              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>
+            </button>
+
+            <!-- Image result -->
+            <div id="cartoonImgResult" style="display:none;margin-top:14px">
+              <div style="position:relative;border-radius:12px;overflow:hidden;background:var(--bg3);aspect-ratio:9/16;max-height:280px">
+                <img id="cartoonImgPreview" style="width:100%;height:100%;object-fit:cover;display:block" alt="Personnage généré">
+                <button onclick="cartoonGenImage(document.getElementById('cartoonImgBtn'))" style="position:absolute;bottom:8px;right:8px;padding:5px 10px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:7px;color:#fff;font-family:var(--mono);font-size:10px;cursor:pointer;backdrop-filter:blur(4px)">↺ Regen</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── MODULE 2 : ANIMER ── -->
+          <div id="cartoonModule2" style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;opacity:.4;pointer-events:none;transition:all .3s">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+              <div style="width:22px;height:22px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">2</div>
+              <div style="font-size:13px;font-weight:700">Anime le personnage</div>
+              <span style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 Fast · 10s</span>
+            </div>
+
+            <!-- Animation prompt -->
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">Décris les mouvements :</div>
+            <textarea id="cartoonAnimPrompt" placeholder="Le personnage marche vers la caméra avec enthousiasme, fait un pouce levé, sourire expressif, mouvements fluides Pixar…" style="width:100%;min-height:72px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:11px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+
+            <!-- Anim presets -->
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+              <button onclick="cartoonAnimPreset('marche vers la caméra, sourire expressif, mouvements fluides Pixar, fond blanc neutre')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">🚶 Walk</button>
+              <button onclick="cartoonAnimPreset('danse de joie, bras levés, expression excitée, énergie positive')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">💃 Dance</button>
+              <button onclick="cartoonAnimPreset('tient un produit et le présente à la caméra, clin d\'oeil, sourire complice')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">📦 Présente</button>
+              <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste, fond coloré dynamique')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
+            </div>
+
+            <!-- Gen video button -->
+            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
+              Générer la vidéo animée
+              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>
+            </button>
+
+            <!-- Progress -->
+            <div id="cartoonVidProgress" style="display:none;margin-top:12px;padding:12px;background:var(--bg3);border-radius:10px;text-align:center">
+              <div style="font-size:12px;font-family:var(--mono);color:#c084fc;margin-bottom:8px" id="cartoonVidProgressTxt">⏳ Veo 3.1 génère ta vidéo…</div>
+              <div style="height:3px;background:var(--bg4);border-radius:3px;overflow:hidden">
+                <div id="cartoonVidProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:3px;transition:width .8s ease"></div>
+              </div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">La génération prend ~60-90 secondes</div>
+            </div>
+
+            <!-- Video result -->
+            <div id="cartoonVidResult" style="display:none;margin-top:14px">
+              <video id="cartoonVidPreview" controls playsinline style="width:100%;border-radius:12px;background:#000;max-height:280px;object-fit:contain"></video>
+              <button onclick="cartoonUseAsAvatar()" style="margin-top:10px;width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+                ✅ Utiliser comme avatar → Générateur
+              </button>
+            </div>
+          </div>
+
+          <!-- Quota info -->
+          <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);padding:8px" id="cartoonQuotaInfo"></div>
+
+        </div><!-- /cartoonContent -->
+      </div>
+    </div><!-- /cartoon -->
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -3231,6 +3367,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
       <div class="setup-hint" id="byok-status" style="display:none;color:var(--green)">✓ Clé Hedra configurée — tu utilises ton propre compte Hedra</div>
       <div class="setup-hint">Entre ta clé API Hedra pour utiliser tes propres crédits (Plan BYOK à 9,99€/mois).<br>Crée un compte sur <a href="https://hedra.com" target="_blank">hedra.com</a> et récupère ta clé dans Settings → API.</div>
+    </div>
+
+    <div class="setup-divider"></div>
+
+    <!-- Google AI API Key (Cartoon Avatar) -->
+    <div class="setup-field" id="google-ai-section">
+      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Clé API Google AI <span style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:700">ÉLITE · CARTOON</span></span>
+        <a href="https://aistudio.google.com/apikey" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
+      </div>
+      <div class="setup-input" style="position:relative">
+        <input type="password" id="inp-google-key" placeholder="AIza…">
+        <button onclick="document.getElementById('inp-google-key').type=document.getElementById('inp-google-key').type==='password'?'text':'password'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
+      </div>
+      <div class="setup-hint" id="google-key-status" style="display:none;color:var(--green)">✓ Clé Google AI configurée — Imagen 4 + Veo 3.1 activés</div>
+      <div class="setup-hint">Nécessaire pour générer des avatars cartoon (Imagen 4 + Veo 3.1 Fast). Crée ta clé sur <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.</div>
     </div>
 
     <div class="setup-divider"></div>
@@ -3859,8 +4011,9 @@ const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
-const OPENAI_PROXY = SUPABASE_URL + '/functions/v1/openai-proxy';
-const EL_PROXY     = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
+const OPENAI_PROXY  = SUPABASE_URL + '/functions/v1/openai-proxy';
+const EL_PROXY      = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
+const GOOGLE_AI_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Helper : retourne l'Authorization header avec le JWT de l'user connecté
 // Sans JWT valide → le proxy refusera la requête (401)
@@ -5003,6 +5156,12 @@ function openSetup(){
     hedraEl.value = window._userHedraKey;
     if(statusEl) statusEl.style.display = 'block';
   }
+  // Charger la clé Google AI
+  const googleKey = localStorage.getItem('aa_google_ai_key')||'';
+  const googleEl  = document.getElementById('inp-google-key');
+  const googleSt  = document.getElementById('google-key-status');
+  if(googleEl) googleEl.value = googleKey ? '••••••••••••••••' : '';
+  if(googleSt) googleSt.style.display = googleKey ? 'block' : 'none';
 }
 function closeSetup(){ document.getElementById('setupOverlay').style.display='none'; }
 function loadKeysToInputs(){ openSetup(); } // compat alias
@@ -5016,6 +5175,9 @@ function toggleHedraKeyVisibility(){
 async function saveKeys(){
   const ytEl = document.getElementById('inp-yt-client');
   if(ytEl){ const v=ytEl.value.trim(); if(v) localStorage.setItem('yt_client_id',v); else localStorage.removeItem('yt_client_id'); }
+  // Clé Google AI (Cartoon)
+  const googleEl = document.getElementById('inp-google-key');
+  if(googleEl){ const v=googleEl.value.trim(); if(v){ localStorage.setItem('aa_google_ai_key',v); const s=document.getElementById('google-key-status'); if(s) s.style.display='block'; } else { localStorage.removeItem('aa_google_ai_key'); } }
   ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
     const el = document.getElementById('inp-wh-'+p);
     if(el){ const v=el.value.trim(); if(v) localStorage.setItem('aa_wh_'+p,v); else localStorage.removeItem('aa_wh_'+p); }
@@ -6032,6 +6194,7 @@ function nav(id,el){
   if(id==='affiliation') initAffiliation();
   if(id==='recorder')   recInit();
   if(id==='express')    initExpress();
+  if(id==='cartoon')    initCartoon();
   if(id==='generator')  setTimeout(initClipPicker, 50);
 }
 function refreshYoutubeView(){
@@ -13425,6 +13588,237 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
   a.href=url; a.download='avatarads-express-'+qCfg.label+'.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   resetBtn();
+}
+
+// ════════════════════════════════════════════════════════════
+// 🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
+// ════════════════════════════════════════════════════════════
+
+window._cartoonStyle    = 'pixar';
+window._cartoonImgB64   = null;  // base64 image Imagen 4
+window._cartoonImgUrl   = null;  // object URL preview
+window._cartoonVidUrl   = null;  // object URL vidéo
+
+const CARTOON_STYLE_PROMPTS = {
+  pixar:  'Pixar 3D animation style, high quality render, warm lighting, expressive face, smooth textures, white clean background',
+  flat:   'flat 2D cartoon style, bold colors, clean vector art, simple shapes, friendly mascot, white background',
+  anime:  'anime manga style, vibrant colors, big expressive eyes, clean lineart, kawaii friendly character, white background',
+  mascot: 'brand mascot 3D style, professional product mascot, bold personality, dynamic pose, white clean background'
+};
+
+function initCartoon(){
+  const plan = _getPlan();
+  const isElite = ['elite','byok'].includes(plan);
+  document.getElementById('cartoonPaywall').style.display  = isElite ? 'none'  : 'block';
+  document.getElementById('cartoonContent').style.display  = isElite ? 'block' : 'none';
+  if(isElite) _cartoonUpdateQuota();
+}
+
+function _cartoonUpdateQuota(){
+  const lbl = document.getElementById('cartoonQuotaInfo');
+  if(!lbl) return;
+  const used  = parseInt(localStorage.getItem('aa_avatar_used_'+_getMonthKey())||'0');
+  const limit = _hedraLimit();
+  lbl.textContent = `${limit - used} avatar${limit-used!==1?'s':''} restant${limit-used!==1?'s':''} ce mois · ${limit}/mois Élite`;
+}
+
+function selectCartoonStyle(btn, style){
+  window._cartoonStyle = style;
+  document.querySelectorAll('.cartoon-style-btn').forEach(b=>{
+    b.style.background   = 'var(--bg3)';
+    b.style.borderColor  = 'var(--border)';
+    b.style.color        = 'var(--text3)';
+  });
+  btn.style.background  = 'rgba(168,85,247,0.15)';
+  btn.style.borderColor = 'rgba(168,85,247,0.5)';
+  btn.style.color       = 'var(--text)';
+}
+
+function cartoonQuickPrompt(txt){ document.getElementById('cartoonCharPrompt').value = txt; }
+function cartoonAnimPreset(txt){ document.getElementById('cartoonAnimPrompt').value = txt; }
+
+function _cartoonGetKey(){
+  const k = localStorage.getItem('aa_google_ai_key');
+  if(!k){ toast('⚠️ Configure ta clé Google AI dans Connexions ⚙'); openSetup(); return null; }
+  return k;
+}
+
+async function cartoonGenImage(btn){
+  const key = _cartoonGetKey(); if(!key) return;
+  const prompt = document.getElementById('cartoonCharPrompt').value.trim();
+  if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
+
+  // Check image credits
+  if(typeof imgCredits !== 'undefined' && imgCredits <= 0){
+    toast('⛔ Plus de crédits image'); openUpgradeModal('images'); return;
+  }
+
+  const styleExtra = CARTOON_STYLE_PROMPTS[window._cartoonStyle] || CARTOON_STYLE_PROMPTS.pixar;
+  const fullPrompt = `${prompt}, ${styleExtra}, no text, no watermark, 9:16 vertical format`;
+
+  if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">⏳ Génération…</span>'; }
+
+  try {
+    const resp = await fetch(
+      `${GOOGLE_AI_URL}/models/imagen-4.0-generate-001:predict?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt: fullPrompt }],
+          parameters: { sampleCount: 1, aspectRatio: '9:16', safetyFilterLevel: 'block_some' }
+        })
+      }
+    );
+    if(!resp.ok){
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const b64  = data?.predictions?.[0]?.bytesBase64Encoded;
+    if(!b64) throw new Error('Aucune image retournée');
+
+    window._cartoonImgB64 = b64;
+    window._cartoonImgUrl = `data:image/png;base64,${b64}`;
+
+    const preview = document.getElementById('cartoonImgPreview');
+    if(preview) preview.src = window._cartoonImgUrl;
+    document.getElementById('cartoonImgResult').style.display = 'block';
+
+    // Débloquer module 2
+    const mod2 = document.getElementById('cartoonModule2');
+    mod2.style.opacity = '1'; mod2.style.pointerEvents = 'auto';
+
+    // Auto-remplir l'animation prompt
+    const animTa = document.getElementById('cartoonAnimPrompt');
+    if(animTa && !animTa.value){
+      animTa.value = `The character walks confidently toward the camera, friendly smile, expressive gestures, ${CARTOON_STYLE_PROMPTS[window._cartoonStyle]?.split(',')[0] || 'Pixar 3D'} animation, smooth fluid motion, white background`;
+    }
+
+    // Décrémenter crédits image
+    if(typeof imgCredits !== 'undefined') imgCredits = Math.max(0, imgCredits - 1);
+    if(typeof updateImgCreditsDisplay === 'function') updateImgCreditsDisplay();
+
+    toast('✅ Personnage généré !');
+  } catch(e){
+    console.error('Imagen 4 error:', e);
+    toast('⚠️ Erreur Imagen 4 : ' + e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg> Générer le personnage <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>'; }
+  }
+}
+
+async function cartoonGenVideo(btn){
+  const key = _cartoonGetKey(); if(!key) return;
+  if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
+  if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
+
+  const animPrompt = document.getElementById('cartoonAnimPrompt').value.trim() ||
+    'The character walks toward the camera with enthusiasm, friendly expression, smooth Pixar-style animation';
+
+  if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">⏳ Lancement…</span>'; }
+  document.getElementById('cartoonVidProgress').style.display = 'block';
+  document.getElementById('cartoonVidResult').style.display   = 'none';
+
+  // Progress bar animation
+  let prog = 0;
+  const progBar = document.getElementById('cartoonVidProgressBar');
+  const progTxt = document.getElementById('cartoonVidProgressTxt');
+  const progInt = setInterval(()=>{
+    prog = Math.min(prog + (prog < 70 ? 1.2 : 0.3), 92);
+    if(progBar) progBar.style.width = prog + '%';
+    if(progTxt){
+      if(prog < 30)       progTxt.textContent = '⏳ Veo 3.1 initialise la génération…';
+      else if(prog < 60)  progTxt.textContent = '🎨 Création du mouvement…';
+      else if(prog < 85)  progTxt.textContent = '🎬 Finalisation de la vidéo…';
+      else                progTxt.textContent = '✨ Presque terminé…';
+    }
+  }, 800);
+
+  try {
+    // 1. Démarrer la génération Veo 3.1 Fast
+    const startResp = await fetch(
+      `${GOOGLE_AI_URL}/models/veo-3.1-fast-generate-preview:predictLongRunning?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{
+            prompt: animPrompt,
+            image: { bytesBase64Encoded: window._cartoonImgB64, mimeType: 'image/png' }
+          }],
+          parameters: {
+            durationSeconds: 10,
+            sampleCount: 1,
+            aspectRatio: '9:16',
+            resolution: '720p',
+            generateAudio: true
+          }
+        })
+      }
+    );
+    if(!startResp.ok){
+      const err = await startResp.json().catch(()=>({}));
+      throw new Error(err?.error?.message || `HTTP ${startResp.status}`);
+    }
+    const { name: opName } = await startResp.json();
+    if(!opName) throw new Error('Opération Veo introuvable');
+
+    // 2. Polling jusqu'à completion
+    let videoB64 = null;
+    for(let i=0; i<60; i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const pollResp = await fetch(`${GOOGLE_AI_URL}/${opName}?key=${key}`);
+      if(!pollResp.ok) continue;
+      const pollData = await pollResp.json();
+      if(pollData.done){
+        videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded;
+        break;
+      }
+    }
+    if(!videoB64) throw new Error('Timeout — Veo n\'a pas terminé dans les 3 minutes');
+
+    // 3. Créer le blob URL
+    const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
+    const videoBlob  = new Blob([videoBytes], { type:'video/mp4' });
+    if(window._cartoonVidUrl) URL.revokeObjectURL(window._cartoonVidUrl);
+    window._cartoonVidUrl = URL.createObjectURL(videoBlob);
+    window._cartoonVidBlob = videoBlob;
+
+    clearInterval(progInt);
+    if(progBar) progBar.style.width='100%';
+    if(progTxt) progTxt.textContent='✅ Vidéo générée !';
+
+    const vid = document.getElementById('cartoonVidPreview');
+    if(vid){ vid.src = window._cartoonVidUrl; vid.load(); }
+    document.getElementById('cartoonVidResult').style.display = 'block';
+
+    // Incrémenter quota avatar
+    _hedraIncrement();
+    _cartoonUpdateQuota();
+    toast('🎭 Avatar cartoon prêt !');
+
+  } catch(e){
+    clearInterval(progInt);
+    console.error('Veo 3.1 error:', e);
+    toast('⚠️ Erreur Veo 3.1 : ' + e.message);
+    document.getElementById('cartoonVidProgress').style.display = 'none';
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg> Générer la vidéo animée <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>'; }
+  }
+}
+
+async function cartoonUseAsAvatar(){
+  if(!window._cartoonVidBlob){ toast('⚠️ Génère la vidéo d\'abord'); return; }
+  const charPrompt = document.getElementById('cartoonCharPrompt').value.trim() || 'cartoon-avatar';
+  const name = charPrompt.slice(0,30).replace(/[^a-zA-Z0-9À-ž ]/g,'').trim() || 'cartoon-avatar';
+  const file = new File([window._cartoonVidBlob], name+'.mp4', { type:'video/mp4' });
+  await handleBypassHedraFile(file);
+  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
+  nav('generator', navEl);
+  await wait(120);
+  goToStep(2);
+  toast('✅ Avatar cartoon chargé — passe à l\'étape 3 pour générer !');
 }
 </script>
 <!-- BUG REPORT MODAL -->
