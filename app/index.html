@@ -586,6 +586,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="5" height="7" rx="2.5"/><path d="M2.5 7.5A4.5 4.5 0 0011 9.5M7.5 11v2.5M5.5 13.5h4"/></svg>
         Enregistreur
       </div>
+      <div class="nav-i" onclick="nav('audioclean',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 7.5h2l2-5 2 10 2-7 2 4 1-2h2"/></svg>
+        🔇 Nettoyage audio
+      </div>
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
         Affiliation
@@ -1573,7 +1577,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </button>
                 <div id="wordEditorBody" style="display:none;margin-top:6px">
                   <div id="wordEditorHint" style="margin-bottom:8px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
-                    Survole un groupe pour l'éditer · glisse un mot pour le déplacer · clique <strong style="color:var(--text2)">→</strong> pour insérer une ligne
+                    Glisse n'importe où · double-clic pour supprimer · <strong style="color:var(--text2)">+</strong> pour ajouter un mot · <strong style="color:var(--text2)">+ ligne</strong> pour insérer une ligne
                   </div>
                   <div id="wordEditor"></div>
                 </div>
@@ -2805,6 +2809,64 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
     </div><!-- /recorder -->
 
+    <!-- ══ NETTOYAGE AUDIO ══ -->
+    <div class="view" id="v-audioclean">
+      <div class="lib-view" style="width:100%;max-width:680px;margin:0 auto">
+
+        <div class="ph" style="margin-bottom:20px">
+          <div>
+            <div class="ph-title">🔇 Nettoyage audio</div>
+            <div class="ph-sub">Supprime les silences automatiquement · synchronise un gameplay · envoie l'audio nettoyé au générateur</div>
+          </div>
+        </div>
+
+        <!-- Réutilise le panneau silence déjà dans le générateur — affichage inline -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px">
+
+          <!-- Source info -->
+          <div id="acSourceInfo" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px">
+            🎙️ Source : <span id="acSourceLabel">aucun fichier audio détecté — va dans le Générateur étape 3 pour charger ta voix</span>
+          </div>
+
+          <!-- Upload audio standalone -->
+          <div id="acDropzone" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';_acHandleFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s;margin-bottom:16px">
+            <div id="acDropContent">
+              <div style="font-size:28px;margin-bottom:6px">🎵</div>
+              <div style="font-size:13px;font-weight:700">Glisse ton fichier audio ici</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">MP3 · WAV · M4A · OGG</div>
+            </div>
+            <div id="acFileInfo" style="display:none">
+              <div style="font-size:22px">✅</div>
+              <div id="acFileName" style="font-size:12px;font-weight:700;margin-top:4px"></div>
+            </div>
+          </div>
+          <input type="file" id="acFileIn" accept="audio/*" style="display:none" onchange="_acHandleFile(this.files[0])">
+
+          <!-- Gameplay -->
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">🎮 Synchronise un gameplay <span style="opacity:.6">(optionnel)</span></div>
+          <div id="acGpDropzone" onclick="document.getElementById('acGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:16px">
+            <div id="acGpDropContent"><div style="font-size:20px">🎮</div><div style="font-size:11px;font-weight:600;margin-top:4px">Glisse ton gameplay ici</div><div style="font-size:9px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — sera coupé aux mêmes moments</div></div>
+            <div id="acGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="acGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
+          </div>
+          <input type="file" id="acGpFileIn" accept="video/*" style="display:none" onchange="_acHandleGpFile(this.files[0])">
+
+          <button id="acAnalyzeBtn" onclick="_acAnalyze()" disabled style="width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);opacity:.5">
+            🔇 Supprimer les silences automatiquement
+          </button>
+
+          <div id="acTip" style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">
+            Charge un audio ou utilise celui du Générateur (étape 3 Voix)
+          </div>
+        </div>
+
+        <!-- Lien rapide vers générateur -->
+        <button onclick="nav('generator',document.querySelector('.nav-i[onclick*=generator]'));setTimeout(()=>goToStep(3),100)" style="width:100%;margin-top:12px;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)'">
+          → Ouvrir dans le Générateur (étape 3 complète avec waveform)
+        </button>
+
+      </div>
+    </div><!-- /audioclean -->
+
     <!-- ══ EXPRESS ══ -->
 
     <div class="view" id="v-express" style="overflow:hidden">
@@ -3112,20 +3174,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- ══════════════════════════════════════════════════════
          🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
          ══════════════════════════════════════════════════════ -->
-    <div class="view" id="v-cartoon" style="overflow-y:auto">
-      <div style="max-width:480px;margin:0 auto;padding:20px 16px 60px">
+    <div class="view" id="v-cartoon" style="overflow:hidden">
+
+      <!-- ══ LEFT — Workflow ══ -->
+      <div style="flex:0 0 400px;overflow-y:auto;padding:20px 16px 40px;border-right:1px solid var(--border)">
 
         <!-- HEADER -->
-        <div style="text-align:center;margin-bottom:24px;position:relative">
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;height:80px;background:radial-gradient(ellipse,rgba(168,85,247,0.12) 0%,transparent 70%);pointer-events:none"></div>
-          <div style="position:relative">
-            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:20px;padding:4px 12px;font-size:10px;font-family:var(--mono);color:#c084fc;letter-spacing:0.8px;margin-bottom:10px">
-              <svg width="6" height="6" viewBox="0 0 6 6" fill="#c084fc"><circle cx="3" cy="3" r="3"/></svg>
-              IMAGEN 4 · VEO 3.1 FAST · ÉLITE
-            </div>
-            <div style="font-size:26px;font-weight:900;letter-spacing:-1.2px;background:linear-gradient(135deg,var(--text) 30%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-bottom:6px">Avatar Cartoon IA</div>
-            <div style="font-size:12px;color:var(--text3)">Génère une mascotte animée avec voix — sans avatar réel</div>
+        <div style="margin-bottom:18px">
+          <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:20px;padding:3px 10px;font-size:9px;font-family:var(--mono);color:#c084fc;letter-spacing:0.8px;margin-bottom:8px">
+            <svg width="5" height="5" viewBox="0 0 6 6" fill="#c084fc"><circle cx="3" cy="3" r="3"/></svg>
+            IMAGEN 4 · VEO 3.1 FAST · ÉLITE
           </div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.8px;background:linear-gradient(135deg,var(--text) 30%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-bottom:4px">Avatar Cartoon IA</div>
+          <div style="font-size:11px;color:var(--text3)">Mascotte animée avec voix — sans avatar réel</div>
         </div>
 
         <!-- PAYWALL ELITE -->
@@ -3139,106 +3200,207 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <!-- CONTENU PRINCIPAL -->
         <div id="cartoonContent">
 
-          <!-- ── MODULE 1 : GÉNÉRER LE PERSO ── -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:22px;height:22px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">1</div>
-              <div style="font-size:13px;font-weight:700">Décris ton personnage</div>
+          <!-- ── MODULE 1 : STYLE + PERSO ── -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">1</div>
+              <div style="font-size:13px;font-weight:700">Style du personnage</div>
             </div>
 
-            <!-- Style presets -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px" id="cartoonStyleGrid">
-              <button onclick="selectCartoonStyle(this,'pixar')" class="cartoon-style-btn active" data-style="pixar" style="padding:8px 4px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
-                <div style="font-size:16px;margin-bottom:2px">🏆</div>Pixar 3D
+            <!-- Style presets avec descriptions -->
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px" id="cartoonStyleGrid">
+              <button onclick="selectCartoonStyle(this,'pixar')" class="cartoon-style-btn" data-style="pixar" style="padding:10px 8px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:10px;color:var(--text);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px;flex-shrink:0">🏆</span>
+                <div><div style="font-weight:700;font-size:11px">Pixar 3D</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Rendu 3D type Toy Story</div></div>
               </button>
-              <button onclick="selectCartoonStyle(this,'flat')" class="cartoon-style-btn" data-style="flat" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
-                <div style="font-size:16px;margin-bottom:2px">🎨</div>Flat 2D
+              <button onclick="selectCartoonStyle(this,'flat')" class="cartoon-style-btn" data-style="flat" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px;flex-shrink:0">🎨</span>
+                <div><div style="font-weight:700;font-size:11px">Flat 2D</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Illustration vectorielle plate</div></div>
               </button>
-              <button onclick="selectCartoonStyle(this,'anime')" class="cartoon-style-btn" data-style="anime" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
-                <div style="font-size:16px;margin-bottom:2px">🌸</div>Anime
+              <button onclick="selectCartoonStyle(this,'anime')" class="cartoon-style-btn" data-style="anime" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px;flex-shrink:0">🌸</span>
+                <div><div style="font-weight:700;font-size:11px">Anime</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Manga japonais, grands yeux</div></div>
               </button>
-              <button onclick="selectCartoonStyle(this,'mascot')" class="cartoon-style-btn" data-style="mascot" style="padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center;transition:all .15s">
-                <div style="font-size:16px;margin-bottom:2px">🤖</div>Mascotte
+              <button onclick="selectCartoonStyle(this,'mascot')" class="cartoon-style-btn" data-style="mascot" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px;flex-shrink:0">🤖</span>
+                <div><div style="font-weight:700;font-size:11px">Mascotte</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Perso de marque commercial</div></div>
               </button>
             </div>
 
             <!-- Prompt perso -->
-            <textarea id="cartoonCharPrompt" placeholder="Ex: Une chaussure de sport blanche avec des yeux expressifs, des petits bras et jambes, sourire amical, style Pixar 3D…" style="width:100%;min-height:80px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:11px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <textarea id="cartoonCharPrompt" placeholder="Ex: Une chaussure de sport blanche avec des yeux et des jambes, sourire amical…" style="width:100%;min-height:72px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
 
             <!-- Quick suggestions -->
-            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
-              <button onclick="cartoonQuickPrompt('Un téléphone smartphone avec des bras et un visage souriant, style Pixar 3D coloré')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">📱 Smartphone</button>
-              <button onclick="cartoonQuickPrompt('Une paire de lunettes avec des yeux expressifs et un grand sourire, style mascotte 3D')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">👓 Lunettes</button>
-              <button onclick="cartoonQuickPrompt('Une bouteille de supplément sportif avec des bras musclés et un sourire confiant, style 3D cartoon')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">💪 Fitness</button>
-              <button onclick="cartoonQuickPrompt('Un robot IA amical avec un écran facial expressif, couleurs vives, style Pixar')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🤖 Robot IA</button>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">
+              <button onclick="cartoonQuickPrompt('Un téléphone smartphone avec des bras et un visage souriant, style Pixar 3D coloré')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">📱 Smartphone</button>
+              <button onclick="cartoonQuickPrompt('Une paire de lunettes avec des yeux expressifs et un grand sourire, style mascotte 3D')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">👓 Lunettes</button>
+              <button onclick="cartoonQuickPrompt('Une bouteille de supplément sportif avec des bras musclés, style 3D cartoon')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">💪 Fitness</button>
+              <button onclick="cartoonQuickPrompt('Un robot IA amical avec un écran facial expressif, couleurs vives, style Pixar')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🤖 Robot IA</button>
             </div>
 
-            <!-- Gen image button -->
-            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
+            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
               Générer le personnage
               <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>
             </button>
-
-            <!-- Image result -->
-            <div id="cartoonImgResult" style="display:none;margin-top:14px">
-              <div style="position:relative;border-radius:12px;overflow:hidden;background:var(--bg3);aspect-ratio:9/16;max-height:280px">
-                <img id="cartoonImgPreview" style="width:100%;height:100%;object-fit:cover;display:block" alt="Personnage généré">
-                <button onclick="cartoonGenImage(document.getElementById('cartoonImgBtn'))" style="position:absolute;bottom:8px;right:8px;padding:5px 10px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:7px;color:#fff;font-family:var(--mono);font-size:10px;cursor:pointer;backdrop-filter:blur(4px)">↺ Regen</button>
-              </div>
-            </div>
           </div>
 
           <!-- ── MODULE 2 : ANIMER ── -->
-          <div id="cartoonModule2" style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;opacity:.4;pointer-events:none;transition:all .3s">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:22px;height:22px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">2</div>
+          <div id="cartoonModule2" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">2</div>
               <div style="font-size:13px;font-weight:700">Anime le personnage</div>
-              <span style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 Fast · 10s</span>
+              <span style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 · 10s</span>
             </div>
 
-            <!-- Animation prompt -->
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">Décris les mouvements :</div>
-            <textarea id="cartoonAnimPrompt" placeholder="Le personnage marche vers la caméra avec enthousiasme, fait un pouce levé, sourire expressif, mouvements fluides Pixar…" style="width:100%;min-height:72px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:11px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Décris les mouvements :</div>
+            <textarea id="cartoonAnimPrompt" placeholder="Marche vers la caméra, sourire expressif, mouvements fluides…" style="width:100%;min-height:64px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
 
-            <!-- Anim presets -->
-            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
-              <button onclick="cartoonAnimPreset('marche vers la caméra, sourire expressif, mouvements fluides Pixar, fond blanc neutre')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">🚶 Walk</button>
-              <button onclick="cartoonAnimPreset('danse de joie, bras levés, expression excitée, énergie positive')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">💃 Dance</button>
-              <button onclick="cartoonAnimPreset('tient un produit et le présente à la caméra, clin d\'oeil, sourire complice')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">📦 Présente</button>
-              <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste, fond coloré dynamique')" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">
+              <button onclick="cartoonAnimPreset('marche vers la caméra, sourire expressif, mouvements fluides, fond blanc')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">🚶 Walk</button>
+              <button onclick="cartoonAnimPreset('danse de joie, bras levés, expression excitée, énergie positive')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">💃 Dance</button>
+              <button onclick="cartoonAnimPreset('présente un produit à la caméra, clin d\'oeil, sourire complice')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">📦 Présente</button>
+              <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
             </div>
 
-            <!-- Gen video button -->
-            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:14px;width:100%;padding:13px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
+            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
               Générer la vidéo animée
               <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>
             </button>
 
-            <!-- Progress -->
-            <div id="cartoonVidProgress" style="display:none;margin-top:12px;padding:12px;background:var(--bg3);border-radius:10px;text-align:center">
-              <div style="font-size:12px;font-family:var(--mono);color:#c084fc;margin-bottom:8px" id="cartoonVidProgressTxt">⏳ Veo 3.1 génère ta vidéo…</div>
+            <div id="cartoonVidProgress" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:10px;text-align:center">
+              <div style="font-size:11px;font-family:var(--mono);color:#c084fc;margin-bottom:7px" id="cartoonVidProgressTxt">⏳ Veo 3.1 génère ta vidéo…</div>
               <div style="height:3px;background:var(--bg4);border-radius:3px;overflow:hidden">
                 <div id="cartoonVidProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:3px;transition:width .8s ease"></div>
               </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">La génération prend ~60-90 secondes</div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">~60-90 secondes</div>
             </div>
 
-            <!-- Video result -->
-            <div id="cartoonVidResult" style="display:none;margin-top:14px">
-              <video id="cartoonVidPreview" controls playsinline style="width:100%;border-radius:12px;background:#000;max-height:280px;object-fit:contain"></video>
-              <button onclick="cartoonUseAsAvatar()" style="margin-top:10px;width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+            <div id="cartoonVidResult" style="display:none;margin-top:12px">
+              <button onclick="cartoonUseAsAvatar()" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
                 ✅ Utiliser comme avatar → Générateur
               </button>
             </div>
           </div>
 
+          <!-- ── MODULE 3 : SOUS-TITRES ── -->
+          <div id="cartoonModule3" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
+              <div style="font-size:13px;font-weight:700">Sous-titres</div>
+            </div>
+
+            <!-- Position -->
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">POSITION</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
+              <button onclick="cartoonSubPos(this,'top')" class="cs-pos-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                <div style="font-size:13px;margin-bottom:1px">⬆️</div>Haut
+              </button>
+              <button onclick="cartoonSubPos(this,'center')" class="cs-pos-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                <div style="font-size:13px;margin-bottom:1px">↕️</div>Centre
+              </button>
+              <button onclick="cartoonSubPos(this,'bottom')" class="cs-pos-btn active-sub" style="padding:7px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                <div style="font-size:13px;margin-bottom:1px">⬇️</div>Bas
+              </button>
+            </div>
+
+            <!-- Taille -->
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">TAILLE</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
+              <button onclick="cartoonSubSize(this,'small')" class="cs-size-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
+                <span style="font-size:9px">T</span> Petit
+              </button>
+              <button onclick="cartoonSubSize(this,'medium')" class="cs-size-btn active-sub" style="padding:7px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
+                <span style="font-size:11px">T</span> Moyen
+              </button>
+              <button onclick="cartoonSubSize(this,'large')" class="cs-size-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
+                <span style="font-size:13px">T</span> Grand
+              </button>
+            </div>
+
+            <!-- Style texte -->
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">STYLE TEXTE</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:12px">
+              <button onclick="cartoonSubStyle(this,'white-outline')" class="cs-style-btn active-sub" style="padding:8px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <span style="color:#fff;font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000">Aa</span>
+                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Blanc + contour</span>
+              </button>
+              <button onclick="cartoonSubStyle(this,'yellow')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <span style="color:#fbbf24;font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px 1px 0 #000">Aa</span>
+                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Jaune</span>
+              </button>
+              <button onclick="cartoonSubStyle(this,'orange')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <span style="color:var(--orange2);font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px 1px 0 #000">Aa</span>
+                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Orange</span>
+              </button>
+              <button onclick="cartoonSubStyle(this,'bg-black')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <span style="color:#fff;font-weight:800;font-size:11px;background:rgba(0,0,0,0.75);padding:0 4px;border-radius:3px">Aa</span>
+                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Fond noir</span>
+              </button>
+            </div>
+
+            <!-- Preview texte sous-titre -->
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">TEXTE EXEMPLE</div>
+            <input id="cartoonSubSample" type="text" value="Découvre notre produit !" maxlength="40"
+              style="width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none;box-sizing:border-box;transition:border-color .15s"
+              onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"
+              oninput="cartoonUpdatePreview()">
+          </div>
+
           <!-- Quota info -->
-          <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);padding:8px" id="cartoonQuotaInfo"></div>
+          <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px" id="cartoonQuotaInfo"></div>
 
         </div><!-- /cartoonContent -->
-      </div>
+      </div><!-- /left -->
+
+      <!-- ══ RIGHT — Phone Preview ══ -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg1)">
+
+        <!-- Phone mockup -->
+        <div style="position:relative;width:220px">
+          <!-- Frame -->
+          <div style="background:var(--bg3);border-radius:36px;padding:10px;box-shadow:0 0 0 2px var(--border2),0 20px 60px rgba(0,0,0,0.5)">
+            <div style="background:#000;border-radius:28px;overflow:hidden;position:relative;aspect-ratio:9/16;width:200px">
+
+              <!-- Placeholder vide -->
+              <div id="cartoonPhonePlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(168,85,247,0.03))">
+                <div style="font-size:36px;opacity:.3">🎭</div>
+                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;opacity:.5">Génère ton<br>personnage</div>
+              </div>
+
+              <!-- Image générée -->
+              <img id="cartoonPhoneImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">
+
+              <!-- Vidéo générée -->
+              <video id="cartoonPhoneVid" loop playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0"></video>
+
+              <!-- Overlay sous-titres -->
+              <div id="cartoonSubOverlay" style="position:absolute;left:0;right:0;bottom:14%;display:flex;justify-content:center;pointer-events:none;padding:0 12px">
+                <div id="cartoonSubText" style="font-size:14px;font-weight:800;font-family:var(--font);color:#fff;text-align:center;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000;line-height:1.3;max-width:100%">Découvre notre produit !</div>
+              </div>
+
+              <!-- Notch -->
+              <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:60px;height:6px;background:rgba(0,0,0,0.6);border-radius:4px"></div>
+            </div>
+          </div>
+
+          <!-- Regen image bouton flottant -->
+          <button id="cartoonRegenImgBtn" onclick="cartoonGenImage(document.getElementById('cartoonImgBtn'))" style="display:none;position:absolute;top:16px;right:-14px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border2);border-radius:50%;color:var(--text2);font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)" title="Regénérer l'image">↺</button>
+        </div>
+
+        <!-- Style actif label -->
+        <div id="cartoonStyleLabel" style="margin-top:14px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">
+          Style sélectionné : <span id="cartoonStyleLabelName" style="color:#c084fc;font-weight:600">Pixar 3D</span>
+        </div>
+
+        <!-- Video controls quand dispo -->
+        <div id="cartoonPhoneVidControls" style="display:none;margin-top:8px;gap:6px;align-items:center">
+          <button onclick="_cartoonTogglePhoneVid()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer">▶ Lecture</button>
+        </div>
+
+      </div><!-- /right -->
+
     </div><!-- /cartoon -->
 
   </div><!-- /main -->
@@ -6229,7 +6391,7 @@ function nav(id,el){
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
   const vEl = document.getElementById('v-'+id);
   vEl.classList.add('on');
-  if(id==='express') vEl.style.flexDirection='row';
+  if(id==='express' || id==='cartoon') vEl.style.flexDirection='row';
   if(el) el.classList.add('on');
   if(id==='library')    renderLibrary();
   if(id==='youtube')    refreshYoutubeView();
@@ -6238,6 +6400,7 @@ function nav(id,el){
   if(id==='recorder')   recInit();
   if(id==='express')    initExpress();
   if(id==='cartoon')    initCartoon();
+  if(id==='audioclean') initAudioCleanView();
   if(id==='generator')  setTimeout(initClipPicker, 50);
 }
 function refreshYoutubeView(){
@@ -9474,43 +9637,20 @@ function toggleWordEditor(){
 function _renderGroupEditor(){
   const editor = document.getElementById('wordEditor');
   if(!editor || !_wordGroups) return;
-  // Injecte les styles du script visuel une seule fois
-  if(!document.getElementById('wg-style')){
-    const s = document.createElement('style');
-    s.id = 'wg-style';
-    s.textContent = `
-      #wordEditor{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0}
-      .wg-pill{position:relative;display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;padding:5px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:default;transition:border-color .15s;max-width:100%}
-      .wg-pill:hover{border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.04)}
-      .wg-pill .wg-controls{display:none;position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:3px 5px;gap:3px;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4)}
-      .wg-pill:hover .wg-controls{display:flex}
-      .wg-controls button{padding:2px 7px;background:transparent;border:none;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;border-radius:5px;transition:all .1s}
-      .wg-controls button:hover{background:var(--bg4);color:var(--orange2)}
-      .wg-controls .wg-del:hover{color:var(--red,#ff4757)!important}
-      .wg-num{font-size:8px;font-family:var(--mono);color:var(--text3);background:var(--bg5);border-radius:50%;width:14px;height:14px;min-width:14px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
-      .wg-arrow{display:inline-flex;align-items:center;justify-content:center;width:22px;height:36px;color:var(--text3);font-size:13px;cursor:pointer;flex-shrink:0;transition:color .15s;user-select:none;position:relative}
-      .wg-arrow:hover{color:var(--orange2)}
-      .wg-arrow:hover::after{content:'+';position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--orange2);font-family:var(--mono);font-weight:700}
-      .wg-slot{display:inline-flex;align-items:center;justify-content:center;width:5px;height:24px;border-radius:3px;background:transparent;transition:all .1s;flex-shrink:0}
-      .wg-slot.drag-over{background:var(--orange);width:7px}
-      .word-chip{display:inline-block;padding:3px 9px;background:var(--bg4);border:1px solid var(--border);border-radius:16px;font-size:11px;cursor:grab;font-family:var(--mono);user-select:none;transition:all .12s;font-weight:600}
-      .word-chip:hover{background:var(--orange-dim);border-color:rgba(255,107,53,.3);color:var(--orange2)}
-      .wg-add-inp{width:70px;padding:2px 7px;background:var(--bg4);border:1.5px solid var(--orange);border-radius:14px;color:var(--text);font-family:var(--mono);font-size:11px;font-weight:700;outline:none;text-transform:uppercase}
-    `;
-    document.head.appendChild(s);
-  }
   editor.innerHTML = '';
   const toggleBtn = document.getElementById('wordEditorToggle');
   if(toggleBtn) toggleBtn.style.display = 'flex';
 
-  // ── Slot de drop entre mots d'un même groupe ──
+  // Zone d'insertion précise entre chips
   const makeSlot = (gi, insertIdx) => {
     const slot = document.createElement('span');
-    slot.className = 'wg-slot';
-    slot.ondragover  = e => { e.preventDefault(); e.stopPropagation(); slot.classList.add('drag-over'); };
-    slot.ondragleave = () => slot.classList.remove('drag-over');
+    slot.className = 'word-drop-slot';
+    slot.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:6px;min-width:6px;height:26px;border-radius:3px;background:transparent;transition:all .1s;cursor:default;flex-shrink:0';
+    slot.ondragover  = e => { e.preventDefault(); e.stopPropagation(); slot.style.background='var(--orange)'; slot.style.width='8px'; slot.style.minWidth='8px'; };
+    slot.ondragleave = () => { slot.style.background='transparent'; slot.style.width='6px'; slot.style.minWidth='6px'; };
     slot.ondrop = e => {
-      e.preventDefault(); e.stopPropagation(); slot.classList.remove('drag-over');
+      e.preventDefault(); e.stopPropagation();
+      slot.style.background='transparent'; slot.style.width='6px'; slot.style.minWidth='6px';
       const fromGi = +e.dataTransfer.getData('wg_gi');
       const fromWi = +e.dataTransfer.getData('wg_wi');
       const word = _wordGroups[fromGi]?.splice(fromWi, 1)[0];
@@ -9526,95 +9666,90 @@ function _renderGroupEditor(){
   };
 
   _wordGroups.forEach((group, gi) => {
-    // ── Pill de groupe ──
-    const pill = document.createElement('div');
-    pill.className = 'wg-pill';
-    pill.dataset.gi = gi;
+    const row = document.createElement('div');
+    row.dataset.gi = gi;
+    row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:6px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:40px;transition:border-color .15s;position:relative';
 
-    // Numéro
-    const num = document.createElement('span');
-    num.className = 'wg-num';
-    num.textContent = gi+1;
-    pill.appendChild(num);
+    // Numéro de ligne
+    const label = document.createElement('span');
+    label.textContent = gi+1;
+    label.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:16px;height:16px;min-width:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700';
+    row.appendChild(label);
 
-    // Slots + chips
-    pill.appendChild(makeSlot(gi, 0));
+    // Slot avant le 1er mot
+    row.appendChild(makeSlot(gi, 0));
+
     group.forEach((word, wi) => {
       const chip = document.createElement('span');
       chip.className = 'word-chip';
       chip.textContent = word;
       chip.draggable = true;
       chip.title = 'Glisser pour déplacer · double-clic pour supprimer';
+      chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:grab;transition:all .15s;font-family:var(--mono);user-select:none';
       chip.ondragstart = e => { e.dataTransfer.setData('wg_gi', gi); e.dataTransfer.setData('wg_wi', wi); setTimeout(()=>chip.style.opacity='.3',0); };
       chip.ondragend   = () => chip.style.opacity='1';
+      chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
+      chip.onmouseout  = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
       chip.ondblclick  = () => { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); _renderGroupEditor(); };
-      pill.appendChild(chip);
-      pill.appendChild(makeSlot(gi, wi+1));
+      row.appendChild(chip);
+      row.appendChild(makeSlot(gi, wi+1));
     });
 
-    // ── Contrôles flottants au survol ──
-    const ctrl = document.createElement('div');
-    ctrl.className = 'wg-controls';
-
-    // + mot
-    const addW = document.createElement('button');
-    addW.textContent = '+ mot';
-    addW.onclick = e => {
-      e.stopPropagation();
+    // Bouton + ajouter un mot
+    const addWordBtn = document.createElement('button');
+    addWordBtn.textContent = '+';
+    addWordBtn.title = 'Ajouter un mot';
+    addWordBtn.style.cssText = 'padding:3px 8px;background:transparent;border:1px dashed var(--border2);border-radius:20px;color:var(--text3);font-size:13px;font-family:var(--mono);cursor:pointer;transition:all .15s;flex-shrink:0;line-height:1';
+    addWordBtn.onmouseover = () => { addWordBtn.style.borderColor='var(--orange)';addWordBtn.style.color='var(--orange2)'; };
+    addWordBtn.onmouseout  = () => { addWordBtn.style.borderColor='var(--border2)';addWordBtn.style.color='var(--text3)'; };
+    addWordBtn.onclick = () => {
+      addWordBtn.style.display='none';
       const inp = document.createElement('input');
-      inp.className = 'wg-add-inp'; inp.placeholder='MOT'; inp.autocomplete='off'; inp.spellcheck=false;
-      ctrl.replaceWith(inp); inp.focus();
-      const ok = () => { const w=inp.value.trim().toUpperCase(); if(w) _wordGroups[gi].push(w); _renderGroupEditor(); };
-      inp.onkeydown = e2 => { if(e2.key==='Enter'){e2.preventDefault();ok();} if(e2.key==='Escape') _renderGroupEditor(); };
-      inp.onblur = ok;
+      inp.type='text'; inp.placeholder='MOT'; inp.autocomplete='off'; inp.spellcheck=false;
+      inp.style.cssText='width:80px;padding:3px 8px;background:var(--bg4);border:1.5px solid var(--orange);border-radius:20px;color:var(--text);font-family:var(--mono);font-size:11px;font-weight:700;outline:none;text-transform:uppercase';
+      row.insertBefore(inp, addWordBtn);
+      inp.focus();
+      const confirm = () => {
+        const w = inp.value.trim().toUpperCase();
+        if(w) { _wordGroups[gi].push(w); }
+        _renderGroupEditor();
+      };
+      inp.onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); confirm(); } if(e.key==='Escape'){ _renderGroupEditor(); } };
+      inp.onblur = confirm;
     };
-    ctrl.appendChild(addW);
+    row.appendChild(addWordBtn);
 
-    // ⊕ fusionner
+    // Boutons droite : + ligne / ⊕ fusionner
+    const btnGroup = document.createElement('div');
+    btnGroup.style.cssText = 'display:flex;gap:4px;margin-left:auto;padding-left:6px;flex-shrink:0';
+
+    const addLineBtn = document.createElement('button');
+    addLineBtn.textContent = '+ ligne';
+    addLineBtn.title = 'Insérer une ligne après';
+    addLineBtn.style.cssText = 'padding:2px 8px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;transition:all .15s;white-space:nowrap';
+    addLineBtn.onmouseover = () => { addLineBtn.style.borderColor='var(--orange)';addLineBtn.style.color='var(--orange2)'; };
+    addLineBtn.onmouseout  = () => { addLineBtn.style.borderColor='var(--border2)';addLineBtn.style.color='var(--text3)'; };
+    addLineBtn.onclick = e => { e.stopPropagation(); _wordGroups.splice(gi+1,0,['…']); _renderGroupEditor(); };
+    btnGroup.appendChild(addLineBtn);
+
     if(gi < _wordGroups.length-1){
-      const mg = document.createElement('button');
-      mg.textContent = '⊕ fusionner';
-      mg.onclick = e => { e.stopPropagation(); _wordGroups[gi]=[..._wordGroups[gi],..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
-      ctrl.appendChild(mg);
+      const mergeBtn = document.createElement('button');
+      mergeBtn.textContent = '⊕';
+      mergeBtn.title = 'Fusionner avec la ligne suivante';
+      mergeBtn.style.cssText = 'padding:2px 7px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;flex-shrink:0';
+      mergeBtn.onmouseover = () => { mergeBtn.style.borderColor='var(--orange)';mergeBtn.style.color='var(--orange2)'; };
+      mergeBtn.onmouseout  = () => { mergeBtn.style.borderColor='var(--border2)';mergeBtn.style.color='var(--text3)'; };
+      mergeBtn.onclick = e => { e.stopPropagation(); _wordGroups[gi]=[..._wordGroups[gi],..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
+      btnGroup.appendChild(mergeBtn);
     }
-
-    // ✕ supprimer groupe
-    const del = document.createElement('button');
-    del.className = 'wg-del'; del.textContent = '✕';
-    del.onclick = e => { e.stopPropagation(); if(_wordGroups.length>1) _wordGroups.splice(gi,1); _renderGroupEditor(); };
-    ctrl.appendChild(del);
-
-    pill.appendChild(ctrl);
-    editor.appendChild(pill);
-
-    // ── Flèche entre groupes (cliquable = insérer un groupe) ──
-    const arrow = document.createElement('span');
-    arrow.className = 'wg-arrow';
-    arrow.textContent = '→';
-    arrow.title = 'Cliquer pour insérer un groupe ici';
-    arrow.onclick = () => { _wordGroups.splice(gi+1, 0, ['…']); _renderGroupEditor(); };
-    // Drop sur la flèche = déplacer un mot dans un nouveau groupe entre gi et gi+1
-    arrow.ondragover  = e => { e.preventDefault(); arrow.style.color='var(--orange)'; arrow.style.fontWeight='900'; };
-    arrow.ondragleave = () => { arrow.style.color=''; arrow.style.fontWeight=''; };
-    arrow.ondrop = e => {
-      e.preventDefault(); arrow.style.color=''; arrow.style.fontWeight='';
-      const fromGi = +e.dataTransfer.getData('wg_gi');
-      const fromWi = +e.dataTransfer.getData('wg_wi');
-      const word = _wordGroups[fromGi]?.splice(fromWi, 1)[0];
-      if(word){ _wordGroups.splice(gi+1, 0, [word]); }
-      _wordGroups = _wordGroups.filter(g=>g.length>0);
-      _renderGroupEditor();
-    };
-    editor.appendChild(arrow);
+    row.appendChild(btnGroup);
+    editor.appendChild(row);
   });
 
-  // ── Barre du bas ──
-  const bar = document.createElement('div');
-  bar.style.cssText = 'width:100%;display:flex;justify-content:flex-end;margin-top:10px;gap:6px';
-
+  // Bouton réinitialiser
   const resetBtn = document.createElement('button');
   resetBtn.textContent = '↺ Tout réinitialiser';
-  resetBtn.style.cssText = 'padding:6px 12px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s';
+  resetBtn.style.cssText = 'width:100%;margin-top:4px;padding:7px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s';
   resetBtn.onmouseover = () => { resetBtn.style.background='rgba(255,71,87,0.08)'; };
   resetBtn.onmouseout  = () => { resetBtn.style.background='transparent'; };
   resetBtn.onclick = () => {
@@ -9624,8 +9759,7 @@ function _renderGroupEditor(){
       || (_wordGroups ? _wordGroups.flat().join(' ') : '');
     if(src) _renderWordChips(src);
   };
-  bar.appendChild(resetBtn);
-  editor.appendChild(bar);
+  editor.appendChild(resetBtn);
   _saveSession && _saveSession();
 }
 
@@ -13675,6 +13809,12 @@ function selectCartoonStyle(btn, style){
   btn.style.background  = 'rgba(168,85,247,0.15)';
   btn.style.borderColor = 'rgba(168,85,247,0.5)';
   btn.style.color       = 'var(--text)';
+  // Update phone style label
+  const styleLabelEl = document.getElementById('cartoonStyleLabelName');
+  if(styleLabelEl){
+    const names = { pixar:'Pixar 3D', flat:'Flat 2D', anime:'Anime', mascot:'Mascotte' };
+    styleLabelEl.textContent = names[style] || style;
+  }
 }
 
 function cartoonQuickPrompt(txt){ document.getElementById('cartoonCharPrompt').value = txt; }
@@ -13692,9 +13832,9 @@ async function cartoonGenImage(btn){
   const prompt = document.getElementById('cartoonCharPrompt').value.trim();
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
 
-  // Check image credits
-  if(typeof imgCredits !== 'undefined' && imgCredits <= 0){
-    toast('⛔ Plus de crédits image'); openUpgradeModal('images'); return;
+  // Check image credits (uses same monthly quota as Images IA)
+  if(_imgMonthRemaining() <= 0){
+    toast('⛔ Plus de crédits image — va dans Images IA pour en acheter'); openUpgradeModal('images'); return;
   }
 
   const styleExtra = CARTOON_STYLE_PROMPTS[window._cartoonStyle] || CARTOON_STYLE_PROMPTS.pixar;
@@ -13728,6 +13868,17 @@ async function cartoonGenImage(btn){
     if(preview) preview.src = window._cartoonImgUrl;
     document.getElementById('cartoonImgResult').style.display = 'block';
 
+    // ── Phone mockup update ──
+    const phoneImg = document.getElementById('cartoonPhoneImg');
+    const phonePlaceholder = document.getElementById('cartoonPhonePlaceholder');
+    if(phoneImg){
+      phoneImg.src = window._cartoonImgUrl;
+      phoneImg.style.display = 'block';
+    }
+    if(phonePlaceholder) phonePlaceholder.style.display = 'none';
+    const regenBtn = document.getElementById('cartoonRegenImgBtn');
+    if(regenBtn) regenBtn.style.display = 'inline-flex';
+
     // Débloquer module 2
     const mod2 = document.getElementById('cartoonModule2');
     mod2.style.opacity = '1'; mod2.style.pointerEvents = 'auto';
@@ -13739,8 +13890,8 @@ async function cartoonGenImage(btn){
     }
 
     // Décrémenter crédits image
-    if(typeof imgCredits !== 'undefined') imgCredits = Math.max(0, imgCredits - 1);
-    if(typeof updateImgCreditsDisplay === 'function') updateImgCreditsDisplay();
+    _imgMonthIncrement();
+    _updateImgQuotaLabel();
 
     toast('✅ Personnage généré !');
   } catch(e){
@@ -13834,6 +13985,25 @@ async function cartoonGenVideo(btn){
     if(vid){ vid.src = window._cartoonVidUrl; vid.load(); }
     document.getElementById('cartoonVidResult').style.display = 'block';
 
+    // ── Phone mockup : show video ──
+    const phoneVid = document.getElementById('cartoonPhoneVid');
+    const phoneImg = document.getElementById('cartoonPhoneImg');
+    if(phoneVid){
+      phoneVid.src = window._cartoonVidUrl;
+      phoneVid.style.display = 'block';
+      phoneVid.load();
+    }
+    if(phoneImg) phoneImg.style.display = 'none';
+    const phoneVidControls = document.getElementById('cartoonPhoneVidControls');
+    if(phoneVidControls) phoneVidControls.style.display = 'flex';
+
+    // ── Débloquer module 3 (sous-titres) ──
+    const mod3 = document.getElementById('cartoonModule3');
+    if(mod3){ mod3.style.opacity='1'; mod3.style.pointerEvents='auto'; }
+
+    // Show subtitle overlay with default sample
+    cartoonUpdatePreview();
+
     // Incrémenter quota avatar
     _hedraIncrement();
     _cartoonUpdateQuota();
@@ -13847,6 +14017,173 @@ async function cartoonGenVideo(btn){
   } finally {
     if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg> Générer la vidéo animée <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>'; }
   }
+}
+
+// ── Cartoon subtitle config ──────────────────────────────────────────
+window._cartoonSubConfig = { position: 'bottom', size: 'medium', style: 'white-outline' };
+
+function cartoonSubPos(btn, pos){
+  window._cartoonSubConfig.position = pos;
+  document.querySelectorAll('.cs-pos-btn').forEach(b=>{
+    b.style.background  = 'var(--bg3)';
+    b.style.borderColor = 'var(--border)';
+    b.style.color       = 'var(--text3)';
+    b.classList.remove('active-sub');
+  });
+  btn.style.background  = 'rgba(168,85,247,0.15)';
+  btn.style.borderColor = 'rgba(168,85,247,0.5)';
+  btn.style.color       = 'var(--text)';
+  btn.classList.add('active-sub');
+  cartoonUpdatePreview();
+}
+
+function cartoonSubSize(btn, size){
+  window._cartoonSubConfig.size = size;
+  document.querySelectorAll('.cs-size-btn').forEach(b=>{
+    b.style.background  = 'var(--bg3)';
+    b.style.borderColor = 'var(--border)';
+    b.style.color       = 'var(--text3)';
+    b.classList.remove('active-sub');
+  });
+  btn.style.background  = 'rgba(168,85,247,0.15)';
+  btn.style.borderColor = 'rgba(168,85,247,0.5)';
+  btn.style.color       = 'var(--text)';
+  btn.classList.add('active-sub');
+  cartoonUpdatePreview();
+}
+
+function cartoonSubStyle(btn, style){
+  window._cartoonSubConfig.style = style;
+  document.querySelectorAll('.cs-style-btn').forEach(b=>{
+    b.style.background  = 'var(--bg3)';
+    b.style.borderColor = 'var(--border)';
+    b.classList.remove('active-sub');
+  });
+  btn.style.background  = 'rgba(168,85,247,0.15)';
+  btn.style.borderColor = 'rgba(168,85,247,0.5)';
+  btn.classList.add('active-sub');
+  cartoonUpdatePreview();
+}
+
+function cartoonUpdatePreview(){
+  const overlay = document.getElementById('cartoonSubOverlay');
+  const textEl  = document.getElementById('cartoonSubText');
+  if(!overlay || !textEl) return;
+
+  const cfg   = window._cartoonSubConfig;
+  const sampleInput = document.getElementById('cartoonSubSample');
+  const sample = sampleInput?.value?.trim() || 'Ton texte ici';
+
+  // Position verticale (utilise bottom pour 'bottom', top pour les autres)
+  overlay.style.bottom = '';
+  overlay.style.top    = '';
+  if(cfg.position === 'bottom'){
+    overlay.style.bottom = '12%';
+  } else if(cfg.position === 'center'){
+    overlay.style.top = '44%';
+  } else {
+    overlay.style.top = '8%';
+  }
+
+  // Taille
+  const sizeMap = { small:'11px', medium:'14px', large:'18px' };
+  textEl.style.fontSize = sizeMap[cfg.size] || '14px';
+
+  // Style texte
+  const styleMap = {
+    'white-outline': { color:'#fff', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
+    'yellow':        { color:'#FFE600', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
+    'orange':        { color:'var(--orange)', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
+    'bg-black':      { color:'#fff', background:'rgba(0,0,0,0.72)', textShadow:'none' }
+  };
+  const st = styleMap[cfg.style] || styleMap['white-outline'];
+  textEl.style.color      = st.color;
+  textEl.style.background = st.background;
+  textEl.style.textShadow = st.textShadow;
+  if(st.background !== 'transparent'){
+    textEl.style.padding      = '3px 8px';
+    textEl.style.borderRadius = '4px';
+  } else {
+    textEl.style.padding      = '0';
+    textEl.style.borderRadius = '0';
+  }
+  textEl.textContent = sample.toUpperCase();
+
+  // Show overlay if video or image exists
+  if(window._cartoonVidUrl || window._cartoonImgUrl){
+    overlay.style.display = 'flex';
+  }
+}
+
+function _cartoonTogglePhoneVid(){
+  const vid = document.getElementById('cartoonPhoneVid');
+  const btn = event?.currentTarget || document.querySelector('#cartoonPhoneVidControls button');
+  if(!vid) return;
+  if(vid.paused){
+    vid.play();
+    if(btn) btn.textContent = '⏸ Pause';
+  } else {
+    vid.pause();
+    if(btn) btn.textContent = '▶ Lecture';
+  }
+}
+
+// ── Audio Clean view helpers ─────────────────────────────────────────
+let _acAudioBlob = null;
+
+function initAudioCleanView(){
+  // Sync with existing silence tool source if available
+  const lbl = document.getElementById('acSourceLabel');
+  if(!lbl) return;
+  // Check if there's already a loaded audio in the silence tool
+  const existingLbl = document.getElementById('silenceSourceLabel');
+  if(existingLbl && existingLbl.textContent && !existingLbl.textContent.includes('aucun')){
+    lbl.textContent = existingLbl.textContent;
+    const analyzeBtn = document.getElementById('acAnalyzeBtn');
+    if(analyzeBtn){ analyzeBtn.disabled = false; analyzeBtn.style.opacity = '1'; }
+  }
+}
+
+function _acHandleFile(file){
+  if(!file) return;
+  _acAudioBlob = file;
+  document.getElementById('acDropContent').style.display = 'none';
+  document.getElementById('acFileInfo').style.display    = 'block';
+  document.getElementById('acFileName').textContent      = file.name;
+  document.getElementById('acSourceLabel').textContent   = '📂 ' + file.name;
+  const btn = document.getElementById('acAnalyzeBtn');
+  if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
+  document.getElementById('acTip').style.display = 'none';
+  // Sync file into the generator's silence tool
+  if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(file);
+}
+
+function _acHandleGpFile(file){
+  if(!file) return;
+  document.getElementById('acGpDropContent').style.display = 'none';
+  document.getElementById('acGpFileInfo').style.display    = 'block';
+  document.getElementById('acGpFileName').textContent      = file.name;
+  if(typeof handleSilenceGameplayFile === 'function') handleSilenceGameplayFile(file);
+}
+
+async function _acAnalyze(){
+  // Redirect to generator silence tool for full waveform experience
+  if(!_acAudioBlob && typeof analyzeSilences !== 'function'){
+    toast('⚠️ Charge un fichier audio d\'abord');
+    return;
+  }
+  // Navigate to generator step 3 which has the full silence tool
+  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
+  nav('generator', navEl);
+  await new Promise(r=>setTimeout(r,150));
+  goToStep(3);
+  await new Promise(r=>setTimeout(r,200));
+  // Open the silence tool
+  const panel = document.getElementById('silenceToolPanel');
+  if(panel && panel.style.display === 'none') toggleSilenceTool();
+  // Analyze
+  if(typeof analyzeSilences === 'function') analyzeSilences();
+  toast('🔇 Analyse des silences lancée — voici le résultat dans Voix');
 }
 
 async function cartoonUseAsAvatar(){
@@ -14111,77 +14448,16 @@ function _tapSyncTap(){
 }
 
 function _tapSyncRenderUI(){
-  const flow  = document.getElementById('tapSyncFlowInner');
-  const prog  = document.getElementById('tapSyncProg');
-  const grpN  = document.getElementById('tapSyncGrpN');
-  const idx   = _tapSyncIdx;
+  const cur  = document.getElementById('tapSyncCurrent');
+  const next = document.getElementById('tapSyncNext');
+  const prog = document.getElementById('tapSyncProg');
+  const grpN = document.getElementById('tapSyncGrpN');
+  const idx  = _tapSyncIdx;
   const total = _tapSyncGroups.length;
-
-  if(prog)  prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
-  if(grpN)  grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
-  if(!flow) return;
-
-  flow.innerHTML = '';
-  _tapSyncGroups.forEach((group, gi) => {
-    const done    = gi < idx;
-    const current = gi === idx;
-    const soon    = gi === idx + 1;
-
-    const pill = document.createElement('span');
-    const label = group.join(' ');
-
-    if(current){
-      // Groupe courant — grand, orange, pulsé
-      pill.textContent = label;
-      pill.style.cssText = 'display:inline-block;padding:8px 16px;background:var(--orange);color:#fff;border-radius:12px;font-family:var(--mono);font-size:15px;font-weight:900;letter-spacing:.5px;animation:ts-pulse .7s ease-in-out infinite alternate;box-shadow:0 0 18px rgba(255,107,53,.5)';
-    } else if(done){
-      // Passé — petit, grisé, barré
-      pill.textContent = '✓ ' + label;
-      pill.style.cssText = 'display:inline-block;padding:4px 10px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:500;text-decoration:line-through;letter-spacing:.3px';
-    } else if(soon){
-      // Suivant immédiat — visible, blanc doux
-      pill.textContent = label;
-      pill.style.cssText = 'display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);border-radius:10px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px';
-    } else {
-      // Futur — très discret
-      pill.textContent = label;
-      pill.style.cssText = 'display:inline-block;padding:4px 10px;color:rgba(255,255,255,0.2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.3px';
-    }
-    flow.appendChild(pill);
-
-    // Flèche entre groupes (sauf dernier)
-    if(gi < total - 1){
-      const arr = document.createElement('span');
-      arr.textContent = '→';
-      arr.style.cssText = 'color:' + (done ? 'rgba(255,255,255,0.15)' : current || soon ? 'rgba(255,107,53,0.6)' : 'rgba(255,255,255,0.1)') + ';font-size:10px;flex-shrink:0;margin:0 1px';
-      flow.appendChild(arr);
-    }
-  });
-
-  // Fin
-  if(idx >= total){
-    flow.innerHTML = '<span style="font-size:22px;font-weight:900;color:var(--green,#00d97e)">✓ Synchronisation terminée !</span>';
-  }
-
-  // Scroll pour garder le groupe courant visible
-  requestAnimationFrame(() => {
-    const pills = flow.querySelectorAll('span');
-    let offset = 0;
-    for(let i = 0; i < pills.length; i++){
-      if(i === idx * 2) break; // chaque groupe + flèche = *2
-      offset += pills[i].offsetWidth + 4;
-    }
-    const container = document.getElementById('tapSyncFlow');
-    if(container) container.scrollLeft = Math.max(0, offset - container.offsetWidth / 2);
-  });
-}
-
-// CSS pulse animation pour le groupe courant
-if(!document.getElementById('ts-anim')){
-  const s = document.createElement('style');
-  s.id = 'ts-anim';
-  s.textContent = '@keyframes ts-pulse{from{transform:scale(1);box-shadow:0 0 14px rgba(255,107,53,.4)}to{transform:scale(1.04);box-shadow:0 0 24px rgba(255,107,53,.7)}}';
-  document.head.appendChild(s);
+  if(cur)  cur.textContent  = idx < total ? _tapSyncGroups[idx].join(' ') : '✓ FIN';
+  if(next) next.textContent = idx + 1 < total ? _tapSyncGroups[idx + 1].join(' ') : '';
+  if(prog) prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
+  if(grpN) grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
 }
 
 function _tapSyncFinish(){
@@ -14276,26 +14552,25 @@ function _tapSyncCancel(){
   </div>
 
   <!-- ── PHASE 2 : TAP INTERFACE ── -->
-  <div id="tapSyncSession" style="display:none;width:100%;max-width:560px;padding:28px 24px;flex-direction:column;align-items:center;gap:18px">
+  <div id="tapSyncSession" style="display:none;width:100%;max-width:420px;padding:32px 28px;flex-direction:column;align-items:center;gap:20px">
 
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:2px">🥁 TAP SYNC</div>
-      <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
-    </div>
+    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync — en cours</div>
 
-    <!-- Script visuel flow — tous les groupes -->
-    <div id="tapSyncFlow" style="width:100%;overflow:hidden;position:relative;min-height:80px;display:flex;align-items:center">
-      <div id="tapSyncFlowInner" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;justify-content:flex-start"></div>
+    <!-- Groupe actuel -->
+    <div style="text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">PROCHAIN GROUPE →</div>
+      <div id="tapSyncCurrent" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;text-align:center">…</div>
+      <div id="tapSyncNext" style="font-size:15px;color:var(--text3);font-family:var(--mono);letter-spacing:1px"></div>
     </div>
 
     <!-- Barre de progression -->
-    <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden">
-      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .15s"></div>
+    <div style="width:100%;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .1s"></div>
     </div>
+    <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
 
     <!-- Bouton TAP principal -->
-    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:24px;background:rgba(255,107,53,0.1);border:2px solid rgba(255,107,53,0.4);border-radius:16px;color:#fff;font-family:var(--font);font-size:19px;font-weight:900;cursor:pointer;transition:all .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.background='rgba(255,107,53,0.2)';this.style.borderColor='var(--orange)'" onmouseout="this.style.background='rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.4)'">
+    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:26px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
       ↵ &nbsp;Maintenant !
     </button>
     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ou appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px">Espace</kbd></div>
