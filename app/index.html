@@ -10156,8 +10156,8 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
 async function startGeneration(){
   const script = document.getElementById('f-script').value.trim();
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
-  // Reset bypass state à chaque nouvelle génération
-  _clearBypassState();
+  // Reset bypass — uniquement la sauvegarde de session, PAS le bypass actif (chargé depuis bibliothèque)
+  if(!window._bypassHedraOn) localStorage.removeItem('aa_bypass_resume');
 
   // ── Vérification minutes ──
   if(currentMember && !guestMode){
