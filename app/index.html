@@ -4488,6 +4488,8 @@ function enterApp(profile){
   const displayName = profile.first_name || (profile.email||'').split('@')[0];
   const nameDisplay = profile.is_owner ? '👑 ' + displayName : displayName;
   document.getElementById('memberName').textContent = nameDisplay;
+  // Crédits images bonus (stockés dans Supabase)
+  window._imgBonusCreditsCache = typeof profile.img_bonus_credits === 'number' ? profile.img_bonus_credits : 0;
   // Quota vidéos — reset mensuel + affichage
   _checkAndResetQuota().then(() => { _updateQuotaDisplay(); _updateBypassUI(); });
   // Bloquer la durée selon le plan
@@ -5287,10 +5289,12 @@ function buyImageCredits(pack){
   closeUpgradeModal();
 }
 
-// Appelée par le webhook Stripe après paiement confirmé
-function _addImgBonusCredits(qty){
-  const current = parseInt(localStorage.getItem('aa_img_bonus')||'0', 10);
-  localStorage.setItem('aa_img_bonus', String(current + qty));
+// Appelée par le webhook Stripe après paiement confirmé (ou par l'admin)
+async function _addImgBonusCredits(qty){
+  if(!currentMember){ toast('⚠️ Non connecté'); return; }
+  const newVal = Math.max(0, (window._imgBonusCreditsCache || 0) + qty);
+  window._imgBonusCreditsCache = newVal;
+  await sb.from('profiles').update({ img_bonus_credits: newVal }).eq('id', currentMember.id);
   _updateImgQuotaLabel();
   toast('✅ +' + qty + ' crédits images ajoutés !');
 }
@@ -5516,7 +5520,7 @@ function _imgMonthLimit(){
   return 0; // free → pas d'accès
 }
 function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
-function _imgBonus(){ try{ return Math.max(0,parseInt(localStorage.getItem('aa_img_bonus')||'0',10)); }catch(e){ return 0; } }
+function _imgBonus(){ return typeof window._imgBonusCreditsCache === 'number' ? Math.max(0, window._imgBonusCreditsCache) : 0; }
 function _imgMonthRemaining(){
   const monthRem = Math.max(0, _imgMonthLimit() - _imgMonthUsed());
   return monthRem + _imgBonus(); // bonus crédits persistent au-delà du reset mensuel
@@ -5526,12 +5530,13 @@ function _imgMonthIncrement(){
     const used = _imgMonthUsed();
     const lim  = _imgMonthLimit();
     if(used < lim){
-      // consomme d'abord le quota mensuel
+      // consomme d'abord le quota mensuel (localStorage)
       localStorage.setItem(_imgMonthKey(), String(used + 1));
     } else {
-      // quota épuisé → consomme un crédit bonus
-      const bonus = Math.max(0, _imgBonus() - 1);
-      localStorage.setItem('aa_img_bonus', String(bonus));
+      // quota épuisé → consomme un crédit bonus (Supabase)
+      const newBonus = Math.max(0, _imgBonus() - 1);
+      window._imgBonusCreditsCache = newBonus;
+      if(currentMember) sb.from('profiles').update({ img_bonus_credits: newBonus }).eq('id', currentMember.id);
     }
   }catch(e){}
 }
