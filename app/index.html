@@ -11689,9 +11689,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       videoEncoder.configure(vcfg);
 
       // Resize canvas aux dimensions sûres si nécessaire
+      // ⚠️ Toujours redessiner après resize — canvas.width = X efface le contenu (→ noir au début)
       if(canvas.width !== safeW || canvas.height !== safeH){
         canvas.width = safeW; canvas.height = safeH;
       }
+      drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
 
       let _wcFrameNum = 0;
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
@@ -11748,28 +11750,23 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // Sauvegarder blob vidéo (sans audio) pour le fallback timeout
       window._lastComposedBlob = wcBlob;
 
-      // Muxage audio + finalisation via FFmpeg
-      // -c:v copy échoue avec mp4-muxer → re-encode libx264 (l'input WebCodecs est déjà CFR parfait)
+      // Muxage audio via FFmpeg 0.12.10 (heap étendu — 0.11.6 trop petit pour 1080p 14MB+)
       if(_audioBlobToEncode){
-        toast('🎵 Muxage audio + finalisation…');
+        toast('🎵 Muxage audio…');
         try {
-          await _loadFFmpeg();
-          const ff = _ffmpegInst;
-          // Détecter le format audio réel (ElevenLabs = audio/mpeg = MP3, pas WAV !)
+          const ff2 = await _loadFfmpeg(); // instance 0.12.10 (API async : writeFile / exec / readFile)
           const _audMime = (_audioBlobToEncode.type || '').toLowerCase();
           const _audExt  = _audMime.includes('ogg') || _audMime.includes('opus') ? 'ogg'
                          : _audMime.includes('webm') ? 'webm'
                          : _audMime.includes('wav')  ? 'wav'
-                         : 'mp3'; // MP3 par défaut (ElevenLabs = audio/mpeg)
+                         : 'mp3';
           const _audFile = 'wc_aud.' + _audExt;
-          try { ff.FS('unlink','wc_vid.mp4'); } catch(e){}
-          try { ff.FS('unlink', _audFile);    } catch(e){}
-          try { ff.FS('unlink','wc_out.mp4'); } catch(e){}
-          ff.FS('writeFile','wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
-          ff.FS('writeFile', _audFile,    new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
-          // Re-encode libx264 : plus fiable que -c:v copy avec mp4-muxer
-          // L'input WebCodecs est CFR 30fps → FFmpeg voit timestamps parfaits → output CFR garanti
-          await ff.run(
+          try { await ff2.deleteFile('wc_vid.mp4'); } catch(e){}
+          try { await ff2.deleteFile(_audFile);     } catch(e){}
+          try { await ff2.deleteFile('wc_out.mp4'); } catch(e){}
+          await ff2.writeFile('wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
+          await ff2.writeFile(_audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
+          await ff2.exec([
             '-i','wc_vid.mp4', '-i',_audFile,
             '-c:v','libx264', '-preset','fast', '-crf','22',
             '-profile:v','main', '-pix_fmt','yuv420p',
@@ -11777,22 +11774,22 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             '-c:a','aac', '-ar','44100', '-b:a','128k',
             '-shortest', '-movflags','+faststart',
             '-y','wc_out.mp4'
-          );
-          const outData = ff.FS('readFile','wc_out.mp4');
+          ]);
+          const outData = await ff2.readFile('wc_out.mp4');
           if(outData && outData.length > 10000){
             finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-            toast('✅ Vidéo CFR WebCodecs + audio — prête !');
+            toast('✅ Vidéo WebCodecs CFR + audio — prête !');
           } else {
-            throw new Error('output FFmpeg trop petit : ' + (outData?.length||0) + ' bytes');
+            throw new Error('output trop petit : ' + (outData?.length||0) + ' bytes');
           }
-          try { ff.FS('unlink','wc_vid.mp4'); ff.FS('unlink',_audFile); ff.FS('unlink','wc_out.mp4'); } catch(e){}
+          try { await ff2.deleteFile('wc_vid.mp4'); await ff2.deleteFile(_audFile); await ff2.deleteFile('wc_out.mp4'); } catch(e){}
         } catch(ffMuxErr){
-          console.warn('FFmpeg audio mux failed:', ffMuxErr);
-          toast('⚠️ Muxage audio échoué — vidéo muette');
+          console.warn('FFmpeg 0.12 audio mux failed:', ffMuxErr);
+          toast('⚠️ Muxage audio échoué (' + (ffMuxErr.message||ffMuxErr) + ') — vidéo muette');
           finalBlob = wcBlob;
         }
       } else {
-        toast('⚠️ Aucun audio disponible — vidéo muette');
+        toast('⚠️ Aucun audio — vidéo muette');
         finalBlob = wcBlob;
       }
 
