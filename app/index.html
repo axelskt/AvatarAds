@@ -11588,192 +11588,278 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     }
   }
 
-  // ── 8. Choisir le mimeType MediaRecorder ──
+  // ── 8. Préparer l'audio (commun aux deux chemins d'encodage) ──
   setStage('Initialisation encodeur…', 14);
-  const mimeTypes = [
-    'video/mp4;codecs=avc1,mp4a.40.2',
-    'video/mp4;codecs=avc1',
-    'video/mp4',
-    'video/webm;codecs=h264,opus',
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-  ];
-  let chosenMime = '';
-  for(const mt of mimeTypes){
-    if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)){ chosenMime = mt; break; }
-  }
-  if(!chosenMime){ toast('⚠️ MediaRecorder non supporté — utilise Chrome/Edge'); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
-  const isWebm = chosenMime.startsWith('video/webm');
-  const fileExt = isWebm ? 'webm' : 'mp4';
 
-  // ── 9. Pre-warm : attendre la 1ère frame avant de démarrer le recorder (évite le noir) ──
-  setStage('Chargement 1ère frame…', 13);
-  try {
-    hedraVid.currentTime = 0;
-    await new Promise(res => {
-      hedraVid.onseeked = res;
-      if(hedraVid.readyState >= 2) res(); // déjà prêt
-      setTimeout(res, 1500);
-    });
-    // Dessiner la première frame sur le canvas avant de commencer l'enregistrement
-    drawFrame(0);
-    await wait(80);
-  } catch(e){}
-
-  // ── 10. AudioContext pour mixer audio dans le stream ──
-  // On utilise un élément <audio> comme source : plus fiable pour le sync avec MediaRecorder
-  let audioCtx = null, audioEl2 = null;
-  const videoStream = canvas.captureStream(30);
-  let combinedStream = videoStream;
-
-  // Si pas d'audioBlob (ex: re-compose depuis bibliothèque) → extraire l'audio du blob hedra
-  // ⚠️ En mode bypass (vidéo depuis bibliothèque), on NE récupère PAS l'audio lipsync original
-  //    → seule la voix ElevenLabs générée (audioBlob) doit être utilisée
+  // Extraire l'audio Hedra si absent (mode bypass désactivé)
   if(!_audioBlobToEncode && hedraObjUrl && !window._bypassHedraOn){
     try {
       const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuf = await fetch(hedraObjUrl).then(r => r.arrayBuffer());
       const decoded  = await tmpCtx.decodeAudioData(arrayBuf);
       await tmpCtx.close();
-      // Convertir AudioBuffer → WAV blob
       _audioBlobToEncode = _audioBufferToWavBlob(decoded);
       toast('🎵 Audio extrait de la vidéo Hedra');
     } catch(e){ console.warn('Hedra audio extract failed:', e); }
   }
-  // Mode bypass sans voix générée → avertir (la vidéo sera muette)
   if(window._bypassHedraOn && !_audioBlobToEncode){
     toast('⚠️ Aucune voix générée — génère ta voix (étape 3) avant d\'exporter pour avoir de l\'audio');
   }
 
-  if(_audioBlobToEncode){
+  // Pre-warm : première frame
+  setStage('Chargement 1ère frame…', 13);
+  try {
+    hedraVid.currentTime = 0;
+    await new Promise(res => { hedraVid.onseeked = res; if(hedraVid.readyState >= 2) res(); setTimeout(res, 1500); });
+    drawFrame(0); await wait(80);
+  } catch(e){}
+
+  const _fps = 30;
+  // isWebm utilisé pour le label final (false = MP4, mis à jour dans le chemin MediaRecorder)
+  let isWebm = false;
+  let finalBlob = null;
+
+  // ════════════════════════════════════════════════════════════
+  // ── CHEMIN A : WebCodecs VideoEncoder ──
+  // Timestamps séquentiels exacts → 30fps CFR natif → 0 effet robot TikTok
+  // canvas.captureStream() + MediaRecorder = timestamps liés au vsync écran (60/120Hz) → VFR → robot
+  // WebCodecs encode frame par frame avec timestamp = frameNum/30 → CFR garanti
+  // ════════════════════════════════════════════════════════════
+  const _hasWebCodecs = typeof VideoEncoder !== 'undefined' &&
+                        typeof VideoFrame   !== 'undefined' &&
+                        typeof VideoEncoder.isConfigSupported === 'function';
+
+  if(_hasWebCodecs){
     try {
-      const audioUrl2 = URL.createObjectURL(_audioBlobToEncode);
-      audioEl2 = new Audio(audioUrl2);
-      audioEl2.preload = 'auto';
-      // Attendre que l'audio soit prêt
-      await new Promise(res => { audioEl2.oncanplaythrough = res; audioEl2.onerror = res; audioEl2.load(); setTimeout(res, 3000); });
-      audioCtx = new AudioContext();
-      // Safari gèle sur resume() sans geste user → timeout 2s
-      if(audioCtx.state === 'suspended'){
-        await Promise.race([audioCtx.resume(), new Promise(r => setTimeout(r, 2000))]);
+      const vcfg = { codec: 'avc1.4D001F', width: W, height: H, framerate: _fps, bitrate: qCfg.br };
+      const { supported: vidOk } = await VideoEncoder.isConfigSupported(vcfg);
+      if(!vidOk) throw new Error('H.264 VideoEncoder non supporté');
+
+      const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
+      const muxTarget = new ArrayBufferTarget();
+
+      // Vérifier AudioEncoder AAC
+      let _audioEncOk = false;
+      const acfg = { codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 1, bitrate: 128000 };
+      if(_audioBlobToEncode && typeof AudioEncoder !== 'undefined' && typeof AudioEncoder.isConfigSupported === 'function'){
+        try { const { supported } = await AudioEncoder.isConfigSupported(acfg); _audioEncOk = supported; } catch(e){}
       }
-      const dest = audioCtx.createMediaStreamDestination();
-      const src = audioCtx.createMediaElementSource(audioEl2);
-      src.connect(dest);
-      combinedStream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...dest.stream.getAudioTracks(),
-      ]);
-    } catch(e){ console.warn('Audio mix failed, vidéo muette:', e); audioEl2 = null; }
+
+      const muxer = new Muxer({
+        target: muxTarget,
+        video: { codec: 'avc', width: W, height: H, frameRate: _fps },
+        audio: (_audioEncOk && _audioBlobToEncode) ? { codec: 'aac', sampleRate: 44100, numberOfChannels: 1 } : undefined,
+        fastStart: 'in-memory',
+      });
+
+      // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
+      const videoEncoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: (e) => { throw e; },
+      });
+      videoEncoder.configure(vcfg);
+
+      // AudioEncoder AAC (si disponible)
+      if(_audioEncOk && _audioBlobToEncode){
+        try {
+          const audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: (e) => console.warn('AudioEncoder:', e),
+          });
+          audioEncoder.configure(acfg);
+          const offCtx = new OfflineAudioContext(1, Math.ceil(44100 * totalDuration), 44100);
+          const decoded = await offCtx.decodeAudioData(await _audioBlobToEncode.arrayBuffer());
+          const chunkSz = 1024; // frames AAC standard
+          for(let i = 0; i < decoded.length; i += chunkSz){
+            const len = Math.min(chunkSz, decoded.length - i);
+            const pcm = new Float32Array(len);
+            decoded.copyFromChannel(pcm, 0, i);
+            const ad = new AudioData({ format: 'f32', sampleRate: 44100, numberOfFrames: len, numberOfChannels: 1, timestamp: Math.round(i / 44100 * 1e6), data: pcm });
+            audioEncoder.encode(ad); ad.close();
+          }
+          await audioEncoder.flush();
+        } catch(audioErr){ console.warn('AudioEncoder failed (vidéo muette):', audioErr); }
+      }
+
+      // Boucle vidéo via requestVideoFrameCallback
+      // → déclenché une fois par frame décodée par le décodeur vidéo (≠ vsync écran)
+      // → timestamps séquentiels garantis CFR
+      setStage('Composition ' + qCfg.label + ' (WebCodecs)…', 18);
+      toast('🎬 Composition CFR WebCodecs ~' + Math.round(totalDuration) + 's…');
+      hedraVid.currentTime = 0;
+      if(gpVid) gpVid.currentTime = 0;
+      await new Promise(r => { hedraVid.onseeked = r; setTimeout(r, 1000); });
+
+      let _wcFrameNum = 0;
+      const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
+
+      await new Promise(resolve => {
+        const onFrame = (now, meta) => {
+          if(window._composeCancelled){ resolve(); return; }
+          drawFrame(meta.mediaTime);
+          const vf = new VideoFrame(canvas, {
+            timestamp: Math.round(_wcFrameNum / _fps * 1e6), // séquentiel strict → CFR
+            duration:  Math.round(1e6 / _fps),
+          });
+          videoEncoder.encode(vf, { keyFrame: _wcFrameNum % (_fps * 2) === 0 });
+          vf.close();
+          _wcFrameNum++;
+          const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
+          if(compFill) compFill.style.width = pct + '%';
+          if(compPct)  compPct.textContent  = pct + '%';
+          if(meta.mediaTime < totalDuration - 0.1 && _wcFrameNum < _wcTotalFrames){
+            hedraVid.requestVideoFrameCallback(onFrame);
+          } else {
+            resolve();
+          }
+        };
+        hedraVid.play().catch(()=>{});
+        if(gpVid) gpVid.play().catch(()=>{});
+        hedraVid.requestVideoFrameCallback(onFrame);
+      });
+
+      hedraVid.pause();
+      if(gpVid) gpVid.pause();
+      setStage('Finalisation WebCodecs…', 99);
+      await videoEncoder.flush();
+      muxer.finalize();
+
+      const wcBlob = new Blob([muxTarget.buffer], { type: 'video/mp4' });
+      if(wcBlob.size < 50000) throw new Error('output WebCodecs trop petit (' + Math.round(wcBlob.size/1024) + 'ko)');
+
+      // Si AudioEncoder AAC indisponible → FFmpeg mux audio uniquement (-c:v copy)
+      if(_audioBlobToEncode && !_audioEncOk){
+        toast('🎵 Muxage audio FFmpeg…');
+        try {
+          await _loadFFmpeg();
+          const ff = _ffmpegInst;
+          try { ff.FS('unlink','wc_vid.mp4'); } catch(e){}
+          try { ff.FS('unlink','wc_aud.wav'); } catch(e){}
+          try { ff.FS('unlink','wc_out.mp4'); } catch(e){}
+          ff.FS('writeFile','wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
+          ff.FS('writeFile','wc_aud.wav', new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
+          await ff.run('-i','wc_vid.mp4','-i','wc_aud.wav','-c:v','copy','-c:a','aac','-ar','44100','-b:a','128k','-shortest','-movflags','+faststart','-y','wc_out.mp4');
+          const outData = ff.FS('readFile','wc_out.mp4');
+          finalBlob = (outData && outData.length > 50000) ? new Blob([outData.buffer], { type: 'video/mp4' }) : wcBlob;
+          try { ff.FS('unlink','wc_vid.mp4'); ff.FS('unlink','wc_aud.wav'); ff.FS('unlink','wc_out.mp4'); } catch(e){}
+        } catch(ffMuxErr){
+          console.warn('FFmpeg audio mux failed:', ffMuxErr);
+          finalBlob = wcBlob;
+        }
+      } else {
+        finalBlob = wcBlob;
+      }
+
+      URL.revokeObjectURL(hedraObjUrl);
+      if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
+      toast('✅ Vidéo CFR WebCodecs 30fps — prête pour TikTok !');
+
+    } catch(wcErr){
+      console.error('WebCodecs composition failed, fallback MediaRecorder:', wcErr);
+      toast('⚠️ WebCodecs échoué (' + (wcErr.message||wcErr) + ') — mode classique…');
+      finalBlob = null; // → déclenche chemin B
+    }
   }
 
-  // ── 10. MediaRecorder ──
-  let recorder, chunks = [];
-  try {
-    recorder = new MediaRecorder(combinedStream, {
-      mimeType: chosenMime,
-      videoBitsPerSecond: qCfg.br,
-      audioBitsPerSecond: 128_000,
+  // ════════════════════════════════════════════════════════════
+  // ── CHEMIN B : MediaRecorder + FFmpeg (fallback si WebCodecs indispo) ──
+  // ════════════════════════════════════════════════════════════
+  if(!finalBlob){
+    const mimeTypes = [
+      'video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1','video/mp4',
+      'video/webm;codecs=h264,opus','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm',
+    ];
+    let chosenMime = '';
+    for(const mt of mimeTypes){ if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)){ chosenMime = mt; break; } }
+    if(!chosenMime){ toast('⚠️ Ni WebCodecs ni MediaRecorder — utilise Chrome/Edge'); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
+    isWebm = chosenMime.startsWith('video/webm');
+
+    const videoStream = canvas.captureStream(30);
+    let combinedStream = videoStream;
+    let audioCtx = null, audioEl2 = null;
+    if(_audioBlobToEncode){
+      try {
+        const audioUrl2 = URL.createObjectURL(_audioBlobToEncode);
+        audioEl2 = new Audio(audioUrl2); audioEl2.preload = 'auto';
+        await new Promise(res => { audioEl2.oncanplaythrough = res; audioEl2.onerror = res; audioEl2.load(); setTimeout(res, 3000); });
+        audioCtx = new AudioContext();
+        if(audioCtx.state === 'suspended') await Promise.race([audioCtx.resume(), new Promise(r => setTimeout(r, 2000))]);
+        const dest = audioCtx.createMediaStreamDestination();
+        const src  = audioCtx.createMediaElementSource(audioEl2);
+        src.connect(dest);
+        combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+      } catch(e){ console.warn('Audio mix failed:', e); audioEl2 = null; }
+    }
+
+    let recorder, chunks = [];
+    try {
+      recorder = new MediaRecorder(combinedStream, { mimeType: chosenMime, videoBitsPerSecond: qCfg.br, audioBitsPerSecond: 128_000 });
+    } catch(e){ toast('⚠️ MediaRecorder init failed: ' + e.message); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
+    recorder.ondataavailable = e => { if(e.data && e.data.size > 0) chunks.push(e.data); };
+
+    setStage('Composition ' + qCfg.label + '…', 18);
+    toast('🎬 Composition ' + qCfg.label + ' (~' + Math.round(totalDuration) + 's)…');
+    hedraVid.currentTime = 0;
+    if(audioEl2) audioEl2.currentTime = 0;
+    if(gpVid) gpVid.currentTime = 0;
+    recorder.start(200);
+    await Promise.all([
+      hedraVid.play().catch(()=>{}),
+      audioEl2 ? audioEl2.play().catch(()=>{}) : Promise.resolve(),
+      gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
+    ]);
+
+    await new Promise(resolve => {
+      let _lastElapsed = -1;
+      const _fi = setInterval(() => {
+        const elapsed = hedraVid.currentTime || 0;
+        const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
+        if(compFill) compFill.style.width = pct + '%';
+        if(compPct)  compPct.textContent  = pct + '%';
+        if(elapsed !== _lastElapsed){ drawFrame(elapsed); _lastElapsed = elapsed; }
+        if(window._composeCancelled){ clearInterval(_fi); resolve(); return; }
+        if(elapsed >= totalDuration - 0.05 && hedraVid.readyState >= 2){ clearInterval(_fi); resolve(); }
+      }, 1000 / 30);
     });
-  } catch(e){
-    toast('⚠️ MediaRecorder init failed: ' + e.message);
-    resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
-  }
-  recorder.ondataavailable = e => { if(e.data && e.data.size > 0) chunks.push(e.data); };
 
-  // ── 11. Démarrer lecture + enregistrement ──
-  setStage('Composition ' + qCfg.label + '…', 18);
-  toast('🎬 Composition ' + qCfg.label + ' (~' + Math.round(totalDuration) + 's en temps réel)…');
-  hedraVid.currentTime = 0;
-  if(audioEl2) audioEl2.currentTime = 0;
-  if(gpVid){ gpVid.currentTime=0; }
+    setStage('Finalisation…', 99);
+    await new Promise(resolve => { recorder.onstop = resolve; recorder.stop(); });
+    if(audioEl2) audioEl2.pause();
+    if(audioCtx) audioCtx.close();
+    hedraVid.pause();
+    if(gpVid) gpVid.pause();
+    URL.revokeObjectURL(hedraObjUrl);
+    if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
 
-  // Démarrer vidéo + audio ensemble, puis recorder immédiatement
-  recorder.start(200);
-  await Promise.all([
-    hedraVid.play().catch(()=>{}),
-    audioEl2 ? audioEl2.play().catch(()=>{}) : Promise.resolve(),
-    gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
-  ]);
+    const mrBlob = new Blob(chunks, { type: chosenMime });
+    if(mrBlob.size < 50000){ toast('⚠️ Vidéo trop petite (' + Math.round(mrBlob.size/1024) + 'ko) — essaie de relancer'); resetBtn(); return; }
 
-  // ── 12. Boucle à 30fps constant (setInterval 33ms) — évite le VFR du rAF (60/120Hz display) ──
-  // rAF cadencé sur le refresh rate de l'écran → timestamps irréguliers → robot sur TikTok
-  // setInterval(33ms) force exactement 30fps dans le stream canvas → CFR natif
-  await new Promise(resolve => {
-    let _lastElapsed = -1;
-    const _frameInterval = setInterval(() => {
-      const elapsed = hedraVid.currentTime || 0;
-      const pct = Math.min(99, Math.round(18 + elapsed / totalDuration * 81));
-      if(compFill) compFill.style.width = pct + '%';
-      if(compPct)  compPct.textContent  = pct + '%';
-      if(elapsed !== _lastElapsed){ drawFrame(elapsed); _lastElapsed = elapsed; }
-      if(window._composeCancelled){ clearInterval(_frameInterval); resolve(); return; }
-      if(elapsed >= totalDuration - 0.05 && hedraVid.readyState >= 2){
-        clearInterval(_frameInterval);
-        resolve();
-      }
-    }, 1000 / 30); // exactement 33.33ms par frame = 30fps constant
-  });
+    window._lastComposedBlob = mrBlob;
 
-  // ── 13. Arrêter l'enregistrement et récupérer le blob ──
-  setStage('Finalisation…', 99);
-  await new Promise(resolve => {
-    recorder.onstop = resolve;
-    recorder.stop();
-  });
-  if(audioEl2){ audioEl2.pause(); }
-  if(audioCtx) audioCtx.close();
-  hedraVid.pause();
-  if(gpVid) gpVid.pause();
-  URL.revokeObjectURL(hedraObjUrl);
-  if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
-
-  const blob = new Blob(chunks, { type: chosenMime });
-  if(blob.size < 50000){
-    toast('⚠️ Vidéo trop petite (' + Math.round(blob.size/1024) + 'ko) — essaie de relancer');
-    resetBtn(); return;
-  }
-
-  // Sauvegarder le blob composé (avec split screen) avant FFmpeg — fallback si timeout
-  window._lastComposedBlob = blob;
-
-  // ── Post-traitement FFmpeg : CFR 30fps + yuv420p + H.264 main + AAC 44.1kHz (TikTok / Reels) ──
-  let finalBlob = blob;
-  try {
-    setStage('Optimisation TikTok…', 99);
-    toast('🎵 Optimisation TikTok en cours…');
-    await _loadFFmpeg();
-    const ff = _ffmpegInst;
-    const inExt = isWebm ? 'webm' : 'mp4';
-    try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
-    try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
-    ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await blob.arrayBuffer()));
-    await ff.run(
-      '-i', 'cfr_in.' + inExt,
-      '-vf', 'fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2',  // CFR 30fps + dimensions paires
-      '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '22',
-      '-profile:v', 'main',          // profil H.264 compatible mobile
-      '-pix_fmt', 'yuv420p',         // CRITIQUE — TikTok/Reels/Instagram exigent yuv420p
-      '-c:a', 'aac',
-      '-ar', '44100',                // 44.1kHz — standard TikTok
-      '-b:a', '128k',
-      '-movflags', '+faststart',
-      '-y', 'cfr_out.mp4'
-    );
-    const outData = ff.FS('readFile', 'cfr_out.mp4');
-    if(!outData || outData.length < 10000) throw new Error('output trop petit : ' + (outData?.length || 0) + ' bytes');
-    finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-    try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
-    try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
-    toast('✅ Vidéo optimisée TikTok — yuv420p · 30fps · AAC 44.1kHz');
-    window._lastComposedBlob = null; // nettoyage — FFmpeg a réussi
-  } catch(ffErr){
-    console.error('FFmpeg TikTok post-process failed:', ffErr);
-    toast('⚠️ Optimisation TikTok ignorée (' + (ffErr.message||ffErr) + ') — vidéo composée utilisée');
-    finalBlob = blob; // blob composé (avec split screen), pas le brut Hedra
+    // FFmpeg post-process : CFR 30fps + yuv420p + H.264 main
+    let ffBlob = mrBlob;
+    try {
+      setStage('Optimisation TikTok…', 99);
+      toast('🎵 Optimisation TikTok en cours…');
+      await _loadFFmpeg();
+      const ff = _ffmpegInst;
+      const inExt = isWebm ? 'webm' : 'mp4';
+      try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
+      try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+      ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await mrBlob.arrayBuffer()));
+      await ff.run('-i','cfr_in.'+inExt,'-vf','fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2','-c:v','libx264','-preset','fast','-crf','22','-profile:v','main','-pix_fmt','yuv420p','-c:a','aac','-ar','44100','-b:a','128k','-movflags','+faststart','-y','cfr_out.mp4');
+      const outData = ff.FS('readFile', 'cfr_out.mp4');
+      if(!outData || outData.length < 10000) throw new Error('output trop petit : ' + (outData?.length || 0) + ' bytes');
+      ffBlob = new Blob([outData.buffer], { type: 'video/mp4' });
+      try { ff.FS('unlink', 'cfr_in.' + inExt); ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+      toast('✅ Vidéo optimisée TikTok — yuv420p · 30fps · AAC 44.1kHz');
+      window._lastComposedBlob = null;
+    } catch(ffErr){
+      console.error('FFmpeg TikTok post-process failed:', ffErr);
+      toast('⚠️ Optimisation TikTok ignorée (' + (ffErr.message||ffErr) + ') — vidéo composée utilisée');
+      ffBlob = mrBlob;
+    }
+    finalBlob = ffBlob;
   }
 
   const url = URL.createObjectURL(finalBlob);
