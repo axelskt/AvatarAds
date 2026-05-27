@@ -11757,9 +11757,6 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       '-crf', '22',
       '-profile:v', 'main',          // profil H.264 compatible mobile
       '-pix_fmt', 'yuv420p',         // CRITIQUE — TikTok/Reels/Instagram exigent yuv420p
-      '-color_primaries', 'bt709',   // colorspace BT.709 standard
-      '-color_trc', 'bt709',
-      '-colorspace', 'bt709',
       '-c:a', 'aac',
       '-ar', '44100',                // 44.1kHz — standard TikTok
       '-b:a', '128k',
