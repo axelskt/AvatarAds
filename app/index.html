@@ -9218,11 +9218,33 @@ function populateWordEditor(text){
 let _wordGroups = null; // array of arrays : [["MONTE","DANS","TA"], ["CHAMBRE","PEU"], ...]
 
 function _renderWordChips(text){
-  // Initialise les groupes depuis le texte brut, découpé par wpg
-  window._wordEditorOriginalText = text; // mémorisé pour reset
-  const words = text.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
-  const wpg = Math.max(1, cfg.subWpg || 2);
-  _wordGroups = _buildWpgGroups(words, wpg);
+  window._wordEditorOriginalText = text;
+  const MAX_PER_GROUP = 5; // jamais plus de 5 mots dans un groupe
+  const clean = w => w.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim();
+
+  // ── Découpe intelligente : respecte les sauts de ligne d'abord ──
+  const lines = text.split(/\n/).map(l=>l.trim()).filter(l=>l);
+  if(lines.length >= 2){
+    // Chaque ligne = 1 groupe (ou plusieurs si trop longue)
+    const groups = [];
+    for(const line of lines){
+      const words = line.split(/\s+/).filter(w=>w).map(clean).filter(w=>w);
+      if(!words.length) continue;
+      if(words.length <= MAX_PER_GROUP){
+        groups.push(words);
+      } else {
+        // Ligne trop longue → sous-groupes de 3-4 mots
+        const sub = Math.max(2, cfg.subWpg || 3);
+        for(let i=0;i<words.length;i+=sub) groups.push(words.slice(i,i+sub));
+      }
+    }
+    _wordGroups = groups.filter(g=>g.length>0);
+  } else {
+    // Pas de sauts de ligne : découpe mécanique par wpg
+    const words = text.trim().split(/\s+/).filter(w=>w).map(clean).filter(w=>w);
+    const wpg = Math.max(1, cfg.subWpg || 3);
+    _wordGroups = _buildWpgGroups(words, wpg);
+  }
   _renderGroupEditor();
 }
 
