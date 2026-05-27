@@ -11631,9 +11631,22 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
   if(_hasWebCodecs){
     try {
-      const vcfg = { codec: 'avc1.4D001F', width: W, height: H, framerate: _fps, bitrate: qCfg.br };
-      const { supported: vidOk } = await VideoEncoder.isConfigSupported(vcfg);
-      if(!vidOk) throw new Error('H.264 VideoEncoder non supporté');
+      // Dimensions paires obligatoires pour H.264
+      const safeW = Math.floor(W / 2) * 2;
+      const safeH = Math.floor(H / 2) * 2;
+      // Bitrate plafonné à 8 Mbps (au-delà = souvent rejeté par VideoEncoder)
+      const safeBr = Math.min(qCfg.br, 8_000_000);
+      // Essayer plusieurs profils H.264 : Baseline d'abord (plus supporté sur Safari)
+      const _codecsToTry = [
+        { codec: 'avc1.42001f', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // Baseline 3.1
+        { codec: 'avc1.4D001F', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // Main 3.1
+        { codec: 'avc1.640028', width: safeW, height: safeH, framerate: _fps, bitrate: safeBr }, // High 4.0
+      ];
+      let vcfg = null;
+      for(const _c of _codecsToTry){
+        try { const { supported } = await VideoEncoder.isConfigSupported(_c); if(supported){ vcfg = _c; break; } } catch(e){}
+      }
+      if(!vcfg) throw new Error('H.264 VideoEncoder non supporté sur ce navigateur');
 
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
       const muxTarget = new ArrayBufferTarget();
@@ -11665,14 +11678,25 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       videoEncoder.configure(vcfg);
 
+      // Resize canvas aux dimensions sûres si nécessaire
+      if(canvas.width !== safeW || canvas.height !== safeH){
+        canvas.width = safeW; canvas.height = safeH;
+      }
+
       let _wcFrameNum = 0;
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
       let _wcEncErr = null;
 
+      // Timeout WebCodecs : si 1080p trop lent → throw → fallback MediaRecorder
+      // Budget = 3× durée vidéo + 45s, minimum 90s
+      const _wcBudgetMs = Math.max(90000, totalDuration * 3 * 1000 + 45000);
+      let _wcTimedOut = false;
+      const _wcTimeoutId = setTimeout(() => { _wcTimedOut = true; }, _wcBudgetMs);
+
       await new Promise(resolve => {
         let _lastMediaTime = -1;
         const _wcInterval = setInterval(() => {
-          if(window._composeCancelled || _wcEncErr || _wcEncErr2){ clearInterval(_wcInterval); resolve(); return; }
+          if(window._composeCancelled || _wcEncErr || _wcEncErr2 || _wcTimedOut){ clearInterval(_wcInterval); resolve(); return; }
           // Backpressure : si la queue VideoEncoder sature (surtout en 1080p), ralentir
           if(videoEncoder.encodeQueueSize > 10){ return; }
           const t = hedraVid.currentTime || 0;
@@ -11698,6 +11722,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         hedraVid.play().catch(()=>{});
         if(gpVid) gpVid.play().catch(()=>{});
       });
+      clearTimeout(_wcTimeoutId);
+      if(_wcTimedOut) throw new Error('WebCodecs timeout — résolution trop haute, passage en mode classique');
       if(_wcEncErr || _wcEncErr2) throw (_wcEncErr || _wcEncErr2);
 
       hedraVid.pause();
