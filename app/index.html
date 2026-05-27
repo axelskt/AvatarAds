@@ -494,62 +494,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         + Crédits
       </button>
-      <!-- Settings button -->
-      <div style="position:relative">
-        <button id="btnAccountMenu" onclick="toggleAccountMenu()" style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text2);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          <span id="btnAccountMenuLabel">Compte</span>
-          <svg width="9" height="9" viewBox="0 0 10 10" fill="none" id="btnAccountMenuChevron" style="transition:transform .2s"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <!-- Dropdown -->
-        <div id="accountMenuDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:260px;background:#16181c;border:1px solid rgba(255,255,255,0.09);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.6);z-index:99999;overflow:hidden;animation:dropIn .18s ease">
-          <!-- User info -->
-          <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.07)">
-            <div style="display:flex;align-items:center;gap:10px">
-              <div id="accountMenuAvatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c0392b);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">A</div>
-              <div style="min-width:0">
-                <div id="accountMenuName" style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
-                <div id="accountMenuEmail" style="font-size:10px;color:rgba(255,255,255,0.35);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">—</div>
-              </div>
-              <div id="accountMenuPlanBadge" style="flex-shrink:0;font-size:8px;font-family:var(--mono);letter-spacing:.8px;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5)">FREE</div>
-            </div>
-          </div>
-          <!-- Menu items -->
-          <div style="padding:6px">
-            <button onclick="changeSubscription();closeAccountMenu()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-              <span style="font-size:15px">📋</span>
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#fff">Changer mon abonnement</div>
-                <div id="accountMenuChangeSub" style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Voir tous les plans disponibles</div>
-              </div>
-            </button>
-            <button id="accountMenuCancelBtn" onclick="cancelSubscription();closeAccountMenu()" style="width:100%;display:none;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-              <span style="font-size:15px">⏸️</span>
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#fff">Annuler l'abonnement</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Gérer via ton compte Whop</div>
-              </div>
-            </button>
-          </div>
-          <div style="height:1px;background:rgba(255,255,255,0.07);margin:0 12px"></div>
-          <div style="padding:6px">
-            <button onclick="resetPassword();closeAccountMenu()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-              <span style="font-size:15px">🔑</span>
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#fff">Réinitialiser le mot de passe</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">Lien envoyé par email</div>
-              </div>
-            </button>
-            <button onclick="authLogout()" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border:none;border-radius:8px;cursor:pointer;transition:background .15s;text-align:left" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">
-              <span style="font-size:15px">🚪</span>
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#ef4444">Se déconnecter</div>
-                <div style="font-size:10px;color:rgba(239,68,68,0.5);margin-top:1px">Retour à avatarads.fr</div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- Logout rapide -->
+      <button onclick="authLogout()" style="display:flex;align-items:center;gap:5px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2h3a1 1 0 011 1v8a1 1 0 01-1 1H9M6 10l4-3-4-3M10 7H1"/></svg>
+      </button>
     </div>
   </div>
   <div class="topbar-right">
@@ -3628,6 +3576,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Réinitialiser via un lien envoyé par email</div>
       </div>
       <button onclick="resetPassword();closeAccountSettings()" style="padding:8px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">Réinitialiser →</button>
+    </div>
+
+    <div class="setup-divider" style="margin-top:20px"></div>
+
+    <!-- ④ Abonnement & Déconnexion -->
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <button onclick="changeSubscription();closeAccountSettings()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+        <span style="font-size:15px">📋</span> Changer mon abonnement
+      </button>
+      <button id="accountPanelCancelBtn" onclick="cancelSubscription();closeAccountSettings()" style="display:none;width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+        <span style="font-size:15px">⏸️</span> Annuler l'abonnement
+      </button>
+      <button onclick="authLogout()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,71,87,.2);border-radius:10px;color:#ff4757;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='rgba(255,71,87,.08)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,71,87,.2)'">
+        <span style="font-size:15px">🚪</span> Se déconnecter
+      </button>
     </div>
 
   </div>
@@ -11395,10 +11358,10 @@ async function composeVideo(btn){
   // Afficher le bouton Annuler après 4s (Safari peut geler)
   const _cancelTimer = setTimeout(() => { if(cancelBtn) cancelBtn.style.display='block'; }, 4000);
 
-  // Timeout global 90s — évite les freezes infinis (Safari / AudioContext sans geste user)
+  // Timeout global 5min — composition 20s vidéo + FFmpeg peut prendre 2-3min sur mobile/Safari
   let _globalTimeout;
   const _globalAbort = new Promise((_, rej) => {
-    _globalTimeout = setTimeout(() => rej(new Error('TIMEOUT')), 90000);
+    _globalTimeout = setTimeout(() => rej(new Error('TIMEOUT')), 300000);
   });
 
   try {
@@ -11407,8 +11370,19 @@ async function composeVideo(btn){
     clearTimeout(_cancelTimer);
     if(cancelBtn) cancelBtn.style.display='none';
     if(e.message === 'TIMEOUT' || window._composeCancelled){
-      toast('⚠️ Composition bloquée — téléchargement direct…');
-      _fallbackDownloadHedra();
+      // Si on a un blob composé (avec split screen) → l'utiliser plutôt que le brut Hedra
+      if(window._lastComposedBlob){
+        toast('⚠️ Optimisation TikTok ignorée — téléchargement de la vidéo composée…');
+        const url = URL.createObjectURL(window._lastComposedBlob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'avatarads-video-compose.mp4';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        window._lastComposedBlob = null;
+      } else {
+        toast('⚠️ Composition bloquée — téléchargement direct…');
+        _fallbackDownloadHedra();
+      }
     } else {
       console.error('composeVideo outer error:', e);
     }
@@ -11762,6 +11736,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     resetBtn(); return;
   }
 
+  // Sauvegarder le blob composé (avec split screen) avant FFmpeg — fallback si timeout
+  window._lastComposedBlob = blob;
+
   // ── Post-traitement FFmpeg : CFR 30fps + yuv420p + H.264 main + AAC 44.1kHz (TikTok / Reels) ──
   let finalBlob = blob;
   try {
@@ -11796,10 +11773,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
     try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
     toast('✅ Vidéo optimisée TikTok — yuv420p · 30fps · AAC 44.1kHz');
+    window._lastComposedBlob = null; // nettoyage — FFmpeg a réussi
   } catch(ffErr){
     console.error('FFmpeg TikTok post-process failed:', ffErr);
-    toast('⚠️ Optimisation échouée (' + (ffErr.message||ffErr) + ') — fichier brut utilisé');
-    finalBlob = blob;
+    toast('⚠️ Optimisation TikTok ignorée (' + (ffErr.message||ffErr) + ') — vidéo composée utilisée');
+    finalBlob = blob; // blob composé (avec split screen), pas le brut Hedra
   }
 
   const url = URL.createObjectURL(finalBlob);
