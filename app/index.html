@@ -9336,16 +9336,20 @@ function _renderGroupEditor(){
   addBtn.onclick = () => { _wordGroups.push(['…']); _renderGroupEditor(); };
   bottomRow.appendChild(addBtn);
 
-  if(window._wordEditorOriginalText){
-    const resetBtn = document.createElement('button');
-    resetBtn.textContent = '↺ Réinitialiser';
-    resetBtn.title = 'Remettre les groupes d\'origine';
-    resetBtn.style.cssText = 'padding:6px 12px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap';
-    resetBtn.onmouseover = () => { resetBtn.style.background='rgba(255,71,87,0.08)'; };
-    resetBtn.onmouseout  = () => { resetBtn.style.background='transparent'; };
-    resetBtn.onclick = () => { _renderWordChips(window._wordEditorOriginalText); };
-    bottomRow.appendChild(resetBtn);
-  }
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = '↺ Réinitialiser';
+  resetBtn.title = 'Remettre les groupes d\'origine';
+  resetBtn.style.cssText = 'padding:6px 12px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap';
+  resetBtn.onmouseover = () => { resetBtn.style.background='rgba(255,71,87,0.08)'; };
+  resetBtn.onmouseout  = () => { resetBtn.style.background='transparent'; };
+  resetBtn.onclick = () => {
+    const src = window._wordEditorOriginalText
+      || document.getElementById('voiceTranscriptTA')?.value?.trim()
+      || document.getElementById('transcriptInput')?.value?.trim()
+      || (_wordGroups ? _wordGroups.flat().join(' ') : '');
+    if(src) _renderWordChips(src);
+  };
+  bottomRow.appendChild(resetBtn);
   editor.appendChild(bottomRow);
 
   _saveSession && _saveSession();
