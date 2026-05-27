@@ -1569,7 +1569,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </button>
                 <div id="wordEditorBody" style="display:none;margin-top:6px">
                   <div id="wordEditorHint" style="margin-bottom:6px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
-                    ✏️ Édite directement · <strong style="color:var(--text2)">Entrée</strong> pour couper · <strong style="color:var(--text2)">⌫ en début de ligne</strong> pour fusionner
+                    Glisse n'importe où · double-clic pour supprimer · <strong style="color:var(--text2)">+</strong> pour ajouter un mot
                   </div>
                   <div id="wordEditor"></div>
                 </div>
@@ -9242,151 +9242,116 @@ function _renderGroupEditor(){
   const toggleBtn = document.getElementById('wordEditorToggle');
   if(toggleBtn) toggleBtn.style.display = 'flex';
 
-  // Sauvegarde toutes les valeurs des inputs actuels avant re-render
-  function _syncFromInputs(){
-    editor.querySelectorAll('.group-line-input').forEach(inp => {
-      const gi = +inp.dataset.gi;
-      if(_wordGroups[gi] !== undefined){
-        const words = inp.value.trim().toUpperCase().split(/\s+/).filter(w=>w);
-        _wordGroups[gi] = words.length ? words : ['…'];
-      }
-    });
-  }
+  // Zone d'insertion précise entre chips
+  const makeSlot = (gi, insertIdx) => {
+    const slot = document.createElement('span');
+    slot.className = 'word-drop-slot';
+    slot.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:6px;min-width:6px;height:26px;border-radius:3px;background:transparent;transition:all .1s;cursor:default;flex-shrink:0';
+    slot.ondragover  = e => { e.preventDefault(); e.stopPropagation(); slot.style.background='var(--orange)'; slot.style.width='8px'; slot.style.minWidth='8px'; };
+    slot.ondragleave = () => { slot.style.background='transparent'; slot.style.width='6px'; slot.style.minWidth='6px'; };
+    slot.ondrop = e => {
+      e.preventDefault(); e.stopPropagation();
+      slot.style.background='transparent'; slot.style.width='6px'; slot.style.minWidth='6px';
+      const fromGi = +e.dataTransfer.getData('wg_gi');
+      const fromWi = +e.dataTransfer.getData('wg_wi');
+      const word = _wordGroups[fromGi]?.splice(fromWi, 1)[0];
+      if(!word){ _renderGroupEditor(); return; }
+      let idx = insertIdx;
+      if(fromGi === gi && fromWi < idx) idx = Math.max(0, idx-1);
+      if(!_wordGroups[gi]) _wordGroups[gi]=[];
+      _wordGroups[gi].splice(idx, 0, word);
+      _wordGroups = _wordGroups.filter(g=>g.length>0);
+      _renderGroupEditor();
+    };
+    return slot;
+  };
 
-  // Crée une ligne éditable pour un groupe
-  function makeRow(gi, focusOffset){
+  _wordGroups.forEach((group, gi) => {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+    row.dataset.gi = gi;
+    row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:6px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:40px;transition:border-color .15s;position:relative';
 
-    // Numéro
-    const num = document.createElement('span');
-    num.textContent = gi+1;
-    num.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:18px;height:18px;min-width:18px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0';
-    row.appendChild(num);
+    // Numéro de ligne
+    const label = document.createElement('span');
+    label.textContent = gi+1;
+    label.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:16px;height:16px;min-width:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700';
+    row.appendChild(label);
 
-    // Input éditable
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.className = 'group-line-input';
-    inp.dataset.gi = gi;
-    inp.value = (_wordGroups[gi] || []).join(' ');
-    inp.autocomplete = 'off';
-    inp.spellcheck = false;
-    inp.style.cssText = 'flex:1;padding:6px 10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:600;outline:none;letter-spacing:.5px;transition:border-color .15s;text-transform:uppercase';
-    inp.onfocus = () => { inp.style.borderColor='var(--orange)'; };
-    inp.onblur  = () => { inp.style.borderColor='var(--border)'; _syncFromInputs(); _wordGroups=_wordGroups.filter(g=>g.length>0); _saveSession&&_saveSession(); };
-    inp.oninput = () => {
-      // Mise à jour live pour le preview
-      const words = inp.value.trim().toUpperCase().split(/\s+/).filter(w=>w);
-      _wordGroups[gi] = words.length ? words : ['…'];
-      _saveSession&&_saveSession();
+    // Slot avant le 1er mot
+    row.appendChild(makeSlot(gi, 0));
+
+    group.forEach((word, wi) => {
+      const chip = document.createElement('span');
+      chip.className = 'word-chip';
+      chip.textContent = word;
+      chip.draggable = true;
+      chip.title = 'Glisser pour déplacer · double-clic pour supprimer';
+      chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:grab;transition:all .15s;font-family:var(--mono);user-select:none';
+      chip.ondragstart = e => { e.dataTransfer.setData('wg_gi', gi); e.dataTransfer.setData('wg_wi', wi); setTimeout(()=>chip.style.opacity='.3',0); };
+      chip.ondragend   = () => chip.style.opacity='1';
+      chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
+      chip.onmouseout  = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
+      chip.ondblclick  = () => { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); _renderGroupEditor(); };
+      row.appendChild(chip);
+      row.appendChild(makeSlot(gi, wi+1));
+    });
+
+    // Bouton + ajouter un mot
+    const addWordBtn = document.createElement('button');
+    addWordBtn.textContent = '+';
+    addWordBtn.title = 'Ajouter un mot';
+    addWordBtn.style.cssText = 'padding:3px 8px;background:transparent;border:1px dashed var(--border2);border-radius:20px;color:var(--text3);font-size:13px;font-family:var(--mono);cursor:pointer;transition:all .15s;flex-shrink:0;line-height:1';
+    addWordBtn.onmouseover = () => { addWordBtn.style.borderColor='var(--orange)';addWordBtn.style.color='var(--orange2)'; };
+    addWordBtn.onmouseout  = () => { addWordBtn.style.borderColor='var(--border2)';addWordBtn.style.color='var(--text3)'; };
+    addWordBtn.onclick = () => {
+      // Remplace le bouton par un mini input
+      addWordBtn.style.display='none';
+      const inp = document.createElement('input');
+      inp.type='text'; inp.placeholder='MOT'; inp.autocomplete='off'; inp.spellcheck=false;
+      inp.style.cssText='width:80px;padding:3px 8px;background:var(--bg4);border:1.5px solid var(--orange);border-radius:20px;color:var(--text);font-family:var(--mono);font-size:11px;font-weight:700;outline:none;text-transform:uppercase';
+      row.insertBefore(inp, addWordBtn);
+      inp.focus();
+      const confirm = () => {
+        const w = inp.value.trim().toUpperCase();
+        if(w) { _wordGroups[gi].push(w); }
+        _renderGroupEditor();
+      };
+      inp.onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); confirm(); } if(e.key==='Escape'){ _renderGroupEditor(); } };
+      inp.onblur = confirm;
     };
+    row.appendChild(addWordBtn);
 
-    inp.onkeydown = e => {
-      const pos = inp.selectionStart;
-      const val = inp.value;
+    // Boutons droite : + ligne / ⊕ fusionner
+    const btnGroup = document.createElement('div');
+    btnGroup.style.cssText = 'display:flex;gap:4px;margin-left:auto;padding-left:6px;flex-shrink:0';
 
-      if(e.key === 'Enter'){
-        e.preventDefault();
-        _syncFromInputs();
-        // Coupe la ligne au curseur → crée nouveau groupe
-        const before = val.slice(0, pos).trim().toUpperCase().split(/\s+/).filter(w=>w);
-        const after  = val.slice(pos).trim().toUpperCase().split(/\s+/).filter(w=>w);
-        _wordGroups[gi] = before.length ? before : ['…'];
-        _wordGroups.splice(gi+1, 0, after.length ? after : ['…']);
-        _renderGroupEditor(gi+1, 0); // focus sur nouvelle ligne
-        return;
-      }
+    const addLineBtn = document.createElement('button');
+    addLineBtn.textContent = '+ ligne';
+    addLineBtn.title = 'Insérer une ligne après';
+    addLineBtn.style.cssText = 'padding:2px 8px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;transition:all .15s;white-space:nowrap';
+    addLineBtn.onmouseover = () => { addLineBtn.style.borderColor='var(--orange)';addLineBtn.style.color='var(--orange2)'; };
+    addLineBtn.onmouseout  = () => { addLineBtn.style.borderColor='var(--border2)';addLineBtn.style.color='var(--text3)'; };
+    addLineBtn.onclick = e => { e.stopPropagation(); _wordGroups.splice(gi+1,0,['…']); _renderGroupEditor(); };
+    btnGroup.appendChild(addLineBtn);
 
-      if(e.key === 'Backspace' && pos === 0 && gi > 0){
-        e.preventDefault();
-        _syncFromInputs();
-        // Fusionne avec la ligne précédente
-        const prevWords = [...(_wordGroups[gi-1]||[])];
-        const curWords  = [...(_wordGroups[gi]||[])];
-        const merged = [...prevWords, ...curWords];
-        _wordGroups[gi-1] = merged.length ? merged : ['…'];
-        _wordGroups.splice(gi, 1);
-        _renderGroupEditor(gi-1, prevWords.join(' ').length + (prevWords.length ? 1 : 0));
-        return;
-      }
-
-      if(e.key === 'Delete' && pos === val.length && gi < _wordGroups.length-1){
-        e.preventDefault();
-        _syncFromInputs();
-        // Fusionne avec la ligne suivante
-        const curWords  = [...(_wordGroups[gi]||[])];
-        const nextWords = [...(_wordGroups[gi+1]||[])];
-        _wordGroups[gi] = [...curWords, ...nextWords];
-        _wordGroups.splice(gi+1, 1);
-        _renderGroupEditor(gi, curWords.join(' ').length + (curWords.length ? 1 : 0));
-        return;
-      }
-
-      // Flèches haut/bas : naviguer entre lignes
-      if(e.key === 'ArrowUp' && gi > 0){
-        e.preventDefault();
-        const prev = editor.querySelectorAll('.group-line-input')[gi-1];
-        if(prev){ prev.focus(); prev.setSelectionRange(prev.value.length, prev.value.length); }
-      }
-      if(e.key === 'ArrowDown' && gi < _wordGroups.length-1){
-        e.preventDefault();
-        const next = editor.querySelectorAll('.group-line-input')[gi+1];
-        if(next){ next.focus(); next.setSelectionRange(0,0); }
-      }
-    };
-
-    row.appendChild(inp);
-
-    // Bouton supprimer la ligne
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '✕';
-    delBtn.title = 'Supprimer cette ligne';
-    delBtn.style.cssText = 'padding:4px 7px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-size:11px;cursor:pointer;flex-shrink:0;transition:all .15s';
-    delBtn.onmouseover = () => { delBtn.style.borderColor='var(--red,#ff4757)';delBtn.style.color='var(--red,#ff4757)'; };
-    delBtn.onmouseout  = () => { delBtn.style.borderColor='var(--border2)';delBtn.style.color='var(--text3)'; };
-    delBtn.onclick = () => {
-      _syncFromInputs();
-      if(_wordGroups.length <= 1){ _wordGroups[gi]=['…']; _renderGroupEditor(gi); return; }
-      _wordGroups.splice(gi,1);
-      _renderGroupEditor(Math.max(0,gi-1));
-    };
-    row.appendChild(delBtn);
-
-    editor.appendChild(row);
-
-    // Focus + position curseur si demandé
-    if(focusOffset !== undefined){
-      requestAnimationFrame(() => {
-        inp.focus();
-        const p = Math.min(focusOffset, inp.value.length);
-        inp.setSelectionRange(p, p);
-      });
+    if(gi < _wordGroups.length-1){
+      const mergeBtn = document.createElement('button');
+      mergeBtn.textContent = '⊕';
+      mergeBtn.title = 'Fusionner avec la ligne suivante';
+      mergeBtn.style.cssText = 'padding:2px 7px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;flex-shrink:0';
+      mergeBtn.onmouseover = () => { mergeBtn.style.borderColor='var(--orange)';mergeBtn.style.color='var(--orange2)'; };
+      mergeBtn.onmouseout  = () => { mergeBtn.style.borderColor='var(--border2)';mergeBtn.style.color='var(--text3)'; };
+      mergeBtn.onclick = e => { e.stopPropagation(); _wordGroups[gi]=[..._wordGroups[gi],..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
+      btnGroup.appendChild(mergeBtn);
     }
-  }
-
-  const focusGi = arguments[0] ?? null;
-  const focusPos = arguments[1] ?? null;
-
-  _wordGroups.forEach((_, gi) => {
-    makeRow(gi, (gi === focusGi ? focusPos : undefined));
+    row.appendChild(btnGroup);
+    editor.appendChild(row);
   });
 
-  // Barre du bas
-  const bottomRow = document.createElement('div');
-  bottomRow.style.cssText = 'display:flex;gap:6px;margin-top:6px';
-
-  const addBtn = document.createElement('button');
-  addBtn.textContent = '+ Nouvelle ligne';
-  addBtn.style.cssText = 'flex:1;padding:7px;background:transparent;border:1px dashed var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s';
-  addBtn.onmouseover = () => { addBtn.style.borderColor='var(--orange)';addBtn.style.color='var(--orange2)'; };
-  addBtn.onmouseout  = () => { addBtn.style.borderColor='var(--border2)';addBtn.style.color='var(--text3)'; };
-  addBtn.onclick = () => { _syncFromInputs(); _wordGroups.push(['…']); _renderGroupEditor(_wordGroups.length-1, 0); };
-  bottomRow.appendChild(addBtn);
-
+  // Bouton réinitialiser uniquement
   const resetBtn = document.createElement('button');
-  resetBtn.textContent = '↺ Réinitialiser';
-  resetBtn.style.cssText = 'padding:7px 12px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap';
+  resetBtn.textContent = '↺ Tout réinitialiser';
+  resetBtn.style.cssText = 'width:100%;margin-top:4px;padding:7px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s';
   resetBtn.onmouseover = () => { resetBtn.style.background='rgba(255,71,87,0.08)'; };
   resetBtn.onmouseout  = () => { resetBtn.style.background='transparent'; };
   resetBtn.onclick = () => {
@@ -9396,26 +9361,12 @@ function _renderGroupEditor(){
       || (_wordGroups ? _wordGroups.flat().join(' ') : '');
     if(src) _renderWordChips(src);
   };
-  bottomRow.appendChild(resetBtn);
-  editor.appendChild(bottomRow);
-
+  editor.appendChild(resetBtn);
   _saveSession && _saveSession();
 }
 
 // Retourne les groupes (depuis _wordGroups ou null si non initialisé)
 function _getWordGroups(){
-  // Sync depuis les inputs éditables si l'éditeur est ouvert
-  const inputs = document.querySelectorAll('#wordEditor .group-line-input');
-  if(inputs.length){
-    inputs.forEach(inp => {
-      const gi = +inp.dataset.gi;
-      if(_wordGroups && _wordGroups[gi] !== undefined){
-        const words = inp.value.trim().toUpperCase().split(/\s+/).filter(w=>w);
-        _wordGroups[gi] = words.length ? words : ['…'];
-      }
-    });
-    if(_wordGroups) _wordGroups = _wordGroups.filter(g=>g.length>0);
-  }
   return (_wordGroups && _wordGroups.length > 0) ? _wordGroups : null;
 }
 
