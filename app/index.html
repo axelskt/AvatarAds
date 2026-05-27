@@ -6985,12 +6985,16 @@ function removeGameplay(){
   gameplayFile = null;
   const lbl3 = document.getElementById('gpStep3FileLabel');
   if(lbl3) lbl3.textContent = '';
-  document.getElementById('gameplayDropContent').style.display='';
-  document.getElementById('gameplayFileInfo').style.display='none';
+  const gpDropContent = document.getElementById('gameplayDropContent');
+  if(gpDropContent) gpDropContent.style.display='';
+  const gpFileInfo = document.getElementById('gameplayFileInfo');
+  if(gpFileInfo) gpFileInfo.style.display='none';
   const removeBtn = document.getElementById('removeGameplayBtn');
   if(removeBtn) removeBtn.style.display='none';
   const gpZone = document.getElementById('gameplayZone');
   if(gpZone) gpZone.style.display='none';
+  // Désactive le split screen pour que updateLivePreview ne réaffiche pas la zone
+  if(splitEnabled) toggleSplit();
   _syncGpSizeStep3();
   updateLivePreview();
   toast('✕ Gameplay supprimé');
@@ -9215,6 +9219,7 @@ let _wordGroups = null; // array of arrays : [["MONTE","DANS","TA"], ["CHAMBRE",
 
 function _renderWordChips(text){
   // Initialise les groupes depuis le texte brut, découpé par wpg
+  window._wordEditorOriginalText = text; // mémorisé pour reset
   const words = text.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
   const wpg = Math.max(1, cfg.subWpg || 2);
   _wordGroups = _buildWpgGroups(words, wpg);
@@ -9234,74 +9239,115 @@ function _renderGroupEditor(){
   const editor = document.getElementById('wordEditor');
   if(!editor || !_wordGroups) return;
   editor.innerHTML = '';
-  // Afficher le bouton toggle (caché par défaut, visible après premier rendu)
   const toggleBtn = document.getElementById('wordEditorToggle');
   if(toggleBtn) toggleBtn.style.display = 'flex';
 
-  _wordGroups.forEach((group, gi) => {
-    // Ligne de groupe
-    const row = document.createElement('div');
-    row.dataset.gi = gi;
-    row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:38px;transition:border-color .15s';
-    // Numéro de groupe
-    const label = document.createElement('span');
-    label.textContent = (gi+1);
-    label.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700';
-    row.appendChild(label);
-
-    // Drop zone
-    row.ondragover = e => { e.preventDefault(); row.style.borderColor='var(--orange)'; row.style.background='rgba(255,107,53,0.06)'; };
-    row.ondragleave = () => { row.style.borderColor='var(--border)'; row.style.background='var(--bg3)'; };
-    row.ondrop = e => {
-      e.preventDefault(); row.style.borderColor='var(--border)'; row.style.background='var(--bg3)';
+  // Helper : crée une zone d'insertion visible entre les mots
+  const makeSlot = (gi, insertIdx) => {
+    const slot = document.createElement('span');
+    slot.className = 'word-drop-slot';
+    slot.style.cssText = 'display:inline-block;width:4px;min-width:4px;height:22px;background:transparent;border-radius:2px;transition:all .12s;cursor:default;flex-shrink:0;vertical-align:middle';
+    slot.ondragover = e => { e.preventDefault(); e.stopPropagation(); slot.style.background='var(--orange)'; slot.style.width='6px'; slot.style.minWidth='6px'; };
+    slot.ondragleave = () => { slot.style.background='transparent'; slot.style.width='4px'; slot.style.minWidth='4px'; };
+    slot.ondrop = e => {
+      e.preventDefault(); e.stopPropagation();
+      slot.style.background='transparent'; slot.style.width='4px'; slot.style.minWidth='4px';
       const fromGi = +e.dataTransfer.getData('wg_gi');
       const fromWi = +e.dataTransfer.getData('wg_wi');
-      if(fromGi === gi) return;
-      const word = _wordGroups[fromGi].splice(fromWi, 1)[0];
-      if(word) _wordGroups[gi].push(word);
+      const word = _wordGroups[fromGi]?.splice(fromWi, 1)[0];
+      if(!word) { _renderGroupEditor(); return; }
+      let idx = insertIdx;
+      if(fromGi === gi && fromWi < idx) idx = Math.max(0, idx - 1);
+      if(!_wordGroups[gi]) _wordGroups[gi] = [];
+      _wordGroups[gi].splice(idx, 0, word);
       _wordGroups = _wordGroups.filter(g=>g.length>0);
       _renderGroupEditor();
     };
+    return slot;
+  };
+
+  _wordGroups.forEach((group, gi) => {
+    const row = document.createElement('div');
+    row.dataset.gi = gi;
+    row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:6px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:38px;transition:border-color .15s';
+
+    // Numéro de ligne
+    const label = document.createElement('span');
+    label.textContent = (gi+1);
+    label.style.cssText = 'font-size:9px;font-family:var(--mono);color:var(--text3);background:var(--bg4);border-radius:50%;width:16px;height:16px;min-width:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700';
+    row.appendChild(label);
+
+    // Slot avant le premier mot
+    row.appendChild(makeSlot(gi, 0));
 
     group.forEach((word, wi) => {
       const chip = document.createElement('span');
       chip.className = 'word-chip';
       chip.textContent = word;
       chip.draggable = true;
-      chip.title = 'Glisser vers un autre groupe · double-clic pour supprimer';
+      chip.title = 'Glisser pour déplacer · double-clic pour supprimer';
       chip.style.cssText = 'display:inline-block;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:grab;transition:all .15s;font-family:var(--mono);user-select:none';
-      chip.ondragstart = e => { e.dataTransfer.setData('wg_gi', gi); e.dataTransfer.setData('wg_wi', wi); setTimeout(()=>chip.style.opacity='.35', 0); };
-      chip.ondragend   = () => { chip.style.opacity='1'; };
+      chip.ondragstart = e => { e.dataTransfer.setData('wg_gi', gi); e.dataTransfer.setData('wg_wi', wi); setTimeout(()=>chip.style.opacity='.35',0); };
+      chip.ondragend   = () => chip.style.opacity='1';
       chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
       chip.onmouseout  = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
       chip.ondblclick  = () => { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); _renderGroupEditor(); };
       row.appendChild(chip);
+      // Slot après chaque mot
+      row.appendChild(makeSlot(gi, wi + 1));
     });
 
-    // Bouton fusionner avec le suivant
+    // Boutons droite : + ligne / ⊕ fusionner
+    const btnGroup = document.createElement('div');
+    btnGroup.style.cssText = 'display:flex;gap:4px;margin-left:auto;flex-shrink:0';
+
+    const addLineBtn = document.createElement('button');
+    addLineBtn.textContent = '+ ligne';
+    addLineBtn.title = 'Insérer une nouvelle ligne après';
+    addLineBtn.style.cssText = 'padding:2px 8px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;transition:all .15s;white-space:nowrap';
+    addLineBtn.onmouseover = () => { addLineBtn.style.borderColor='var(--orange)';addLineBtn.style.color='var(--orange2)'; };
+    addLineBtn.onmouseout  = () => { addLineBtn.style.borderColor='var(--border2)';addLineBtn.style.color='var(--text3)'; };
+    addLineBtn.onclick = (e) => { e.stopPropagation(); _wordGroups.splice(gi+1,0,['…']); _renderGroupEditor(); };
+    btnGroup.appendChild(addLineBtn);
+
     if(gi < _wordGroups.length - 1){
       const mergeBtn = document.createElement('button');
       mergeBtn.textContent = '⊕';
-      mergeBtn.title = 'Fusionner avec le groupe suivant';
-      mergeBtn.style.cssText = 'margin-left:auto;padding:2px 7px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;flex-shrink:0';
+      mergeBtn.title = 'Fusionner avec la ligne suivante';
+      mergeBtn.style.cssText = 'padding:2px 7px;background:transparent;border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;flex-shrink:0';
       mergeBtn.onmouseover = () => { mergeBtn.style.borderColor='var(--orange)';mergeBtn.style.color='var(--orange2)'; };
       mergeBtn.onmouseout  = () => { mergeBtn.style.borderColor='var(--border2)';mergeBtn.style.color='var(--text3)'; };
-      mergeBtn.onclick = () => { _wordGroups[gi] = [..._wordGroups[gi], ..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
-      row.appendChild(mergeBtn);
+      mergeBtn.onclick = (e) => { e.stopPropagation(); _wordGroups[gi]=[..._wordGroups[gi],..._wordGroups[gi+1]]; _wordGroups.splice(gi+1,1); _renderGroupEditor(); };
+      btnGroup.appendChild(mergeBtn);
     }
+    row.appendChild(btnGroup);
     editor.appendChild(row);
   });
 
-  // Bouton + nouveau groupe vide
+  // Barre du bas : + nouveau groupe + réinitialiser
+  const bottomRow = document.createElement('div');
+  bottomRow.style.cssText = 'display:flex;gap:6px;margin-top:4px';
+
   const addBtn = document.createElement('button');
   addBtn.textContent = '+ Nouveau groupe vide';
-  addBtn.style.cssText = 'width:100%;padding:6px;background:transparent;border:1px dashed var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;margin-top:2px';
+  addBtn.style.cssText = 'flex:1;padding:6px;background:transparent;border:1px dashed var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s';
   addBtn.onmouseover = () => { addBtn.style.borderColor='var(--orange)';addBtn.style.color='var(--orange2)'; };
   addBtn.onmouseout  = () => { addBtn.style.borderColor='var(--border2)';addBtn.style.color='var(--text3)'; };
   addBtn.onclick = () => { _wordGroups.push(['…']); _renderGroupEditor(); };
-  editor.appendChild(addBtn);
+  bottomRow.appendChild(addBtn);
 
-  // Sauvegarde auto après chaque modification des groupes
+  if(window._wordEditorOriginalText){
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = '↺ Réinitialiser';
+    resetBtn.title = 'Remettre les groupes d\'origine';
+    resetBtn.style.cssText = 'padding:6px 12px;background:transparent;border:1px solid rgba(255,71,87,0.35);border-radius:8px;color:var(--red,#ff4757);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap';
+    resetBtn.onmouseover = () => { resetBtn.style.background='rgba(255,71,87,0.08)'; };
+    resetBtn.onmouseout  = () => { resetBtn.style.background='transparent'; };
+    resetBtn.onclick = () => { _renderWordChips(window._wordEditorOriginalText); };
+    bottomRow.appendChild(resetBtn);
+  }
+  editor.appendChild(bottomRow);
+
   _saveSession && _saveSession();
 }
 
