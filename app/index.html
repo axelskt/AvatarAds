@@ -2764,6 +2764,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l5 5m0 0l5 5M6 6l5-5M6 6L1 11"/><circle cx="2" cy="2" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="11" r="1.5" fill="currentColor" stroke="none"/></svg>
               Couper ici
             </button>
+            <button id="recDeleteBtn" onclick="recDeleteAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Supprime le segment sous le curseur" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h8M5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M10.5 3.5l-.6 7a1 1 0 01-1 .9H4.1a1 1 0 01-1-.9l-.6-7"/></svg>
+              Supprimer
+            </button>
             <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
               ✂️ Remplacer
             </button>
@@ -6202,6 +6206,16 @@ function _recFmt(s){ const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'
 
 // ── UI update ──
 // ── ✂️ Découpe CapCut-style ─────────────────────────────────────────
+function recDeleteAtCursor(){
+  if(!recAudioBuffer || recSegments.length === 0) return;
+  const sr = recAudioBuffer.sampleRate;
+  const cursorSample = Math.round(recPlayOffset * sr);
+  // Trouve le segment contenant le curseur
+  const seg = recSegments.find(s => cursorSample >= s.start && cursorSample <= s.end);
+  if(!seg){ toast('⚠️ Positionne le curseur dans le segment à supprimer'); return; }
+  recDeleteSegment(seg.id);
+}
+
 function recSplitAtCursor(){
   if(!recAudioBuffer || recSegments.length === 0) return;
   const sr = recAudioBuffer.sampleRate;
@@ -6355,8 +6369,9 @@ function recUpdateUI(){
   const mainIcon = document.getElementById('recMainBtnIcon');
   const pulse    = document.getElementById('recPulse');
   const playBtn  = document.getElementById('recPlayBtn');
-  const splitBtn = document.getElementById('recSplitBtn');
-  const replBtn  = document.getElementById('recReplaceBtn');
+  const splitBtn  = document.getElementById('recSplitBtn');
+  const delBtn2   = document.getElementById('recDeleteBtn');
+  const replBtn   = document.getElementById('recReplaceBtn');
   const dlBtn    = document.getElementById('recDownloadBtn');
   const libBtn   = document.getElementById('recLibBtn');
   const resetBtn = document.getElementById('recResetBtn');
@@ -6374,6 +6389,7 @@ function recUpdateUI(){
   if(pulse)    pulse.style.display = isRec ? 'block' : 'none';
   if(playBtn){ playBtn.disabled = !has||isRec||isProc; playBtn.innerHTML = isPlay ? '⏸ Pause' : '▶ Écouter'; }
   if(splitBtn) splitBtn.disabled = !has||isRec||isProc;
+  if(delBtn2)  delBtn2.disabled  = !has||isRec||isProc;
   if(replBtn)  replBtn.disabled  = !has||isRec||isProc;
   if(dlBtn)    dlBtn.disabled    = !has||isRec||isProc;
   if(libBtn)   libBtn.disabled   = !has||isRec||isProc;
@@ -12131,9 +12147,10 @@ function renderLibrary(){
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
           <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
-          <button onclick="recPlayLibraryAudio(${ri})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
-            ▶ Écouter / Utiliser
-          </button>
+          <div style="display:flex;gap:5px;margin-top:7px">
+            <button id="libAudioPlay_${ri}" onclick="event.stopPropagation();_libPlayAudio(${ri},this)" style="flex:1;padding:7px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter</button>
+            <button onclick="event.stopPropagation();recPlayLibraryAudio(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">→ Utiliser</button>
+          </div>
         </div>
       </div>`;
     }
@@ -12179,6 +12196,51 @@ async function deleteLibItem(src, idx){
   }
   renderLibrary();
   toast('🗑️ Supprimé de la bibliothèque');
+}
+
+let _libAudioEl = null;
+let _libAudioPlayingIdx = -1;
+
+async function _libPlayAudio(libIdx, btn){
+  const entry = library[libIdx];
+  if(!entry || !entry.idbKey){ toast('⚠️ Audio introuvable'); return; }
+
+  // Même audio en lecture → pause
+  if(_libAudioPlayingIdx === libIdx && _libAudioEl && !_libAudioEl.paused){
+    _libAudioEl.pause();
+    btn.innerHTML = '▶ Écouter';
+    return;
+  }
+
+  // Arrêter le précédent
+  if(_libAudioEl){
+    _libAudioEl.pause();
+    _libAudioEl.src = '';
+    const prevBtn = document.getElementById('libAudioPlay_' + _libAudioPlayingIdx);
+    if(prevBtn) prevBtn.innerHTML = '▶ Écouter';
+  }
+
+  btn.innerHTML = '⏳';
+  const rec = await _idbLoad(entry.idbKey);
+  if(!rec){ toast('⚠️ Fichier audio non trouvé'); btn.innerHTML = '▶ Écouter'; return; }
+
+  const blob = rec.blob || rec;
+  const url  = URL.createObjectURL(new Blob([blob], { type:'audio/wav' }));
+  _libAudioEl = new Audio(url);
+  _libAudioPlayingIdx = libIdx;
+
+  btn.innerHTML = '⏸ Pause';
+  _libAudioEl.onended = () => {
+    btn.innerHTML = '▶ Écouter';
+    _libAudioPlayingIdx = -1;
+    URL.revokeObjectURL(url);
+  };
+  _libAudioEl.onerror = () => {
+    btn.innerHTML = '▶ Écouter';
+    toast('⚠️ Impossible de lire l\'audio');
+    URL.revokeObjectURL(url);
+  };
+  _libAudioEl.play().catch(() => { btn.innerHTML = '▶ Écouter'; });
 }
 
 async function recPlayLibraryAudio(libIdx){
