@@ -2789,9 +2789,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1v8M3.5 6l3 3 3-3M1.5 10.5v.5a1 1 0 001 1h9a1 1 0 001-1v-.5"/></svg>
             WAV
           </button>
-          <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" title="Sauvegarder dans la bibliothèque">
+          <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="padding:12px 14px;background:rgba(255,107,53,0.06);border:1.5px solid rgba(255,107,53,0.45);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap" title="Envoyer vers la bibliothèque" onmouseover="if(!this.disabled)this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.borderColor='rgba(255,107,53,0.45)'">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg>
-            Bibliothèque
+            Envoyer vers bibliothèque
           </button>
           <button id="recResetBtn" onclick="recReset()" disabled style="padding:12px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px" title="Réinitialiser / supprimer l'enregistrement" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h8M5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M10.5 3.5l-.6 7a1 1 0 01-1 .9H4.1a1 1 0 01-1-.9l-.6-7"/></svg>
@@ -6165,7 +6165,7 @@ async function recConfirmSaveToLibrary(){
   } finally {
     if(btn){
       btn.disabled = false;
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg> Bibliothèque';
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg> Envoyer vers bibliothèque';
     }
   }
 }
