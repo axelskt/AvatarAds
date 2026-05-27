@@ -11681,9 +11681,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         } catch(audioErr){ console.warn('AudioEncoder failed (vidéo muette):', audioErr); }
       }
 
-      // Boucle vidéo via requestVideoFrameCallback
-      // → déclenché une fois par frame décodée par le décodeur vidéo (≠ vsync écran)
-      // → timestamps séquentiels garantis CFR
+      // Boucle vidéo via setInterval (compatible Safari + Chrome)
+      // requestVideoFrameCallback a des bugs sur Safari avec les vidéos hors-DOM
+      // setInterval n'affecte PAS le CFR : les timestamps sont assignés par VideoEncoder
+      // (frameNum/30 * 1e6 µs) et non par le wall clock → CFR garanti peu importe le jitter JS
       setStage('Composition ' + qCfg.label + ' (WebCodecs)…', 18);
       toast('🎬 Composition CFR WebCodecs ~' + Math.round(totalDuration) + 's…');
       hedraVid.currentTime = 0;
@@ -11692,31 +11693,40 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       let _wcFrameNum = 0;
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
+      let _wcEncErr = null;
 
       await new Promise(resolve => {
-        const onFrame = (now, meta) => {
-          if(window._composeCancelled){ resolve(); return; }
-          drawFrame(meta.mediaTime);
-          const vf = new VideoFrame(canvas, {
-            timestamp: Math.round(_wcFrameNum / _fps * 1e6), // séquentiel strict → CFR
-            duration:  Math.round(1e6 / _fps),
-          });
-          videoEncoder.encode(vf, { keyFrame: _wcFrameNum % (_fps * 2) === 0 });
-          vf.close();
+        let _lastMediaTime = -1;
+        const _wcInterval = setInterval(() => {
+          if(window._composeCancelled || _wcEncErr){ clearInterval(_wcInterval); resolve(); return; }
+          const t = hedraVid.currentTime || 0;
+          // Dessiner uniquement si la vidéo a avancé (évite les frames dupliquées inutiles)
+          if(t !== _lastMediaTime){
+            drawFrame(t);
+            _lastMediaTime = t;
+          }
+          // Encoder à chaque tick setInterval → timestamp séquentiel strict (CFR)
+          try {
+            const vf = new VideoFrame(canvas, {
+              timestamp: Math.round(_wcFrameNum / _fps * 1e6),
+              duration:  Math.round(1e6 / _fps),
+            });
+            videoEncoder.encode(vf, { keyFrame: _wcFrameNum % (_fps * 2) === 0 });
+            vf.close();
+          } catch(encErr){ _wcEncErr = encErr; clearInterval(_wcInterval); resolve(); return; }
           _wcFrameNum++;
           const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
           if(compFill) compFill.style.width = pct + '%';
           if(compPct)  compPct.textContent  = pct + '%';
-          if(meta.mediaTime < totalDuration - 0.1 && _wcFrameNum < _wcTotalFrames){
-            hedraVid.requestVideoFrameCallback(onFrame);
-          } else {
+          if(t >= totalDuration - 0.05 || _wcFrameNum >= _wcTotalFrames){
+            clearInterval(_wcInterval);
             resolve();
           }
-        };
+        }, 1000 / _fps);
         hedraVid.play().catch(()=>{});
         if(gpVid) gpVid.play().catch(()=>{});
-        hedraVid.requestVideoFrameCallback(onFrame);
       });
+      if(_wcEncErr) throw _wcEncErr;
 
       hedraVid.pause();
       if(gpVid) gpVid.pause();
