@@ -3381,8 +3381,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <input type="password" id="inp-google-key" placeholder="AIza…">
         <button onclick="document.getElementById('inp-google-key').type=document.getElementById('inp-google-key').type==='password'?'text':'password'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
       </div>
-      <div class="setup-hint" id="google-key-status" style="display:none;color:var(--green)">✓ Clé Google AI configurée — Imagen 4 + Veo 3.1 activés</div>
-      <div class="setup-hint">Nécessaire pour générer des avatars cartoon (Imagen 4 + Veo 3.1 Fast). Crée ta clé sur <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.</div>
+      <div class="setup-hint" style="color:var(--green)" id="google-key-status">✓ Clé Google AI configurée côté serveur — Imagen 4 + Veo 3.1 activés</div>
+      <div class="setup-hint">Clé gérée côté serveur Supabase. Ajoute <strong>GOOGLE_AI_KEY</strong> dans tes secrets Supabase pour activer la génération cartoon.</div>
     </div>
 
     <div class="setup-divider"></div>
@@ -4011,9 +4011,9 @@ const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
-const OPENAI_PROXY  = SUPABASE_URL + '/functions/v1/openai-proxy';
-const EL_PROXY      = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
-const GOOGLE_AI_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const OPENAI_PROXY   = SUPABASE_URL + '/functions/v1/openai-proxy';
+const EL_PROXY       = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
+const GOOGLE_PROXY   = SUPABASE_URL + '/functions/v1/google-ai-proxy';
 
 // Helper : retourne l'Authorization header avec le JWT de l'user connecté
 // Sans JWT valide → le proxy refusera la requête (401)
@@ -13637,14 +13637,15 @@ function selectCartoonStyle(btn, style){
 function cartoonQuickPrompt(txt){ document.getElementById('cartoonCharPrompt').value = txt; }
 function cartoonAnimPreset(txt){ document.getElementById('cartoonAnimPrompt').value = txt; }
 
-function _cartoonGetKey(){
-  const k = localStorage.getItem('aa_google_ai_key');
-  if(!k){ toast('⚠️ Configure ta clé Google AI dans Connexions ⚙'); openSetup(); return null; }
-  return k;
+async function _cartoonProxyFetch(path, options={}){
+  const authH = await getAuthHeader();
+  return fetch(`${GOOGLE_PROXY}?path=${encodeURIComponent(path)}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': authH, ...(options.headers||{}) }
+  });
 }
 
 async function cartoonGenImage(btn){
-  const key = _cartoonGetKey(); if(!key) return;
   const prompt = document.getElementById('cartoonCharPrompt').value.trim();
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
 
@@ -13659,11 +13660,10 @@ async function cartoonGenImage(btn){
   if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">⏳ Génération…</span>'; }
 
   try {
-    const resp = await fetch(
-      `${GOOGLE_AI_URL}/models/imagen-4.0-generate-001:predict?key=${key}`,
+    const resp = await _cartoonProxyFetch(
+      '/v1beta/models/imagen-4.0-generate-001:predict',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           instances: [{ prompt: fullPrompt }],
           parameters: { sampleCount: 1, aspectRatio: '9:16', safetyFilterLevel: 'block_some' }
@@ -13709,7 +13709,6 @@ async function cartoonGenImage(btn){
 }
 
 async function cartoonGenVideo(btn){
-  const key = _cartoonGetKey(); if(!key) return;
   if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
   if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
 
@@ -13737,11 +13736,10 @@ async function cartoonGenVideo(btn){
 
   try {
     // 1. Démarrer la génération Veo 3.1 Fast
-    const startResp = await fetch(
-      `${GOOGLE_AI_URL}/models/veo-3.1-fast-generate-preview:predictLongRunning?key=${key}`,
+    const startResp = await _cartoonProxyFetch(
+      '/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           instances: [{
             prompt: animPrompt,
@@ -13768,7 +13766,7 @@ async function cartoonGenVideo(btn){
     let videoB64 = null;
     for(let i=0; i<60; i++){
       await new Promise(r=>setTimeout(r,3000));
-      const pollResp = await fetch(`${GOOGLE_AI_URL}/${opName}?key=${key}`);
+      const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
       if(!pollResp.ok) continue;
       const pollData = await pollResp.json();
       if(pollData.done){
