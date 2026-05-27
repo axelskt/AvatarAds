@@ -1581,7 +1581,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </button>
                 <div id="wordEditorBody" style="display:none;margin-top:6px">
                   <div id="wordEditorHint" style="margin-bottom:8px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
-                    Glisse n'importe où · double-clic pour supprimer · <strong style="color:var(--text2)">+</strong> pour ajouter un mot · <strong style="color:var(--text2)">+ ligne</strong> pour insérer une ligne
+                    Glisse n'importe où · double-clic pour modifier ou supprimer · <strong style="color:var(--text2)">+</strong> pour ajouter · <strong style="color:var(--text2)">+ ligne</strong> pour insérer une ligne
                   </div>
                   <div id="wordEditor"></div>
                 </div>
@@ -9764,6 +9764,62 @@ function toggleWordEditor(){
   if(chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
+function _showWordChipMenu(e, chip, gi, wi){
+  document.getElementById('_wcMenu')?.remove();
+  const menu = document.createElement('div');
+  menu.id = '_wcMenu';
+  menu.style.cssText = 'position:fixed;z-index:99999;background:#16181c;border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.7);padding:4px;min-width:170px';
+  const rect = chip.getBoundingClientRect();
+  const left = Math.min(rect.left, window.innerWidth - 185);
+  const top  = rect.bottom + 6;
+  menu.style.left = left + 'px';
+  menu.style.top  = top  + 'px';
+
+  const mkBtn = (ico, label, color, fn) => {
+    const b = document.createElement('button');
+    b.innerHTML = ico + ' &nbsp;' + label;
+    b.style.cssText = 'width:100%;display:flex;align-items:center;padding:9px 12px;background:transparent;border:none;border-radius:7px;color:' + color + ';font-family:var(--mono);font-size:12px;cursor:pointer;text-align:left;transition:background .12s;gap:4px';
+    b.onmouseover = () => b.style.background = color==='#ff4757' ? 'rgba(255,71,87,0.12)' : 'rgba(255,255,255,0.07)';
+    b.onmouseout  = () => b.style.background = 'transparent';
+    b.onclick = () => { menu.remove(); fn(); };
+    return b;
+  };
+
+  menu.appendChild(mkBtn('✏️', 'Modifier l\'écriture', '#fff', () => _editWordChip(chip, gi, wi)));
+  menu.appendChild(mkBtn('🗑', 'Supprimer le mot',    '#ff4757', () => {
+    _wordGroups[gi].splice(wi,1);
+    _wordGroups = _wordGroups.filter(g=>g.length>0);
+    _renderGroupEditor();
+  }));
+
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once:true }), 0);
+}
+
+function _editWordChip(chip, gi, wi){
+  const original = chip.textContent;
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = original;
+  inp.autocomplete = 'off';
+  inp.spellcheck   = false;
+  inp.style.cssText = 'padding:4px 10px;background:var(--bg4);border:1.5px solid var(--orange);border-radius:20px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;outline:none;min-width:50px;width:' + Math.max(60, original.length * 9 + 24) + 'px';
+  chip.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  const confirm = () => {
+    const val = inp.value.trim().toUpperCase();
+    if(val){ _wordGroups[gi][wi] = val; }
+    else   { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); }
+    _renderGroupEditor();
+  };
+  inp.onblur   = confirm;
+  inp.onkeydown = ev => {
+    if(ev.key==='Enter')  { ev.preventDefault(); inp.blur(); }
+    if(ev.key==='Escape') { inp.replaceWith(chip); }
+  };
+}
+
 function _renderGroupEditor(){
   const editor = document.getElementById('wordEditor');
   if(!editor || !_wordGroups) return;
@@ -9820,7 +9876,7 @@ function _renderGroupEditor(){
       chip.ondragend   = () => chip.style.opacity='1';
       chip.onmouseover = () => { chip.style.background='var(--orange-dim)';chip.style.borderColor='rgba(255,107,53,.3)';chip.style.color='var(--orange2)'; };
       chip.onmouseout  = () => { chip.style.background='var(--bg4)';chip.style.borderColor='var(--border)';chip.style.color='var(--text)'; };
-      chip.ondblclick  = () => { _wordGroups[gi].splice(wi,1); _wordGroups=_wordGroups.filter(g=>g.length>0); _renderGroupEditor(); };
+      chip.ondblclick  = e => { e.stopPropagation(); _showWordChipMenu(e, chip, gi, wi); };
       row.appendChild(chip);
       row.appendChild(makeSlot(gi, wi+1));
     });
