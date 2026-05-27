@@ -11755,15 +11755,23 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         try {
           await _loadFFmpeg();
           const ff = _ffmpegInst;
+          // Détecter le format audio réel (ElevenLabs = audio/mpeg = MP3, pas WAV !)
+          const _audMime = (_audioBlobToEncode.type || '').toLowerCase();
+          const _audExt  = _audMime.includes('mp3') || _audMime.includes('mpeg') ? 'mp3'
+                         : _audMime.includes('ogg') || _audMime.includes('opus') ? 'ogg'
+                         : _audMime.includes('webm') ? 'webm'
+                         : _audMime.includes('wav')  ? 'wav'
+                         : 'mp3'; // ElevenLabs par défaut → MP3
+          const _audFile = 'wc_aud.' + _audExt;
           try { ff.FS('unlink','wc_vid.mp4'); } catch(e){}
-          try { ff.FS('unlink','wc_aud.wav'); } catch(e){}
+          try { ff.FS('unlink', _audFile);    } catch(e){}
           try { ff.FS('unlink','wc_out.mp4'); } catch(e){}
           ff.FS('writeFile','wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
-          ff.FS('writeFile','wc_aud.wav', new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
-          await ff.run('-i','wc_vid.mp4','-i','wc_aud.wav','-c:v','copy','-c:a','aac','-ar','44100','-b:a','128k','-shortest','-movflags','+faststart','-y','wc_out.mp4');
+          ff.FS('writeFile', _audFile,    new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
+          await ff.run('-i','wc_vid.mp4','-i',_audFile,'-c:v','copy','-c:a','aac','-ar','44100','-b:a','128k','-shortest','-movflags','+faststart','-y','wc_out.mp4');
           const outData = ff.FS('readFile','wc_out.mp4');
           finalBlob = (outData && outData.length > 50000) ? new Blob([outData.buffer], { type: 'video/mp4' }) : wcBlob;
-          try { ff.FS('unlink','wc_vid.mp4'); ff.FS('unlink','wc_aud.wav'); ff.FS('unlink','wc_out.mp4'); } catch(e){}
+          try { ff.FS('unlink','wc_vid.mp4'); ff.FS('unlink',_audFile); ff.FS('unlink','wc_out.mp4'); } catch(e){}
         } catch(ffMuxErr){
           console.warn('FFmpeg audio mux failed:', ffMuxErr);
           finalBlob = wcBlob; // vidéo sans audio plutôt que rien
