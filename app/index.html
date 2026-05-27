@@ -479,6 +479,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
         <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
       </div>
+      <div id="memberImgQuotaBox" style="display:none;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;cursor:pointer" onclick="nav('imagegen',document.querySelector('.nav-i[onclick*=imagegen]'))" title="Crédits images IA ce mois">
+        <span style="font-size:11px">🖼️</span>
+        <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberImgCredits">—</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">imgs</span>
+      </div>
       <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.3)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
         🚀 Voir les plans
       </button>
@@ -548,12 +553,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div>
   </div>
   <div class="topbar-right">
-    <div class="keys-status" id="keysStatus">
-      <div class="key-pill"><div class="key-dot" id="dot-gpt"></div>Script IA</div>
-      <div class="key-pill"><div class="key-dot" id="dot-el"></div>ElevenLabs</div>
-      <div class="key-pill"><div class="key-dot" id="dot-hedra"></div>Avatar IA</div>
-    </div>
-    <button class="btn-keys" onclick="openSetup()">⚙ Connexions</button>
+    <button id="btnConnexions" class="btn-keys" onclick="openSetup()" style="display:none">⚙ Connexions</button>
   </div>
 </div>
 
@@ -3564,20 +3564,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div>
 
     <div class="setup-divider"></div>
-
-    <!-- YouTube Client ID (optionnel) -->
-    <div class="setup-field">
-      <div class="setup-label">
-        YouTube OAuth Client ID <span style="color:var(--text3);font-size:9px;margin-left:4px">OPTIONNEL</span>
-        <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console →</a>
-      </div>
-      <div class="setup-input">
-        <input type="text" id="inp-yt-client" placeholder="123456789-abc.apps.googleusercontent.com">
-      </div>
-      <div class="setup-hint">Nécessaire uniquement pour publier directement sur YouTube.</div>
-    </div>
-
-    <div class="setup-divider"></div>
     <button class="btn-setup-save" onclick="saveKeys()">Enregistrer →</button>
   </div>
 </div>
@@ -4503,9 +4489,14 @@ function enterApp(profile){
   // Bouton orange "Voir les plans" : caché (remplacé par btnUpgradePlan pour tous)
   const seePlansBtn = document.getElementById('btnSeePlans');
   if(seePlansBtn) seePlansBtn.style.display = 'none';
+  // Bouton "Connexions" : visible uniquement pour le plan BYOK
+  const connexionsBtn = document.getElementById('btnConnexions');
+  if(connexionsBtn) connexionsBtn.style.display = profile.plan === 'byok' ? 'flex' : 'none';
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
+  // Crédits images topbar : visible pour les plans avec accès images
+  _updateImgQuotaLabel();
   // Bouton "Upgrade" : visible pour tous sauf Elite
   const upgBtn   = document.getElementById('btnUpgradePlan');
   const upgLabel = document.getElementById('btnUpgradePlanLabel');
@@ -5328,9 +5319,6 @@ async function useImageAsAvatar(){
 // ── CONNEXIONS ──
 function openSetup(){
   document.getElementById('setupOverlay').style.display='flex';
-  const ytc = localStorage.getItem('yt_client_id')||'';
-  const el = document.getElementById('inp-yt-client');
-  if(el) el.value = ytc;
   // Charger la clé Hedra BYOK depuis le profil
   const hedraEl = document.getElementById('inp-hedra-key');
   const statusEl = document.getElementById('byok-status');
@@ -5355,8 +5343,6 @@ function toggleHedraKeyVisibility(){
   if(btn) btn.textContent = inp.type === 'password' ? 'Voir' : 'Cacher';
 }
 async function saveKeys(){
-  const ytEl = document.getElementById('inp-yt-client');
-  if(ytEl){ const v=ytEl.value.trim(); if(v) localStorage.setItem('yt_client_id',v); else localStorage.removeItem('yt_client_id'); }
   // Clé Google AI (Cartoon)
   const googleEl = document.getElementById('inp-google-key');
   if(googleEl){ const v=googleEl.value.trim(); if(v){ localStorage.setItem('aa_google_ai_key',v); const s=document.getElementById('google-key-status'); if(s) s.style.display='block'; } else { localStorage.removeItem('aa_google_ai_key'); } }
@@ -5539,10 +5525,18 @@ function _imgMonthIncrement(){
 
 function _updateImgQuotaLabel(){
   const el = document.getElementById('imgQuotaLabel');
-  if(!el) return;
   const lim   = _imgMonthLimit();
   const bonus = _imgBonus();
   const rem   = _imgMonthRemaining();
+  // Topbar image credits pill
+  const topBox = document.getElementById('memberImgQuotaBox');
+  const topEl  = document.getElementById('memberImgCredits');
+  if(topBox) topBox.style.display = lim > 0 ? 'flex' : 'none';
+  if(topEl){
+    topEl.textContent = rem + (bonus > 0 ? ' (+'+bonus+')' : '') + ' imgs';
+    topEl.style.color = rem <= 2 ? 'var(--orange)' : 'var(--text2)';
+  }
+  if(!el) return;
   if(lim<=0){
     el.textContent = '⛔ Disponible à partir du plan Starter · Upgrade →';
     el.style.color = 'var(--red,#ff6b6b)';
