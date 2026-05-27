@@ -11762,10 +11762,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     resetBtn(); return;
   }
 
-  // ── Post-traitement FFmpeg : VFR → CFR 30fps + AAC 48kHz (compatibilité TikTok) ──
+  // ── Post-traitement FFmpeg : CFR 30fps + yuv420p + H.264 main + AAC 44.1kHz (TikTok / Reels) ──
   let finalBlob = blob;
   try {
-    setStage('Optimisation TikTok (CFR 30fps)…', 99);
+    setStage('Optimisation TikTok…', 99);
     toast('🎵 Optimisation TikTok en cours…');
     await _loadFFmpeg();
     const ff = _ffmpegInst;
@@ -11775,20 +11775,30 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await blob.arrayBuffer()));
     await ff.run(
       '-i', 'cfr_in.' + inExt,
-      '-vf', 'fps=30',                    // force CFR 30fps
-      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
-      '-c:a', 'aac', '-ar', '48000', '-b:a', '192k',
+      '-vf', 'fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2',  // CFR 30fps + dimensions paires
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '22',
+      '-profile:v', 'main',          // profil H.264 compatible mobile
+      '-pix_fmt', 'yuv420p',         // CRITIQUE — TikTok/Reels/Instagram exigent yuv420p
+      '-color_primaries', 'bt709',   // colorspace BT.709 standard
+      '-color_trc', 'bt709',
+      '-colorspace', 'bt709',
+      '-c:a', 'aac',
+      '-ar', '44100',                // 44.1kHz — standard TikTok
+      '-b:a', '128k',
       '-movflags', '+faststart',
       '-y', 'cfr_out.mp4'
     );
     const outData = ff.FS('readFile', 'cfr_out.mp4');
+    if(!outData || outData.length < 10000) throw new Error('output trop petit : ' + (outData?.length || 0) + ' bytes');
     finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
     try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
     try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
-    toast('✅ Optimisation TikTok OK — 30fps constant + AAC 48kHz');
+    toast('✅ Vidéo optimisée TikTok — yuv420p · 30fps · AAC 44.1kHz');
   } catch(ffErr){
-    console.warn('FFmpeg CFR post-process failed, using original:', ffErr);
-    toast('⚠️ Optimisation TikTok ignorée — fichier original utilisé');
+    console.error('FFmpeg TikTok post-process failed:', ffErr);
+    toast('⚠️ Optimisation échouée (' + (ffErr.message||ffErr) + ') — fichier brut utilisé');
     finalBlob = blob;
   }
 
