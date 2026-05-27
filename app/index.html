@@ -2197,22 +2197,62 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             <!-- HEDRA WORKFLOW -->
             <div id="hedraManualCard" class="result-card" style="display:none">
-              <div class="result-title">🎭 Créer ta vidéo avatar (lipsync)</div>
+              <div class="result-title">⚠️ Génération avatar échouée</div>
 
-              <!-- Bouton 1 clic : télécharge + ouvre Hedra -->
-              <button onclick="quickLaunchHedra()" style="width:100%;margin-bottom:14px;padding:15px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-                🚀 Télécharger l'audio + Ouvrir Hedra en 1 clic
-              </button>
+              <!-- Message d'erreur dynamique -->
+              <div id="hedraErrorMsg" style="font-size:12px;font-family:var(--mono);color:var(--red,#ff4757);background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6;display:none"></div>
 
-              <!-- Réessayer automatiquement -->
-              <button onclick="retryHedraAuto()" style="width:100%;margin-bottom:14px;padding:11px;background:var(--bg4);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='rgba(255,107,53,0.3)'">
+              <!-- Message no-avatar -->
+              <div id="hedraNoAvatarMsg" style="display:none;font-size:12px;font-family:var(--mono);color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
+                Aucun avatar sélectionné. <strong style="color:var(--orange2)">Retourne à l'étape Avatar</strong> et choisis un avatar pour générer ta vidéo lipsync.
+                <br><button onclick="goToStep(2)" style="margin-top:8px;padding:6px 14px;background:var(--orange);border:none;border-radius:7px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">← Étape Avatar</button>
+              </div>
+
+              <!-- Réessayer — bouton principal -->
+              <button id="retryHedraBtn" onclick="retryHedraAuto(this)" style="width:100%;margin-bottom:12px;padding:15px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
                 🔄 Réessayer la génération automatique
               </button>
 
-              <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px;line-height:1.7">
-                💡 Hedra génère la vidéo lipsync de ton avatar.<br>
-                <strong style="color:var(--text2)">Hedra gratuit</strong> = 3 min/mois · <strong style="color:var(--text2)">Hedra Pro</strong> = illimité.
+              <!-- Manuel — collapsible -->
+              <details style="margin-bottom:10px">
+                <summary style="font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px">
+                  <span style="font-size:10px">▶</span> Générer manuellement via Hedra
+                </summary>
+                <div style="margin-top:10px">
+                  <button onclick="quickLaunchHedra()" style="width:100%;margin-bottom:10px;padding:11px;background:var(--bg4);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;color:var(--orange2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+                    🚀 Télécharger l'audio + Ouvrir Hedra
+                  </button>
+                  <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:8px;line-height:1.6">
+                    💡 <strong style="color:var(--text2)">Hedra gratuit</strong> = 3 min/mois · <strong style="color:var(--text2)">Hedra Pro</strong> = illimité.
+                  </div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">1️⃣</span>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Télécharge l'audio généré</div>
+                    <button id="downloadAudioBtn" onclick="downloadGeneratedAudio()" style="padding:6px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s">⬇ Télécharger l'audio</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">2️⃣</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700;margin-bottom:4px">Va sur Hedra · importe l'audio · choisis ton avatar · génère</div>
+                    <a href="https://app.hedra.com" target="_blank" style="display:inline-block;padding:6px 14px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;text-decoration:none;transition:all .15s">Ouvrir Hedra →</a>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+                  <span style="font-size:16px;flex-shrink:0">3️⃣</span>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:700;margin-bottom:6px">Colle le lien de ta vidéo Hedra ici</div>
+                    <div style="display:flex;gap:6px">
+                      <input id="hedraVideoUrlInput" type="text" placeholder="https://app.hedra.com/..." style="flex:1;padding:8px 10px;background:var(--bg4);border:1.5px solid rgba(255,107,53,0.4);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='rgba(255,107,53,0.4)'">
+                      <button onclick="loadHedraVideoFromUrl()" style="padding:8px 14px;background:var(--orange);border:none;border-radius:7px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">OK ✓</button>
+                    </div>
+                  </div>
+                </div>
               </div>
+                </div>
+              </details>
 
               <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
                 <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
@@ -9853,8 +9893,9 @@ async function callHedra(audioBlob){
   // ── Vérification clé BYOK obligatoire ──
   const plan = (window._userPlan || 'free').toLowerCase();
   if(plan === 'byok' && !window._userHedraKey){
+    window._lastHedraError = 'Plan BYOK : configure ta clé Hedra dans Connexions → Clé API Hedra';
     toast('⚠️ Plan BYOK : configure ta clé Hedra dans Connexions → Clé API Hedra');
-    goToStep(6); // aller sur l'onglet Connexions
+    goToStep(6);
     return '';
   }
 
@@ -9862,6 +9903,7 @@ async function callHedra(audioBlob){
   if(plan !== 'byok' && !currentMember?.is_owner){
     const remaining = _videosRemaining();
     if(remaining <= 0){
+      window._lastHedraError = 'Quota atteint — Plus de vidéos disponibles ce mois-ci. Passe à un plan supérieur pour continuer.';
       toast('🚫 Quota atteint — Plus de vidéos disponibles ce mois-ci');
       openUpgradeModal();
       return '';
@@ -9873,16 +9915,16 @@ async function callHedra(audioBlob){
     const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav' : 'mp3';
     const audioFname = 'voice.' + audioExt;
     const createAudioRes = await hPost('/assets', { type: 'audio', name: audioFname });
-    if(!createAudioRes.ok){ toast('⚠️ Hedra create asset ' + createAudioRes.status); return ''; }
+    if(!createAudioRes.ok){ const _c=createAudioRes.status; window._lastHedraError='Erreur serveur Hedra ('+_c+') — réessaie dans quelques secondes'; toast('⚠️ Hedra create asset ' + _c); return ''; }
     const audioAsset = await createAudioRes.json();
     const audioId = audioAsset.id;
-    if(!audioId){ toast('⚠️ Hedra : pas d\'asset ID audio'); return ''; }
+    if(!audioId){ window._lastHedraError='Hedra n\'a pas retourné d\'ID asset audio'; toast('⚠️ Hedra : pas d\'asset ID audio'); return ''; }
 
     // ── 2. Uploader le fichier audio (POST /assets/{id}/upload) ──
     const audioFd = new FormData();
     audioFd.append('file', audioBlob, audioFname);
     const uploadRes = await hUpload('/assets/' + audioId + '/upload', audioFd);
-    if(!uploadRes.ok){ toast('⚠️ Hedra upload audio ' + uploadRes.status); return ''; }
+    if(!uploadRes.ok){ window._lastHedraError='Erreur upload audio ('+uploadRes.status+') — vérifie ta connexion'; toast('⚠️ Hedra upload audio ' + uploadRes.status); return ''; }
 
     // ── 3. Avatar image (optionnel) ──
     let imageId = null;
@@ -9937,13 +9979,14 @@ async function callHedra(audioBlob){
     const genRes = await hPost('/generations', genBody);
     if(!genRes.ok){
       const err = await genRes.text();
+      window._lastHedraError = 'Hedra erreur ' + genRes.status + (err ? ' — ' + err.slice(0,100) : '') + '. Réessaie ou vérifie tes crédits Hedra.';
       toast('⚠️ Hedra génération erreur ' + genRes.status + ' — ' + err.slice(0,80));
       console.error('Hedra generate:', err);
       return '';
     }
     const genData = await genRes.json();
     const genId = genData.id;
-    if(!genId){ toast('⚠️ Hedra : pas de génération ID'); return ''; }
+    if(!genId){ window._lastHedraError='Hedra n\'a pas retourné d\'ID de génération'; toast('⚠️ Hedra : pas de génération ID'); return ''; }
     toast('⏳ Hedra génère ta vidéo… (~2 min)');
 
     // ── 5. Polling (GET /generations/{id}/status) ──
@@ -10004,14 +10047,17 @@ async function callHedra(audioBlob){
       if(status === 'failed' || status === 'error' || status === 'cancelled'){
         if(hedraBar) hedraBar.style.display = 'none';
         const reason = pollData.error_message || pollData.error || pollData.message || '';
+        window._lastHedraError = 'Génération Hedra échouée' + (reason ? ' : ' + reason.slice(0,100) : '') + '. Vérifie tes crédits ou réessaie.';
         toast('✗ Hedra génération échouée' + (reason ? ' : ' + reason.slice(0,60) : ''));
         return '';
       }
     }
     if(hedraBar) hedraBar.style.display = 'none';
+    window._lastHedraError = 'Timeout : Hedra a pris plus de 6 min. Réessaie ou vérifie app.hedra.com.';
     toast('⚠️ Hedra timeout (6 min) — vérifie app.hedra.com');
     return '';
   } catch(e){
+    window._lastHedraError = 'Erreur réseau : ' + (e.message || e);
     toast('⚠️ Hedra erreur : ' + (e.message || e));
     console.error('Hedra error:', e);
     return '';
@@ -10039,7 +10085,7 @@ function showResults(){
   // Restaurer le Tap Sync si déjà fait sur ce script
   if(!whisperWordTimestamps.length) _tryRestoreTapSync(results.script);
 
-  // Si pas de vidéo Hedra, corriger l'affichage du workflow manuel après _showResultArea
+  // Si pas de vidéo Hedra, afficher le bon message selon la cause
   if(!results.hedraUrl){
     if(results.audioBlob || voiceMode==='gameplay'){
       const dlAudioBtn=document.getElementById('downloadAudioBtn');
@@ -10048,7 +10094,29 @@ function showResults(){
     const genStatusCard=document.getElementById('genStatusCard');
     const hs=document.getElementById('hedraStatus');
     if(genStatusCard) genStatusCard.style.display='block';
-    if(hs){ hs.className='hedra-status'; hs.textContent='🎭 Suis les étapes ci-dessous pour créer ta vidéo lipsync (2 min)'; }
+
+    // Détecter la cause : pas d'avatar vs erreur Hedra
+    const _avatarImgUrl2 = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
+    const _noAvatar = !selAvatar.localFile && !selAvatar.localUrl && !_avatarImgUrl2;
+    const noAvatarDiv = document.getElementById('hedraNoAvatarMsg');
+    const errDiv      = document.getElementById('hedraErrorMsg');
+    const retryBtn    = document.getElementById('retryHedraBtn');
+
+    if(_noAvatar){
+      if(noAvatarDiv) noAvatarDiv.style.display='block';
+      if(errDiv)      errDiv.style.display='none';
+      if(retryBtn)    retryBtn.style.display='none'; // pas d'avatar = réessayer ne sert à rien
+      if(hs){ hs.className='hedra-status'; hs.textContent='⚠️ Aucun avatar sélectionné — retourne à l\'étape Avatar'; }
+    } else {
+      if(noAvatarDiv) noAvatarDiv.style.display='none';
+      if(retryBtn)    retryBtn.style.display='flex';
+      if(errDiv && window._lastHedraError){
+        errDiv.textContent = '⚠️ ' + window._lastHedraError;
+        errDiv.style.display='block';
+      } else if(errDiv){ errDiv.style.display='none'; }
+      if(hs){ hs.className='hedra-status'; hs.textContent='⚠️ Génération automatique échouée — clique Réessayer'; }
+    }
+    window._lastHedraError = null; // reset
   }
 
   _saveSession();
