@@ -2806,6 +2806,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     </div><!-- /recorder -->
 
     <!-- ══ EXPRESS ══ -->
+
     <div class="view" id="v-express" style="overflow:hidden">
 
       <!-- ══ LEFT — Formulaire ══ -->
@@ -3242,6 +3243,25 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
   </div><!-- /main -->
 </div><!-- /layout -->
+
+<!-- RECORDER RENAME MODAL -->
+<div id="recRenameModal" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="if(event.target===this)document.getElementById('recRenameModal').style.display='none'">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:340px;max-width:92vw;padding:24px 22px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Envoyer vers la bibliothèque</div>
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:18px">Donne un nom à cet enregistrement</div>
+    <input id="recRenameInput" type="text" placeholder="Audio 1" maxlength="60"
+      style="width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;padding:12px 14px;outline:none;box-sizing:border-box;transition:border-color .15s;margin-bottom:14px"
+      onfocus="this.style.borderColor='rgba(255,107,53,0.5)'" onblur="this.style.borderColor='var(--border2)'"
+      onkeydown="if(event.key==='Enter')recConfirmSaveToLibrary();if(event.key==='Escape')document.getElementById('recRenameModal').style.display='none'">
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('recRenameModal').style.display='none'" style="flex:1;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">Annuler</button>
+      <button onclick="recConfirmSaveToLibrary()" style="flex:2;padding:11px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg>
+        Envoyer
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- LOGIN OVERLAY -->
 <div class="setup-overlay" id="loginOverlay" style="z-index:600" onclick="if(event.target===this)loginGuest()">
@@ -6092,19 +6112,42 @@ function _recRenderTimeline(){
 }
 
 // ── 📚 Sauvegarder dans bibliothèque ────────────────────────────────
-async function recSaveToLibrary(){
+function _recNextAudioName(){
+  // Trouve le prochain "Audio N" sans doublon dans la bibliothèque
+  const existing = new Set(library.map(e => e.name?.toLowerCase()));
+  let n = 1;
+  while(existing.has('audio ' + n)) n++;
+  return 'Audio ' + n;
+}
+
+function recSaveToLibrary(){
   if(!recAudioBuffer){ toast('⚠️ Pas d\'enregistrement à sauvegarder'); return; }
+
+  // Afficher le modal de renommage
+  const defaultName = _recNextAudioName();
+  document.getElementById('recRenameInput').value = defaultName;
+  document.getElementById('recRenameModal').style.display = 'flex';
+  setTimeout(()=>{
+    const inp = document.getElementById('recRenameInput');
+    inp.focus(); inp.select();
+  }, 80);
+}
+
+async function recConfirmSaveToLibrary(){
+  const name = document.getElementById('recRenameInput').value.trim() || _recNextAudioName();
+  document.getElementById('recRenameModal').style.display = 'none';
+
   const btn = document.getElementById('recLibBtn');
   if(btn){ btn.disabled=true; btn.textContent='⏳'; }
   try {
     const wav    = _recToWav(recAudioBuffer);
     const dur    = _recFmt(recAudioBuffer.duration);
     const idbKey = 'rec_audio_' + Date.now();
-    await _idbSave(idbKey, new File([wav], 'enregistrement.wav', { type:'audio/wav' }));
+    await _idbSave(idbKey, new File([wav], name + '.wav', { type:'audio/wav' }));
     library.unshift({
       type:    'audio',
       emo:     '🎙️',
-      name:    'Enregistrement · ' + dur,
+      name,
       tags:    ['audio', dur],
       status:  'done',
       style:   'AUDIO',
@@ -6115,7 +6158,7 @@ async function recSaveToLibrary(){
       date:    new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
     });
     _saveLibrary();
-    toast('✅ Audio sauvegardé dans Bibliothèque');
+    toast('✅ "' + name + '" sauvegardé dans Bibliothèque');
   } catch(e){
     console.error('recSaveToLibrary:', e);
     toast('⚠️ Erreur : ' + e.message);
