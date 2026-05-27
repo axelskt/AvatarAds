@@ -13648,16 +13648,77 @@ function _tapSyncTap(){
 }
 
 function _tapSyncRenderUI(){
-  const cur  = document.getElementById('tapSyncCurrent');
-  const next = document.getElementById('tapSyncNext');
-  const prog = document.getElementById('tapSyncProg');
-  const grpN = document.getElementById('tapSyncGrpN');
-  const idx  = _tapSyncIdx;
+  const flow  = document.getElementById('tapSyncFlowInner');
+  const prog  = document.getElementById('tapSyncProg');
+  const grpN  = document.getElementById('tapSyncGrpN');
+  const idx   = _tapSyncIdx;
   const total = _tapSyncGroups.length;
-  if(cur)  cur.textContent  = idx < total ? _tapSyncGroups[idx].join(' ') : '✓ FIN';
-  if(next) next.textContent = idx + 1 < total ? _tapSyncGroups[idx + 1].join(' ') : '';
-  if(prog) prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
-  if(grpN) grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
+
+  if(prog)  prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
+  if(grpN)  grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
+  if(!flow) return;
+
+  flow.innerHTML = '';
+  _tapSyncGroups.forEach((group, gi) => {
+    const done    = gi < idx;
+    const current = gi === idx;
+    const soon    = gi === idx + 1;
+
+    const pill = document.createElement('span');
+    const label = group.join(' ');
+
+    if(current){
+      // Groupe courant — grand, orange, pulsé
+      pill.textContent = label;
+      pill.style.cssText = 'display:inline-block;padding:8px 16px;background:var(--orange);color:#fff;border-radius:12px;font-family:var(--mono);font-size:15px;font-weight:900;letter-spacing:.5px;animation:ts-pulse .7s ease-in-out infinite alternate;box-shadow:0 0 18px rgba(255,107,53,.5)';
+    } else if(done){
+      // Passé — petit, grisé, barré
+      pill.textContent = '✓ ' + label;
+      pill.style.cssText = 'display:inline-block;padding:4px 10px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:500;text-decoration:line-through;letter-spacing:.3px';
+    } else if(soon){
+      // Suivant immédiat — visible, blanc doux
+      pill.textContent = label;
+      pill.style.cssText = 'display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);border-radius:10px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px';
+    } else {
+      // Futur — très discret
+      pill.textContent = label;
+      pill.style.cssText = 'display:inline-block;padding:4px 10px;color:rgba(255,255,255,0.2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.3px';
+    }
+    flow.appendChild(pill);
+
+    // Flèche entre groupes (sauf dernier)
+    if(gi < total - 1){
+      const arr = document.createElement('span');
+      arr.textContent = '→';
+      arr.style.cssText = 'color:' + (done ? 'rgba(255,255,255,0.15)' : current || soon ? 'rgba(255,107,53,0.6)' : 'rgba(255,255,255,0.1)') + ';font-size:10px;flex-shrink:0;margin:0 1px';
+      flow.appendChild(arr);
+    }
+  });
+
+  // Fin
+  if(idx >= total){
+    flow.innerHTML = '<span style="font-size:22px;font-weight:900;color:var(--green,#00d97e)">✓ Synchronisation terminée !</span>';
+  }
+
+  // Scroll pour garder le groupe courant visible
+  requestAnimationFrame(() => {
+    const pills = flow.querySelectorAll('span');
+    let offset = 0;
+    for(let i = 0; i < pills.length; i++){
+      if(i === idx * 2) break; // chaque groupe + flèche = *2
+      offset += pills[i].offsetWidth + 4;
+    }
+    const container = document.getElementById('tapSyncFlow');
+    if(container) container.scrollLeft = Math.max(0, offset - container.offsetWidth / 2);
+  });
+}
+
+// CSS pulse animation pour le groupe courant
+if(!document.getElementById('ts-anim')){
+  const s = document.createElement('style');
+  s.id = 'ts-anim';
+  s.textContent = '@keyframes ts-pulse{from{transform:scale(1);box-shadow:0 0 14px rgba(255,107,53,.4)}to{transform:scale(1.04);box-shadow:0 0 24px rgba(255,107,53,.7)}}';
+  document.head.appendChild(s);
 }
 
 function _tapSyncFinish(){
@@ -13752,25 +13813,26 @@ function _tapSyncCancel(){
   </div>
 
   <!-- ── PHASE 2 : TAP INTERFACE ── -->
-  <div id="tapSyncSession" style="display:none;width:100%;max-width:420px;padding:32px 28px;flex-direction:column;align-items:center;gap:20px">
+  <div id="tapSyncSession" style="display:none;width:100%;max-width:560px;padding:28px 24px;flex-direction:column;align-items:center;gap:18px">
 
-    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync — en cours</div>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:2px">🥁 TAP SYNC</div>
+      <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
+    </div>
 
-    <!-- Groupe actuel -->
-    <div style="text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">PROCHAIN GROUPE →</div>
-      <div id="tapSyncCurrent" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;text-align:center">…</div>
-      <div id="tapSyncNext" style="font-size:15px;color:var(--text3);font-family:var(--mono);letter-spacing:1px"></div>
+    <!-- Script visuel flow — tous les groupes -->
+    <div id="tapSyncFlow" style="width:100%;overflow:hidden;position:relative;min-height:80px;display:flex;align-items:center">
+      <div id="tapSyncFlowInner" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;justify-content:flex-start"></div>
     </div>
 
     <!-- Barre de progression -->
-    <div style="width:100%;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
-      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .1s"></div>
+    <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden">
+      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .15s"></div>
     </div>
-    <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
 
     <!-- Bouton TAP principal -->
-    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:26px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
+    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:24px;background:rgba(255,107,53,0.1);border:2px solid rgba(255,107,53,0.4);border-radius:16px;color:#fff;font-family:var(--font);font-size:19px;font-weight:900;cursor:pointer;transition:all .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.background='rgba(255,107,53,0.2)';this.style.borderColor='var(--orange)'" onmouseout="this.style.background='rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.4)'">
       ↵ &nbsp;Maintenant !
     </button>
     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ou appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px">Espace</kbd></div>
