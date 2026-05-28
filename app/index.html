@@ -11684,7 +11684,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       toast('🎬 Composition CFR WebCodecs ~' + Math.round(totalDuration) + 's…');
       hedraVid.currentTime = 0;
       if(gpVid) gpVid.currentTime = 0;
-      await new Promise(r => { hedraVid.onseeked = r; setTimeout(r, 1000); });
+      // Attendre que TOUTES les vidéos aient leur 1ère frame prête (sinon split screen noir au départ)
+      await Promise.all([
+        new Promise(r => { hedraVid.onseeked = r; hedraVid.onloadeddata = r; setTimeout(r, 1500); }),
+        gpVid ? new Promise(r => { gpVid.onseeked = r; gpVid.onloadeddata = r; setTimeout(r, 1500); }) : Promise.resolve(),
+      ]);
 
       videoEncoder.configure(vcfg);
 
@@ -11731,8 +11735,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             resolve();
           }
         }, 1000 / _fps);
-        hedraVid.play().catch(()=>{});
-        if(gpVid) gpVid.play().catch(()=>{});
+        // Démarrer les deux vidéos ensemble puis laisser le setInterval prendre le relais
+        Promise.all([
+          hedraVid.play().catch(()=>{}),
+          gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
+        ]);
       });
       clearTimeout(_wcTimeoutId);
       if(_wcTimedOut) throw new Error('WebCodecs timeout — résolution trop haute, passage en mode classique');
@@ -11766,11 +11773,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           try { await ff2.deleteFile('wc_out.mp4'); } catch(e){}
           await ff2.writeFile('wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
           await ff2.writeFile(_audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
+          // -c:v copy : pas de re-encode vidéo → quelques secondes au lieu de 5 minutes
+          // L'input WebCodecs est déjà H.264 CFR 30fps yuv420p → copie directe dans le container
           await ff2.exec([
             '-i','wc_vid.mp4', '-i',_audFile,
-            '-c:v','libx264', '-preset','fast', '-crf','22',
-            '-profile:v','main', '-pix_fmt','yuv420p',
-            '-r','30',
+            '-c:v','copy',
             '-c:a','aac', '-ar','44100', '-b:a','128k',
             '-shortest', '-movflags','+faststart',
             '-y','wc_out.mp4'
