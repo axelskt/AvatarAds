@@ -11670,8 +11670,33 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       }
       drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
 
-      // Précharger FFmpeg 0.11.6 EN PARALLÈLE de l'encodage WebCodecs
-      // On utilise la même instance que path B → déjà chargée si le user a déjà composé
+      // ── Enregistrement audio EN PARALLÈLE (même technique que path B, prouvée) ──
+      // On joue l'audio via AudioContext + MediaElementSource → MediaStreamDestination
+      // MediaRecorder capture le stream audio-only en temps réel, synchronisé avec la vidéo
+      let _wcAudioRec = null, _wcAudioChunks = [], _wcAudioEl = null, _wcAudioCtx = null, _wcAudioMime = '';
+      if(_audioBlobToEncode){
+        try {
+          const _wcAudUrl = URL.createObjectURL(_audioBlobToEncode);
+          _wcAudioEl = new Audio(_wcAudUrl);
+          _wcAudioEl.preload = 'auto';
+          await new Promise(res => { _wcAudioEl.oncanplaythrough = res; _wcAudioEl.onerror = res; _wcAudioEl.load(); setTimeout(res, 3000); });
+          _wcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if(_wcAudioCtx.state === 'suspended') await Promise.race([_wcAudioCtx.resume(), new Promise(r => setTimeout(r, 2000))]);
+          const _wcAudDest = _wcAudioCtx.createMediaStreamDestination();
+          const _wcAudSrc  = _wcAudioCtx.createMediaElementSource(_wcAudioEl);
+          _wcAudSrc.connect(_wcAudDest);
+          const _wcAudStream = new MediaStream([..._wcAudDest.stream.getAudioTracks()]);
+          // Choisir le meilleur format supporté (opus/webm préféré, ogg fallback)
+          const _mimeList = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg',''];
+          _wcAudioMime = _mimeList.find(m => !m || (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m))) || '';
+          if(typeof MediaRecorder !== 'undefined' && _wcAudStream.getAudioTracks().length > 0){
+            _wcAudioRec = new MediaRecorder(_wcAudStream, _wcAudioMime ? { mimeType: _wcAudioMime } : {});
+            _wcAudioRec.ondataavailable = e => { if(e.data && e.data.size > 0) _wcAudioChunks.push(e.data); };
+          }
+        } catch(e){ console.warn('WebCodecs audio setup failed:', e); _wcAudioEl = null; _wcAudioCtx = null; }
+      }
+
+      // Précharger FFmpeg 0.11.6 EN PARALLÈLE
       const _ff2Preload = _loadFFmpeg().catch(e => console.warn('FFmpeg preload failed:', e));
 
       let _wcFrameNum = 0;
@@ -11710,13 +11735,23 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             resolve();
           }
         }, 1000 / _fps);
-        // Démarrer les deux vidéos ensemble puis laisser le setInterval prendre le relais
+        // Démarrer vidéo + audio ensemble au même instant
+        if(_wcAudioRec) _wcAudioRec.start(200);
         Promise.all([
           hedraVid.play().catch(()=>{}),
           gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
+          _wcAudioEl ? _wcAudioEl.play().catch(()=>{}) : Promise.resolve(),
         ]);
       });
       clearTimeout(_wcTimeoutId);
+
+      // Arrêter l'enregistrement audio
+      if(_wcAudioRec && _wcAudioRec.state !== 'inactive'){
+        await new Promise(res => { _wcAudioRec.onstop = res; _wcAudioRec.stop(); });
+      }
+      if(_wcAudioEl){ _wcAudioEl.pause(); try{ URL.revokeObjectURL(_wcAudioEl.src); }catch(e){} }
+      if(_wcAudioCtx) _wcAudioCtx.close().catch(()=>{});
+
       if(_wcTimedOut) throw new Error('WebCodecs timeout — résolution trop haute, passage en mode classique');
       if(_wcEncErr || _wcEncErr2) throw (_wcEncErr || _wcEncErr2);
 
@@ -11732,25 +11767,29 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // Sauvegarder blob vidéo (sans audio) pour le fallback timeout
       window._lastComposedBlob = wcBlob;
 
-      // Muxage audio via FFmpeg 0.11.6 (même instance que path B, déjà prouvée)
-      // -c:v copy : copie le stream H.264 WebCodecs sans re-encoder → quelques secondes
-      if(_audioBlobToEncode){
+      // Muxage audio via FFmpeg 0.11.6 — audio enregistré en direct (garanti synchronisé)
+      // Priorité : audio enregistré par MediaRecorder > _audioBlobToEncode (fallback)
+      const _wcRecordedAudio = _wcAudioChunks.length > 0 ? new Blob(_wcAudioChunks, { type: _wcAudioMime || 'audio/webm' }) : null;
+      const _audioForMux = _wcRecordedAudio || _audioBlobToEncode;
+
+      if(_audioForMux){
         toast('🎵 Muxage audio…');
         try {
-          await _ff2Preload; // s'assurer que FFmpeg 0.11.6 est chargé
+          await _ff2Preload;
           const ff = _ffmpegInst;
-          const _audMime = (_audioBlobToEncode.type || '').toLowerCase();
-          const _audExt  = _audMime.includes('ogg') || _audMime.includes('opus') ? 'ogg'
-                         : _audMime.includes('webm') ? 'webm'
-                         : _audMime.includes('wav')  ? 'wav'
-                         : 'mp3';
+          // Déterminer l'extension audio
+          const _audMimeStr = (_wcRecordedAudio ? (_wcAudioMime || '') : ((_audioBlobToEncode.type) || '')).toLowerCase();
+          const _audExt = _audMimeStr.includes('ogg') ? 'ogg'
+                        : _audMimeStr.includes('webm') ? 'webm'
+                        : _audMimeStr.includes('wav')  ? 'wav'
+                        : _audMimeStr.includes('mp3') || _audMimeStr.includes('mpeg') ? 'mp3'
+                        : 'webm'; // défaut : webm (MediaRecorder Safari/Chrome)
           const _audFile = 'wc_aud.' + _audExt;
           try { ff.FS('unlink', 'wc_vid.mp4'); } catch(e){}
           try { ff.FS('unlink', _audFile);     } catch(e){}
           try { ff.FS('unlink', 'wc_out.mp4'); } catch(e){}
           ff.FS('writeFile', 'wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
-          ff.FS('writeFile', _audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
-          // -map explicite + pas de -shortest (mp4-muxer ne met pas toujours la durée dans moov)
+          ff.FS('writeFile', _audFile,     new Uint8Array(await _audioForMux.arrayBuffer()));
           await ff.run(
             '-i','wc_vid.mp4', '-i',_audFile,
             '-map','0:v:0', '-map','1:a:0',
