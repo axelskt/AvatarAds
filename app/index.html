@@ -4171,6 +4171,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
 <!-- TOAST -->
 <div class="toast" id="toastEl"><span id="toastMsg"></span></div>
+<!-- Badge debug audio — fixe, ne se fait pas écraser par setStage() -->
+<div id="audioBadge" style="display:none;position:fixed;bottom:80px;right:16px;background:#1a1a1a;border:1.5px solid #f90;color:#f90;padding:8px 12px;border-radius:10px;font-size:11px;font-family:monospace;z-index:99999;max-width:320px;word-break:break-all;line-height:1.6"></div>
 
 <script>
 // ── SUPABASE CONFIG ──
@@ -11563,8 +11565,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   setStage('Préparation audio…', 10);
   let _audioBlobToEncode = results.audioBlob;
   // Debug persistant dans la barre de progression (reste visible)
-  const _dbgAudio = document.getElementById('composeProgressStage');
-  if(_dbgAudio) _dbgAudio.textContent = 'Audio source: ' + (_audioBlobToEncode ? Math.round(_audioBlobToEncode.size/1024)+'KB' : 'NULL - pas de blob');
+  // Badge debug audio — fixe, résiste aux setStage() qui écrasent composeProgressStage
+  const _ab = document.getElementById('audioBadge');
+  if(_ab){ _ab.innerHTML = '🔊 DEBUG AUDIO<br>'; _ab.style.display = 'block'; }
+  const _dbg = (msg) => { if(!_ab) return; _ab.innerHTML += msg + '<br>'; };
+  _dbg('1. audioBlob: ' + (_audioBlobToEncode ? Math.round(_audioBlobToEncode.size/1024)+'KB' : 'NULL ❌'));
   // ⚠️ Même logique que pour Hedra : seulement en mode MP4 (même fichier analysé + encodé)
   if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
     const cleanUrl = await _getOrBuildCleanBlobUrl();
@@ -11664,8 +11669,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
-          if(_dbgAudio) _dbgAudio.textContent = 'PCM décodé: ' + Math.round(_audioPCMBuf.duration) + 's';
-        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; if(_dbgAudio) _dbgAudio.textContent = 'PCM decode FAIL: ' + e.message; }
+          _dbg('2. PCM: ' + Math.round(_audioPCMBuf.duration) + 's ✅');
+        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' ❌'); }
 
         // Étape 2 : trouver un codec AudioEncoder supporté (AAC puis Opus en fallback)
         if(_audioPCMBuf){
@@ -11684,10 +11689,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
               _probe.close();
             } catch(e){ /* codec non supporté, essayer suivant */ }
           }
-          if(_dbgAudio) _dbgAudio.textContent = _canEncodeAudio ? 'AudioEncoder OK: ' + _audEncCfg.codec : 'AudioEncoder: AUCUN codec supporté';
+          _dbg('3. Encoder: ' + (_canEncodeAudio ? _audEncCfg.codec + ' ✅' : 'AUCUN CODEC ❌'));
         }
       } else {
-        if(_dbgAudio) _dbgAudio.textContent = !_audioBlobToEncode ? 'Audio NULL (ElevenLabs 401?)' : 'AudioEncoder API absente';
+        _dbg(!_audioBlobToEncode ? '→ audioBlob NULL (ElevenLabs HS?)' : '→ AudioEncoder API absente ❌');
       }
 
       // Étape 3 : créer le muxer avec audio UNIQUEMENT si l'encoder est confirmé
@@ -11726,8 +11731,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           }
           if(!_audioEncErr) await _audioEncoder.flush();
           if(_audioEncErr) console.warn('AudioEncoder erreur encode:', _audioEncErr);
-          else if(_dbgAudio) _dbgAudio.textContent = 'Audio OK (' + _audEncCfg.codec + ') ' + Math.round(_audioPCMBuf.length/_audioSampleRate) + 's ✅';
-        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); if(_dbgAudio) _dbgAudio.textContent = 'Audio CRASH: ' + e.message; }
+          else _dbg('4. Encodé ' + _audEncCfg.codec + ' ' + Math.round(_audioPCMBuf.length/_audioSampleRate) + 's ✅');
+        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); _dbg('4. CRASH: ' + e.message + ' ❌'); }
       }
 
       // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
