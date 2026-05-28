@@ -11268,7 +11268,7 @@ function _updateQualityLocks(plan){
   });
 
   // Définir la qualité par défaut selon plan et corriger si hors limite
-  const defaultQ = can1080 ? 1080 : (can720 ? 720 : 540);
+  const defaultQ = can720 ? 720 : 540; // 720p par défaut (meilleur équilibre vitesse/qualité)
   const maxQ     = defaultQ;
   // Toujours appliquer le defaultQ du plan (sélection automatique au login)
   _composeQuality = Math.min(_composeQuality > 540 ? _composeQuality : defaultQ, maxQ);
@@ -11670,10 +11670,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       }
       drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
 
-      // Précharger FFmpeg 0.12.10 EN PARALLÈLE de l'encodage WebCodecs
-      // L'encodage prend ~20s → FFmpeg a le temps de se charger depuis le CDN
-      // Quand on arrive au muxage audio, FFmpeg est déjà prêt → 0 attente
-      const _ff2Preload = _loadFfmpeg().catch(e => console.warn('FFmpeg 0.12 preload failed:', e));
+      // Précharger FFmpeg 0.11.6 EN PARALLÈLE de l'encodage WebCodecs
+      // On utilise la même instance que path B → déjà chargée si le user a déjà composé
+      const _ff2Preload = _loadFFmpeg().catch(e => console.warn('FFmpeg preload failed:', e));
 
       let _wcFrameNum = 0;
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
@@ -11733,45 +11732,43 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // Sauvegarder blob vidéo (sans audio) pour le fallback timeout
       window._lastComposedBlob = wcBlob;
 
-      // Muxage audio via FFmpeg 0.12.10 — déjà préchargé pendant l'encodage, 0 attente CDN
+      // Muxage audio via FFmpeg 0.11.6 (même instance que path B, déjà prouvée)
+      // -c:v copy : copie le stream H.264 WebCodecs sans re-encoder → quelques secondes
       if(_audioBlobToEncode){
         toast('🎵 Muxage audio…');
         try {
-          await _ff2Preload; // s'assurer que le préchargement est terminé
-          const ff2 = await _loadFfmpeg(); // instance 0.12.10 (déjà en mémoire)
+          await _ff2Preload; // s'assurer que FFmpeg 0.11.6 est chargé
+          const ff = _ffmpegInst;
           const _audMime = (_audioBlobToEncode.type || '').toLowerCase();
           const _audExt  = _audMime.includes('ogg') || _audMime.includes('opus') ? 'ogg'
                          : _audMime.includes('webm') ? 'webm'
                          : _audMime.includes('wav')  ? 'wav'
                          : 'mp3';
           const _audFile = 'wc_aud.' + _audExt;
-          try { await ff2.deleteFile('wc_vid.mp4'); } catch(e){}
-          try { await ff2.deleteFile(_audFile);     } catch(e){}
-          try { await ff2.deleteFile('wc_out.mp4'); } catch(e){}
-          await ff2.writeFile('wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
-          await ff2.writeFile(_audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
-          // -c:v copy : pas de re-encode vidéo → quelques secondes au lieu de 5 minutes
-          // L'input WebCodecs est déjà H.264 CFR 30fps yuv420p → copie directe dans le container
-          // -map explicite + pas de -shortest (mp4-muxer peut ne pas écrire la durée correctement)
-          await ff2.exec([
+          try { ff.FS('unlink', 'wc_vid.mp4'); } catch(e){}
+          try { ff.FS('unlink', _audFile);     } catch(e){}
+          try { ff.FS('unlink', 'wc_out.mp4'); } catch(e){}
+          ff.FS('writeFile', 'wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
+          ff.FS('writeFile', _audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
+          // -map explicite + pas de -shortest (mp4-muxer ne met pas toujours la durée dans moov)
+          await ff.run(
             '-i','wc_vid.mp4', '-i',_audFile,
             '-map','0:v:0', '-map','1:a:0',
             '-c:v','copy',
             '-c:a','aac', '-ar','44100', '-b:a','128k',
             '-movflags','+faststart',
             '-y','wc_out.mp4'
-          ]);
-          const outData = await ff2.readFile('wc_out.mp4');
+          );
+          const outData = ff.FS('readFile', 'wc_out.mp4');
           if(outData && outData.length > 10000){
-            // Utiliser byteOffset/byteLength pour éviter les problèmes de buffer partagé avec FFmpeg 0.12
-            finalBlob = new Blob([new Uint8Array(outData.buffer, outData.byteOffset, outData.byteLength)], { type: 'video/mp4' });
+            finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
             toast('✅ Vidéo WebCodecs CFR + audio — prête !');
           } else {
             throw new Error('output trop petit : ' + (outData?.length||0) + ' bytes');
           }
-          try { await ff2.deleteFile('wc_vid.mp4'); await ff2.deleteFile(_audFile); await ff2.deleteFile('wc_out.mp4'); } catch(e){}
+          try { ff.FS('unlink', 'wc_vid.mp4'); ff.FS('unlink', _audFile); ff.FS('unlink', 'wc_out.mp4'); } catch(e){}
         } catch(ffMuxErr){
-          console.warn('FFmpeg 0.12 audio mux failed:', ffMuxErr);
+          console.warn('FFmpeg audio mux failed:', ffMuxErr);
           toast('⚠️ Muxage audio échoué (' + (ffMuxErr.message||ffMuxErr) + ') — vidéo muette');
           finalBlob = wcBlob;
         }
