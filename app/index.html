@@ -11562,6 +11562,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   // ── 7. Audio blob à utiliser (avec silences supprimés si applicable) ──
   setStage('Préparation audio…', 10);
   let _audioBlobToEncode = results.audioBlob;
+  // Debug persistant dans la barre de progression (reste visible)
+  const _dbgAudio = document.getElementById('composeProgressStage');
+  if(_dbgAudio) _dbgAudio.textContent = 'Audio source: ' + (_audioBlobToEncode ? Math.round(_audioBlobToEncode.size/1024)+'KB' : 'NULL - pas de blob');
   // ⚠️ Même logique que pour Hedra : seulement en mode MP4 (même fichier analysé + encodé)
   if(mp4AudioEnabled && mp4AudioFile && silenceKeepSegs.length > 0 && silenceAudioBuffer){
     const cleanUrl = await _getOrBuildCleanBlobUrl();
@@ -11661,28 +11664,30 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
-          toast('🔊 Audio décodé : ' + Math.round(_audioPCMBuf.duration) + 's · ' + _audioSampleRate + 'Hz');
-        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; }
+          if(_dbgAudio) _dbgAudio.textContent = 'PCM décodé: ' + Math.round(_audioPCMBuf.duration) + 's';
+        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; if(_dbgAudio) _dbgAudio.textContent = 'PCM decode FAIL: ' + e.message; }
 
-        // Étape 2 : tester AudioEncoder avec un encodeur factice (évite muxer audio vide si KO)
+        // Étape 2 : trouver un codec AudioEncoder supporté (AAC puis Opus en fallback)
         if(_audioPCMBuf){
-          _audEncCfg = { codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 };
-          try {
-            const _probe = new AudioEncoder({ output:()=>{}, error:()=>{} });
-            _probe.configure(_audEncCfg);
-            await new Promise(r => setTimeout(r, 30)); // laisser Safari traiter configure()
-            _canEncodeAudio = (_probe.state === 'configured');
-            _probe.close();
-          } catch(e){ console.warn('AudioEncoder probe failed:', e); }
-          // isConfigSupported est parfois pessimiste (Safari) → dernier recours
-          if(!_canEncodeAudio){
-            try { const r = await AudioEncoder.isConfigSupported(_audEncCfg); _canEncodeAudio = !!r.supported; } catch(e){}
+          // Safari peut ne pas supporter AAC dans AudioEncoder → essayer Opus aussi
+          const _codecCandidates = [
+            { codec:'mp4a.40.2', muxCodec:'aac',  sr:_audioSampleRate },
+            { codec:'opus',      muxCodec:'opus', sr:Math.min(_audioSampleRate, 48000) },
+          ];
+          for(const _cand of _codecCandidates){
+            const _cfg = { codec:_cand.codec, sampleRate:_cand.sr, numberOfChannels:_audioNumCh, bitrate:128000 };
+            try {
+              const _probe = new AudioEncoder({ output:()=>{}, error:()=>{} });
+              _probe.configure(_cfg);
+              // configure() est synchrone → state change immédiatement
+              if(_probe.state === 'configured'){ _canEncodeAudio = true; _audEncCfg = _cfg; _audEncCfg._muxCodec = _cand.muxCodec; _probe.close(); break; }
+              _probe.close();
+            } catch(e){ /* codec non supporté, essayer suivant */ }
           }
-          console.log('AudioEncoder AAC disponible :', _canEncodeAudio);
+          if(_dbgAudio) _dbgAudio.textContent = _canEncodeAudio ? 'AudioEncoder OK: ' + _audEncCfg.codec : 'AudioEncoder: AUCUN codec supporté';
         }
       } else {
-        if(!_audioBlobToEncode) console.warn('Pas de _audioBlobToEncode → vidéo muette');
-        if(typeof AudioEncoder === 'undefined') console.warn('AudioEncoder non disponible sur ce navigateur');
+        if(_dbgAudio) _dbgAudio.textContent = !_audioBlobToEncode ? 'Audio NULL (ElevenLabs 401?)' : 'AudioEncoder API absente';
       }
 
       // Étape 3 : créer le muxer avec audio UNIQUEMENT si l'encoder est confirmé
@@ -11691,7 +11696,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         video: { codec:'avc', width:safeW, height:safeH, frameRate:_fps },
         fastStart: 'in-memory',
       };
-      if(_canEncodeAudio) _muxCfg.audio = { codec:'aac', numberOfChannels:_audioNumCh, sampleRate:_audioSampleRate };
+      if(_canEncodeAudio) _muxCfg.audio = { codec:(_audEncCfg._muxCodec||'aac'), numberOfChannels:_audioNumCh, sampleRate:_audEncCfg.sampleRate||_audioSampleRate };
       const muxer = new Muxer(_muxCfg);
 
       // Étape 4 : encoder TOUTES les frames audio maintenant (avant la boucle vidéo, rapide)
@@ -11703,8 +11708,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             output: (chunk, meta) => { try{ muxer.addAudioChunk(chunk, meta); }catch(e){ _audioEncErr=e; } },
             error:  (e) => { _audioEncErr = e; },
           });
-          _audioEncoder.configure(_audEncCfg);
-          const _frameSize = 1024; // taille standard d'une frame AAC
+          const _encCfgClean = { codec:_audEncCfg.codec, sampleRate:_audEncCfg.sampleRate, numberOfChannels:_audEncCfg.numberOfChannels, bitrate:_audEncCfg.bitrate };
+          _audioEncoder.configure(_encCfgClean);
+          const _frameSize = _audEncCfg.codec === 'opus' ? 960 : 1024; // 960 = taille frame Opus 20ms@48k, 1024 = AAC
           const _chData = [];
           for(let c=0; c<_audioNumCh; c++) _chData.push(_audioPCMBuf.getChannelData(c));
           let _audTs = 0;
@@ -11720,8 +11726,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           }
           if(!_audioEncErr) await _audioEncoder.flush();
           if(_audioEncErr) console.warn('AudioEncoder erreur encode:', _audioEncErr);
-          else toast('✅ Audio AAC encodé — ' + Math.round(_audioPCMBuf.length/_audioSampleRate) + 's');
-        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); }
+          else if(_dbgAudio) _dbgAudio.textContent = 'Audio OK (' + _audEncCfg.codec + ') ' + Math.round(_audioPCMBuf.length/_audioSampleRate) + 's ✅';
+        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); if(_dbgAudio) _dbgAudio.textContent = 'Audio CRASH: ' + e.message; }
       }
 
       // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
