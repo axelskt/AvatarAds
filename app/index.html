@@ -11582,22 +11582,30 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   // ── 8. Préparer l'audio (commun aux deux chemins d'encodage) ──
   setStage('Initialisation encodeur…', 14);
 
-  // Extraire l'audio Hedra si absent (mode bypass désactivé)
-  if(!_audioBlobToEncode && hedraObjUrl && !window._bypassHedraOn){
+  // Extraire l'audio Hedra si absent (bypass ou non)
+  _dbg('2. bypass=' + (window._bypassHedraOn?'OUI':'NON') + ' hedraObjUrl=' + (hedraObjUrl?'OUI':'NON'));
+  if(!_audioBlobToEncode && hedraObjUrl){
     try {
       const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuf = await fetch(hedraObjUrl).then(r => r.arrayBuffer());
       const decoded  = await tmpCtx.decodeAudioData(arrayBuf);
       await tmpCtx.close();
       _audioBlobToEncode = _audioBufferToWavBlob(decoded);
+      _dbg('3. Hedra audio: ' + Math.round(decoded.duration) + 's ✅');
       toast('🎵 Audio extrait de la vidéo Hedra (' + Math.round(decoded.duration) + 's)');
     } catch(e){
       console.warn('Hedra audio extract failed:', e);
-      toast('⚠️ Extraction audio Hedra échouée : ' + (e.message||e));
+      _dbg('3. Hedra FAIL: ' + (e.message||e) + ' ❌');
     }
   }
-  if(window._bypassHedraOn && !_audioBlobToEncode){
-    toast('⚠️ Aucune voix générée — génère ta voix (étape 3) avant d\'exporter pour avoir de l\'audio');
+  // Fallback : utiliser le fichier MP4 audio uploadé (gameplay ou voix)
+  if(!_audioBlobToEncode && mp4AudioFile){
+    _audioBlobToEncode = mp4AudioFile;
+    _dbg('3b. Fallback mp4AudioFile: ' + Math.round(mp4AudioFile.size/1024) + 'KB ✅');
+    toast('🎮 Audio MP4 utilisé comme source voix');
+  }
+  if(!_audioBlobToEncode){
+    _dbg('3c. Aucune source audio trouvée ❌');
   }
 
   // Pre-warm : première frame
