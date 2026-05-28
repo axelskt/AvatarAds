@@ -11632,13 +11632,70 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
       const muxTarget = new ArrayBufferTarget();
 
-      // Muxer vidéo uniquement — l'audio est ajouté après via FFmpeg -c:v copy
-      // (AudioEncoder AAC non supporté sur Safari → on évite cette dépendance)
-      const muxer = new Muxer({
+      // ── Audio : décoder en PCM + vérifier AudioEncoder AAC (aucun FFmpeg/WASM requis) ──
+      // Safari bloque FFmpeg (SharedArrayBuffer + blob Worker URL) → on utilise des Web APIs pures
+      // AudioEncoder AAC est supporté nativement sur Safari 16.4+, Chrome 94+, Firefox 130+
+      let _audioPCMBuf = null, _audioSampleRate = 44100, _audioNumCh = 1, _canEncodeAudio = false;
+      if(_audioBlobToEncode && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined'){
+        try {
+          const _decCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+          _audioPCMBuf = await _decCtx.decodeAudioData(await _audioBlobToEncode.arrayBuffer());
+          await _decCtx.close();
+          _audioSampleRate = _audioPCMBuf.sampleRate;
+          _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
+          const _audCfg = { codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 };
+          try { const r = await AudioEncoder.isConfigSupported(_audCfg); _canEncodeAudio = !!r.supported; } catch(e){}
+          // Safari peut mentir → tenter quoi qu'il arrive
+          if(!_canEncodeAudio){ _canEncodeAudio = true; console.warn('AudioEncoder isConfigSupported false, tentative directe'); }
+        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; }
+      }
+
+      // Muxer avec ou sans piste audio selon disponibilité
+      const _muxCfg = {
         target: muxTarget,
-        video: { codec: 'avc', width: W, height: H, frameRate: _fps },
+        video: { codec:'avc', width:safeW, height:safeH, frameRate:_fps },
         fastStart: 'in-memory',
-      });
+      };
+      if(_audioPCMBuf && _canEncodeAudio){
+        _muxCfg.audio = { codec:'aac', numberOfChannels:_audioNumCh, sampleRate:_audioSampleRate };
+      }
+      const muxer = new Muxer(_muxCfg);
+
+      // AudioEncoder (si audio disponible)
+      let _audioEncoder = null, _audioEncErr = null;
+      if(_audioPCMBuf && _canEncodeAudio){
+        _audioEncoder = new AudioEncoder({
+          output: (chunk, meta) => { try{ muxer.addAudioChunk(chunk, meta); }catch(e){ _audioEncErr=e; } },
+          error:  (e) => { _audioEncErr = e; },
+        });
+        try {
+          _audioEncoder.configure({ codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 });
+        } catch(e){ _audioEncErr = e; _audioEncoder = null; }
+      }
+
+      // Encoder TOUTES les frames audio MAINTENANT (rapide, pas de backpressure vidéo)
+      // mp4-muxer gère l'interleaving — les chunks audio peuvent arriver avant la vidéo
+      if(_audioEncoder && !_audioEncErr && _audioPCMBuf){
+        try {
+          const _frameSize = 1024; // taille standard frame AAC
+          const _chData = [];
+          for(let c=0; c<_audioNumCh; c++) _chData.push(_audioPCMBuf.getChannelData(c));
+          let _audTs = 0;
+          for(let off=0; off<_audioPCMBuf.length; off+=_frameSize){
+            if(_audioEncErr) break;
+            const _frames = Math.min(_frameSize, _audioPCMBuf.length-off);
+            const _pcm = new Float32Array(_frames * _audioNumCh);
+            for(let f=0; f<_frames; f++) for(let c=0; c<_audioNumCh; c++) _pcm[f*_audioNumCh+c] = _chData[c][off+f];
+            const _ad = new AudioData({ format:'f32-interleaved', sampleRate:_audioSampleRate, numberOfFrames:_frames, numberOfChannels:_audioNumCh, timestamp:Math.round(_audTs/_audioSampleRate*1e6), data:_pcm });
+            _audioEncoder.encode(_ad);
+            _ad.close();
+            _audTs += _frames;
+            // Backpressure : éviter de saturer la queue
+            if(_audioEncoder.encodeQueueSize > 20) await new Promise(r => setTimeout(r, 10));
+          }
+          await _audioEncoder.flush();
+        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder encode failed:', e); }
+      }
 
       // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
       let _wcEncErr2 = null;
@@ -11669,36 +11726,6 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         canvas.width = safeW; canvas.height = safeH;
       }
       drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
-
-      // ── Enregistrement audio EN PARALLÈLE (même technique que path B, prouvée) ──
-      // On joue l'audio via AudioContext + MediaElementSource → MediaStreamDestination
-      // MediaRecorder capture le stream audio-only en temps réel, synchronisé avec la vidéo
-      let _wcAudioRec = null, _wcAudioChunks = [], _wcAudioEl = null, _wcAudioCtx = null, _wcAudioMime = '';
-      if(_audioBlobToEncode){
-        try {
-          const _wcAudUrl = URL.createObjectURL(_audioBlobToEncode);
-          _wcAudioEl = new Audio(_wcAudUrl);
-          _wcAudioEl.preload = 'auto';
-          await new Promise(res => { _wcAudioEl.oncanplaythrough = res; _wcAudioEl.onerror = res; _wcAudioEl.load(); setTimeout(res, 3000); });
-          _wcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          if(_wcAudioCtx.state === 'suspended') await Promise.race([_wcAudioCtx.resume(), new Promise(r => setTimeout(r, 2000))]);
-          const _wcAudDest = _wcAudioCtx.createMediaStreamDestination();
-          const _wcAudSrc  = _wcAudioCtx.createMediaElementSource(_wcAudioEl);
-          _wcAudSrc.connect(_wcAudDest);
-          const _wcAudStream = new MediaStream([..._wcAudDest.stream.getAudioTracks()]);
-          // Choisir le meilleur format supporté (opus/webm préféré, ogg fallback)
-          const _mimeList = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg',''];
-          _wcAudioMime = _mimeList.find(m => !m || (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m))) || '';
-          if(typeof MediaRecorder !== 'undefined' && _wcAudStream.getAudioTracks().length > 0){
-            _wcAudioRec = new MediaRecorder(_wcAudStream, _wcAudioMime ? { mimeType: _wcAudioMime } : {});
-            _wcAudioRec.ondataavailable = e => { if(e.data && e.data.size > 0) _wcAudioChunks.push(e.data); };
-          }
-        } catch(e){ console.warn('WebCodecs audio setup failed:', e); _wcAudioEl = null; _wcAudioCtx = null; }
-      }
-
-      // Précharger FFmpeg 0.12.10 EN PARALLÈLE (single-thread, pas de SharedArrayBuffer requis → Safari OK)
-      // FFmpeg 0.11.6 exige SharedArrayBuffer → bloqué par Safari sans COOP/COEP headers
-      const _ff2Preload = _loadFfmpeg().catch(e => console.warn('FFmpeg 0.12 preload failed:', e));
 
       let _wcFrameNum = 0;
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
@@ -11736,22 +11763,12 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             resolve();
           }
         }, 1000 / _fps);
-        // Démarrer vidéo + audio ensemble au même instant
-        if(_wcAudioRec) _wcAudioRec.start(200);
         Promise.all([
           hedraVid.play().catch(()=>{}),
           gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
-          _wcAudioEl ? _wcAudioEl.play().catch(()=>{}) : Promise.resolve(),
         ]);
       });
       clearTimeout(_wcTimeoutId);
-
-      // Arrêter l'enregistrement audio
-      if(_wcAudioRec && _wcAudioRec.state !== 'inactive'){
-        await new Promise(res => { _wcAudioRec.onstop = res; _wcAudioRec.stop(); });
-      }
-      if(_wcAudioEl){ _wcAudioEl.pause(); try{ URL.revokeObjectURL(_wcAudioEl.src); }catch(e){} }
-      if(_wcAudioCtx) _wcAudioCtx.close().catch(()=>{});
 
       if(_wcTimedOut) throw new Error('WebCodecs timeout — résolution trop haute, passage en mode classique');
       if(_wcEncErr || _wcEncErr2) throw (_wcEncErr || _wcEncErr2);
@@ -11765,61 +11782,12 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       const wcBlob = new Blob([muxTarget.buffer], { type: 'video/mp4' });
       if(wcBlob.size < 50000) throw new Error('output WebCodecs trop petit (' + Math.round(wcBlob.size/1024) + 'ko)');
 
-      // Sauvegarder blob vidéo (sans audio) pour le fallback timeout
       window._lastComposedBlob = wcBlob;
 
-      // Muxage audio via FFmpeg 0.11.6 — audio enregistré en direct (garanti synchronisé)
-      // Priorité : audio enregistré par MediaRecorder > _audioBlobToEncode (fallback)
-      const _wcRecordedAudio = _wcAudioChunks.length > 0 ? new Blob(_wcAudioChunks, { type: _wcAudioMime || 'audio/webm' }) : null;
-      const _audioForMux = _wcRecordedAudio || _audioBlobToEncode;
-
-      if(_audioForMux){
-        toast('🎵 Muxage audio…');
-        try {
-          await _ff2Preload; // FFmpeg 0.12.10 déjà chargé pendant l'encodage
-          const ff2 = await _loadFfmpeg(); // instance déjà en mémoire, retour immédiat
-          // Déterminer l'extension audio
-          const _audMimeStr = (_wcRecordedAudio ? (_wcAudioMime || '') : ((_audioBlobToEncode?.type) || '')).toLowerCase();
-          const _audExt = _audMimeStr.includes('ogg') ? 'ogg'
-                        : _audMimeStr.includes('webm') ? 'webm'
-                        : _audMimeStr.includes('wav')  ? 'wav'
-                        : _audMimeStr.includes('mp3') || _audMimeStr.includes('mpeg') ? 'mp3'
-                        : 'webm';
-          const _audFile = 'wc_aud.' + _audExt;
-          try { await ff2.deleteFile('wc_vid.mp4'); } catch(e){}
-          try { await ff2.deleteFile(_audFile);     } catch(e){}
-          try { await ff2.deleteFile('wc_out.mp4'); } catch(e){}
-          await ff2.writeFile('wc_vid.mp4', new Uint8Array(await wcBlob.arrayBuffer()));
-          await ff2.writeFile(_audFile,     new Uint8Array(await _audioForMux.arrayBuffer()));
-          // Timeout 90s anti-blocage + -map explicite + pas de -shortest
-          await Promise.race([
-            ff2.exec([
-              '-i','wc_vid.mp4', '-i',_audFile,
-              '-map','0:v:0', '-map','1:a:0',
-              '-c:v','copy',
-              '-c:a','aac', '-ar','44100', '-b:a','128k',
-              '-movflags','+faststart',
-              '-y','wc_out.mp4'
-            ]),
-            new Promise((_,rej) => setTimeout(() => rej(new Error('FFmpeg exec timeout 90s')), 90000))
-          ]);
-          const outData = await ff2.readFile('wc_out.mp4');
-          if(outData && outData.length > 10000){
-            finalBlob = new Blob([new Uint8Array(outData.buffer, outData.byteOffset, outData.byteLength)], { type: 'video/mp4' });
-            toast('✅ Vidéo WebCodecs CFR + audio — prête !');
-          } else {
-            throw new Error('output trop petit : ' + (outData?.length||0) + ' bytes');
-          }
-          try { await ff2.deleteFile('wc_vid.mp4'); await ff2.deleteFile(_audFile); await ff2.deleteFile('wc_out.mp4'); } catch(e){}
-        } catch(ffMuxErr){
-          console.warn('FFmpeg 0.12 audio mux failed:', ffMuxErr);
-          toast('⚠️ Muxage audio échoué (' + (ffMuxErr.message||ffMuxErr) + ') — vidéo muette');
-          finalBlob = wcBlob;
-        }
-      } else {
-        toast('⚠️ Aucun audio — vidéo muette');
-        finalBlob = wcBlob;
-      }
+      if(_audioEncErr){ console.warn('AudioEncoder erreur (vidéo avec audio quand même si chunks reçus):', _audioEncErr); }
+      const _hasAudio = _audioPCMBuf && _canEncodeAudio && !_audioEncErr;
+      toast(_hasAudio ? '✅ Vidéo WebCodecs CFR + audio AAC — prête !' : '⚠️ Aucun audio (AudioEncoder indisponible)');
+      finalBlob = wcBlob;
 
       URL.revokeObjectURL(hedraObjUrl);
       if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
