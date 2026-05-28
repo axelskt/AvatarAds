@@ -2262,6 +2262,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- ══ LIBRARY ══ -->
     <div class="view" id="v-library">
       <div class="lib-view" style="width:100%">
+        <!-- Banner navigation privée -->
+        <div id="privateModeBanner" style="display:none;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--orange2);line-height:1.5">
+          🔒 <strong>Navigation privée</strong> — La bibliothèque ne persiste pas entre les sessions privées. Les vidéos créées cette session sont visibles, mais elles seront perdues à la fermeture de l'onglet.
+        </div>
         <div class="ph">
           <div>
             <div class="ph-title">Bibliothèque</div>
@@ -4243,13 +4247,21 @@ let splitEnabled = false;
 let results = {script:'', audioBlob:null, hedraUrl:''};
 let library = [];
 
-// ── LIBRARY PERSISTENCE (localStorage) ──
+// ── LIBRARY PERSISTENCE (localStorage + sessionStorage fallback pour navigation privée) ──
+const _isPrivateMode = (() => {
+  try { localStorage.setItem('_aa_test','1'); localStorage.removeItem('_aa_test'); return false; }
+  catch(e){ return true; }
+})();
 function _saveLibrary(){
-  try{ localStorage.setItem('aa_library', JSON.stringify(library)); }catch(e){}
+  try{
+    if(_isPrivateMode){ sessionStorage.setItem('aa_library', JSON.stringify(library)); }
+    else { localStorage.setItem('aa_library', JSON.stringify(library)); }
+  }catch(e){}
 }
 function _loadLibrary(){
   try{
-    const raw = localStorage.getItem('aa_library');
+    const src = _isPrivateMode ? sessionStorage : localStorage;
+    const raw = src.getItem('aa_library');
     if(raw){ library = JSON.parse(raw); }
   }catch(e){ library = []; }
 }
@@ -11570,8 +11582,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       const decoded  = await tmpCtx.decodeAudioData(arrayBuf);
       await tmpCtx.close();
       _audioBlobToEncode = _audioBufferToWavBlob(decoded);
-      toast('🎵 Audio extrait de la vidéo Hedra');
-    } catch(e){ console.warn('Hedra audio extract failed:', e); }
+      toast('🎵 Audio extrait de la vidéo Hedra (' + Math.round(decoded.duration) + 's)');
+    } catch(e){
+      console.warn('Hedra audio extract failed:', e);
+      toast('⚠️ Extraction audio Hedra échouée : ' + (e.message||e));
+    }
   }
   if(window._bypassHedraOn && !_audioBlobToEncode){
     toast('⚠️ Aucune voix générée — génère ta voix (étape 3) avant d\'exporter pour avoir de l\'audio');
@@ -11797,13 +11812,18 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       window._lastComposedBlob = wcBlob;
 
       const _hasAudio = _canEncodeAudio && !_audioEncErr && _audioPCMBuf;
-      if(!_hasAudio && !_audioBlobToEncode) toast('⚠️ Aucun audio source — vidéo muette');
-      else if(!_hasAudio) toast('⚠️ AudioEncoder échoué — vidéo muette (voir console)');
       finalBlob = wcBlob;
 
       URL.revokeObjectURL(hedraObjUrl);
       if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
-      toast('✅ Vidéo CFR WebCodecs 30fps — prête pour TikTok !');
+      // Un seul toast final qui inclut le statut audio (évite l'écrasement)
+      if(_hasAudio){
+        toast('✅ Vidéo CFR 30fps + audio AAC — prête pour TikTok !');
+      } else if(!_audioBlobToEncode){
+        toast('⚠️ Vidéo prête SANS audio — aucune source audio détectée');
+      } else {
+        toast('⚠️ Vidéo prête SANS audio — AudioEncoder: ' + (_audioEncErr ? _audioEncErr.message : 'non disponible'));
+      }
 
     } catch(wcErr){
       console.error('WebCodecs composition failed, fallback MediaRecorder:', wcErr);
@@ -12363,6 +12383,10 @@ function libSetTab(tab){
 }
 
 function renderLibrary(){
+  // Afficher le banner si navigation privée
+  const _privBanner = document.getElementById('privateModeBanner');
+  if(_privBanner) _privBanner.style.display = _isPrivateMode ? 'block' : 'none';
+
   const grid = document.getElementById('libGrid');
 
   // Build filtered list — images come from imgHistory, audio/video from library[]
