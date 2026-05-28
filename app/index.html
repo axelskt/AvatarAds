@@ -11752,16 +11752,19 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await ff2.writeFile(_audFile,     new Uint8Array(await _audioBlobToEncode.arrayBuffer()));
           // -c:v copy : pas de re-encode vidéo → quelques secondes au lieu de 5 minutes
           // L'input WebCodecs est déjà H.264 CFR 30fps yuv420p → copie directe dans le container
+          // -map explicite + pas de -shortest (mp4-muxer peut ne pas écrire la durée correctement)
           await ff2.exec([
             '-i','wc_vid.mp4', '-i',_audFile,
+            '-map','0:v:0', '-map','1:a:0',
             '-c:v','copy',
             '-c:a','aac', '-ar','44100', '-b:a','128k',
-            '-shortest', '-movflags','+faststart',
+            '-movflags','+faststart',
             '-y','wc_out.mp4'
           ]);
           const outData = await ff2.readFile('wc_out.mp4');
           if(outData && outData.length > 10000){
-            finalBlob = new Blob([outData.buffer], { type: 'video/mp4' });
+            // Utiliser byteOffset/byteLength pour éviter les problèmes de buffer partagé avec FFmpeg 0.12
+            finalBlob = new Blob([new Uint8Array(outData.buffer, outData.byteOffset, outData.byteLength)], { type: 'video/mp4' });
             toast('✅ Vidéo WebCodecs CFR + audio — prête !');
           } else {
             throw new Error('output trop petit : ' + (outData?.length||0) + ' bytes');
