@@ -11632,57 +11632,68 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
       const muxTarget = new ArrayBufferTarget();
 
-      // ── Audio : décoder en PCM + vérifier AudioEncoder AAC (aucun FFmpeg/WASM requis) ──
-      // Safari bloque FFmpeg (SharedArrayBuffer + blob Worker URL) → on utilise des Web APIs pures
-      // AudioEncoder AAC est supporté nativement sur Safari 16.4+, Chrome 94+, Firefox 130+
-      let _audioPCMBuf = null, _audioSampleRate = 44100, _audioNumCh = 1, _canEncodeAudio = false;
+      // ── Audio : décoder PCM puis tester AudioEncoder AVANT de créer le muxer ──
+      // Safari bloque FFmpeg (SharedArrayBuffer + blob Worker URL) → Web APIs pures uniquement
+      // Ordre : 1) decode PCM  2) test encoder  3) créer muxer (avec audio seulement si encoder OK)
+      let _audioPCMBuf = null, _audioSampleRate = 44100, _audioNumCh = 1;
+      let _audEncCfg = null, _canEncodeAudio = false;
+
       if(_audioBlobToEncode && typeof AudioEncoder !== 'undefined' && typeof AudioData !== 'undefined'){
+        // Étape 1 : décoder l'audio en PCM
         try {
           const _decCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
           _audioPCMBuf = await _decCtx.decodeAudioData(await _audioBlobToEncode.arrayBuffer());
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
-          const _audCfg = { codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 };
-          try { const r = await AudioEncoder.isConfigSupported(_audCfg); _canEncodeAudio = !!r.supported; } catch(e){}
-          // Safari peut mentir → tenter quoi qu'il arrive
-          if(!_canEncodeAudio){ _canEncodeAudio = true; console.warn('AudioEncoder isConfigSupported false, tentative directe'); }
+          toast('🔊 Audio décodé : ' + Math.round(_audioPCMBuf.duration) + 's · ' + _audioSampleRate + 'Hz');
         } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; }
+
+        // Étape 2 : tester AudioEncoder avec un encodeur factice (évite muxer audio vide si KO)
+        if(_audioPCMBuf){
+          _audEncCfg = { codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 };
+          try {
+            const _probe = new AudioEncoder({ output:()=>{}, error:()=>{} });
+            _probe.configure(_audEncCfg);
+            await new Promise(r => setTimeout(r, 30)); // laisser Safari traiter configure()
+            _canEncodeAudio = (_probe.state === 'configured');
+            _probe.close();
+          } catch(e){ console.warn('AudioEncoder probe failed:', e); }
+          // isConfigSupported est parfois pessimiste (Safari) → dernier recours
+          if(!_canEncodeAudio){
+            try { const r = await AudioEncoder.isConfigSupported(_audEncCfg); _canEncodeAudio = !!r.supported; } catch(e){}
+          }
+          console.log('AudioEncoder AAC disponible :', _canEncodeAudio);
+        }
+      } else {
+        if(!_audioBlobToEncode) console.warn('Pas de _audioBlobToEncode → vidéo muette');
+        if(typeof AudioEncoder === 'undefined') console.warn('AudioEncoder non disponible sur ce navigateur');
       }
 
-      // Muxer avec ou sans piste audio selon disponibilité
+      // Étape 3 : créer le muxer avec audio UNIQUEMENT si l'encoder est confirmé
       const _muxCfg = {
         target: muxTarget,
         video: { codec:'avc', width:safeW, height:safeH, frameRate:_fps },
         fastStart: 'in-memory',
       };
-      if(_audioPCMBuf && _canEncodeAudio){
-        _muxCfg.audio = { codec:'aac', numberOfChannels:_audioNumCh, sampleRate:_audioSampleRate };
-      }
+      if(_canEncodeAudio) _muxCfg.audio = { codec:'aac', numberOfChannels:_audioNumCh, sampleRate:_audioSampleRate };
       const muxer = new Muxer(_muxCfg);
 
-      // AudioEncoder (si audio disponible)
-      let _audioEncoder = null, _audioEncErr = null;
-      if(_audioPCMBuf && _canEncodeAudio){
-        _audioEncoder = new AudioEncoder({
-          output: (chunk, meta) => { try{ muxer.addAudioChunk(chunk, meta); }catch(e){ _audioEncErr=e; } },
-          error:  (e) => { _audioEncErr = e; },
-        });
+      // Étape 4 : encoder TOUTES les frames audio maintenant (avant la boucle vidéo, rapide)
+      // mp4-muxer gère l'interleaving ; les chunks audio avant la vidéo sont OK en mode in-memory
+      let _audioEncErr = null;
+      if(_canEncodeAudio && _audioPCMBuf){
         try {
-          _audioEncoder.configure({ codec:'mp4a.40.2', sampleRate:_audioSampleRate, numberOfChannels:_audioNumCh, bitrate:128000 });
-        } catch(e){ _audioEncErr = e; _audioEncoder = null; }
-      }
-
-      // Encoder TOUTES les frames audio MAINTENANT (rapide, pas de backpressure vidéo)
-      // mp4-muxer gère l'interleaving — les chunks audio peuvent arriver avant la vidéo
-      if(_audioEncoder && !_audioEncErr && _audioPCMBuf){
-        try {
-          const _frameSize = 1024; // taille standard frame AAC
+          const _audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => { try{ muxer.addAudioChunk(chunk, meta); }catch(e){ _audioEncErr=e; } },
+            error:  (e) => { _audioEncErr = e; },
+          });
+          _audioEncoder.configure(_audEncCfg);
+          const _frameSize = 1024; // taille standard d'une frame AAC
           const _chData = [];
           for(let c=0; c<_audioNumCh; c++) _chData.push(_audioPCMBuf.getChannelData(c));
           let _audTs = 0;
-          for(let off=0; off<_audioPCMBuf.length; off+=_frameSize){
-            if(_audioEncErr) break;
+          for(let off=0; off<_audioPCMBuf.length && !_audioEncErr; off+=_frameSize){
             const _frames = Math.min(_frameSize, _audioPCMBuf.length-off);
             const _pcm = new Float32Array(_frames * _audioNumCh);
             for(let f=0; f<_frames; f++) for(let c=0; c<_audioNumCh; c++) _pcm[f*_audioNumCh+c] = _chData[c][off+f];
@@ -11690,11 +11701,12 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
             _audioEncoder.encode(_ad);
             _ad.close();
             _audTs += _frames;
-            // Backpressure : éviter de saturer la queue
             if(_audioEncoder.encodeQueueSize > 20) await new Promise(r => setTimeout(r, 10));
           }
-          await _audioEncoder.flush();
-        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder encode failed:', e); }
+          if(!_audioEncErr) await _audioEncoder.flush();
+          if(_audioEncErr) console.warn('AudioEncoder erreur encode:', _audioEncErr);
+          else toast('✅ Audio AAC encodé — ' + Math.round(_audioPCMBuf.length/_audioSampleRate) + 's');
+        } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); }
       }
 
       // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
@@ -11784,9 +11796,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       window._lastComposedBlob = wcBlob;
 
-      if(_audioEncErr){ console.warn('AudioEncoder erreur (vidéo avec audio quand même si chunks reçus):', _audioEncErr); }
-      const _hasAudio = _audioPCMBuf && _canEncodeAudio && !_audioEncErr;
-      toast(_hasAudio ? '✅ Vidéo WebCodecs CFR + audio AAC — prête !' : '⚠️ Aucun audio (AudioEncoder indisponible)');
+      const _hasAudio = _canEncodeAudio && !_audioEncErr && _audioPCMBuf;
+      if(!_hasAudio && !_audioBlobToEncode) toast('⚠️ Aucun audio source — vidéo muette');
+      else if(!_hasAudio) toast('⚠️ AudioEncoder échoué — vidéo muette (voir console)');
       finalBlob = wcBlob;
 
       URL.revokeObjectURL(hedraObjUrl);
