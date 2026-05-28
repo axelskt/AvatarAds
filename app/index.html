@@ -11729,9 +11729,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           let _audTs = 0;
           for(let off=0; off<_audioPCMBuf.length && !_audioEncErr; off+=_frameSize){
             const _frames = Math.min(_frameSize, _audioPCMBuf.length-off);
+            // f32-planar : ch0[0..N], ch1[0..N] — seul format accepté par Safari AudioEncoder
             const _pcm = new Float32Array(_frames * _audioNumCh);
-            for(let f=0; f<_frames; f++) for(let c=0; c<_audioNumCh; c++) _pcm[f*_audioNumCh+c] = _chData[c][off+f];
-            const _ad = new AudioData({ format:'f32-interleaved', sampleRate:_audioSampleRate, numberOfFrames:_frames, numberOfChannels:_audioNumCh, timestamp:Math.round(_audTs/_audioSampleRate*1e6), data:_pcm });
+            for(let c=0; c<_audioNumCh; c++) for(let f=0; f<_frames; f++) _pcm[c*_frames+f] = _chData[c][off+f];
+            const _ad = new AudioData({ format:'f32-planar', sampleRate:_audioSampleRate, numberOfFrames:_frames, numberOfChannels:_audioNumCh, timestamp:Math.round(_audTs/_audioSampleRate*1e6), data:_pcm });
             _audioEncoder.encode(_ad);
             _ad.close();
             _audTs += _frames;
