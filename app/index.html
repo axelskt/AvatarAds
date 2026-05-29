@@ -11858,8 +11858,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
 
       let _wcFrameNum = 0;
-      const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 5;
+      // +30 frames (1s buffer) pour s'assurer que la dernière frame est bien capturée
+      const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 30;
       let _wcEncErr = null;
+      let _hedraEnded = false;
+      hedraVid.onended = () => { _hedraEnded = true; };
 
       // Timeout WebCodecs : si 1080p trop lent → throw → fallback MediaRecorder
       // Budget = 3× durée vidéo + 45s, minimum 90s
@@ -11869,12 +11872,14 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       await new Promise(resolve => {
         let _lastMediaTime = -1;
+        let _frozenFrames = 0; // frames encodées après fin vidéo (max 3 = 100ms buffer)
         const _wcInterval = setInterval(() => {
           if(window._composeCancelled || _wcEncErr || _wcEncErr2 || _wcTimedOut){ clearInterval(_wcInterval); resolve(); return; }
           // Backpressure : si la queue VideoEncoder sature (surtout en 1080p), ralentir
           if(videoEncoder.encodeQueueSize > 10){ return; }
           const t = hedraVid.currentTime || 0;
-          if(t !== _lastMediaTime){ drawFrame(t); _lastMediaTime = t; }
+          if(t !== _lastMediaTime){ drawFrame(t); _lastMediaTime = t; _frozenFrames = 0; }
+          else if(_hedraEnded){ _frozenFrames++; }
           // Timestamp séquentiel strict → CFR garanti (indépendant du jitter JS du setInterval)
           try {
             const vf = new VideoFrame(canvas, {
@@ -11888,7 +11893,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
           if(compFill) compFill.style.width = pct + '%';
           if(compPct)  compPct.textContent  = pct + '%';
-          if(t >= totalDuration - 0.05 || _wcFrameNum >= _wcTotalFrames){
+          // Arrêt : vidéo terminée + 3 frames buffer, ou dépassement total
+          if((_hedraEnded && _frozenFrames >= 3) || _wcFrameNum >= _wcTotalFrames){
             clearInterval(_wcInterval);
             resolve();
           }
