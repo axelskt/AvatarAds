@@ -2674,12 +2674,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
           </div>
 
-          <!-- RECORD BUTTON -->
-          <div style="display:flex;justify-content:center;margin-bottom:24px">
+          <!-- RECORD BUTTON + IMPORT -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px">
             <button id="recMainBtn" onclick="recToggle()" style="width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all .2s;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.4);color:#ef4444;position:relative">
               <span id="recMainBtnIcon">⏺</span>
               <div id="recPulse" style="display:none;position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(239,68,68,0.35);animation:recPulse 1.2s ease-out infinite"></div>
             </button>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text3);font-size:11px;font-family:var(--mono)">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              ou
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+            <button onclick="document.getElementById('recImportFileIn').click()" style="padding:9px 18px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 1v8M4 4l3-3 3 3M1.5 10.5v.5a1.5 1.5 0 001.5 1.5h8a1.5 1.5 0 001.5-1.5v-.5"/></svg>
+              Importer un fichier audio / vidéo MP4
+            </button>
+            <input type="file" id="recImportFileIn" accept="audio/*,video/*" style="display:none" onchange="recImportFile(this.files[0]);this.value=''">
           </div>
 
           <!-- CONTROLS ROW -->
@@ -6052,6 +6062,51 @@ async function recOnStop(){
   document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
   document.getElementById('recTimeline').style.display='none'; // single segment = no timeline yet
   toast('✅ Enregistrement prêt');
+}
+
+// ── Import fichier audio/vidéo dans l'enregistreur ──
+async function recImportFile(file){
+  if(!file) return;
+  try {
+    toast('⏳ Chargement…');
+    if(!recCtx) recCtx = new AudioContext();
+    const arrBuf = await file.arrayBuffer();
+    let decoded;
+    try {
+      decoded = await recCtx.decodeAudioData(arrBuf);
+    } catch(e) {
+      // Certains MP4 video ne sont pas décodables directement → extraire l'audio via un element video
+      toast('⚠️ Décodage direct impossible — extraction audio…');
+      const blobUrl = URL.createObjectURL(file);
+      const tmpVid = document.createElement('video');
+      tmpVid.src = blobUrl;
+      await new Promise(r => { tmpVid.onloadedmetadata = r; tmpVid.onerror = r; setTimeout(r,5000); });
+      const dur = tmpVid.duration || 30;
+      const offCtx = new OfflineAudioContext(1, Math.ceil(dur * 44100), 44100);
+      const src = offCtx.createMediaElementSource(tmpVid);
+      src.connect(offCtx.destination);
+      tmpVid.play();
+      decoded = await offCtx.startRendering();
+      URL.revokeObjectURL(blobUrl);
+    }
+    recRawBuffer = decoded;
+    const processed = recSilenceOn ? _recRemoveSilence(recRawBuffer) : recRawBuffer;
+    recAudioBuffer = processed;
+    recPlayOffset = 0;
+    recSegments = [{ id: Date.now(), start: 0, end: recAudioBuffer.length }];
+    recState = 'recorded';
+    recUpdateUI();
+    recRenderWaveform(recAudioBuffer, 0);
+    _recUpdateTime(0, recAudioBuffer.duration);
+    document.getElementById('recDurDisplay').textContent = '/ ' + _recFmt(recAudioBuffer.duration);
+    document.getElementById('recTimeline').style.display = 'none';
+    const stats = document.getElementById('recStatsDisplay');
+    if(stats) stats.style.display = 'none';
+    toast('✅ ' + file.name + ' importé (' + Math.round(recAudioBuffer.duration) + 's)');
+  } catch(e) {
+    toast('✗ Erreur import : ' + (e.message || e));
+    console.error('recImportFile error:', e);
+  }
 }
 
 function recLiveLoop(){
@@ -11717,9 +11772,32 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       let _audioEncErr = null;
       if(_canEncodeAudio && _audioPCMBuf){
         try {
+          // Table AudioSpecificConfig pour AAC-LC (ISO 14496-3)
+          const _aacSrTable = [96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000];
+          let _firstAudioChunk = true;
           const _audioEncoder = new AudioEncoder({
-            output: (chunk, meta) => { try{ muxer.addAudioChunk(chunk, meta); }catch(e){ _audioEncErr=e; } },
-            error:  (e) => { _audioEncErr = e; },
+            output: (chunk, meta) => {
+              try {
+                // Safari omet parfois decoderConfig.description (AudioSpecificConfig)
+                // mp4-muxer en a besoin pour écrire le codec box → on le fournit manuellement
+                if(_firstAudioChunk){
+                  _firstAudioChunk = false;
+                  const hasDesc = !!(meta?.decoderConfig?.description);
+                  _dbg('4a. sz=' + chunk.byteLength + ' dc=' + (meta?.decoderConfig ? (hasDesc?'OK':'NO-DESC') : 'NULL'));
+                  if(meta?.decoderConfig && !hasDesc && _audEncCfg.codec === 'mp4a.40.2'){
+                    const _srIdx = _aacSrTable.indexOf(_audEncCfg.sampleRate || _audioSampleRate);
+                    if(_srIdx !== -1){
+                      const _b1 = (0x02 << 3) | (_srIdx >> 1);
+                      const _b2 = ((_srIdx & 1) << 7) | (_audioNumCh << 3);
+                      meta = { decoderConfig: { ...meta.decoderConfig, description: new Uint8Array([_b1, _b2]).buffer } };
+                      _dbg('4b. ASC patché: 0x' + _b1.toString(16) + ' 0x' + _b2.toString(16) + ' ✅');
+                    }
+                  }
+                }
+                muxer.addAudioChunk(chunk, meta);
+              } catch(e){ _audioEncErr=e; _dbg('4c. addChunk ERR: ' + e.message); }
+            },
+            error: (e) => { _audioEncErr = e; },
           });
           const _encCfgClean = { codec:_audEncCfg.codec, sampleRate:_audEncCfg.sampleRate, numberOfChannels:_audEncCfg.numberOfChannels, bitrate:_audEncCfg.bitrate };
           _audioEncoder.configure(_encCfgClean);
