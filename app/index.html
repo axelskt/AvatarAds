@@ -11819,9 +11819,17 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
-          // Capper totalDuration sur la durée audio : la vidéo s'arrête quand l'audio finit
-          if(_audioPCMBuf.duration > 0 && _audioPCMBuf.duration < totalDuration){
-            totalDuration = _audioPCMBuf.duration;
+          // L'AUDIO est la référence de durée absolue de la vidéo finale.
+          // On ajuste hedraVid.playbackRate pour que la vidéo Hedra finisse
+          // exactement en même temps que l'audio → avatar parle jusqu'au bout,
+          // jamais figé, jamais coupé, synchronisation parfaite.
+          if(_audioPCMBuf.duration > 0 && hedraVid.duration > 0){
+            const _vidAudioRatio = hedraVid.duration / _audioPCMBuf.duration;
+            // Ajustement si ratio raisonnable (±40%) — évite cas extrêmes
+            if(_vidAudioRatio >= 0.6 && _vidAudioRatio <= 1.4){
+              hedraVid.playbackRate = _vidAudioRatio;
+            }
+            totalDuration = _audioPCMBuf.duration; // durée finale = durée audio
           }
           _dbg('2. PCM: ' + Math.round(_audioPCMBuf.duration) + 's ✅');
         } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' ❌'); }
