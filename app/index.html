@@ -11955,8 +11955,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // +30 frames (1s buffer) pour s'assurer que la dernière frame est bien capturée
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 30;
       let _wcEncErr = null;
-      let _hedraEnded = false;
-      hedraVid.onended = () => { _hedraEnded = true; };
+      // Si hedraVid finit avant l'audio → loop pour éviter avatar figé
+      hedraVid.loop = true;
 
       // Timeout WebCodecs : si 1080p trop lent → throw → fallback MediaRecorder
       // Budget = 3× durée vidéo + 45s, minimum 90s
@@ -11966,14 +11966,12 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       await new Promise(resolve => {
         let _lastMediaTime = -1;
-        let _frozenFrames = 0; // frames encodées après fin vidéo (max 3 = 100ms buffer)
         const _wcInterval = setInterval(() => {
           if(window._composeCancelled || _wcEncErr || _wcEncErr2 || _wcTimedOut){ clearInterval(_wcInterval); resolve(); return; }
           // Backpressure : si la queue VideoEncoder sature (surtout en 1080p), ralentir
           if(videoEncoder.encodeQueueSize > 10){ return; }
           const t = hedraVid.currentTime || 0;
-          if(t !== _lastMediaTime){ drawFrame(t); _lastMediaTime = t; _frozenFrames = 0; }
-          else if(_hedraEnded){ _frozenFrames++; }
+          if(t !== _lastMediaTime){ drawFrame(t); _lastMediaTime = t; }
           // Timestamp séquentiel strict → CFR garanti (indépendant du jitter JS du setInterval)
           try {
             const vf = new VideoFrame(canvas, {
@@ -11987,9 +11985,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
           if(compFill) compFill.style.width = pct + '%';
           if(compPct)  compPct.textContent  = pct + '%';
-          // Arrêt : audio terminé (timestamp frame ≥ durée audio) OU vidéo finie + buffer OU dépassement
+          // Seule condition d'arrêt : timestamp frame ≥ durée audio (ou filet de sécurité)
           const _frameSec = _wcFrameNum / _fps;
-          if(_frameSec >= totalDuration || (_hedraEnded && _frozenFrames >= 3) || _wcFrameNum >= _wcTotalFrames){
+          if(_frameSec >= totalDuration || _wcFrameNum >= _wcTotalFrames){
             clearInterval(_wcInterval);
             resolve();
           }
