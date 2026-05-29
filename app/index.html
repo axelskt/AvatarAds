@@ -11779,36 +11779,28 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           // Durée nominale d'un frame en µs — fallback si Safari ne fournit pas chunk.duration
           const _nominalAudioDurUs = Math.round(_frameSize / (_audEncCfg.sampleRate || _audioSampleRate) * 1e6);
           let _audioChunkCount = 0;
-          let _patchedMetaForMuxer = null; // meta avec decoderConfig.description correct
           const _audioEncoder = new AudioEncoder({
             output: (chunk, meta) => {
               try {
                 _audioChunkCount++;
                 if(_audioChunkCount === 1){
-                  const hasDesc = !!(meta?.decoderConfig?.description);
-                  // BUG SAFARI : chunk.duration est souvent null → durée 0 → silence → on log pour vérif
-                  _dbg('4a. sz=' + chunk.byteLength + ' dur=' + chunk.duration + ' dc=' + (meta?.decoderConfig ? (hasDesc?'OK':'NO-DESC') : 'NULL'));
-                  // Safari omet parfois decoderConfig.description → patch manuel AAC-LC
-                  if(meta?.decoderConfig && !hasDesc && _audEncCfg.codec === 'mp4a.40.2'){
-                    const _srIdx = _aacSrTable.indexOf(_audEncCfg.sampleRate || _audioSampleRate);
-                    if(_srIdx !== -1){
-                      const _b1 = (0x02 << 3) | (_srIdx >> 1);
-                      const _b2 = ((_srIdx & 1) << 7) | (_audioNumCh << 3);
-                      _patchedMetaForMuxer = { decoderConfig: { ...meta.decoderConfig, description: new Uint8Array([_b1, _b2]).buffer } };
-                      _dbg('4b. ASC patché ✅');
-                    }
-                  } else if(meta?.decoderConfig){
-                    _patchedMetaForMuxer = meta;
+                  // Diagnostic : logguer les bytes de description de Safari (hex) + durée
+                  const _desc = meta?.decoderConfig?.description;
+                  let _descHex = 'null';
+                  if(_desc){
+                    try { _descHex = Array.from(new Uint8Array(_desc instanceof ArrayBuffer ? _desc : _desc.buffer || _desc)).map(b=>b.toString(16).padStart(2,'0')).join(''); } catch(e){ _descHex='err'; }
                   }
+                  _dbg('4a. sz=' + chunk.byteLength + ' dur=' + chunk.duration + ' desc=' + _descHex);
                 }
-                // CORRECTION BUG SAFARI : chunk.duration est null → passer undefined à mp4-muxer
-                // donnait une durée 0 à chaque sample → piste audio de durée totale 0 → silence.
-                // On utilise la durée nominale du frame comme fallback obligatoire.
+                // CORRECTION : ne pas passer meta à mp4-muxer.
+                // Safari fournit description comme ArrayBuffer — mp4-muxer fait `...description`
+                // qui ne fonctionne PAS sur ArrayBuffer (≠ Uint8Array) → esds box vide → silence.
+                // mp4-muxer génère l'ASC en interne depuis sampleRate/numberOfChannels fournis
+                // à la construction → on passe toujours undefined pour laisser mp4-muxer gérer.
                 const _dur = (chunk.duration != null && chunk.duration > 0) ? chunk.duration : _nominalAudioDurUs;
-                // addAudioChunkRaw : plus robuste que addAudioChunk avec Safari
                 const _raw = new Uint8Array(chunk.byteLength);
                 chunk.copyTo(_raw);
-                muxer.addAudioChunkRaw(_raw, chunk.type, chunk.timestamp, _dur, _audioChunkCount === 1 ? (_patchedMetaForMuxer || meta) : undefined);
+                muxer.addAudioChunkRaw(_raw, chunk.type, chunk.timestamp, _dur, undefined);
               } catch(e){ _audioEncErr=e; _dbg('4c. ERR: ' + e.message); }
             },
             error: (e) => { _audioEncErr = e; },
