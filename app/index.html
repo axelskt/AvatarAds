@@ -1093,7 +1093,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="font-size:28px;margin-bottom:6px">✅</div>
                     <div id="mp4AudioFileName" style="font-size:12px;font-weight:600;margin-bottom:2px"></div>
                     <div id="mp4AudioDuration" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px">
+                      <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Clique pour changer</span>
+                      <button onclick="event.stopPropagation();clearMp4AudioFile()" style="padding:2px 8px;background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.3);border-radius:5px;color:#ff4757;font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,71,87,0.25)'" onmouseout="this.style.background='rgba(255,71,87,0.12)'">✕ Supprimer</button>
+                    </div>
                   </div>
                 </div>
                 <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0]);this.value=''">
@@ -1620,11 +1623,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
-          </div>
+            <!-- RESET TOTAL — en bas de l'étape Style -->
+            <div style="text-align:center;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:8px">
+              <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:all .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
+            </div>
 
-          <!-- RESET TOTAL — visible seulement à l'étape 4 (Style) -->
-          <div id="resetTotalBtn" style="display:none;text-align:center;padding:6px 0 2px">
-            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:opacity .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
           </div>
 
         </div><!-- /gen-form -->
@@ -6685,9 +6688,6 @@ function updateSteps(){
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
-  // Bouton reset total : visible seulement à l'étape Style (4)
-  const resetBtn=document.getElementById('resetTotalBtn');
-  if(resetBtn) resetBtn.style.display=step===4?'block':'none';
   // Masquer la zone résultat si on revient dans le form
   document.getElementById('resultArea').style.display='none';
   document.getElementById('genProgArea').style.display='none';
@@ -9318,6 +9318,32 @@ function handleMp4AudioFile(file){
     try{ await _mp4DrawWaveform(file); }catch(e){}
     try{ _mp4InitDrag(); }catch(e){}
   };
+}
+
+function clearMp4AudioFile(){
+  // Révoke l'ancien blob URL
+  const el = document.getElementById('mp4AudioEl');
+  if(el && el.src && el.src.startsWith('blob:')){ try{ URL.revokeObjectURL(el.src); }catch(e){} }
+  if(el){ el.pause(); el.removeAttribute('src'); el.load(); }
+  // Reset état
+  mp4AudioFile = null;
+  mp4AudioDur  = 0;
+  mp4AudioTrimSt = 0;
+  mp4AudioTrimEnd = 0;
+  silenceAudioBuffer = null;
+  silenceKeepSegs = [];
+  whisperWordTimestamps = [];
+  try{ _idbDelete('mp4audio'); }catch(e){}
+  // Reset UI dropzone
+  const dropContent = document.getElementById('mp4AudioDropContent');
+  const fileInfo    = document.getElementById('mp4AudioFileInfo');
+  const trimPanel   = document.getElementById('mp4TrimPanel');
+  if(dropContent) dropContent.style.display = 'block';
+  if(fileInfo)    fileInfo.style.display    = 'none';
+  if(trimPanel)   trimPanel.style.display   = 'none';
+  // Désactiver le toggle mp4 audio
+  toggleMp4AudioOption(false);
+  toast('🗑️ Fichier audio supprimé');
 }
 
 async function _mp4DrawWaveform(file){
