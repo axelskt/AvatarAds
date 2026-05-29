@@ -10258,8 +10258,33 @@ async function startGeneration(){
   setStep('gp2','on');
   let audioBlob=null;
   if(mp4AudioEnabled && mp4AudioFile){
-    // Use the uploaded MP4/audio file directly as audio source for Hedra lipsync
-    audioBlob = mp4AudioFile;
+    // Extraire l'audio pur (WAV) + appliquer le trim AVANT Hedra et composition.
+    // Si on envoie le fichier vidéo brut à Hedra renommé en .mp3, le lipsync est décalé.
+    // En envoyant le même WAV à Hedra ET à la composition → sync parfaite garantie.
+    try {
+      toast('🎵 Préparation audio…');
+      const _prepAc = new (window.AudioContext || window.webkitAudioContext)();
+      const _prepDecoded = await _prepAc.decodeAudioData(await mp4AudioFile.arrayBuffer());
+      await _prepAc.close();
+      // Appliquer le trim (mp4AudioTrimSt / mp4AudioTrimEnd)
+      let _prepFinal = _prepDecoded;
+      const _tSt  = mp4AudioTrimSt || 0;
+      const _tEnd = (mp4AudioTrimEnd > 0.5 && mp4AudioTrimEnd < _prepDecoded.duration - 0.1)
+                    ? mp4AudioTrimEnd : _prepDecoded.duration;
+      if(_tSt > 0.05 || _tEnd < _prepDecoded.duration - 0.05){
+        const _sr  = _prepDecoded.sampleRate, _nCh = _prepDecoded.numberOfChannels;
+        const _offCtx = new OfflineAudioContext(_nCh, Math.round((_tEnd - _tSt) * _sr), _sr);
+        const _src = _offCtx.createBufferSource();
+        _src.buffer = _prepDecoded; _src.connect(_offCtx.destination);
+        _src.start(0, _tSt, _tEnd - _tSt);
+        _prepFinal = await _offCtx.startRendering();
+      }
+      audioBlob = _audioBufferToWavBlob(_prepFinal);
+      toast('🎵 Audio prêt : ' + Math.round(_prepFinal.duration) + 's');
+    } catch(_prepErr){
+      console.warn('Audio extraction for Hedra failed, using raw file:', _prepErr);
+      audioBlob = mp4AudioFile; // fallback
+    }
     // Pre-populate word editor from existing transcript if available
     const ta = document.getElementById('voiceTranscriptTA');
     if(ta && ta.value.trim()) populateWordEditor(ta.value.trim());
@@ -10638,7 +10663,10 @@ async function callHedra(audioBlob){
 
   try {
     // ── 1. Créer l'asset audio (POST /assets) ──
-    const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav' : 'mp3';
+    // Déterminer l'extension correcte selon le type MIME réel
+    const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav'
+                   : (audioBlob.type === 'audio/ogg' || audioBlob.type === 'audio/opus')  ? 'ogg'
+                   : 'mp3'; // mp3 par défaut (ElevenLabs, WAV extrait par _audioBufferToWavBlob → wav)
     const audioFname = 'voice.' + audioExt;
     const createAudioRes = await hPost('/assets', { type: 'audio', name: audioFname });
     if(!createAudioRes.ok){ const _c=createAudioRes.status; window._lastHedraError='Erreur serveur Hedra ('+_c+') — réessaie dans quelques secondes'; toast('⚠️ Hedra create asset ' + _c); return ''; }
