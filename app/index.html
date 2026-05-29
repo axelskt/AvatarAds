@@ -11604,7 +11604,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     toast('⚠️ Vidéo Hedra illisible : ' + (e.message||'format inconnu'));
     resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
   }
-  const totalDuration = (hedraVid.duration && isFinite(hedraVid.duration)) ? hedraVid.duration : 30;
+  let totalDuration = (hedraVid.duration && isFinite(hedraVid.duration)) ? hedraVid.duration : 30;
 
   // ── 3. Gameplay vidéo (si présent) ──
   const gpVideoEl = document.getElementById('gpVideo');
@@ -11819,6 +11819,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
+          // Capper totalDuration sur la durée audio : la vidéo s'arrête quand l'audio finit
+          if(_audioPCMBuf.duration > 0 && _audioPCMBuf.duration < totalDuration){
+            totalDuration = _audioPCMBuf.duration;
+          }
           _dbg('2. PCM: ' + Math.round(_audioPCMBuf.duration) + 's ✅');
         } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' ❌'); }
 
@@ -11980,8 +11984,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
           if(compFill) compFill.style.width = pct + '%';
           if(compPct)  compPct.textContent  = pct + '%';
-          // Arrêt : vidéo terminée + 3 frames buffer, ou dépassement total
-          if((_hedraEnded && _frozenFrames >= 3) || _wcFrameNum >= _wcTotalFrames){
+          // Arrêt : audio terminé (timestamp frame ≥ durée audio) OU vidéo finie + buffer OU dépassement
+          const _frameSec = _wcFrameNum / _fps;
+          if(_frameSec >= totalDuration || (_hedraEnded && _frozenFrames >= 3) || _wcFrameNum >= _wcTotalFrames){
             clearInterval(_wcInterval);
             resolve();
           }
@@ -12086,7 +12091,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         if(compPct)  compPct.textContent  = pct + '%';
         if(elapsed !== _lastElapsed){ drawFrame(elapsed); _lastElapsed = elapsed; }
         if(window._composeCancelled){ clearInterval(_fi); resolve(); return; }
-        if(elapsed >= totalDuration - 0.05 && hedraVid.readyState >= 2){ clearInterval(_fi); resolve(); }
+        if(elapsed >= totalDuration - 0.05 || elapsed >= totalDuration){ clearInterval(_fi); resolve(); }
       }, 1000 / 30);
     });
 
