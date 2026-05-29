@@ -11604,7 +11604,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     toast('⚠️ Vidéo Hedra illisible : ' + (e.message||'format inconnu'));
     resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
   }
-  let totalDuration = (hedraVid.duration && isFinite(hedraVid.duration)) ? hedraVid.duration : 30;
+  const totalDuration = (hedraVid.duration && isFinite(hedraVid.duration)) ? hedraVid.duration : 30;
 
   // ── 3. Gameplay vidéo (si présent) ──
   const gpVideoEl = document.getElementById('gpVideo');
@@ -11819,13 +11819,6 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           await _decCtx.close();
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
-          // L'audio est la référence de durée absolue.
-          // hedraVid joue à playbackRate=1.0 (sync bouche exacte sur l'audio).
-          // La composition s'arrête quand l'audio finit — pas quand hedraVid finit.
-          // (Hedra ayant reçu le même WAV, les durées sont quasi-identiques.)
-          if(_audioPCMBuf.duration > 0){
-            totalDuration = _audioPCMBuf.duration;
-          }
           _dbg('2. PCM: ' + Math.round(_audioPCMBuf.duration) + 's ✅');
         } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' ❌'); }
 
@@ -11985,7 +11978,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
           if(compFill) compFill.style.width = pct + '%';
           if(compPct)  compPct.textContent  = pct + '%';
-          // Seule condition d'arrêt : timestamp frame ≥ durée audio (ou filet de sécurité)
+          // Arrêt quand on a encodé toutes les frames de la durée Hedra
           const _frameSec = _wcFrameNum / _fps;
           if(_frameSec >= totalDuration || _wcFrameNum >= _wcTotalFrames){
             clearInterval(_wcInterval);
