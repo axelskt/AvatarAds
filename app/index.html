@@ -11955,8 +11955,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // +30 frames (1s buffer) pour s'assurer que la dernière frame est bien capturée
       const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 30;
       let _wcEncErr = null;
-      // Si hedraVid finit avant l'audio → loop pour éviter avatar figé
-      hedraVid.loop = true;
+      // hedraVid.loop = false (défaut) — Hedra génère exactement la durée du WAV envoyé.
+      // Si un léger écart persiste, la dernière frame est tenue jusqu'à la fin de l'audio.
 
       // Timeout WebCodecs : si 1080p trop lent → throw → fallback MediaRecorder
       // Budget = 3× durée vidéo + 45s, minimum 90s
