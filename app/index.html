@@ -1096,7 +1096,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
                   </div>
                 </div>
-                <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0])">
+                <input type="file" id="mp4AudioFileIn" accept="audio/*,video/*" style="display:none" onchange="handleMp4AudioFile(this.files[0]);this.value=''">
                 <audio id="mp4AudioEl" style="display:none"></audio>
                 <!-- Écouter + Mute -->
                 <div id="mp4TrimPanel" style="display:none">
@@ -1620,6 +1620,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+          </div>
+
+          <!-- RESET TOTAL — visible seulement à l'étape 4 (Style) -->
+          <div id="resetTotalBtn" style="display:none;text-align:center;padding:6px 0 2px">
+            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:opacity .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
           </div>
 
         </div><!-- /gen-form -->
@@ -6680,6 +6685,9 @@ function updateSteps(){
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
+  // Bouton reset total : visible seulement à l'étape Style (4)
+  const resetBtn=document.getElementById('resetTotalBtn');
+  if(resetBtn) resetBtn.style.display=step===4?'block':'none';
   // Masquer la zone résultat si on revient dans le form
   document.getElementById('resultArea').style.display='none';
   document.getElementById('genProgArea').style.display='none';
@@ -8238,6 +8246,11 @@ function handleGameplayFile(file){
   if(lbl3) lbl3.textContent = '📂 ' + file.name;
   _syncGpSizeStep3();
   updateLivePreview();
+  // Auto-activer "Ajouter un audio depuis un fichier MP4" si pas déjà activé
+  if(!mp4AudioEnabled){
+    toggleMp4AudioOption(true);
+    toast('🎵 Audio MP4 activé — importe ta voix pour le lipsync');
+  }
 }
 
 // ── PLATFORM PREVIEW ──
@@ -9252,10 +9265,27 @@ function applyMp4Transcript(text){
 
 function handleMp4AudioFile(file){
   if(!file) return;
+
+  // ── Reset de l'ancienne source (évite que l'ancien audio reste) ──
+  const el = document.getElementById('mp4AudioEl');
+  if(el && el.src && el.src.startsWith('blob:')){ try{ URL.revokeObjectURL(el.src); }catch(e){} }
+  if(el){ el.pause(); el.removeAttribute('src'); el.load(); }
+
+  // ── Reset état silence (nouveau fichier = nouvelle analyse) ──
+  silenceAudioBuffer = null;
+  silenceKeepSegs    = [];
+  whisperWordTimestamps = [];
+  window._previewUsingCleanAudio = false;
+  window._mp4ReadyForWhisper = true;
+
+  // Reset UI silence si visible
+  const silResArea = document.getElementById('silenceResultArea');
+  if(silResArea) silResArea.style.display = 'none';
+  const silBtn = document.getElementById('silenceAnalyzeBtn');
+  if(silBtn){ silBtn.disabled = false; silBtn.textContent = '🔍 Analyser et supprimer les silences'; }
+
   mp4AudioFile = file;
   try{ _idbSave('mp4audio', file); }catch(e){}
-  whisperWordTimestamps = [];
-  window._mp4ReadyForWhisper = true;
 
   // ── UI immédiate (pas besoin d'attendre les métadonnées) ──
   const dropContent = document.getElementById('mp4AudioDropContent');
@@ -9265,8 +9295,11 @@ function handleMp4AudioFile(file){
   if(fileInfo)    fileInfo.style.display    = 'block';
   if(fileNameEl)  fileNameEl.textContent    = file.name;
 
+  // Reset durée affichée pendant le chargement
+  const durEl = document.getElementById('mp4AudioDuration');
+  if(durEl) durEl.textContent = '⏳ Chargement…';
+
   // ── Chargement audio (durée + waveform dans le callback) ──
-  const el = document.getElementById('mp4AudioEl');
   if(!el) return;
   el.src = URL.createObjectURL(file);
   el.load();
