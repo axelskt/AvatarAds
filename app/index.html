@@ -546,10 +546,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="nav('express',this)" style="margin-top:6px;border-top:1px solid var(--border);padding-top:10px">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
         ⚡ Express
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('cartoon',this)" style="margin-top:2px">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="6" r="3.5"/><path d="M3 12.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11.5 2.5l1 1M3.5 2.5l-1 1"/></svg>
         🎭 Cartoon
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
@@ -3227,10 +3229,29 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
           </div>
 
-          <!-- ── MODULE 3 : SOUS-TITRES ── -->
+          <!-- ── MODULE 3 : VOIX ── -->
+          <div id="cartoonModule3Voice" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
+              <div style="font-size:13px;font-weight:700">Voix <span style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel)</span></div>
+            </div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">Ajoute une voix à ta vidéo cartoon — MP4, WAV, MP3</div>
+            <!-- Dropzone audio -->
+            <div id="cartoonVoiceDropzone" onclick="document.getElementById('cartoonVoiceFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='#a855f7'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';_cartoonHandleVoice(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s;margin-bottom:10px">
+              <div id="cartoonVoiceDrop" style="font-size:10px;font-family:var(--mono);color:var(--text3)">🎙️ Glisse ton fichier audio ici<br><span style="font-size:9px;opacity:.6">ou clique pour parcourir</span></div>
+              <div id="cartoonVoiceInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2)"></div>
+            </div>
+            <input type="file" id="cartoonVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_cartoonHandleVoice(this.files[0]);this.value=''">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
+              <button onclick="cartoonUseAsAvatarWithVoice()" style="padding:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">→ Générer avec voix</button>
+            </div>
+          </div>
+
+          <!-- ── MODULE 4 : SOUS-TITRES ── -->
           <div id="cartoonModule3" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
+              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">4</div>
               <div style="font-size:13px;font-weight:700">Sous-titres</div>
             </div>
 
@@ -12614,6 +12635,60 @@ function libSetTab(tab){
   renderLibrary();
 }
 
+// ── Envoyer depuis bibliothèque vers Express / Cartoon ──────────────────
+async function _libSendVideoToExpress(idbKey){
+  const entry = await _idbLoad(idbKey);
+  if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
+  const file = new File([entry.blob], entry.name || 'video.mp4', { type: entry.type || 'video/mp4' });
+  // Injecter dans l'input Express
+  const expInput = document.getElementById('expMainFileIn');
+  if(expInput){
+    const dt = new DataTransfer(); dt.items.add(file);
+    expInput.files = dt.files;
+    expInput.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    // Fallback : appel direct de la fonction Express si disponible
+    if(typeof _expHandleMainFile === 'function') _expHandleMainFile(file);
+  }
+  const navEl = document.querySelector('.nav-i[onclick*="express"]');
+  nav('express', navEl);
+  toast('⚡ Vidéo envoyée vers Express');
+}
+
+async function _libSendAudioToExpress(libIdx){
+  const entry = library[libIdx];
+  if(!entry || !entry.idbKey){ toast('⚠️ Audio introuvable'); return; }
+  const idbEntry = await _idbLoad(entry.idbKey);
+  if(!idbEntry){ toast('⚠️ Audio introuvable en base'); return; }
+  const file = new File([idbEntry.blob], idbEntry.name || 'audio.wav', { type: idbEntry.type || 'audio/wav' });
+  // Injecter comme audio MP4 dans le générateur
+  handleMp4AudioFile(file);
+  toggleMp4AudioOption(true);
+  const navEl = document.querySelector('.nav-i[onclick*="express"]');
+  nav('express', navEl);
+  toast('⚡ Audio envoyé vers Express');
+}
+
+function _libSendImageToCartoon(imgUrl){
+  // Naviguer vers Cartoon et pré-remplir l'image de référence
+  const navEl = document.querySelector('.nav-i[onclick*="cartoon"]');
+  nav('cartoon', navEl);
+  setTimeout(async () => {
+    try {
+      const res  = await fetch(imgUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'ref-image.jpg', { type: blob.type || 'image/jpeg' });
+      window._cartoonRefImageFile = file;
+      // Afficher l'aperçu dans Cartoon
+      const preview = document.getElementById('cartoonRefPreview');
+      const wrap    = document.getElementById('cartoonRefWrap');
+      if(preview){ preview.src = imgUrl; preview.style.display = 'block'; }
+      if(wrap)    wrap.style.display = 'block';
+      toast('🎭 Image envoyée vers Cartoon comme référence');
+    } catch(e){ toast('⚠️ Impossible de charger l\'image'); }
+  }, 300);
+}
+
 async function _libPreviewVideo(idbKey){
   const entry = await _idbLoad(idbKey);
   if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
@@ -12697,8 +12772,9 @@ function renderLibrary(){
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
           <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
-          <div style="display:flex;gap:6px;margin-top:6px">
-            <a href="${v.imgUrl}" download="avatarads-image.png" style="flex:1;padding:6px 0;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;text-align:center;text-decoration:none" onclick="event.stopPropagation()">⬇ DL</a>
+          <div style="display:flex;gap:5px;margin-top:6px">
+            <a href="${v.imgUrl}" download="avatarads-image.png" style="padding:6px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;text-align:center;text-decoration:none" onclick="event.stopPropagation()">⬇</a>
+            <button onclick="event.stopPropagation();_libSendImageToCartoon('${v.imgUrl}')" title="Envoyer vers Cartoon" style="flex:1;padding:6px 0;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:7px;color:#c084fc;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(168,85,247,0.2)'" onmouseout="this.style.background='rgba(168,85,247,0.1)'">🎭 Cartoon</button>
           </div>
         </div>
       </div>`;
@@ -12717,8 +12793,9 @@ function renderLibrary(){
           <div class="vid-title">${v.name}</div>
           <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
           <div style="display:flex;gap:5px;margin-top:7px">
-            <button id="libAudioPlay_${ri}" onclick="event.stopPropagation();_libPlayAudio(${ri},this)" style="flex:1;padding:7px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter</button>
-            <button onclick="event.stopPropagation();recPlayLibraryAudio(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">→ Utiliser</button>
+            <button id="libAudioPlay_${ri}" onclick="event.stopPropagation();_libPlayAudio(${ri},this)" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
+            <button onclick="event.stopPropagation();recPlayLibraryAudio(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">→ Générateur</button>
+            <button onclick="event.stopPropagation();_libSendAudioToExpress(${ri})" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'">⚡</button>
           </div>
         </div>
       </div>`;
@@ -12739,8 +12816,9 @@ function renderLibrary(){
         <div class="vid-status"><div class="sdot ok"></div><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span></div>
         ${v.hedraIdbKey ? `
         <div style="display:flex;gap:5px;margin-top:7px">
-          <button onclick="event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})" style="padding:7px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
-          <button onclick="recomposeFromLibrary(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">🎬 Utiliser cette vidéo</button>
+          <button onclick="event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
+          <button onclick="recomposeFromLibrary(${ri})" style="flex:1;padding:7px 4px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">🎬 Utiliser</button>
+          <button onclick="event.stopPropagation();_libSendVideoToExpress('${v.hedraIdbKey}')" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'">⚡</button>
         </div>` : ''}
       </div>
     </div>`;
@@ -14629,7 +14707,9 @@ async function cartoonGenVideo(btn){
     const phoneVidControls = document.getElementById('cartoonPhoneVidControls');
     if(phoneVidControls) phoneVidControls.style.display = 'flex';
 
-    // ── Débloquer module 3 (sous-titres) ──
+    // ── Débloquer module 3 (voix) et module 4 (sous-titres) ──
+    const modVoice = document.getElementById('cartoonModule3Voice');
+    if(modVoice){ modVoice.style.opacity='1'; modVoice.style.pointerEvents='auto'; }
     const mod3 = document.getElementById('cartoonModule3');
     if(mod3){ mod3.style.opacity='1'; mod3.style.pointerEvents='auto'; }
 
@@ -14909,6 +14989,47 @@ async function _acSendToGenerator(){
   await new Promise(r => setTimeout(r, 150));
   goToStep(3);
   toast('✅ Audio nettoyé injecté dans le Générateur (étape Voix)');
+}
+
+// ── Cartoon Module Voix ─────────────────────────────────────
+let _cartoonVoiceFile = null;
+let _cartoonVoiceAudioEl = null;
+
+function _cartoonHandleVoice(file){
+  if(!file) return;
+  _cartoonVoiceFile = file;
+  const drop = document.getElementById('cartoonVoiceDrop');
+  const info = document.getElementById('cartoonVoiceInfo');
+  if(drop) drop.style.display = 'none';
+  if(info){ info.style.display = 'block'; info.textContent = '🎙️ ' + file.name; }
+}
+
+function _cartoonVoicePreview(){
+  if(!_cartoonVoiceFile){ toast('⚠️ Importe un fichier audio d\'abord'); return; }
+  if(_cartoonVoiceAudioEl){ _cartoonVoiceAudioEl.pause(); _cartoonVoiceAudioEl = null; }
+  const url = URL.createObjectURL(_cartoonVoiceFile);
+  _cartoonVoiceAudioEl = new Audio(url);
+  _cartoonVoiceAudioEl.play();
+  _cartoonVoiceAudioEl.onended = () => URL.revokeObjectURL(url);
+}
+
+async function cartoonUseAsAvatarWithVoice(){
+  if(!window._cartoonVidBlob){ toast('⚠️ Génère la vidéo d\'abord'); return; }
+  // Charger l'avatar cartoon dans le générateur
+  const charPrompt = document.getElementById('cartoonCharPrompt')?.value?.trim() || 'cartoon-avatar';
+  const name = charPrompt.slice(0,30).replace(/[^a-zA-Z0-9À-ž ]/g,'').trim() || 'cartoon-avatar';
+  const file = new File([window._cartoonVidBlob], name+'.mp4', { type: 'video/mp4' });
+  await handleBypassHedraFile(file);
+  // Injecter la voix si disponible
+  if(_cartoonVoiceFile){
+    handleMp4AudioFile(_cartoonVoiceFile);
+    toggleMp4AudioOption(true);
+  }
+  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
+  nav('generator', navEl);
+  await wait(120);
+  goToStep(_cartoonVoiceFile ? 4 : 2); // Step 4 (Style) si voix déjà chargée
+  toast(_cartoonVoiceFile ? '✅ Avatar + voix chargés — va à Style pour composer !' : '✅ Avatar cartoon chargé — passe à Voix pour ajouter ta voix !');
 }
 
 async function cartoonUseAsAvatar(){
