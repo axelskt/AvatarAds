@@ -332,6 +332,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .vid-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:all .2s}
 .vid-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
 .vid-thumb{aspect-ratio:9/16;max-height:170px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;overflow:hidden}
+.vid-thumb:hover .vid-play-overlay{opacity:1!important}
 .vid-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),transparent 55%)}
 .vid-badge{position:absolute;top:7px;left:7px;font-size:8px;font-family:var(--mono);background:rgba(0,0,0,.7);color:var(--orange2);padding:2px 6px;border-radius:8px}
 .vid-meta{padding:9px 10px}
@@ -2802,12 +2803,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="acTip" style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">
             Charge un audio ou utilise celui du Générateur (étape 3 Voix)
           </div>
+          <!-- Résultat inline après nettoyage -->
+          <div id="acResult"></div>
         </div>
-
-        <!-- Lien rapide vers générateur -->
-        <button onclick="nav('generator',document.querySelector('.nav-i[onclick*=generator]'));setTimeout(()=>goToStep(3),100)" style="width:100%;margin-top:12px;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)'">
-          → Ouvrir dans le Générateur (étape 3 complète avec waveform)
-        </button>
 
       </div>
     </div><!-- /audioclean -->
@@ -3302,16 +3300,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <!-- ══ RIGHT — Phone Preview ══ -->
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg1)">
 
-        <!-- Phone mockup -->
-        <div style="position:relative;width:220px">
-          <!-- Frame -->
-          <div style="background:var(--bg3);border-radius:36px;padding:10px;box-shadow:0 0 0 2px var(--border2),0 20px 60px rgba(0,0,0,0.5)">
-            <div style="background:#000;border-radius:28px;overflow:hidden;position:relative;aspect-ratio:9/16;width:200px">
+        <!-- Phone mockup iPhone 17 -->
+        <div style="position:relative;width:300px">
+          <!-- Frame titanium -->
+          <div style="background:linear-gradient(145deg,#2a2a2e,#1a1a1e);border-radius:52px;padding:12px;box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 0 0 3px #1c1c1e,0 30px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.06)">
+            <div style="background:#000;border-radius:42px;overflow:hidden;position:relative;aspect-ratio:9/19.5;width:276px">
 
               <!-- Placeholder vide -->
               <div id="cartoonPhonePlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(168,85,247,0.03))">
-                <div style="font-size:36px;opacity:.3">🎭</div>
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;opacity:.5">Génère ton<br>personnage</div>
+                <div style="font-size:44px;opacity:.3">🎭</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;opacity:.5">Génère ton<br>personnage</div>
               </div>
 
               <!-- Image générée -->
@@ -3321,14 +3319,23 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <video id="cartoonPhoneVid" loop playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0"></video>
 
               <!-- Overlay sous-titres -->
-              <div id="cartoonSubOverlay" style="position:absolute;left:0;right:0;bottom:14%;display:flex;justify-content:center;pointer-events:none;padding:0 12px">
-                <div id="cartoonSubText" style="font-size:14px;font-weight:800;font-family:var(--font);color:#fff;text-align:center;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000;line-height:1.3;max-width:100%">Découvre notre produit !</div>
+              <div id="cartoonSubOverlay" style="position:absolute;left:0;right:0;bottom:12%;display:flex;justify-content:center;pointer-events:none;padding:0 14px">
+                <div id="cartoonSubText" style="font-size:17px;font-weight:800;font-family:var(--font);color:#fff;text-align:center;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000;line-height:1.3;max-width:100%">Découvre notre produit !</div>
               </div>
 
-              <!-- Notch -->
-              <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:60px;height:6px;background:rgba(0,0,0,0.6);border-radius:4px"></div>
+              <!-- Dynamic Island (iPhone 17) -->
+              <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:10;box-shadow:0 0 0 1px rgba(255,255,255,0.06)">
+                <div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);width:10px;height:10px;background:#1a1a1a;border-radius:50%;border:1.5px solid rgba(255,255,255,0.05)"></div>
+              </div>
             </div>
           </div>
+          <!-- Bouton latéral droit -->
+          <div style="position:absolute;right:-4px;top:20%;width:3px;height:60px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:0 3px 3px 0"></div>
+          <!-- Boutons latéraux gauche -->
+          <div style="position:absolute;left:-4px;top:16%;width:3px;height:30px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
+          <div style="position:absolute;left:-4px;top:28%;width:3px;height:50px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
+          <div style="position:absolute;left:-4px;top:40%;width:3px;height:50px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
+        </div>
 
           <!-- Regen image bouton flottant -->
           <button id="cartoonRegenImgBtn" onclick="cartoonGenImage(document.getElementById('cartoonImgBtn'))" style="display:none;position:absolute;top:16px;right:-14px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border2);border-radius:50%;color:var(--text2);font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)" title="Regénérer l'image">↺</button>
@@ -12607,6 +12614,25 @@ function libSetTab(tab){
   renderLibrary();
 }
 
+async function _libPreviewVideo(idbKey){
+  const entry = await _idbLoad(idbKey);
+  if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
+  const file = new File([entry.blob], entry.name || 'video.mp4', { type: entry.type || 'video/mp4' });
+  const url  = URL.createObjectURL(file);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;cursor:pointer';
+  overlay.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
+  const vid = document.createElement('video');
+  vid.src = url; vid.controls = true; vid.autoplay = true; vid.playsInline = true;
+  vid.style.cssText = 'max-width:min(90vw,400px);max-height:88vh;border-radius:16px;box-shadow:0 0 60px rgba(0,0,0,0.8)';
+  vid.onclick = e => e.stopPropagation();
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕'; closeBtn.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
+  closeBtn.style.cssText = 'position:absolute;top:20px;right:24px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;backdrop-filter:blur(4px)';
+  overlay.appendChild(vid); overlay.appendChild(closeBtn);
+  document.body.appendChild(overlay);
+}
+
 function renderLibrary(){
   // Afficher le banner si navigation privée
   const _privBanner = document.getElementById('privateModeBanner');
@@ -12700,8 +12726,9 @@ function renderLibrary(){
     // Video/Avatar card
     const ri = v._realIdx;
     return `<div class="vid-card">
-      <div class="vid-thumb" style="background:${v.bg}">
+      <div class="vid-thumb" style="background:${v.bg};cursor:${v.hedraIdbKey?'pointer':'default'}" onclick="${v.hedraIdbKey?`event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})`:''}">
         <div style="font-size:40px;z-index:1;position:relative">${v.emo}</div>
+        ${v.hedraIdbKey ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
         <div class="vid-overlay"></div>
         <div class="vid-badge">${v.style}</div>
         ${_delBtn('lib', ri)}
@@ -12711,9 +12738,10 @@ function renderLibrary(){
         <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
         <div class="vid-status"><div class="sdot ok"></div><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span></div>
         ${v.hedraIdbKey ? `
-        <button onclick="recomposeFromLibrary(${ri})" style="margin-top:7px;width:100%;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">
-          🎬 Utiliser cette vidéo
-        </button>` : ''}
+        <div style="display:flex;gap:5px;margin-top:7px">
+          <button onclick="event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})" style="padding:7px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
+          <button onclick="recomposeFromLibrary(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">🎬 Utiliser cette vidéo</button>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -14763,24 +14791,124 @@ function _acHandleFile(file){
 }
 
 
+let _acCleanBlob = null;
+
 async function _acAnalyze(){
-  // Redirect to generator silence tool for full waveform experience
-  if(!_acAudioBlob && typeof analyzeSilences !== 'function'){
-    toast('⚠️ Charge un fichier audio d\'abord');
-    return;
+  if(!_acAudioBlob){ toast('⚠️ Charge un fichier audio d\'abord'); return; }
+  const btn    = document.getElementById('acAnalyzeBtn');
+  const tipEl  = document.getElementById('acTip');
+  const resEl  = document.getElementById('acResult');
+  if(btn){ btn.textContent = '⏳ Analyse en cours...'; btn.disabled = true; }
+  if(resEl) resEl.innerHTML = '';
+
+  try {
+    // 1. Décoder l'audio
+    const arrBuf  = await _acAudioBlob.arrayBuffer();
+    const ac      = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded = await ac.decodeAudioData(arrBuf);
+    await ac.close();
+
+    // 2. Détection des silences (fenêtres de 50ms, seuil RMS 0.015)
+    const sr        = decoded.sampleRate;
+    const data      = decoded.getChannelData(0);
+    const winSz     = Math.round(0.05 * sr);
+    const threshold = 0.015;
+    const minSilMs  = 350;                        // silence mini à supprimer (ms)
+    const keepMs    = 80;                         // marge à garder autour des mots (ms)
+    const minSilSmp = Math.round(minSilMs/1000 * sr);
+    const keepSmp   = Math.round(keepMs/1000  * sr);
+
+    // Classifier chaque fenêtre
+    const voiced = [];
+    for(let i = 0; i < data.length; i += winSz){
+      let rms = 0;
+      const end = Math.min(i + winSz, data.length);
+      for(let j = i; j < end; j++) rms += data[j] * data[j];
+      voiced.push(Math.sqrt(rms / (end - i)) >= threshold);
+    }
+
+    // Construire les segments à garder
+    const keepSegs = [];
+    let segStart = -1;
+    for(let w = 0; w < voiced.length; w++){
+      if(voiced[w] && segStart < 0) segStart = Math.max(0, w * winSz - keepSmp);
+      if(!voiced[w] && segStart >= 0){
+        // Compter la durée du silence qui suit
+        let silEnd = w;
+        while(silEnd < voiced.length && !voiced[silEnd]) silEnd++;
+        const silSmp = (silEnd - w) * winSz;
+        if(silSmp >= minSilSmp){
+          // Silence long → couper
+          keepSegs.push({ start: segStart, end: Math.min(w * winSz + keepSmp, data.length) });
+          segStart = -1;
+          w = silEnd - 1;
+        }
+      }
+    }
+    if(segStart >= 0) keepSegs.push({ start: segStart, end: data.length });
+
+    if(!keepSegs.length){
+      toast('⚠️ Aucun silence détectable — audio déjà propre ?');
+      if(btn){ btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = false; }
+      return;
+    }
+
+    // 3. Construire l'audio nettoyé via OfflineAudioContext
+    const nCh  = decoded.numberOfChannels;
+    let totalSmp = keepSegs.reduce((s, seg) => s + (seg.end - seg.start), 0);
+    const offCtx = new OfflineAudioContext(nCh, totalSmp, sr);
+    let offset = 0;
+    for(const seg of keepSegs){
+      const len = seg.end - seg.start;
+      const src = offCtx.createBufferSource();
+      src.buffer = decoded;
+      src.connect(offCtx.destination);
+      src.start(offset / sr, seg.start / sr, len / sr);
+      offset += len;
+    }
+    const cleanBuf  = await offCtx.startRendering();
+    _acCleanBlob    = _audioBufferToWavBlob(cleanBuf);
+    const removedS  = Math.round((decoded.duration - cleanBuf.duration) * 10) / 10;
+    const origS     = Math.round(decoded.duration);
+    const cleanS    = Math.round(cleanBuf.duration);
+
+    // 4. Afficher le résultat avec bouton téléchargement
+    if(resEl) resEl.innerHTML = `
+      <div style="background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;padding:14px;margin-top:12px;text-align:center">
+        <div style="font-size:20px;margin-bottom:6px">✅</div>
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:2px">${removedS}s de silences supprimés</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">${origS}s → ${cleanS}s</div>
+        <button onclick="_acDownload()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
+        <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer">→ Utiliser dans le Générateur</button>
+      </div>`;
+    if(tipEl) tipEl.style.display = 'none';
+    if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
+    toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
+
+  } catch(e){
+    console.error('_acAnalyze:', e);
+    toast('⚠️ Erreur : ' + (e.message || e).slice(0, 80));
+    if(btn){ btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = false; }
   }
-  // Navigate to generator step 3 which has the full silence tool
+}
+
+function _acDownload(){
+  if(!_acCleanBlob){ toast('⚠️ Lance l\'analyse d\'abord'); return; }
+  const url = URL.createObjectURL(_acCleanBlob);
+  const a = document.createElement('a'); a.href = url; a.download = 'audio_nettoye.wav'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+async function _acSendToGenerator(){
+  if(!_acCleanBlob){ toast('⚠️ Lance l\'analyse d\'abord'); return; }
+  const file = new File([_acCleanBlob], 'audio_nettoye.wav', { type: 'audio/wav' });
+  handleMp4AudioFile(file);
+  toggleMp4AudioOption(true);
   const navEl = document.querySelector('.nav-i[onclick*="generator"]');
   nav('generator', navEl);
-  await new Promise(r=>setTimeout(r,150));
+  await new Promise(r => setTimeout(r, 150));
   goToStep(3);
-  await new Promise(r=>setTimeout(r,200));
-  // Open the silence tool
-  const panel = document.getElementById('silenceToolPanel');
-  if(panel && panel.style.display === 'none') toggleSilenceTool();
-  // Analyze
-  if(typeof analyzeSilences === 'function') analyzeSilences();
-  toast('🔇 Analyse des silences lancée — voici le résultat dans Voix');
+  toast('✅ Audio nettoyé injecté dans le Générateur (étape Voix)');
 }
 
 async function cartoonUseAsAvatar(){
