@@ -744,6 +744,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <!-- RESET PRODUIT -->
             <button onclick="resetProduit()" style="width:100%;margin-top:4px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,80,80,0.4)';this.style.color='#ff6b6b'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">↺ Réinitialiser le produit</button>
+            <!-- RESET TOTAL -->
+            <div style="text-align:center;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:10px">
+              <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:all .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
+            </div>
           </div>
 
           <!-- STEP 2 -->
