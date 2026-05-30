@@ -4324,9 +4324,18 @@ async function _checkAndResetQuota(){
 
 async function _incrementVideosUsed(){
   if(!currentMember) return;
-  const newCount = (currentMember.videos_used || 0) + 1;
-  await sb.from('profiles').update({ videos_used: newCount }).eq('id', currentMember.id);
-  currentMember.videos_used = newCount;
+  // Toujours re-lire la valeur depuis la DB avant d'incrémenter
+  // → empêche la manipulation client-side (currentMember.videos_used = 0)
+  try {
+    const { data } = await sb.from('profiles').select('videos_used').eq('id', currentMember.id).single();
+    const serverCount = (data?.videos_used || 0);
+    const newCount = serverCount + 1;
+    await sb.from('profiles').update({ videos_used: newCount }).eq('id', currentMember.id);
+    currentMember.videos_used = newCount;
+  } catch(e) {
+    // fallback conservatif si la DB est inaccessible
+    currentMember.videos_used = (currentMember.videos_used || 0) + 1;
+  }
   _updateQuotaDisplay();
 }
 
@@ -8905,10 +8914,10 @@ async function exportCleanGameplay(){
   const gpFile = silenceGameplayFile || gameplayFile;
   if(!gpFile){ toast('⚠️ Upload un gameplay d\'abord'); return; }
   const btn = document.getElementById('silenceExportVideoBtn');
-  btn.textContent='⏳ Traitement...'; btn.disabled=true;
+  if(btn){ btn.textContent='⏳ Traitement...'; btn.disabled=true; }
   try { await _runGameplayExport(gpFile); }
   catch(e){ toast('⚠️ Erreur : '+(e.message||e).slice(0,100)); console.error(e); }
-  finally { btn.textContent='⬇ Gameplay synchro'; btn.disabled=false; }
+  finally { if(btn){ btn.textContent='⬇ Gameplay synchro'; btn.disabled=false; } }
 }
 
 function handleSilenceGameplayFile(file){
@@ -10185,7 +10194,7 @@ function toggleChip(el){ el.classList.toggle('on'); }
 // ── GPT-4o SCRIPT ──
 async function generateScript(){
   const product=document.getElementById('f-product')?.value||'ce produit';
-  const niche=document.getElementById('f-niche').value||'e-commerce';
+  const niche=document.getElementById('f-niche')?.value||'e-commerce';
   const duration=document.getElementById('f-duration').value;
   const angles=[...document.querySelectorAll('.chip.on')].map(c=>c.textContent).join(', ')||'résultats rapides';
   const btn=document.querySelector('.flbl-action');
@@ -10220,6 +10229,20 @@ async function startGeneration(){
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
   // Reset bypass — uniquement la sauvegarde de session, PAS le bypass actif (chargé depuis bibliothèque)
   if(!window._bypassHedraOn) localStorage.removeItem('aa_bypass_resume');
+
+  // ── Re-validation plan + quotas depuis la DB (anti-manipulation console) ──
+  if(currentMember && !guestMode){
+    try {
+      const { data: freshProfile } = await sb.from('profiles').select('plan, videos_used, credits_remaining, img_bonus_credits').eq('id', currentMember.id).single();
+      if(freshProfile){
+        currentMember.plan            = freshProfile.plan;
+        currentMember.videos_used     = freshProfile.videos_used;
+        currentMember.credits_remaining = freshProfile.credits_remaining;
+        currentMember.img_bonus_credits = freshProfile.img_bonus_credits;
+        window._userPlan = freshProfile.plan || 'free';
+      }
+    } catch(e){ console.warn('Plan revalidation failed:', e); }
+  }
 
   // ── Vérification minutes ──
   if(currentMember && !guestMode){
@@ -10433,7 +10456,7 @@ async function startGeneration(){
 
 async function callGPT(){
   const product = document.getElementById('f-product').value || 'ce produit digital';
-  const niche = document.getElementById('f-niche').value || 'business en ligne';
+  const niche = document.getElementById('f-niche')?.value || 'business en ligne';
   const duration = document.getElementById('f-duration').value;
   const hook = document.getElementById('f-hook').value || '';
   const cta = document.getElementById('f-cta').value || 'Commente PLAN et je t\'explique tout en DM';
@@ -11357,10 +11380,12 @@ function resetAll(){
 let audioPlaying=false;
 function toggleAudio(){
   const a=document.getElementById('audioEl');
-  if(audioPlaying){a.pause();document.getElementById('playAudioBtn').textContent='▶';}
-  else{a.play();document.getElementById('playAudioBtn').textContent='⏸';}
+  if(!a) return;
+  const pb=document.getElementById('playAudioBtn');
+  if(audioPlaying){a.pause();if(pb)pb.textContent='▶';}
+  else{a.play();if(pb)pb.textContent='⏸';}
   audioPlaying=!audioPlaying;
-  document.getElementById('audioEl').onended=()=>{audioPlaying=false;document.getElementById('playAudioBtn').textContent='▶';};
+  a.onended=()=>{audioPlaying=false;if(pb)pb.textContent='▶';};
 }
 function downloadVideo(){
   composeVideo(document.getElementById('composeBtn'));
@@ -13582,7 +13607,8 @@ function _expLoadGameplay(file){
   if(s) s.textContent = (file.size/1024/1024).toFixed(1) + ' Mo';
   document.getElementById('expGpDropZone').style.display = 'none';
   document.getElementById('expGpInfo').style.display     = 'flex';
-  document.getElementById('expGpSplitWrap').style.display = 'block';
+  const _expGpSplit = document.getElementById('expGpSplitWrap');
+  if(_expGpSplit) _expGpSplit.style.display = 'block';
   toast('🎮 Gameplay chargé');
 }
 function _expClearGameplay(){
@@ -14439,7 +14465,8 @@ async function cartoonGenImage(btn){
 
     const preview = document.getElementById('cartoonImgPreview');
     if(preview) preview.src = window._cartoonImgUrl;
-    document.getElementById('cartoonImgResult').style.display = 'block';
+    const _cartoonRes = document.getElementById('cartoonImgResult');
+    if(_cartoonRes) _cartoonRes.style.display = 'block';
 
     // ── Phone mockup update ──
     const phoneImg = document.getElementById('cartoonPhoneImg');
