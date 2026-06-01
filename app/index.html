@@ -483,7 +483,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div id="memberImgQuotaBox" style="display:none;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;cursor:pointer" onclick="nav('imagegen',document.querySelector('.nav-i[onclick*=imagegen]'))" title="Crédits images IA ce mois">
         <span style="font-size:11px">🖼️</span>
         <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberImgCredits">—</span>
-        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">imgs</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">img</span>
       </div>
       <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.3)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
         🚀 Voir les plans
@@ -5681,7 +5681,7 @@ function _updateImgQuotaLabel(){
   const topEl  = document.getElementById('memberImgCredits');
   if(topBox) topBox.style.display = lim > 0 ? 'flex' : 'none';
   if(topEl){
-    topEl.textContent = rem + (bonus > 0 ? ' (+'+bonus+')' : '') + ' imgs';
+    topEl.textContent = rem + (bonus > 0 ? ' (+'+bonus+')' : '');
     topEl.style.color = rem <= 2 ? 'var(--orange)' : 'var(--text2)';
   }
   if(!el) return;
@@ -15153,6 +15153,7 @@ async function _acAnalyze(){
       <div style="background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;padding:14px;margin-top:12px;text-align:center">
         <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:2px">✅ ${removedS}s de silences supprimés · ${origS}s → ${cleanS}s</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Niveau : ${isStrong?'🔈 Avancé':'🔇 Standard'}</div>
+        <button id="acPlayBtn" onclick="_acTogglePlay(this)" style="width:100%;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter l'audio nettoyé</button>
         <button onclick="_acDownload()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
         <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer">→ Utiliser dans le Générateur</button>
       </div>`;
@@ -15165,6 +15166,29 @@ async function _acAnalyze(){
     toast('⚠️ Erreur : ' + (e.message||e).slice(0,80));
     if(btn){ btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = false; }
   }
+}
+
+let _acAudioPlayer = null;
+
+function _acTogglePlay(btn){
+  if(!_acCleanBlob){ toast('⚠️ Lance l\'analyse d\'abord'); return; }
+  if(_acAudioPlayer && !_acAudioPlayer.paused){
+    _acAudioPlayer.pause();
+    btn.innerHTML = '▶ Écouter l\'audio nettoyé';
+    return;
+  }
+  if(!_acAudioPlayer || _acAudioPlayer.ended){
+    if(_acAudioPlayer) _acAudioPlayer.src = '';
+    const url = URL.createObjectURL(_acCleanBlob);
+    _acAudioPlayer = new Audio(url);
+    _acAudioPlayer.onended = () => {
+      const b = document.getElementById('acPlayBtn');
+      if(b) b.innerHTML = '▶ Écouter l\'audio nettoyé';
+      URL.revokeObjectURL(url);
+    };
+  }
+  _acAudioPlayer.play();
+  btn.innerHTML = '⏸ Pause';
 }
 
 function _acDownload(){
