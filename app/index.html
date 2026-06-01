@@ -12689,6 +12689,82 @@ function _libSendImageToCartoon(imgUrl){
   }, 300);
 }
 
+// ── Chargement des thumbnails vidéo + waveforms audio en arrière-plan ──
+async function _loadLibThumbnails(){
+  // 1. Thumbnails vidéo — premier frame via canvas
+  const thumbEls = document.querySelectorAll('[data-lib-idb]');
+  for(const img of thumbEls){
+    const key = img.dataset.libIdb;
+    if(!key) continue;
+    try {
+      const entry = await _idbLoad(key);
+      if(!entry) continue;
+      const file = new File([entry.blob], entry.name||'video.mp4', { type: entry.type||'video/mp4' });
+      const url  = URL.createObjectURL(file);
+      await new Promise(resolve => {
+        const vid = document.createElement('video');
+        vid.src = url; vid.muted = true; vid.preload = 'metadata'; vid.playsInline = true;
+        vid.onloadeddata = () => {
+          vid.currentTime = 0.5;
+          vid.onseeked = () => {
+            try {
+              const c = document.createElement('canvas');
+              c.width = 200; c.height = 356;
+              c.getContext('2d').drawImage(vid, 0, 0, 200, 356);
+              img.src = c.toDataURL('image/jpeg', 0.75);
+              img.style.display = 'block';
+              const emoEl = img.parentElement?.querySelector('.lib-emoji');
+              if(emoEl) emoEl.style.display = 'none';
+            } catch(e){}
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          vid.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          setTimeout(resolve, 2000);
+        };
+        vid.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+        setTimeout(() => { URL.revokeObjectURL(url); resolve(); }, 5000);
+        vid.load();
+      });
+    } catch(e){ /* silencieux */ }
+  }
+
+  // 2. Waveforms audio — barres sur canvas
+  const waveEls = document.querySelectorAll('[data-lib-audio-idb]');
+  for(const canvas of waveEls){
+    const key = canvas.dataset.libAudioIdb;
+    if(!key) continue;
+    try {
+      const entry = await _idbLoad(key);
+      if(!entry) continue;
+      const file = new File([entry.blob], entry.name||'audio.wav', { type: entry.type||'audio/wav' });
+      const ab   = await file.arrayBuffer();
+      const ac   = new (window.AudioContext||window.webkitAudioContext)();
+      const buf  = await ac.decodeAudioData(ab);
+      await ac.close();
+      const data = buf.getChannelData(0);
+      const W = canvas.width, H = canvas.height;
+      const ctx2 = canvas.getContext('2d');
+      ctx2.clearRect(0,0,W,H);
+      const bars = 40, barW = W / bars;
+      const step = Math.ceil(data.length / bars);
+      const grad = ctx2.createLinearGradient(0,0,W,0);
+      grad.addColorStop(0,'rgba(255,107,53,0.4)');
+      grad.addColorStop(1,'rgba(255,107,53,0.8)');
+      ctx2.fillStyle = grad;
+      for(let i=0;i<bars;i++){
+        let max=0;
+        for(let j=i*step;j<(i+1)*step&&j<data.length;j++) max=Math.max(max,Math.abs(data[j]));
+        const bH = Math.max(3, max * H * 0.9);
+        ctx2.fillRect(i*barW+1,(H-bH)/2,barW-2,bH);
+      }
+      // Cacher l'emoji si waveform tracée
+      const emoEl = canvas.parentElement?.querySelector('.lib-emoji');
+      if(emoEl) emoEl.style.display = 'none';
+    } catch(e){ /* silencieux */ }
+  }
+}
+
 async function _libPreviewVideo(idbKey){
   const entry = await _idbLoad(idbKey);
   if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
@@ -12783,11 +12859,12 @@ function renderLibrary(){
     if(v.type==='audio'){
       const ri = v._realIdx;
       return `<div class="vid-card">
-        <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center">
-          <div style="font-size:42px;z-index:1;position:relative">${v.emo}</div>
-          <div class="vid-overlay"></div>
-          <div class="vid-badge">${v.style}</div>
-          ${_delBtn('lib', ri)}
+        <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+          <canvas id="lib-wave-${ri}" data-lib-audio-idb="${v.idbKey||''}" width="160" height="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:.7;z-index:1"></canvas>
+          <div class="lib-emoji" style="font-size:36px;z-index:2;position:relative">${v.emo}</div>
+          <div class="vid-overlay" style="z-index:3"></div>
+          <div class="vid-badge" style="z-index:4">${v.style}</div>
+          <div style="z-index:5">${_delBtn('lib', ri)}</div>
         </div>
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
@@ -12803,12 +12880,13 @@ function renderLibrary(){
     // Video/Avatar card
     const ri = v._realIdx;
     return `<div class="vid-card">
-      <div class="vid-thumb" style="background:${v.bg};cursor:${v.hedraIdbKey?'pointer':'default'}" onclick="${v.hedraIdbKey?`event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})`:''}">
-        <div style="font-size:40px;z-index:1;position:relative">${v.emo}</div>
-        ${v.hedraIdbKey ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
-        <div class="vid-overlay"></div>
-        <div class="vid-badge">${v.style}</div>
-        ${_delBtn('lib', ri)}
+      <div class="vid-thumb" style="background:${v.bg};cursor:${v.hedraIdbKey?'pointer':'default'};position:relative;overflow:hidden" onclick="${v.hedraIdbKey?`event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})`:''}">
+        ${v.hedraIdbKey ? `<img id="lib-thumb-${ri}" data-lib-idb="${v.hedraIdbKey}" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1" alt="">` : ''}
+        <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${v.emo}</div>
+        ${v.hedraIdbKey ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
+        <div class="vid-overlay" style="z-index:4"></div>
+        <div class="vid-badge" style="z-index:5">${v.style}</div>
+        <div style="z-index:6">${_delBtn('lib', ri)}</div>
       </div>
       <div class="vid-meta">
         <div class="vid-title">${v.name}</div>
@@ -12823,6 +12901,9 @@ function renderLibrary(){
       </div>
     </div>`;
   }).join('');
+
+  // Charger thumbnails vidéo + waveforms audio en arrière-plan (non bloquant)
+  setTimeout(() => _loadLibThumbnails(), 50);
 }
 
 async function deleteLibItem(src, idx){
