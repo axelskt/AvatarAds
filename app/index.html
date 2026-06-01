@@ -493,7 +493,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </button>
       <button id="btnBuyCredits" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.3);border-radius:8px;padding:4px 10px;color:#4dabf7;font-size:11px;font-family:var(--mono);font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(77,171,247,0.18)';this.style.borderColor='rgba(77,171,247,0.5)'" onmouseout="this.style.background='rgba(77,171,247,0.1)';this.style.borderColor='rgba(77,171,247,0.3)'">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        + Crédits
+        Crédits
       </button>
       <!-- Logout rapide -->
       <button onclick="authLogout()" style="display:flex;align-items:center;gap:5px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'">
@@ -15155,7 +15155,8 @@ async function _acAnalyze(){
         <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Niveau : ${isStrong?'🔈 Avancé':'🔇 Standard'}</div>
         <button id="acPlayBtn" onclick="_acTogglePlay(this)" style="width:100%;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter l'audio nettoyé</button>
         <button onclick="_acDownload()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
-        <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer">→ Utiliser dans le Générateur</button>
+        <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;margin-bottom:6px">→ Utiliser dans le Générateur</button>
+        <button onclick="_acReset()" style="width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">↺ Faire un autre nettoyage</button>
       </div>`;
     if(tipEl) tipEl.style.display = 'none';
     if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
@@ -15189,6 +15190,29 @@ function _acTogglePlay(btn){
   }
   _acAudioPlayer.play();
   btn.innerHTML = '⏸ Pause';
+}
+
+function _acReset(){
+  // Stopper la lecture en cours
+  if(_acAudioPlayer){ _acAudioPlayer.pause(); _acAudioPlayer = null; }
+  // Vider l'état
+  _acAudioBlob  = null;
+  _acCleanBlob  = null;
+  // Reset UI
+  const dropzone = document.getElementById('acDropzone');
+  const fileInfo = document.getElementById('acFileInfo');
+  const waveWrap = document.getElementById('acWaveWrap');
+  const resEl    = document.getElementById('acResult');
+  const tipEl    = document.getElementById('acTip');
+  const btn      = document.getElementById('acAnalyzeBtn');
+  const fileIn   = document.getElementById('acFileIn');
+  if(dropzone) dropzone.style.display = 'block';
+  if(fileInfo) fileInfo.style.display = 'none';
+  if(waveWrap) waveWrap.style.display = 'none';
+  if(resEl)    resEl.innerHTML = '';
+  if(tipEl)    tipEl.style.display = 'block';
+  if(btn){     btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = true; btn.style.opacity = '.5'; }
+  if(fileIn)   fileIn.value = '';
 }
 
 function _acDownload(){
