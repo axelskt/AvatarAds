@@ -530,6 +530,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="nav('imagegen',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
         Images IA
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(77,171,247,0.15);border:1px solid rgba(77,171,247,0.3);color:#4dabf7;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('recorder',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="5" height="7" rx="2.5"/><path d="M2.5 7.5A4.5 4.5 0 0011 9.5M7.5 11v2.5M5.5 13.5h4"/></svg>
@@ -12745,7 +12746,10 @@ async function _loadLibThumbnails(){
               const cw = c.width,       ch = c.height;
               const scale = Math.max(cw/vw, ch/vh);
               const sw = cw/scale, sh = ch/scale;
-              const sx = (vw - sw)/2,   sy = (vh - sh)/2;
+              // Crop centré horizontalement, depuis le HAUT verticalement
+              // (les vidéos Hedra ont l'avatar dans le tiers supérieur)
+              const sx = (vw - sw)/2;
+              const sy = 0; // toujours depuis le haut → montre visage + corps
               ctx.drawImage(vid, sx, sy, sw, sh, 0, 0, cw, ch);
               img.src = c.toDataURL('image/jpeg', 0.8);
               img.style.display = 'block';
