@@ -2798,13 +2798,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
           <input type="file" id="acFileIn" accept="audio/*" style="display:none" onchange="_acHandleFile(this.files[0])">
 
-          <!-- Niveau de force -->
+          <!-- Niveau de nettoyage -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" style="padding:9px 6px;background:rgba(255,107,53,0.15);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center">
-              <div style="font-size:16px;margin-bottom:2px">🔇</div>Normal
+            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" style="padding:9px 6px;background:rgba(255,107,53,0.15);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center">
+              <div style="font-size:16px;margin-bottom:2px">🔇</div>Standard
             </button>
-            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" style="padding:9px 6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
-              <div style="font-size:16px;margin-bottom:2px">🔈</div>Forte
+            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" style="padding:9px 6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
+              <div style="font-size:16px;margin-bottom:2px">🔈</div>Avancé
               <span style="position:absolute;top:-7px;right:6px;font-size:7px;font-weight:800;background:var(--orange);color:#fff;padding:1px 5px;border-radius:8px;font-family:var(--mono)">Pro+</span>
             </button>
           </div>
@@ -12738,9 +12738,16 @@ async function _loadLibThumbnails(){
           vid.onseeked = () => {
             try {
               const c = document.createElement('canvas');
-              c.width = 200; c.height = 356;
-              c.getContext('2d').drawImage(vid, 0, 0, 200, 356);
-              img.src = c.toDataURL('image/jpeg', 0.75);
+              c.width = 200; c.height = 356; // 9:16 ratio pour les cartes
+              const ctx = c.getContext('2d');
+              // Cover centré : recadre sans déformer
+              const vw = vid.videoWidth, vh = vid.videoHeight;
+              const cw = c.width,       ch = c.height;
+              const scale = Math.max(cw/vw, ch/vh);
+              const sw = cw/scale, sh = ch/scale;
+              const sx = (vw - sw)/2,   sy = (vh - sh)/2;
+              ctx.drawImage(vid, sx, sy, sw, sh, 0, 0, cw, ch);
+              img.src = c.toDataURL('image/jpeg', 0.8);
               img.style.display = 'block';
               const emoEl = img.parentElement?.querySelector('.lib-emoji');
               if(emoEl) emoEl.style.display = 'none';
@@ -15141,7 +15148,7 @@ async function _acAnalyze(){
     if(resEl) resEl.innerHTML = `
       <div style="background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;padding:14px;margin-top:12px;text-align:center">
         <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:2px">✅ ${removedS}s de silences supprimés · ${origS}s → ${cleanS}s</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Niveau : ${isStrong?'🔈 Fort':'🔇 Normal'}</div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Niveau : ${isStrong?'🔈 Avancé':'🔇 Standard'}</div>
         <button onclick="_acDownload()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
         <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer">→ Utiliser dans le Générateur</button>
       </div>`;
