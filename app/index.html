@@ -4600,7 +4600,7 @@ function enterApp(profile){
   const upgBtn   = document.getElementById('btnUpgradePlan');
   const upgLabel = document.getElementById('btnUpgradePlanLabel');
   if(upgBtn && upgLabel){
-    const showUpg = profile.plan !== 'elite';
+    const showUpg = !['elite','developer'].includes(profile.plan);
     upgBtn.style.display = showUpg ? 'flex' : 'none';
     if(!profile.plan || profile.plan === 'free') upgLabel.textContent = 'Voir les plans';
     if(profile.plan === 'starter')               upgLabel.textContent = '→ Pro';
@@ -4631,6 +4631,8 @@ function enterApp(profile){
 // ── DEDUCT MINUTES ──
 async function decrementCredit(durationSecs){
   if(!currentMember) return false;
+  // Compte developer/owner : pas de décrément de crédits
+  if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
   const secs = durationSecs || 20;
   const remaining = currentMember.credits_remaining || 0;
   if(remaining < secs){
@@ -5653,9 +5655,10 @@ function saveAffPayment(){
 function _imgMonthKey(){ const d=new Date(); return 'aa_img_'+d.getFullYear()+'_'+(d.getMonth()+1); }
 function _imgMonthLimit(){
   const p=(currentMember?.plan||'free').toLowerCase();
-  if(p==='elite')   return 50;
-  if(p==='pro')     return 20;
-  if(p==='starter') return 10;
+  if(p==='developer') return 9999; // illimité
+  if(p==='elite')     return 50;
+  if(p==='pro')       return 20;
+  if(p==='starter')   return 10;
   return 0; // free → pas d'accès
 }
 function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
@@ -8164,10 +8167,11 @@ function _bypassMonthKey(){
 }
 function _bypassLimit(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  if(p === 'elite')   return 70;
-  if(p === 'pro')     return 25;
-  if(p === 'starter') return 10;
-  if(p === 'byok')    return 30;
+  if(p === 'developer') return 9999; // compte développeur — illimité
+  if(p === 'elite')     return 70;
+  if(p === 'pro')       return 25;
+  if(p === 'starter')   return 10;
+  if(p === 'byok')      return 30;
   return 0; // free → pas de bypass
 }
 function _bypassUsed(){
