@@ -4350,11 +4350,12 @@ let currentMember = null; // {id, email, plan, credits_remaining, is_owner, vide
 
 // ── QUOTAS PAR PLAN ──
 const PLAN_QUOTAS = {
-  free:    { videos: 2,   maxDuration: 15 },
-  byok:    { videos: 999, maxDuration: 30 }, // illimité — clé Hedra personnelle
-  starter: { videos: 5,   maxDuration: 20 },
-  pro:     { videos: 15,  maxDuration: 30 },
-  elite:   { videos: 30,  maxDuration: 35 },
+  free:      { videos: 2,    maxDuration: 15 },
+  byok:      { videos: 999,  maxDuration: 30 }, // illimité — clé Hedra personnelle
+  starter:   { videos: 5,    maxDuration: 20 },
+  pro:       { videos: 15,   maxDuration: 30 },
+  elite:     { videos: 30,   maxDuration: 35 },
+  developer: { videos: 9999, maxDuration: 120 }, // compte développeur — tout illimité
 };
 
 function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
@@ -4610,7 +4611,7 @@ function enterApp(profile){
   if(byokSection) byokSection.style.display = profile.plan === 'byok' ? 'block' : 'none';
 
   // Silence tool panel : open by default for PRO/Elite, closed for others
-  if(!['pro','elite'].includes(profile.plan)){
+  if(!['pro','elite','developer'].includes(profile.plan)){
     const sPanel = document.getElementById('silenceToolPanel');
     const sArrow = document.getElementById('silenceToolArrow');
     if(sPanel) sPanel.style.display = 'none';
@@ -4620,7 +4621,7 @@ function enterApp(profile){
   checkSetupNeeded();
   // ── Verrouillage qualité selon plan ──
   _updateQualityLocks(profile.plan);
-  const credits = profile.plan === 'elite' ? '∞' : profile.credits_remaining;
+  const credits = ['elite','developer'].includes(profile.plan) ? '∞' : profile.credits_remaining;
   toast('✓ Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
   // ── Restaurer la session précédente ──
   setTimeout(_restoreSession, 120);
@@ -5287,7 +5288,7 @@ function openUpgradeModal(mode){
     showPaywall(); return;
   }
   const plan = currentMember.plan;
-  const bal  = plan === 'elite' ? '∞ (Elite)' : secsToDisplay(currentMember.credits_remaining || 0);
+  const bal  = ['elite','developer'].includes(plan) ? '∞ (Dev)' : secsToDisplay(currentMember.credits_remaining || 0);
   document.getElementById('upgradeModalBalance').textContent = bal;
 
   const upg = UPGRADE_PLANS[plan]; // null for elite
@@ -7202,7 +7203,7 @@ function _getClonedVoices(){ try{ return JSON.parse(localStorage.getItem('aa_clo
 function _saveClonedVoices(arr){ localStorage.setItem('aa_cloned_voices', JSON.stringify(arr)); }
 function _maxVoices(){
   const p = (currentMember?.plan||'free').toLowerCase();
-  return p === 'elite' ? 999 : p === 'pro' || p === 'byok' ? 2 : 1;
+  return ['elite','developer'].includes(p) ? 9999 : p === 'pro' || p === 'byok' ? 2 : 1;
 }
 
 // Migration ancienne clé → nouveau format tableau
@@ -7272,7 +7273,7 @@ function autoGenSubtitles(){
 async function whisperTranscribe(){
   // Gate Pro / Elite / BYOK
   const plan = currentMember?.plan || 'free';
-  if(!['pro','elite','byok'].includes(plan)){
+  if(!['pro','elite','byok','developer'].includes(plan)){
     showPaywall();
     toast('⚠️ Whisper IA disponible avec les plans Pro, Élite et BYOK');
     return;
@@ -8583,7 +8584,7 @@ let _silencePlayheadRaf = null;   // rAF ID pour animation playhead
 
 function toggleSilenceTool(){
   // PRO/Elite only
-  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+  if(currentMember && !['pro','elite','developer'].includes(currentMember.plan)){
     openUpgradeModal();
     return;
   }
@@ -8603,7 +8604,7 @@ function _updateSilenceSourceLabel(){
 }
 
 async function analyzeSilences(){
-  if(currentMember && !['pro','elite','byok'].includes(currentMember.plan)){
+  if(currentMember && !['pro','elite','byok','developer'].includes(currentMember.plan)){
     openUpgradeModal(); return;
   }
   const file = mp4AudioFile || window._voiceFileRef;
@@ -10557,7 +10558,7 @@ let voiceMode = 'elevenlabs';
 
 function toggleGameplayAudio(){
   // PRO/Elite only
-  if(currentMember && !['pro','elite'].includes(currentMember.plan)){
+  if(currentMember && !['pro','elite','developer'].includes(currentMember.plan)){
     openUpgradeModal();
     return;
   }
@@ -11493,8 +11494,8 @@ function _updateQualityLocks(plan){
   // 720p : starter, byok, pro, elite
   // 1080p : pro, elite uniquement
   const p = (plan||'free').toLowerCase();
-  const can720  = ['starter','byok','pro','elite'].includes(p);
-  const can1080 = ['pro','elite'].includes(p);
+  const can720  = ['starter','byok','pro','elite','developer'].includes(p);
+  const can1080 = ['pro','elite','developer'].includes(p);
 
   document.querySelectorAll('.qual-btn').forEach(btn => {
     const q = parseInt(btn.dataset.q || '0');
@@ -11537,8 +11538,8 @@ function _updateQualityLocks(plan){
 function setQuality(q, btn){
   // ── Vérification plan ──
   const plan = (currentMember?.plan || 'free').toLowerCase();
-  const can720  = ['starter','byok','pro','elite'].includes(plan);
-  const can1080 = ['pro','elite'].includes(plan);
+  const can720  = ['starter','byok','pro','elite','developer'].includes(plan);
+  const can1080 = ['pro','elite','developer'].includes(plan);
   if(q === 720  && !can720 ){ toast('⚠️ 720p réservé aux plans Starter et supérieurs'); openUpgradeModal(); return; }
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
   _composeQuality = q;
@@ -14168,7 +14169,7 @@ function _expDeductImageCredit(){
 // ── Transcription ─────────────────────────────────────────────
 async function expressWhisper(){
   const plan = (currentMember?.plan||'free').toLowerCase();
-  if(!['pro','elite','byok'].includes(plan)){ showPaywall(); toast('⚠️ Whisper IA — Plan Pro ou Élite requis'); return; }
+  if(!['pro','elite','byok','developer'].includes(plan)){ showPaywall(); toast('⚠️ Whisper IA — Plan Pro ou Élite requis'); return; }
   if(!_expressVideoFile){ toast('⚠️ Importe ta vidéo d\'abord'); return; }
   const btn = document.getElementById('expWhisperBtn');
   if(btn){ btn.innerHTML='⏳ Transcription en cours…'; btn.disabled=true; }
@@ -14236,7 +14237,7 @@ function _expSyncWpgUI(n){ [1,2,3,4].forEach(i=>{ const c=document.getElementByI
 async function expressGenerateEffects(){
   // Réservé Pro et Élite uniquement
   const _plan = (currentMember?.plan || 'free').toLowerCase();
-  if(_plan !== 'pro' && _plan !== 'elite' && _plan !== 'byok'){
+  if(_plan !== 'pro' && _plan !== 'elite' && _plan !== 'byok' && _plan !== 'developer'){
     toast('⛔ Les effets IA sont réservés aux plans Pro et Élite');
     openUpgradeModal(); return;
   }
@@ -15056,7 +15057,7 @@ function _acSetLevel(level, btn){
   // Vérifier plan pour le niveau fort
   if(level === 'strong'){
     const plan = (currentMember?.plan || 'free').toLowerCase();
-    if(!['pro','elite','byok'].includes(plan)){
+    if(!['pro','elite','byok','developer'].includes(plan)){
       openUpgradeModal(); return;
     }
   }
