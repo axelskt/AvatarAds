@@ -1396,6 +1396,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div class="sub-name">Badis ✍️</div>
                   <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
                 </div>
+                <div class="sub-card style-card" id="sc-karaoke" onclick="pickSub(this,'karaoke')">
+                  <div class="sub-name">Karaoke 🎤</div>
+                  <div class="sub-preview" style="gap:3px"><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">OÙ</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">TA</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;background:linear-gradient(90deg,#1E90FF,#00D4AA);padding:1px 5px;border-radius:3px">MATURITÉ</span></div>
+                </div>
               </div>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
             </div>
@@ -2919,6 +2923,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div class="sub-card style-card" id="sc-exp-badis" onclick="pickSub(this,'badis')">
               <div class="sub-name">Badis ✍️</div>
               <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
+            </div>
+            <div class="sub-card style-card" id="sc-exp-karaoke" onclick="pickSub(this,'karaoke')">
+              <div class="sub-name">Karaoke 🎤</div>
+              <div class="sub-preview" style="gap:3px"><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">OÙ</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">TA</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;background:linear-gradient(90deg,#1E90FF,#00D4AA);padding:1px 5px;border-radius:3px">MATURITÉ</span></div>
             </div>
           </div>
           <div style="margin-top:14px">
@@ -6864,7 +6872,7 @@ function clearVoiceMode(){
   if(cloneSection) cloneSection.classList.remove('dimmed');
   if(presetSection) presetSection.classList.remove('dimmed');
 }
-const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'Badis ✍️' };
+const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'Badis ✍️', karaoke:'Karaoke 🎤' };
 function _subStyleLabel(s){ return SUB_STYLE_LABELS[s] || (s ? s.charAt(0).toUpperCase()+s.slice(1) : 'Hormozi'); }
 function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
@@ -12468,6 +12476,55 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         ctx.textAlign = 'center';
         ctx.fillText(shown[i], x+pw/2, lineY);
         x += pw + gapT;
+      });
+    });
+  } else if(style === 'karaoke'){
+    // ── Style Karaoke : mot actif avec fond dégradé bleu→vert, autres en blanc outline ──
+    ctx.font = `900 ${sz}px Impact,sans-serif`;
+    const pad  = Math.round(sz * 0.18);
+    const gapK = Math.round(sz * 0.10);
+    const widths = shown.map(w => ctx.measureText(w).width + pad*2);
+    const lines  = _splitSubLines(widths.map((w,i)=>w+gapK), maxLineW);
+    const nLines = lines.length;
+    const startY = posY - ((nLines-1)*lineH)/2;
+
+    lines.forEach((lineIdxs, li)=>{
+      const lineY = startY + li * lineH;
+      const lineW = lineIdxs.reduce((a,i)=>a+widths[i]+gapK,0) - gapK;
+      let x = posX - lineW/2;
+      x = Math.max(W*0.04, Math.min(W*0.96 - lineW, x));
+
+      lineIdxs.forEach(i=>{
+        const active = i === activeIdx;
+        const pw = widths[i];
+        const ph = Math.round(sz * 1.25);
+        const r  = Math.round(sz * 0.15);
+
+        if(active){
+          // Fond dégradé bleu→turquoise/vert (personnalisable via c1/c2)
+          const grad = ctx.createLinearGradient(x, lineY, x+pw, lineY);
+          grad.addColorStop(0, '#1E90FF');
+          grad.addColorStop(1, '#00D4AA');
+          ctx.fillStyle = grad;
+          _cvRoundRect(ctx, x, lineY-ph/2, pw, ph, r);
+          ctx.fill();
+          // Texte blanc sans outline sur fond coloré
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0,0,0,0.3)';
+          ctx.shadowBlur = 2;
+          ctx.fillText(shown[i], x+pw/2, lineY);
+          ctx.shadowBlur = 0;
+        } else {
+          // Texte blanc avec contour noir (comme Hormozi)
+          ctx.lineWidth = strokeW;
+          ctx.strokeStyle = '#000';
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.strokeText(shown[i], x+pw/2, lineY);
+          ctx.fillText(shown[i], x+pw/2, lineY);
+        }
+        x += pw + gapK;
       });
     });
   } else {
