@@ -424,6 +424,12 @@ const m=document.getElementById('marquee');
 
 // Pricing
 let isAnnual=false;
+// Whop checkout URLs — monthly & annual
+const CHECKOUT={
+  starter:{ m:'https://whop.com/checkout/plan_YKcdyPT6RRQSi', a:'https://whop.com/checkout/plan_cNydK89X39PLE' },
+  pro:    { m:'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', a:'https://whop.com/checkout/plan_P7WIywSa6YrxT' },
+  elite:  { m:'https://whop.com/checkout/plan_w8lh5zpEJFOQR', a:'https://whop.com/checkout/plan_OvRwm5CW3xcNh' },
+};
 const plans=[
   {id:"starter",name:"STARTER",tagline:"Pour commencer à créer du contenu vidéo IA sans se ruiner.",price:"29,99",annual:"20,83",accent:"var(--text)",popular:false,chips:["5 avatar/mois","10 vidéos/mois","20s/avatar"],foot:"Idéal pour tester et lancer ses premières vidéos",feats:["Clip max 40s · sans watermark · export vertical","Script IA GPT-4o optimisé","Voix clonée ElevenLabs","5 Avatar IA/mois · lipsync HD · sous-titres animés","Enregistreur vocal + suppression silences","Split-screen · gameplay · sync voix/texte","10 images IA/mois · DALL·E 3 4K"]},
   {id:"pro",name:"PRO",tagline:"Pour les créateurs qui veulent scaler sérieusement.",price:"49,99",annual:"37,50",accent:"var(--accent)",popular:true,chips:["15 avatar/mois","30 vidéos/mois","30s/avatar"],foot:"Le plus choisi · 3× plus de vidéos avatar que Starter",feats:["Tout Starter + clip max 70s · export 1080p","Whisper IA · synchronisation voix/texte pro","Suppression silences avancée","15 Avatar IA/mois · lipsync HD · effets avancés","Sous-titres styles cinématiques (karaoke, bounce…)","Split-screen · effets visuels · export multi-format","20 images IA/mois · DALL·E 3 4K"]},
@@ -461,7 +467,8 @@ function renderPricing(){
     }
     var annualColor=isAnnual?'var(--green)':'var(--text-3)';
     var annualLabel=isAnnual?'Économise 25% · facturé annuellement':'Facturé mensuellement';
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+price+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div><a href="/app/" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a><div class="col" style="gap:12px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+    var checkoutUrl=(CHECKOUT[pl.id]&&CHECKOUT[pl.id][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+price+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div><a href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a><div class="col" style="gap:12px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
   document.getElementById('pricing-grid').innerHTML=html;
 }
