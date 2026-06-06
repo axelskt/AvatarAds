@@ -5255,9 +5255,9 @@ async function _composeClipWithAudio(clipId, audioBlob) {
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
-  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S  – 5 min  –  9,99€
-  pack_m: 'https://whop.com/checkout/plan_8ZlMDLvTi5M05', // Pack M – 15 min – 24,99€
-  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – 30 min – 44,99€
+  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S  –  5 min  – 14,99€
+  pack_m: 'https://whop.com/checkout/plan_8ZlMDLvTi5M05', // Pack M – 15 min – 34,99€
+  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – 25 min – 54,99€
 };
 
 // Plans checkout Whop
@@ -7886,15 +7886,13 @@ function toggleGameplaySound(){
   const icon  = document.getElementById('gp-sound-icon');
   const label = document.getElementById('gp-sound-label');
   if(vid.muted){
-    btn.style.color = 'var(--text3)';
-    btn.style.borderColor = 'var(--border2)';
-    label.textContent = 'Son gameplay : OFF';
-    icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+    if(btn)  { btn.style.color='var(--text3)'; btn.style.borderColor='var(--border2)'; }
+    if(label)  label.textContent = 'Son gameplay : OFF';
+    if(icon)   icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
   } else {
-    btn.style.color = 'var(--orange2)';
-    btn.style.borderColor = 'rgba(255,107,53,0.35)';
-    label.textContent = 'Son gameplay : ON';
-    icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+    if(btn)  { btn.style.color='var(--orange2)'; btn.style.borderColor='rgba(255,107,53,0.35)'; }
+    if(label)  label.textContent = 'Son gameplay : ON';
+    if(icon)   icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
   }
 }
 
@@ -10617,7 +10615,8 @@ async function startGeneration(){
 }
 
 async function callGPT(){
-  const product = document.getElementById('f-product').value || 'ce produit digital';
+  const productEl = document.getElementById('f-product');
+  const product = productEl ? productEl.value : (document.getElementById('i-business')?.value || 'ce produit digital');
   const niche = document.getElementById('f-niche')?.value || 'business en ligne';
   const duration = document.getElementById('f-duration').value;
   const hook = document.getElementById('f-hook').value || '';
@@ -11144,7 +11143,7 @@ async function retryHedraAuto(btn){
   }
 }
 function genSubtitlesFromAudio(){
-  toast('📝 Génération des sous-titres depuis AssemblyAI — fonctionnalité bientôt disponible');
+  toast('📝 Sous-titres auto — utilise Whisper IA dans l\'onglet Voix (Plan Pro/Elite)');
 }
 
 // ══════════════════════════════════════════════════
@@ -13869,9 +13868,12 @@ function handleBugScreenshot(file){
     const full = canvas.toDataURL('image/jpeg', 0.5);
     _bugScreenshotB64 = full.replace(/^data:image\/jpeg;base64,/, '');
     URL.revokeObjectURL(url);
-    document.getElementById('bugScreenshotImg').src = full;
-    document.getElementById('bugScreenshotEmpty').style.display = 'none';
-    document.getElementById('bugScreenshotPreview').style.display = 'block';
+    const imgEl = document.getElementById('bugScreenshotImg');
+    const emptyEl = document.getElementById('bugScreenshotEmpty');
+    const previewEl = document.getElementById('bugScreenshotPreview');
+    if(imgEl) imgEl.src = full;
+    if(emptyEl) emptyEl.style.display = 'none';
+    if(previewEl) previewEl.style.display = 'block';
   };
   img.src = url;
 }
