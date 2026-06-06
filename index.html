@@ -149,7 +149,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <b style="color:var(--text)">Avatar IA · Voix clonée · Sous-titres.</b> Deviens viral, sans caméra.
   </p>
   <div class="row rise" style="gap:14px;justify-content:center;margin-top:34px;flex-wrap:wrap">
-    <a href="/app/" class="btn btn-primary btn-lg">Commencer gratuitement <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 9h12M10 4.5l4.5 4.5L10 13.5"/></svg></a>
+    <a href="/app/" class="btn btn-primary btn-lg" style="padding:18px 34px;font-size:18px;box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 20px 50px -12px var(--accent-glow),0 0 0 1px var(--accent)">🚀 Commencer gratuitement <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 9h12M10 4.5l4.5 4.5L10 13.5"/></svg></a>
     <button class="btn btn-ghost btn-lg" onclick="document.getElementById('apropos').scrollIntoView({behavior:'smooth'})">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5,2 13,8 5,14"/></svg>
       Voir comment ça marche
@@ -163,7 +163,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <div class="row faint" style="gap:8px;font-size:13.5px"><b style="color:var(--text)">500+</b> avatars générés</div>
     <div class="row faint" style="gap:8px;font-size:13.5px">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5l2 1.5"/></svg>
-      Vidéo prête en <b style="color:var(--text);margin-left:4px">5 min</b>
+      Vidéo prête en <b style="color:var(--text);margin-left:4px">2 min</b>
     </div>
   </div>
 
@@ -301,7 +301,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </section>
 
 <!-- TARIFS -->
-<section id="tarifs" class="wrap" style="padding-bottom:80px">
+<section id="tarifs" class="wrap" style="padding-top:90px;padding-bottom:80px">
   <div class="center" style="margin-bottom:34px">
     <div class="eyebrow">Tarifs</div>
     <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.02">Choisis ton plan.<br><span class="accent">Scale ton contenu.</span></h2>
@@ -413,7 +413,7 @@ function setPlatform(btn){
 }
 
 // Marquee
-const marqueeItems=["Avatar lipsync","Sans caméra","TikTok · Reels · YT Shorts","Vidéo en 5 minutes","Voix clonée","Scripts IA","ElevenLabs voix"];
+const marqueeItems=["Avatar lipsync","Sans caméra","TikTok · Reels · YT Shorts","Vidéo en 2 minutes","Voix clonée","Scripts IA","ElevenLabs voix"];
 const m=document.getElementById('marquee');
 [...marqueeItems,...marqueeItems,...marqueeItems].forEach(s=>{
   const span=document.createElement('span');
@@ -431,34 +431,39 @@ const plans=[
 ];
 const CHECK='<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="var(--accent-2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>';
 function renderPricing(){
-  document.getElementById('pricing-grid').innerHTML=plans.map(pl=>{
-    const price=isAnnual?pl.annual:pl.price;
-    const chipBg=pl.id==='elite'?'rgba(154,124,255,.1)':pl.id==='pro'?'var(--accent-soft)':'var(--surface-2)';
-    const chipBorder=pl.id==='elite'?'rgba(154,124,255,.35)':pl.id==='pro'?'var(--accent-line)':'var(--border-2)';
-    return `<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:${pl.popular?'var(--accent)':pl.id==='elite'?'rgba(154,124,255,.3)':'var(--border)'};background:${pl.popular?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.12),var(--surface))':'var(--surface)'};box-shadow:${pl.popular?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none'};transform:${pl.popular?'translateY(-10px)':'none'}">
-      ${pl.popular?`<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:11px;font-weight:800;padding:5px 15px;border-radius:999px;white-space:nowrap">⚡ LE PLUS POPULAIRE</div>`:''}
-      <div class="center">
-        <div class="display" style="font-size:24px;font-weight:800;color:${pl.accent}">${pl.name}</div>
-        <p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">${pl.tagline}</p>
-        <div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">
-          <span class="faint" style="font-size:22px;font-weight:700">€</span>
-          <span class="display" style="font-size:48px;font-weight:800">${price}</span>
-          <span class="faint" style="font-size:15px">/mois</span>
-        </div>
-        <div class="mono" style="font-size:11.5px;margin-top:6px;color:${isAnnual?'var(--green)':'var(--text-3)'}">
-          ${isAnnual?'Économise 25% · facturé annuellement':'Facturé mensuellement'}
-        </div>
-      </div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">
-        ${pl.chips.map((c,i)=>`<span class="pill mono" style="font-size:11px;padding:5px 10px;color:${i===0?pl.accent:'var(--text-2)'};border-color:${i===0?chipBorder:'var(--border)'};background:${i===0?chipBg:'var(--surface)'}">${c}</span>`).join('')}
-      </div>
-      <a href="/app/" class="${pl.popular?'btn btn-primary':'btn'}" style="width:100%;margin-bottom:22px;display:flex;text-decoration:none;${!pl.popular?`background:${pl.id==='elite'?'rgba(154,124,255,.14)':'var(--surface-2)'};border:1px solid ${pl.id==='elite'?'rgba(154,124,255,.35)':'var(--border-2)'};color:${pl.id==='elite'?'var(--violet)':'var(--text)'};font-weight:700`:'';}">Commencer →</a>
-      <div class="col" style="gap:12px">
-        ${pl.feats.map(f=>`<div class="row" style="gap:10px;font-size:13.5px;align-items:flex-start"><span style="width:18px;height:18px;border-radius:50%;flex:0 0 auto;margin-top:1px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center">${CHECK}</span><span style="line-height:1.45">${f}</span></div>`).join('')}
-      </div>
-      <p class="center faint" style="font-size:11.5px;margin-top:20px">${pl.foot}</p>
-    </div>`;
-  }).join('');
+  var html='';
+  for(var i=0;i<plans.length;i++){
+    var pl=plans[i];
+    var price=isAnnual?pl.annual:pl.price;
+    var chipBg=pl.id==='elite'?'rgba(154,124,255,.1)':pl.id==='pro'?'var(--accent-soft)':'var(--surface-2)';
+    var chipBorder=pl.id==='elite'?'rgba(154,124,255,.35)':pl.id==='pro'?'var(--accent-line)':'var(--border-2)';
+    var borderColor=pl.popular?'var(--accent)':pl.id==='elite'?'rgba(154,124,255,.3)':'var(--border)';
+    var bg=pl.popular?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.12),var(--surface))':'var(--surface)';
+    var shadow=pl.popular?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none';
+    var transform=pl.popular?'translateY(-10px)':'none';
+    var badge=pl.popular?'<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:11px;font-weight:800;padding:5px 15px;border-radius:999px;white-space:nowrap">⚡ LE PLUS POPULAIRE</div>':'';
+    var btnCls=pl.popular?'btn btn-primary':'btn';
+    var btnStyle='width:100%;margin-bottom:22px;display:flex;justify-content:center;text-decoration:none;';
+    if(!pl.popular){
+      var btnBg=pl.id==='elite'?'rgba(154,124,255,.14)':'var(--surface-2)';
+      var btnBorder=pl.id==='elite'?'rgba(154,124,255,.35)':'var(--border-2)';
+      var btnColor=pl.id==='elite'?'var(--violet)':'var(--text)';
+      btnStyle+='background:'+btnBg+';border:1px solid '+btnBorder+';color:'+btnColor+';font-weight:700';
+    }
+    var chips='';
+    for(var j=0;j<pl.chips.length;j++){
+      var c=pl.chips[j];
+      chips+='<span class="pill mono" style="font-size:11px;padding:5px 10px;color:'+(j===0?pl.accent:'var(--text-2)')+';border-color:'+(j===0?chipBorder:'var(--border)')+';background:'+(j===0?chipBg:'var(--surface)')+'">'+c+'</span>';
+    }
+    var feats='';
+    for(var k=0;k<pl.feats.length;k++){
+      feats+='<div class="row" style="gap:10px;font-size:13.5px;align-items:flex-start"><span style="width:18px;height:18px;border-radius:50%;flex:0 0 auto;margin-top:1px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center">'+CHECK+'</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
+    }
+    var annualColor=isAnnual?'var(--green)':'var(--text-3)';
+    var annualLabel=isAnnual?'Économise 25% · facturé annuellement':'Facturé mensuellement';
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+price+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div><a href="/app/" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a><div class="col" style="gap:12px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+  }
+  document.getElementById('pricing-grid').innerHTML=html;
 }
 renderPricing();
 
