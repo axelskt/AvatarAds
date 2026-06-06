@@ -3842,7 +3842,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <button id="upgradePlanBtn" onclick="goUpgradePlan()" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 6px 20px rgba(168,85,247,0.4);letter-spacing:-0.2px" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 28px rgba(168,85,247,0.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(168,85,247,0.4)'">
             Choisir ce plan →
           </button>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Paiement sécurisé via Stripe</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Paiement sécurisé via Whop</div>
         </div>
       </div>
 
@@ -4074,7 +4074,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- Toggle -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px">
       <span id="sheetLblMonthly" style="font-size:14px;font-weight:700;color:var(--text)">Mensuel</span>
-      <div id="sheetBillingToggle" onclick="sheetToggleBilling()" style="width:44px;height:26px;background:var(--orange);border-radius:13px;cursor:pointer;position:relative;transition:background .2s">
+      <div id="sheetBillingToggle" onclick="sheetToggleBilling()" style="width:44px;height:26px;background:var(--border2);border-radius:13px;cursor:pointer;position:relative;transition:background .2s">
         <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
       </div>
       <span id="sheetLblAnnual" style="font-size:14px;color:var(--text3)">Annuel <span style="background:#22c55e;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:4px">Économise 25%</span></span>
@@ -4227,7 +4227,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
 
       <!-- Main CTA -->
-      <button id="cm2PayBtn" style="width:100%;max-width:300px;padding:16px 24px;background:linear-gradient(135deg,var(--orange),#d63a16);border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:800;font-family:var(--font);cursor:pointer;box-shadow:0 8px 28px rgba(255,107,53,0.4);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.1px" onmouseover="this.style.opacity='.87';this.style.transform='translateY(-1px)'" onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+      <button id="cm2PayBtn" onclick="if(window._cm2Url)window.open(window._cm2Url,'_blank')" style="width:100%;max-width:300px;padding:16px 24px;background:linear-gradient(135deg,var(--orange),#d63a16);border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:800;font-family:var(--font);cursor:pointer;box-shadow:0 8px 28px rgba(255,107,53,0.4);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.1px" onmouseover="this.style.opacity='.87';this.style.transform='translateY(-1px)'" onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L10.5 6H15L11.5 9.5L12.5 14.5L8 12L3.5 14.5L4.5 9.5L1 6H5.5L8 1Z" fill="currentColor" opacity=".9"/></svg>
         Continuer vers le paiement
       </button>
@@ -4857,6 +4857,26 @@ function closePaywall(){ closePlansSheet(); }
 // ── PLANS SHEET ──
 let _sheetAnnual = false;
 function showPlansSheet(){
+  // Reset toggle to monthly on open
+  _sheetAnnual = false;
+  const toggle = document.getElementById('sheetBillingToggle');
+  const thumb  = document.getElementById('sheetBillingThumb');
+  const lblM   = document.getElementById('sheetLblMonthly');
+  const lblA   = document.getElementById('sheetLblAnnual');
+  if(toggle) toggle.style.background = 'var(--border2)';
+  if(thumb)  thumb.style.left = '3px';
+  if(lblM)   { lblM.style.color='var(--text)'; lblM.style.fontWeight='700'; }
+  if(lblA)   { lblA.style.color='var(--text3)'; lblA.style.fontWeight='400'; }
+  // Reset prices to monthly
+  const prices = { starter:['29,99€','/mois',''], pro:['49,99€','/mois','soit 1,67€/jour'], elite:['89,99€','/mois',''] };
+  ['starter','pro','elite'].forEach(k=>{
+    const cap=k.charAt(0).toUpperCase()+k.slice(1);
+    const p=prices[k];
+    const pe=document.getElementById('sheetPrice'+cap);   if(pe) pe.textContent=p[0];
+    const pp=document.getElementById('sheetPeriod'+cap);  if(pp) pp.textContent=p[1];
+    const ps=document.getElementById('sheetSub'+cap);     if(ps) ps.textContent=p[2];
+    const sv=document.getElementById('sheetSave'+cap);    if(sv) sv.style.display='none';
+  });
   document.getElementById('plansSheet').style.display = 'block';
   document.body.style.overflow = 'hidden';
 }
@@ -4894,9 +4914,12 @@ function sheetCheckout(plan){
   const billing = _sheetAnnual ? 'annual' : 'monthly';
   const keyMap  = { starter:'free', pro:'starter', elite:'pro' };
   const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
-  if(!url) return;
-  window.location.href = url;
+  if(!url){ toast('⚠️ Lien indisponible — contacte le support'); return; }
+  window.open(url, '_blank');
+  closePlansSheet();
 }
+function openCheckoutModal2(){}
+function closeCheckoutModal2(){ document.getElementById('checkoutModal2').style.display='none'; }
 
 // ── BUY CREDITS ──
 // LemonSqueezy variant IDs pour les packs de minutes (à remplir après création dans LS)
