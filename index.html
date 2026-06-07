@@ -429,11 +429,24 @@ const CHECKOUT={
   starter:{ m:'https://whop.com/checkout/plan_YKcdyPT6RRQSi', a:'https://whop.com/checkout/plan_cNydK89X39PLE' },
   pro:    { m:'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', a:'https://whop.com/checkout/plan_P7WIywSa6YrxT' },
   elite:  { m:'https://whop.com/checkout/plan_w8lh5zpEJFOQR', a:'https://whop.com/checkout/plan_OvRwm5CW3xcNh' },
+  elite60:{ m:'https://whop.com/checkout/plan_pZmWh1dVdmIWT', a:'https://whop.com/checkout/plan_uWTkJDl1GvxNR' },
+  elite90:{ m:'https://whop.com/checkout/plan_63PGeG3MesbJR', a:'https://whop.com/checkout/plan_x2kDWR6ur2W5E' },
 };
+// Elite slider state
+var eliteSlider=0; // 0=30av, 1=60av, 2=90av
+const ELITE_TIERS=[
+  {avatars:30, price:'89,99', annual:'66,67', annualPct:25, savings:'280', checkoutId:'elite'},
+  {avatars:60, price:'158,99',annual:'119,99',annualPct:25, savings:'468', checkoutId:'elite60'},
+  {avatars:90, price:'224,99',annual:'157,99',annualPct:30, savings:'804', checkoutId:'elite90'},
+];
+function setEliteSlider(idx){
+  eliteSlider=idx;
+  renderPricing();
+}
 const plans=[
-  {id:"starter",name:"STARTER",tagline:"Pour commencer à créer du contenu vidéo IA sans se ruiner.",price:"29,99",annual:"20,83",accent:"var(--text)",popular:false,chips:["5 avatar/mois","10 vidéos/mois","20s/avatar"],foot:"Idéal pour tester et lancer ses premières vidéos",feats:["Clip max 40s · sans watermark · export vertical","Script IA GPT-4o optimisé","Voix clonée ElevenLabs","5 Avatar IA/mois · lipsync HD · sous-titres animés","Enregistreur vocal + suppression silences","Split-screen · gameplay · sync voix/texte","10 images IA/mois · DALL·E 3 4K"]},
-  {id:"pro",name:"PRO",tagline:"Pour les créateurs qui veulent scaler sérieusement.",price:"49,99",annual:"37,50",accent:"var(--accent)",popular:true,chips:["15 avatar/mois","30 vidéos/mois","30s/avatar"],foot:"Le plus choisi · 3× plus de vidéos avatar que Starter",feats:["Tout Starter + clip max 70s · export 1080p","Whisper IA · synchronisation voix/texte pro","Suppression silences avancée","15 Avatar IA/mois · lipsync HD · effets avancés","Sous-titres styles cinématiques (karaoke, bounce…)","Split-screen · effets visuels · export multi-format","20 images IA/mois · DALL·E 3 4K"]},
-  {id:"elite",name:"ELITE ✦",tagline:"Le maximum pour les créateurs les plus ambitieux.",price:"89,99",annual:"66,67",accent:"var(--violet)",popular:false,chips:["30 avatar/mois","60 vidéos/mois","35s/avatar"],foot:"Le meilleur rapport qualité/prix du marché",feats:["Tout Pro + clip max 120s · export 4K","Meilleur lipsync du marché · rendu 1080p","Bibliothèque illimitée · export illimité","30 Avatar IA/mois · modèle avatar exclusif Élite","Support prioritaire direct + early access","50 images IA/mois · DALL·E 3 4K"]},
+  {id:"starter",name:"STARTER",tagline:"Pour commencer à créer du contenu vidéo IA sans se ruiner.",price:"29,99",annual:"20,83",savings:"110",accent:"var(--text)",popular:false,chips:["5 avatar/mois","10 vidéos/mois","20s/avatar"],foot:"Idéal pour tester et lancer ses premières vidéos",feats:["Clip max 40s · sans watermark · export vertical","Script IA GPT-4o optimisé","Voix clonée ElevenLabs","5 Avatar IA/mois · lipsync HD · sous-titres animés","Enregistreur vocal + suppression silences","Split-screen · gameplay · sync voix/texte","10 images IA/mois · DALL·E 3 4K"]},
+  {id:"pro",name:"PRO",tagline:"Pour les créateurs qui veulent scaler sérieusement.",price:"49,99",annual:"37,50",savings:"150",accent:"var(--accent)",popular:true,chips:["15 avatar/mois","30 vidéos/mois","30s/avatar"],foot:"Le plus choisi · 3× plus de vidéos avatar que Starter",feats:["Tout Starter + clip max 70s · export 1080p","Whisper IA · synchronisation voix/texte pro","Suppression silences avancée","15 Avatar IA/mois · lipsync HD · effets avancés","Sous-titres styles cinématiques (karaoke, bounce…)","Split-screen · effets visuels · export multi-format","20 images IA/mois · DALL·E 3 4K"]},
+  {id:"elite",name:"ELITE ✦",tagline:"Le maximum pour les créateurs les plus ambitieux.",price:"89,99",annual:"66,67",savings:"280",accent:"var(--violet)",popular:false,chips:["30 avatar/mois","60 vidéos/mois","35s/avatar"],foot:"Le meilleur rapport qualité/prix du marché",feats:["Tout Pro + clip max 120s · export 4K","Meilleur lipsync du marché · rendu 1080p","Bibliothèque illimitée · export illimité","30 Avatar IA/mois · modèle avatar exclusif Élite","Support prioritaire direct + early access","50 images IA/mois · DALL·E 3 4K"]},
 ];
 const CHECK='<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="var(--accent-2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>';
 function renderPricing(){
@@ -465,10 +478,36 @@ function renderPricing(){
     for(var k=0;k<pl.feats.length;k++){
       feats+='<div class="row" style="gap:10px;font-size:13.5px;align-items:flex-start"><span style="width:18px;height:18px;border-radius:50%;flex:0 0 auto;margin-top:1px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center">'+CHECK+'</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
     }
+    // Elite slider override
+    var tier=pl.id==='elite'?ELITE_TIERS[eliteSlider]:null;
+    var displayPrice=tier?(isAnnual?tier.annual:tier.price):price;
+    var displaySavings=tier?tier.savings:pl.savings;
+    var displayPct=tier?tier.annualPct:25;
+    var displayAvatars=tier?tier.avatars:null;
+    var checkoutId=tier?tier.checkoutId:pl.id;
     var annualColor=isAnnual?'var(--green)':'var(--text-3)';
-    var annualLabel=isAnnual?'Économise 25% · facturé annuellement':'Facturé mensuellement';
-    var checkoutUrl=(CHECKOUT[pl.id]&&CHECKOUT[pl.id][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+price+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div><a href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a><div class="col" style="gap:12px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+    var annualLabel=isAnnual?('Économise '+displayPct+'% · facturé annuellement'):'Facturé mensuellement';
+    var savingsLine=isAnnual?'<div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel</div>':'';
+    var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
+    // Elite slider HTML
+    var sliderHtml='';
+    if(pl.id==='elite'){
+      var btns='';
+      for(var t=0;t<ELITE_TIERS.length;t++){
+        var active=t===eliteSlider;
+        btns+='<button onclick="setEliteSlider('+t+')" style="flex:1;padding:7px 4px;border-radius:8px;border:'+(active?'2px solid rgba(154,124,255,.7)':'1px solid rgba(154,124,255,.2)')+';background:'+(active?'rgba(154,124,255,.18)':'transparent')+';color:'+(active?'var(--violet)':'var(--text-3)')+';font-family:var(--mono);font-size:11px;font-weight:'+(active?'800':'600')+';cursor:pointer;transition:all .18s">'+ELITE_TIERS[t].avatars+' avatars</button>';
+      }
+      sliderHtml='<div style="margin:0 0 18px;padding:12px;background:rgba(154,124,255,.06);border:1px solid rgba(154,124,255,.15);border-radius:12px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-3);font-weight:600;margin-bottom:8px;text-align:center;letter-spacing:.5px">AVATARS / MOIS</div><div style="display:flex;gap:6px">'+btns+'</div></div>';
+    }
+    // Update chips for elite
+    if(pl.id==='elite'&&tier){
+      chips='';
+      var eliteChips=[tier.avatars+' avatar/mois','35s/avatar'];
+      for(var j=0;j<eliteChips.length;j++){
+        chips+='<span class="pill mono" style="font-size:11px;padding:5px 10px;color:'+(j===0?pl.accent:'var(--text-2)')+';border-color:'+(j===0?chipBorder:'var(--border)')+';background:'+(j===0?chipBg:'var(--surface)')+'">'+eliteChips[j]+'</span>';
+      }
+    }
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div>'+sliderHtml+'<a href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
   document.getElementById('pricing-grid').innerHTML=html;
 }
