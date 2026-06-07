@@ -2922,57 +2922,54 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="view" id="v-audioclean">
       <div class="lib-view" style="width:100%;max-width:680px;margin:0 auto">
 
-        <div class="ph" style="margin-bottom:20px">
-          <div>
-            <div class="ph-title">🔇 Nettoyage audio</div>
-            <div class="ph-sub">Supprime les silences automatiquement · envoie l'audio nettoyé au générateur</div>
-          </div>
+        <div style="margin-bottom:26px">
+          <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><span style="font-size:24px">🪄</span>Nettoyage audio</h2>
+          <p class="muted" style="margin-top:8px;font-size:14.5px">Supprime les silences automatiquement · envoie l'audio nettoyé au générateur</p>
         </div>
 
-        <!-- Réutilise le panneau silence déjà dans le générateur — affichage inline -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px">
+        <div class="card" style="padding:24px">
 
           <!-- Source info -->
-          <div id="acSourceInfo" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:14px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px">
+          <div id="acSourceInfo" class="field mono faint" style="margin-bottom:18px;font-size:12.5px;padding:12px 14px">
             🎙️ Source : <span id="acSourceLabel">aucun fichier audio détecté — va dans le Générateur étape 3 pour charger ta voix</span>
           </div>
 
           <!-- Upload audio standalone -->
-          <div id="acDropzone" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';_acHandleFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s;margin-bottom:16px">
-            <div id="acDropContent">
-              <div style="font-size:28px;margin-bottom:6px">🎵</div>
-              <div style="font-size:13px;font-weight:700">Glisse ton fichier audio ici</div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">MP3 · WAV · M4A · OGG</div>
+          <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFile(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;border-radius:16px;cursor:pointer;margin-bottom:18px">
+            <div id="acDropContent" style="display:flex;flex-direction:column;align-items:center;gap:8px">
+              <div style="font-size:30px;opacity:.6">🎵</div>
+              <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier audio ici</div>
+              <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP3 · WAV · M4A · OGG</div>
             </div>
-            <div id="acFileInfo" style="display:none">
-              <div style="font-size:22px">✅</div>
-              <div id="acFileName" style="font-size:12px;font-weight:700;margin-top:4px"></div>
+            <div id="acFileInfo" style="display:none;flex-direction:column;align-items:center;gap:6px">
+              <div style="font-size:24px">✅</div>
+              <div id="acFileName" style="font-size:13px;font-weight:700"></div>
             </div>
           </div>
           <input type="file" id="acFileIn" accept="audio/*" style="display:none" onchange="_acHandleFile(this.files[0])">
 
           <!-- Niveau de nettoyage -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" style="padding:9px 6px;background:rgba(255,107,53,0.15);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center">
-              <div style="font-size:16px;margin-bottom:2px">🔇</div>Standard
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);border:2px solid var(--accent);background:var(--accent-soft);color:var(--text)">
+              <span style="font-size:20px">🔇</span><span style="font-weight:600;font-size:14px">Standard</span>
             </button>
-            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" style="padding:9px 6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
-              <div style="font-size:16px;margin-bottom:2px">🔈</div>Avancé
-              <span style="position:absolute;top:-7px;right:6px;font-size:7px;font-weight:800;background:var(--orange);color:#fff;padding:1px 5px;border-radius:8px;font-family:var(--mono)">Pro+</span>
+            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);border:1px solid var(--border);background:var(--surface);color:var(--text-2)">
+              <span style="font-size:20px">🔈</span><span style="font-weight:600;font-size:14px">Avancé</span>
+              <span style="position:absolute;top:-8px;right:10px;background:var(--violet);color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px">Pro+</span>
             </button>
           </div>
 
-          <button id="acAnalyzeBtn" onclick="_acAnalyze()" disabled style="width:100%;padding:13px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow);opacity:.5">
-            🔇 Supprimer les silences automatiquement
+          <button id="acAnalyzeBtn" class="btn btn-primary" onclick="_acAnalyze()" disabled style="width:100%;opacity:.5">
+            🪄 Supprimer les silences automatiquement
           </button>
 
           <!-- Waveform avec segments supprimés -->
-          <div id="acWaveWrap" style="display:none;margin-top:12px;background:var(--bg3);border-radius:10px;overflow:hidden;position:relative">
+          <div id="acWaveWrap" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative">
             <canvas id="acWaveCanvas" style="width:100%;height:64px;display:block"></canvas>
-            <div id="acWaveStats" style="padding:6px 10px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center"></div>
+            <div id="acWaveStats" style="padding:6px 10px;font-size:10px;font-family:var(--mono);color:var(--text-3);text-align:center"></div>
           </div>
 
-          <div id="acTip" style="margin-top:10px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">
+          <div id="acTip" class="center faint" style="margin-top:14px;font-size:12px">
             Charge un audio ou utilise celui du Générateur (étape 3 Voix)
           </div>
           <!-- Résultat inline après nettoyage -->
@@ -15569,12 +15566,11 @@ function _acSetLevel(level, btn){
     }
   }
   _acLevel = level;
-  document.getElementById('acLevelNormal').style.cssText = level==='normal'
-    ? 'padding:9px 6px;background:rgba(255,107,53,0.15);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center'
-    : 'padding:9px 6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center';
-  document.getElementById('acLevelStrong').style.cssText = level==='strong'
-    ? 'padding:9px 6px;background:rgba(255,107,53,0.15);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;position:relative'
-    : 'padding:9px 6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center;position:relative';
+  var _acBase='display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);';
+  var _acOn=_acBase+'border:2px solid var(--accent);background:var(--accent-soft);color:var(--text)';
+  var _acOff=_acBase+'border:1px solid var(--border);background:var(--surface);color:var(--text-2)';
+  document.getElementById('acLevelNormal').style.cssText = level==='normal' ? _acOn : _acOff;
+  document.getElementById('acLevelStrong').style.cssText = level==='strong' ? _acOn : _acOff;
 }
 
 function _acDrawWaveform(data, sr, keepSegs, totalLen){
