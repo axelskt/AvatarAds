@@ -2217,7 +2217,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           </div>
 
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">220 × 420</div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">1080 × 1920 · 9:16</div>
         </div>
 
         <!-- GENERATING -->
@@ -8215,7 +8215,10 @@ function setFormat(fmt){
     ph.style.borderRadius = Math.round(84 * d.nw/393)+'px';
   }
   const lbl = document.getElementById('previewSizeLabel');
-  if(lbl) lbl.textContent = d.dw+' × '+d.dh;
+  if(lbl){
+    var _ar = d.dw/d.dh;
+    lbl.textContent = _ar < 0.72 ? '1080 × 1920 · 9:16' : _ar > 1.3 ? '1920 × 1080 · 16:9' : '1080 × 1080 · 1:1';
+  }
   // Format button highlighting is handled by selectFormatGroup
   updateLivePreview();
 }
