@@ -2649,6 +2649,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
         </div>
 
+        <!-- NOMBRE D'IMAGES -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px 18px 14px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="3.2" height="8" rx="1"/><rect x="5.8" y="1" width="3.2" height="8" rx="1"/></svg>
+              Nombre d'images
+            </div>
+            <span id="imgCountCost" style="font-size:10px;font-family:var(--mono);color:var(--text3)">1 crédit</span>
+          </div>
+          <div id="imgCountGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
         <!-- PROMPT -->
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px 18px 16px;margin-bottom:10px">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
@@ -2719,6 +2731,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- RÉSULTAT MULTI (2-3 images) -->
+        <div id="imgResultMulti" style="display:none;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="8" height="8" rx="1.5"/><path d="M1 6.5l2.2-2 2 1.8 1.8-2.3L9 6"/></svg>
+            Variations générées · clique pour sélectionner
+          </div>
+          <div id="imgMultiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
         </div>
 
         <!-- HISTORIQUE LOCAL -->
@@ -6033,8 +6054,35 @@ let _imgSelectedStyleSuffix= _IMG_STYLES[0].suffix;
 let _imgSelectedStyleLabel = _IMG_STYLES[0].label;
 let _imgSelectedFormat     = '1024x1024';
 let _imgSelectedFormatId   = 'square';
+let _imgSelectedCount      = 1;
 
 function _imgFmtLabel(val){ return (_IMG_FORMATS.find(f=>f.value===val)||{sub:'Carré'}).sub; }
+
+function _imgInitCountGrid(){
+  const g = document.getElementById('imgCountGrid'); if(!g) return;
+  g.innerHTML = '';
+  [1,2,3].forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'img-fmt-card' + (n===_imgSelectedCount?' on':'');
+    el.innerHTML = '<div class="ifc-preview"><div style="font-size:18px;font-weight:900;font-family:var(--mono)">'+n+'</div></div><div class="ifc-label">'+n+' image'+(n>1?'s':'')+'</div><div class="ifc-sub">'+n+' crédit'+(n>1?'s':'')+'</div>';
+    el.onclick = () => _imgPickCount(n);
+    g.appendChild(el);
+  });
+}
+
+function _imgPickCount(n){
+  _imgSelectedCount = n;
+  document.querySelectorAll('#imgCountGrid .img-fmt-card').forEach((el,i) => {
+    el.classList.toggle('on', (i+1)===n);
+  });
+  const cost = document.getElementById('imgCountCost');
+  if(cost) cost.textContent = n + ' crédit' + (n>1?'s':'');
+  // Update generate button label
+  const btn = document.getElementById('imgGenBtn');
+  if(btn && !btn.disabled){
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer ' + (n>1? n+' images' : 'l\'image');
+  }
+}
 
 function _imgInitStyleGrid(){
   const g = document.getElementById('imgStyleGrid'); if(!g) return;
@@ -6189,73 +6237,163 @@ function _imgInitSuggestions(){
 function initImageGen(){
   _imgInitStyleGrid();
   _imgInitFormatGrid();
+  _imgInitCountGrid();
   _imgInitSuggestions();
   _imgRenderHistory();
   _updateImgQuotaLabel();
+}
+
+// Helper : génère UNE image et retourne son URL (ou throw)
+async function _imgGenerateOne(token, enhancedPrompt, size, style){
+  const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'dall-e-3', prompt: enhancedPrompt, n: 1, size, style: style||'natural', response_format: 'url' })
+  });
+  const data = await res.json();
+  if(data.error){ throw new Error(data.error.message||'Erreur génération'); }
+  const url = data.data?.[0]?.url;
+  if(!url){ throw new Error('Aucune image retournée'); }
+  return url;
+}
+
+// Affiche une image dans le bloc résultat principal (single)
+function _imgShowSingle(url, size){
+  const resultWrap = document.getElementById('imgResult');
+  resultWrap.style.display = 'block';
+  const img = document.getElementById('imgOutput');
+  img.style.display = 'block';
+  img.src = url;
+  document.getElementById('imgDownloadBtn').href = url;
+  const badges = document.getElementById('imgBadges');
+  if(badges){
+    badges.innerHTML = '';
+    const bStyle = document.createElement('div');
+    bStyle.textContent = _imgSelectedStyleLabel;
+    bStyle.style.cssText = 'padding:4px 10px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-family:var(--font);color:rgba(255,255,255,0.85);font-weight:600';
+    const bSize = document.createElement('div');
+    bSize.textContent = _imgFmtLabel(size);
+    bSize.style.cssText = bStyle.style.cssText;
+    badges.appendChild(bStyle); badges.appendChild(bSize);
+  }
 }
 
 async function generateImage(){
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
   if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
-  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
+  const count = _imgSelectedCount || 1;
+  const remaining = _imgMonthRemaining();
+  if(remaining<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
+  // Pas assez de crédits pour le count demandé → on plafonne
+  const actualCount = Math.min(count, remaining);
+  if(actualCount < count){ toast('⚠️ Seulement ' + remaining + ' crédit'+(remaining>1?'s':'')+' — génération de '+actualCount+' image'+(actualCount>1?'s':'')); }
+
   const btn = document.getElementById('imgGenBtn');
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
+  const baseLabel = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer ' + (count>1? count+' images' : 'l\'image');
   btn.disabled = true; btn.style.opacity = '0.75';
-  // Show loading overlay
-  const resultWrap = document.getElementById('imgResult');
+
+  const singleWrap = document.getElementById('imgResult');
+  const multiWrap  = document.getElementById('imgResultMulti');
+  const multiGrid  = document.getElementById('imgMultiGrid');
   const overlay    = document.getElementById('imgLoadingOverlay');
-  if(resultWrap.style.display !== 'none') overlay.style.display = 'flex';
-  else { resultWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+
   try {
     const session = (await sb.auth.getSession()).data.session;
     const token   = session?.access_token;
-    if(!token){ toast('⚠️ Connecte-toi pour générer des images'); return; }
+    if(!token){ toast('⚠️ Connecte-toi pour générer des images'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
 
-    const size  = _imgSelectedFormat;
-    const style = _imgSelectedStyleApi;
+    const size   = _imgSelectedFormat;
+    const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
     const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
-    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'dall-e-3', prompt: enhancedPrompt, n: 1, size, style: style||'natural', response_format: 'url' })
-    });
-    const data = await res.json();
-    if(data.error){ toast('⚠️ ' + (data.error.message||'Erreur génération')); return; }
-    const url = data.data?.[0]?.url;
-    if(!url){ toast('⚠️ Aucune image retournée'); return; }
-    _imgMonthIncrement();
-    const img = document.getElementById('imgOutput');
-    img.style.display = 'block';
-    img.src = url;
-    document.getElementById('imgDownloadBtn').href = url;
-    // Update result badges
-    const badges = document.getElementById('imgBadges');
-    if(badges){
-      badges.innerHTML = '';
-      const bStyle = document.createElement('div');
-      bStyle.textContent = _imgSelectedStyleLabel;
-      bStyle.style.cssText = 'padding:4px 10px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:10px;font-family:var(--font);color:rgba(255,255,255,0.85);font-weight:600';
-      const bSize = document.createElement('div');
-      bSize.textContent = _imgFmtLabel(size);
-      bSize.style.cssText = bStyle.style.cssText;
-      badges.appendChild(bStyle); badges.appendChild(bSize);
+
+    if(actualCount === 1){
+      // ── Mode single (comportement original) ──
+      multiWrap.style.display = 'none';
+      if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
+      else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
+      const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+      _imgMonthIncrement();
+      _imgShowSingle(url, size);
+      _imgSaveHistory(url, _imgSelectedStyleLabel, size);
+      _imgRenderHistory();
+      const rem = _imgMonthRemaining();
+      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+    } else {
+      // ── Mode multi (2-3 images) ──
+      singleWrap.style.display = 'none';
+      multiWrap.style.display = 'block';
+      multiGrid.style.gridTemplateColumns = 'repeat(' + (actualCount===2?2:3) + ',1fr)';
+      // Placeholders loading
+      multiGrid.innerHTML = '';
+      for(let i=0;i<actualCount;i++){
+        const ph = document.createElement('div');
+        ph.id = '_imgMultiSlot'+i;
+        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'16/9':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+        ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
+        multiGrid.appendChild(ph);
+      }
+      const urls = [];
+      for(let i=0;i<actualCount;i++){
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image '+(i+1)+'/'+actualCount+'…';
+        try {
+          const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+          urls.push(url);
+          _imgMonthIncrement();
+          _imgSaveHistory(url, _imgSelectedStyleLabel, size);
+          // Remplir le slot
+          const slot = document.getElementById('_imgMultiSlot'+i);
+          if(slot){
+            slot.innerHTML = '';
+            slot.style.cursor = 'pointer';
+            slot.title = 'Cliquer pour sélectionner';
+            const im = document.createElement('img');
+            im.src = url;
+            im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+            slot.appendChild(im);
+            // Boutons hover
+            const bar = document.createElement('div');
+            bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)';
+            const pickBtn = document.createElement('button');
+            pickBtn.textContent = '✓ Choisir';
+            pickBtn.style.cssText = 'flex:1;padding:7px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer';
+            pickBtn.onclick = (e)=>{ e.stopPropagation(); _imgSelectFromMulti(url, size); };
+            const dlBtn = document.createElement('a');
+            dlBtn.href = url; dlBtn.download = 'avatarads-image-'+(i+1)+'.png';
+            dlBtn.innerHTML = '⬇';
+            dlBtn.style.cssText = 'padding:7px 11px;background:rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;text-decoration:none;display:flex;align-items:center';
+            dlBtn.onclick = (e)=>e.stopPropagation();
+            bar.appendChild(pickBtn); bar.appendChild(dlBtn);
+            slot.appendChild(bar);
+            slot.onclick = ()=> _imgSelectFromMulti(url, size);
+          }
+        } catch(err){
+          const slot = document.getElementById('_imgMultiSlot'+i);
+          if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:11px;font-family:var(--mono);text-align:center;padding:10px">⚠️ Échec</div>'; }
+        }
+      }
+      _imgRenderHistory();
+      const rem = _imgMonthRemaining();
+      toast('✅ ' + urls.length + ' images générées · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     }
-    // Save to history
-    _imgSaveHistory(url, _imgSelectedStyleLabel, size);
-    _imgRenderHistory();
-    const rem = _imgMonthRemaining();
-    toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     _updateImgQuotaLabel();
   } catch(e){
     console.error('generateImage:', e);
     toast('⚠️ Erreur : ' + e.message);
   } finally {
     overlay.style.display = 'none';
-    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer l\'image';
+    btn.innerHTML = baseLabel;
     btn.disabled = false; btn.style.opacity = '1';
   }
+}
+
+// Sélectionne une image depuis la grille multi → l'affiche en grand (single)
+function _imgSelectFromMulti(url, size){
+  document.getElementById('imgResultMulti').style.display = 'none';
+  _imgShowSingle(url, size);
+  document.getElementById('imgResult').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
