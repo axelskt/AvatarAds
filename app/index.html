@@ -626,36 +626,38 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div>
       <div class="nav-i" onclick="nav('audioclean',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 7.5h2l2-5 2 10 2-7 2 4 1-2h2"/></svg>
-        🔇 Nettoyage audio
+        Nettoyage audio
+      </div>
+    </div>
+    <div class="nav-g" style="margin-top:14px">
+      <div class="nav-gl">Studio</div>
+      <div class="nav-i" onclick="nav('express',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
+        Express
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
+      </div>
+      <div class="nav-i" onclick="nav('cartoon',this)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="6" r="3.5"/><path d="M3 12.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11.5 2.5l1 1M3.5 2.5l-1 1"/></svg>
+        Cartoon
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
         Affiliation
       </div>
-      <div class="nav-i" onclick="nav('express',this)" style="margin-top:6px;border-top:1px solid var(--border);padding-top:10px">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
-        ⚡ Express
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
-      </div>
-      <div class="nav-i" onclick="nav('cartoon',this)" style="margin-top:2px">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="6" r="3.5"/><path d="M3 12.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11.5 2.5l1 1M3.5 2.5l-1 1"/></svg>
-        🎭 Cartoon
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
-      </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
-      <div class="nav-gl">Ressources</div>
       <div class="nav-i" onclick="openSetup()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2.5M7.5 11.5V14M1 7.5h2.5M11.5 7.5H14M3.2 3.2l1.77 1.77M10.03 10.03l1.77 1.77M3.2 11.8l1.77-1.77M10.03 4.97l1.77-1.77"/></svg>
         Connexions
       </div>
-      <div class="nav-i" onclick="openBugReport()" style="color:var(--text2)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5v3M7.5 10h.01"/></svg>
-        Report bug
-      </div>
       <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
         Mon compte
+      </div>
+      <div class="nav-i" onclick="openBugReport()" style="color:var(--text2)">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="5" height="8" rx="2.5"/><path d="M5 5.5H2.5M5 8H2.5M10 5.5h2.5M10 8h2.5M7.5 3V1M6 1.8l1 1.2M9 1.8l-1 1.2"/></svg>
+        Report bug
       </div>
     </div>
   </div>
