@@ -2581,96 +2581,82 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="lib-view" style="width:100%;max-width:680px;margin:0 auto;padding-bottom:40px">
 
         <!-- HERO -->
-        <div style="background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,107,53,0.04));border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:28px;margin-bottom:20px;text-align:center">
-          <div style="font-size:32px;margin-bottom:10px">💸</div>
-          <div style="font-size:20px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px">Programme d'Affiliation</div>
-          <div style="font-size:13px;color:var(--text2);max-width:420px;margin:0 auto">Gagne <strong style="color:var(--orange)">30% de commission récurrente</strong> sur chaque abonnement que tu parraine — à vie, sans limite.</div>
+        <div class="card center" style="padding:34px 28px;margin-bottom:18px;position:relative;overflow:hidden;background:radial-gradient(600px 220px at 50% 0,rgba(255,90,31,.16),var(--surface));border-color:var(--accent-line)">
+          <div style="font-size:34px">💸</div>
+          <h2 class="display" style="font-size:30px;font-weight:800;margin-top:10px">Programme d'Affiliation</h2>
+          <p class="muted" style="margin-top:10px;font-size:15.5px;max-width:520px;margin-inline:auto">Gagne <b style="color:var(--accent-2)">30% de commission récurrente</b> sur chaque abonnement que tu parraines — à vie, sans limite.</p>
         </div>
 
         <!-- STATS -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--orange)">30%</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">COMMISSION</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">Sur chaque paiement, à vie</div>
-          </div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--green)">∞</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">COOKIE</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">Pas d'expiration</div>
-          </div>
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--text)">50€</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">MINIMUM</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">Virement le 1er du mois</div>
-          </div>
+        <div class="row gap16" style="margin-bottom:18px;align-items:stretch">
+          <div class="card center" style="padding:22px 16px;flex:1"><div class="display" style="font-size:34px;font-weight:800;color:var(--accent)">30%</div><div class="eyebrow" style="margin-top:8px">Commission</div><div class="faint" style="font-size:12px;margin-top:5px">Sur chaque paiement, à vie</div></div>
+          <div class="card center" style="padding:22px 16px;flex:1"><div class="display" style="font-size:34px;font-weight:800;color:var(--violet)">∞</div><div class="eyebrow" style="margin-top:8px">Cookie</div><div class="faint" style="font-size:12px;margin-top:5px">Pas d'expiration</div></div>
+          <div class="card center" style="padding:22px 16px;flex:1"><div class="display" style="font-size:34px;font-weight:800;color:var(--green)">50€</div><div class="eyebrow" style="margin-top:8px">Minimum</div><div class="faint" style="font-size:12px;margin-top:5px">Virement le 1er du mois</div></div>
         </div>
 
         <!-- LIEN AFFILIÉ -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
-          <div class="flbl" style="margin-bottom:10px">🔗 Ton lien d'affiliation unique</div>
-          <div style="display:flex;gap:8px">
-            <input id="affLink" readonly style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none" value="Chargement…">
-            <button onclick="copyAffLink()" style="padding:10px 16px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Copier</button>
+        <div class="card" style="padding:22px;margin-bottom:18px">
+          <div class="label" style="margin-bottom:12px">🔗 Ton lien d'affiliation unique</div>
+          <div class="row gap12" style="flex-wrap:wrap">
+            <input id="affLink" class="field mono grow" readonly style="font-size:13.5px;min-width:240px" value="Chargement…">
+            <button class="btn btn-primary" onclick="copyAffLink()" style="flex:0 0 auto">📋 Copier</button>
           </div>
           <!-- Partage -->
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <button onclick="shareAff('twitter')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#1da1f2';this.style.color='#1da1f2'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">𝕏 Twitter</button>
-            <button onclick="shareAff('facebook')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#1877f2';this.style.color='#1877f2'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">📘 Facebook</button>
-            <button onclick="shareAff('tiktok')" style="flex:1;min-width:100px;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--text)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">🎵 TikTok</button>
+          <div class="row gap12" style="margin-top:14px;flex-wrap:wrap">
+            <button onclick="shareAff('twitter')" class="btn btn-ghost grow" style="font-size:13.5px;min-width:100px">𝕏 Twitter</button>
+            <button onclick="shareAff('facebook')" class="btn btn-ghost grow" style="font-size:13.5px;min-width:100px">📘 Facebook</button>
+            <button onclick="shareAff('tiktok')" class="btn btn-ghost grow" style="font-size:13.5px;min-width:100px">🎵 TikTok</button>
           </div>
         </div>
 
         <!-- STATS FILLEULS -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
-          <div class="flbl" style="margin-bottom:14px">📊 Tes statistiques</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div style="background:var(--bg3);border-radius:10px;padding:14px">
-              <div style="font-size:24px;font-weight:800" id="affStatRefs">—</div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Filleuls inscrits</div>
+        <div class="card" style="padding:22px;margin-bottom:18px">
+          <div class="label" style="margin-bottom:16px">📊 Tes statistiques</div>
+          <div class="row gap16" style="align-items:stretch">
+            <div class="card center" style="padding:20px 16px;flex:1;background:var(--panel-1)">
+              <div class="display" style="font-size:30px;font-weight:800" id="affStatRefs">—</div>
+              <div class="faint mono" style="font-size:11px;margin-top:6px">Filleuls inscrits</div>
             </div>
-            <div style="background:var(--bg3);border-radius:10px;padding:14px">
-              <div style="font-size:24px;font-weight:800;color:var(--orange)" id="affStatEarnings">—</div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Gains estimés</div>
+            <div class="card center" style="padding:20px 16px;flex:1;background:var(--panel-1)">
+              <div class="display accent" style="font-size:30px;font-weight:800" id="affStatEarnings">—</div>
+              <div class="faint mono" style="font-size:11px;margin-top:6px">Gains estimés</div>
             </div>
           </div>
-          <div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:var(--mono)">Les conversions sont calculées une fois Stripe connecté · Paiement le 1er du mois via virement</div>
+          <p class="faint mono" style="margin-top:14px;font-size:11px;line-height:1.5">Les conversions sont calculées une fois Stripe connecté · Paiement le 1er du mois via virement</p>
         </div>
 
         <!-- COMMENT ÇA MARCHE -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
-          <div class="flbl" style="margin-bottom:14px">⚡ Comment ça marche</div>
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <div style="display:flex;align-items:flex-start;gap:12px">
-              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">1</div>
-              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Partage ton lien</div><div style="font-size:11px;color:var(--text3)">Sur TikTok, YouTube, Instagram, ta newsletter — partout</div></div>
+        <div class="card" style="padding:22px;margin-bottom:18px">
+          <div class="label" style="margin-bottom:18px">⚡ Comment ça marche</div>
+          <div class="col gap16">
+            <div class="row gap12" style="align-items:flex-start">
+              <span style="width:26px;height:26px;border-radius:50%;flex:0 0 auto;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-size:12.5px;font-weight:800;display:grid;place-items:center">1</span>
+              <div class="col" style="line-height:1.4"><span style="font-weight:700;font-size:15px">Partage ton lien</span><span class="faint" style="font-size:13px">Sur TikTok, YouTube, Instagram, ta newsletter — partout</span></div>
             </div>
-            <div style="display:flex;align-items:flex-start;gap:12px">
-              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">2</div>
-              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Ils s'inscrivent</div><div style="font-size:11px;color:var(--text3)">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</div></div>
+            <div class="row gap12" style="align-items:flex-start">
+              <span style="width:26px;height:26px;border-radius:50%;flex:0 0 auto;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-size:12.5px;font-weight:800;display:grid;place-items:center">2</span>
+              <div class="col" style="line-height:1.4"><span style="font-weight:700;font-size:15px">Ils s'inscrivent</span><span class="faint" style="font-size:13px">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</span></div>
             </div>
-            <div style="display:flex;align-items:flex-start;gap:12px">
-              <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--orange);flex-shrink:0">3</div>
-              <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Tu gagnes 30% à vie</div><div style="font-size:11px;color:var(--text3)">Sur chaque renouvellement mensuel ou annuel — sans limite</div></div>
+            <div class="row gap12" style="align-items:flex-start">
+              <span style="width:26px;height:26px;border-radius:50%;flex:0 0 auto;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-size:12.5px;font-weight:800;display:grid;place-items:center">3</span>
+              <div class="col" style="line-height:1.4"><span style="font-weight:700;font-size:15px">Tu gagnes 30% à vie</span><span class="faint" style="font-size:13px">Sur chaque renouvellement mensuel ou annuel — sans limite</span></div>
             </div>
           </div>
         </div>
 
         <!-- CALCULATEUR DE REVENUS -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px">
-          <div class="flbl" style="margin-bottom:16px">📊 Simulateur de revenus</div>
-          <div style="font-size:12px;font-family:var(--mono);color:var(--text3);margin-bottom:16px;text-align:center">Si je ramène <strong id="affCalcCount" style="color:var(--text);font-size:15px">10</strong> filleuls/mois</div>
+        <div class="card" style="padding:24px 22px">
+          <div class="label" style="margin-bottom:18px">📊 Simulateur de revenus</div>
+          <p class="center muted" style="font-size:15px">Si je ramène <b class="accent" id="affCalcCount" style="font-size:18px">10</b> filleuls/mois</p>
           <input type="range" id="affCalcSlider" min="0" max="500" value="10" oninput="affUpdateCalc(this.value)"
-            style="width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--orange) 2%,rgba(255,255,255,0.12) 2%,rgba(255,255,255,0.12) 100%);margin-bottom:6px">
-          <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:20px"><span>0</span><span>250</span><span>500</span></div>
-          <div style="text-align:center">
-            <div id="affCalcMonthly" style="font-size:40px;font-weight:900;letter-spacing:-2px;color:var(--orange);line-height:1">114€</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:4px">/mois</div>
-            <div id="affCalcYearly" style="font-size:12px;font-family:var(--mono);color:var(--text2)">1 368€ par an</div>
+            style="width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;margin:18px 0 6px;background:linear-gradient(to right,var(--accent) 2%,var(--surface-3) 2%,var(--surface-3) 100%)">
+          <div class="row" style="justify-content:space-between"><span class="mono faint" style="font-size:11px">0</span><span class="mono faint" style="font-size:11px">250</span><span class="mono faint" style="font-size:11px">500</span></div>
+          <div class="center" style="margin-top:18px">
+            <div class="display accent" id="affCalcMonthly" style="font-size:52px;font-weight:800;line-height:1">114€</div>
+            <div class="faint" style="font-size:13px;margin-top:2px">/mois</div>
+            <div class="muted" id="affCalcYearly" style="font-size:15px;margin-top:8px">1 368€ par an</div>
           </div>
-          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.6">
-            Calcul basé sur 30% · mix Starter/Pro/Elite · prix moyen 38€/mois · récurrent à vie
-          </div>
+          <p class="center faint mono" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;line-height:1.6">Calcul basé sur 30% · mix Starter/Pro/Elite · prix moyen 38€/mois · récurrent à vie</p>
         </div>
 
       </div>
