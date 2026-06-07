@@ -381,7 +381,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .lib-view::-webkit-scrollbar-thumb{background:var(--bg4)}
 
 /* ══ EXPRESS VIEW ══ */
-.exp-drop{border:2px dashed var(--border2);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative}
+.exp-drop{border:2px dashed var(--border-2);border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-1);position:relative}
 .exp-drop:hover,.exp-drop.drag-over{border-color:var(--orange);background:rgba(255,107,53,0.05)}
 .exp-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .exp-vidinfo{display:none;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px 16px}
@@ -395,7 +395,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .exp-prog-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
 .exp-prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:3px;transition:width .15s}
 .exp-prog-pct{font-size:11px;font-family:var(--mono);color:var(--text3);min-width:32px;text-align:right}
-.exp-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 22px;margin-bottom:14px}
+.exp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 22px;margin-bottom:14px}
 .exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
 .exp-wpg-chip{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;transition:all .15s}
 .exp-wpg-chip:hover{border-color:var(--border2);color:var(--text2)}
@@ -2349,7 +2349,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- TikTok -->
-        <div id="sc-tiktok" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
+        <div id="sc-tiktok" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#010101;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📱</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">TikTok</div>
@@ -2359,7 +2359,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- Instagram -->
-        <div id="sc-instagram" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
+        <div id="sc-instagram" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📸</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">Instagram Reels</div>
@@ -2369,7 +2369,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- Facebook -->
-        <div id="sc-facebook" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
+        <div id="sc-facebook" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#1877f2;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👥</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">Facebook Reels</div>
@@ -2379,7 +2379,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <!-- LinkedIn -->
-        <div id="sc-linkedin" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
+        <div id="sc-linkedin" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#0A66C2;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
           </div>
@@ -2461,7 +2461,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </button>
         </div>
 
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;gap:8px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;gap:8px">
           <button onclick="copyYtMeta()" style="flex:1;padding:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">📋 Copier titre + description</button>
           <button onclick="openYtStudio()" style="flex:1;padding:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">🎬 Ouvrir YouTube Studio</button>
         </div>
@@ -3191,7 +3191,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div id="cartoonContent">
 
           <!-- ── MODULE 1 : STYLE + PERSO ── -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">1</div>
               <div style="font-size:13px;font-weight:700">Style du personnage</div>
@@ -3236,7 +3236,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
 
           <!-- ── MODULE 2 : ANIMER ── -->
-          <div id="cartoonModule2" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+          <div id="cartoonModule2" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">2</div>
               <div style="font-size:13px;font-weight:700">Anime le personnage</div>
@@ -3275,7 +3275,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
 
           <!-- ── MODULE 3 : VOIX ── -->
-          <div id="cartoonModule3Voice" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+          <div id="cartoonModule3Voice" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
               <div style="font-size:13px;font-weight:700">Voix <span style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel)</span></div>
@@ -3294,7 +3294,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
 
           <!-- ── MODULE 4 : SOUS-TITRES ── -->
-          <div id="cartoonModule3" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
+          <div id="cartoonModule3" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">4</div>
               <div style="font-size:13px;font-weight:700">Sous-titres</div>
