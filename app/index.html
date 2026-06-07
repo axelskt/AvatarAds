@@ -1834,7 +1834,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
               <!-- VIDEO CONTENT -->
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
-                <div id="avZone" style="background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
+                <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
@@ -1873,38 +1873,35 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="width:30px;height:14px;border:2px solid rgba(255,255,255,.8);border-radius:3px;position:relative;padding:1px"><div style="background:#fff;height:100%;width:68%;border-radius:1px"></div><div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:3px;height:7px;background:rgba(255,255,255,.5);border-radius:1px"></div></div>
                   </div>
                 </div>
-                <!-- Nav tabs -->
-                <div style="position:absolute;top:50px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:18px;padding:5px 14px;background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent)">
-                  <span style="font-size:14px;color:rgba(255,255,255,.5);font-weight:600">LIVE</span>
-                  <span style="font-size:14px;color:rgba(255,255,255,.5)">Suivis</span>
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:16px;color:#fff;font-weight:700">Pour toi</span><div style="width:100%;height:2px;background:#fff;border-radius:1px"></div></div>
-                  <span style="font-size:14px;color:rgba(255,255,255,.5)">Boutique</span>
-                  <span style="font-size:20px;color:#fff">🔍</span>
+                <!-- Nav tabs (design : Abonnements · Pour toi · Boutique) -->
+                <div style="position:absolute;top:52px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:26px;padding:5px 14px;z-index:60">
+                  <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:600">Abonnements</span>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:16px;color:#fff;font-weight:700">Pour toi</span><div style="width:100%;height:2.5px;background:#fff;border-radius:2px"></div></div>
+                  <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:600">Boutique</span>
                 </div>
-                <!-- Right sidebar -->
-                <div style="position:absolute;right:10px;bottom:100px;display:flex;flex-direction:column;align-items:center;gap:16px">
-                  <div style="text-align:center">
-                    <div style="width:52px;height:52px;border-radius:50%;background:var(--orange);border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;margin:0 auto">A</div>
-                    <div style="width:22px;height:22px;background:#fe2c55;border-radius:50%;margin:-8px auto 0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900;border:2px solid #000">+</div>
+                <!-- Right rail (icônes nues, comme le design / vrai TikTok) -->
+                <div style="position:absolute;right:12px;bottom:150px;display:flex;flex-direction:column;align-items:center;gap:20px">
+                  <div style="text-align:center;margin-bottom:4px">
+                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#1A0A02;margin:0 auto">A</div>
+                    <div style="width:24px;height:24px;background:var(--accent);border-radius:50%;margin:-10px auto 0;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:900;border:2px solid #000">+</div>
                   </div>
-                  <div style="text-align:center"><div style="width:52px;height:52px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="28" height="28" viewBox="0 0 16 16"><path d="M8 1.5C5.5 1.5 3 3.8 3 6.8C3 11 8 15 8 15C8 15 13 11 13 6.8C13 3.8 10.5 1.5 8 1.5Z" fill="white"/></svg></div><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:3px">59K</div></div>
-                  <div style="text-align:center"><div style="width:52px;height:52px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="28" height="28" viewBox="0 0 16 16"><path d="M8 2C4.7 2 2 4.4 2 7.5C2 9.1 2.8 10.5 4 11.5L3.3 14L6 13.3C6.6 13.5 7.3 13.6 8 13.6C11.3 13.6 14 11.2 14 8.1C14 5 11.3 2 8 2Z" fill="white"/></svg></div><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:3px">1.2K</div></div>
-                  <div style="text-align:center"><div style="width:52px;height:52px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="28" height="28" viewBox="0 0 16 16"><path d="M12 2L2 7L5.5 8.5L7 13Z" fill="white"/></svg></div><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:3px">87</div></div>
-                  <div style="width:52px;height:52px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:22px">•••</span></div>
+                  <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
+                  <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
+                  <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">2,1K</div></div>
+                  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#444,#111);border:3px solid #000;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                 </div>
                 <!-- Bottom info -->
-                <div style="position:absolute;bottom:95px;left:18px;right:85px">
-                  <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px" id="tt-handle">@sofia.ads</div>
-                  <div style="font-size:16px;color:rgba(255,255,255,.85);line-height:1.4">Viens en DM si tu veux savoir comment on fait... <span style="font-weight:700">plus</span></div>
-                  <div style="height:3px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:8px"><div style="width:25%;height:100%;background:#fff;border-radius:2px"></div></div>
+                <div style="position:absolute;bottom:150px;left:18px;right:90px">
+                  <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:5px" id="tt-handle">@sofia.ads</div>
+                  <div style="font-size:16px;color:rgba(255,255,255,.9);line-height:1.4">Découvre comment… <span style="font-weight:700">plus</span></div>
                 </div>
-                <!-- Bottom nav -->
-                <div style="position:absolute;bottom:0;left:0;right:0;height:86px;background:#000;display:flex;align-items:center;justify-content:space-around;padding-bottom:18px">
-                  <div style="text-align:center"><svg width="32" height="32" viewBox="0 0 20 20" fill="white"><path d="M10 2L2 9h2v9h5v-5h2v5h5V9h2z"/></svg><div style="font-size:11px;color:#fff;font-family:var(--mono)">Accueil</div></div>
-                  <div style="text-align:center"><svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5l3 3"/></svg><div style="font-size:11px;color:rgba(255,255,255,.5);font-family:var(--mono)">Ami(e)s</div></div>
-                  <div style="width:58px;height:38px;border-radius:10px;background:linear-gradient(135deg,#69C9D0 0%,#fff 50%,#EE1D52 100%);display:flex;align-items:center;justify-content:center"><span style="font-size:28px;font-weight:900;color:#fff;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.3)">+</span></div>
-                  <div style="text-align:center"><svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><path d="M2 4h16v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/><path d="M2 4l8 7 8-7"/></svg><div style="font-size:11px;color:rgba(255,255,255,.5);font-family:var(--mono)">Messages</div></div>
-                  <div style="text-align:center"><svg width="32" height="32" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5"><circle cx="10" cy="7" r="4"/><path d="M2 18c0-4 3.6-7 8-7s8 3 8 7"/></svg><div style="font-size:11px;color:rgba(255,255,255,.5);font-family:var(--mono)">Profil</div></div>
+                <!-- Bottom nav (icônes seules, barre floutée — design) -->
+                <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                  <div style="width:46px;height:30px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center"><span style="font-size:24px;font-weight:900;color:#111;line-height:1">+</span></div>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 13h5l1 2h4l1-2h5"/></svg>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
                 </div>
               </div>
 
