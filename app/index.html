@@ -195,11 +195,11 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 
 /* STEPS */
 .steps-bar{display:flex;padding:0 20px;border-bottom:1px solid var(--border);gap:0;flex-shrink:0;align-items:center;height:48px}
-.step{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;transition:all .2s;white-space:nowrap}
-.step.on{color:var(--text)}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--text-3);cursor:pointer;transition:all .2s;white-space:nowrap}
+.step.on{color:var(--text);font-weight:600}
 .step.done{color:var(--green)}
-.step-n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--mono);flex-shrink:0;transition:all .25s;background:var(--bg3)}
-.step.on .step-n{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 10px var(--orange-glow)}
+.step-n{width:26px;height:26px;border-radius:50%;border:1px solid var(--border-2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0;transition:all .25s;background:var(--surface)}
+.step.on .step-n{background:var(--accent);border-color:var(--accent);color:#1A0A02;box-shadow:0 0 10px var(--accent-glow)}
 .step.done .step-n{background:rgba(0,217,126,0.15);border-color:var(--green);color:var(--green)}
 .step.done .step-n::before{content:'✓';font-size:9px}
 .step.done .step-n-num{display:none}
@@ -666,6 +666,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- ══ GENERATOR ══ -->
     <div class="view on" id="v-generator">
       <div class="gen-left">
+        <div style="padding:18px 20px 4px;flex-shrink:0">
+          <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/5</div>
+          <h2 class="display" id="genStepTitle" style="font-size:24px;font-weight:700;margin-top:6px">Décris ton produit</h2>
+        </div>
         <div class="steps-bar">
           <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Produit</div>
           <div class="step-line"></div>
@@ -7232,6 +7236,12 @@ function _showResultArea(){
 }
 
 function updateSteps(){
+  // En-tête refonte : eyebrow + titre display par étape
+  var _stepTitles=['Décris ton produit','Choisis ton avatar','Donne-lui une voix','Peaufine le style','Lance la génération'];
+  var _eyb=document.getElementById('genStepEyebrow');
+  var _ttl=document.getElementById('genStepTitle');
+  if(_eyb) _eyb.textContent='Générateur · Étape '+step+'/5';
+  if(_ttl) _ttl.textContent=_stepTitles[step-1]||'';
   if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
