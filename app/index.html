@@ -558,34 +558,41 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <div class="logo-name">AvatarAds</div>
     <div class="logo-members">IA Manager · Membres</div>
   </div>
-  <div class="topbar-right" style="flex:1;justify-content:center">
-    <div id="memberBar" style="display:none;align-items:center;gap:10px">
-      <div style="font-size:12px;font-weight:600;color:var(--text)" id="memberName">—</div>
-      <div id="memberPlanBadge" style="font-size:9px;font-family:var(--mono);letter-spacing:.8px;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:var(--bg4);border:1px solid var(--border2);color:var(--text3)">FREE</div>
-      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-      <div style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px" id="memberQuotaBox">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="opacity:.5"><path d="M2 2h8v8H2z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberCredits">—</span>
-        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="memberCreditsLabel">vidéos restantes</span>
+  <div class="topbar-right" style="flex:1;justify-content:flex-end">
+    <div id="memberBar" style="display:none;align-items:center;gap:12px">
+      <!-- Compteur vidéos -->
+      <div class="row" id="memberQuotaBox" style="gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+        <span class="mono" style="font-size:12.5px"><b id="memberCredits" style="color:var(--text)">—</b> <span class="faint" id="memberCreditsLabel">vidéos</span></span>
       </div>
-      <div id="memberImgQuotaBox" style="display:none;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;cursor:pointer" onclick="nav('imagegen',document.querySelector('.nav-i[onclick*=imagegen]'))" title="Crédits images IA ce mois">
-        <span style="font-size:11px">🖼️</span>
-        <span style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="memberImgCredits">—</span>
-        <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">img</span>
+      <!-- Compteur images -->
+      <div class="row" id="memberImgQuotaBox" style="display:none;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px;cursor:pointer" onclick="nav('imagegen',document.querySelector('.nav-i[onclick*=imagegen]'))" title="Crédits images IA ce mois">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <span class="mono" style="font-size:12.5px"><b id="memberImgCredits" style="color:var(--text)">—</b> <span class="accent">img</span></span>
       </div>
-      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:5px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.3)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <button id="btnSeePlans" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:8px;padding:6px 14px;color:#fff;font-size:11px;font-family:var(--mono);font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 2px 10px rgba(255,107,53,0.3)" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
         🚀 Voir les plans
       </button>
-      <button id="btnUpgradePlan" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:5px 12px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(168,85,247,0.15)" onmouseover="this.style.background='rgba(168,85,247,0.28)';this.style.borderColor='rgba(168,85,247,0.65)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08))';this.style.borderColor='rgba(168,85,247,0.4)'">
+      <button id="btnUpgradePlan" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:6px 12px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.28)';this.style.borderColor='rgba(168,85,247,0.65)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08))';this.style.borderColor='rgba(168,85,247,0.4)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
-      <button id="btnBuyCredits" onclick="openUpgradeModal()" style="display:none;align-items:center;gap:4px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.3);border-radius:8px;padding:4px 10px;color:#4dabf7;font-size:11px;font-family:var(--mono);font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(77,171,247,0.18)';this.style.borderColor='rgba(77,171,247,0.5)'" onmouseout="this.style.background='rgba(77,171,247,0.1)';this.style.borderColor='rgba(77,171,247,0.3)'">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Crédits
+      <!-- + Crédits (style design : accent-soft) -->
+      <button id="btnBuyCredits" onclick="openUpgradeModal()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crédits
       </button>
-      <!-- Logout rapide -->
-      <button onclick="authLogout()" style="display:flex;align-items:center;gap:5px;background:transparent;border:1px solid transparent;border-radius:8px;padding:5px 8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2h3a1 1 0 011 1v8a1 1 0 01-1 1H9M6 10l4-3-4-3M10 7H1"/></svg>
+      <!-- Séparateur -->
+      <div style="width:1px;height:26px;background:var(--border)"></div>
+      <!-- Compte -->
+      <div class="row" style="gap:9px">
+        <div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:grid;place-items:center;font-weight:800;color:#1A0A02;font-size:13px;flex:0 0 auto">A</div>
+        <div class="col" style="line-height:1.2;align-items:flex-start">
+          <span style="font-size:13.5px;font-weight:600" id="memberName">—</span>
+          <span id="memberPlanBadge" style="font-size:9px;font-family:var(--mono);letter-spacing:.6px;text-transform:uppercase;padding:1px 7px;border-radius:10px;background:var(--bg4);border:1px solid var(--border2);color:var(--text3);margin-top:2px">FREE</span>
+        </div>
+      </div>
+      <!-- Logout -->
+      <button onclick="authLogout()" class="btn-quiet" style="display:flex;align-items:center;padding:5px 6px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text-2)'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
     </div>
   </div>
