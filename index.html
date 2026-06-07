@@ -95,16 +95,47 @@ nav{position:sticky;top:0;z-index:50}
 .showcase-bar-fill{width:42%;height:100%;border-radius:3px;background:#fff}
 .ph{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 10px,rgba(255,255,255,0) 10px 20px),var(--panel-1);border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.05em;border-radius:var(--r)}
 input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
+.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:all .25s;flex-shrink:0}
+.sc-dot.on{background:var(--accent);width:20px;border-radius:4px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
 @media(max-width:900px){
   .wrap{padding:0 20px}
   .hide-mobile{display:none!important}
   .grid-3{grid-template-columns:1fr!important}
   .grid-5{grid-template-columns:1fr 1fr!important}
-  .showcase-row{height:320px!important;overflow:hidden!important;margin-top:24px!important}
-  .showcase-side{display:none!important}
-  .showcase-center{width:160px!important;height:320px!important}
+  .grid-5>div:last-child{grid-column:1/-1!important;border-left:none!important;border-top:1px solid var(--border)!important}
   #tarifs{padding-top:40px!important}
+  /* Showcase carousel */
+  .showcase-row{
+    display:flex!important;
+    flex-direction:row!important;
+    overflow-x:scroll!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x mandatory!important;
+    -webkit-overflow-scrolling:touch!important;
+    height:auto!important;
+    margin-top:24px!important;
+    gap:16px!important;
+    padding:0 24px 12px!important;
+    align-items:center!important;
+    perspective:none!important;
+    scrollbar-width:none!important;
+  }
+  .showcase-row::-webkit-scrollbar{display:none!important}
+  .showcase-side{
+    display:flex!important;
+    width:180px!important;
+    height:360px!important;
+    flex:0 0 180px!important;
+    transform:none!important;
+    scroll-snap-align:center!important;
+  }
+  .showcase-center{
+    width:200px!important;
+    height:400px!important;
+    flex:0 0 200px!important;
+    scroll-snap-align:center!important;
+  }
 }
 </style>
 </head>
@@ -226,6 +257,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </div>
     </div>
   </div>
+  <!-- Carousel dots (mobile only) -->
+  <div id="showcaseDots" class="row" style="justify-content:center;gap:7px;margin-top:14px;display:none">
+    <div class="sc-dot on" data-i="0"></div>
+    <div class="sc-dot" data-i="1"></div>
+    <div class="sc-dot" data-i="2"></div>
+  </div>
+
   <!-- Platform tabs -->
   <div class="row" style="justify-content:center;margin-top:36px">
     <div class="seg accent-seg" id="platformSeg">
@@ -408,6 +446,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </footer>
 
 <script>
+// Showcase carousel dots (mobile)
+(function(){
+  const isMobile = () => window.innerWidth <= 900;
+  const row = document.querySelector('.showcase-row');
+  const dots = document.getElementById('showcaseDots');
+  const dotEls = dots ? dots.querySelectorAll('.sc-dot') : [];
+  function updateDots(){
+    if(!row||!dots) return;
+    if(!isMobile()){dots.style.display='none';return;}
+    dots.style.display='flex';
+    const cards = row.querySelectorAll('.showcase-side,.showcase-center');
+    const rowRect = row.getBoundingClientRect();
+    let closest=0, minDist=Infinity;
+    cards.forEach((c,i)=>{
+      const rect=c.getBoundingClientRect();
+      const center=rect.left+rect.width/2;
+      const dist=Math.abs(center-(rowRect.left+rowRect.width/2));
+      if(dist<minDist){minDist=dist;closest=i;}
+    });
+    dotEls.forEach((d,i)=>d.classList.toggle('on',i===closest));
+  }
+  if(row){
+    row.addEventListener('scroll',updateDots,{passive:true});
+    window.addEventListener('resize',updateDots);
+    setTimeout(updateDots,100);
+  }
+})();
+
 // Platform tabs
 function setPlatform(btn){
   document.querySelectorAll('#platformSeg button').forEach(b=>b.classList.remove('on'));
