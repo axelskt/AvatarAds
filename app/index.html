@@ -166,7 +166,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 
 /* ══ SETUP MODAL ══ */
 .setup-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center}
-.setup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px;width:520px;max-width:90vw}
+.setup-box{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-lg);padding:32px;width:520px;max-width:90vw}
 .setup-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
 .setup-title{font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
 .setup-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6}
@@ -260,14 +260,14 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* ── PAYWALL MODAL ── */
 .paywall-overlay{position:fixed;inset:0;background:rgba(7,8,10,0.92);backdrop-filter:blur(8px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
-.paywall-box{background:var(--bg2);border:1px solid rgba(255,107,53,0.3);border-radius:18px;padding:36px 32px;max-width:640px;width:100%;text-align:center}
+.paywall-box{background:var(--surface);border:1px solid rgba(255,107,53,0.3);border-radius:18px;padding:36px 32px;max-width:640px;width:100%;text-align:center}
 .paywall-icon{font-size:48px;margin-bottom:16px}
 .paywall-title{font-size:22px;font-weight:900;letter-spacing:-0.8px;margin-bottom:8px}
 .paywall-sub{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:24px}
 .paywall-price{font-size:42px;font-weight:900;letter-spacing:-2px;margin-bottom:4px}
 .paywall-price sup{font-size:18px;vertical-align:top;margin-top:8px;font-weight:700}
 .paywall-price span{font-size:14px;font-weight:400;color:var(--text2);letter-spacing:0}
-.paywall-perks{text-align:left;margin-bottom:24px;background:var(--bg3);border-radius:12px;padding:16px}
+.paywall-perks{text-align:left;margin-bottom:24px;background:var(--panel-1);border-radius:12px;padding:16px}
 .paywall-perk{font-size:13px;color:var(--text2);padding:5px 0;display:flex;align-items:center;gap:8px}
 .paywall-perk::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
 .btn-paywall{width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#e03e1a);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px var(--orange-glow);margin-bottom:10px}
@@ -277,8 +277,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* ── BUY CREDITS MODAL ── */
 .credits-overlay{position:fixed;inset:0;background:rgba(4,5,8,0.94);backdrop-filter:blur(12px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
-.credits-box{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04)}
-.credits-pack{border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;background:var(--bg3)}
+.credits-box{background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04)}
+.credits-pack{border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;background:var(--panel-1)}
 .credits-pack:hover{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .credits-pack.popular{border-color:var(--orange);background:rgba(255,107,53,0.06);box-shadow:0 0 0 1px rgba(255,107,53,0.1)}
 .credits-pack.popular:hover{box-shadow:0 8px 28px rgba(255,107,53,0.2)}
