@@ -456,6 +456,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .img-style-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:12px 10px;cursor:pointer;transition:all .18s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
 .img-style-card:hover{border-color:var(--border3);background:var(--bg4)}
 .img-style-card.on{border-color:rgba(255,107,53,0.55);background:rgba(255,107,53,0.07);box-shadow:0 0 0 3px rgba(255,107,53,0.12)}
+/* BG VIDEO GALLERY */
+.bg-cat-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--bg4);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s}
+.bg-cat-btn:hover{border-color:var(--border3);color:var(--text)}
+.bg-cat-btn.on{background:rgba(77,171,247,0.15);border-color:rgba(77,171,247,0.5);color:#4dabf7}
+.bg-card{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .22s;aspect-ratio:9/16;background:var(--bg4)}
+.bg-card:hover{border-color:rgba(77,171,247,0.5);transform:scale(1.04)}
+.bg-card.on{border-color:#4dabf7;box-shadow:0 0 0 3px rgba(77,171,247,0.2);transform:scale(1.04)}
+.bg-card img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .25s}
+.bg-card .bg-card-label{position:absolute;bottom:0;left:0;right:0;padding:5px 6px;background:linear-gradient(0deg,rgba(0,0,0,.75),transparent);font-size:9px;font-family:var(--mono);font-weight:700;color:#fff;text-align:center;line-height:1.2}
+.bg-card .bg-card-check{position:absolute;top:5px;right:5px;width:18px;height:18px;background:#4dabf7;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.bg-card.on .bg-card-check{display:flex}
+@keyframes bgReveal{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.bg-card{animation:bgReveal .22s ease both}
 .img-style-card .isc-icon{font-size:20px;line-height:1}
 .img-style-card .isc-label{font-size:11px;font-weight:700;color:var(--text2);line-height:1.2}
 .img-style-card .isc-sub{font-size:9px;font-family:var(--mono);color:var(--text3);line-height:1}
@@ -1302,6 +1315,45 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div style="font-size:11px;font-weight:700">Publication</div>
                   <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · Meta · LinkedIn</div>
                 </div>
+              </div>
+            </div>
+
+            <!-- FOND VIDÉO -->
+            <div class="fld" style="margin-bottom:18px">
+              <div id="bgVideoToggleRow" onclick="toggleBgVideo()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:20px">🎬</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:700">Fond vidéo</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="bgVideoToggleLabel">Désactivé — fond avatar original</div>
+                  </div>
+                </div>
+                <div id="bgVideoSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="bgVideoThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s"></div>
+                </div>
+              </div>
+              <div id="bgVideoPanel" style="display:none;flex-direction:column;gap:12px;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+                <!-- Catégories -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap" id="bgCatTabs">
+                  <button onclick="setBgCat('all')" class="bg-cat-btn on" data-cat="all">Tous</button>
+                  <button onclick="setBgCat('bureau')" class="bg-cat-btn" data-cat="bureau">🏢 Bureau</button>
+                  <button onclick="setBgCat('ville')" class="bg-cat-btn" data-cat="ville">🌆 Ville</button>
+                  <button onclick="setBgCat('nature')" class="bg-cat-btn" data-cat="nature">🌿 Nature</button>
+                  <button onclick="setBgCat('studio')" class="bg-cat-btn" data-cat="studio">🎥 Studio</button>
+                  <button onclick="setBgCat('lifestyle')" class="bg-cat-btn" data-cat="lifestyle">☕ Lifestyle</button>
+                </div>
+                <!-- Galerie -->
+                <div id="bgVideoGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+                <!-- Sélection active -->
+                <div id="bgSelectedBadge" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(77,171,247,0.08);border:1.5px solid rgba(77,171,247,0.35);border-radius:10px">
+                  <span style="font-size:18px">✅</span>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:700;color:#4dabf7" id="bgSelectedLabel">—</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Fond sélectionné · boucle auto</div>
+                  </div>
+                  <button onclick="clearBgVideo()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
+                </div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5">🔁 La vidéo boucle automatiquement · Fond supprimé de l'avatar par IA</div>
               </div>
             </div>
 
@@ -4383,7 +4435,8 @@ const cfg = {
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
   format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom',
   avZoom:100, avWidth:100, avCropX:0, avCropY:0,
-  gpWidth:100, gpCropX:0, gpCropY:0
+  gpWidth:100, gpCropX:0, gpCropY:0,
+  bgVideo: null // { id, label, videoUrl, thumbUrl }
 };
 const subColors = {c1:'#FFE500', c2:'#ffffff'};
 let selVoiceId = '21m00Tcm4TlvDq8ikWAM';
@@ -4391,6 +4444,112 @@ let selSubStyle = 'hormozi';
 let selAnim = 'none';
 let animEnabled = false;
 let splitEnabled = false;
+let bgVideoEnabled = false;
+let _bgCurrentCat = 'all';
+
+// ── CURATED PEXELS BACKGROUNDS ──
+// Thumbnails: Pexels CDN public (no key needed)
+// Videos: Pexels free MP4 (SD 960×540 or HD 1280×720)
+const PEXELS_BG = [
+  // BUREAU
+  { id:'pex_001', cat:'bureau', label:'Bureau moderne',    thumb:'https://images.pexels.com/videos/3196394/free-video-3196394.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3196394/3196394-sd_540_960_25fps.mp4' },
+  { id:'pex_002', cat:'bureau', label:'Workspace minimal', thumb:'https://images.pexels.com/videos/4050290/free-video-4050290.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/4050290/4050290-sd_540_960_25fps.mp4' },
+  { id:'pex_003', cat:'bureau', label:'Meeting room',      thumb:'https://images.pexels.com/videos/3127977/free-video-3127977.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3127977/3127977-sd_540_960_25fps.mp4' },
+  // VILLE
+  { id:'pex_004', cat:'ville',  label:'City night',        thumb:'https://images.pexels.com/videos/1851190/free-video-1851190.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/1851190/1851190-sd_540_960_25fps.mp4' },
+  { id:'pex_005', cat:'ville',  label:'Urban timelapse',   thumb:'https://images.pexels.com/videos/3571264/free-video-3571264.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3571264/3571264-sd_540_960_25fps.mp4' },
+  { id:'pex_006', cat:'ville',  label:'Street lights',     thumb:'https://images.pexels.com/videos/2711748/free-video-2711748.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/2711748/2711748-sd_540_960_25fps.mp4' },
+  // NATURE
+  { id:'pex_007', cat:'nature', label:'Forêt',              thumb:'https://images.pexels.com/videos/1448735/free-video-1448735.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/1448735/1448735-sd_540_960_25fps.mp4' },
+  { id:'pex_008', cat:'nature', label:'Montagne',           thumb:'https://images.pexels.com/videos/1437396/free-video-1437396.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/1437396/1437396-sd_540_960_25fps.mp4' },
+  { id:'pex_009', cat:'nature', label:'Ocean sunset',       thumb:'https://images.pexels.com/videos/2169880/free-video-2169880.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/2169880/2169880-sd_540_960_25fps.mp4' },
+  // STUDIO
+  { id:'pex_010', cat:'studio', label:'Studio blanc',       thumb:'https://images.pexels.com/videos/2985139/free-video-2985139.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/2985139/2985139-sd_540_960_25fps.mp4' },
+  { id:'pex_011', cat:'studio', label:'Fond noir minimal',  thumb:'https://images.pexels.com/videos/3045161/free-video-3045161.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3045161/3045161-sd_540_960_25fps.mp4' },
+  { id:'pex_012', cat:'studio', label:'Bokeh lumières',     thumb:'https://images.pexels.com/videos/3121461/free-video-3121461.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3121461/3121461-sd_540_960_25fps.mp4' },
+  // LIFESTYLE
+  { id:'pex_013', cat:'lifestyle', label:'Coffee shop',     thumb:'https://images.pexels.com/videos/3192285/free-video-3192285.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3192285/3192285-sd_540_960_25fps.mp4' },
+  { id:'pex_014', cat:'lifestyle', label:'Restaurant chic', thumb:'https://images.pexels.com/videos/5201838/free-video-5201838.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/5201838/5201838-sd_540_960_25fps.mp4' },
+  { id:'pex_015', cat:'lifestyle', label:'Rooftop terrace', thumb:'https://images.pexels.com/videos/2795406/free-video-2795406.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/2795406/2795406-sd_540_960_25fps.mp4' },
+  { id:'pex_016', cat:'lifestyle', label:'Soirée lounge',   thumb:'https://images.pexels.com/videos/3571636/free-video-3571636.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200', videoUrl:'https://videos.pexels.com/video-files/3571636/3571636-sd_540_960_25fps.mp4' },
+];
+
+function toggleBgVideo() {
+  bgVideoEnabled = !bgVideoEnabled;
+  const sw = document.getElementById('bgVideoSwitch');
+  const th = document.getElementById('bgVideoThumb');
+  const panel = document.getElementById('bgVideoPanel');
+  const label = document.getElementById('bgVideoToggleLabel');
+  const row = document.getElementById('bgVideoToggleRow');
+  sw.style.background = bgVideoEnabled ? '#4dabf7' : 'var(--bg5)';
+  th.style.left = bgVideoEnabled ? '21px' : '3px';
+  row.style.borderColor = bgVideoEnabled ? 'rgba(77,171,247,0.5)' : 'var(--border)';
+  panel.style.display = bgVideoEnabled ? 'flex' : 'none';
+  if (bgVideoEnabled) {
+    label.textContent = cfg.bgVideo ? '✅ ' + cfg.bgVideo.label : 'Activé — choisir un fond';
+    renderBgGrid();
+  } else {
+    label.textContent = 'Désactivé — fond avatar original';
+    cfg.bgVideo = null;
+  }
+}
+
+function setBgCat(cat) {
+  _bgCurrentCat = cat;
+  document.querySelectorAll('.bg-cat-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.cat === cat);
+  });
+  renderBgGrid();
+}
+
+function renderBgGrid() {
+  const grid = document.getElementById('bgVideoGrid');
+  const filtered = _bgCurrentCat === 'all' ? PEXELS_BG : PEXELS_BG.filter(b => b.cat === _bgCurrentCat);
+  grid.innerHTML = '';
+  filtered.forEach((bg, i) => {
+    const isOn = cfg.bgVideo && cfg.bgVideo.id === bg.id;
+    const div = document.createElement('div');
+    div.className = 'bg-card' + (isOn ? ' on' : '');
+    div.style.animationDelay = (i * 0.04) + 's';
+    div.innerHTML = `
+      <img src="${bg.thumb}" alt="${bg.label}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22180%22><rect width=%22100%%22 height=%22100%%22 fill=%22%23222%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23555%22 font-size=%2212%22>🎬</text></svg>'">
+      <div class="bg-card-label">${bg.label}</div>
+      <div class="bg-card-check">✓</div>
+    `;
+    div.onclick = () => selectBgVideo(bg);
+    grid.appendChild(div);
+  });
+}
+
+function selectBgVideo(bg) {
+  cfg.bgVideo = bg;
+  // Animation : flash sur la card sélectionnée
+  document.querySelectorAll('.bg-card').forEach(c => c.classList.remove('on'));
+  const cards = document.querySelectorAll('.bg-card');
+  // Find and mark
+  renderBgGrid();
+  // Badge
+  const badge = document.getElementById('bgSelectedBadge');
+  const lbl = document.getElementById('bgSelectedLabel');
+  badge.style.display = 'flex';
+  lbl.textContent = bg.label;
+  // Ripple animation on the whole panel
+  const panel = document.getElementById('bgVideoPanel');
+  panel.style.borderColor = '#4dabf7';
+  setTimeout(() => { panel.style.borderColor = 'var(--border)'; }, 600);
+  // Update toggle label
+  document.getElementById('bgVideoToggleLabel').textContent = '✅ ' + bg.label;
+  // Update live preview if possible
+  if (typeof updateLivePreview === 'function') updateLivePreview();
+}
+
+function clearBgVideo() {
+  cfg.bgVideo = null;
+  document.getElementById('bgSelectedBadge').style.display = 'none';
+  document.getElementById('bgVideoToggleLabel').textContent = 'Activé — choisir un fond';
+  renderBgGrid();
+}
+
 let results = {script:'', audioBlob:null, hedraUrl:''};
 let library = [];
 
