@@ -101,8 +101,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   .hide-mobile{display:none!important}
   .grid-3{grid-template-columns:1fr!important}
   .grid-5{grid-template-columns:1fr 1fr!important}
-  .showcase-row{height:360px!important}
+  .showcase-row{height:320px!important;overflow:hidden!important;margin-top:24px!important}
   .showcase-side{display:none!important}
+  .showcase-center{width:160px!important;height:320px!important}
+  #tarifs{padding-top:40px!important}
 }
 </style>
 </head>
@@ -129,7 +131,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </div>
       <div class="row" style="gap:12px">
         <a href="/app/" class="btn btn-quiet btn-sm">Se connecter</a>
-        <a href="/app/" class="btn btn-primary btn-sm">Commencer gratuitement <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5"/></svg></a>
+        <a href="/app/" class="btn btn-primary btn-sm">Commencer <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5"/></svg></a>
       </div>
     </div>
   </div>
@@ -188,7 +190,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </div>
     </div>
     <!-- Centre avatar réel -->
-    <div style="width:248px;height:512px;flex:0 0 auto">
+    <div class="showcase-center" style="width:248px;height:512px;flex:0 0 auto">
       <div class="showcase-frame" style="background:linear-gradient(180deg,#1a0a0a,#0d0505)">
         <!-- TODO: <video src="videos/avatar-demo.mp4" autoplay loop muted playsinline></video> -->
         <div class="ph" style="height:100%;border-radius:26px;flex-direction:column;gap:8px;font-size:13px">
