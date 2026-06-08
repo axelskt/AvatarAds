@@ -2587,7 +2587,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 1l1.6 3.2 3.4.5-2.5 2.4.6 3.4L6 9.3 2.9 10.9l.6-3.4L1 5.1l3.4-.5z"/></svg>
             Modèle IA
           </div>
-          <div id="imgModelGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+          <div id="imgModelGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
         </div>
 
         <!-- STYLE PRESETS -->
@@ -2703,10 +2703,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
                 Utiliser comme avatar &amp; créer une vidéo
               </button>
-              <button onclick="_imgUpscale(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                Upscale HD · netteté max
-              </button>
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button onclick="_imgUpscale(this)" id="imgUpscaleBtn" style="flex:1;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                  Upscale HD
+                </button>
+                <button onclick="_imgRemoveBgRun(this)" id="imgDetourBtn" style="flex:1;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
+                  <span style="font-size:14px">✂️</span> Détourer le fond
+                </button>
+              </div>
               <div style="display:flex;gap:8px">
                 <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
@@ -4388,6 +4393,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const OPENAI_PROXY   = SUPABASE_URL + '/functions/v1/openai-proxy';
 const EL_PROXY       = SUPABASE_URL + '/functions/v1/elevenlabs-proxy';
 const GOOGLE_PROXY   = SUPABASE_URL + '/functions/v1/google-ai-proxy';
+const REMOVEBG_PROXY = SUPABASE_URL + '/functions/v1/removebg-proxy';
 
 // Helper : retourne l'Authorization header avec le JWT de l'user connecté
 // Sans JWT valide → le proxy refusera la requête (401)
@@ -6048,9 +6054,8 @@ let _imgRefDataUrl         = null;
 let _imgRemoveBg           = false;      // suppression de fond auto
 
 const _IMG_MODELS = [
-  { id:'dalle3',  label:'DALL·E 3', sub:'OpenAI · 4K',     soon:false },
-  { id:'imagen4', label:'Imagen 4', sub:'Google · réaliste', soon:false },
-  { id:'flux',    label:'Flux Pro', sub:'fal.ai · artistique', soon:true },
+  { id:'dalle3',  label:'DALL·E 3', sub:'OpenAI · créatif',   soon:false },
+  { id:'imagen4', label:'Imagen 4', sub:'Google · réaliste',  soon:false },
 ];
 
 function _imgInitModelGrid(){
@@ -6118,6 +6123,37 @@ async function _imgUpscale(btn){
   } catch(e){
     toast('⚠️ Upscale bloqué (image externe). Fonctionne sur Imagen 4 — ou télécharge puis ré-importe.');
   } finally { btn.disabled = false; btn.style.opacity='1'; btn.innerHTML = orig; }
+}
+
+async function _imgRemoveBgRun(btn){
+  const img = document.getElementById('imgOutput');
+  if(!img || !img.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  const _isBtn = !!(btn && typeof btn.innerHTML === 'string');
+  let orig;
+  if(_isBtn){ orig = btn.innerHTML; btn.disabled = true; btn.style.opacity='.7'; btn.innerHTML = '⏳ Détourage…'; }
+  try {
+    const authH = await getAuthHeader();
+    const src = img.src;
+    const body = src.startsWith('data:') ? { image_b64: src } : { image_url: src };
+    const resp = await fetch(REMOVEBG_PROXY, {
+      method:'POST',
+      headers:{ 'Authorization': authH, 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!resp.ok){ const e = await resp.json().catch(()=>({})); throw new Error(e.error || ('HTTP '+resp.status)); }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    img.src = url;
+    img.style.background = 'repeating-conic-gradient(#3a3a3a 0% 25%, #242424 0% 50%) 50% / 18px 18px'; // damier = transparence
+    const dl = document.getElementById('imgDownloadBtn'); if(dl){ dl.href = url; dl.download = 'avatarads-detoure.png'; }
+    toast('✅ Fond détouré · PNG transparent');
+  } catch(e){
+    const msg = String(e && e.message || e);
+    if(msg.includes('REMOVEBG_KEY')) toast('⚠️ Clé remove.bg pas encore ajoutée dans Supabase (secret REMOVEBG_KEY)');
+    else toast('⚠️ Détourage : ' + msg);
+  } finally {
+    if(_isBtn){ btn.disabled = false; btn.style.opacity='1'; btn.innerHTML = orig; }
+  }
 }
 
 function _imgFmtLabel(val){ return (_IMG_FORMATS.find(f=>f.value===val)||{sub:'Carré'}).sub; }
@@ -6402,6 +6438,8 @@ async function generateImage(){
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
       toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      // Détourage auto si le toggle est activé
+      if(_imgRemoveBg){ try { await _imgRemoveBgRun(null); } catch(_e){} }
     } else {
       // ── Mode multi (2-3 images) ──
       singleWrap.style.display = 'none';
