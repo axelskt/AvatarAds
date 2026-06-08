@@ -2581,6 +2581,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
         </div>
 
+        <!-- MODÈLE IA -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 1l1.6 3.2 3.4.5-2.5 2.4.6 3.4L6 9.3 2.9 10.9l.6-3.4L1 5.1l3.4-.5z"/></svg>
+            Modèle IA
+          </div>
+          <div id="imgModelGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
         <!-- STYLE PRESETS -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
@@ -2597,6 +2606,34 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             Format
           </div>
           <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
+        <!-- OPTIONS : image de référence + suppression de fond -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6" cy="4" r="2.4"/><path d="M1.5 11c0-2.2 2-3.6 4.5-3.6s4.5 1.4 4.5 3.6"/></svg>
+            Image de référence <span style="text-transform:none;letter-spacing:0;color:var(--text3);opacity:.7">· optionnel</span>
+          </div>
+          <!-- zone upload réf -->
+          <div id="imgRefZone" class="aaph" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_imgSetRef(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;border-radius:12px;cursor:pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <div style="font-size:12.5px;font-weight:600;color:var(--text)">Glisse une image à transformer</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono)">img2img · décline un produit / un style</div>
+          </div>
+          <div id="imgRefBadge" style="display:none;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
+            <img id="imgRefThumb" style="width:34px;height:34px;border-radius:7px;object-fit:cover;flex-shrink:0">
+            <div style="flex:1;min-width:0"><div id="imgRefName" style="font-size:12px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Référence active</div></div>
+            <button onclick="_imgClearRef()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer">✕</button>
+          </div>
+          <input type="file" id="imgRefInput" accept="image/*" style="display:none" onchange="_imgSetRef(this.files[0])">
+          <!-- toggle suppression de fond -->
+          <div id="imgBgToggleRow" onclick="_imgToggleBg()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px;cursor:pointer;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="font-size:17px">✂️</span>
+              <div><div style="font-size:12.5px;font-weight:600">Suppression de fond auto</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Détoure le sujet sur fond transparent</div></div>
+            </div>
+            <div id="imgBgSwitch" style="width:40px;height:22px;background:var(--surface-3);border-radius:11px;position:relative;transition:.2s;flex-shrink:0"><div id="imgBgThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:.2s"></div></div>
+          </div>
         </div>
 
         <!-- NOMBRE D'IMAGES -->
@@ -2665,6 +2702,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--orange),#d93a15);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;box-shadow:0 6px 20px rgba(255,107,53,0.32);transition:all .2s;margin-bottom:10px" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 9px 28px rgba(255,107,53,0.48)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(255,107,53,0.32)'">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
                 Utiliser comme avatar &amp; créer une vidéo
+              </button>
+              <button onclick="_imgUpscale(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                Upscale HD · netteté max
               </button>
               <div style="display:flex;gap:8px">
                 <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
@@ -6001,6 +6042,83 @@ let _imgSelectedStyleLabel = _IMG_STYLES[0].label;
 let _imgSelectedFormat     = '1024x1024';
 let _imgSelectedFormatId   = 'square';
 let _imgSelectedCount      = 1;
+let _imgSelectedModel      = 'dalle3';   // dalle3 | imagen4 | flux
+let _imgRefFile            = null;       // image de référence (img2img)
+let _imgRefDataUrl         = null;
+let _imgRemoveBg           = false;      // suppression de fond auto
+
+const _IMG_MODELS = [
+  { id:'dalle3',  label:'DALL·E 3', sub:'OpenAI · 4K',     soon:false },
+  { id:'imagen4', label:'Imagen 4', sub:'Google · réaliste', soon:false },
+  { id:'flux',    label:'Flux Pro', sub:'fal.ai · artistique', soon:true },
+];
+
+function _imgInitModelGrid(){
+  const g = document.getElementById('imgModelGrid'); if(!g) return;
+  g.innerHTML = '';
+  _IMG_MODELS.forEach(m => {
+    const on = m.id===_imgSelectedModel;
+    const el = document.createElement('div');
+    el.className = 'img-fmt-card' + (on?' on':'');
+    if(m.soon) el.style.opacity = '.5';
+    el.innerHTML = '<div class="ifc-label">'+m.label+'</div><div class="ifc-sub">'+(m.soon?'bientôt':m.sub)+'</div>';
+    el.onclick = () => { if(m.soon){ toast('⏳ Flux Pro arrive bientôt'); return; } _imgPickModel(m.id); };
+    g.appendChild(el);
+  });
+}
+function _imgPickModel(id){
+  _imgSelectedModel = id;
+  document.querySelectorAll('#imgModelGrid .img-fmt-card').forEach((el,i) => el.classList.toggle('on', _IMG_MODELS[i] && _IMG_MODELS[i].id===id));
+}
+
+function _imgSetRef(file){
+  if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
+  _imgRefFile = file;
+  const rd = new FileReader();
+  rd.onload = e => {
+    _imgRefDataUrl = e.target.result;
+    const th = document.getElementById('imgRefThumb'); if(th) th.src = _imgRefDataUrl;
+    const nm = document.getElementById('imgRefName'); if(nm) nm.textContent = file.name;
+    const z = document.getElementById('imgRefZone'); if(z) z.style.display = 'none';
+    const b = document.getElementById('imgRefBadge'); if(b) b.style.display = 'flex';
+  };
+  rd.readAsDataURL(file);
+}
+function _imgClearRef(){
+  _imgRefFile = null; _imgRefDataUrl = null;
+  const z = document.getElementById('imgRefZone'); if(z) z.style.display = 'flex';
+  const b = document.getElementById('imgRefBadge'); if(b) b.style.display = 'none';
+  const inp = document.getElementById('imgRefInput'); if(inp) inp.value = '';
+}
+function _imgToggleBg(){
+  _imgRemoveBg = !_imgRemoveBg;
+  const sw = document.getElementById('imgBgSwitch');
+  const th = document.getElementById('imgBgThumb');
+  if(sw) sw.style.background = _imgRemoveBg ? 'var(--accent)' : 'var(--surface-3)';
+  if(th) th.style.left = _imgRemoveBg ? '21px' : '3px';
+}
+
+async function _imgUpscale(btn){
+  const img = document.getElementById('imgOutput');
+  if(!img || !img.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  const orig = btn.innerHTML; btn.disabled = true; btn.style.opacity='.7'; btn.innerHTML = '⏳ Upscale en cours…';
+  try {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    await new Promise((res,rej)=>{ im.onload=res; im.onerror=()=>rej(new Error('load')); im.src = img.src; });
+    const factor = im.naturalWidth < 1300 ? 3 : 2;
+    const c = document.createElement('canvas');
+    c.width = im.naturalWidth*factor; c.height = im.naturalHeight*factor;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(im, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/png');   // throws si canvas "tainted" (CORS)
+    img.src = url;
+    const dl = document.getElementById('imgDownloadBtn'); if(dl){ dl.href = url; dl.download = 'avatarads-image-hd.png'; }
+    toast('✅ Image agrandie en ' + c.width + '×' + c.height);
+  } catch(e){
+    toast('⚠️ Upscale bloqué (image externe). Fonctionne sur Imagen 4 — ou télécharge puis ré-importe.');
+  } finally { btn.disabled = false; btn.style.opacity='1'; btn.innerHTML = orig; }
+}
 
 function _imgFmtLabel(val){ return (_IMG_FORMATS.find(f=>f.value===val)||{sub:'Carré'}).sub; }
 
@@ -6181,6 +6299,7 @@ function _imgInitSuggestions(){
 }
 
 function initImageGen(){
+  _imgInitModelGrid();
   _imgInitStyleGrid();
   _imgInitFormatGrid();
   _imgInitCountGrid();
@@ -6189,8 +6308,22 @@ function initImageGen(){
   _updateImgQuotaLabel();
 }
 
-// Helper : génère UNE image et retourne son URL (ou throw)
+// Helper : génère UNE image et retourne son URL (ou throw) — route selon le modèle
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
+  // ── Imagen 4 (Google AI) ──
+  if(_imgSelectedModel === 'imagen4'){
+    const ar = size==='1024x1792' ? '9:16' : size==='1792x1024' ? '16:9' : '1:1';
+    const resp = await _cartoonProxyFetch('/v1beta/models/imagen-4.0-generate-001:predict', {
+      method:'POST',
+      body: JSON.stringify({ instances:[{ prompt: enhancedPrompt }], parameters:{ sampleCount:1, aspectRatio:ar, safetyFilterLevel:'block_some' } })
+    });
+    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message || ('Imagen 4 — HTTP '+resp.status)); }
+    const data = await resp.json();
+    const b64 = data?.predictions?.[0]?.bytesBase64Encoded;
+    if(!b64) throw new Error('Aucune image retournée (Imagen 4)');
+    return 'data:image/png;base64,' + b64;
+  }
+  // ── DALL·E 3 (OpenAI, défaut) ──
   const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
@@ -6252,7 +6385,9 @@ async function generateImage(){
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
-    const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
+    let enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
+    if(_imgRemoveBg) enhancedPrompt += ', sujet parfaitement isolé sur fond blanc uni, détourable, contour net';
+    if(_imgRefFile)  enhancedPrompt += ', dans le style et la composition de l\'image de référence fournie';
 
     if(actualCount === 1){
       // ── Mode single (comportement original) ──
