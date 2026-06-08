@@ -1843,9 +1843,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
                 <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
-                  <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:10px;opacity:.5;color:#fff;pointer-events:none">
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
-                    <span style="font-size:13px;font-family:var(--mono)">avatar · <span id="previewAvName">avatarads.fr</span></span>
+                  <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:.55;color:#fff;pointer-events:none;text-align:center">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+                    <span id="previewAvName" style="font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:.5px">avatarads.fr</span>
                   </div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                   <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
