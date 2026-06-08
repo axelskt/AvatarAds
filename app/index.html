@@ -7953,7 +7953,7 @@ function removeAvatar(){
   const avImg   = document.getElementById('previewAvImg');
   const avEmoji = document.getElementById('previewAvEmoji');
   if(avImg){ avImg.style.display='none'; avImg.src=''; }
-  if(avEmoji) avEmoji.style.display='block';
+  if(avEmoji) avEmoji.style.display='flex';
   document.getElementById('avatarDropContent').style.display='';
   document.getElementById('avatarPreviewWrap').style.display='none';
   document.querySelectorAll('.av-card,.lib-av-card').forEach(c=>c.classList.remove('on'));
@@ -10193,7 +10193,7 @@ function updateLivePreview(){
       if(avEmoji) avEmoji.style.display = 'none';
     } else {
       if(avImg)   avImg.style.display = 'none';
-      if(avEmoji){ avEmoji.style.display = 'block'; avEmoji.textContent = (selAvatar && selAvatar.emo) || '👩‍💼'; }
+      if(avEmoji){ avEmoji.style.display = 'flex'; }
     }
   }
 
