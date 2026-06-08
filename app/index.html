@@ -13852,8 +13852,9 @@ function _saveGeneratorState(){
         cfg: { ...cfg },
         subColors: { ...subColors },
         selSubStyle, selAnim, animEnabled, splitEnabled,
-        phoneW: w ? w.offsetWidth  : 220,
-        phoneH: w ? w.offsetHeight : 477,
+        phoneW: w ? w.offsetWidth  : 310,
+        phoneH: w ? w.offsetHeight : 672,
+        psv: 2,
       }));
     } catch(e){}
   }, 400);
@@ -13921,8 +13922,8 @@ function _restoreGeneratorState(){
     // ── Split ──
     if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
 
-    // ── Taille preview phone ──
-    if(s.phoneW && s.phoneH){
+    // ── Taille preview phone ── (psv:2 → ignore les anciennes tailles par défaut sauvegardées)
+    if(s.phoneW && s.phoneH && s.psv === 2){
       const wEl=document.getElementById('phoneWrapper');
       const ph=document.getElementById('phoneMockup');
       if(wEl){ wEl.style.width=s.phoneW+'px'; wEl.style.height=s.phoneH+'px'; }
