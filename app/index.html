@@ -1843,7 +1843,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
                 <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px">✋ Glisse pour recadrer</span></div>
-                  <div id="previewAvEmoji" style="font-size:56px;position:relative;z-index:1">👩‍💼</div>
+                  <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:10px;opacity:.5;color:#fff;pointer-events:none">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+                    <span style="font-size:13px;font-family:var(--mono)">avatar · <span id="previewAvName">avatarads.fr</span></span>
+                  </div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                   <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
                   <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:3"></video>
@@ -1880,27 +1883,30 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                     <div style="width:30px;height:14px;border:2px solid rgba(255,255,255,.8);border-radius:3px;position:relative;padding:1px"><div style="background:#fff;height:100%;width:68%;border-radius:1px"></div><div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:3px;height:7px;background:rgba(255,255,255,.5);border-radius:1px"></div></div>
                   </div>
                 </div>
-                <!-- Nav tabs (design : Abonnements · Pour toi · Boutique) -->
-                <div style="position:absolute;top:52px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:26px;padding:5px 14px;z-index:60">
+                <!-- Nav tabs (Abonnements · Pour toi · Boutique) — juste sous la caméra -->
+                <div style="position:absolute;top:74px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:26px;padding:5px 14px;z-index:60">
                   <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:600">Abonnements</span>
                   <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font-size:16px;color:#fff;font-weight:700">Pour toi</span><div style="width:100%;height:2.5px;background:#fff;border-radius:2px"></div></div>
                   <span style="font-size:15px;color:rgba(255,255,255,.6);font-weight:600">Boutique</span>
                 </div>
-                <!-- Right rail (icônes nues, comme le design / vrai TikTok) -->
-                <div style="position:absolute;right:12px;bottom:150px;display:flex;flex-direction:column;align-items:center;gap:20px">
-                  <div style="text-align:center;margin-bottom:4px">
+                <!-- Right rail (avatar, like, comment, share) -->
+                <div style="position:absolute;right:12px;bottom:172px;display:flex;flex-direction:column;align-items:center;gap:18px">
+                  <div style="text-align:center;margin-bottom:2px">
                     <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#1A0A02;margin:0 auto">A</div>
                     <div style="width:24px;height:24px;background:var(--accent);border-radius:50%;margin:-10px auto 0;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:900;border:2px solid #000">+</div>
                   </div>
                   <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
                   <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
                   <div style="text-align:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg><div style="font-size:13px;color:#fff;font-family:var(--mono);margin-top:2px">2,1K</div></div>
-                  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#444,#111);border:3px solid #000;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                 </div>
-                <!-- Bottom info -->
-                <div style="position:absolute;bottom:150px;left:18px;right:90px">
-                  <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:5px" id="tt-handle">@sofia.ads</div>
-                  <div style="font-size:16px;color:rgba(255,255,255,.9);line-height:1.4">Découvre comment… <span style="font-weight:700">plus</span></div>
+                <!-- Bottom info (@ + légende) — bas gauche, comme le vrai TikTok -->
+                <div style="position:absolute;bottom:86px;left:18px;right:84px">
+                  <div style="font-size:19px;font-weight:700;color:#fff;margin-bottom:5px" id="tt-handle">@avataradss</div>
+                  <div style="font-size:15px;color:rgba(255,255,255,.9);line-height:1.4">Découvre comment… <span style="font-weight:700">plus</span></div>
+                </div>
+                <!-- Disque musique — bas droite, aligné à l'@ -->
+                <div style="position:absolute;right:14px;bottom:88px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#444,#111);border:3px solid #000;display:flex;align-items:center;justify-content:center">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                 </div>
                 <!-- Bottom nav (icônes seules, barre floutée — design) -->
                 <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around">
@@ -10226,12 +10232,16 @@ function updateLivePreview(){
     }
   }
 
-  // 5. TikTok handle
-  const name = (selAvatar && selAvatar.name) || 'sofia';
+  // 5. Handle + nom — basé sur le nom du business, sinon AvatarAds
+  const _bn = (typeof userBizName !== 'undefined' && userBizName) ? userBizName.trim() : '';
+  const _handle = _bn ? _bn.toLowerCase().replace(/[^a-z0-9]/g,'') : 'avataradss';
+  const _displayName = _bn || 'avatarads.fr';
   const ttHandle = document.getElementById('tt-handle');
   const igHandle = document.getElementById('ig-handle');
-  if(ttHandle) ttHandle.textContent = '@' + name + '.ads';
-  if(igHandle) igHandle.textContent = name + '.ads';
+  if(ttHandle) ttHandle.textContent = '@' + _handle;
+  if(igHandle) igHandle.textContent = _handle;
+  const avNameEl = document.getElementById('previewAvName');
+  if(avNameEl) avNameEl.textContent = _displayName;
 
   // Auto-save state
   _saveGeneratorState();
