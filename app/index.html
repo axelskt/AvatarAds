@@ -191,10 +191,10 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 
 /* ══ GENERATOR VIEW ══ */
 .gen-view{overflow:hidden}
-.gen-left{width:500px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.gen-left{flex:1;min-width:0;background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
 
 /* STEPS */
-.steps-bar{display:flex;padding:0 20px;border-bottom:1px solid var(--border);gap:0;flex-shrink:0;align-items:center;height:48px}
+.steps-bar{display:flex;padding:0 40px;gap:0;flex-shrink:0;align-items:center;height:54px;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box}
 .step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--text-3);cursor:pointer;transition:all .2s;white-space:nowrap}
 .step.on{color:var(--text);font-weight:600}
 .step.done{color:var(--green)}
@@ -207,7 +207,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 .step.done~.step-line{background:linear-gradient(90deg,rgba(0,217,126,0.3),var(--border))}
 
 /* FORM */
-.gen-form{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+.gen-form{flex:1;overflow-y:auto;padding:8px 40px 40px;display:flex;flex-direction:column;gap:20px;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box}
 .gen-form::-webkit-scrollbar{width:2px}
 .gen-form::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
 
@@ -328,7 +328,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .cost-hint span{color:var(--orange2)}
 
 /* RIGHT PREVIEW */
-.gen-right{flex:1;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.gen-right{width:460px;flex:0 0 auto;background:var(--bg-grad);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow-y:auto;padding:26px 24px 30px}
 .gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,53,0.07) 0%,transparent 55%);pointer-events:none}
 .gen-right::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.5}
 .preview-area{display:flex;flex-direction:column;align-items:center;gap:16px}
@@ -675,9 +675,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- ══ GENERATOR ══ -->
     <div class="view on" id="v-generator">
       <div class="gen-left">
-        <div style="padding:18px 20px 4px;flex-shrink:0">
+        <div style="padding:26px 40px 6px;flex-shrink:0;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box">
           <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/5</div>
-          <h2 class="display" id="genStepTitle" style="font-size:24px;font-weight:700;margin-top:6px">Décris ton produit</h2>
+          <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Décris ton produit</h2>
         </div>
         <div class="steps-bar">
           <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Produit</div>
@@ -1799,7 +1799,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <div class="gen-footer" id="genFooter">
-          <div id="footerBtns">
+          <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box">
             <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()">Continuer →</button>
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
           </div>
@@ -1833,9 +1833,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:220px;height:477px;flex-shrink:0;overflow:hidden">
+            <div id="phoneWrapper" style="position:relative;width:262px;height:568px;flex-shrink:0;overflow:hidden">
             <!-- phoneMockup renders at native iPhone 17 logical resolution 393×852 and is scaled down -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.5597);transform-origin:top left">
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.6667);transform-origin:top left">
               <!-- Dynamic Island iPhone 17 -->
               <div style="position:absolute;top:25px;left:50%;transform:translateX(-50%);width:125px;height:37px;background:#000;border-radius:20px;z-index:99;box-shadow:0 0 0 2.5px rgba(255,255,255,0.07)"></div>
 
@@ -8093,9 +8093,9 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:220,dh:477,nw:393,nh:852},
-    square:    {dw:320,dh:320,nw:572,nh:572},
-    landscape: {dw:380,dh:214,nw:679,nh:382}
+    vertical:  {dw:262,dh:568,nw:393,nh:852},
+    square:    {dw:360,dh:360,nw:572,nh:572},
+    landscape: {dw:412,dh:232,nw:679,nh:382}
   };
   const d = dims[fmt] || dims.vertical;
   const scale = d.dw / d.nw;
