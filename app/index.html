@@ -328,7 +328,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .cost-hint span{color:var(--orange2)}
 
 /* RIGHT PREVIEW */
-.gen-right{width:460px;flex:0 0 auto;background:var(--bg-grad);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow-y:auto;padding:26px 24px 30px}
+.gen-right{width:490px;flex:0 0 auto;background:var(--bg-grad);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow-y:auto;padding:26px 24px 30px}
 .gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,53,0.07) 0%,transparent 55%);pointer-events:none}
 .gen-right::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.5}
 .preview-area{display:flex;flex-direction:column;align-items:center;gap:16px}
@@ -1833,9 +1833,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:262px;height:568px;flex-shrink:0;overflow:hidden">
+            <div id="phoneWrapper" style="position:relative;width:310px;height:672px;flex-shrink:0;overflow:hidden">
             <!-- phoneMockup renders at native iPhone 17 logical resolution 393×852 and is scaled down -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.6667);transform-origin:top left">
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.7888);transform-origin:top left">
               <!-- Dynamic Island iPhone 17 -->
               <div style="position:absolute;top:25px;left:50%;transform:translateX(-50%);width:125px;height:37px;background:#000;border-radius:20px;z-index:99;box-shadow:0 0 0 2.5px rgba(255,255,255,0.07)"></div>
 
@@ -8093,9 +8093,9 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:262,dh:568,nw:393,nh:852},
-    square:    {dw:360,dh:360,nw:572,nh:572},
-    landscape: {dw:412,dh:232,nw:679,nh:382}
+    vertical:  {dw:310,dh:672,nw:393,nh:852},
+    square:    {dw:404,dh:404,nw:572,nh:572},
+    landscape: {dw:440,dh:248,nw:679,nh:382}
   };
   const d = dims[fmt] || dims.vertical;
   const scale = d.dw / d.nw;
