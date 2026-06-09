@@ -13369,17 +13369,16 @@ async function _loadLibThumbnails(){
               const c = document.createElement('canvas');
               c.width = 200; c.height = 356; // 9:16 ratio pour les cartes
               const ctx = c.getContext('2d');
-              // Cover centré : recadre sans déformer
               const vw = vid.videoWidth, vh = vid.videoHeight;
               const cw = c.width,       ch = c.height;
-              const scale = Math.max(cw/vw, ch/vh);
-              const sw = cw/scale, sh = ch/scale;
-              // Crop centré horizontalement, depuis le HAUT verticalement
-              // (les vidéos Hedra ont l'avatar dans le tiers supérieur)
-              const sx = (vw - sw)/2;
-              const sy = 0; // toujours depuis le haut → montre visage + corps
-              ctx.drawImage(vid, sx, sy, sw, sh, 0, 0, cw, ch);
-              img.src = c.toDataURL('image/jpeg', 0.8);
+              // Contain : montre TOUT l'avatar sans rogner (dézoomé)
+              ctx.fillStyle = '#0e0e10';
+              ctx.fillRect(0,0,cw,ch);
+              const scale = Math.min(cw/vw, ch/vh);
+              const dw = vw*scale, dh = vh*scale;
+              const dx = (cw-dw)/2, dy = (ch-dh)/2;
+              ctx.drawImage(vid, 0, 0, vw, vh, dx, dy, dw, dh);
+              img.src = c.toDataURL('image/jpeg', 0.85);
               img.style.display = 'block';
               const emoEl = img.parentElement?.querySelector('.lib-emoji');
               if(emoEl) emoEl.style.display = 'none';
@@ -13443,7 +13442,7 @@ async function _libPreviewVideo(idbKey){
   overlay.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
   const vid = document.createElement('video');
   vid.src = url; vid.controls = true; vid.autoplay = true; vid.playsInline = true;
-  vid.style.cssText = 'max-width:min(90vw,400px);max-height:88vh;border-radius:16px;box-shadow:0 0 60px rgba(0,0,0,0.8)';
+  vid.style.cssText = 'height:94vh;max-height:94vh;max-width:96vw;width:auto;border-radius:16px;box-shadow:0 0 80px rgba(0,0,0,0.85)';
   vid.onclick = e => e.stopPropagation();
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '✕'; closeBtn.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
@@ -13549,7 +13548,7 @@ function renderLibrary(){
     const ri = v._realIdx;
     return `<div class="vid-card">
       <div class="vid-thumb" style="background:${v.bg};cursor:${v.hedraIdbKey?'pointer':'default'};position:relative;overflow:hidden" onclick="${v.hedraIdbKey?`event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})`:''}">
-        ${v.hedraIdbKey ? `<img id="lib-thumb-${ri}" data-lib-idb="${v.hedraIdbKey}" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:1" alt="">` : ''}
+        ${v.hedraIdbKey ? `<img id="lib-thumb-${ri}" data-lib-idb="${v.hedraIdbKey}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
         <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${v.emo}</div>
         ${v.hedraIdbKey ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
         <div class="vid-overlay" style="z-index:4"></div>
