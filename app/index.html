@@ -662,7 +662,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
         Mon compte
       </div>
-      <div class="nav-i" onclick="openBugReport()" style="color:var(--text2)">
+      <div class="nav-i" id="navReportBug" onclick="openBugReport()" style="color:var(--text2)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="5" height="8" rx="2.5"/><path d="M5 5.5H2.5M5 8H2.5M10 5.5h2.5M10 8h2.5M7.5 3V1M6 1.8l1 1.2M9 1.8l-1 1.2"/></svg>
         Report bug
       </div>
@@ -2564,6 +2564,46 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
       </div>
     </div><!-- /affiliation -->
+
+    <!-- ══ REPORT BUG (page) ══ -->
+    <div class="view" id="v-reportbug">
+      <div class="lib-view" style="width:100%;max-width:560px;margin:0 auto;padding-top:34px">
+
+        <div class="row gap12" style="margin-bottom:24px;align-items:center">
+          <div style="width:46px;height:46px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,70,70,.12);border:1px solid rgba(255,70,70,.3)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg>
+          </div>
+          <div class="col" style="gap:5px;min-width:0">
+            <h2 class="display" style="font-size:23px;font-weight:700;line-height:1.05">Report un bug</h2>
+            <span class="mono faint" style="font-size:12px;line-height:1">AvatarAds IA Manager</span>
+          </div>
+        </div>
+
+        <div class="card" style="padding:24px">
+          <!-- FORM -->
+          <div id="bugForm">
+            <div style="margin-bottom:24px">
+              <div class="label">Titre du bug <span class="accent">*</span></div>
+              <input id="bugTitle" class="field" type="text" placeholder="Ex : L'avatar ne s'affiche pas dans le preview" onkeydown="if(event.key==='Enter')document.getElementById('bugDesc').focus()">
+            </div>
+            <div style="margin-bottom:24px">
+              <div class="label">Description (optionnel)</div>
+              <textarea id="bugDesc" class="field" rows="4" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="min-height:120px;resize:vertical"></textarea>
+            </div>
+            <button id="bugSubmitBtn" class="btn" onclick="submitBugReport()" style="width:100%;background:#FF4646;color:#fff;font-weight:700">Envoyer le bug report</button>
+          </div>
+          <!-- SUCCESS -->
+          <div id="bugSuccess" class="card center rise" style="display:none;flex-direction:column;align-items:center;padding:40px 24px;gap:6px;border-color:rgba(40,199,149,.35);background:rgba(40,199,149,.08)">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            <h3 class="display" style="font-size:21px;font-weight:700;margin-top:14px">Merci, c'est envoyé 🙌</h3>
+            <p class="muted" style="margin-top:8px;font-size:14px">On regarde ça au plus vite.</p>
+            <button class="btn btn-ghost btn-sm" style="margin-top:20px" onclick="openBugReport()">Signaler un autre bug</button>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /reportbug -->
+
 
     <!-- ══ IMAGES IA ══ -->
     <div class="view" id="v-imagegen">
@@ -14322,16 +14362,18 @@ const BUG_WEBHOOK = 'https://hook.eu1.make.com/85nubik4r7qgsm54j4qpjo3kd2skzcjr'
 let _bugScreenshotB64 = null;
 
 function openBugReport(){
-  document.getElementById('bugModal').style.display = 'flex';
-  document.getElementById('bugTitle').value = '';
-  document.getElementById('bugDesc').value = '';
-  document.getElementById('bugSuccess').style.display = 'none';
-  document.getElementById('bugForm').style.display = 'block';
+  nav('reportbug', document.getElementById('navReportBug'));
+  const t = document.getElementById('bugTitle');
+  const d = document.getElementById('bugDesc');
+  if(t) t.value = '';
+  if(d) d.value = '';
+  const s = document.getElementById('bugSuccess'); if(s) s.style.display = 'none';
+  const f = document.getElementById('bugForm');    if(f) f.style.display = 'block';
   clearBugScreenshot();
-  document.getElementById('bugTitle').focus();
+  if(t) setTimeout(()=>t.focus(), 50);
 }
 function closeBugReport(){
-  document.getElementById('bugModal').style.display = 'none';
+  nav('generator', document.querySelector('.nav-i'));
 }
 function handleBugScreenshot(file){
   if(!file || !file.type.startsWith('image/')) return;
@@ -14359,7 +14401,7 @@ function handleBugScreenshot(file){
 }
 function clearBugScreenshot(){
   _bugScreenshotB64 = null;
-  document.getElementById('bugScreenshotIn').value = '';
+  const inEl = document.getElementById('bugScreenshotIn'); if(inEl) inEl.value = '';
   const empty = document.getElementById('bugScreenshotEmpty');
   const preview = document.getElementById('bugScreenshotPreview');
   if(empty) empty.style.display = 'block';
@@ -15918,43 +15960,6 @@ async function cartoonUseAsAvatar(){
   toast('✅ Avatar cartoon chargé — passe à l\'étape 3 pour générer !');
 }
 </script>
-<!-- BUG REPORT MODAL -->
-<div id="bugModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="if(event.target===this)closeBugReport()">
-  <div class="card rise" style="width:440px;max-width:90vw;padding:24px;position:relative">
-    <button class="btn-quiet" onclick="closeBugReport()" style="position:absolute;top:16px;right:18px;font-size:18px">✕</button>
-    <div class="row gap12" style="margin-bottom:22px">
-      <div style="width:46px;height:46px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,70,70,.12);border:1px solid rgba(255,70,70,.3)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg>
-      </div>
-      <div class="col" style="gap:5px;min-width:0">
-        <h2 class="display" style="font-size:23px;font-weight:700;line-height:1.05">Report un bug</h2>
-        <span class="mono faint" style="font-size:12px;line-height:1">AvatarAds IA Manager</span>
-      </div>
-    </div>
-
-    <!-- FORM -->
-    <div id="bugForm">
-      <div style="margin-bottom:24px">
-        <div class="label">Titre du bug <span class="accent">*</span></div>
-        <input id="bugTitle" class="field" type="text" placeholder="Ex : L'avatar ne s'affiche pas dans le preview" onkeydown="if(event.key==='Enter')document.getElementById('bugDesc').focus()">
-      </div>
-      <div style="margin-bottom:24px">
-        <div class="label">Description (optionnel)</div>
-        <textarea id="bugDesc" class="field" rows="4" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="min-height:120px;resize:vertical"></textarea>
-      </div>
-      <button id="bugSubmitBtn" class="btn" onclick="submitBugReport()" style="width:100%;background:#FF4646;color:#fff;font-weight:700">Envoyer le bug report</button>
-    </div>
-
-    <!-- SUCCESS -->
-    <div id="bugSuccess" class="card center rise" style="display:none;flex-direction:column;align-items:center;padding:40px 24px;gap:6px;border-color:rgba(40,199,149,.35);background:rgba(40,199,149,.08)">
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-      <h3 class="display" style="font-size:21px;font-weight:700;margin-top:14px">Merci, c'est envoyé 🙌</h3>
-      <p class="muted" style="margin-top:8px;font-size:14px">On regarde ça au plus vite.</p>
-      <button class="btn btn-ghost btn-sm" style="margin-top:20px" onclick="openBugReport()">Signaler un autre bug</button>
-    </div>
-  </div>
-</div>
-
 <!-- AVATAR MODAL -->
 <div id="avatarModal">
   <div class="av-modal-header">
