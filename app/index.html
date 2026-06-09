@@ -2745,7 +2745,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- WAVEFORM + TIME -->
           <div style="position:relative;margin-bottom:16px">
-            <canvas id="recWaveform" height="80" style="width:100%;display:block;border-radius:10px;background:var(--bg3);cursor:crosshair"></canvas>
+            <canvas id="recWaveform" height="90" style="width:100%;display:block;border-radius:14px;background:var(--bg3);border:1px solid var(--border2);cursor:crosshair"></canvas>
             <div id="recCursorHint" style="display:none;position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,.5);padding:2px 8px;border-radius:4px;pointer-events:none">Clique pour positionner le curseur</div>
           </div>
 
@@ -2760,8 +2760,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- RECORD BUTTON + IMPORT -->
           <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px">
-            <button id="recMainBtn" onclick="recToggle()" style="width:74px;height:74px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all .2s;background:rgba(255,70,70,0.12);border:3px solid rgba(255,70,70,0.4);color:#FF4646;position:relative;box-shadow:0 10px 34px -8px rgba(255,70,70,0.45)">
-              <span id="recMainBtnIcon">⏺</span>
+            <button id="recMainBtn" onclick="recToggle()" style="width:74px;height:74px;border-radius:50%;cursor:pointer;display:grid;place-items:center;transition:all .2s;background:rgba(255,70,70,0.12);border:3px solid rgba(255,70,70,0.4);position:relative;box-shadow:0 10px 34px -8px rgba(255,70,70,0.45)">
+              <div id="recMainBtnDot" style="width:30px;height:30px;border-radius:50%;background:#FF4646;transition:all .2s"></div>
               <div id="recPulse" style="display:none;position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(239,68,68,0.35);animation:recPulse 1.2s ease-out infinite"></div>
             </button>
             <div style="display:flex;align-items:center;gap:10px;color:var(--text3);font-size:11px;font-family:var(--mono)">
@@ -2769,7 +2769,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               ou
               <div style="flex:1;height:1px;background:var(--border)"></div>
             </div>
-            <button onclick="document.getElementById('recImportFileIn').click()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+            <button onclick="document.getElementById('recImportFileIn').click()" style="padding:13px 26px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:9px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 1v8M4 4l3-3 3 3M1.5 10.5v.5a1.5 1.5 0 001.5 1.5h8a1.5 1.5 0 001.5-1.5v-.5"/></svg>
               Importer un fichier audio / vidéo MP4
             </button>
@@ -2778,18 +2778,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
           <!-- CONTROLS ROW -->
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
               ▶ Écouter
             </button>
-            <button id="recSplitBtn" onclick="recSplitAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Coupe l'audio au curseur — supprime ensuite le segment voulu">
+            <button id="recSplitBtn" onclick="recSplitAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Coupe l'audio au curseur — supprime ensuite le segment voulu">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l5 5m0 0l5 5M6 6l5-5M6 6L1 11"/><circle cx="2" cy="2" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="11" r="1.5" fill="currentColor" stroke="none"/></svg>
               Couper ici
             </button>
-            <button id="recDeleteBtn" onclick="recDeleteAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Supprime le segment sous le curseur" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+            <button id="recDeleteBtn" onclick="recDeleteAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Supprime le segment sous le curseur" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h8M5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M10.5 3.5l-.6 7a1 1 0 01-1 .9H4.1a1 1 0 01-1-.9l-.6-7"/></svg>
               Supprimer
             </button>
-            <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+            <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
               ✂️ Remplacer
             </button>
             <button id="recSilenceBtn" onclick="recToggleSilence()" style="padding:10px 12px;background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
@@ -2814,18 +2814,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- ACTIONS BOTTOM -->
         <div style="display:flex;gap:8px">
-          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" title="Télécharger en WAV">
+          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:14px 20px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" title="Télécharger en WAV">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1v8M3.5 6l3 3 3-3M1.5 10.5v.5a1 1 0 001 1h9a1 1 0 001-1v-.5"/></svg>
             WAV
           </button>
-          <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="padding:12px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px;white-space:nowrap" title="Envoyer vers la bibliothèque" onmouseover="if(!this.disabled){this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="flex:1;padding:14px 22px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap" title="Envoyer vers la bibliothèque" onmouseover="if(!this.disabled)this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg>
             Envoyer vers bibliothèque
           </button>
-          <button id="recResetBtn" onclick="recReset()" disabled style="padding:12px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px" title="Réinitialiser / supprimer l'enregistrement" onmouseover="if(!this.disabled){this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'}" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h8M5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M10.5 3.5l-.6 7a1 1 0 01-1 .9H4.1a1 1 0 01-1-.9l-.6-7"/></svg>
+          <button onclick="openBugReport()" style="padding:14px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px" title="Signaler un bug" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="5" height="8" rx="2.5"/><path d="M5 5.5H2.5M5 8H2.5M10 5.5h2.5M10 8h2.5M7.5 3V1M6 1.8l1 1.2M9 1.8l-1 1.2"/></svg>
           </button>
-          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 6px 20px rgba(255,107,53,0.3)" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1.7;padding:14px;background:linear-gradient(180deg,#FF7A3C,#FF5E22);border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 12px 34px -8px rgba(255,94,34,.6),0 1px 0 rgba(255,255,255,.25) inset" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5,1 5,6.5 2,6.5 8.5,12 8.5,6.5 11,6.5"/></svg>
             Utiliser dans le générateur
           </button>
@@ -6543,9 +6543,10 @@ function recDrawIdle(){
   ctx.clearRect(0,0,W,H);
   // Ligne de tirets uniformes (état repos — style design Claude)
   const dpr = devicePixelRatio;
-  const dashW = 6*dpr, gap = 9*dpr, dashH = 3*dpr;
-  ctx.fillStyle='rgba(255,255,255,0.16)';
-  for(let x=0; x<W; x+=dashW+gap){
+  const dashW = 7*dpr, gap = 7*dpr, dashH = 3;
+  const startX = 14*dpr, endX = W-14*dpr;
+  ctx.fillStyle='rgba(255,255,255,0.22)';
+  for(let x=startX; x<endX; x+=dashW+gap){
     const r = dashH/2;
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(x,(H-dashH)/2,dashW,dashH,r) : ctx.rect(x,(H-dashH)/2,dashW,dashH);
@@ -7108,7 +7109,7 @@ function recReset(){
 
 function recUpdateUI(){
   const mainBtn  = document.getElementById('recMainBtn');
-  const mainIcon = document.getElementById('recMainBtnIcon');
+  const mainDot  = document.getElementById('recMainBtnDot');
   const pulse    = document.getElementById('recPulse');
   const playBtn  = document.getElementById('recPlayBtn');
   const splitBtn  = document.getElementById('recSplitBtn');
@@ -7122,11 +7123,17 @@ function recUpdateUI(){
   const isRec = recState === 'recording';
   const isPlay= recState === 'playing';
   const isProc= recState === 'processing';
-  if(mainIcon) mainIcon.textContent = isRec ? '⏹' : isProc ? '⏳' : '⏺';
+  if(mainDot){
+    // Point rouge plein au repos → carré arrondi pendant l'enregistrement (style design Claude)
+    mainDot.style.width  = isRec ? '22px' : '30px';
+    mainDot.style.height = isRec ? '22px' : '30px';
+    mainDot.style.borderRadius = isRec ? '6px' : '50%';
+    mainDot.style.opacity = isProc ? '.5' : '1';
+  }
   if(mainBtn){
     mainBtn.disabled = isProc;
-    mainBtn.style.background   = isRec ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.12)';
-    mainBtn.style.borderColor  = isRec ? 'rgba(239,68,68,0.7)'  : 'rgba(239,68,68,0.4)';
+    mainBtn.style.background   = isRec ? 'rgba(255,70,70,0.22)' : 'rgba(255,70,70,0.12)';
+    mainBtn.style.borderColor  = isRec ? 'rgba(255,70,70,0.7)'  : 'rgba(255,70,70,0.4)';
   }
   if(pulse)    pulse.style.display = isRec ? 'block' : 'none';
   if(playBtn){ playBtn.disabled = !has||isRec||isProc; playBtn.innerHTML = isPlay ? '⏸ Pause' : '▶ Écouter'; }
