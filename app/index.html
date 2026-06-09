@@ -13367,14 +13367,14 @@ async function _loadLibThumbnails(){
           vid.onseeked = () => {
             try {
               const c = document.createElement('canvas');
-              c.width = 200; c.height = 356; // 9:16 ratio pour les cartes
+              c.width = 360; c.height = 640; // 9:16 haute résolution → net
               const ctx = c.getContext('2d');
               const vw = vid.videoWidth, vh = vid.videoHeight;
               const cw = c.width,       ch = c.height;
-              // Contain : montre TOUT l'avatar sans rogner (dézoomé)
               ctx.fillStyle = '#0e0e10';
               ctx.fillRect(0,0,cw,ch);
-              const scale = Math.min(cw/vw, ch/vh);
+              // Cover puis léger dézoom → remplit la carte mais montre + l'avatar
+              const scale = Math.max(cw/vw, ch/vh) * 0.85;
               const dw = vw*scale, dh = vh*scale;
               const dx = (cw-dw)/2, dy = (ch-dh)/2;
               ctx.drawImage(vid, 0, 0, vw, vh, dx, dy, dw, dh);
@@ -13442,7 +13442,7 @@ async function _libPreviewVideo(idbKey){
   overlay.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
   const vid = document.createElement('video');
   vid.src = url; vid.controls = true; vid.autoplay = true; vid.playsInline = true;
-  vid.style.cssText = 'height:94vh;max-height:94vh;max-width:96vw;width:auto;border-radius:16px;box-shadow:0 0 80px rgba(0,0,0,0.85)';
+  vid.style.cssText = 'max-width:min(82vw,920px);max-height:82vh;width:auto;height:auto;border-radius:16px;box-shadow:0 0 80px rgba(0,0,0,0.85)';
   vid.onclick = e => e.stopPropagation();
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '✕'; closeBtn.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
