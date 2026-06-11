@@ -3569,6 +3569,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div id="edDelHint" class="faint mono" style="display:none;font-size:10.5px;margin-top:10px;color:var(--orange2);line-height:1.5"></div>
               </div>
 
+              <div class="card" style="padding:16px;margin-bottom:14px">
+                <div class="label" style="margin-bottom:10px">🎵 Bande son</div>
+                <div id="edMusicEmpty"><button onclick="document.getElementById('edMusicIn').click()" class="btn btn-ghost btn-sm" style="width:100%">➕ Ajouter une musique</button></div>
+                <div id="edMusicLoaded" style="display:none">
+                  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
+                  <div class="faint mono" style="font-size:10px;margin-bottom:3px">Volume musique</div>
+                  <input type="range" min="0" max="100" value="70" oninput="edSetMusicVol(+this.value)" style="width:100%;margin-bottom:10px">
+                </div>
+                <div class="faint mono" style="font-size:10px;margin:8px 0 3px">Volume vidéo (voix)</div>
+                <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value)" style="width:100%">
+                <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
+              </div>
+
               <div id="edProps" class="card" style="padding:16px;margin-bottom:14px;display:none">
                 <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
                   <div class="label" id="edPropsTitle" style="margin:0">Élément</div>
@@ -16443,7 +16456,7 @@ function edLoadFile(file){
   video.onloadedmetadata=()=>{
     _ed={ file,url,video, dur:video.duration||0, vw:video.videoWidth||720, vh:video.videoHeight||1280,
           trimA:0, trimB:video.duration||0, deletes:[], overlays:[], sel:null,
-          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null };
+          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, audio:null };
     edSetup();
   };
   video.onerror=()=>toast('⚠️ Impossible de lire cette vidéo');
@@ -16485,9 +16498,11 @@ function edPlay(){
   if(t<_ed.trimA || t>=_ed.trimB) t=_ed.trimA;
   for(const d of _ed.deletes){ if(t>=d.a && t<d.b) t=d.b; }
   _ed.video.currentTime=t;
+  if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{_ed.audio.ac.resume();}catch(e){} }
+  if(_ed.music){ try{ _ed.music.currentTime=edOutTime(t); _ed.music.play(); }catch(e){} }
   _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='⏸ Pause'; }).catch(()=>{});
 }
-function edPause(){ if(!_ed) return; _ed.video.pause(); _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
+function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed) el.textContent=edFmt(_ed.video.currentTime)+' / '+edFmt(_ed.dur); }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; ph.style.left=((_ed.video.currentTime/_ed.dur)*tl.clientWidth)+'px'; }
@@ -16538,7 +16553,7 @@ function edBindTimeline(){
       edRefreshTimeline(); toast('🗑 Passage marqué supprimé');
       return;
     }
-    _ed.video.currentTime=Math.max(_ed.trimA,Math.min(_ed.trimB,t));
+    _ed.video.currentTime=Math.max(_ed.trimA,Math.min(_ed.trimB,t)); if(_ed.music&&_ed.playing){ try{_ed.music.currentTime=edOutTime(_ed.video.currentTime);}catch(e){} }
   });
   new ResizeObserver(()=>{ if(_ed) edRefreshTimeline(); }).observe(tl);
 }
@@ -16673,7 +16688,7 @@ function edSetQ(q,btn){
   btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700';
 }
 function edReset(){
-  if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); try{URL.revokeObjectURL(_ed.url);}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
+  if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); try{URL.revokeObjectURL(_ed.url);}catch(e){} try{edRemoveMusic(true);}catch(e){} try{_ed.audio&&_ed.audio.ac.close();}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
   _ed=null;
   document.getElementById('edMain').style.display='none';
   document.getElementById('edEmpty').style.display='block';
@@ -16692,7 +16707,10 @@ async function edExport(){
     const cv=document.createElement('canvas'); cv.width=expW; cv.height=expH; const cx=cv.getContext('2d');
     const f=expW/_ed.dispW;
     const cstream=cv.captureStream(30);
-    try{ const vs=v.captureStream?v.captureStream():(v.mozCaptureStream&&v.mozCaptureStream()); const at=vs&&vs.getAudioTracks&&vs.getAudioTracks(); if(at&&at.length) cstream.addTrack(at[0]); }catch(e){}
+    if(_ed.music){ edEnsureAudioGraph(); if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{ await _ed.audio.ac.resume(); }catch(e){} } }
+    let _usedGraph=false;
+    if(_ed.audio&&_ed.audio.dest){ try{ const at=_ed.audio.dest.stream.getAudioTracks()[0]; if(at){ cstream.addTrack(at); _usedGraph=true; } }catch(e){} }
+    if(!_usedGraph){ try{ const vs=v.captureStream?v.captureStream():(v.mozCaptureStream&&v.mozCaptureStream()); const at=vs&&vs.getAudioTracks&&vs.getAudioTracks(); if(at&&at.length) cstream.addTrack(at[0]); }catch(e){} }
     const mime = MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':(MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')?'video/webm;codecs=vp9,opus':'video/webm');
     const rec=new MediaRecorder(cstream,{mimeType:mime,videoBitsPerSecond:expH>=1080?9000000:5000000});
     const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
@@ -16730,6 +16748,7 @@ async function edExport(){
     await new Promise(r=>{ v.onseeked=()=>{ v.onseeked=null; r(); }; setTimeout(r,800); });
     rec.start();
     await v.play().catch(()=>{});
+    if(_ed.music){ try{ _ed.music.currentTime=0; await _ed.music.play(); }catch(e){} }
     const span=Math.max(0.1,_ed.trimB-_ed.trimA);
     await new Promise(resolve=>{
       const tick=()=>{
@@ -16755,11 +16774,48 @@ async function edExport(){
   }catch(e){
     console.error('Export éditeur:',e); status.textContent='⚠️ '+e.message; toast('⚠️ Export échoué : '+e.message);
   }finally{
-    try{ v.pause(); }catch(e){}
+    try{ v.pause(); }catch(e){} try{ _ed&&_ed.music&&_ed.music.pause(); }catch(e){}
     _ed && (_ed.playing=false);
     btn.disabled=false; btn.textContent=lbl;
   }
 }
+
+
+function edOutTime(t){ if(!_ed) return 0; let o=t-_ed.trimA; for(const d of _ed.deletes){ if(t>d.b) o-=(d.b-d.a); else if(t>d.a) o-=(t-d.a); } return Math.max(0,o); }
+function edEnsureAudioGraph(){
+  if(!_ed||_ed.audio) return _ed&&_ed.audio;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; const ac=new AC();
+    const vSrc=ac.createMediaElementSource(_ed.video); const vGain=ac.createGain(); vGain.gain.value=_ed.vol;
+    const dest=ac.createMediaStreamDestination();
+    vSrc.connect(vGain); vGain.connect(ac.destination); vGain.connect(dest);
+    _ed.audio={ac,vSrc,vGain,dest,mSrc:null,mGain:null};
+  }catch(e){ console.warn('audio graph',e); _ed.audio=null; }
+  return _ed.audio;
+}
+function edAddMusic(file){
+  if(!_ed||!file) return;
+  edRemoveMusic(true);
+  const url=URL.createObjectURL(file); const a=new Audio(); a.src=url; a.preload='auto';
+  _ed.music=a; _ed.musicUrl=url; _ed.musicName=file.name;
+  edEnsureAudioGraph();
+  if(_ed.audio){ try{ const mSrc=_ed.audio.ac.createMediaElementSource(a); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=_ed.musicVol; mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){ a.volume=_ed.musicVol; } }
+  else { a.volume=_ed.musicVol; }
+  document.getElementById('edMusicEmpty').style.display='none';
+  document.getElementById('edMusicLoaded').style.display='block';
+  document.getElementById('edMusicName').textContent=file.name;
+  toast('🎵 Bande son ajoutée');
+}
+function edRemoveMusic(silent){
+  if(!_ed) return;
+  if(_ed.music){ try{_ed.music.pause();}catch(e){} }
+  if(_ed.audio&&_ed.audio.mGain){ try{_ed.audio.mGain.disconnect();}catch(e){} try{_ed.audio.mSrc.disconnect();}catch(e){} _ed.audio.mSrc=null; _ed.audio.mGain=null; }
+  if(_ed.musicUrl){ try{URL.revokeObjectURL(_ed.musicUrl);}catch(e){} }
+  _ed.music=null; _ed.musicUrl=null;
+  if(!silent){ const e1=document.getElementById('edMusicEmpty'),e2=document.getElementById('edMusicLoaded'); if(e1)e1.style.display='block'; if(e2)e2.style.display='none'; }
+}
+function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=v/100; if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=_ed.musicVol; }
+function edSetVideoVol(v){ if(!_ed) return; _ed.vol=v/100; if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video) _ed.video.volume=_ed.vol; }
 
 </script>
 </body>
