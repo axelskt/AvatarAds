@@ -648,6 +648,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         Cartoon
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
+      <div class="nav-i" onclick="nav('studio',this);initStudio()">
+        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="12" height="9" rx="1.5"/><path d="M1.5 6h12M5 3v9"/><path d="M3 4.5h0.5M3 7.5h0.5M3 10.5h0.5"/></svg>
+        Éditeur
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
+      </div>
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
         Affiliation
@@ -3504,6 +3509,95 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       </div><!-- /right -->
 
     </div><!-- /cartoon -->
+
+    <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
+    <div class="view" id="v-studio">
+      <div class="lib-view" style="width:100%;max-width:1060px;margin:0 auto;padding:24px 24px 70px">
+        <div style="margin-bottom:20px">
+          <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">✂️</span>Éditeur de clip <span class="tag-beta" style="font-size:9px;margin-left:2px">BETA</span></h2>
+          <p class="muted" style="margin-top:8px;font-size:14.5px">Coupe, supprime un passage, ajoute du texte fixe et des images — puis exporte ton clip.</p>
+        </div>
+
+        <!-- IMPORT -->
+        <div id="edEmpty">
+          <div class="aaph" onclick="document.getElementById('edFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';edLoadFile(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:54px 20px;border-radius:16px;cursor:pointer;background:var(--panel-1)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M8 4v5"/><path d="m10.5 12.5 4 2.3-4 2.3z" fill="var(--text-3)" stroke="none"/></svg>
+            <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo ici</div>
+            <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP4 · MOV · WEBM</div>
+            <div class="row gap10" style="margin-top:6px">
+              <button onclick="event.stopPropagation();document.getElementById('edFileIn').click()" style="padding:10px 24px;background:rgba(255,90,31,.07);border:1px solid rgba(255,90,31,.45);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer">Parcourir</button>
+              <button onclick="event.stopPropagation();edPickFromLibrary()" class="btn btn-ghost btn-sm">📁 Bibliothèque</button>
+            </div>
+          </div>
+          <input type="file" id="edFileIn" accept="video/*" style="display:none" onchange="edLoadFile(this.files[0]);this.value=''">
+        </div>
+
+        <!-- EDITOR -->
+        <div id="edMain" style="display:none">
+          <div class="row" style="gap:22px;align-items:flex-start;flex-wrap:wrap">
+            <!-- PREVIEW -->
+            <div style="flex:0 0 auto">
+              <div id="edStage" style="position:relative;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border2);touch-action:none">
+                <canvas id="edCanvas" style="display:block"></canvas>
+              </div>
+              <div class="row" style="gap:10px;align-items:center;margin-top:12px">
+                <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost btn-sm" style="min-width:88px">▶ Lire</button>
+                <span id="edTime" class="mono faint" style="font-size:12px">0:00 / 0:00</span>
+              </div>
+              <div id="edTl" style="position:relative;height:40px;margin-top:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;cursor:pointer;overflow:hidden;user-select:none">
+                <div id="edTlDeletes" style="position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none"></div>
+                <div id="edTlTrimL" style="position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
+                <div id="edTlTrimR" style="position:absolute;top:0;bottom:0;right:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
+                <div id="edTlHandleL" style="position:absolute;top:3px;bottom:3px;left:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
+                <div id="edTlHandleR" style="position:absolute;top:3px;bottom:3px;right:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
+                <div id="edTlPlayhead" style="position:absolute;top:-2px;bottom:-2px;left:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.7);z-index:2"></div>
+              </div>
+              <div class="faint mono" style="font-size:10px;margin-top:6px;line-height:1.5">Poignées orange = rogner début/fin · clique la timeline pour te déplacer</div>
+            </div>
+
+            <!-- TOOLS -->
+            <div style="flex:1;min-width:300px">
+              <div class="card" style="padding:16px;margin-bottom:14px">
+                <div class="label" style="margin-bottom:12px">Outils</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <button onclick="edAddText()" class="btn btn-ghost btn-sm">➕ Texte</button>
+                  <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost btn-sm">🖼 Image</button>
+                  <button id="edDelBtn" onclick="edDeleteFlow(this)" class="btn btn-ghost btn-sm">✂️ Supprimer un passage</button>
+                  <button onclick="edReset()" class="btn btn-ghost btn-sm">↺ Autre vidéo</button>
+                </div>
+                <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
+                <div id="edDelHint" class="faint mono" style="display:none;font-size:10.5px;margin-top:10px;color:var(--orange2);line-height:1.5"></div>
+              </div>
+
+              <div id="edProps" class="card" style="padding:16px;margin-bottom:14px;display:none">
+                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+                  <div class="label" id="edPropsTitle" style="margin:0">Élément</div>
+                  <button onclick="edDeleteSelected()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button>
+                </div>
+                <div id="edPropsBody"></div>
+              </div>
+
+              <div class="card" style="padding:16px;margin-bottom:14px">
+                <div class="label" style="margin-bottom:10px">Calques</div>
+                <div id="edLayers" class="col" style="gap:6px"></div>
+                <div id="edLayersEmpty" class="faint" style="font-size:12px">Aucun calque — ajoute du texte ou une image.</div>
+              </div>
+
+              <div class="card" style="padding:16px">
+                <div class="label" style="margin-bottom:10px">Export</div>
+                <div class="row gap8" style="margin-bottom:12px">
+                  <button id="edQ720" onclick="edSetQ(720,this)" class="btn btn-ghost btn-sm grow">720p</button>
+                  <button id="edQ1080" onclick="edSetQ(1080,this)" class="btn btn-sm grow" style="border:1px solid var(--accent);background:var(--accent-soft);color:var(--text);font-weight:700">1080p ✓</button>
+                  <button id="edQ1440" onclick="edSetQ(1440,this)" class="btn btn-ghost btn-sm grow">2K upscale</button>
+                </div>
+                <button id="edExportBtn" onclick="edExport()" class="btn" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">⬇ Exporter le clip</button>
+                <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /studio -->
 
   </div><!-- /main -->
 </div><!-- /layout -->
@@ -7190,7 +7284,7 @@ function recUpdateUI(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Sections accessibles uniquement aux plans payants (pas free / guest)
-const _PAID_ONLY_SECTIONS = ['library','imagegen','recorder','audioclean','affiliation','express','cartoon','youtube'];
+const _PAID_ONLY_SECTIONS = ['library','imagegen','recorder','audioclean','affiliation','express','cartoon','studio','youtube'];
 
 function nav(id,el){
   // ── Paywall free plan : toutes les sections sauf le générateur ──
@@ -16314,5 +16408,359 @@ function _tapSyncCancel(){
   <a href="mailto:contact@iamanager.fr" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all">Contact</a>
 </footer>
 
+<script>
+/* ════════════════════════════════════════════════════════════
+   ÉDITEUR DE CLIP (BETA) — couper · supprimer · texte fixe · image
+   ════════════════════════════════════════════════════════════ */
+let _ed = null;
+let _edQuality = 1080;
+
+function initStudio(){
+  if(!_ed){
+    const m=document.getElementById('edMain'); if(m) m.style.display='none';
+    const e=document.getElementById('edEmpty'); if(e) e.style.display='block';
+  }
+}
+function edFmt(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+String(s).padStart(2,'0'); }
+
+async function edPickFromLibrary(){
+  try{
+    const vids=(window.library||[]).filter(v=>v.hedraIdbKey);
+    if(!vids.length){ toast('⚠️ Aucune vidéo dans ta bibliothèque'); return; }
+    const v=vids[0];
+    const entry=await _idbLoad(v.hedraIdbKey);
+    if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
+    edLoadFile(new File([entry.blob], entry.name||'video.mp4',{type:entry.type||'video/mp4'}));
+    toast('📁 Dernière vidéo de la bibliothèque chargée');
+  }catch(e){ toast('⚠️ '+e.message); }
+}
+
+function edLoadFile(file){
+  if(!file || !file.type.startsWith('video/')){ toast('⚠️ Choisis un fichier vidéo'); return; }
+  const url=URL.createObjectURL(file);
+  const video=document.createElement('video');
+  video.src=url; video.playsInline=true; video.preload='auto';
+  video.onloadedmetadata=()=>{
+    _ed={ file,url,video, dur:video.duration||0, vw:video.videoWidth||720, vh:video.videoHeight||1280,
+          trimA:0, trimB:video.duration||0, deletes:[], overlays:[], sel:null,
+          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null };
+    edSetup();
+  };
+  video.onerror=()=>toast('⚠️ Impossible de lire cette vidéo');
+}
+
+function edSetup(){
+  const stage=document.getElementById('edStage');
+  const canvas=document.getElementById('edCanvas');
+  document.getElementById('edEmpty').style.display='none';
+  document.getElementById('edMain').style.display='block';
+  const ar=_ed.vw/_ed.vh; let h=460, w=h*ar; if(w>460){ w=460; h=w/ar; }
+  _ed.dispW=Math.round(w); _ed.dispH=Math.round(h); _ed.scale=_ed.dispW/_ed.vw;
+  stage.style.width=_ed.dispW+'px'; stage.style.height=_ed.dispH+'px';
+  canvas.width=_ed.dispW; canvas.height=_ed.dispH; _ed.ctx=canvas.getContext('2d');
+  [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
+  stage.onpointerdown=(e)=>{ if(e.target===canvas) edHideProps(); };
+  _ed.video.currentTime=_ed.trimA;
+  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline();
+  cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
+}
+
+function edDrawLoop(){
+  if(!_ed) return;
+  const v=_ed.video, ctx=_ed.ctx;
+  try{ ctx.drawImage(v,0,0,_ed.dispW,_ed.dispH); }catch(e){}
+  if(_ed.playing){
+    let t=v.currentTime;
+    for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
+    if(t>=_ed.trimB){ edPause(); v.currentTime=_ed.trimA; }
+  }
+  edUpdatePlayhead(); edUpdateTime();
+  _ed.raf=requestAnimationFrame(edDrawLoop);
+}
+
+function edTogglePlay(){ if(!_ed) return; _ed.playing?edPause():edPlay(); }
+function edPlay(){
+  if(!_ed) return;
+  let t=_ed.video.currentTime;
+  if(t<_ed.trimA || t>=_ed.trimB) t=_ed.trimA;
+  for(const d of _ed.deletes){ if(t>=d.a && t<d.b) t=d.b; }
+  _ed.video.currentTime=t;
+  _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='⏸ Pause'; }).catch(()=>{});
+}
+function edPause(){ if(!_ed) return; _ed.video.pause(); _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
+
+function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed) el.textContent=edFmt(_ed.video.currentTime)+' / '+edFmt(_ed.dur); }
+function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; ph.style.left=((_ed.video.currentTime/_ed.dur)*tl.clientWidth)+'px'; }
+
+function edRefreshTimeline(){
+  if(!_ed) return;
+  const tl=document.getElementById('edTl'); const w=tl.clientWidth||tl.offsetWidth||300;
+  const px=t=>(t/_ed.dur)*w;
+  document.getElementById('edTlTrimL').style.width=px(_ed.trimA)+'px';
+  document.getElementById('edTlTrimR').style.width=(w-px(_ed.trimB))+'px';
+  document.getElementById('edTlHandleL').style.left=px(_ed.trimA)+'px';
+  document.getElementById('edTlHandleR').style.left=(px(_ed.trimB)-9)+'px';
+  const dc=document.getElementById('edTlDeletes'); dc.innerHTML='';
+  _ed.deletes.forEach((d,i)=>{
+    const seg=document.createElement('div');
+    seg.style.cssText='position:absolute;top:0;bottom:0;left:'+px(d.a)+'px;width:'+(px(d.b)-px(d.a))+'px;background:repeating-linear-gradient(45deg,rgba(255,70,70,.55) 0 6px,rgba(255,70,70,.28) 6px 12px);pointer-events:auto;cursor:pointer;z-index:1';
+    seg.title='Cliquer pour restaurer ce passage';
+    seg.onclick=(e)=>{ e.stopPropagation(); _ed.deletes.splice(i,1); edRefreshTimeline(); toast('↩︎ Passage restauré'); };
+    dc.appendChild(seg);
+  });
+}
+
+function edBindTimeline(){
+  const tl=document.getElementById('edTl'); if(tl._bound) return; tl._bound=true;
+  const hL=document.getElementById('edTlHandleL'), hR=document.getElementById('edTlHandleR');
+  let drag=null;
+  const xToT=(clientX)=>{ const r=tl.getBoundingClientRect(); let x=Math.max(0,Math.min(r.width,clientX-r.left)); return (x/r.width)*_ed.dur; };
+  hL.addEventListener('pointerdown',e=>{ e.stopPropagation(); drag='L'; try{hL.setPointerCapture(e.pointerId);}catch(_){} });
+  hR.addEventListener('pointerdown',e=>{ e.stopPropagation(); drag='R'; try{hR.setPointerCapture(e.pointerId);}catch(_){} });
+  window.addEventListener('pointermove',e=>{
+    if(!drag||!_ed) return;
+    const t=xToT(e.clientX);
+    if(drag==='L') _ed.trimA=Math.max(0,Math.min(t,_ed.trimB-0.3));
+    else _ed.trimB=Math.min(_ed.dur,Math.max(t,_ed.trimA+0.3));
+    _ed.video.currentTime=drag==='L'?_ed.trimA:_ed.trimB;
+    edRefreshTimeline();
+  });
+  window.addEventListener('pointerup',()=>{ drag=null; });
+  tl.addEventListener('click',e=>{
+    if(!_ed) return;
+    const t=xToT(e.clientX);
+    if(_ed.delPending!=null){
+      const a=Math.min(_ed.delPending,t), b=Math.max(_ed.delPending,t);
+      if(b-a>0.1) _ed.deletes.push({a,b});
+      _ed.delPending=null;
+      document.getElementById('edDelHint').style.display='none';
+      document.getElementById('edDelBtn').textContent='✂️ Supprimer un passage';
+      edRefreshTimeline(); toast('🗑 Passage marqué supprimé');
+      return;
+    }
+    _ed.video.currentTime=Math.max(_ed.trimA,Math.min(_ed.trimB,t));
+  });
+  new ResizeObserver(()=>{ if(_ed) edRefreshTimeline(); }).observe(tl);
+}
+
+function edDeleteFlow(btn){
+  if(!_ed) return;
+  if(_ed.delPending==null){
+    _ed.delPending=_ed.video.currentTime;
+    const h=document.getElementById('edDelHint'); h.style.display='block';
+    h.textContent='Début = position actuelle ('+edFmt(_ed.delPending)+'). Clique la timeline à la FIN du passage à supprimer.';
+    btn.textContent='✂️ Clique la fin…';
+  } else {
+    _ed.delPending=null; document.getElementById('edDelHint').style.display='none';
+    btn.textContent='✂️ Supprimer un passage';
+  }
+}
+
+/* ---------- overlays ---------- */
+function edAddText(){
+  if(!_ed) return;
+  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', bg:true, bold:true };
+  _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
+}
+function edAddImage(file){
+  if(!_ed||!file) return;
+  const img=new Image(); const url=URL.createObjectURL(file);
+  img.onload=()=>{
+    const ar=img.width/img.height; let w=_ed.dispW*0.42, h=w/ar;
+    const ov={ id:'ov'+Date.now(), type:'image', img, url, x:_ed.dispW*0.29, y:_ed.dispH*0.3, w, h, crop:{t:0,r:0,b:0,l:0} };
+    _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
+  };
+  img.src=url;
+}
+
+function edBuildOverlayEl(ov){
+  const stage=document.getElementById('edStage');
+  const el=document.createElement('div'); el.className='ed-ov'; el.dataset.id=ov.id;
+  el.style.cssText='position:absolute;cursor:move;box-sizing:border-box;left:'+ov.x+'px;top:'+ov.y+'px;';
+  if(ov.type==='text'){ el.style.width=ov.w+'px'; el.innerHTML='<div class="ed-ov-txt"></div>'; }
+  else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px'; const im=document.createElement('img'); im.src=ov.url; im.style.cssText='width:100%;height:100%;display:block;object-fit:fill;pointer-events:none'; el.appendChild(im); }
+  const rh=document.createElement('div'); rh.className='ed-ov-rh';
+  rh.style.cssText='position:absolute;right:-8px;bottom:-8px;width:16px;height:16px;background:var(--accent);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;z-index:5;display:none';
+  el.appendChild(rh); stage.appendChild(el); ov._el=el; edStyleOverlay(ov);
+
+  let mode=null,sx,sy,ox,oy,ow,oh;
+  const start=(e,m)=>{ e.stopPropagation(); edSelect(ov.id); mode=m; sx=e.clientX; sy=e.clientY; ox=ov.x; oy=ov.y; ow=ov.w; oh=ov.h||(ov.size*1.4); try{(m==='resize'?rh:el).setPointerCapture(e.pointerId);}catch(_){} };
+  const move=(e)=>{
+    if(!mode||!_ed) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(mode==='move'){ ov.x=Math.max(-_ed.dispW*0.4,Math.min(_ed.dispW*0.98,ox+dx)); ov.y=Math.max(-_ed.dispH*0.15,Math.min(_ed.dispH*0.98,oy+dy)); }
+    else { ov.w=Math.max(28,ow+dx); if(ov.type==='image'){ const ar=ow/oh; ov.h=Math.max(20,ov.w/ar); } }
+    edStyleOverlay(ov);
+  };
+  const up=()=>{ mode=null; };
+  el.addEventListener('pointerdown',e=>{ if(e.target===rh) return; start(e,'move'); });
+  rh.addEventListener('pointerdown',e=>start(e,'resize'));
+  el.addEventListener('pointermove',move); rh.addEventListener('pointermove',move);
+  el.addEventListener('pointerup',up); rh.addEventListener('pointerup',up);
+}
+
+function edStyleOverlay(ov){
+  const el=ov._el; if(!el) return;
+  el.style.left=ov.x+'px'; el.style.top=ov.y+'px';
+  if(ov.type==='text'){
+    el.style.width=ov.w+'px'; el.style.height='auto';
+    const t=el.querySelector('.ed-ov-txt'); t.textContent=ov.text||'';
+    t.style.cssText='font-family:var(--display),sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;'+(ov.bg?'padding:5px 12px;background:rgba(0,0,0,.55);border-radius:9px;':'text-shadow:0 2px 7px rgba(0,0,0,.85);');
+  } else {
+    el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
+    const im=el.querySelector('img'); const c=ov.crop||{t:0,r:0,b:0,l:0};
+    if(im) im.style.clipPath='inset('+c.t+'% '+c.r+'% '+c.b+'% '+c.l+'%)';
+  }
+  const onSel=_ed.sel===ov.id;
+  el.style.outline=onSel?'2px solid var(--accent)':'1px dashed rgba(255,255,255,.45)';
+  el.style.outlineOffset='1px';
+  const rh=el.querySelector('.ed-ov-rh'); if(rh) rh.style.display=onSel?'block':'none';
+}
+
+function edSelect(id){ _ed.sel=id; _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); }
+function edHideProps(){ if(!_ed) return; _ed.sel=null; const p=document.getElementById('edProps'); if(p) p.style.display='none'; _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); }
+function edShowProps(){
+  const ov=_ed.overlays.find(o=>o.id===_ed.sel); const p=document.getElementById('edProps'); const body=document.getElementById('edPropsBody');
+  if(!ov){ p.style.display='none'; return; }
+  p.style.display='block';
+  document.getElementById('edPropsTitle').textContent=ov.type==='text'?'Texte':'Image';
+  if(ov.type==='text'){
+    body.innerHTML=
+      '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:10px">'+
+      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
+      '<input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="width:100%;margin-bottom:12px">'+
+      '<div class="row" style="gap:14px;align-items:center;flex-wrap:wrap">'+
+        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Couleur</label>'+
+        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bg?'checked':'')+' onchange="edSetProp(\'bg\',this.checked)"> Fond</label>'+
+        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bold?'checked':'')+' onchange="edSetProp(\'bold\',this.checked)"> Gras</label>'+
+      '</div>';
+  } else {
+    const c=ov.crop;
+    body.innerHTML=
+      '<div class="faint mono" style="font-size:10px;margin-bottom:6px">Rogner</div>'+
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;margin-bottom:10px;font-size:11px">'+
+        '<span class="faint">Haut</span><input type="range" min="0" max="45" value="'+c.t+'" oninput="edSetCrop(\'t\',+this.value)">'+
+        '<span class="faint">Bas</span><input type="range" min="0" max="45" value="'+c.b+'" oninput="edSetCrop(\'b\',+this.value)">'+
+        '<span class="faint">Gauche</span><input type="range" min="0" max="45" value="'+c.l+'" oninput="edSetCrop(\'l\',+this.value)">'+
+        '<span class="faint">Droite</span><input type="range" min="0" max="45" value="'+c.r+'" oninput="edSetCrop(\'r\',+this.value)">'+
+      '</div>'+
+      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
+      '<input type="range" min="40" max="'+Math.round(_ed.dispW*1.3)+'" value="'+Math.round(ov.w)+'" oninput="edSetImgW(+this.value)" style="width:100%">';
+  }
+}
+function edSetProp(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov[k]=v; edStyleOverlay(ov); edRenderLayers(); }
+function edSetCrop(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov.crop) return; ov.crop[k]=v; edStyleOverlay(ov); }
+function edSetImgW(v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||ov.type!=='image') return; const ar=ov.w/ov.h; ov.w=v; ov.h=v/ar; edStyleOverlay(ov); }
+
+function edRenderLayers(){
+  const wrap=document.getElementById('edLayers'); const empty=document.getElementById('edLayersEmpty'); if(!wrap||!_ed) return;
+  wrap.innerHTML='';
+  if(!_ed.overlays.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  _ed.overlays.forEach(ov=>{
+    const on=_ed.sel===ov.id; const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(on?'var(--accent)':'var(--border2)')+';background:'+(on?'var(--accent-soft)':'var(--bg3)');
+    row.innerHTML='<span style="font-size:13px">'+(ov.type==='text'?'🅣':'🖼')+'</span><span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(ov.type==='text'?(ov.text||'Texte'):'Image')+'</span>';
+    row.onclick=()=>edSelect(ov.id);
+    wrap.appendChild(row);
+  });
+}
+function edDeleteSelected(){ if(!_ed) return; const i=_ed.overlays.findIndex(o=>o.id===_ed.sel); if(i<0) return; const ov=_ed.overlays[i]; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); edHideProps(); edRenderLayers(); }
+
+function edSetQ(q,btn){
+  _edQuality=q;
+  ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.border='1px solid var(--border)'; b.style.background='transparent'; b.style.color='var(--text-2)'; b.style.fontWeight='500'; } });
+  btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700';
+}
+function edReset(){
+  if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); try{URL.revokeObjectURL(_ed.url);}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
+  _ed=null;
+  document.getElementById('edMain').style.display='none';
+  document.getElementById('edEmpty').style.display='block';
+}
+
+/* ---------- EXPORT ---------- */
+async function edExport(){
+  if(!_ed) return;
+  const status=document.getElementById('edExportStatus'); status.style.display='block'; status.textContent='Préparation…';
+  const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='⏳ Export…';
+  edPause();
+  const v=_ed.video;
+  try{
+    const ar=_ed.vw/_ed.vh;
+    const expH=_edQuality, expW=Math.round(expH*ar/2)*2;
+    const cv=document.createElement('canvas'); cv.width=expW; cv.height=expH; const cx=cv.getContext('2d');
+    const f=expW/_ed.dispW;
+    const cstream=cv.captureStream(30);
+    try{ const vs=v.captureStream?v.captureStream():(v.mozCaptureStream&&v.mozCaptureStream()); const at=vs&&vs.getAudioTracks&&vs.getAudioTracks(); if(at&&at.length) cstream.addTrack(at[0]); }catch(e){}
+    const mime = MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':(MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')?'video/webm;codecs=vp9,opus':'video/webm');
+    const rec=new MediaRecorder(cstream,{mimeType:mime,videoBitsPerSecond:expH>=1080?9000000:5000000});
+    const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    const done=new Promise(res=>rec.onstop=res);
+
+    function renderFrame(){
+      cx.fillStyle='#000'; cx.fillRect(0,0,expW,expH);
+      try{ cx.drawImage(v,0,0,expW,expH); }catch(e){}
+      for(const ov of _ed.overlays){
+        if(ov.type==='image'){
+          const c=ov.crop||{t:0,r:0,b:0,l:0}; const iw=ov.img.naturalWidth, ih=ov.img.naturalHeight;
+          const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
+          try{ cx.drawImage(ov.img, sx,sy,sw,sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
+        } else {
+          const fs=ov.size*f; cx.save();
+          cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
+          cx.textAlign='center'; cx.textBaseline='top';
+          const cxc=(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=ov.w*f;
+          const words=(ov.text||'').split(' '); let line='', lines=[];
+          for(const wd of words){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; }
+          if(line) lines.push(line);
+          const lh=fs*1.18;
+          lines.forEach((ln,i)=>{
+            const ly=cy+i*lh;
+            if(ov.bg){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle='rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
+            else { cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
+            cx.fillStyle=ov.color||'#fff'; cx.fillText(ln,cxc,ly); cx.shadowColor='transparent';
+          });
+          cx.restore();
+        }
+      }
+    }
+
+    v.currentTime=_ed.trimA;
+    await new Promise(r=>{ v.onseeked=()=>{ v.onseeked=null; r(); }; setTimeout(r,800); });
+    rec.start();
+    await v.play().catch(()=>{});
+    const span=Math.max(0.1,_ed.trimB-_ed.trimA);
+    await new Promise(resolve=>{
+      const tick=()=>{
+        if(!_ed){ resolve(); return; }
+        let t=v.currentTime;
+        for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
+        renderFrame();
+        status.textContent='Rendu… '+Math.min(99,Math.max(0,Math.round((t-_ed.trimA)/span*100)))+'%';
+        if(t>=_ed.trimB || v.ended){ resolve(); return; }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    v.pause(); rec.stop(); await done;
+    const isMp4=mime.indexOf('mp4')>=0;
+    const blob=new Blob(chunks,{type:isMp4?'video/mp4':'video/webm'});
+    const ext=isMp4?'mp4':'webm';
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='avatarads-edit-'+Date.now()+'.'+ext; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),6000);
+    status.textContent='✅ Exporté en '+ext.toUpperCase()+' ('+expW+'×'+expH+')';
+    toast('✅ Clip exporté');
+  }catch(e){
+    console.error('Export éditeur:',e); status.textContent='⚠️ '+e.message; toast('⚠️ Export échoué : '+e.message);
+  }finally{
+    try{ v.pause(); }catch(e){}
+    _ed && (_ed.playing=false);
+    btn.disabled=false; btn.textContent=lbl;
+  }
+}
+
+</script>
 </body>
 </html>
