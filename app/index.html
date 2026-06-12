@@ -3512,7 +3512,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
     <div class="view" id="v-studio">
-      <div class="lib-view" style="width:100%;max-width:1060px;margin:0 auto;padding:24px 24px 70px">
+      <div class="lib-view" style="width:min(1060px,100%);max-width:1060px;margin:0 auto;align-self:center;padding:24px 24px 70px">
         <div style="margin-bottom:20px">
           <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">✂️</span>Éditeur de clip <span class="tag-beta" style="font-size:9px;margin-left:2px">BETA</span></h2>
           <p class="muted" style="margin-top:8px;font-size:14.5px">Coupe, supprime un passage, ajoute du texte fixe et des images — puis exporte ton clip.</p>
@@ -3534,7 +3534,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- EDITOR -->
         <div id="edMain" style="display:none">
-          <div class="row" style="gap:22px;align-items:flex-start;flex-wrap:wrap">
+          <div class="row" style="gap:22px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
             <!-- PREVIEW -->
             <div style="flex:0 0 auto">
               <div id="edStage" style="position:relative;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border2);touch-action:none">
@@ -16467,10 +16467,13 @@ function edSetup(){
   const canvas=document.getElementById('edCanvas');
   document.getElementById('edEmpty').style.display='none';
   document.getElementById('edMain').style.display='block';
-  const ar=_ed.vw/_ed.vh; let h=460, w=h*ar; if(w>460){ w=460; h=w/ar; }
+  const ar=_ed.vw/_ed.vh; let h=540, w=h*ar; if(w>520){ w=520; h=w/ar; }
   _ed.dispW=Math.round(w); _ed.dispH=Math.round(h); _ed.scale=_ed.dispW/_ed.vw;
   stage.style.width=_ed.dispW+'px'; stage.style.height=_ed.dispH+'px';
-  canvas.width=_ed.dispW; canvas.height=_ed.dispH; _ed.ctx=canvas.getContext('2d');
+  const _dpr=Math.min(3,(window.devicePixelRatio||1)*2);
+  canvas.width=Math.round(_ed.dispW*_dpr); canvas.height=Math.round(_ed.dispH*_dpr);
+  canvas.style.width=_ed.dispW+'px'; canvas.style.height=_ed.dispH+'px';
+  _ed.ctx=canvas.getContext('2d'); _ed.ctx.setTransform(_dpr,0,0,_dpr,0,0); _ed.ctx.imageSmoothingQuality='high';
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
   stage.onpointerdown=(e)=>{ if(e.target===canvas) edHideProps(); };
   _ed.video.currentTime=_ed.trimA;
@@ -16701,6 +16704,7 @@ async function edExport(){
   const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='⏳ Export…';
   edPause();
   const v=_ed.video;
+  if(!MediaRecorder.isTypeSupported('video/mp4')){ status.textContent="\u26A0\uFE0F Export MP4 non supporte par ce navigateur \u2014 utilise Safari."; toast('\u26A0\uFE0F Export MP4 non supporte ici (utilise Safari)'); btn.disabled=false; btn.textContent=lbl; return; }
   try{
     const ar=_ed.vw/_ed.vh;
     const expH=_edQuality, expW=Math.round(expH*ar/2)*2;
@@ -16711,8 +16715,8 @@ async function edExport(){
     let _usedGraph=false;
     if(_ed.audio&&_ed.audio.dest){ try{ const at=_ed.audio.dest.stream.getAudioTracks()[0]; if(at){ cstream.addTrack(at); _usedGraph=true; } }catch(e){} }
     if(!_usedGraph){ try{ const vs=v.captureStream?v.captureStream():(v.mozCaptureStream&&v.mozCaptureStream()); const at=vs&&vs.getAudioTracks&&vs.getAudioTracks(); if(at&&at.length) cstream.addTrack(at[0]); }catch(e){} }
-    const mime = MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':(MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')?'video/webm;codecs=vp9,opus':'video/webm');
-    const rec=new MediaRecorder(cstream,{mimeType:mime,videoBitsPerSecond:expH>=1080?9000000:5000000});
+    const mime='video/mp4';
+    const rec=new MediaRecorder(cstream,{mimeType:mime,videoBitsPerSecond:expH>=1440?16000000:(expH>=1080?12000000:6000000)});
     const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
     const done=new Promise(res=>rec.onstop=res);
 
