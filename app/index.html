@@ -3347,6 +3347,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button id="cartoonModelVeo" onclick="cartoonPickVidModel('veo',this)" style="flex:1;padding:9px 6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:9px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Veo 3.1<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">réaliste · 10s</span></button>
               <button id="cartoonModelSeedance" onclick="cartoonPickVidModel('seedance',this)" style="flex:1;padding:9px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Seedance<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">anim cartoon + audio</span></button>
             </div>
+            <div id="cartoonSeedanceDurRow" style="display:none;align-items:center;gap:6px;margin-top:8px">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Durée :</span>
+              <button id="cartoonSdDur5" onclick="cartoonPickSeedanceDur(5000,this)" style="padding:5px 12px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">5s</button>
+              <button id="cartoonSdDur10" onclick="cartoonPickSeedanceDur(10000,this)" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">10s</button>
+            </div>
             <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
               <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
               Générer la vidéo animée
@@ -3589,6 +3594,16 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
                 <div id="edDelHint" class="faint mono" style="display:none;font-size:10.5px;margin-top:10px;color:var(--orange2);line-height:1.5"></div>
+              </div>
+
+              <div class="card" style="padding:16px;margin-bottom:14px">
+                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <div class="label" style="margin:0">🎞 Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
+                  <button onclick="document.getElementById('edClipIn').click()" class="btn btn-ghost btn-sm">＋ Ajouter</button>
+                </div>
+                <div id="edClips" class="col" style="gap:6px"></div>
+                <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. Ajoute d'autres clips (ou glisse une vidéo sur l'aperçu) pour les coller bout à bout — vidéo &gt; 10s à l'export.</div>
+                <input type="file" id="edClipIn" accept="video/*" multiple style="display:none" onchange="edAddClips(this.files);this.value=''">
               </div>
 
               <div class="card" style="padding:16px;margin-bottom:14px">
@@ -15406,6 +15421,7 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
 window._cartoonStyle    = 'pixar';
 window._cartoonImgB64   = null;  // base64 image Imagen 4
 window._cartoonVidModel = 'veo'; // 'veo' (Google) | 'seedance' (Hedra)
+window._cartoonSeedanceDur = 5000; // durée Seedance en ms (5000 | 10000)
 window._cartoonImgUrl   = null;  // object URL preview
 window._cartoonVidUrl   = null;  // object URL vidéo
 
@@ -15669,9 +15685,18 @@ function cartoonPickVidModel(m, el){
   window._cartoonVidModel = m;
   ['cartoonModelVeo','cartoonModelSeedance'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.background='var(--bg3)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; } });
   if(el){ el.style.background='rgba(168,85,247,0.12)'; el.style.borderColor='rgba(168,85,247,0.5)'; el.style.color='#c084fc'; }
+  const durRow=document.getElementById('cartoonSeedanceDurRow');
+  if(durRow) durRow.style.display = (m==='seedance') ? 'flex' : 'none';
   const badge=document.getElementById('cartoonModelBadge');
-  if(badge) badge.textContent = (m==='seedance') ? 'Seedance · 5s' : 'Veo 3.1 · 10s';
+  if(badge) badge.textContent = (m==='seedance') ? ('Seedance · '+((window._cartoonSeedanceDur||5000)/1000)+'s') : 'Veo 3.1 · 10s';
   toast(m==='seedance' ? '🎬 Modèle : Seedance (anim cartoon + audio natif)' : '🎬 Modèle : Veo 3.1 Fast');
+}
+function cartoonPickSeedanceDur(ms, el){
+  window._cartoonSeedanceDur = ms;
+  ['cartoonSdDur5','cartoonSdDur10'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.background='var(--bg3)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; } });
+  if(el){ el.style.background='rgba(168,85,247,0.12)'; el.style.borderColor='rgba(168,85,247,0.5)'; el.style.color='#c084fc'; }
+  const badge=document.getElementById('cartoonModelBadge');
+  if(badge) badge.textContent = 'Seedance · '+(ms/1000)+'s';
 }
 
 // ── Helper générique pour l'API Hedra (via proxy Supabase) ──
@@ -15726,7 +15751,7 @@ async function _cartoonSeedanceGenerate(animPrompt, progTxt){
       text_prompt: animPrompt,
       aspect_ratio: '9:16',
       resolution: '720p',
-      duration_ms: 5000
+      duration_ms: (window._cartoonSeedanceDur || 5000)
     }
   };
   const genRes = await _hedraFetch('/generations', 'POST', genBody);
@@ -16619,7 +16644,7 @@ function edLoadFile(file){
   video.onloadedmetadata=()=>{
     _ed={ file,url,video, dur:video.duration||0, vw:video.videoWidth||720, vh:video.videoHeight||1280,
           trimA:0, trimB:video.duration||0, deletes:[], overlays:[], sel:null,
-          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, audio:null };
+          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, audio:null, extraClips:[] };
     edSetup();
   };
   video.onerror=()=>toast('⚠️ Impossible de lire cette vidéo');
@@ -16640,7 +16665,7 @@ function edSetup(){
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
   stage.onpointerdown=(e)=>{ if(e.target===canvas) edHideProps(); };
   _ed.video.currentTime=_ed.trimA;
-  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop();
+  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); edRenderClips();
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
 }
 
@@ -16892,7 +16917,7 @@ function edSetQ(q,btn){
   btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700';
 }
 function edReset(){
-  if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); try{URL.revokeObjectURL(_ed.url);}catch(e){} try{edRemoveMusic(true);}catch(e){} try{_ed.audio&&_ed.audio.ac.close();}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
+  if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); try{URL.revokeObjectURL(_ed.url);}catch(e){} (_ed.extraClips||[]).forEach(c=>{try{URL.revokeObjectURL(c.url);}catch(e){}}); try{edRemoveMusic(true);}catch(e){} try{_ed.audio&&_ed.audio.ac.close();}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
   _ed=null;
   document.getElementById('edMain').style.display='none';
   document.getElementById('edEmpty').style.display='block';
@@ -16912,7 +16937,16 @@ async function edExport(){
     const cv=document.createElement('canvas'); cv.width=expW; cv.height=expH; const cx=cv.getContext('2d');
     const f=expW/_ed.dispW;
     const cstream=cv.captureStream(30);
-    if(_ed.music){ edEnsureAudioGraph(); if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{ await _ed.audio.ac.resume(); }catch(e){} } }
+    const _hasExtra=(_ed.extraClips&&_ed.extraClips.length>0);
+    if(_ed.music || _hasExtra){
+      edEnsureAudioGraph();
+      if(_ed.audio){
+        for(const c of (_ed.extraClips||[])){
+          if(!c._srcNode){ try{ c._srcNode=_ed.audio.ac.createMediaElementSource(c.video); const g=_ed.audio.ac.createGain(); c._srcNode.connect(g); g.connect(_ed.audio.ac.destination); g.connect(_ed.audio.dest); }catch(e){} }
+        }
+        if(_ed.audio.ac.state==='suspended'){ try{ await _ed.audio.ac.resume(); }catch(e){} }
+      }
+    }
     let _usedGraph=false;
     if(_ed.audio&&_ed.audio.dest){ try{ const at=_ed.audio.dest.stream.getAudioTracks()[0]; if(at){ cstream.addTrack(at); _usedGraph=true; } }catch(e){} }
     if(!_usedGraph){ try{ const vs=v.captureStream?v.captureStream():(v.mozCaptureStream&&v.mozCaptureStream()); const at=vs&&vs.getAudioTracks&&vs.getAudioTracks(); if(at&&at.length) cstream.addTrack(at[0]); }catch(e){} }
@@ -16921,10 +16955,11 @@ async function edExport(){
     const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
     const done=new Promise(res=>rec.onstop=res);
 
-    function renderFrame(){
+    function renderFrame(curV, withOverlays){
       cx.fillStyle='#000'; cx.fillRect(0,0,expW,expH);
-      try{ cx.drawImage(v,0,0,expW,expH); }catch(e){}
-      const _ft=v.currentTime;
+      try{ cx.drawImage(curV,0,0,expW,expH); }catch(e){}
+      if(!withOverlays) return;
+      const _ft=curV.currentTime;
       for(const ov of _ed.overlays){
         if(ov.start!=null && (_ft<ov.start||_ft>ov.end)) continue;
         if(ov.type==='image'){
@@ -16951,37 +16986,51 @@ async function edExport(){
       }
     }
 
+    // Segments : clip principal (rogné, sans passages supprimés, avec overlays) + clips ajoutés (entiers)
+    const segments=[{ vid:v, a:_ed.trimA, b:_ed.trimB, deletes:_ed.deletes, overlays:true }];
+    for(const c of (_ed.extraClips||[])) segments.push({ vid:c.video, a:0, b:(c.dur||c.video.duration||0), deletes:[], overlays:false });
+    const totalSpan=segments.reduce((s,seg)=>s+Math.max(0.1,seg.b-seg.a),0);
+
     v.currentTime=_ed.trimA;
     await new Promise(r=>{ v.onseeked=()=>{ v.onseeked=null; r(); }; setTimeout(r,800); });
     rec.start();
-    await v.play().catch(()=>{});
     if(_ed.music){ try{ _ed.music.currentTime=0; await _ed.music.play(); }catch(e){} }
-    const span=Math.max(0.1,_ed.trimB-_ed.trimA);
-    await new Promise(resolve=>{
-      const tick=()=>{
-        if(!_ed){ resolve(); return; }
-        let t=v.currentTime;
-        for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
-        renderFrame();
-        status.textContent='Rendu… '+Math.min(99,Math.max(0,Math.round((t-_ed.trimA)/span*100)))+'%';
-        if(t>=_ed.trimB || v.ended){ resolve(); return; }
+
+    let doneSpan=0;
+    for(const seg of segments){
+      const cur=seg.vid;
+      if(cur!==v){ cur.muted=false; try{ cur.currentTime=seg.a; }catch(e){} await new Promise(r=>{ cur.onseeked=()=>{ cur.onseeked=null; r(); }; setTimeout(r,800); }); }
+      await cur.play().catch(()=>{});
+      await new Promise(resolve=>{
+        const tick=()=>{
+          if(!_ed){ resolve(); return; }
+          let t=cur.currentTime;
+          for(const d of seg.deletes){ if(t>=d.a-0.02 && t<d.b){ cur.currentTime=d.b; t=d.b; break; } }
+          renderFrame(cur, seg.overlays);
+          const segDone=doneSpan+Math.max(0,t-seg.a);
+          status.textContent='Rendu… '+Math.min(99,Math.max(0,Math.round(segDone/totalSpan*100)))+'%';
+          if(t>=seg.b || cur.ended){ resolve(); return; }
+          requestAnimationFrame(tick);
+        };
         requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-    v.pause(); rec.stop(); await done;
+      });
+      try{ cur.pause(); }catch(e){}
+      doneSpan+=Math.max(0.1,seg.b-seg.a);
+    }
+    rec.stop(); await done;
     const isMp4=mime.indexOf('mp4')>=0;
     const blob=new Blob(chunks,{type:isMp4?'video/mp4':'video/webm'});
     const ext=isMp4?'mp4':'webm';
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='avatarads-edit-'+Date.now()+'.'+ext; a.click();
     setTimeout(()=>URL.revokeObjectURL(url),6000);
-    status.textContent='✅ Exporté en '+ext.toUpperCase()+' ('+expW+'×'+expH+')';
-    toast('✅ Clip exporté');
+    status.textContent='✅ Exporté en '+ext.toUpperCase()+' ('+expW+'×'+expH+(segments.length>1?' · '+segments.length+' clips collés':'')+')';
+    toast(segments.length>1?'✅ '+segments.length+' clips collés et exportés':'✅ Clip exporté');
   }catch(e){
     console.error('Export éditeur:',e); status.textContent='⚠️ '+e.message; toast('⚠️ Export échoué : '+e.message);
   }finally{
     try{ v.pause(); }catch(e){} try{ _ed&&_ed.music&&_ed.music.pause(); }catch(e){}
+    try{ ((_ed&&_ed.extraClips)||[]).forEach(c=>{try{c.video.pause();}catch(_){}}); }catch(e){}
     _ed && (_ed.playing=false);
     btn.disabled=false; btn.textContent=lbl;
   }
@@ -17040,8 +17089,53 @@ function edRouteFile(f){
   if(!f){ return; }
   if(f.type.startsWith('image/')) edAddImage(f);
   else if(f.type.startsWith('audio/')) edAddMusic(f);
-  else if(f.type.startsWith('video/')) toast('↺ Pour remplacer la vidéo, clique « Autre vidéo »');
+  else if(f.type.startsWith('video/')) edAddClips([f]);
   else toast('⚠️ Glisse une image, un son ou une vidéo');
+}
+
+/* ---------- clips multiples (concaténation) ---------- */
+const _edClipBtnCss='flex:0 0 auto;width:24px;height:24px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;line-height:1;padding:0';
+function edAddClips(files){
+  if(!_ed||!files) return;
+  let added=0;
+  [...files].forEach(f=>{
+    if(!f.type || !f.type.startsWith('video/')) return;
+    added++;
+    const url=URL.createObjectURL(f);
+    const vid=document.createElement('video');
+    vid.src=url; vid.playsInline=true; vid.preload='auto'; vid.muted=false;
+    vid.onloadedmetadata=()=>{ _ed.extraClips.push({ file:f, url, video:vid, dur:vid.duration||0 }); edRenderClips(); };
+  });
+  if(added) toast('🎞 '+added+' clip'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+' à la suite');
+}
+function edRemoveClip(i){
+  const c=_ed.extraClips[i]; if(c){ try{ c.video.pause(); }catch(e){} try{ URL.revokeObjectURL(c.url); }catch(e){} }
+  _ed.extraClips.splice(i,1); edRenderClips(); toast('🗑 Clip retiré');
+}
+function edMoveClip(i,d){
+  const a=_ed.extraClips, j=i+d; if(j<0||j>=a.length) return;
+  [a[i],a[j]]=[a[j],a[i]]; edRenderClips();
+}
+function edRenderClips(){
+  const wrap=document.getElementById('edClips'); const empty=document.getElementById('edClipsEmpty'); const tot=document.getElementById('edClipsTotal'); if(!wrap||!_ed) return;
+  wrap.innerHTML='';
+  const rows=[{name:'Clip principal',dur:Math.max(0,_ed.trimB-_ed.trimA),main:true}]
+    .concat(_ed.extraClips.map((c,i)=>({name:'Clip '+(i+2),dur:c.dur,idx:i})));
+  const total=rows.reduce((s,r)=>s+r.dur,0);
+  if(tot) tot.textContent='· '+rows.length+' clip'+(rows.length>1?'s':'')+' · '+edFmt(total);
+  if(empty) empty.style.display=_ed.extraClips.length?'none':'block';
+  rows.forEach(r=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid '+(r.main?'rgba(255,90,31,.4)':'var(--border2)')+';background:var(--bg3)';
+    row.innerHTML='<span style="font-size:13px">'+(r.main?'⭐':'🎞')+'</span><span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.name+'</span><span class="faint mono" style="font-size:10px">'+edFmt(r.dur)+'</span>';
+    if(!r.main){
+      const up=document.createElement('button'); up.textContent='↑'; up.title='Monter'; up.style.cssText=_edClipBtnCss; up.onclick=()=>edMoveClip(r.idx,-1);
+      const dn=document.createElement('button'); dn.textContent='↓'; dn.title='Descendre'; dn.style.cssText=_edClipBtnCss; dn.onclick=()=>edMoveClip(r.idx,1);
+      const x=document.createElement('button'); x.textContent='✕'; x.title='Retirer'; x.style.cssText=_edClipBtnCss+';color:#ff6b6b'; x.onclick=()=>edRemoveClip(r.idx);
+      row.appendChild(up); row.appendChild(dn); row.appendChild(x);
+    }
+    wrap.appendChild(row);
+  });
 }
 
 /* ---------- overlay time-range track ---------- */
