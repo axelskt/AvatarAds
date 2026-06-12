@@ -3329,7 +3329,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">2</div>
               <div style="font-size:13px;font-weight:700">Anime le personnage</div>
-              <span style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 · 10s</span>
+              <span id="cartoonModelBadge" style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 · 10s</span>
             </div>
 
             <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Décris les mouvements :</div>
@@ -3342,6 +3342,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
             </div>
 
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:12px;margin-bottom:5px">Modèle d'animation :</div>
+            <div style="display:flex;gap:6px">
+              <button id="cartoonModelVeo" onclick="cartoonPickVidModel('veo',this)" style="flex:1;padding:9px 6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:9px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Veo 3.1<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">réaliste · 10s</span></button>
+              <button id="cartoonModelSeedance" onclick="cartoonPickVidModel('seedance',this)" style="flex:1;padding:9px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Seedance<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">anim cartoon + audio</span></button>
+            </div>
             <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
               <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
               Générer la vidéo animée
@@ -15400,6 +15405,7 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
 
 window._cartoonStyle    = 'pixar';
 window._cartoonImgB64   = null;  // base64 image Imagen 4
+window._cartoonVidModel = 'veo'; // 'veo' (Google) | 'seedance' (Hedra)
 window._cartoonImgUrl   = null;  // object URL preview
 window._cartoonVidUrl   = null;  // object URL vidéo
 
@@ -15545,11 +15551,12 @@ async function cartoonGenVideo(btn){
   let prog = 0;
   const progBar = document.getElementById('cartoonVidProgressBar');
   const progTxt = document.getElementById('cartoonVidProgressTxt');
+  const _mLabel = (window._cartoonVidModel === 'seedance') ? 'Seedance' : 'Veo 3.1';
   const progInt = setInterval(()=>{
     prog = Math.min(prog + (prog < 70 ? 1.2 : 0.3), 92);
     if(progBar) progBar.style.width = prog + '%';
     if(progTxt){
-      if(prog < 30)       progTxt.textContent = '⏳ Veo 3.1 initialise la génération…';
+      if(prog < 30)       progTxt.textContent = '⏳ '+_mLabel+' initialise la génération…';
       else if(prog < 60)  progTxt.textContent = '🎨 Création du mouvement…';
       else if(prog < 85)  progTxt.textContent = '🎬 Finalisation de la vidéo…';
       else                progTxt.textContent = '✨ Presque terminé…';
@@ -15557,50 +15564,58 @@ async function cartoonGenVideo(btn){
   }, 800);
 
   try {
-    // 1. Démarrer la génération Veo 3.1 Fast
-    const startResp = await _cartoonProxyFetch(
-      '/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          instances: [{
-            prompt: animPrompt,
-            image: { bytesBase64Encoded: window._cartoonImgB64, mimeType: 'image/png' }
-          }],
-          parameters: {
-            durationSeconds: 10,
-            sampleCount: 1,
-            aspectRatio: '9:16',
-            resolution: '720p',
-            generateAudio: true
-          }
-        })
-      }
-    );
-    if(!startResp.ok){
-      const err = await startResp.json().catch(()=>({}));
-      throw new Error(err?.error?.message || `HTTP ${startResp.status}`);
-    }
-    const { name: opName } = await startResp.json();
-    if(!opName) throw new Error('Opération Veo introuvable');
+    let videoBlob;
 
-    // 2. Polling jusqu'à completion
-    let videoB64 = null;
-    for(let i=0; i<60; i++){
-      await new Promise(r=>setTimeout(r,3000));
-      const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
-      if(!pollResp.ok) continue;
-      const pollData = await pollResp.json();
-      if(pollData.done){
-        videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded;
-        break;
+    if(window._cartoonVidModel === 'seedance'){
+      // ── Seedance 1.5 Pro via Hedra (image→vidéo, audio natif) ──
+      videoBlob = await _cartoonSeedanceGenerate(animPrompt, progTxt);
+    } else {
+      // 1. Démarrer la génération Veo 3.1 Fast
+      const startResp = await _cartoonProxyFetch(
+        '/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            instances: [{
+              prompt: animPrompt,
+              image: { bytesBase64Encoded: window._cartoonImgB64, mimeType: 'image/png' }
+            }],
+            parameters: {
+              durationSeconds: 10,
+              sampleCount: 1,
+              aspectRatio: '9:16',
+              resolution: '720p',
+              generateAudio: true
+            }
+          })
+        }
+      );
+      if(!startResp.ok){
+        const err = await startResp.json().catch(()=>({}));
+        throw new Error(err?.error?.message || `HTTP ${startResp.status}`);
       }
-    }
-    if(!videoB64) throw new Error('Timeout — Veo n\'a pas terminé dans les 3 minutes');
+      const { name: opName } = await startResp.json();
+      if(!opName) throw new Error('Opération Veo introuvable');
 
-    // 3. Créer le blob URL
-    const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
-    const videoBlob  = new Blob([videoBytes], { type:'video/mp4' });
+      // 2. Polling jusqu'à completion
+      let videoB64 = null;
+      for(let i=0; i<60; i++){
+        await new Promise(r=>setTimeout(r,3000));
+        const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
+        if(!pollResp.ok) continue;
+        const pollData = await pollResp.json();
+        if(pollData.done){
+          videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded;
+          break;
+        }
+      }
+      if(!videoB64) throw new Error('Timeout — Veo n\'a pas terminé dans les 3 minutes');
+
+      // 3. Créer le blob
+      const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
+      videoBlob = new Blob([videoBytes], { type:'video/mp4' });
+    }
+
     if(window._cartoonVidUrl) URL.revokeObjectURL(window._cartoonVidUrl);
     window._cartoonVidUrl = URL.createObjectURL(videoBlob);
     window._cartoonVidBlob = videoBlob;
@@ -15641,12 +15656,104 @@ async function cartoonGenVideo(btn){
 
   } catch(e){
     clearInterval(progInt);
-    console.error('Veo 3.1 error:', e);
-    toast('⚠️ Erreur Veo 3.1 : ' + e.message);
+    console.error(_mLabel+' error:', e);
+    toast('⚠️ Erreur '+_mLabel+' : ' + e.message);
     document.getElementById('cartoonVidProgress').style.display = 'none';
   } finally {
     if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg> Générer la vidéo animée <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>'; }
   }
+}
+
+// ── Sélecteur de modèle d'animation (Veo / Seedance) ──
+function cartoonPickVidModel(m, el){
+  window._cartoonVidModel = m;
+  ['cartoonModelVeo','cartoonModelSeedance'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.background='var(--bg3)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; } });
+  if(el){ el.style.background='rgba(168,85,247,0.12)'; el.style.borderColor='rgba(168,85,247,0.5)'; el.style.color='#c084fc'; }
+  const badge=document.getElementById('cartoonModelBadge');
+  if(badge) badge.textContent = (m==='seedance') ? 'Seedance · 5s' : 'Veo 3.1 · 10s';
+  toast(m==='seedance' ? '🎬 Modèle : Seedance (anim cartoon + audio natif)' : '🎬 Modèle : Veo 3.1 Fast');
+}
+
+// ── Helper générique pour l'API Hedra (via proxy Supabase) ──
+async function _hedraFetch(path, method, body, isForm){
+  const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
+  const authHdr = await getAuthHeader();
+  const byok = window._userHedraKey ? { 'x-user-hedra-key': window._userHedraKey } : {};
+  const opts = { method: method||'GET', headers: { ...authHdr, ...byok } };
+  if(body && isForm){ opts.body = body; }
+  else if(body){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  return fetch(PROXY + '?path=' + encodeURIComponent(path), opts);
+}
+
+// ── Résout dynamiquement l'id du modèle Seedance sur le compte Hedra (mis en cache) ──
+async function _cartoonResolveSeedanceModel(){
+  if(window._seedanceModelId) return window._seedanceModelId;
+  const r = await _hedraFetch('/models', 'GET');
+  if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
+  const data = await r.json().catch(()=>null);
+  const all = Array.isArray(data) ? data : (data?.models || data?.data || []);
+  const m = all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
+         || all.find(x=>/seedance/i.test(x.name||''));
+  if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
+  window._seedanceModelId = m.id;
+  console.log('🎬 Seedance modèle résolu :', m.name, '→', m.id);
+  return m.id;
+}
+
+// ── Génère une vidéo cartoon avec Seedance 1.5 Pro via Hedra (image→vidéo) ──
+async function _cartoonSeedanceGenerate(animPrompt, progTxt){
+  if(progTxt) progTxt.textContent = '⏳ Seedance : préparation…';
+  const modelId = await _cartoonResolveSeedanceModel();
+
+  // 1. Upload de l'image perso (Imagen 4) comme asset Hedra
+  const imgBytes = Uint8Array.from(atob(window._cartoonImgB64), c=>c.charCodeAt(0));
+  const imgBlob  = new Blob([imgBytes], { type:'image/png' });
+  const createImg = await _hedraFetch('/assets', 'POST', { type:'image', name:'cartoon.png' });
+  if(!createImg.ok){ const e=await createImg.text(); throw new Error('Hedra asset image '+createImg.status+' — '+e.slice(0,100)); }
+  const imgAsset = await createImg.json();
+  if(!imgAsset.id) throw new Error('Hedra : pas d\'ID asset image');
+  const fd = new FormData(); fd.append('file', imgBlob, 'cartoon.png');
+  const up = await _hedraFetch('/assets/'+imgAsset.id+'/upload', 'POST', fd, true);
+  if(!up.ok){ const e=await up.text(); throw new Error('Hedra upload image '+up.status+' — '+e.slice(0,100)); }
+
+  // 2. Lancer la génération
+  if(progTxt) progTxt.textContent = '🎬 Seedance génère…';
+  const genBody = {
+    type: 'video',
+    ai_model_id: modelId,
+    start_keyframe_id: imgAsset.id,
+    generated_video_inputs: {
+      text_prompt: animPrompt,
+      aspect_ratio: '9:16',
+      resolution: '720p',
+      duration_ms: 5000
+    }
+  };
+  const genRes = await _hedraFetch('/generations', 'POST', genBody);
+  if(!genRes.ok){ const e=await genRes.text(); throw new Error('Seedance '+genRes.status+' — '+e.slice(0,140)); }
+  const gen = await genRes.json();
+  const genId = gen.id || gen.generation_id;
+  if(!genId) throw new Error('Seedance : pas d\'ID de génération');
+
+  // 3. Polling
+  for(let i=0; i<72; i++){
+    await new Promise(r=>setTimeout(r,5000));
+    const pr = await _hedraFetch('/generations/'+genId+'/status', 'GET');
+    if(!pr.ok) continue;
+    const pd = await pr.json();
+    const st = (pd.status || pd.state || '').toLowerCase();
+    if(st==='error' || st==='failed') throw new Error('Seedance a échoué — '+(pd.error || pd.error_message || 'raison inconnue'));
+    if(st==='complete' || st==='completed' || st==='succeeded'){
+      const url = pd.url || pd.download_url || pd.video_url || pd.streaming_url || '';
+      if(!url) throw new Error('Seedance : pas d\'URL vidéo dans la réponse');
+      const vr = await fetch(url);
+      if(!vr.ok) throw new Error('Téléchargement vidéo Seedance échoué ('+vr.status+')');
+      const vb = await vr.blob();
+      return new Blob([vb], { type:'video/mp4' });
+    }
+    // queued / processing / finalizing → continue
+  }
+  throw new Error('Seedance : délai dépassé (~6 min)');
 }
 
 // ── Cartoon subtitle config ──────────────────────────────────────────
