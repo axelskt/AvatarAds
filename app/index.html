@@ -3376,6 +3376,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="cartoonVoiceInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2)"></div>
             </div>
             <input type="file" id="cartoonVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_cartoonHandleVoice(this.files[0]);this.value=''">
+            <!-- TTS Gemini (voix IA générée) -->
+            <div style="margin:4px 0 10px;padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3)">
+              <div style="font-size:10px;font-family:var(--mono);color:#c4a3f7;margin-bottom:6px">✨ OU génère la voix avec l'IA — Gemini TTS</div>
+              <textarea id="cartoonTtsText" placeholder="Écris ce que le personnage doit dire…" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;min-height:46px;margin-bottom:6px"></textarea>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+                <select id="cartoonTtsVoice" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:11px;padding:7px 8px">
+                  <option value="Puck">Puck (énergique)</option>
+                  <option value="Kore">Kore (clair)</option>
+                  <option value="Charon">Charon (grave)</option>
+                  <option value="Fenrir">Fenrir (punchy)</option>
+                  <option value="Aoede">Aoede (douce)</option>
+                </select>
+                <button id="cartoonTtsBtn" onclick="cartoonGenVoiceTTS()" style="padding:7px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
+              </div>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
               <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
               <button onclick="cartoonUseAsAvatarWithVoice()" style="padding:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">→ Générer avec voix</button>
@@ -3553,6 +3568,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div id="edTlPlayhead" style="position:absolute;top:-2px;bottom:-2px;left:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.7);z-index:2"></div>
               </div>
               <div class="faint mono" style="font-size:10px;margin-top:6px;line-height:1.5">Poignées orange = rogner début/fin · clique la timeline pour te déplacer</div>
+              <div id="edOvTrack" style="display:none;flex-direction:column;gap:5px;margin-top:8px"></div>
+              <div id="edOvTrackHint" class="faint mono" style="display:none;font-size:9.5px;margin-top:4px;line-height:1.5;color:var(--text3)">Bandes = durée d'apparition du calque · glisse pour déplacer, bords pour ajuster, ✕ pour supprimer</div>
             </div>
 
             <!-- TOOLS -->
@@ -16035,6 +16052,45 @@ function _cartoonVoicePreview(){
   _cartoonVoiceAudioEl.onended = () => URL.revokeObjectURL(url);
 }
 
+async function cartoonGenVoiceTTS(){
+  const txt=(document.getElementById('cartoonTtsText')?.value||'').trim();
+  if(!txt){ toast('⚠️ Écris le texte à dire'); return; }
+  const btn=document.getElementById('cartoonTtsBtn'); const lbl=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Voix…'; }
+  try{
+    const voice=document.getElementById('cartoonTtsVoice')?.value||'Puck';
+    const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
+      method:'POST',
+      body:JSON.stringify({
+        contents:[{parts:[{text:txt}]}],
+        generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:voice } } } }
+      })
+    });
+    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+resp.status)); }
+    const data=await resp.json();
+    const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
+    const b64=(part?.inlineData||part?.inline_data)?.data;
+    if(!b64) throw new Error('Pas d\'audio renvoyé par Gemini');
+    const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+    const wav=_pcmToWav(pcm,24000,1);
+    const file=new File([new Blob([wav],{type:'audio/wav'})],'cartoon-voix.wav',{type:'audio/wav'});
+    _cartoonHandleVoice(file);
+    toast('✅ Voix IA générée (Gemini)');
+  }catch(e){ toast('⚠️ '+e.message); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
+}
+function _pcmToWav(pcm,rate,channels){
+  const bytesPerSample=2, blockAlign=channels*bytesPerSample, byteRate=rate*blockAlign;
+  const buf=new ArrayBuffer(44+pcm.length); const dv=new DataView(buf);
+  const ws=(o,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); };
+  ws(0,'RIFF'); dv.setUint32(4,36+pcm.length,true); ws(8,'WAVE'); ws(12,'fmt ');
+  dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,channels,true);
+  dv.setUint32(24,rate,true); dv.setUint32(28,byteRate,true); dv.setUint16(32,blockAlign,true); dv.setUint16(34,16,true);
+  ws(36,'data'); dv.setUint32(40,pcm.length,true);
+  new Uint8Array(buf,44).set(pcm);
+  return buf;
+}
+
 async function cartoonUseAsAvatarWithVoice(){
   if(!window._cartoonVidBlob){ toast('⚠️ Génère la vidéo d\'abord'); return; }
   // Charger l'avatar cartoon dans le générateur
@@ -16477,7 +16533,7 @@ function edSetup(){
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
   stage.onpointerdown=(e)=>{ if(e.target===canvas) edHideProps(); };
   _ed.video.currentTime=_ed.trimA;
-  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline();
+  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop();
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
 }
 
@@ -16485,6 +16541,8 @@ function edDrawLoop(){
   if(!_ed) return;
   const v=_ed.video, ctx=_ed.ctx;
   try{ ctx.drawImage(v,0,0,_ed.dispW,_ed.dispH); }catch(e){}
+  const _vt=v.currentTime;
+  for(const o of _ed.overlays){ if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_vt>=o.start)&&(o.end==null||_vt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; } }
   if(_ed.playing){
     let t=v.currentTime;
     for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
@@ -16577,7 +16635,7 @@ function edDeleteFlow(btn){
 /* ---------- overlays ---------- */
 function edAddText(){
   if(!_ed) return;
-  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', bg:true, bold:true };
+  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'box', bold:true, start:_ed.trimA, end:_ed.trimB };
   _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
 }
 function edAddImage(file){
@@ -16585,7 +16643,7 @@ function edAddImage(file){
   const img=new Image(); const url=URL.createObjectURL(file);
   img.onload=()=>{
     const ar=img.width/img.height; let w=_ed.dispW*0.42, h=w/ar;
-    const ov={ id:'ov'+Date.now(), type:'image', img, url, x:_ed.dispW*0.29, y:_ed.dispH*0.3, w, h, crop:{t:0,r:0,b:0,l:0} };
+    const ov={ id:'ov'+Date.now(), type:'image', img, url, x:_ed.dispW*0.29, y:_ed.dispH*0.3, w, h, crop:{t:0,r:0,b:0,l:0}, start:_ed.trimA, end:_ed.trimB };
     _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
   };
   img.src=url;
@@ -16597,24 +16655,54 @@ function edBuildOverlayEl(ov){
   el.style.cssText='position:absolute;cursor:move;box-sizing:border-box;left:'+ov.x+'px;top:'+ov.y+'px;';
   if(ov.type==='text'){ el.style.width=ov.w+'px'; el.innerHTML='<div class="ed-ov-txt"></div>'; }
   else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px'; const im=document.createElement('img'); im.src=ov.url; im.style.cssText='width:100%;height:100%;display:block;object-fit:fill;pointer-events:none'; el.appendChild(im); }
-  const rh=document.createElement('div'); rh.className='ed-ov-rh';
-  rh.style.cssText='position:absolute;right:-8px;bottom:-8px;width:16px;height:16px;background:var(--accent);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;z-index:5;display:none';
-  el.appendChild(rh); stage.appendChild(el); ov._el=el; edStyleOverlay(ov);
+  stage.appendChild(el); ov._el=el;
+
+  const mk=(name,css,cur)=>{ const h=document.createElement('div'); h.className='ed-ov-rh'; h.dataset.h=name; h.style.cssText='position:absolute;width:15px;height:15px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:6;display:none;cursor:'+cur+';'+css; el.appendChild(h); };
+  if(ov.type==='image'){
+    mk('br','right:-8px;bottom:-8px','nwse-resize'); mk('bl','left:-8px;bottom:-8px','nesw-resize');
+    mk('tr','right:-8px;top:-8px','nesw-resize'); mk('tl','left:-8px;top:-8px','nwse-resize');
+    ['t','r','b','l'].forEach(side=>{
+      const ch=document.createElement('div'); ch.className='ed-crop-h';
+      ch.style.cssText='position:absolute;display:none;z-index:7;background:#10E0C0;box-shadow:0 0 0 1px rgba(0,0,0,.4);'+(side==='t'?'top:-3px;left:18%;right:18%;height:6px;border-radius:3px;cursor:ns-resize':side==='b'?'bottom:-3px;left:18%;right:18%;height:6px;border-radius:3px;cursor:ns-resize':side==='l'?'left:-3px;top:18%;bottom:18%;width:6px;border-radius:3px;cursor:ew-resize':'right:-3px;top:18%;bottom:18%;width:6px;border-radius:3px;cursor:ew-resize');
+      el.appendChild(ch);
+      let cs,cv0;
+      ch.addEventListener('pointerdown',e=>{ e.stopPropagation(); cs=(side==='t'||side==='b')?e.clientY:e.clientX; cv0=ov.crop[side]; ch._d=true; try{ch.setPointerCapture(e.pointerId);}catch(_){} });
+      ch.addEventListener('pointermove',e=>{ if(!ch._d) return; const d=((side==='t'||side==='b')?e.clientY:e.clientX)-cs; const dim=(side==='t'||side==='b')?ov.h:ov.w; const pct=cv0+(((side==='b'||side==='r')?-d:d)/dim)*100; ov.crop[side]=Math.max(0,Math.min(45,pct)); edStyleOverlay(ov); });
+      ch.addEventListener('pointerup',()=>{ ch._d=false; });
+    });
+    el.addEventListener('dblclick',e=>{ e.stopPropagation(); ov._cropMode=!ov._cropMode; edSelect(ov.id); toast(ov._cropMode?'✂️ Mode rognage — glisse les poignées cyan':'✓ Rognage terminé'); });
+  } else {
+    mk('br','right:-8px;bottom:-8px','nwse-resize');
+    el.addEventListener('dblclick',e=>{ e.stopPropagation(); edEditText(ov); });
+  }
+  edStyleOverlay(ov);
 
   let mode=null,sx,sy,ox,oy,ow,oh;
-  const start=(e,m)=>{ e.stopPropagation(); edSelect(ov.id); mode=m; sx=e.clientX; sy=e.clientY; ox=ov.x; oy=ov.y; ow=ov.w; oh=ov.h||(ov.size*1.4); try{(m==='resize'?rh:el).setPointerCapture(e.pointerId);}catch(_){} };
+  const start=(e,m)=>{ if(ov._editing) return; e.stopPropagation(); edSelect(ov.id); mode=m; sx=e.clientX; sy=e.clientY; ox=ov.x; oy=ov.y; ow=ov.w; oh=ov.h||(ov.size*1.4); try{el.setPointerCapture(e.pointerId);}catch(_){} };
   const move=(e)=>{
     if(!mode||!_ed) return;
     const dx=e.clientX-sx, dy=e.clientY-sy;
     if(mode==='move'){ ov.x=Math.max(-_ed.dispW*0.4,Math.min(_ed.dispW*0.98,ox+dx)); ov.y=Math.max(-_ed.dispH*0.15,Math.min(_ed.dispH*0.98,oy+dy)); }
-    else { ov.w=Math.max(28,ow+dx); if(ov.type==='image'){ const ar=ow/oh; ov.h=Math.max(20,ov.w/ar); } }
+    else if(ov.type==='image'){ const ar=ow/oh; let nw=ow;
+      if(mode==='br') nw=ow+dx; else if(mode==='bl'){ nw=ow-dx; ov.x=ox+dx; } else if(mode==='tr') nw=ow+dx; else if(mode==='tl'){ nw=ow-dx; ov.x=ox+dx; }
+      ov.w=Math.max(28,nw); ov.h=Math.max(20,ov.w/ar);
+      if(mode==='tr'||mode==='tl') ov.y=oy+(oh-ov.h);
+    }
+    else { ov.w=Math.max(28,ow+dx); }
     edStyleOverlay(ov);
   };
   const up=()=>{ mode=null; };
-  el.addEventListener('pointerdown',e=>{ if(e.target===rh) return; start(e,'move'); });
-  rh.addEventListener('pointerdown',e=>start(e,'resize'));
-  el.addEventListener('pointermove',move); rh.addEventListener('pointermove',move);
-  el.addEventListener('pointerup',up); rh.addEventListener('pointerup',up);
+  el.addEventListener('pointerdown',e=>{ if(e.target.classList.contains('ed-crop-h')) return; if(e.target.classList.contains('ed-ov-rh')){ start(e,e.target.dataset.h); return; } start(e,'move'); });
+  el.addEventListener('pointermove',move);
+  el.addEventListener('pointerup',up);
+}
+function edEditText(ov){
+  const el=ov._el; if(!el) return; const t=el.querySelector('.ed-ov-txt'); if(!t) return;
+  ov._editing=true; t.contentEditable='true'; edStyleOverlay(ov); t.focus();
+  try{ const rng=document.createRange(); rng.selectNodeContents(t); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(rng); }catch(_){}
+  const finish=()=>{ ov.text=(t.textContent||'').trim()||'TEXTE'; t.contentEditable='false'; ov._editing=false; t.onblur=null; t.onkeydown=null; edStyleOverlay(ov); edRenderLayers(); edRenderOvTrack(); edShowProps(); };
+  t.onblur=finish;
+  t.onkeydown=(ke)=>{ if((ke.key==='Enter'&&!ke.shiftKey)||ke.key==='Escape'){ ke.preventDefault(); t.blur(); } };
 }
 
 function edStyleOverlay(ov){
@@ -16622,8 +16710,13 @@ function edStyleOverlay(ov){
   el.style.left=ov.x+'px'; el.style.top=ov.y+'px';
   if(ov.type==='text'){
     el.style.width=ov.w+'px'; el.style.height='auto';
-    const t=el.querySelector('.ed-ov-txt'); t.textContent=ov.text||'';
-    t.style.cssText='font-family:var(--display),sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;'+(ov.bg?'padding:5px 12px;background:rgba(0,0,0,.55);border-radius:9px;':'text-shadow:0 2px 7px rgba(0,0,0,.85);');
+    const t=el.querySelector('.ed-ov-txt'); if(!ov._editing) t.textContent=ov.text||'';
+    const fam=ov.font||'var(--display)'; const styl=ov.style||'box';
+    let deco='';
+    if(styl==='box') deco='padding:5px 12px;background:rgba(0,0,0,.55);border-radius:9px;';
+    else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
+    else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
+    t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
   } else {
     el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     const im=el.querySelector('img'); const c=ov.crop||{t:0,r:0,b:0,l:0};
@@ -16632,36 +16725,37 @@ function edStyleOverlay(ov){
   const onSel=_ed.sel===ov.id;
   el.style.outline=onSel?'2px solid var(--accent)':'1px dashed rgba(255,255,255,.45)';
   el.style.outlineOffset='1px';
-  const rh=el.querySelector('.ed-ov-rh'); if(rh) rh.style.display=onSel?'block':'none';
+  el.querySelectorAll('.ed-ov-rh').forEach(h=>{ h.style.display=(onSel&&!ov._cropMode)?'block':'none'; });
+  el.querySelectorAll('.ed-crop-h').forEach(h=>{ h.style.display=(onSel&&ov._cropMode)?'block':'none'; });
 }
 
-function edSelect(id){ _ed.sel=id; _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); }
-function edHideProps(){ if(!_ed) return; _ed.sel=null; const p=document.getElementById('edProps'); if(p) p.style.display='none'; _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); }
+function edSelect(id){ _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
+function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
 function edShowProps(){
   const ov=_ed.overlays.find(o=>o.id===_ed.sel); const p=document.getElementById('edProps'); const body=document.getElementById('edPropsBody');
   if(!ov){ p.style.display='none'; return; }
   p.style.display='block';
   document.getElementById('edPropsTitle').textContent=ov.type==='text'?'Texte':'Image';
   if(ov.type==='text'){
+    const fonts=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
+    const styles=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
     body.innerHTML=
+      '<div class="faint mono" style="font-size:10px;margin-bottom:6px">💡 Double-clique le texte dans l\'aperçu pour l\'éditer</div>'+
       '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:10px">'+
+      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Police</div>'+
+      '<select class="field" onchange="edSetFont(this.value)" style="margin-bottom:10px">'+fonts.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'+
+      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Style</div>'+
+      '<div class="row gap6" style="margin-bottom:10px;flex-wrap:wrap">'+styles.map(s=>{const on=(ov.style||'box')===s[0];return '<button onclick="edSetStyle(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid '+(on?'var(--accent)':'var(--border2)')+';background:'+(on?'var(--accent-soft)':'transparent')+';color:var(--text);font-size:11px;padding:5px 9px">'+s[1]+'</button>';}).join('')+'</div>'+
       '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
       '<input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="width:100%;margin-bottom:12px">'+
       '<div class="row" style="gap:14px;align-items:center;flex-wrap:wrap">'+
         '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Couleur</label>'+
-        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bg?'checked':'')+' onchange="edSetProp(\'bg\',this.checked)"> Fond</label>'+
         '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bold?'checked':'')+' onchange="edSetProp(\'bold\',this.checked)"> Gras</label>'+
       '</div>';
   } else {
-    const c=ov.crop;
     body.innerHTML=
-      '<div class="faint mono" style="font-size:10px;margin-bottom:6px">Rogner</div>'+
-      '<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;margin-bottom:10px;font-size:11px">'+
-        '<span class="faint">Haut</span><input type="range" min="0" max="45" value="'+c.t+'" oninput="edSetCrop(\'t\',+this.value)">'+
-        '<span class="faint">Bas</span><input type="range" min="0" max="45" value="'+c.b+'" oninput="edSetCrop(\'b\',+this.value)">'+
-        '<span class="faint">Gauche</span><input type="range" min="0" max="45" value="'+c.l+'" oninput="edSetCrop(\'l\',+this.value)">'+
-        '<span class="faint">Droite</span><input type="range" min="0" max="45" value="'+c.r+'" oninput="edSetCrop(\'r\',+this.value)">'+
-      '</div>'+
+      '<div class="faint mono" style="font-size:11px;line-height:1.6;margin-bottom:10px">✂️ <b style="color:var(--text-2)">Double-clique l\'image</b> dans l\'aperçu pour la rogner (poignées cyan) · les coins servent à la redimensionner.</div>'+
+      '<button onclick="edToggleCrop()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">✂️ Activer / désactiver le rognage</button>'+
       '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
       '<input type="range" min="40" max="'+Math.round(_ed.dispW*1.3)+'" value="'+Math.round(ov.w)+'" oninput="edSetImgW(+this.value)" style="width:100%">';
   }
@@ -16723,7 +16817,9 @@ async function edExport(){
     function renderFrame(){
       cx.fillStyle='#000'; cx.fillRect(0,0,expW,expH);
       try{ cx.drawImage(v,0,0,expW,expH); }catch(e){}
+      const _ft=v.currentTime;
       for(const ov of _ed.overlays){
+        if(ov.start!=null && (_ft<ov.start||_ft>ov.end)) continue;
         if(ov.type==='image'){
           const c=ov.crop||{t:0,r:0,b:0,l:0}; const iw=ov.img.naturalWidth, ih=ov.img.naturalHeight;
           const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
@@ -16820,6 +16916,67 @@ function edRemoveMusic(silent){
 }
 function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=v/100; if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=_ed.musicVol; }
 function edSetVideoVol(v){ if(!_ed) return; _ed.vol=v/100; if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video) _ed.video.volume=_ed.vol; }
+
+/* ---------- font / style / crop ---------- */
+function edSetFont(f){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov.font=f; edStyleOverlay(ov); }
+function edSetStyle(s){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov.style=s; edStyleOverlay(ov); edShowProps(); }
+function edToggleCrop(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||ov.type!=='image') return; ov._cropMode=!ov._cropMode; edStyleOverlay(ov); toast(ov._cropMode?'✂️ Mode rognage actif':'✓ Rognage terminé'); }
+
+/* ---------- drag & drop import ---------- */
+function edBindStageDrop(){
+  const stage=document.getElementById('edStage'); if(!stage||stage._dropBound) return; stage._dropBound=true;
+  stage.addEventListener('dragover',e=>{ e.preventDefault(); stage.style.outline='3px dashed var(--accent)'; stage.style.outlineOffset='-3px'; });
+  stage.addEventListener('dragleave',()=>{ stage.style.outline='none'; });
+  stage.addEventListener('drop',e=>{ e.preventDefault(); stage.style.outline='none'; const f=e.dataTransfer.files&&e.dataTransfer.files[0]; edRouteFile(f); });
+}
+function edRouteFile(f){
+  if(!f){ return; }
+  if(f.type.startsWith('image/')) edAddImage(f);
+  else if(f.type.startsWith('audio/')) edAddMusic(f);
+  else if(f.type.startsWith('video/')) toast('↺ Pour remplacer la vidéo, clique « Autre vidéo »');
+  else toast('⚠️ Glisse une image, un son ou une vidéo');
+}
+
+/* ---------- overlay time-range track ---------- */
+function edRenderOvTrack(){
+  const wrap=document.getElementById('edOvTrack'); const hint=document.getElementById('edOvTrackHint'); if(!wrap||!_ed) return;
+  wrap.innerHTML='';
+  if(!_ed.overlays.length){ wrap.style.display='none'; if(hint) hint.style.display='none'; return; }
+  wrap.style.display='flex'; if(hint) hint.style.display='block';
+  _ed.overlays.forEach(ov=>{
+    if(ov.start==null) ov.start=0; if(ov.end==null) ov.end=_ed.dur;
+    const lane=document.createElement('div'); lane.style.cssText='display:flex;align-items:center;gap:6px';
+    const track=document.createElement('div'); track.style.cssText='position:relative;flex:1;height:22px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden';
+    const on=_ed.sel===ov.id;
+    const L=Math.max(0,(ov.start/_ed.dur)*100), W=Math.max(3,((ov.end-ov.start)/_ed.dur)*100);
+    const band=document.createElement('div');
+    band.style.cssText='position:absolute;top:0;bottom:0;left:'+L+'%;width:'+W+'%;background:'+(ov.type==='text'?'rgba(255,90,31,.9)':'rgba(168,85,247,.9)')+';border-radius:6px;display:flex;align-items:center;gap:4px;padding:0 9px;color:#fff;font-size:10px;font-weight:700;cursor:grab;box-sizing:border-box;'+(on?'box-shadow:0 0 0 2px #fff inset':'');
+    band.innerHTML='<span style="font-size:11px">'+(ov.type==='text'?'🅣':'🖼')+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((ov.type==='text'?(ov.text||'Texte'):'Image'))+'</span>';
+    const eL=document.createElement('div'); eL.dataset.e='l'; eL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:6px 0 0 6px';
+    const eR=document.createElement('div'); eR.dataset.e='r'; eR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:0 6px 6px 0';
+    band.appendChild(eL); band.appendChild(eR);
+    band.addEventListener('pointerdown',e=>{ const m=e.target.dataset.e; edBandDrag(ov,track,e,m==='l'?'l':m==='r'?'r':'move'); });
+    track.appendChild(band);
+    const x=document.createElement('button'); x.textContent='✕'; x.title='Supprimer ce calque';
+    x.style.cssText='flex:0 0 auto;width:22px;height:22px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:#ff6b6b;font-size:12px;cursor:pointer;line-height:1;padding:0';
+    x.onclick=(e)=>{ e.stopPropagation(); const i=_ed.overlays.findIndex(o=>o.id===ov.id); if(i<0) return; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); if(_ed.sel===ov.id) edHideProps(); edRenderLayers(); edRenderOvTrack(); toast('🗑 Calque supprimé'); };
+    lane.appendChild(track); lane.appendChild(x);
+    wrap.appendChild(lane);
+  });
+}
+function edBandDrag(ov,track,e,mode){
+  e.stopPropagation(); edSelect(ov.id);
+  const r=track.getBoundingClientRect(); const sx=e.clientX; const s0=ov.start, e0=ov.end;
+  const tt=dx=>(dx/r.width)*_ed.dur;
+  const mv=(ev)=>{ const d=tt(ev.clientX-sx);
+    if(mode==='move'){ const len=e0-s0; const ns=Math.max(0,Math.min(_ed.dur-len,s0+d)); ov.start=ns; ov.end=ns+len; }
+    else if(mode==='l'){ ov.start=Math.max(0,Math.min(e0-0.2,s0+d)); }
+    else { ov.end=Math.min(_ed.dur,Math.max(s0+0.2,e0+d)); }
+    edRenderOvTrack();
+  };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
 
 </script>
 </body>
