@@ -2337,6 +2337,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <!-- Filter tabs -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
           <button class="lib-filter-tab on" id="libTab-all"     onclick="libSetTab('all')">Tout</button>
+          <button class="lib-filter-tab"    id="libTab-fav"     onclick="libSetTab('fav')">⭐ Favoris</button>
           <button class="lib-filter-tab"    id="libTab-avatar"  onclick="libSetTab('avatar')">🎭 Avatars</button>
           <button class="lib-filter-tab"    id="libTab-video"   onclick="libSetTab('video')">🎬 Vidéos</button>
           <button class="lib-filter-tab"    id="libTab-audio"   onclick="libSetTab('audio')">🎙️ Audio</button>
@@ -5326,6 +5327,7 @@ const CLIPS_TIER_ACCESS = {
   pro:     ['starter', 'pro'],
   elite:   ['starter', 'pro', 'elite'],
   byok:    ['starter', 'pro'],
+  developer: ['starter', 'pro', 'elite'], // compte dev — tout débloqué
 };
 
 // Durée max du clip gameplay (secondes) — s'applique UNIQUEMENT sans avatar sélectionné
@@ -5336,17 +5338,20 @@ const CLIP_MAX_DURATION = {
   pro:     70,   // 70 secondes
   elite:   120,  // 2 minutes
   byok:    70,   // même que pro
+  developer: 120, // compte dev
 };
 
 // Retourne la durée max clip en secondes pour le plan actuel (0 = bloqué)
 function _clipMaxDuration(){
   const p = (currentMember?.plan || 'free').toLowerCase();
+  if(p==='developer' || currentMember?.is_owner) return 120;
   return CLIP_MAX_DURATION[p] ?? 0;
 }
 
 // Retourne les tiers accessibles pour le plan actuel
 function _clipsAccessTiers(){
   const p = (currentMember?.plan || 'free').toLowerCase();
+  if(p==='developer' || currentMember?.is_owner) return ['starter', 'pro', 'elite'];
   return CLIPS_TIER_ACCESS[p] || [];
 }
 
@@ -13646,26 +13651,32 @@ function renderLibrary(){
 
   // Build filtered list — images come from imgHistory, audio/video from library[]
   let items = [];
-  if(_libActiveTab === 'all' || _libActiveTab === 'image'){
+  const _allOrFav = (_libActiveTab === 'all' || _libActiveTab === 'fav');
+  if(_allOrFav || _libActiveTab === 'image'){
     try {
       const imgHist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
       imgHist.forEach((img, i) => items.push({
-        _src: 'img', _idx: i,
+        _src: 'img', _idx: i, fav: !!img.fav,
         type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
         style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
         imgUrl: img.url, date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
       }));
     } catch(e){}
   }
-  if(_libActiveTab === 'all' || _libActiveTab === 'audio'){
+  if(_allOrFav || _libActiveTab === 'audio'){
     library.filter(v=>v.type==='audio').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
   }
-  if(_libActiveTab === 'all' || _libActiveTab === 'avatar'){
+  if(_allOrFav || _libActiveTab === 'avatar'){
     library.filter(v=>!v.type||v.type==='video-avatar').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
   }
-  if(_libActiveTab === 'all' || _libActiveTab === 'video'){
+  if(_allOrFav || _libActiveTab === 'video'){
     library.filter(v=>v.type==='video-simple'||v.type==='video-import').forEach((v,i) => items.push({...v, _src:'lib', _realIdx: library.indexOf(v)}));
   }
+
+  // Onglet Favoris : ne garder que les favoris
+  if(_libActiveTab === 'fav') items = items.filter(it => it.fav);
+  // Favoris toujours en premier (tri stable)
+  items.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
 
   // Update count
   const countEl = document.getElementById('libCount');
@@ -13673,8 +13684,8 @@ function renderLibrary(){
 
   // Render
   if(!items.length && !(_libActiveTab==='all'||_libActiveTab==='avatar')){
-    const emojis = {audio:'🎙️', image:'🖼️', video:'🎬', avatar:'🎭'};
-    const labels = {audio:'audio enregistré', image:'image générée', video:'vidéo importée', avatar:'avatar généré'};
+    const emojis = {audio:'🎙️', image:'🖼️', video:'🎬', avatar:'🎭', fav:'⭐'};
+    const labels = {audio:'audio enregistré', image:'image générée', video:'vidéo importée', avatar:'avatar généré', fav:'favori — clique l\'étoile sur un élément'};
     grid.innerHTML = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:50px 20px"><div style="text-align:center"><div style="font-size:36px;margin-bottom:12px">${emojis[_libActiveTab]||'📁'}</div><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px">Aucun ${labels[_libActiveTab]||'élément'}</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crée du contenu pour le retrouver ici</div></div></div>`;
     if(_libActiveTab==='all'||_libActiveTab==='avatar') grid.innerHTML = _LIB_IMPORT_CARD + grid.innerHTML;
     return;
@@ -13687,6 +13698,9 @@ function renderLibrary(){
   const _delBtn = (src, idx) =>
     `<button onclick="event.stopPropagation();deleteLibItem('${src}',${idx})" style="position:absolute;top:6px;right:6px;z-index:20;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(220,30,30,0.85)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.65)';this.style.borderColor='rgba(255,255,255,0.2)'">✕</button>`;
 
+  const _favBtn = (src, idx, isFav) =>
+    `<button onclick="event.stopPropagation();toggleLibFav('${src}',${idx})" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}" style="position:absolute;top:6px;left:6px;z-index:20;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid ${isFav?'rgba(255,206,58,0.85)':'rgba(255,255,255,0.2)'};color:${isFav?'#ffce3a':'#fff'};font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;backdrop-filter:blur(4px)">${isFav?'★':'☆'}</button>`;
+
   const prefix = (_libActiveTab==='all'||_libActiveTab==='avatar') ? _LIB_IMPORT_CARD : '';
   grid.innerHTML = prefix + items.map((v) => {
     // Image card
@@ -13697,6 +13711,7 @@ function renderLibrary(){
           <div class="vid-overlay"></div>
           <div class="vid-badge">${v.style}</div>
           ${_delBtn('img', v._idx)}
+          ${_favBtn('img', v._idx, v.fav)}
         </div>
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
@@ -13718,6 +13733,7 @@ function renderLibrary(){
           <div class="vid-overlay" style="z-index:3"></div>
           <div class="vid-badge" style="z-index:4">${v.style}</div>
           <div style="z-index:5">${_delBtn('lib', ri)}</div>
+          <div style="z-index:5">${_favBtn('lib', ri, v.fav)}</div>
         </div>
         <div class="vid-meta">
           <div class="vid-title">${v.name}</div>
@@ -13740,6 +13756,7 @@ function renderLibrary(){
         <div class="vid-overlay" style="z-index:4"></div>
         <div class="vid-badge" style="z-index:5">${v.style}</div>
         <div style="z-index:6">${_delBtn('lib', ri)}</div>
+        <div style="z-index:6">${_favBtn('lib', ri, v.fav)}</div>
       </div>
       <div class="vid-meta">
         <div class="vid-title">${v.name}</div>
@@ -13757,6 +13774,15 @@ function renderLibrary(){
 
   // Charger thumbnails vidéo + waveforms audio en arrière-plan (non bloquant)
   setTimeout(() => _loadLibThumbnails(), 50);
+}
+
+function toggleLibFav(src, idx){
+  if(src === 'img'){
+    try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); if(h[idx]){ h[idx].fav=!h[idx].fav; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(e){}
+  } else {
+    if(library[idx]){ library[idx].fav = !library[idx].fav; _saveLibrary(); }
+  }
+  renderLibrary();
 }
 
 async function deleteLibItem(src, idx){
