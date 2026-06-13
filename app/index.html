@@ -1247,6 +1247,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
               </label>
+              <div class="faint mono" style="margin-top:6px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Les boutons « ▶ Écouter » des voix jouent un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
             </div>
 
             <!-- ══ SILENCE REMOVAL ══ -->
@@ -3415,7 +3416,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </select>
                 <button id="cartoonTtsBtn" onclick="cartoonGenVoiceTTS()" style="padding:7px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
               </div>
-              <label class="row gap6" style="margin-top:8px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
+              <div class="faint mono" style="margin-top:8px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Le bouton « ▶ Écouter » joue un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
+              <label class="row gap6" style="margin-top:6px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
               <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
@@ -3614,8 +3616,18 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="flex:1;min-width:300px">
               <div class="card" style="padding:16px;margin-bottom:14px">
                 <div class="label" style="margin-bottom:10px">Outils</div>
-                <button onclick="edAddText()" class="btn btn-ghost btn-sm" style="width:100%">➕ Ajouter un texte</button>
-                <div class="faint mono" style="margin-top:10px;font-size:10.5px;line-height:1.6">🎬 Glisse <b style="color:var(--text-2)">vidéos · images · audio</b> directement sur l'aperçu pour les ajouter.<br><span onclick="edReset()" style="cursor:pointer;color:var(--orange2)">↺ Recommencer</span></div>
+                <button onclick="edAddText()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">➕ Ajouter un texte</button>
+                <div onclick="document.getElementById('edImportIn').click()"
+                     ondragover="event.preventDefault();this.style.borderColor='#3dd6c4';this.style.background='rgba(61,214,196,.07)'"
+                     ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg3)'"
+                     ondrop="event.preventDefault();this.style.borderColor='var(--border2)';this.style.background='var(--bg3)';[...event.dataTransfer.files].forEach(f=>edRouteFile(f))"
+                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:22px 14px;border:1.5px dashed var(--border2);border-radius:12px;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="width:30px;height:30px;border-radius:50%;background:#3dd6c4;display:flex;align-items:center;justify-content:center;color:#06302b;font-size:18px;font-weight:800;line-height:1">+</div>
+                  <div style="font-weight:700;font-size:13px;color:var(--text)">Importer</div>
+                  <div class="faint" style="font-size:10.5px;font-family:var(--mono);text-align:center;line-height:1.5">Glisse vidéos · images · audio</div>
+                </div>
+                <div style="text-align:center;margin-top:8px"><span onclick="edReset()" style="cursor:pointer;color:var(--orange2);font-size:11px;font-family:var(--mono)">↺ Recommencer</span></div>
+                <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
                 <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
               </div>
 
@@ -16748,7 +16760,7 @@ function edSetup(){
   document.getElementById('edMain').style.display='block';
   edResizeCanvas();
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
-  stage.onpointerdown=(e)=>{ if(e.target===canvas) edHideProps(); };
+  stage.onpointerdown=(e)=>{ if(e.target===canvas){ if(_ed.sel){ edHideProps(); } else { edTogglePlay(); } } };
   _ed.video.currentTime=_ed.trimA;
   edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); edRenderClips();
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
@@ -17077,18 +17089,66 @@ function edRenderClipsTrack(){
   _ed.clips.forEach((c,idx)=>{
     const len=Math.max(0.1,c.trimB-c.trimA); const active=idx===_ed.activeIdx;
     const seg=document.createElement('div');
-    seg.style.cssText='flex:'+len.toFixed(3)+' 1 0;min-width:0;height:100%;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden;white-space:nowrap;background:'+(active?'var(--accent-soft)':'var(--bg4)')+';border:1px solid '+(active?'var(--accent)':'var(--border2)')+';color:'+(active?'var(--accent-2)':'var(--text3)')+';font-size:10px;font-weight:700;font-family:var(--mono)';
-    seg.textContent=(idx===0?'⭐ ':'🎞 ')+(idx+1);
+    seg.style.cssText='flex:'+len.toFixed(3)+' 1 0;min-width:0;height:100%;border-radius:6px;cursor:pointer;position:relative;overflow:hidden;background:'+(active?'var(--accent-soft)':'var(--bg4)')+';border:1px solid '+(active?'var(--accent)':'var(--border2)')+'';
+    const strip=document.createElement('div'); strip.style.cssText='position:absolute;inset:0;display:flex'; seg.appendChild(strip);
+    const lab=document.createElement('div'); lab.style.cssText='position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;font-family:var(--mono);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.95);pointer-events:none;z-index:2'; lab.textContent=(idx===0?'⭐':'🎞')+' '+(idx+1); seg.appendChild(lab);
     seg.title='Clip '+(idx+1)+' ('+edFmt(len)+') — clique pour l\'éditer';
     seg.onclick=()=>edSelectClip(idx);
     tr.appendChild(seg);
+    _edFillStrip(strip, c);
   });
+}
+async function _edFillStrip(strip, clip){
+  try{
+    const thumbs=await _edExtractThumbs(clip, 4);
+    if(!strip.isConnected) return;
+    strip.innerHTML='';
+    (thumbs||[]).forEach(src=>{ const im=document.createElement('div'); im.style.cssText='flex:1;min-width:0;background-size:cover;background-position:center;opacity:.85'+(src?(';background-image:url('+src+')'):''); strip.appendChild(im); });
+  }catch(e){}
+}
+function _edExtractThumbs(clip, count){
+  if(clip._thumbs) return Promise.resolve(clip._thumbs);
+  return new Promise((resolve)=>{
+    const tv=document.createElement('video'); tv.src=clip.url; tv.muted=true; tv.preload='auto'; tv.playsInline=true;
+    const cv=document.createElement('canvas'); const cx=cv.getContext('2d'); const out=[];
+    let done=false; const finish=()=>{ if(done) return; done=true; clip._thumbs=out; try{tv.src='';}catch(e){} resolve(out); };
+    tv.onloadedmetadata=async ()=>{
+      const vw=clip.vw||tv.videoWidth||720, vh=clip.vh||tv.videoHeight||1280;
+      cv.width=48; cv.height=Math.max(1,Math.round(48*(vh/vw)));
+      const a=clip.trimA, b=clip.trimB;
+      for(let i=0;i<count;i++){
+        const t=a+((b-a)*(i+0.5)/count);
+        await new Promise(res=>{ const on=()=>{ tv.removeEventListener('seeked',on); res(); }; tv.addEventListener('seeked',on); try{ tv.currentTime=t; }catch(e){ res(); } setTimeout(res,700); });
+        try{ cx.drawImage(tv,0,0,cv.width,cv.height); out.push(cv.toDataURL('image/jpeg',0.55)); }catch(e){ out.push(null); }
+      }
+      finish();
+    };
+    tv.onerror=()=>finish();
+    setTimeout(finish, 7000);
+  });
+}
+function _edDrawWave(canvasId, peaks, color){
+  const c=document.getElementById(canvasId); if(!c) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1); const W=c.clientWidth||300, H=c.clientHeight||34;
+  c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  if(!peaks||!peaks.length) return;
+  const mid=H/2, n=peaks.length, bw=W/n; x.fillStyle=color;
+  for(let i=0;i<n;i++){ const h=Math.max(1,peaks[i]*(H*0.92)); x.fillRect(i*bw, mid-h/2, Math.max(1,bw*0.7), h); }
+}
+async function _edComputePeaks(blob, buckets){
+  buckets=buckets||260;
+  try{ if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)(); const ab=await blob.arrayBuffer(); const dec=await recCtx.decodeAudioData(ab.slice(0)); const ch=dec.getChannelData(0); const block=Math.max(1,Math.floor(ch.length/buckets)); const peaks=[]; for(let b=0;b<buckets;b++){ let mx=0; const st=b*block; for(let i=0;i<block;i+=2){ const v=Math.abs(ch[st+i]||0); if(v>mx)mx=v; } peaks.push(mx); } return peaks; }catch(e){ return null; }
 }
 function edRenderMusicTrack(){
   const mt=document.getElementById('edMusicTrack'); if(!mt||!_ed) return;
   if(!_ed.music){ mt.style.display='none'; mt.innerHTML=''; return; }
   mt.style.display='block';
-  mt.innerHTML='<div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:6px;background:rgba(77,171,247,.18);border:1px solid rgba(77,171,247,.5);color:#9fd0ff;font-size:10px;font-weight:700;font-family:var(--mono);overflow:hidden"><span>🎵</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((_ed.musicName||'Bande son'))+'</span></div>';
+  mt.innerHTML='<div style="position:relative;height:34px;border-radius:6px;overflow:hidden;background:rgba(77,171,247,.14);border:1px solid rgba(77,171,247,.5)">'
+    +'<canvas id="edMusicWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
+    +'<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;font-family:var(--mono);color:#cfe9ff;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;max-width:68%;text-overflow:ellipsis;pointer-events:none">🎵 '+((_ed.musicName||'Bande son'))+'</div>'
+    +'<button onclick="edRemoveMusic()" title="Retirer la musique" style="position:absolute;right:4px;top:5px;width:22px;height:22px;background:rgba(10,10,12,.7);border:1px solid var(--border2);border-radius:6px;color:#ff8a8a;font-size:12px;cursor:pointer;line-height:1;z-index:2">✕</button>'
+    +'</div>';
+  _edDrawWave('edMusicWave', _ed.musicPeaks, 'rgba(130,195,255,.85)');
 }
 /* ---------- SFX (sons synthétisés Web Audio: gloup / transition / ding) ---------- */
 function _edBlip(ac, outs, type, when){
@@ -17337,7 +17397,8 @@ function edAddMusic(file){
   if(!_ed||!file) return;
   edRemoveMusic(true);
   const url=URL.createObjectURL(file); const a=new Audio(); a.src=url; a.preload='auto';
-  _ed.music=a; _ed.musicUrl=url; _ed.musicName=file.name;
+  _ed.music=a; _ed.musicUrl=url; _ed.musicName=file.name; _ed.musicPeaks=null;
+  _edComputePeaks(file).then(p=>{ if(_ed&&_ed.music){ _ed.musicPeaks=p; edRenderMusicTrack(); } });
   edEnsureAudioGraph();
   if(_ed.audio){ try{ const mSrc=_ed.audio.ac.createMediaElementSource(a); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=_ed.musicVol; mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){ a.volume=_ed.musicVol; } }
   else { a.volume=_ed.musicVol; }
