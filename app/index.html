@@ -3401,6 +3401,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </select>
                 <button id="cartoonTtsBtn" onclick="cartoonGenVoiceTTS()" style="padding:7px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
               </div>
+              <label class="row gap6" style="margin-top:8px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
               <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
@@ -16248,10 +16249,21 @@ async function cartoonGenVoiceTTS(){
     const b64=(part?.inlineData||part?.inline_data)?.data;
     if(!b64) throw new Error('Pas d\'audio renvoyé par Gemini');
     const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-    const wav=_pcmToWav(pcm,24000,1);
-    const file=new File([new Blob([wav],{type:'audio/wav'})],'cartoon-voix.wav',{type:'audio/wav'});
+    let blob=new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
+    const stripSil=document.getElementById('cartoonTtsSilence');
+    const doStrip=stripSil && stripSil.checked;
+    if(doStrip){
+      try{
+        if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)();
+        const ab=await blob.arrayBuffer();
+        const decoded=await recCtx.decodeAudioData(ab.slice(0));
+        const cleaned=_recRemoveSilence(decoded);
+        blob=_audioBufferToWavBlob(cleaned);
+      }catch(e){ console.warn('Silence strip TTS skip:',e); }
+    }
+    const file=new File([blob],'cartoon-voix.wav',{type:'audio/wav'});
     _cartoonHandleVoice(file);
-    toast('✅ Voix IA générée (Gemini)');
+    toast(doStrip?'✅ Voix IA générée + silences supprimés':'✅ Voix IA générée (Gemini)');
   }catch(e){ toast('⚠️ '+e.message); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
 }
