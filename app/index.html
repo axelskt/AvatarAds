@@ -3588,6 +3588,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="edRuler" style="position:relative;height:14px;margin-top:10px"></div>
               <div id="edClipsTrack" style="display:none;height:30px;margin-top:3px;gap:3px"></div>
               <div id="edMusicTrack" style="display:none;margin-top:5px"></div>
+              <div id="edSfxTrack" style="display:none;position:relative;height:24px;margin-top:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px"></div>
               <div id="edOvTrack" style="display:none;flex-direction:column;gap:5px;margin-top:6px"></div>
               <div id="edOvTrackHint" class="faint mono" style="display:none;font-size:9.5px;margin-top:4px;line-height:1.5;color:var(--text3)">Bandes = durée d'apparition du calque · glisse pour déplacer, bords pour ajuster, ✕ pour supprimer</div>
             </div>
@@ -3626,6 +3627,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <div class="faint mono" style="font-size:10px;margin:8px 0 3px">Volume vidéo (voix)</div>
                 <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value)" style="width:100%">
+                <div class="faint mono" style="font-size:10px;margin:11px 0 4px">Effets sonores — ajoutés au curseur (retirables sur la piste 🔊)</div>
+                <div class="row gap6" style="flex-wrap:wrap">
+                  <button onclick="edAddSfxAtPlayhead('pop')" class="btn btn-ghost btn-sm">🔊 Gloup</button>
+                  <button onclick="edAddSfxAtPlayhead('whoosh')" class="btn btn-ghost btn-sm">🌀 Transition</button>
+                  <button onclick="edAddSfxAtPlayhead('ding')" class="btn btn-ghost btn-sm">🔔 Ding</button>
+                </div>
                 <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
               </div>
 
@@ -16682,7 +16689,7 @@ function edLoadFile(file){
     const _dur=video.duration||0, _vw=video.videoWidth||720, _vh=video.videoHeight||1280;
     const clip0={ file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[] };
     _ed={ clips:[clip0], activeIdx:0,
-          file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[], overlays:[], sel:null,
+          file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[], overlays:[], sfx:[], sel:null,
           playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, audio:null };
     edSetup();
   };
@@ -16736,6 +16743,8 @@ function edDrawLoop(){
   try{ ctx.drawImage(v,0,0,_ed.dispW,_ed.dispH); }catch(e){}
   const _gt=edGlobalNow();
   for(const o of _ed.overlays){ if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; } }
+  if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
+  _ed._gtPrev=_gt;
   if(_ed.playing){
     let t=v.currentTime;
     for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
@@ -16840,6 +16849,7 @@ function edAddImage(file){
     edSnap();
     const ov={ id:'ov'+Date.now(), type:'image', img, url, x:_ed.dispW*0.29, y:_ed.dispH*0.3, w, h, crop:{t:0,r:0,b:0,l:0}, start:0, end:edTotalDur() };
     _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
+    edAddSfx('pop', ov.start); edPlaySfxPreview('pop');
   };
   img.src=url;
 }
@@ -17016,7 +17026,49 @@ function edRenderMusicTrack(){
   mt.style.display='block';
   mt.innerHTML='<div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:6px;background:rgba(77,171,247,.18);border:1px solid rgba(77,171,247,.5);color:#9fd0ff;font-size:10px;font-weight:700;font-family:var(--mono);overflow:hidden"><span>🎵</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((_ed.musicName||'Bande son'))+'</span></div>';
 }
-function edRenderTracks(){ edRenderRuler(); edRenderClipsTrack(); edRenderMusicTrack(); }
+/* ---------- SFX (sons synthétisés Web Audio: gloup / transition / ding) ---------- */
+function _edBlip(ac, outs, type, when){
+  const t=when||ac.currentTime; const g=ac.createGain(); outs.forEach(n=>{try{g.connect(n);}catch(e){}});
+  if(type==='whoosh'){
+    const len=Math.floor(ac.sampleRate*0.3); const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+    const src=ac.createBufferSource(); src.buffer=buf; const bp=ac.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(500,t); bp.frequency.exponentialRampToValueAtTime(3500,t+0.25);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
+    src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.32);}catch(e){}
+  } else if(type==='ding'){
+    const o=ac.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(880,t);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.35,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+    o.connect(g); try{o.start(t);o.stop(t+0.45);}catch(e){}
+  } else { // pop / gloup
+    const o=ac.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(720,t+0.07); o.frequency.exponentialRampToValueAtTime(240,t+0.16);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+    o.connect(g); try{o.start(t);o.stop(t+0.25);}catch(e){}
+  }
+}
+function _edSfxAc(){ if(!_ed) return null; if(_ed.audio&&_ed.audio.ac) return _ed.audio.ac; if(!_ed._sfxAc){ try{ const AC=window.AudioContext||window.webkitAudioContext; _ed._sfxAc=new AC(); }catch(e){ _ed._sfxAc=null; } } return _ed._sfxAc; }
+function edPlaySfxPreview(type){ const ac=_edSfxAc(); if(!ac) return; if(ac.state==='suspended'){ try{ac.resume();}catch(e){} } _edBlip(ac,[ac.destination],type); }
+const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding' };
+function edAddSfx(type,t){ if(!_ed) return; if(!_ed.sfx) _ed.sfx=[]; _ed.sfx.push({ id:'sfx'+Date.now()+Math.random().toString(36).slice(2,6), type, t:Math.max(0,t||0), label:_SFX_LABEL[type]||'Son' }); edRenderSfxTrack(); }
+function edAddSfxAtPlayhead(type){ if(!_ed) return; edSnap(); edAddSfx(type, edGlobalNow()); edPlaySfxPreview(type); toast('🔊 Son ajouté au curseur'); }
+function edRemoveSfx(id){ if(!_ed||!_ed.sfx) return; edSnap(); _ed.sfx=_ed.sfx.filter(s=>s.id!==id); edRenderSfxTrack(); toast('🗑 Son retiré'); }
+function edRenderSfxTrack(){
+  const tr=document.getElementById('edSfxTrack'); if(!tr||!_ed) return;
+  const sfx=_ed.sfx||[];
+  if(!sfx.length){ tr.style.display='none'; tr.innerHTML=''; return; }
+  tr.style.display='block'; tr.innerHTML='';
+  const total=edTotalDur()||1;
+  sfx.forEach(s=>{
+    const pct=Math.min(96,Math.max(0,(s.t/total)*100));
+    const chip=document.createElement('div');
+    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+pct+'%;display:flex;align-items:center;gap:3px;padding:0 5px;border-radius:5px;background:rgba(255,170,40,.22);border:1px solid rgba(255,170,40,.6);color:#ffcb6b;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;z-index:1';
+    chip.innerHTML='<span>🔊</span><span>'+s.label+'</span>';
+    const x=document.createElement('span'); x.textContent='✕'; x.title='Retirer ce son'; x.style.cssText='cursor:pointer;color:#ff8a8a;margin-left:2px'; x.onclick=(e)=>{e.stopPropagation();edRemoveSfx(s.id);};
+    chip.appendChild(x); tr.appendChild(chip);
+  });
+}
+function edRenderTracks(){ edRenderRuler(); edRenderClipsTrack(); edRenderMusicTrack(); edRenderSfxTrack(); }
 
 /* ---------- couper / supprimer ---------- */
 function edSplitClip(){
@@ -17040,7 +17092,8 @@ function edDeleteContext(){
 function edStateCopy(){
   return { activeIdx:_ed.activeIdx,
     clips:_ed.clips.map(c=>({...c})),
-    overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }) };
+    overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }),
+    sfx:(_ed.sfx||[]).map(s=>({...s})) };
 }
 function edSnap(){ if(!_ed) return; _ed._redo=[]; _ed._hist=_ed._hist||[]; _ed._hist.push(edStateCopy()); if(_ed._hist.length>40) _ed._hist.shift(); }
 function edRestoreState(st){
@@ -17051,6 +17104,7 @@ function edRestoreState(st){
   const ac=_ed.clips[_ed.activeIdx];
   _ed.video=ac.video;_ed.url=ac.url;_ed.file=ac.file;_ed.dur=ac.dur;_ed.vw=ac.vw;_ed.vh=ac.vh;_ed.trimA=ac.trimA;_ed.trimB=ac.trimB;_ed.deletes=ac.deletes;
   _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; n._editing=false; n._cropMode=false; return n; });
+  _ed.sfx=(st.sfx||[]).map(s=>({...s}));
   _ed.sel=null;
   _ed.overlays.forEach(o=>edBuildOverlayEl(o));
   edResizeCanvas(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
@@ -17101,7 +17155,7 @@ async function edExport(){
     const f=expW/_ed.dispW;
     const cstream=cv.captureStream(30);
     const _multi=(_ed.clips&&_ed.clips.length>1);
-    if(_ed.music || _multi){
+    if(_ed.music || _multi || (_ed.sfx&&_ed.sfx.length)){
       edEnsureAudioGraph();
       if(_ed.audio){
         for(const c of (_ed.clips||[])){
@@ -17159,6 +17213,7 @@ async function edExport(){
     rec.start();
     if(_ed.music){ try{ _ed.music.currentTime=0; await _ed.music.play(); }catch(e){} }
 
+    const _sfxFired=new Set();
     let doneSpan=0;
     for(const seg of segments){
       const cur=seg.vid; cur.muted=false;
@@ -17171,6 +17226,7 @@ async function edExport(){
           let t=cur.currentTime;
           for(const d of (seg.deletes||[])){ if(t>=d.a-0.02 && t<d.b){ cur.currentTime=d.b; t=d.b; break; } }
           const gTime=doneSpan+Math.max(0,t-seg.a);
+          for(const s of (_ed.sfx||[])){ if(!_sfxFired.has(s.id) && gTime>=s.t){ _sfxFired.add(s.id); if(_ed.audio){ try{ _edBlip(_ed.audio.ac,[_ed.audio.ac.destination,_ed.audio.dest],s.type); }catch(e){} } } }
           renderFrame(cur, gTime);
           status.textContent='Rendu… '+Math.min(99,Math.max(0,Math.round(gTime/totalSpan*100)))+'%';
           if(t>=seg.b || cur.ended){ resolve(); return; }
@@ -17270,7 +17326,7 @@ function edAddClips(files){
     const url=URL.createObjectURL(f);
     const vid=document.createElement('video');
     vid.src=url; vid.playsInline=true; vid.preload='auto'; vid.muted=false;
-    vid.onloadedmetadata=()=>{ const d=vid.duration||0; _ed.clips.push({ file:f, url, video:vid, dur:d, vw:vid.videoWidth||720, vh:vid.videoHeight||1280, trimA:0, trimB:d, deletes:[] }); edRenderClips(); edRenderOvTrack(); };
+    vid.onloadedmetadata=()=>{ const d=vid.duration||0; _ed.clips.push({ file:f, url, video:vid, dur:d, vw:vid.videoWidth||720, vh:vid.videoHeight||1280, trimA:0, trimB:d, deletes:[] }); edAddSfx('whoosh', edClipGlobalStart(_ed.clips.length-1)); edRenderClips(); edRenderOvTrack(); };
   });
   if(added) toast('🎞 '+added+' clip'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+' à la suite');
 }
