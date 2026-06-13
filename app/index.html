@@ -852,12 +852,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </select>
               <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
-            <!-- RESET PRODUIT -->
-            <button onclick="resetProduit()" style="width:100%;margin-top:4px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,80,80,0.4)';this.style.color='#ff6b6b'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">↺ Réinitialiser le produit</button>
-            <!-- RESET TOTAL -->
-            <div style="text-align:center;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:10px">
-              <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:all .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
-            </div>
+            <!-- RESET TOTAL — uniquement ici (1er onglet Produit), visible -->
+            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
           </div>
 
           <!-- STEP 2 -->
@@ -1236,7 +1232,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
 
             <!-- ══ TOGGLE silences voix IA (ElevenLabs) ══ -->
-            <div class="fld" style="margin-top:18px">
+            <div class="fld" id="genTtsSilenceFld" style="margin-top:18px">
               <label style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer">
                 <div style="display:flex;align-items:center;gap:10px">
                   <span style="font-size:16px">✂️</span>
@@ -1795,10 +1791,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
-            <!-- RESET TOTAL — en bas de l'étape Style -->
-            <div style="text-align:center;padding:8px 0 2px;border-top:1px solid var(--border);margin-top:8px">
-              <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;opacity:.7;transition:all .15s" onmouseover="this.style.opacity='1';this.style.color='#ff4757'" onmouseout="this.style.opacity='.7';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
-            </div>
 
           </div>
 
@@ -6697,8 +6689,11 @@ async function generateImage(){
             slot.onclick = ()=> _imgSelectFromMulti(url, size);
           }
         } catch(err){
+          console.error('Image '+(i+1)+':', err);
+          const _m=((err&&err.message)||'Échec').toString();
           const slot = document.getElementById('_imgMultiSlot'+i);
-          if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:11px;font-family:var(--mono);text-align:center;padding:10px">⚠️ Échec</div>'; }
+          if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠️ '+_m.replace(/</g,'&lt;').slice(0,180)+'</div>'; }
+          if(i===0) toast('⚠️ '+_m.slice(0,140));
         }
       }
       _imgRenderHistory();
@@ -7574,6 +7569,7 @@ function goToStep(n){
   }
   step = n;
   updateSteps();
+  if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
 }
 
 function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
@@ -9296,9 +9292,15 @@ let mp4AudioDur          = 0;
 let mp4AudioPreviewTimer = null;
 let mp4TrimDragging      = null;  // 'L' | 'R' | null
 
+function _updateGenTtsSilenceUI(){
+  const el=document.getElementById('genTtsSilenceFld'); if(!el) return;
+  const usingEleven = (typeof voiceMode==='undefined' || voiceMode!=='gameplay') && !(typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled);
+  el.style.display = usingEleven ? 'block' : 'none';
+}
 function toggleMp4AudioOption(force){
   if(force !== undefined) mp4AudioEnabled = !force; // will flip below
   mp4AudioEnabled = (force !== undefined) ? force : !mp4AudioEnabled;
+  _updateGenTtsSilenceUI();
   const sw    = document.getElementById('mp4AudioSwitch');
   const thumb = document.getElementById('mp4AudioThumb');
   const panel = document.getElementById('mp4AudioPanel');
@@ -11361,6 +11363,7 @@ function toggleGameplayAudio(){
     return;
   }
   voiceMode = voiceMode === 'gameplay' ? 'elevenlabs' : 'gameplay';
+  if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
   const sw    = document.getElementById('gpAudioSwitch');
   const thumb = document.getElementById('gpAudioThumb');
   const row   = document.getElementById('gpAudioRow');
@@ -13750,7 +13753,7 @@ function renderLibrary(){
     `<button onclick="event.stopPropagation();deleteLibItem('${src}',${idx})" style="position:absolute;top:6px;right:6px;z-index:20;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(220,30,30,0.85)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.65)';this.style.borderColor='rgba(255,255,255,0.2)'">✕</button>`;
 
   const _favBtn = (src, idx, isFav) =>
-    `<button onclick="event.stopPropagation();toggleLibFav('${src}',${idx})" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}" style="position:absolute;top:6px;left:6px;z-index:20;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid ${isFav?'rgba(255,206,58,0.85)':'rgba(255,255,255,0.2)'};color:${isFav?'#ffce3a':'#fff'};font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;backdrop-filter:blur(4px)">${isFav?'★':'☆'}</button>`;
+    `<button onclick="event.stopPropagation();toggleLibFav('${src}',${idx})" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}" style="position:absolute;top:6px;right:33px;z-index:21;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1.5px solid ${isFav?'rgba(255,206,58,0.85)':'rgba(255,255,255,0.2)'};color:${isFav?'#ffce3a':'#fff'};font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;backdrop-filter:blur(4px)">${isFav?'★':'☆'}</button>`;
 
   const prefix = (_libActiveTab==='all'||_libActiveTab==='avatar') ? _LIB_IMPORT_CARD : '';
   grid.innerHTML = prefix + items.map((v) => {
@@ -16716,7 +16719,7 @@ function edFmt(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%
 
 async function edPickFromLibrary(){
   try{
-    const vids=(window.library||[]).filter(v=>v.hedraIdbKey);
+    const vids=((typeof library!=='undefined'&&library)||window.library||[]).filter(v=>v.hedraIdbKey);
     if(!vids.length){ toast('⚠️ Aucune vidéo dans ta bibliothèque'); return; }
     const v=vids[0];
     const entry=await _idbLoad(v.hedraIdbKey);
