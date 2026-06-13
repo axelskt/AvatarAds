@@ -1235,6 +1235,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
             </div>
 
+            <!-- ══ TOGGLE silences voix IA (ElevenLabs) ══ -->
+            <div class="fld" style="margin-top:18px">
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:16px">✂️</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Supprimer les silences — voix IA</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix ElevenLabs (clone/preset) · voix plus punchy</div>
+                  </div>
+                </div>
+                <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
+              </label>
+            </div>
+
             <!-- ══ SILENCE REMOVAL ══ -->
             <div class="fld" style="margin-top:18px">
               <div onclick="toggleSilenceTool()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -11403,8 +11417,22 @@ async function callElevenLabs(text){
       })
     });
     if(!res.ok){ toast('✗ ElevenLabs : '+res.status); return null; }
-    return await res.blob();
+    const blob=await res.blob();
+    const sil=document.getElementById('genTtsSilence');
+    if(sil && sil.checked){ const cleaned=await _stripSilencesFromBlob(blob); if(cleaned!==blob) toast('✂️ Silences supprimés de la voix IA'); return cleaned; }
+    return blob;
   }catch(e){ toast('✗ ElevenLabs : '+e.message); return null; }
+}
+
+// Décode un blob audio → retire les silences → ré-encode en WAV (réutilise le moteur Nettoyage audio)
+async function _stripSilencesFromBlob(blob){
+  try{
+    if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const ab=await blob.arrayBuffer();
+    const decoded=await recCtx.decodeAudioData(ab.slice(0));
+    const cleaned=_recRemoveSilence(decoded);
+    return _audioBufferToWavBlob(cleaned);
+  }catch(e){ console.warn('Strip silences skip:',e); return blob; }
 }
 
 // Modèles Hedra par plan utilisateur
