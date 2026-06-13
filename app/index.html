@@ -3574,7 +3574,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="row" style="gap:6px;margin-top:12px;margin-bottom:6px;flex-wrap:wrap">
                 <button onclick="edUndo()" id="edUndoBtn" title="Annuler" class="btn btn-ghost btn-sm" style="padding:6px 11px">↶</button>
                 <button onclick="edRedo()" id="edRedoBtn" title="Refaire" class="btn btn-ghost btn-sm" style="padding:6px 11px">↷</button>
-                <button onclick="edSplitClip()" title="Couper le clip au curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">✂️ Couper</button>
+                <button onclick="edSplitClip()" title="Séparer le clip au curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">✂️ Séparer</button>
+                <button onclick="edDeleteLeft()" title="Supprimer avant le curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">⏴✂</button>
+                <button onclick="edDeleteRight()" title="Supprimer après le curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">✂⏵</button>
                 <button onclick="edDeleteContext()" title="Supprimer l'élément sélectionné" class="btn btn-ghost btn-sm" style="padding:6px 11px;color:#ff6b6b">🗑 Supprimer</button>
               </div>
               <div id="edTl" style="position:relative;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;cursor:pointer;overflow:hidden;user-select:none">
@@ -3597,30 +3599,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- TOOLS -->
             <div style="flex:1;min-width:300px">
               <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:12px">Outils</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <button onclick="edAddText()" class="btn btn-ghost btn-sm">➕ Texte</button>
-                  <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost btn-sm">🖼 Image</button>
-                  <button id="edDelBtn" onclick="edDeleteFlow(this)" class="btn btn-ghost btn-sm">✂️ Supprimer un passage</button>
-                  <button onclick="edReset()" class="btn btn-ghost btn-sm">↺ Autre vidéo</button>
-                </div>
+                <div class="label" style="margin-bottom:10px">Outils</div>
+                <button onclick="edAddText()" class="btn btn-ghost btn-sm" style="width:100%">➕ Ajouter un texte</button>
+                <div class="faint mono" style="margin-top:10px;font-size:10.5px;line-height:1.6">🎬 Glisse <b style="color:var(--text-2)">vidéos · images · audio</b> directement sur l'aperçu pour les ajouter.<br><span onclick="edReset()" style="cursor:pointer;color:var(--orange2)">↺ Recommencer</span></div>
                 <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
-                <div id="edDelHint" class="faint mono" style="display:none;font-size:10.5px;margin-top:10px;color:var(--orange2);line-height:1.5"></div>
               </div>
 
               <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-                  <div class="label" style="margin:0">🎞 Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
-                  <button onclick="document.getElementById('edClipIn').click()" class="btn btn-ghost btn-sm">＋ Ajouter</button>
-                </div>
+                <div class="label" style="margin:0 0 10px">🎞 Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
                 <div id="edClips" class="col" style="gap:6px"></div>
-                <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. Ajoute d'autres clips (ou glisse une vidéo sur l'aperçu) pour les coller bout à bout — vidéo &gt; 10s à l'export.</div>
+                <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. <b style="color:var(--text-2)">Glisse une vidéo sur l'aperçu</b> pour la coller à la suite — vidéo &gt; 10s à l'export.</div>
                 <input type="file" id="edClipIn" accept="video/*" multiple style="display:none" onchange="edAddClips(this.files);this.value=''">
               </div>
 
               <div class="card" style="padding:16px;margin-bottom:14px">
                 <div class="label" style="margin-bottom:10px">🎵 Bande son</div>
-                <div id="edMusicEmpty"><button onclick="document.getElementById('edMusicIn').click()" class="btn btn-ghost btn-sm" style="width:100%">➕ Ajouter une musique</button></div>
+                <div id="edMusicEmpty" class="faint mono" style="font-size:10.5px;line-height:1.6">🎵 Glisse un <b style="color:var(--text-2)">fichier audio</b> sur l'aperçu pour ajouter une musique de fond.</div>
                 <div id="edMusicLoaded" style="display:none">
                   <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
                   <div class="faint mono" style="font-size:10px;margin-bottom:3px">Volume musique</div>
@@ -16748,6 +16742,32 @@ function edSelectClip(idx){
   edRefreshTimeline(); edRenderClips(); edRenderOvTrack(); edUpdateTime();
   toast(idx===0?'⭐ Clip principal — édite le trim/texte':'🎞 Clip '+(idx+1)+' — édite son trim');
 }
+// avance au clip suivant pendant la lecture (sans pause/toast, garde la musique)
+function edAdvanceClip(idx){
+  if(!_ed||!_ed.clips||idx<0||idx>=_ed.clips.length) return;
+  try{ _ed.video.pause(); }catch(e){}
+  edSyncToClip(); _ed.activeIdx=idx;
+  const c=_ed.clips[idx];
+  _ed.video=c.video; _ed.url=c.url; _ed.file=c.file; _ed.dur=c.dur; _ed.vw=c.vw; _ed.vh=c.vh;
+  _ed.trimA=c.trimA; _ed.trimB=c.trimB; _ed.deletes=c.deletes; _ed.delPending=null;
+  edResizeCanvas();
+  try{ _ed.video.currentTime=_ed.trimA; }catch(e){}
+  edRefreshTimeline(); edRenderClips();
+  if(_ed.playing){ try{ _ed.video.play(); }catch(e){} }
+}
+// supprimer le contenu avant / après le curseur (rogne le clip actif)
+function edDeleteLeft(){
+  if(!_ed) return; const t=_ed.video.currentTime;
+  if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('⚠️ Place le curseur dans le clip'); return; }
+  edSnap(); _ed.trimA=t; edSyncToClip(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
+  edRefreshTimeline(); edRenderClips(); toast('✂️ Avant le curseur supprimé');
+}
+function edDeleteRight(){
+  if(!_ed) return; const t=_ed.video.currentTime;
+  if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('⚠️ Place le curseur dans le clip'); return; }
+  edSnap(); _ed.trimB=t; edSyncToClip(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
+  edRefreshTimeline(); edRenderClips(); toast('✂️ Après le curseur supprimé');
+}
 
 function edDrawLoop(){
   if(!_ed) return;
@@ -16760,7 +16780,10 @@ function edDrawLoop(){
   if(_ed.playing){
     let t=v.currentTime;
     for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
-    if(t>=_ed.trimB){ edPause(); v.currentTime=_ed.trimA; }
+    if(t>=_ed.trimB){
+      if(_ed.activeIdx < _ed.clips.length-1){ edAdvanceClip(_ed.activeIdx+1); }
+      else { edPause(); if(_ed.clips.length>1){ edAdvanceClip(0); } else { v.currentTime=_ed.trimA; } }
+    }
   }
   edUpdatePlayhead(); edUpdateTime();
   _ed.raf=requestAnimationFrame(edDrawLoop);
@@ -16942,7 +16965,7 @@ function edStyleOverlay(ov){
     const t=el.querySelector('.ed-ov-txt'); if(!ov._editing) t.textContent=ov.text||'';
     const fam=ov.font||'var(--display)'; const styl=ov.style||'box';
     let deco='';
-    if(styl==='box') deco='padding:5px 12px;background:rgba(0,0,0,.55);border-radius:9px;';
+    if(styl==='box') deco='padding:5px 12px;background:'+(ov.bgColor||'rgba(0,0,0,.55)')+';border-radius:9px;';
     else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
     else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
     t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
@@ -16985,6 +17008,7 @@ function edShowProps(){
       '<input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="width:100%;margin-bottom:12px">'+
       '<div class="row" style="gap:14px;align-items:center;flex-wrap:wrap">'+
         '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Couleur</label>'+
+        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+(ov.bgColor||'#000000')+'" oninput="edSetProp(\'bgColor\',this.value);edSetProp(\'style\',\'box\')" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Fond</label>'+
         '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bold?'checked':'')+' onchange="edSetProp(\'bold\',this.checked)"> Gras</label>'+
       '</div>';
   } else {
@@ -17205,7 +17229,7 @@ async function edExport(){
           const lh=fs*1.18;
           lines.forEach((ln,i)=>{
             const ly=cy+i*lh;
-            if(ov.bg){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle='rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
+            if((ov.style||'box')==='box'){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
             else { cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
             cx.fillStyle=ov.color||'#fff'; cx.fillText(ln,cxc,ly); cx.shadowColor='transparent';
           });
