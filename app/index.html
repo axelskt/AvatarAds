@@ -3325,7 +3325,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button onclick="cartoonQuickPrompt('Un robot IA amical avec un écran facial expressif, couleurs vives, style Pixar')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🤖 Robot IA</button>
             </div>
 
-            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+            <button onclick="cartoonEnhancePrompt()" style="margin-top:10px;width:100%;padding:9px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.28);border-radius:9px;color:#c4a3f7;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(168,85,247,0.16)'" onmouseout="this.style.background='rgba(168,85,247,0.08)'">✦ Améliorer (4K · qualité pro)</button>
+            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:10px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
               <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
               Générer le personnage
               <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>
@@ -3628,6 +3629,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div style="font-weight:700;font-size:13px;color:var(--text)">Importer</div>
                   <div class="faint" style="font-size:10.5px;font-family:var(--mono);text-align:center;line-height:1.5">Glisse vidéos · images · audio</div>
                 </div>
+                <button onclick="edPickFromLibrary()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px">📁 Choisir dans la bibliothèque</button>
                 <div style="text-align:center;margin-top:8px"><span onclick="edReset()" style="cursor:pointer;color:var(--orange2);font-size:11px;font-family:var(--mono)">↺ Recommencer</span></div>
                 <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
                 <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
@@ -6499,30 +6501,23 @@ function _imgRenderHistory(){
   } catch(e){}
 }
 
-async function enhanceImagePrompt(){
-  const ta  = document.getElementById('imgPrompt');
-  const btn = document.getElementById('imgEnhanceBtn');
-  const txt = ta.value.trim();
-  if(!txt){ toast('⚠️ Écris d\'abord une idée de base'); return; }
-  btn.textContent = '…'; btn.disabled = true;
-  try {
-    const session = (await sb.auth.getSession()).data.session;
-    const token   = session?.access_token;
-    if(!token){ toast('⚠️ Connecte-toi d\'abord'); return; }
-    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/chat/completions', {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-      body: JSON.stringify({ model:'gpt-4o-mini', max_tokens:200, messages:[
-        { role:'system', content:'Tu es expert en création de prompts DALL-E 3 pour des publicités professionnelles. Améliore le prompt de l\'utilisateur pour qu\'il soit plus précis et donne un résultat visuellement impactant. Réponds UNIQUEMENT avec le prompt amélioré (1 seule ligne, sans guillemets, sans explication).' },
-        { role:'user',   content: txt }
-      ]})
-    });
-    const data = await res.json();
-    const improved = data.choices?.[0]?.message?.content?.trim();
-    if(improved){ ta.value = improved; _imgUpdateCharCount(ta); toast('✨ Prompt amélioré !'); }
-    else toast('⚠️ Impossible d\'améliorer');
-  } catch(e){ toast('⚠️ Erreur : ' + e.message); }
-  finally { btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 1v1.5M5 7.5V9M1 5h1.5M7.5 5H9M2.5 2.5l1 1M6.5 6.5l1 1M2.5 7.5l1-1M6.5 3.5l1-1"/></svg> ✦ Améliorer'; btn.disabled = false; }
+// Prompt d'amélioration / remastering 4K — ajouté tel quel (pas d'appel IA)
+const _ENHANCE_PROMPT = `Améliore et remasterise cette image en véritable qualité 4K ultra haute définition. Donne l'impression qu'elle a été capturée avec le meilleur appareil photo professionnel au monde et un objectif haut de gamme. Netteté exceptionnelle, détails ultra-précis, textures réalistes, éclairage naturel et parfaitement maîtrisé, plage dynamique maximale (HDR), couleurs riches et fidèles, profondeur de champ cinématographique, étalonnage professionnel. Supprime le bruit, le flou, la pixellisation et les artefacts de compression tout en conservant un rendu naturel. Préserve intégralement la composition, les proportions, les visages, les objets et l'identité visuelle d'origine. Qualité publicité de luxe, photographie professionnelle premium, rendu photoréaliste, ombres naturelles, reflets réalistes, contraste équilibré, qualité magazine haut de gamme, niveau chef-d'œuvre, fidélité visuelle maximale, HDR professionnel.`;
+
+function enhanceImagePrompt(){
+  const ta = document.getElementById('imgPrompt');
+  if(!ta) return;
+  const cur = ta.value.trim();
+  ta.value = cur ? (cur + ' ' + _ENHANCE_PROMPT) : _ENHANCE_PROMPT;
+  _imgUpdateCharCount(ta);
+  toast('✨ Prompt d\'amélioration ajouté');
+}
+function cartoonEnhancePrompt(){
+  const ta = document.getElementById('cartoonCharPrompt');
+  if(!ta) return;
+  const cur = ta.value.trim();
+  ta.value = cur ? (cur + ' ' + _ENHANCE_PROMPT) : _ENHANCE_PROMPT;
+  toast('✨ Prompt d\'amélioration ajouté');
 }
 
 function _imgInitSuggestions(){
@@ -7653,6 +7648,7 @@ function pickVoice(el,id,name,desc){
   document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
   el.classList.add('on');
   selVoiceId=id;
+  window._genVoicePicked=true; if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
   updateVoicePresetLabel(name);
   // Dim clone section, un-dim preset section
   const cloneSection = document.getElementById('voice-clone-section');
@@ -8283,6 +8279,7 @@ function useSavedVoice(voiceId){
   const v = voiceId ? voices.find(x=>x.voice_id===voiceId) : voices[0];
   if(!v) return;
   clonedVoiceId = v.voice_id; selVoiceId = v.voice_id;
+  window._genVoicePicked=true; if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
   // Mettre en premier dans la liste
   const arr = [v, ...voices.filter(x=>x.voice_id!==v.voice_id)];
   _saveClonedVoices(arr);
@@ -8315,6 +8312,7 @@ function selectClonedVariant(btn,voiceId,label){
   document.querySelectorAll('.select-variant-btn').forEach(b=>{b.textContent='Choisir';b.style.background='var(--bg4)';b.style.color='var(--text2)';});
   btn.textContent='✓ Sélectionné';btn.style.background='var(--orange-dim)';btn.style.color='var(--orange2)';
   selVoiceId=voiceId;
+  window._genVoicePicked=true; if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
   document.querySelectorAll('.voice-row').forEach(r=>r.classList.remove('on'));
   toast('✓ "'+label+'" sélectionné');
 }
@@ -9304,7 +9302,8 @@ let mp4TrimDragging      = null;  // 'L' | 'R' | null
 
 function _updateGenTtsSilenceUI(){
   const el=document.getElementById('genTtsSilenceFld'); if(!el) return;
-  const usingEleven = (typeof voiceMode==='undefined' || voiceMode!=='gameplay') && !(typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled);
+  const picked = !!window._genVoicePicked;
+  const usingEleven = picked && (typeof voiceMode==='undefined' || voiceMode!=='gameplay') && !(typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled);
   el.style.display = usingEleven ? 'block' : 'none';
 }
 function toggleMp4AudioOption(force){
@@ -16727,16 +16726,37 @@ function initStudio(){
 }
 function edFmt(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+String(s).padStart(2,'0'); }
 
-async function edPickFromLibrary(){
-  try{
-    const vids=((typeof library!=='undefined'&&library)||window.library||[]).filter(v=>v.hedraIdbKey);
-    if(!vids.length){ toast('⚠️ Aucune vidéo dans ta bibliothèque'); return; }
-    const v=vids[0];
-    const entry=await _idbLoad(v.hedraIdbKey);
-    if(!entry){ toast('⚠️ Vidéo introuvable'); return; }
-    edLoadFile(new File([entry.blob], entry.name||'video.mp4',{type:entry.type||'video/mp4'}));
-    toast('📁 Dernière vidéo de la bibliothèque chargée');
-  }catch(e){ toast('⚠️ '+e.message); }
+function edPickFromLibrary(){
+  const vids=((typeof library!=='undefined'&&library)||window.library||[]).filter(v=>v.hedraIdbKey);
+  if(!vids.length){ toast('⚠️ Aucune vidéo dans ta bibliothèque'); return; }
+  let modal=document.getElementById('edLibModal');
+  if(modal) modal.remove();
+  modal=document.createElement('div'); modal.id='edLibModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(5,5,7,.78);backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  modal.innerHTML='<div class="card" style="width:100%;max-width:600px;max-height:82vh;overflow-y:auto;padding:20px">'
+    +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px"><div class="label" style="margin:0">📁 Choisir une vidéo de la bibliothèque</div><button onclick="document.getElementById(\'edLibModal\').remove()" class="btn-quiet btn-sm" style="font-size:13px">✕</button></div>'
+    +'<div id="edLibGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div></div>';
+  document.body.appendChild(modal);
+  const grid=modal.querySelector('#edLibGrid');
+  vids.forEach((v,i)=>{
+    const card=document.createElement('div');
+    card.style.cssText='cursor:pointer;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--bg3);transition:border-color .15s';
+    card.onmouseover=()=>card.style.borderColor='var(--accent)'; card.onmouseout=()=>card.style.borderColor='var(--border2)';
+    card.innerHTML='<div style="aspect-ratio:9/16;background:#111;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:28px;opacity:.5">🎬</span><canvas data-libpick="'+v.hedraIdbKey+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas></div>'
+      +'<div style="padding:7px 9px;font-size:10.5px;font-family:var(--mono);color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((v.name||'Vidéo '+(i+1)))+(v.date?' · '+v.date:'')+'</div>';
+    card.onclick=async()=>{ modal.remove(); try{ const entry=await _idbLoad(v.hedraIdbKey); if(!entry){ toast('⚠️ Vidéo introuvable'); return; } edLoadFile(new File([entry.blob], entry.name||'video.mp4',{type:entry.type||'video/mp4'})); toast('📁 Vidéo chargée dans l\'éditeur'); }catch(e){ toast('⚠️ '+e.message); } };
+    grid.appendChild(card);
+  });
+  // miniatures (best-effort)
+  vids.forEach(async v=>{ try{
+    const entry=await _idbLoad(v.hedraIdbKey); if(!entry) return;
+    const url=URL.createObjectURL(entry.blob); const tv=document.createElement('video'); tv.src=url; tv.muted=true; tv.preload='auto';
+    await new Promise(r=>{ tv.onloadedmetadata=r; setTimeout(r,2000); });
+    await new Promise(r=>{ tv.onseeked=r; try{ tv.currentTime=Math.min(0.6,(tv.duration||1)/3); }catch(e){ r(); } setTimeout(r,2000); });
+    const cv=modal.querySelector('canvas[data-libpick="'+v.hedraIdbKey+'"]'); if(cv){ cv.width=160; cv.height=Math.round(160*(tv.videoHeight/tv.videoWidth)||284); const cx=cv.getContext('2d'); try{ cx.drawImage(tv,0,0,cv.width,cv.height); }catch(e){} }
+    URL.revokeObjectURL(url);
+  }catch(e){} });
 }
 
 function edLoadFile(file){
