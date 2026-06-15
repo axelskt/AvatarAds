@@ -3584,11 +3584,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap;justify-content:center">
                 <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost btn-sm" style="min-width:92px">▶ Lire</button>
                 <span id="edTime" class="mono faint" style="font-size:12.5px">0:00 / 0:00</span>
-                <span style="width:1px;height:20px;background:var(--border)"></span>
-                <span class="faint mono" style="font-size:10px">Zoom</span>
-                <button onclick="edZoom(-1)" class="btn btn-ghost btn-sm" style="padding:4px 11px">−</button>
-                <span id="edZoomLbl" class="faint mono" style="font-size:10px;min-width:38px;text-align:center">100%</span>
-                <button onclick="edZoom(1)" class="btn btn-ghost btn-sm" style="padding:4px 11px">+</button>
               </div>
               <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:center">
                 <button onclick="edUndo()" id="edUndoBtn" title="Annuler" class="btn btn-ghost btn-sm" style="padding:6px 11px">↶ Annuler</button>
@@ -3599,30 +3594,66 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button onclick="edDeleteContext()" title="Supprimer l'élément sélectionné" class="btn btn-ghost btn-sm" style="padding:6px 11px;color:#ff6b6b">🗑 Supprimer</button>
               </div>
             </div>
-            <!-- TIMELINE (pleine largeur de la colonne centrale) -->
-            <div style="flex:0 0 auto;padding:8px 16px 14px;border-top:1px solid var(--border);background:var(--bg-grad)">
-              <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-                <span class="faint mono" style="font-size:10.5px">Timeline · glisse les bandes pour ajuster</span>
+            <!-- TIMELINE multi-piste étiquetée (design Claude — CapCut style) -->
+            <div style="flex:0 0 auto;border-top:1px solid var(--border);background:var(--bg-grad)">
+              <div class="row" style="justify-content:space-between;align-items:center;padding:8px 16px">
+                <span class="faint mono" style="font-size:10.5px">Timeline · <span id="edTlDurLbl">0:00</span> · glisse les bandes pour ajuster</span>
+                <div class="row gap8" style="align-items:center">
+                  <button onclick="edZoom(-1)" class="btn btn-ghost btn-sm" style="padding:4px 10px" title="Dézoomer">🔍−</button>
+                  <span id="edZoomLbl" class="faint mono" style="font-size:11px;width:42px;text-align:center">100%</span>
+                  <button onclick="edZoom(1)" class="btn btn-ghost btn-sm" style="padding:4px 10px" title="Zoomer">🔍+</button>
+                </div>
               </div>
-              <div id="edTlScroll" style="overflow-x:auto;overflow-y:hidden;padding-bottom:4px">
-              <div id="edTlInner" style="width:100%">
-              <div class="label" style="font-size:9px;margin:0 0 4px;color:var(--accent-2)">● Clip · trim</div>
-              <div id="edTl" style="position:relative;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;cursor:pointer;overflow:hidden;user-select:none">
-                <div id="edTlDeletes" style="position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none"></div>
-                <div id="edTlTrimL" style="position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
-                <div id="edTlTrimR" style="position:absolute;top:0;bottom:0;right:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
-                <div id="edTlHandleL" style="position:absolute;top:3px;bottom:3px;left:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
-                <div id="edTlHandleR" style="position:absolute;top:3px;bottom:3px;right:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
-                <div id="edTlPlayhead" style="position:absolute;top:-2px;bottom:-2px;left:0;width:2px;background:#fff;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.7);z-index:2"></div>
+              <div id="edTlScroll" style="overflow-x:auto;overflow-y:hidden;padding:0 16px 14px">
+                <div id="edTlInner" style="width:100%;position:relative;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--bg3)">
+                  <!-- RULER -->
+                  <div class="row" style="height:20px">
+                    <div style="width:100px;flex:0 0 auto;border-right:1px solid var(--border2);background:var(--bg-grad)"></div>
+                    <div id="edRuler" style="position:relative;flex:1;height:100%"></div>
+                  </div>
+                  <!-- CLIPS -->
+                  <div class="row" style="height:46px;border-top:1px solid var(--border2)">
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:var(--accent);flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Clips</span></div>
+                    <div style="position:relative;flex:1;height:100%;padding:5px 0;box-sizing:border-box">
+                      <div id="edTl" style="position:absolute;left:0;right:0;top:5px;bottom:5px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;cursor:pointer;overflow:hidden;user-select:none">
+                        <div id="edTlDeletes" style="position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none"></div>
+                        <div id="edTlTrimL" style="position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
+                        <div id="edTlTrimR" style="position:absolute;top:0;bottom:0;right:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
+                        <div id="edTlHandleL" style="position:absolute;top:3px;bottom:3px;left:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
+                        <div id="edTlHandleR" style="position:absolute;top:3px;bottom:3px;right:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
+                      </div>
+                      <div id="edClipsTrack" style="display:none;position:absolute;left:0;right:0;top:5px;bottom:5px;gap:3px"></div>
+                    </div>
+                  </div>
+                  <!-- BANDE SON -->
+                  <div class="row" style="height:46px;border-top:1px solid var(--border2)">
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#3B82F6;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Bande son</span></div>
+                    <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
+                      <div id="edMusicTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
+                      <span id="edMusicHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Glisse une musique de fond</span>
+                    </div>
+                  </div>
+                  <!-- EFFETS -->
+                  <div class="row" style="height:42px;border-top:1px solid var(--border2)">
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#FFB020;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Effets</span></div>
+                    <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
+                      <div id="edSfxTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
+                      <span id="edSfxHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Ajoute gloup · transition · ding au curseur</span>
+                    </div>
+                  </div>
+                  <!-- CALQUES -->
+                  <div class="row" style="border-top:1px solid var(--border2);min-height:46px">
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#9A7CFF;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Calques</span></div>
+                    <div style="position:relative;flex:1;min-height:46px;padding:6px 8px;box-sizing:border-box">
+                      <div id="edOvTrack" style="display:none;flex-direction:column;gap:5px"></div>
+                      <div id="edOvTrackHint" class="faint mono" style="display:none;font-size:9px;line-height:1.4;color:var(--text3);margin-top:3px">Bandes = durée d'apparition · glisse pour déplacer, bords pour ajuster, ✕ pour supprimer</div>
+                      <span id="edOvEmptyHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Ajoute du texte ou une image</span>
+                    </div>
+                  </div>
+                  <!-- PLAYHEAD (traverse toutes les pistes) -->
+                  <div id="edTlPlayhead" style="position:absolute;top:20px;bottom:0;left:100px;width:2px;background:var(--accent-2);box-shadow:0 0 8px var(--accent-glow);pointer-events:none;z-index:6"><div style="position:absolute;top:-3px;left:-5px;width:12px;height:12px;border-radius:50%;background:var(--accent-2)"></div></div>
+                </div>
               </div>
-              <div class="faint mono" style="font-size:9.5px;margin-top:5px;line-height:1.5">Poignées orange = rogner le clip · clique la timeline pour te déplacer</div>
-              <div id="edRuler" style="position:relative;height:14px;margin-top:8px"></div>
-              <div id="edClipsTrack" style="display:none;height:30px;margin-top:3px;gap:3px"></div>
-              <div id="edMusicTrack" style="display:none;margin-top:5px"></div>
-              <div id="edSfxTrack" style="display:none;position:relative;height:24px;margin-top:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px"></div>
-              <div id="edOvTrack" style="display:none;flex-direction:column;gap:5px;margin-top:6px"></div>
-              <div id="edOvTrackHint" class="faint mono" style="display:none;font-size:9.5px;margin-top:4px;line-height:1.5;color:var(--text3)">Bandes = durée d'apparition du calque · glisse pour déplacer, bords pour ajuster, ✕ pour supprimer</div>
-              </div><!-- /edTlInner --></div><!-- /edTlScroll -->
             </div>
           </div>
 
@@ -3691,6 +3722,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
               <div class="card" style="padding:16px;margin-bottom:14px">
                 <div class="label" style="margin-bottom:10px">📐 Format &amp; qualité</div>
+                <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Format (ratio)</div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+                  <button id="edFmt916" onclick="edSetFormat('9:16',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column"><span style="width:14px;height:22px;border-radius:3px;border:2px solid var(--accent-2)"></span><span style="font-size:12px;font-weight:700">9:16</span><span class="faint" style="font-size:9.5px">TikTok</span></button>
+                  <button id="edFmt45" onclick="edSetFormat('4:5',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:15px;height:19px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">4:5</span><span class="faint" style="font-size:9.5px">Feed</span></button>
+                  <button id="edFmt11" onclick="edSetFormat('1:1',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:17px;height:17px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">1:1</span><span class="faint" style="font-size:9.5px">Post</span></button>
+                  <button id="edFmt169" onclick="edSetFormat('16:9',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:22px;height:13px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">16:9</span><span class="faint" style="font-size:9.5px">YouTube</span></button>
+                </div>
                 <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Qualité d'export</div>
                 <div class="row gap8" style="margin-bottom:12px">
                   <button id="edQ720" onclick="edSetQ(720,this)" class="btn btn-ghost btn-sm grow">720p</button>
@@ -16933,7 +16971,7 @@ function edPlay(){
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed) el.textContent=edFmt(_ed.video.currentTime)+' / '+edFmt(_ed.dur); }
-function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; ph.style.left=((_ed.video.currentTime/_ed.dur)*tl.clientWidth)+'px'; }
+function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const frac=_ed.dur?(_ed.video.currentTime/_ed.dur):0; ph.style.left=(100+Math.max(0,Math.min(1,frac))*tl.clientWidth)+'px'; }
 
 function edRefreshTimeline(){
   if(!_ed) return;
@@ -17183,7 +17221,8 @@ function edApplyTextPreset(name){
 /* ---------- timeline tracks (règle / clips / bande son) ---------- */
 function edRenderRuler(){
   const r=document.getElementById('edRuler'); if(!r||!_ed) return;
-  const total=edTotalDur(); if(total<=0.05){ r.innerHTML=''; return; }
+  const total=edTotalDur(); const dl=document.getElementById('edTlDurLbl'); if(dl) dl.textContent=edFmt(total);
+  if(total<=0.05){ r.innerHTML=''; return; }
   const step = total>60?15 : total>30?10 : total>12?5 : total>6?2 : 1;
   let html='';
   for(let s=0; s<=total+0.001; s+=step){
@@ -17253,7 +17292,9 @@ async function _edComputePeaks(blob, buckets){
 }
 function edRenderMusicTrack(){
   const mt=document.getElementById('edMusicTrack'); if(!mt||!_ed) return;
-  if(!_ed.music){ mt.style.display='none'; mt.innerHTML=''; return; }
+  const hint=document.getElementById('edMusicHint');
+  if(!_ed.music){ mt.style.display='none'; mt.innerHTML=''; if(hint) hint.style.display='block'; return; }
+  if(hint) hint.style.display='none';
   mt.style.display='block';
   mt.innerHTML='<div style="position:relative;height:34px;border-radius:6px;overflow:hidden;background:rgba(77,171,247,.14);border:1px solid rgba(77,171,247,.5)">'
     +'<canvas id="edMusicWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
@@ -17291,8 +17332,10 @@ function edAddSfxAtPlayhead(type){ if(!_ed) return; edSnap(); edAddSfx(type, edG
 function edRemoveSfx(id){ if(!_ed||!_ed.sfx) return; edSnap(); _ed.sfx=_ed.sfx.filter(s=>s.id!==id); edRenderSfxTrack(); toast('🗑 Son retiré'); }
 function edRenderSfxTrack(){
   const tr=document.getElementById('edSfxTrack'); if(!tr||!_ed) return;
+  const sfxHint=document.getElementById('edSfxHint');
   const sfx=_ed.sfx||[];
-  if(!sfx.length){ tr.style.display='none'; tr.innerHTML=''; return; }
+  if(!sfx.length){ tr.style.display='none'; tr.innerHTML=''; if(sfxHint) sfxHint.style.display='block'; return; }
+  if(sfxHint) sfxHint.style.display='none';
   tr.style.display='block'; tr.innerHTML='';
   const total=edTotalDur()||1;
   sfx.forEach(s=>{
@@ -17398,13 +17441,23 @@ function edRenderLayers(){
 }
 function edDeleteSelected(){ if(!_ed) return; const i=_ed.overlays.findIndex(o=>o.id===_ed.sel); if(i<0) return; const ov=_ed.overlays[i]; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); edHideProps(); edRenderLayers(); }
 
+let _edFormat='9:16';
+function edUpdateOutputLabel(){
+  const out=document.getElementById('edOutputLabel');
+  const labels={720:'720p',1080:'1080p',1440:'2K'};
+  if(out) out.textContent='Sortie : '+_edFormat+' · '+(labels[_edQuality]||'1080p')+' · H.264';
+}
+function edSetFormat(fmt,btn){
+  _edFormat=fmt;
+  [['edFmt916','9:16'],['edFmt45','4:5'],['edFmt11','1:1'],['edFmt169','16:9']].forEach(([id])=>{ const b=document.getElementById(id); if(!b) return; const on=b===btn; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; const shape=b.querySelector('span'); if(shape) shape.style.borderColor=on?'var(--accent-2)':'var(--text-3)'; const lab=b.querySelectorAll('span')[1]; if(lab) lab.style.color=on?'var(--text)':'var(--text-2)'; });
+  edUpdateOutputLabel();
+}
 function edSetQ(q,btn){
   _edQuality=q;
   const labels={720:'720p',1080:'1080p',1440:'2K'};
   ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.border='1px solid var(--border)'; b.style.background='transparent'; b.style.color='var(--text-2)'; b.style.fontWeight='500'; const k=({edQ720:720,edQ1080:1080,edQ1440:1440})[id]; b.textContent=labels[k]; } });
   btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700'; btn.textContent=labels[q]+' ✓';
-  const out=document.getElementById('edOutputLabel');
-  if(out){ const ar=(_ed&&_ed.vw&&_ed.vh)?(_ed.vw/_ed.vh<0.72?'9:16':_ed.vw/_ed.vh>1.3?'16:9':'1:1'):'9:16'; out.textContent='Sortie : '+ar+' · '+labels[q]+' · H.264'; }
+  edUpdateOutputLabel();
 }
 function edReset(){
   if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); (_ed.clips||[]).forEach(c=>{try{URL.revokeObjectURL(c.url);}catch(e){}}); try{edRemoveMusic(true);}catch(e){} try{_ed.audio&&_ed.audio.ac.close();}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
@@ -17643,10 +17696,10 @@ function edRenderClips(){
 
 /* ---------- overlay time-range track ---------- */
 function edRenderOvTrack(){
-  const wrap=document.getElementById('edOvTrack'); const hint=document.getElementById('edOvTrackHint'); if(!wrap||!_ed) return;
+  const wrap=document.getElementById('edOvTrack'); const hint=document.getElementById('edOvTrackHint'); const emptyHint=document.getElementById('edOvEmptyHint'); if(!wrap||!_ed) return;
   wrap.innerHTML='';
-  if(!_ed.overlays.length){ wrap.style.display='none'; if(hint) hint.style.display='none'; return; }
-  wrap.style.display='flex'; if(hint) hint.style.display='block';
+  if(!_ed.overlays.length){ wrap.style.display='none'; if(hint) hint.style.display='none'; if(emptyHint) emptyHint.style.display='block'; return; }
+  wrap.style.display='flex'; if(hint) hint.style.display='block'; if(emptyHint) emptyHint.style.display='none';
   const _td=edTotalDur()||1;
   _ed.overlays.forEach(ov=>{
     if(ov.start==null) ov.start=0; if(ov.end==null) ov.end=_td;
