@@ -577,7 +577,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
       <!-- + Crédits (style design : accent-soft) -->
-      <button id="btnBuyCredits" onclick="openUpgradeModal()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">
+      <button id="btnBuyCredits" onclick="openCreditsModal()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crédits
       </button>
       <!-- Séparateur -->
@@ -2710,7 +2710,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg>
             Générer l'image
           </button>
-          <div id="imgQuotaLabel" onclick="openUpgradeModal('images')" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
+          <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
         </div>
 
         <!-- RÉSULTAT -->
@@ -5848,7 +5848,10 @@ function switchPackTab(tab){
   }
 }
 
-function openUpgradeModal(mode){
+// Paywall plans UNIFIÉ — partout le même design (le nouveau plansSheet 3 cartes)
+function openUpgradeModal(mode){ showPaywall(); }
+// Modal d'achat de crédits (packs) — gardée pour les boutons crédits explicites
+function openCreditsModal(mode){
   if(!currentMember || currentMember.plan === 'free'){
     showPaywall(); return;
   }
