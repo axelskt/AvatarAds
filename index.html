@@ -98,6 +98,9 @@ input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webki
 .sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:all .25s;flex-shrink:0}
 .sc-dot.on{background:var(--accent);width:20px;border-radius:4px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
+.elite-range{height:6px;border-radius:6px}
+.elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--violet);border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(154,124,255,.6);cursor:pointer}
+.elite-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--violet);border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(154,124,255,.6);cursor:pointer}
 @media(max-width:900px){
   .wrap{padding:0 20px}
   .hide-mobile{display:none!important}
@@ -493,9 +496,9 @@ const CHECKOUT={
 // Elite slider state
 var eliteSlider=0; // 0=30av, 1=60av, 2=90av
 const ELITE_TIERS=[
-  {avatars:30, price:'89,99', annual:'66,67', annualPct:25, savings:'280', checkoutId:'elite'},
-  {avatars:60, price:'158,99',annual:'119,99',annualPct:25, savings:'468', checkoutId:'elite60'},
-  {avatars:90, price:'224,99',annual:'157,99',annualPct:30, savings:'804', checkoutId:'elite90'},
+  {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', annualPct:25, savings:'280', checkoutId:'elite'},
+  {avatars:60, videos:120, images:100, price:'158,99',annual:'119,99',annualPct:25, savings:'468', checkoutId:'elite60'},
+  {avatars:90, videos:180, images:150, price:'224,99',annual:'157,99',annualPct:30, savings:'804', checkoutId:'elite90'},
 ];
 function setEliteSlider(idx){
   eliteSlider=idx;
@@ -547,23 +550,24 @@ function renderPricing(){
     var annualLabel=isAnnual?('Économise '+displayPct+'% · facturé annuellement'):'Facturé mensuellement';
     var savingsLine=isAnnual?'<div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel</div>':'';
     var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
-    // Elite slider HTML
+    // Elite slider HTML — barre (design Claude, screen 2)
     var sliderHtml='';
-    if(pl.id==='elite'){
-      var btns='';
-      for(var t=0;t<ELITE_TIERS.length;t++){
-        var active=t===eliteSlider;
-        btns+='<button onclick="setEliteSlider('+t+')" style="flex:1;padding:7px 4px;border-radius:8px;border:'+(active?'2px solid rgba(154,124,255,.7)':'1px solid rgba(154,124,255,.2)')+';background:'+(active?'rgba(154,124,255,.18)':'transparent')+';color:'+(active?'var(--violet)':'var(--text-3)')+';font-family:var(--mono);font-size:11px;font-weight:'+(active?'800':'600')+';cursor:pointer;transition:all .18s">'+ELITE_TIERS[t].avatars+' avatars</button>';
-      }
-      sliderHtml='<div style="margin:0 0 18px;padding:12px;background:rgba(154,124,255,.06);border:1px solid rgba(154,124,255,.15);border-radius:12px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-3);font-weight:600;margin-bottom:8px;text-align:center;letter-spacing:.5px">AVATARS / MOIS</div><div style="display:flex;gap:6px">'+btns+'</div></div>';
-    }
-    // Update chips for elite
     if(pl.id==='elite'&&tier){
-      chips='';
-      var eliteChips=[tier.avatars+' avatar/mois','35s/avatar'];
-      for(var j=0;j<eliteChips.length;j++){
-        chips+='<span class="pill mono" style="font-size:11px;padding:5px 10px;color:'+(j===0?pl.accent:'var(--text-2)')+';border-color:'+(j===0?chipBorder:'var(--border)')+';background:'+(j===0?chipBg:'var(--surface)')+'">'+eliteChips[j]+'</span>';
+      var pct=eliteSlider/(ELITE_TIERS.length-1)*100;
+      var marks='';
+      for(var t=0;t<ELITE_TIERS.length;t++){
+        var act=t===eliteSlider;
+        marks+='<button onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
       }
+      sliderHtml=''
+        +'<div style="margin:0 0 18px;padding:16px 18px;background:rgba(154,124,255,.06);border:1px solid rgba(154,124,255,.3);border-radius:14px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10.5px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)">Avatars IA / mois</span><span style="font-size:26px;font-weight:800;color:var(--violet);line-height:1">'+tier.avatars+'</span></div>'
+        +'<input type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+eliteSlider+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
+        +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>'
+        +'<div style="border-top:1px solid rgba(154,124,255,.18);margin-top:10px;padding-top:10px;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text-3);font-family:var(--mono)"><span><b style="color:var(--text-2)">'+tier.videos+'</b> vidéos</span><span><b style="color:var(--text-2)">'+tier.images+'</b> images</span><span>35s/avatar</span></div>'
+        +'</div>';
+      // L'encadré porte déjà les quotas → pas de chips redondants pour Elite
+      chips='';
     }
     html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center;margin:20px 0">'+chips+'</div>'+sliderHtml+'<a href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
