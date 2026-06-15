@@ -648,7 +648,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         Cartoon
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
-      <div class="nav-i" onclick="nav('studio',this);initStudio()">
+      <div class="nav-i" onclick="nav('studio',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="12" height="9" rx="1.5"/><path d="M1.5 6h12M5 3v9"/><path d="M3 4.5h0.5M3 7.5h0.5M3 10.5h0.5"/></svg>
         Éditeur
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
@@ -7404,6 +7404,7 @@ function nav(id,el){
   if(id==='express')    initExpress();
   if(id==='cartoon')    initCartoon();
   if(id==='audioclean') initAudioCleanView();
+  if(id==='studio')     initStudio();
   if(id==='generator')  setTimeout(initClipPicker, 50);
 }
 function refreshYoutubeView(){
