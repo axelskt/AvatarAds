@@ -3631,8 +3631,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
             <!-- TOOLS -->
               <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:10px">Outils</div>
-                <button onclick="edAddText()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">➕ Ajouter un texte</button>
+                <div class="label" style="margin-bottom:10px">🧰 Outils</div>
+                <button onclick="edAddText()" class="btn" style="width:100%;margin-bottom:10px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">🅣 Ajouter un texte</button>
+                <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">🖼 Ajouter une image</button>
                 <div onclick="document.getElementById('edImportIn').click()"
                      ondragover="event.preventDefault();this.style.borderColor='#3dd6c4';this.style.background='rgba(61,214,196,.07)'"
                      ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg3)'"
@@ -3688,14 +3689,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div id="edLayersEmpty" class="faint" style="font-size:12px">Aucun calque — ajoute du texte ou une image.</div>
               </div>
 
-              <div class="card" style="padding:16px">
-                <div class="label" style="margin-bottom:10px">Export</div>
+              <div class="card" style="padding:16px;margin-bottom:14px">
+                <div class="label" style="margin-bottom:10px">📐 Format &amp; qualité</div>
+                <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Qualité d'export</div>
                 <div class="row gap8" style="margin-bottom:12px">
                   <button id="edQ720" onclick="edSetQ(720,this)" class="btn btn-ghost btn-sm grow">720p</button>
                   <button id="edQ1080" onclick="edSetQ(1080,this)" class="btn btn-sm grow" style="border:1px solid var(--accent);background:var(--accent-soft);color:var(--text);font-weight:700">1080p ✓</button>
-                  <button id="edQ1440" onclick="edSetQ(1440,this)" class="btn btn-ghost btn-sm grow">2K upscale</button>
+                  <button id="edQ1440" onclick="edSetQ(1440,this)" class="btn btn-ghost btn-sm grow">2K</button>
                 </div>
-                <button id="edExportBtn" onclick="edExport()" class="btn" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">⬇ Exporter le clip</button>
+                <div class="row gap8 faint" style="font-size:11.5px;align-items:center">🎞 <span id="edOutputLabel">Sortie : 9:16 · 1080p · H.264</span></div>
+              </div>
+
+              <div class="card" style="padding:16px">
+                <div class="label" style="margin-bottom:10px">🎞 Export</div>
+                <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">⬇ Exporter MP4</button>
                 <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
               </div>
           </div>
@@ -17393,8 +17400,11 @@ function edDeleteSelected(){ if(!_ed) return; const i=_ed.overlays.findIndex(o=>
 
 function edSetQ(q,btn){
   _edQuality=q;
-  ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.border='1px solid var(--border)'; b.style.background='transparent'; b.style.color='var(--text-2)'; b.style.fontWeight='500'; } });
-  btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700';
+  const labels={720:'720p',1080:'1080p',1440:'2K'};
+  ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.border='1px solid var(--border)'; b.style.background='transparent'; b.style.color='var(--text-2)'; b.style.fontWeight='500'; const k=({edQ720:720,edQ1080:1080,edQ1440:1440})[id]; b.textContent=labels[k]; } });
+  btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700'; btn.textContent=labels[q]+' ✓';
+  const out=document.getElementById('edOutputLabel');
+  if(out){ const ar=(_ed&&_ed.vw&&_ed.vh)?(_ed.vw/_ed.vh<0.72?'9:16':_ed.vw/_ed.vh>1.3?'16:9':'1:1'):'9:16'; out.textContent='Sortie : '+ar+' · '+labels[q]+' · H.264'; }
 }
 function edReset(){
   if(_ed){ edPause(); cancelAnimationFrame(_ed.raf); (_ed.clips||[]).forEach(c=>{try{URL.revokeObjectURL(c.url);}catch(e){}}); try{edRemoveMusic(true);}catch(e){} try{_ed.audio&&_ed.audio.ac.close();}catch(e){} const st=document.getElementById('edStage'); [...st.querySelectorAll('.ed-ov')].forEach(el=>el.remove()); }
