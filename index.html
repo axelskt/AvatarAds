@@ -502,7 +502,17 @@ const ELITE_TIERS=[
 ];
 function setEliteSlider(idx){
   eliteSlider=idx;
-  renderPricing();
+  var tier=ELITE_TIERS[idx]; if(!tier) return;
+  var pct=idx/(ELITE_TIERS.length-1)*100;
+  var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.avatars;
+  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=tier.videos;
+  var img=document.getElementById('lpEliteImg'); if(img) img.textContent=tier.images;
+  var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
+  for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
+  var price=document.getElementById('lpElitePrice'); if(price) price.textContent=isAnnual?tier.annual:tier.price;
+  var al=document.getElementById('lpEliteAnnualLabel'); if(al) al.textContent=isAnnual?('Économise '+tier.annualPct+'% · facturé annuellement'):'Facturé mensuellement';
+  var sv=document.getElementById('lpEliteSave'); if(sv) sv.innerHTML=isAnnual?'🎁 Économisez <span style="font-size:14px">€'+tier.savings+'</span> par rapport au mensuel':'';
+  var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=(CHECKOUT[tier.checkoutId]&&CHECKOUT[tier.checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/'; }
 }
 const plans=[
   {id:"starter",name:"STARTER",tagline:"Pour commencer à créer du contenu vidéo IA sans se ruiner.",price:"29,99",annual:"20,83",savings:"110",accent:"var(--text)",popular:false,chips:["5 avatar/mois","10 vidéos/mois","20s/avatar"],foot:"Idéal pour tester et lancer ses premières vidéos",feats:["Clip max 40s · sans watermark · export vertical","Script IA GPT-4o optimisé","Voix clonée ElevenLabs","5 Avatar IA/mois · lipsync HD · sous-titres animés","Enregistreur vocal + suppression silences","Split-screen · gameplay · sync voix/texte","10 images IA/mois · DALL·E 3 4K"]},
@@ -548,7 +558,7 @@ function renderPricing(){
     var checkoutId=tier?tier.checkoutId:pl.id;
     var annualColor=isAnnual?'var(--green)':'var(--text-3)';
     var annualLabel=isAnnual?('Économise '+displayPct+'% · facturé annuellement'):'Facturé mensuellement';
-    var savingsLine=isAnnual?'<div style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel</div>':'';
+    var savingsLine='<div id="'+(pl.id==='elite'?'lpEliteSave':'save-'+pl.id)+'" style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">'+(isAnnual?'🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel':'')+'</div>';
     var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
     // Elite slider HTML — barre (design Claude, screen 2)
     var sliderHtml='';
@@ -557,19 +567,19 @@ function renderPricing(){
       var marks='';
       for(var t=0;t<ELITE_TIERS.length;t++){
         var act=t===eliteSlider;
-        marks+='<button onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
+        marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
       }
       sliderHtml=''
         +'<div style="padding:16px 18px;background:rgba(154,124,255,.06);border:1px solid rgba(154,124,255,.3);border-radius:14px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10.5px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)">Avatars IA / mois</span><span style="font-size:26px;font-weight:800;color:var(--violet);line-height:1">'+tier.avatars+'</span></div>'
-        +'<input type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+eliteSlider+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10.5px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)">Avatars IA / mois</span><span id="lpEliteAv" style="font-size:26px;font-weight:800;color:var(--violet);line-height:1">'+tier.avatars+'</span></div>'
+        +'<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+eliteSlider+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
         +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>'
-        +'<div style="border-top:1px solid rgba(154,124,255,.18);margin-top:10px;padding-top:10px;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text-3);font-family:var(--mono)"><span><b style="color:var(--text-2)">'+tier.videos+'</b> vidéos</span><span><b style="color:var(--text-2)">'+tier.images+'</b> images</span><span>35s/avatar</span></div>'
+        +'<div style="border-top:1px solid rgba(154,124,255,.18);margin-top:10px;padding-top:10px;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text-3);font-family:var(--mono)"><span><b id="lpEliteVid" style="color:var(--text-2)">'+tier.videos+'</b> vidéos</span><span><b id="lpEliteImg" style="color:var(--text-2)">'+tier.images+'</b> images</span><span>35s/avatar</span></div>'
         +'</div>';
       // L'encadré porte déjà les quotas → pas de chips redondants pour Elite
       chips='';
     }
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px"><span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
   document.getElementById('pricing-grid').innerHTML=html;
 }
