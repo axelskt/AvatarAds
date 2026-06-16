@@ -3361,25 +3361,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button id="cartoonSdDur5" onclick="cartoonPickSeedanceDur(5000,this)" style="padding:5px 12px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">5s</button>
               <button id="cartoonSdDur10" onclick="cartoonPickSeedanceDur(10000,this)" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">10s</button>
             </div>
-            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="margin-top:12px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
-              Générer la vidéo animée
-              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>
-            </button>
-
-            <div id="cartoonVidProgress" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:10px;text-align:center">
-              <div style="font-size:11px;font-family:var(--mono);color:#c084fc;margin-bottom:7px" id="cartoonVidProgressTxt">⏳ Veo 3.1 génère ta vidéo…</div>
-              <div style="height:3px;background:var(--bg4);border-radius:3px;overflow:hidden">
-                <div id="cartoonVidProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:3px;transition:width .8s ease"></div>
-              </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">~60-90 secondes</div>
-            </div>
-
-            <div id="cartoonVidResult" style="display:none;margin-top:12px">
-              <button onclick="cartoonUseAsAvatar()" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-                ✅ Utiliser comme avatar → Générateur
-              </button>
-            </div>
           </div>
 
           <!-- ── MODULE 3 : VOIX ── -->
@@ -3411,6 +3392,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <div class="faint mono" style="margin-top:8px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Le bouton « ▶ Écouter » joue un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
               <label class="row gap6" style="margin-top:6px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
+              <button id="cartoonExportAudioBtn" onclick="cartoonExportAudio()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid rgba(168,85,247,0.45);border-radius:8px;color:#c4a3f7;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(168,85,247,0.12)'" onmouseout="this.style.background='var(--bg4)'">⬇ Exporter l'audio généré (WAV)</button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
               <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
@@ -3480,6 +3462,30 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               style="width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none;box-sizing:border-box;transition:border-color .15s"
               onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"
               oninput="cartoonUpdatePreview()">
+          </div>
+
+          <!-- ── GÉNÉRATION FINALE (à la toute fin) ── -->
+          <div style="background:radial-gradient(400px 120px at 50% 0,rgba(168,85,247,.10),var(--surface));border:1px solid rgba(168,85,247,.3);border-radius:14px;padding:16px;margin-bottom:10px">
+            <div style="font-size:11px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#c084fc;margin-bottom:10px;text-align:center">✨ Génère ta vidéo cartoon</div>
+            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 8px 24px rgba(168,85,247,0.4)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
+              Générer la vidéo animée
+              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>
+            </button>
+
+            <div id="cartoonVidProgress" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:10px;text-align:center">
+              <div style="font-size:11px;font-family:var(--mono);color:#c084fc;margin-bottom:7px" id="cartoonVidProgressTxt">⏳ Veo 3.1 génère ta vidéo…</div>
+              <div style="height:3px;background:var(--bg4);border-radius:3px;overflow:hidden">
+                <div id="cartoonVidProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:3px;transition:width .8s ease"></div>
+              </div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">~60-90 secondes</div>
+            </div>
+
+            <div id="cartoonVidResult" style="display:none;margin-top:12px">
+              <button onclick="cartoonUseAsAvatar()" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+                ✅ Utiliser comme avatar → Générateur
+              </button>
+            </div>
           </div>
 
           <!-- Quota info -->
@@ -16412,9 +16418,20 @@ async function cartoonGenVoiceTTS(){
     }
     const file=new File([blob],'cartoon-voix.wav',{type:'audio/wav'});
     _cartoonHandleVoice(file);
+    window._cartoonTtsBlob=blob; // pour l'export audio
+    const exBtn=document.getElementById('cartoonExportAudioBtn'); if(exBtn) exBtn.style.display='flex';
     toast(doStrip?'✅ Voix IA générée + silences supprimés':'✅ Voix IA générée (Gemini)');
   }catch(e){ toast('⚠️ '+e.message); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
+}
+function cartoonExportAudio(){
+  const blob=window._cartoonTtsBlob || (_cartoonVoiceFile||null);
+  if(!blob){ toast('⚠️ Génère d\'abord la voix'); return; }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cartoon-voix.wav';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast('⬇ Audio exporté (WAV)');
 }
 function _pcmToWav(pcm,rate,channels){
   const bytesPerSample=2, blockAlign=channels*bytesPerSample, byteRate=rate*blockAlign;
