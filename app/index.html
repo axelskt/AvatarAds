@@ -6446,7 +6446,7 @@ async function _imgRemoveBgRun(btn){
     const body = src.startsWith('data:') ? { image_b64: src } : { image_url: src };
     const resp = await fetch(REMOVEBG_PROXY, {
       method:'POST',
-      headers:{ 'Authorization': authH, 'Content-Type':'application/json' },
+      headers:{ ...authH, 'Content-Type':'application/json' },
       body: JSON.stringify(body)
     });
     if(!resp.ok){ const e = await resp.json().catch(()=>({})); throw new Error(e.error || ('HTTP '+resp.status)); }
@@ -6717,7 +6717,7 @@ async function generateImage(){
 
   try {
     const session = (await sb.auth.getSession()).data.session;
-    const token   = session?.access_token;
+    const token   = session?.access_token || SUPABASE_KEY; // fallback clé publishable (comme getAuthHeader / chat IA)
     if(!token){ toast('⚠️ Connecte-toi pour générer des images'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
 
     const size   = _imgSelectedFormat;
@@ -15667,7 +15667,7 @@ async function _cartoonProxyFetch(path, options={}){
   const authH = await getAuthHeader();
   return fetch(`${GOOGLE_PROXY}?path=${encodeURIComponent(path)}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': authH, ...(options.headers||{}) }
+    headers: { 'Content-Type': 'application/json', ...authH, ...(options.headers||{}) }
   });
 }
 
