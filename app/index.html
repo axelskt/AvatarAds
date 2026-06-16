@@ -859,8 +859,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
 
-            <!-- ── CLIP PICKER compact ──────────────────────────────────────── -->
-            <div id="clipPickerSection" style="margin-bottom:16px">
+            <!-- ── CLIP PICKER compact (gameplay) — visible seulement si Split Screen ON ── -->
+            <div id="clipPickerSection" style="margin-bottom:16px;display:none">
               <!-- Aucun clip sélectionné -->
               <div id="clipNoSelRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
                 <span style="font-size:18px;opacity:.5">🎬</span>
@@ -885,7 +885,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="clipGrid" style="display:none"></div>
             </div>
 
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div id="clipOrAvatarDivider" style="display:none;align-items:center;gap:10px;margin-bottom:12px">
               <div style="flex:1;height:1px;background:var(--border)"></div>
               <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou ajoute un avatar</span>
               <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -3573,7 +3573,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <!-- CENTRE : aperçu (flexible) + transport + timeline (poussés en bas) -->
           <div class="col" style="flex:1;min-width:0;display:flex;flex-direction:column">
             <!-- zone aperçu flexible -->
-            <div style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:18px 16px;overflow:auto;background:radial-gradient(600px 300px at 50% 0%, rgba(255,90,31,.05), transparent)">
+            <div id="edPreviewZone" style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:18px 16px;overflow:auto;background:radial-gradient(600px 300px at 50% 0%, rgba(255,90,31,.05), transparent)">
               <div id="edStage" style="position:relative;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border2);touch-action:none;box-shadow:0 30px 70px -30px rgba(0,0,0,.9)">
                 <canvas id="edCanvas" style="display:block"></canvas>
               </div>
@@ -8943,6 +8943,7 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
       if(isStopL(w)) html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
       else           html+=`<span style="${base}font-family:'Dancing Script',cursive;font-size:${Math.round(sz*1.25)}px;font-weight:700;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 1px">${w}</span>`;
     }
+    else if(style==='karaoke') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${active?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
   // During animated preview, never apply entry animation class (would re-trigger on every word)
@@ -9009,6 +9010,11 @@ function toggleSplit(){
   const row2    = document.getElementById('splitToggleStep2');
 
   const ratioRow = document.getElementById('avSplitRatioRow');
+  // Le picker de clip gameplay (étape 2) n'a de sens qu'en Split Screen
+  const clipPick = document.getElementById('clipPickerSection');
+  const clipDiv  = document.getElementById('clipOrAvatarDivider');
+  if(clipPick) clipPick.style.display = splitEnabled ? 'block' : 'none';
+  if(clipDiv)  clipDiv.style.display  = splitEnabled ? 'flex'  : 'none';
   if(splitEnabled){
     // Étape 4
     toggle.style.background = 'var(--orange)';
@@ -9301,6 +9307,9 @@ function updateSubPreview(){
         : `<span style="${sc2}font-family:'Dancing Script',cursive;font-size:${Math.round(sz*1.25)}px;font-weight:700;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 1px">${w}</span>`
       ).join('');
     })(),
+    karaoke: () => shown.map((w,i) =>
+      `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${i===0?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`
+    ).join(''),
   };
 
   const html = (render[style] || render.hormozi)();
@@ -16894,9 +16903,15 @@ function edSetup(){
   edResizeCanvas();
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
   stage.onpointerdown=(e)=>{ if(e.target===canvas){ if(_ed.sel){ edHideProps(); } else { edTogglePlay(); } } };
+  // Clic AUTOUR de l'aperçu (zone vide) → ferme le menu / désélectionne
+  const pz=document.getElementById('edPreviewZone');
+  if(pz && !pz._deselBound){ pz._deselBound=true;
+    pz.addEventListener('pointerdown',(e)=>{ if(!_ed||!_ed.sel) return; if(e.target.closest('#edStage,#edTextMenu')) return; edHideProps(); });
+  }
   _ed.video.currentTime=_ed.trimA;
   edResetZoom();
   edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); edRenderClips();
+  if(!window._edKeysBound){ window._edKeysBound=true; document.addEventListener('keydown', edKeyHandler); }
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
 }
 /* ---------- clips: durée totale, temps global, sync, sélection ---------- */
@@ -16979,7 +16994,19 @@ function edPlay(){
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed) el.textContent=edFmt(_ed.video.currentTime)+' / '+edFmt(_ed.dur); }
-function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const frac=_ed.dur?(_ed.video.currentTime/_ed.dur):0; ph.style.left=(100+Math.max(0,Math.min(1,frac))*tl.clientWidth)+'px'; }
+function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
+// déplace la lecture au temps GLOBAL gt (gère le multi-clip en changeant de clip silencieusement)
+function edScrubTo(gt){
+  if(!_ed||!_ed.clips||!_ed.clips.length) return;
+  const total=edTotalDur(); gt=Math.max(0,Math.min(total,gt));
+  let acc=0, target=_ed.clips.length-1, local=0;
+  for(let i=0;i<_ed.clips.length;i++){ const c=_ed.clips[i]; const len=Math.max(0.0001,c.trimB-c.trimA); if(gt<acc+len||i===_ed.clips.length-1){ target=i; local=gt-acc; break; } acc+=len; }
+  if(target!==_ed.activeIdx) edAdvanceClip(target);
+  const c=_ed.clips[target];
+  try{ _ed.video.currentTime=c.trimA+Math.max(0,Math.min(c.trimB-c.trimA,local)); }catch(e){}
+  if(_ed.music){ try{ _ed.music.currentTime=edOutTime(_ed.video.currentTime); }catch(e){} }
+  edUpdatePlayhead(); edUpdateTime();
+}
 
 function edRefreshTimeline(){
   if(!_ed) return;
@@ -17028,9 +17055,58 @@ function edBindTimeline(){
       edRefreshTimeline(); toast('🗑 Passage marqué supprimé');
       return;
     }
-    _ed.video.currentTime=Math.max(_ed.trimA,Math.min(_ed.trimB,t)); if(_ed.music&&_ed.playing){ try{_ed.music.currentTime=edOutTime(_ed.video.currentTime);}catch(e){} }
+    // le scrub global (edTlInner) gère le déplacement de la tête de lecture
   });
   new ResizeObserver(()=>{ if(_ed) edRefreshTimeline(); }).observe(tl);
+  // SCRUB GLOBAL : prendre la tête de lecture et la déplacer n'importe où sur la timeline
+  const inner=document.getElementById('edTlInner');
+  if(inner && !inner._scrubBound){ inner._scrubBound=true;
+    const gtFromX=(clientX)=>{ const r=inner.getBoundingClientRect(); const laneW=inner.clientWidth-100; let x=Math.max(0,Math.min(laneW, clientX-r.left-100)); return (x/Math.max(1,laneW))*(edTotalDur()||1); };
+    let scrub=false;
+    inner.addEventListener('pointerdown',e=>{
+      if(!_ed||e.button!==0) return;
+      // ignore les éléments interactifs (poignées trim, chips SFX, bandes calque, vignettes clip, boutons)
+      if(e.target.closest('#edTlHandleL,#edTlHandleR,[data-h],[data-x],[data-e],.ed-ov,#edClipsTrack,button')) return;
+      if(e.clientX < inner.getBoundingClientRect().left+100) return; // colonne des labels
+      scrub=true; edPause(); edScrubTo(gtFromX(e.clientX));
+      try{ inner.setPointerCapture(e.pointerId); }catch(_){}
+    });
+    inner.addEventListener('pointermove',e=>{ if(scrub&&_ed) edScrubTo(gtFromX(e.clientX)); });
+    const endScrub=()=>{ scrub=false; };
+    inner.addEventListener('pointerup',endScrub); inner.addEventListener('pointercancel',endScrub);
+  }
+  // MOLETTE = zoom timeline (ancré sous le curseur), toutes pistes ensemble
+  const sc=document.getElementById('edTlScroll');
+  if(sc && !sc._wheelBound){ sc._wheelBound=true;
+    sc.addEventListener('wheel',e=>{
+      if(!_ed) return; if(e.shiftKey) return; // shift+molette = scroll horizontal natif
+      e.preventDefault();
+      const innerEl=document.getElementById('edTlInner'); const rect=sc.getBoundingClientRect();
+      const total=edTotalDur()||1; const cursorX=e.clientX-rect.left+sc.scrollLeft;
+      const laneW0=Math.max(1,innerEl.clientWidth-100); const tCur=Math.max(0,(cursorX-100))/laneW0*total;
+      const factor=e.deltaY<0?1.15:1/1.15;
+      _edZoom=Math.max(1,Math.min(8,+(_edZoom*factor).toFixed(3)));
+      innerEl.style.width=(_edZoom*100)+'%';
+      const lbl=document.getElementById('edZoomLbl'); if(lbl) lbl.textContent=Math.round(_edZoom*100)+'%';
+      edRefreshTimeline();
+      const laneW1=Math.max(1,innerEl.clientWidth-100);
+      sc.scrollLeft = (100+(tCur/total)*laneW1) - (e.clientX-rect.left);
+    },{passive:false});
+  }
+}
+// RACCOURCIS CLAVIER éditeur (Suppr, Espace, ←/→, Cmd/Ctrl+Z)
+function edKeyHandler(e){
+  const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
+  const t=(e.target.tagName||'').toLowerCase(); if(t==='input'||t==='textarea'||e.target.isContentEditable) return;
+  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.sel){ e.preventDefault(); edDeleteContext(); } }
+  else if(e.key===' '||e.code==='Space'){ e.preventDefault(); edTogglePlay(); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+    const dir=e.key==='ArrowRight'?1:-1; const step=e.shiftKey?1:0.2; const tot=edTotalDur()||1;
+    const ov=_ed.sel&&_ed.overlays.find(o=>o.id===_ed.sel);
+    if(ov){ e.preventDefault(); const len=ov.end-ov.start; ov.start=Math.max(0,Math.min(tot-len,ov.start+dir*step)); ov.end=ov.start+len; if(ov._el) edStyleOverlay(ov); edRenderOvTrack(); }
+    else { e.preventDefault(); edScrubTo((edGlobalNow()||0)+dir*step); }
+  }
+  else if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) edRedo(); else edUndo(); }
 }
 
 function edDeleteFlow(btn){
@@ -17056,11 +17132,13 @@ function edAddImage(file){
   if(!_ed||!file) return;
   const img=new Image(); const url=URL.createObjectURL(file);
   img.onload=()=>{
-    const ar=img.width/img.height; let w=_ed.dispW*0.42, h=w/ar;
+    // par défaut : couvre TOUT l'écran (cover-fit centré, sans déformation) + toute la durée
+    const scale=Math.max(_ed.dispW/img.width, _ed.dispH/img.height);
+    const w=img.width*scale, h=img.height*scale;
+    const x=(_ed.dispW-w)/2, y=(_ed.dispH-h)/2;
     edSnap();
-    const ov={ id:'ov'+Date.now(), type:'image', img, url, x:_ed.dispW*0.29, y:_ed.dispH*0.3, w, h, crop:{t:0,r:0,b:0,l:0}, start:0, end:edTotalDur() };
+    const ov={ id:'ov'+Date.now(), type:'image', img, url, x, y, w, h, crop:{t:0,r:0,b:0,l:0}, start:0, end:edTotalDur() };
     _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
-    edAddSfx('pop', ov.start); edPlaySfxPreview('pop');
   };
   img.src=url;
 }
@@ -17273,12 +17351,12 @@ function _edExtractThumbs(clip, count){
     let done=false; const finish=()=>{ if(done) return; done=true; clip._thumbs=out; try{tv.src='';}catch(e){} resolve(out); };
     tv.onloadedmetadata=async ()=>{
       const vw=clip.vw||tv.videoWidth||720, vh=clip.vh||tv.videoHeight||1280;
-      cv.width=48; cv.height=Math.max(1,Math.round(48*(vh/vw)));
+      cv.width=160; cv.height=Math.max(1,Math.round(160*(vh/vw)));
       const a=clip.trimA, b=clip.trimB;
       for(let i=0;i<count;i++){
         const t=a+((b-a)*(i+0.5)/count);
         await new Promise(res=>{ const on=()=>{ tv.removeEventListener('seeked',on); res(); }; tv.addEventListener('seeked',on); try{ tv.currentTime=t; }catch(e){ res(); } setTimeout(res,700); });
-        try{ cx.drawImage(tv,0,0,cv.width,cv.height); out.push(cv.toDataURL('image/jpeg',0.55)); }catch(e){ out.push(null); }
+        try{ cx.imageSmoothingQuality='high'; cx.drawImage(tv,0,0,cv.width,cv.height); out.push(cv.toDataURL('image/jpeg',0.78)); }catch(e){ out.push(null); }
       }
       finish();
     };
@@ -17360,7 +17438,7 @@ function edRenderSfxTrack(){
     chip.appendChild(hL); chip.appendChild(x); chip.appendChild(hR);
     chip.addEventListener('pointerdown',e=>{
       if(e.target&&e.target.dataset&&e.target.dataset.x) return;
-      e.preventDefault(); edSnap(); chip.style.cursor='grabbing';
+      e.preventDefault(); e.stopPropagation(); edSnap(); chip.style.cursor='grabbing';
       const r=tr.getBoundingClientRect();
       const mode=(e.target&&e.target.dataset&&e.target.dataset.h)||'move';
       const startX=e.clientX, t0=s.t, len0=(s.len||0.6);
