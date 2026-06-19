@@ -1549,8 +1549,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                   <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-badis" onclick="pickSub(this,'badis')">
-                  <div class="sub-name">Badis ✍️</div>
-                  <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
+                  <div class="sub-name">Punch</div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;font-weight:900;-webkit-text-stroke:.8px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-karaoke" onclick="pickSub(this,'karaoke')">
                   <div class="sub-name">Karaoke 🎤</div>
@@ -3037,8 +3037,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
             </div>
             <div class="sub-card style-card" id="sc-exp-badis" onclick="pickSub(this,'badis')">
-              <div class="sub-name">Badis ✍️</div>
-              <div class="sub-preview"><span style="font-family:'Dancing Script',cursive;font-size:14px;color:#FFE500;font-weight:700">vaux</span><span style="font-family:Impact,sans-serif;font-size:10px;color:#fff;-webkit-text-stroke:.4px #000;margin-left:3px">plus que</span></div>
+              <div class="sub-name">Punch</div>
+              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;font-weight:900;-webkit-text-stroke:.8px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
             </div>
             <div class="sub-card style-card" id="sc-exp-karaoke" onclick="pickSub(this,'karaoke')">
               <div class="sub-name">Karaoke 🎤</div>
@@ -7756,7 +7756,7 @@ function clearVoiceMode(){
   if(cloneSection) cloneSection.classList.remove('dimmed');
   if(presetSection) presetSection.classList.remove('dimmed');
 }
-const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'Badis ✍️', karaoke:'Karaoke 🎤' };
+const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'Punch', karaoke:'Karaoke 🎤' };
 function _subStyleLabel(s){ return SUB_STYLE_LABELS[s] || (s ? s.charAt(0).toUpperCase()+s.slice(1) : 'Hormozi'); }
 function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
@@ -7823,7 +7823,7 @@ function openSubPresetPicker(){
   } else {
     if(empty) empty.style.display = 'none';
     list.innerHTML = presets.map((p, i) => {
-      const styleLabel = { hormozi:'Hormozi', tiktok:'TikTok', neon:'Néon', iman:'Iman', podcast:'Podcast', mrbeast:'MrBeast', badis:'Badis ✍️' }[p.style] || p.style;
+      const styleLabel = { hormozi:'Hormozi', tiktok:'TikTok', neon:'Néon', iman:'Iman', podcast:'Podcast', mrbeast:'MrBeast', badis:'Punch' }[p.style] || p.style;
       const animLabel  = p.anim && p.anim !== 'none' ? ' · ' + p.anim : '';
       const posLabel   = 'Y:' + (p.pos||75) + '% X:' + (p.posX||50) + '%';
       return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .18s"
@@ -8937,10 +8937,8 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
     else if(style==='podcast') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
     else if(style==='mrbeast') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;font-style:italic;margin:0 2px">${w}</span>`;
     else if(style==='badis'){
-      const FR_STOP_L = new Set(['de','du','le','la','les','l','un','une','des','et','ou','que','qui','quoi','dont','à','au','aux','en','sur','sous','dans','par','pour','avec','sans','mais','donc','car','ni','or','je','tu','il','elle','nous','vous','ils','elles','me','te','se','lui','leur','y','plus','moins','très','bien','si','quand','plusieurs','pas','ne','on','ce','ça','cette','ces','mon','ma','mes','ton','ta','tes','son','sa','ses','notre','votre','leurs','même','aussi','encore','déjà','jamais','toujours','souvent','comme','alors','puis','cela','fait','est','sont','ont','avoir']);
-      const isStopL = x => FR_STOP_L.has(x.toLowerCase().replace(/[',\.!?«»]/g,'').replace(/^[jcdlmnst]'/,''));
-      if(isStopL(w)) html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
-      else           html+=`<span style="${base}font-family:'Dancing Script',cursive;font-size:${Math.round(sz*1.25)}px;font-weight:700;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 1px">${w}</span>`;
+      // « Punch » — simple & efficace : blanc gras + contour noir épais, majuscules (style DANA WHITE)
+      html+=`<span style="${base}font-family:'Anton',Impact,sans-serif;font-size:${Math.round(sz*1.05)}px;color:#fff;-webkit-text-stroke:${stroke+1}px #000;text-shadow:3px 3px 0 rgba(0,0,0,.95);margin:0 3px;text-transform:uppercase;letter-spacing:.5px">${w}</span>`;
     }
     else if(style==='karaoke') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${active?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
@@ -13331,49 +13329,27 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   ctx.lineJoin = 'round';
 
   if(style === 'badis'){
-    // ── Style Badis : mots-clés en script cursive, liaisons en Impact ──
-    // Mots de liaison français → Impact bold ; sinon → Dancing Script cursive
-    const FR_STOP = new Set([
-      'de','du','le','la','les','l','un','une','des','et','ou','que','qui','quoi','dont',
-      'à','au','aux','en','sur','sous','dans','par','pour','avec','sans','mais','donc',
-      'car','ni','or','je','tu','il','elle','nous','vous','ils','elles','me','te','se',
-      'lui','leur','y','plus','moins','très','bien','si','quand','plusieurs','pas','ne',
-      'on','ce','ça','cette','ces','mon','ma','mes','ton','ta','tes','son','sa','ses',
-      'notre','votre','leurs','même','aussi','encore','déjà','jamais','toujours',
-      'souvent','comme','alors','puis','cela','fait','est','sont','ont','avoir'
-    ]);
-    const cleanWord = w => w.toLowerCase().replace(/[',\.!?«»]/g,'').replace(/^[jcdlmnst]'/, '');
-    const isStop    = w => FR_STOP.has(cleanWord(w));
-    const fontNorm  = `900 ${sz}px Impact,sans-serif`;
-    const fontScript= `700 ${Math.round(sz * 1.25)}px 'Dancing Script',cursive`;
-    const fontFor   = w => isStop(w) ? fontNorm : fontScript;
-
+    // ── « Punch » — simple & efficace : blanc gras + contour noir épais, MAJUSCULES ──
+    const font = `900 ${Math.round(sz*1.05)}px 'Anton',Impact,sans-serif`;
+    ctx.font = font;
     ctx.textAlign = 'left';
-    // Mesure chaque mot avec sa propre fonte
-    const wordWidths = shown.map(w => {
-      ctx.font = fontFor(w);
-      return ctx.measureText(w).width + gap;
-    });
-
+    const upWords = shown.map(w => (w||'').toUpperCase());
+    const wordWidths = upWords.map(w => ctx.measureText(w).width + gap);
     const lines  = _splitSubLines(wordWidths, maxLineW);
     const nLines = lines.length;
     const startY = posY - ((nLines - 1) * lineH) / 2;
-
     lines.forEach((lineIdxs, li) => {
       const lineY = startY + li * lineH;
       const lineW = lineIdxs.reduce((a, i) => a + wordWidths[i], 0);
       let x = posX - lineW / 2;
       x = Math.max(W * 0.05, Math.min(W * 0.95 - lineW, x));
-
       lineIdxs.forEach(i => {
-        const active = i === activeIdx;
-        const color  = active ? c1 : c2;
-        ctx.font = fontFor(shown[i]);
-        ctx.lineWidth   = strokeW;
+        ctx.font = font;
+        ctx.lineWidth   = strokeW + Math.max(2, Math.round(sz*0.06));
         ctx.strokeStyle = '#000';
-        ctx.fillStyle   = color;
-        ctx.strokeText(shown[i], x, lineY);
-        ctx.fillText(shown[i], x, lineY);
+        ctx.fillStyle   = '#fff';
+        ctx.strokeText(upWords[i], x, lineY);
+        ctx.fillText(upWords[i], x, lineY);
         x += wordWidths[i];
       });
     });
