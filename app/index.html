@@ -2632,6 +2632,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
         </div>
 
+        <!-- MODE : Génération / Correction -->
+        <div class="row" style="gap:8px;margin-bottom:14px">
+          <button id="imgModeGen" onclick="_imgSetMode('generate')" class="btn btn-sm" style="flex:1;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px">✨ Génération</button>
+          <button id="imgModeCorrect" onclick="_imgSetMode('correct')" class="btn btn-ghost btn-sm" style="flex:1;padding:12px;font-weight:700">🪄 Correction d'image</button>
+        </div>
+
         <div id="imgModelGrid" style="display:none"></div>
 
         <!-- STYLE PRESETS -->
@@ -2652,18 +2658,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
         </div>
 
-        <!-- IMAGE DE RÉFÉRENCE — bientôt disponible -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px;opacity:.7">
+        <!-- IMAGE À CORRIGER (mode Correction) -->
+        <div id="imgCorrectionPanel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5"/><circle cx="4.3" cy="4.3" r=".9"/><path d="M10.5 7.5l-2.5-2.5L2.5 10.5"/></svg>
-            Image de référence
-            <span style="margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;padding:2px 7px;border-radius:8px;background:rgba(168,85,247,0.12);color:#c084fc;border:1px solid rgba(168,85,247,0.3)">BIENTÔT</span>
+            Image à corriger
           </div>
-          <div class="aaph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 20px;border-radius:12px;cursor:not-allowed">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <div style="font-size:12.5px;font-weight:600;color:var(--text-2)">Transforme une image existante (img2img)</div>
-            <div class="faint" style="font-size:10.5px;font-family:var(--mono)">bientôt disponible</div>
+          <div id="imgRefDrop" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_imgOnRefDrop(event)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:22px 20px;border:1.5px dashed var(--border-2);border-radius:12px;cursor:pointer;background:var(--bg3);transition:all .15s;position:relative;overflow:hidden;min-height:120px">
+            <input type="file" id="imgRefInput" accept="image/*" style="display:none" onchange="_imgOnRefInput(this)">
+            <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <div style="font-size:12.5px;font-weight:700;color:var(--text)">Importe l'image à modifier</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono)">puis décris la correction dans le prompt ci-dessous</div>
           </div>
+          <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:9px;line-height:1.5">Ex : « remplace le fond par un studio », « ajoute des lunettes de soleil », « change la couleur du t-shirt en rouge »</div>
         </div>
 
         <!-- NOMBRE D'IMAGES -->
@@ -6244,6 +6252,48 @@ function _imgClearRef(){
   const b = document.getElementById('imgRefBadge'); if(b) b.style.display = 'none';
   const inp = document.getElementById('imgRefInput'); if(inp) inp.value = '';
 }
+
+// ── Mode Génération / Correction (img2img) ──
+let _imgMode = 'generate';
+function _imgSetMode(m){
+  _imgMode = m;
+  const gen = document.getElementById('imgModeGen'), cor = document.getElementById('imgModeCorrect');
+  const onCss = 'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;flex:1', offCss = 'padding:12px;font-weight:700;flex:1';
+  if(gen){ gen.className='btn btn-sm'+(m==='generate'?'':' btn-ghost'); gen.style.cssText = m==='generate'?onCss:offCss; }
+  if(cor){ cor.className='btn btn-sm'+(m==='correct'?'':' btn-ghost'); cor.style.cssText = m==='correct'?onCss:offCss; }
+  const panel = document.getElementById('imgCorrectionPanel'); if(panel) panel.style.display = m==='correct' ? 'block' : 'none';
+  // En correction, le style/preset n'a pas de sens → on grise (optionnel) ; le format reste utile
+  const pr = document.getElementById('imgPrompt');
+  if(pr) pr.placeholder = m==='correct' ? 'Décris la correction à appliquer (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
+}
+function _imgOnRefDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border-2)'; const f=e.dataTransfer?.files?.[0]; if(f) _imgLoadRef(f); }
+function _imgOnRefInput(input){ const f=input?.files?.[0]; if(f) _imgLoadRef(f); }
+function _imgLoadRef(file){
+  if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
+  _imgRefFile = file;
+  const r=new FileReader();
+  r.onload=()=>{ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)'; toast('✅ Image chargée'); };
+  r.readAsDataURL(file);
+}
+
+// Édition d'image via gpt-image-1 /v1/images/edits (multipart)
+async function _imgEditOne(token, prompt, refFile, gptSize){
+  const fd = new FormData();
+  fd.append('model', 'gpt-image-1');
+  fd.append('image', refFile, refFile.name || 'image.png');
+  fd.append('prompt', prompt);
+  fd.append('n', '1');
+  fd.append('size', gptSize);
+  const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
+    method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
+  });
+  const data = await res.json();
+  if(data.error){ throw new Error(data.error.message||'Erreur correction'); }
+  const item = data.data?.[0];
+  if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
+  if(item?.url) return item.url;
+  throw new Error('Aucune image retournée');
+}
 function _imgToggleBg(){
   _imgRemoveBg = !_imgRemoveBg;
   const sw = document.getElementById('imgBgSwitch');
@@ -6569,6 +6619,27 @@ async function generateImage(){
     const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
     const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
+
+    // ── Mode CORRECTION (img2img) : 1 image éditée ──
+    if(_imgMode === 'correct'){
+      if(!_imgRefFile){ toast('⚠️ Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
+      const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
+      const gptSize = sizeMap[size] || '1024x1024';
+      multiWrap.style.display = 'none';
+      if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
+      else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Correction en cours…';
+      const url = await _imgEditOne(token, prompt, _imgRefFile, gptSize);
+      _imgMonthIncrement();
+      _imgShowSingle(url, size);
+      _imgSaveHistory(url, 'Correction', size);
+      _imgRenderHistory();
+      const rem = _imgMonthRemaining();
+      toast('🪄 Image corrigée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
+      overlay.style.display='none';
+      return;
+    }
 
     if(actualCount === 1){
       // ── Mode single (comportement original) ──
