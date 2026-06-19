@@ -3246,12 +3246,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <!-- Menu voix Gemini -->
               <div id="cartoonGeminiVoiceWrap">
                 <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">CHOISIS LA VOIX QUI COLLE AU PERSO</div>
-                <select id="cartoonTtsVoice" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:9px 8px;margin-bottom:8px;cursor:pointer"></select>
+                <input type="hidden" id="cartoonTtsVoice" value="Puck">
+                <button onclick="openVoicePicker('gemini')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;margin-bottom:8px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.5)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🎙 Voix : <b id="cartoonGeminiVoiceLabel" style="color:#c4a3f7">Puck</b></span><span style="color:var(--text3);font-size:11px">parcourir ▾</span></button>
               </div>
               <!-- Voix ElevenLabs -->
               <div id="cartoonElevenVoiceWrap" style="display:none;margin-bottom:8px">
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">VOIX ELEVENLABS</div>
-                <div class="faint" style="font-size:10px;font-family:var(--mono);line-height:1.5">Utilise ta voix clonée / sélectionnée dans le Générateur. <span style="color:#c4a3f7">Tu peux la cloner depuis l'onglet voix du Générateur.</span></div>
+                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">CHOISIS UNE VOIX ELEVENLABS</div>
+                <button onclick="openVoicePicker('eleven')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.5)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🔊 Voix : <b id="cartoonElevenVoiceLabel" style="color:#c4a3f7">Rachel</b></span><span style="color:var(--text3);font-size:11px">parcourir ▾</span></button>
+                <div class="faint" style="font-size:9.5px;font-family:var(--mono);line-height:1.5">Voix premium · ou clone la tienne depuis l'onglet voix du Générateur.</div>
               </div>
               <button id="cartoonTtsBtn" onclick="cartoonGenVoice()" style="width:100%;padding:9px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
               <label class="row gap6" style="margin-top:8px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
@@ -15908,16 +15910,121 @@ const _CARTOON_VOICES = [
   { id:'Gacrux',     emoji:'🎙️', name:'Gacrux',     desc:'mature',                match:'expert / posé' },
   { id:'Sulafat',    emoji:'🔥', name:'Sulafat',    desc:'chaleureuse',           match:'proximité / DM' },
 ];
-function _cartoonRenderVoices(){
-  const sel = document.getElementById('cartoonTtsVoice');
-  if(!sel || sel.tagName !== 'SELECT') return;
-  const cur = sel.value || 'Puck';
-  sel.innerHTML = _CARTOON_VOICES.map(v=>
-    `<option value="${v.id}"${v.id===cur?' selected':''}>${v.emoji} ${v.name} — ${v.desc} (idéal : ${v.match})</option>`
-  ).join('');
+// Voix ElevenLabs publiques (IDs stables) + voix clonées de l'utilisateur
+const _ELEVEN_VOICES = [
+  { id:'21m00Tcm4TlvDq8ikWAM', emoji:'👩', name:'Rachel',   desc:'calme · féminine',   match:'narration douce' },
+  { id:'AZnzlk1XvdvUeBnXmlld', emoji:'💪', name:'Domi',     desc:'forte · féminine',   match:'énergie / sport' },
+  { id:'EXAVITQu4vr4xnSDxMaL', emoji:'🌷', name:'Sarah',    desc:'douce · posée',      match:'lifestyle' },
+  { id:'MF3mGyEYCl7XYWbV9V6O', emoji:'🎭', name:'Elli',     desc:'émotive · jeune',    match:'storytelling' },
+  { id:'ErXwobaYiN019PkySvjV', emoji:'🧑', name:'Antoni',   desc:'équilibrée · H',     match:'voix off pro' },
+  { id:'TxGEqnHWrfWFTfGW9XjX', emoji:'🧔', name:'Josh',     desc:'grave · masculine',  match:'pub / autorité' },
+  { id:'VR6AewLTigWG4xSOukaG', emoji:'🎙️', name:'Arnold',   desc:'nette · masculine',  match:'annonceur' },
+  { id:'pNInz6obpgDQGcFmaJgB', emoji:'🔊', name:'Adam',     desc:'profonde · H',       match:'trailer / deep' },
+  { id:'yoZ06aMxZJJ28mfd3POQ', emoji:'🪕', name:'Sam',      desc:'raspy · masculine',  match:'cool / casual' },
+  { id:'jBpfuIE2acCO8z3wKNLl', emoji:'🧒', name:'Gigi',     desc:'enfantine',          match:'cartoon kid' },
+  { id:'XrExE9yKIg1WjnnlVkGX', emoji:'🤗', name:'Matilda',  desc:'chaleureuse · F',    match:'proximité' },
+  { id:'onwK4e9ZLuTAKqWW03F9', emoji:'🇬🇧', name:'Daniel',   desc:'British · grave',    match:'docu / premium' },
+  { id:'pFZP5JQG7iQjIQuC4Bku', emoji:'🌸', name:'Lily',     desc:'British · féminine', match:'élégant' },
+  { id:'piTKgcLEGmPE4e6mEKli', emoji:'🤫', name:'Nicole',   desc:'whisper · F',        match:'ASMR / intime' },
+];
+function _elevenVoiceList(){
+  let cloned=[];
+  try{ cloned=(typeof _getClonedVoices==='function'?_getClonedVoices():[]).map(v=>({ id:v.voice_id, emoji:'⭐', name:v.name||'Ma voix', desc:'voix clonée', match:'ta voix' })); }catch(e){}
+  return cloned.concat(_ELEVEN_VOICES);
 }
-function cartoonPickVoice(id){
-  const inp = document.getElementById('cartoonTtsVoice'); if(inp) inp.value = id;
+
+// Met à jour le label du bouton voix Cartoon
+function _cartoonRenderVoices(){
+  const id=document.getElementById('cartoonTtsVoice')?.value||'Puck';
+  const v=_CARTOON_VOICES.find(x=>x.id===id);
+  const lbl=document.getElementById('cartoonGeminiVoiceLabel'); if(lbl&&v) lbl.textContent=v.name;
+  const ev=_elevenVoiceList().find(x=>x.id===selVoiceId);
+  const elbl=document.getElementById('cartoonElevenVoiceLabel'); if(elbl) elbl.textContent=ev?ev.name:'Rachel';
+}
+function cartoonPickVoice(id){ const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _cartoonRenderVoices(); }
+
+// ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
+const _VOICE_SAMPLE = "Salut ! Voici ma voix, est-ce qu'elle colle bien à ton personnage ?";
+window._voicePreviewCache = {};
+let _voicePreviewAudio = null;
+function _voiceFavs(engine){ try{ return JSON.parse(localStorage.getItem('aa_fav_voices_'+engine)||'[]'); }catch(e){ return []; } }
+function _voiceToggleFav(engine,id){
+  let f=_voiceFavs(engine);
+  f = f.includes(id) ? f.filter(x=>x!==id) : [id,...f];
+  localStorage.setItem('aa_fav_voices_'+engine, JSON.stringify(f));
+  _renderVoicePickerList(engine);
+}
+function openVoicePicker(engine){
+  let ov=document.getElementById('voicePickerOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='voicePickerOverlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.onclick=(e)=>{ if(e.target===ov) closeVoicePicker(); };
+    ov.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:440px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)"><div style="font-size:15px;font-weight:800" id="voicePickerTitle">Choisir une voix</div><button onclick="closeVoicePicker()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:14px">✕</button></div>'
+      +'<div id="voicePickerList" style="overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:6px"></div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.dataset.engine=engine;
+  document.getElementById('voicePickerTitle').textContent = engine==='gemini' ? '🎙 Voix Gemini TTS' : '🔊 Voix ElevenLabs';
+  ov.style.display='flex';
+  _renderVoicePickerList(engine);
+}
+function closeVoicePicker(){ const ov=document.getElementById('voicePickerOverlay'); if(ov) ov.style.display='none'; if(_voicePreviewAudio){ _voicePreviewAudio.pause(); _voicePreviewAudio=null; } }
+function _renderVoicePickerList(engine){
+  const list=document.getElementById('voicePickerList'); if(!list) return;
+  const all = engine==='gemini' ? _CARTOON_VOICES : _elevenVoiceList();
+  const favs=_voiceFavs(engine);
+  const curId = engine==='gemini' ? (document.getElementById('cartoonTtsVoice')?.value||'Puck') : selVoiceId;
+  const sorted=[...all].sort((a,b)=> (favs.includes(b.id)?1:0)-(favs.includes(a.id)?1:0));
+  list.innerHTML=sorted.map(v=>{
+    const on=v.id===curId, fav=favs.includes(v.id);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;border:1px solid ${on?'rgba(168,85,247,.5)':'var(--border2)'};background:${on?'rgba(168,85,247,.1)':'var(--bg3)'}">
+      <span onclick="_voiceToggleFav('${engine}','${v.id}')" style="cursor:pointer;font-size:15px;flex-shrink:0" title="Favori">${fav?'⭐':'☆'}</span>
+      <div onclick="_voiceSelectFromPicker('${engine}','${v.id}')" style="flex:1;min-width:0;cursor:pointer">
+        <div style="font-size:13px;font-weight:700;color:${on?'#c4a3f7':'var(--text)'}">${v.emoji} ${v.name} <span style="font-weight:400;color:var(--text3);font-size:10.5px">· ${v.desc}</span></div>
+        <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">idéal : ${v.match}</div>
+      </div>
+      <button onclick="_voicePreview('${engine}','${v.id}',this)" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:var(--bg4);border:1px solid var(--border2);color:#c4a3f7;cursor:pointer;font-size:13px" title="Écouter">▶</button>
+      ${on?'<span style="flex-shrink:0;color:#a855f7;font-size:13px">✓</span>':''}
+    </div>`;
+  }).join('');
+}
+function _voiceSelectFromPicker(engine,id){
+  if(engine==='gemini'){ const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; }
+  else { selVoiceId=id; }
+  _cartoonRenderVoices();
+  closeVoicePicker();
+  toast('✅ Voix sélectionnée');
+}
+async function _voicePreview(engine,id,btn){
+  if(_voicePreviewAudio){ _voicePreviewAudio.pause(); _voicePreviewAudio=null; }
+  const key=engine+':'+id;
+  const orig=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+  try{
+    let url=window._voicePreviewCache[key];
+    if(!url){
+      let blob;
+      if(engine==='gemini'){
+        const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
+          method:'POST', body:JSON.stringify({ contents:[{parts:[{text:_VOICE_SAMPLE}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:id } } } } })
+        });
+        if(!resp.ok) throw new Error('preview '+resp.status);
+        const data=await resp.json();
+        const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
+        const b64=(part?.inlineData||part?.inline_data)?.data; if(!b64) throw new Error('no audio');
+        blob=new Blob([_pcmToWav(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),24000,1)],{type:'audio/wav'});
+      } else {
+        const authH=await getAuthHeader();
+        const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${id}`,{ method:'POST', headers:{...authH,'Content-Type':'application/json'}, body:JSON.stringify({ text:_VOICE_SAMPLE, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} }) });
+        if(!resp.ok) throw new Error('preview '+resp.status);
+        blob=await resp.blob();
+      }
+      url=URL.createObjectURL(blob); window._voicePreviewCache[key]=url;
+    }
+    _voicePreviewAudio=new Audio(url); _voicePreviewAudio.play();
+  }catch(e){ toast('⚠️ Aperçu indisponible'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=orig||'▶'; } }
 }
 
 // ── Importer une image comme personnage (biblio / upload) ──
