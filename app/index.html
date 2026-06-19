@@ -3082,8 +3082,22 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">1</div>
-              <div style="font-size:13px;font-weight:700">Style du personnage</div>
+              <div style="font-size:13px;font-weight:700">Ton personnage</div>
             </div>
+
+            <!-- Sources du personnage -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+              <div onclick="nav('imagegen', document.querySelector('.nav-i[onclick*=\'imagegen\']'))" style="padding:11px 10px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)'" onmouseout="this.style.borderColor='var(--border2)'">
+                <span style="font-size:17px">✨</span>
+                <div><div style="font-size:11px;font-weight:700;color:var(--text)">Créer dans Images IA</div><div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:1px">générateur dédié</div></div>
+              </div>
+              <div onclick="document.getElementById('cartoonImportIn').click()" style="padding:11px 10px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)'" onmouseout="this.style.borderColor='var(--border2)'">
+                <span style="font-size:17px">📁</span>
+                <div><div style="font-size:11px;font-weight:700;color:var(--text)">Importer une image</div><div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:1px">depuis ta biblio</div></div>
+              </div>
+            </div>
+            <input type="file" id="cartoonImportIn" accept="image/*" style="display:none" onchange="cartoonImportImage(this.files[0]);this.value=''">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="flex:1;height:1px;background:var(--border)"></div><span class="faint" style="font-size:9px;font-family:var(--mono)">OU GÉNÈRE-LE ICI</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
 
             <!-- Style presets avec descriptions -->
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px" id="cartoonStyleGrid">
@@ -3171,16 +3185,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="margin:4px 0 10px;padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3)">
               <div style="font-size:10px;font-family:var(--mono);color:#c4a3f7;margin-bottom:6px">✨ OU génère la voix avec l'IA — Gemini TTS</div>
               <textarea id="cartoonTtsText" placeholder="Écris ce que le personnage doit dire…" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;min-height:46px;margin-bottom:6px"></textarea>
-              <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
-                <select id="cartoonTtsVoice" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:11px;padding:7px 8px">
-                  <option value="Puck">Puck (énergique)</option>
-                  <option value="Kore">Kore (clair)</option>
-                  <option value="Charon">Charon (grave)</option>
-                  <option value="Fenrir">Fenrir (punchy)</option>
-                  <option value="Aoede">Aoede (douce)</option>
-                </select>
-                <button id="cartoonTtsBtn" onclick="cartoonGenVoiceTTS()" style="padding:7px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
-              </div>
+              <input type="hidden" id="cartoonTtsVoice" value="Puck">
+              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">CHOISIS LA VOIX QUI COLLE AU PERSO</div>
+              <div id="cartoonVoiceRows" style="display:grid;gap:5px;margin-bottom:8px"></div>
+              <button id="cartoonTtsBtn" onclick="cartoonGenVoiceTTS()" style="width:100%;padding:9px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">🎙 Générer la voix</button>
               <div class="faint mono" style="margin-top:8px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Le bouton « ▶ Écouter » joue un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
               <label class="row gap6" style="margin-top:6px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> ✂️ Supprimer les silences (voix plus punchy)</label>
               <button id="cartoonExportAudioBtn" onclick="cartoonExportAudio()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid rgba(168,85,247,0.45);border-radius:8px;color:#c4a3f7;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(168,85,247,0.12)'" onmouseout="this.style.background='var(--bg4)'">⬇ Exporter l'audio généré (WAV)</button>
@@ -15581,19 +15589,82 @@ const CARTOON_STYLE_PROMPTS = {
 };
 
 function initCartoon(){
+  // Freemium : tout le monde explore le module. Le paywall tombe au clic Générer (voir _cartoonGate).
+  const pw = document.getElementById('cartoonPaywall'); if(pw) pw.style.display = 'none';
+  const ct = document.getElementById('cartoonContent'); if(ct) ct.style.display = 'block';
+  _cartoonUpdateQuota();
+  if(typeof _cartoonRenderVoices === 'function') _cartoonRenderVoices();
+}
+
+// Gate de génération Cartoon : free → fiche plans ; payant non-Élite → upgrade Élite.
+function _cartoonGate(){
+  if(_gateFreeGenerate()) return true;
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const isElite = ['elite','byok','developer'].includes(plan) || currentMember?.is_owner;
-  document.getElementById('cartoonPaywall').style.display  = isElite ? 'none'  : 'block';
-  document.getElementById('cartoonContent').style.display  = isElite ? 'block' : 'none';
-  if(isElite) _cartoonUpdateQuota();
+  if(!isElite){ toast('🔒 Avatar Cartoon — réservé au plan Élite'); openUpgradeModal(); return true; }
+  return false;
 }
+
+// ── Voix Gemini : rangées sélectionnables (la voix doit coller au perso) ──
+const _CARTOON_VOICES = [
+  { id:'Puck',   emoji:'⚡', name:'Puck',   desc:'énergique · jeune',   match:'perso fun / hype' },
+  { id:'Kore',   emoji:'🎯', name:'Kore',   desc:'clair · neutre',      match:'voix pro / explainer' },
+  { id:'Charon', emoji:'🐻', name:'Charon', desc:'grave · posé',        match:'mascotte masculine' },
+  { id:'Fenrir', emoji:'🔥', name:'Fenrir', desc:'punchy · intense',    match:'pub / accroche' },
+  { id:'Aoede',  emoji:'🌸', name:'Aoede',  desc:'douce · féminine',    match:'perso doux / lifestyle' },
+];
+function _cartoonRenderVoices(){
+  const wrap = document.getElementById('cartoonVoiceRows');
+  if(!wrap) return;
+  const cur = document.getElementById('cartoonTtsVoice')?.value || 'Puck';
+  wrap.innerHTML = _CARTOON_VOICES.map(v=>{
+    const on = v.id===cur;
+    return `<div onclick="cartoonPickVoice('${v.id}')" data-voice="${v.id}" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid ${on?'rgba(168,85,247,.5)':'var(--border2)'};background:${on?'rgba(168,85,247,.12)':'var(--bg4)'}">
+      <span style="font-size:16px;flex-shrink:0">${v.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:${on?'#c4a3f7':'var(--text)'}">${v.name} <span style="font-weight:400;color:var(--text3);font-size:10px">· ${v.desc}</span></div>
+        <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">idéal : ${v.match}</div>
+      </div>
+      <span style="width:15px;height:15px;border-radius:50%;flex-shrink:0;border:1.5px solid ${on?'#a855f7':'var(--border2)'};background:${on?'#a855f7':'transparent'};display:flex;align-items:center;justify-content:center">${on?'<svg width=\"9\" height=\"9\" viewBox=\"0 0 12 12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.4\"><path d=\"M2 6.5l2.5 2.5L10 3.5\"/></svg>':''}</span>
+    </div>`;
+  }).join('');
+}
+function cartoonPickVoice(id){
+  const inp = document.getElementById('cartoonTtsVoice'); if(inp) inp.value = id;
+  _cartoonRenderVoices();
+}
+
+// ── Importer une image comme personnage (biblio / upload) ──
+function cartoonImportImage(file){
+  if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    const dataUrl = String(r.result);
+    window._cartoonImgB64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    window._cartoonImgUrl = dataUrl;
+    const phoneImg = document.getElementById('cartoonPhoneImg');
+    if(phoneImg){ phoneImg.src = dataUrl; phoneImg.style.display = 'block'; }
+    const ph = document.getElementById('cartoonPhonePlaceholder'); if(ph) ph.style.display = 'none';
+    const mod2 = document.getElementById('cartoonModule2'); if(mod2){ mod2.style.opacity='1'; mod2.style.pointerEvents='auto'; }
+    const regen = document.getElementById('cartoonRegenImgBtn'); if(regen) regen.style.display='none';
+    toast('✅ Personnage importé');
+  };
+  r.readAsDataURL(file);
+}
+
+// Quota avatars cartoon = quota vidéos du plan (système réel _videos*).
+function _hedraLimit(){ return _getPlanQuota((currentMember?.plan||'free').toLowerCase()).videos || 0; }
+function _hedraRemaining(){ return _videosRemaining(); }
+function _hedraIncrement(){ if(typeof _incrementVideosUsed==='function') _incrementVideosUsed(); }
+function _getMonthKey(){ const d=new Date(); return d.getFullYear()+'_'+(d.getMonth()+1); }
 
 function _cartoonUpdateQuota(){
   const lbl = document.getElementById('cartoonQuotaInfo');
   if(!lbl) return;
-  const used  = parseInt(localStorage.getItem('aa_avatar_used_'+_getMonthKey())||'0');
+  const rem   = _hedraRemaining();
   const limit = _hedraLimit();
-  lbl.textContent = `${limit - used} avatar${limit-used!==1?'s':''} restant${limit-used!==1?'s':''} ce mois · ${limit}/mois Élite`;
+  if(limit >= 999){ lbl.textContent = 'Vidéos illimitées ce mois'; return; }
+  lbl.textContent = `${rem} vidéo${rem!==1?'s':''} restante${rem!==1?'s':''} ce mois · ${limit}/mois`;
 }
 
 function selectCartoonStyle(btn, style){
@@ -15628,7 +15699,7 @@ async function _cartoonProxyFetch(path, options={}){
 async function cartoonGenImage(btn){
   const prompt = document.getElementById('cartoonCharPrompt').value.trim();
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
-  if(_gateFreeGenerate()) return;
+  if(_cartoonGate()) return;
 
   // Check image credits (uses same monthly quota as Images IA)
   if(_imgMonthRemaining() <= 0){
@@ -15702,7 +15773,7 @@ async function cartoonGenImage(btn){
 }
 
 async function cartoonGenVideo(btn){
-  if(_gateFreeGenerate()) return;
+  if(_cartoonGate()) return;
   if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
   if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
 
@@ -16337,7 +16408,7 @@ function _cartoonVoicePreview(){
 async function cartoonGenVoiceTTS(){
   const txt=(document.getElementById('cartoonTtsText')?.value||'').trim();
   if(!txt){ toast('⚠️ Écris le texte à dire'); return; }
-  if(_gateFreeGenerate()) return;
+  if(_cartoonGate()) return;
   const btn=document.getElementById('cartoonTtsBtn'); const lbl=btn?btn.textContent:'';
   if(btn){ btn.disabled=true; btn.textContent='⏳ Voix…'; }
   try{
