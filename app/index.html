@@ -2627,7 +2627,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div class="row gap10" style="align-items:center;flex-wrap:wrap">
             <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">🖼</span>Images IA</h2>
             <span class="tag-beta">BETA</span>
-            <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> GPT IMAGE · 4K ULTRA</span>
+            <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> IMAGE 4K · ULTRA RÉALISTE</span>
           </div>
           <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
         </div>
@@ -2946,308 +2946,106 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
     <div class="view" id="v-express" style="overflow:hidden">
 
-      <!-- ══ LEFT — Formulaire ══ -->
-      <div style="flex:0 0 500px;overflow-y:auto;padding:24px 20px 40px;border-right:1px solid var(--border)">
+      <!-- ══ LEFT — Config rail (style Higgsfield) ══ -->
+      <div style="flex:0 0 340px;overflow-y:auto;padding:24px 20px 40px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:14px">
 
         <!-- Header -->
-        <div style="margin-bottom:22px">
+        <div>
           <div class="row gap10" style="align-items:center">
             <h2 class="display row gap10" style="font-size:26px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:23px">⚡</span>Express</h2>
-            <span class="tag-beta">VSL</span>
+            <span class="tag-beta" style="background:rgba(255,107,53,.14);color:var(--orange2);border:1px solid rgba(255,107,53,.4)">1 CLIC</span>
           </div>
-          <p class="muted" style="margin-top:8px;font-size:14px">Importe ta vidéo prête · Sous-titres Whisper · Effets IA · Export direct</p>
+          <p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.45">Décris ta vidéo, on la crée. Avatar réel ou cartoon — vidéo verticale prête en ~30 s.</p>
         </div>
 
-        <!-- ① Source vidéo -->
-        <div class="exp-section">
-          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">1</span> Vidéo source</div>
-          <div id="expDropZone" class="exp-drop" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expOnDrop(event)">
-            <input type="file" accept="video/mp4,video/quicktime,video/webm,video/avi,video/*" onchange="_expOnFileInput(this)">
-            <div style="font-size:34px;margin-bottom:10px">🎬</div>
-            <div style="font-size:15px;font-weight:700;margin-bottom:4px">Glisse ta vidéo ici</div>
-            <div style="font-size:12px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · WebM — ou clique pour parcourir</div>
-          </div>
-          <!-- Depuis bibliothèque -->
-          <button onclick="openExpLibPicker()" style="width:100%;margin-top:8px;padding:8px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
-            <span style="font-size:13px">📚</span> ou utilise une vidéo depuis la bibliothèque
-          </button>
-          <div id="expVidInfo" class="exp-vidinfo" style="display:none">
-            <div class="exp-vidthumb">🎬</div>
-            <div class="exp-vidmeta">
-              <div class="exp-vidname" id="expVidName">—</div>
-              <div class="exp-vidsize" id="expVidSize">—</div>
-            </div>
-            <button onclick="_expClearVideo()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕ Changer</button>
-          </div>
+        <!-- ① STYLE -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">🎨 Style</div>
+          <div id="expStyleGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
         </div>
 
-        <!-- ② Transcription -->
-        <div class="exp-section">
-          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">2</span> Transcription des sous-titres</div>
-          <button id="expWhisperBtn" onclick="expressWhisper()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.04));border:1.5px solid rgba(255,107,53,0.4);border-radius:13px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.8)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.4)'">
-            <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-family:var(--mono)">PRO</span></div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale · timestamps mot par mot</div>
-          </button>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <div style="flex:1;height:1px;background:var(--border)"></div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">ou manuellement</div>
-            <div style="flex:1;height:1px;background:var(--border)"></div>
-          </div>
-          <textarea id="expTranscriptTA" placeholder="Colle ton transcript ici..." style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 13px;outline:none;resize:none;line-height:1.7;transition:border-color .15s" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-          <button onclick="expApplyTranscript()" style="margin-top:8px;padding:9px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--border3)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">✓ Appliquer le transcript</button>
-          <div id="expWordPreview" style="margin-top:14px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;display:none">
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Mots détectés</div>
-            <div id="expWordPreviewText" style="font-size:12px;color:var(--text2);line-height:1.9"></div>
-          </div>
+        <!-- ② FORMAT -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">📐 Format</div>
+          <div id="expFormatRow" class="row" style="gap:8px"></div>
         </div>
 
-        <!-- ③ Style sous-titres -->
-        <div class="exp-section">
-          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">3</span> Style des sous-titres</div>
-          <div class="sub-grid">
-            <div class="sub-card style-card on" id="sc-exp-hormozi" onclick="pickSub(this,'hormozi')">
-              <div class="sub-name">Hormozi</div>
-              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-mrbeast" onclick="pickSub(this,'mrbeast')">
-              <div class="sub-name">MrBeast</div>
-              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFD700;-webkit-text-stroke:.5px #000;font-style:italic">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#FF0000;-webkit-text-stroke:.5px #000;margin-left:3px;font-style:italic">ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-iman" onclick="pickSub(this,'iman')">
-              <div class="sub-name">Iman</div>
-              <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;letter-spacing:1px">PASSE ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-tiktok" onclick="pickSub(this,'tiktok')">
-              <div class="sub-name">TikTok Pills</div>
-              <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-neon" onclick="pickSub(this,'neon')">
-              <div class="sub-name">Néon</div>
-              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:11px;color:#00FF87;text-shadow:0 0 8px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#BF5FFF;text-shadow:0 0 8px #BF5FFF;margin-left:3px">ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-podcast" onclick="pickSub(this,'podcast')">
-              <div class="sub-name">Podcast</div>
-              <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-badis" onclick="pickSub(this,'badis')">
-              <div class="sub-name">Punch</div>
-              <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;font-weight:900;-webkit-text-stroke:.8px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
-            </div>
-            <div class="sub-card style-card" id="sc-exp-karaoke" onclick="pickSub(this,'karaoke')">
-              <div class="sub-name">Karaoke 🎤</div>
-              <div class="sub-preview" style="gap:3px"><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">OÙ</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">TA</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;background:linear-gradient(90deg,#1E90FF,#00D4AA);padding:1px 5px;border-radius:3px">MATURITÉ</span></div>
-            </div>
+        <!-- ③ DURÉE -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">⏱ Durée</div>
+          <div id="expDurRow" class="row" style="gap:8px"></div>
+        </div>
+
+        <!-- ④ OPTIONS -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">⚙️ Options</div>
+          <label class="row" style="gap:10px;align-items:center;cursor:pointer;justify-content:space-between">
+            <span style="font-size:13px;font-weight:600">Sous-titres auto</span>
+            <span id="expSubToggle" onclick="_expToggleSubs()" style="width:42px;height:24px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);position:relative;transition:all .2s;flex-shrink:0;cursor:pointer">
+              <span id="expSubKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#888;transition:all .2s"></span>
+            </span>
+          </label>
+          <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:8px;line-height:1.5">Style ajoutable ensuite dans l'Éditeur</div>
+        </div>
+
+        <div style="flex:1"></div>
+
+        <!-- GÉNÉRER -->
+        <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
+        </button>
+        <div class="center faint mono" style="font-size:11px;margin-top:-4px">1 vidéo IA · 720p · ~30 s</div>
+      </div>
+
+      <!-- ══ CENTER — Stage ══ -->
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+        <!-- Résultat / preview -->
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
+          <div id="expResultPlaceholder" style="text-align:center;color:var(--text3)">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="opacity:.4"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="M10 9l5 3-5 3z"/></svg>
+            <div style="margin-top:14px;font-size:14px;font-weight:600;color:var(--text2)">Décris ta vidéo en bas, puis clique Générer</div>
+            <div class="faint mono" style="font-size:11px;margin-top:6px">La vidéo apparaîtra ici</div>
           </div>
-          <div style="margin-top:14px">
-            <div class="flbl" style="margin-bottom:8px">Mots par sous-titre</div>
-            <div style="display:flex;gap:6px">
-              <div class="exp-wpg-chip" id="expWpg1" onclick="expSetWpg(this,1)">1 mot</div>
-              <div class="exp-wpg-chip on" id="expWpg2" onclick="expSetWpg(this,2)">2 mots</div>
-              <div class="exp-wpg-chip" id="expWpg3" onclick="expSetWpg(this,3)">3 mots</div>
-              <div class="exp-wpg-chip" id="expWpg4" onclick="expSetWpg(this,4)">4 mots</div>
-            </div>
+          <video id="expResultVid" controls playsinline style="display:none;max-height:100%;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
+
+          <!-- Progress overlay -->
+          <div id="expProgress" style="display:none;position:absolute;inset:0;background:rgba(10,10,10,.86);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+            <div style="width:54px;height:54px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>
+            <div id="expProgressTxt" style="font-size:13px;font-family:var(--mono);color:var(--text2)">Initialisation…</div>
+            <div style="width:260px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="expProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .3s"></div></div>
           </div>
         </div>
 
-        <!-- ④ Split Screen + Gameplay -->
-        <div class="exp-section">
-          <div class="exp-section-title" style="justify-content:space-between">
-            <span><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">4</span> Split Screen &amp; Gameplay</span>
-            <span style="font-size:9px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:10px">Optionnel</span>
-          </div>
-
-          <!-- Toggle Split Screen -->
-          <div onclick="toggleExpSplit()" id="expSplitRow" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:10px" onmouseover="if(!window._expSplitOn)this.style.borderColor='var(--border2)'" onmouseout="if(!window._expSplitOn)this.style.borderColor='var(--border)'">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:18px">🎮</span>
-              <div>
-                <div style="font-size:13px;font-weight:700">Split Screen</div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ta vidéo + fond gameplay · avatar optionnel</div>
-              </div>
-            </div>
-            <div id="expSplitSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-              <div id="expSplitThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
-            </div>
-          </div>
-
-          <!-- Panel Split (visible quand activé) -->
-          <div id="expSplitPanel" style="display:none;flex-direction:column;gap:12px">
-
-            <!-- Source gameplay : clips presets OU import -->
-            <div>
-              <div class="flbl" style="font-size:10px;margin-bottom:7px">Fond gameplay</div>
-              <!-- Clip sélectionné -->
-              <div id="expClipNoSel" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg4);border:1.5px dashed var(--border2);border-radius:9px">
-                <span style="font-size:16px;opacity:.5">🎬</span>
-                <div style="flex:1;font-size:11px;color:var(--text3);font-family:var(--mono)">Aucun clip</div>
-                <button onclick="openExpClipPicker()" style="padding:5px 10px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer">Choisir clip</button>
-              </div>
-              <div id="expClipActive" style="display:none;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.3);border-radius:9px">
-                <span id="expClipEmo" style="font-size:16px">🎬</span>
-                <div style="flex:1;min-width:0">
-                  <div id="expClipName" style="font-size:11px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">Segment aléatoire</div>
-                </div>
-                <button onclick="openExpClipPicker()" style="padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">Changer</button>
-                <button onclick="_expClearClip()" style="background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer">✕</button>
-              </div>
-              <!-- ou importer fichier -->
-              <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-                <div style="flex:1;height:1px;background:var(--border)"></div>
-                <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou importe</span>
-                <div style="flex:1;height:1px;background:var(--border)"></div>
-              </div>
-              <div id="expGpDropZone" class="exp-drop" style="padding:14px;margin-top:8px" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="_expGpOnDrop(event)">
-                <input type="file" accept="video/*" onchange="_expGpFileInput(this)">
-                <div style="font-size:20px;margin-bottom:4px">📂</div>
-                <div style="font-size:11px;font-weight:600">Ton propre gameplay</div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">MP4 · MOV</div>
-              </div>
-              <div id="expGpInfo" class="exp-vidinfo" style="display:none">
-                <div class="exp-vidthumb">🎮</div>
-                <div class="exp-vidmeta">
-                  <div class="exp-vidname" id="expGpName">—</div>
-                  <div class="exp-vidsize" id="expGpSize">—</div>
-                </div>
-                <button onclick="_expClearGameplay()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);padding:6px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);flex-shrink:0;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕</button>
-              </div>
-            </div>
-
-            <!-- Répartition écran -->
-            <div>
-              <div class="flbl" style="font-size:10px;margin-bottom:6px">Répartition — <span id="expGpSplitLbl" style="color:var(--orange2)">60% vidéo / 40% gameplay</span></div>
-              <input type="range" id="expGpSplitSlider" min="30" max="80" value="60" oninput="expGpSplitChange(this)" style="width:100%;accent-color:var(--orange)">
-            </div>
-
-            <!-- Avatar (optionnel dans split) -->
-            <div>
-              <div class="flbl" style="font-size:10px;margin-bottom:7px">Avatar IA <span style="font-size:9px;font-family:var(--mono);color:var(--text3)">— optionnel, flotte sur le split</span></div>
-              <div id="expAvDropZone" onclick="document.getElementById('expAvFileIn').click()"
-                ondragover="ev=>{ev.preventDefault();this.style.borderColor='var(--orange)'}"
-                ondragleave="this.style.borderColor='var(--border2)'"
-                ondrop="ev=>{ev.preventDefault();this.style.borderColor='var(--border2)';_expHandleAvatar(ev.dataTransfer.files[0])}"
-                style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s">
-                <div id="expAvDropContent">
-                  <div style="font-size:24px;margin-bottom:4px">🖼️</div>
-                  <div style="font-size:11px;font-weight:600">Photo avatar</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">PNG · JPG · Portrait recommandé</div>
-                </div>
-                <div id="expAvInfo" style="display:none">
-                  <img id="expAvPreview" style="max-height:60px;border-radius:8px;object-fit:cover;margin-bottom:4px">
-                  <div id="expAvName" style="font-size:10px;font-family:var(--mono);color:var(--green)"></div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Clique pour changer</div>
-                </div>
-              </div>
-              <input type="file" id="expAvFileIn" accept="image/*" style="display:none" onchange="_expHandleAvatar(this.files[0])">
-
-              <!-- Recadrage avatar express -->
-              <div id="expAvCropWrap" style="display:none;margin-top:8px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:9px">
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:7px">Position &amp; taille avatar</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                  <div>
-                    <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">Taille — <span id="expAvSizeLbl" style="color:var(--orange2)">35%</span></div>
-                    <input type="range" id="expAvSize" min="10" max="70" value="35" oninput="document.getElementById('expAvSizeLbl').textContent=this.value+'%';_expUpdateExpPreview()" style="width:100%;accent-color:var(--orange)">
-                  </div>
-                  <div>
-                    <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">Position Y — <span id="expAvYLbl" style="color:var(--orange2)">30%</span></div>
-                    <input type="range" id="expAvY" min="0" max="90" value="30" oninput="document.getElementById('expAvYLbl').textContent=this.value+'%';_expUpdateExpPreview()" style="width:100%;accent-color:var(--orange)">
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div><!-- /expSplitPanel -->
+        <!-- Actions post-génération -->
+        <div id="expResultActions" class="row" style="display:none;gap:10px;justify-content:center;padding:0 28px 14px;flex-wrap:wrap">
+          <button onclick="expressOpenInEditor()" class="btn btn-ghost btn-sm">🎬 Ouvrir dans l'Éditeur</button>
+          <button onclick="expressDownload()" class="btn btn-ghost btn-sm">⬇ Télécharger</button>
+          <button onclick="expressReset()" class="btn btn-ghost btn-sm">↺ Nouvelle vidéo</button>
         </div>
 
-        <!-- ⑤ Effets IA — VSL style -->
-        <div class="exp-section">
-          <div class="exp-section-title"><span style="background:linear-gradient(135deg,#ff6b35,#ff2d78);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">5</span> Effets IA <span style="font-size:9px;font-family:var(--mono);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--orange2);padding:2px 8px;border-radius:10px;margin-left:4px">✨ 1 crédit</span> <span style="font-size:9px;font-family:var(--mono);background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;padding:2px 8px;border-radius:10px;margin-left:4px;font-weight:700">PRO+</span></div>
-
-          <button id="expGenEffectsBtn" onclick="expressGenerateEffects()" style="width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
-            <div style="display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800">✨ Analyser &amp; Générer les effets IA</div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Zoom punch-in · Hook texte · Vignette · Shake · Rythmé VSL</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,0.2);padding:3px 10px;border-radius:20px">🖼️ Coûte 1 crédit image IA</div>
-          </button>
-
-          <div id="expEffectsWrap" style="display:none">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div style="font-size:11px;font-family:var(--mono);color:var(--text2)" id="expEffectsCount">— effets générés</div>
-              <button onclick="expressGenerateEffects()" style="font-size:10px;font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);padding:4px 10px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">↺ Régénérer (1 crédit)</button>
-            </div>
-            <div id="expEffectsList" style="display:flex;flex-direction:column;gap:6px"></div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:10px;text-align:center">Clique ✕ pour supprimer · Toggle ON/OFF pour désactiver</div>
-          </div>
-
-          <div id="expEffectsEmpty" style="padding:20px;background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:8px">🎬</div>
-            <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Transcris ta vidéo (étape 2) puis génère les effets</div>
-          </div>
-        </div>
-
-        <!-- ⑥ Exporter -->
-        <div class="exp-section" style="margin-bottom:40px">
-          <div class="exp-section-title"><span style="background:var(--orange);color:#fff;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;margin-right:4px">6</span> Exporter</div>
-          <div style="display:flex;gap:6px;margin-bottom:18px">
-            <button class="qual-btn" data-q="540" onclick="setQuality(540,this)" style="padding:7px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:20px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">540p</button>
-            <button class="qual-btn" data-q="720" onclick="setQuality(720,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">720p</button>
-            <button class="qual-btn" data-q="1080" onclick="setQuality(1080,this)" style="padding:7px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">1080p <span style="font-size:9px;opacity:.6">PRO</span></button>
-          </div>
-          <button id="expComposeBtn" onclick="expressCompose()" disabled style="width:100%;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all .25s;box-shadow:0 4px 20px rgba(255,107,53,.3);letter-spacing:-.2px;opacity:.4" onmouseover="if(!this.disabled)this.style.opacity='.9'" onmouseout="if(!this.disabled)this.style.opacity='1'">⚡ Appliquer &amp; Télécharger</button>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:8px">La vidéo se télécharge automatiquement · temps réel</div>
-          <div id="expProgWrap" class="exp-prog-wrap">
-            <div class="exp-prog-stage" id="expProgStage">Composition en cours…</div>
-            <div class="exp-prog-row">
-              <div class="exp-prog-bar"><div class="exp-prog-fill" id="expProgFill"></div></div>
-              <div class="exp-prog-pct" id="expProgPct">0%</div>
+        <!-- Composer (style Remakeit) -->
+        <div style="border-top:1px solid var(--border);padding:18px 28px 24px;background:var(--surface)">
+          <div class="row" style="gap:14px;align-items:stretch">
+            <!-- Prompt -->
+            <textarea id="expPrompt" placeholder="Décris la vidéo que tu veux créer…  (ex : un coach fitness explique sa routine du matin, énergique, face caméra)" style="flex:1;min-height:96px;max-height:160px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:14.5px;line-height:1.5;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <!-- Image optionnelle -->
+            <div id="expImgDrop" onclick="document.getElementById('expImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="_expOnImgDrop(event)" style="flex:0 0 150px;border:1.5px dashed var(--border2);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:var(--bg3);transition:all .15s;position:relative;overflow:hidden">
+              <input type="file" id="expImgInput" accept="image/*" style="display:none" onchange="_expOnImgInput(this)">
+              <img id="expImgPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text2);text-align:center;line-height:1.3">Image<br><span class="faint" style="font-weight:400">optionnelle</span></div>
             </div>
           </div>
-        </div>
-
-      </div><!-- /left -->
-
-      <!-- ══ RIGHT — Preview téléphone ══ -->
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:var(--bg)">
-        <div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-bottom:4px">Aperçu en temps réel</div>
-
-        <!-- Phone mockup Express (220×477) -->
-        <div style="position:relative;width:220px;height:477px;flex-shrink:0">
-          <div id="expPhoneMockup" style="position:absolute;top:0;left:0;width:393px;height:852px;border-radius:84px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.5597);transform-origin:top left">
-            <!-- Dynamic Island -->
-            <div style="position:absolute;top:25px;left:50%;transform:translateX(-50%);width:125px;height:37px;background:#000;border-radius:20px;z-index:99"></div>
-            <!-- Content zone -->
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column">
-              <!-- Zone vidéo principale -->
-              <div id="expPreviewTop" style="flex:1;background:#111;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
-                <div id="expPreviewPlaceholder" style="text-align:center;color:rgba(255,255,255,.2)">
-                  <div style="font-size:36px">🎬</div>
-                  <div style="font-size:9px;font-family:var(--mono);margin-top:4px">Vidéo ici</div>
-                </div>
-                <video id="expPreviewVid" muted loop playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
-                <!-- Sous-titres preview overlay -->
-                <div id="expSubOverlay" style="position:absolute;bottom:12%;left:0;right:0;text-align:center;pointer-events:none;z-index:5;padding:0 10px"></div>
-                <!-- Avatar overlay (split) -->
-                <img id="expAvOverlay" style="display:none;position:absolute;z-index:6;object-fit:cover;border-radius:4px" src="">
-              </div>
-              <!-- Zone gameplay (split screen) -->
-              <div id="expPreviewBottom" style="display:none;background:#0a0a0a;position:relative;overflow:hidden;flex-shrink:0">
-                <div id="expGpPreviewPlaceholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.15)">
-                  <div style="text-align:center"><div style="font-size:20px">🎮</div><div style="font-size:8px;font-family:var(--mono);margin-top:2px">Gameplay</div></div>
-                </div>
-                <video id="expGpPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
-              </div>
-              <!-- Overlay UI TikTok -->
-              <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 10px 16px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);z-index:10">
-                <div style="font-size:7px;font-family:var(--mono);color:rgba(255,255,255,.7)">@sofia.ads</div>
-                <div style="font-size:6px;color:rgba(255,255,255,.5);margin-top:2px">Viens en DM si tu veux savoir comment on fait_plus</div>
-              </div>
-            </div>
+          <!-- Quick prompts -->
+          <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+            <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')">💬 Face caméra</span>
+            <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')">🧸 Cartoon</span>
+            <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')">💪 Fitness</span>
+            <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')">🛍 Produit</span>
           </div>
         </div>
-
-        <!-- Bouton play preview -->
-        <button onclick="_expTogglePreviewPlay()" id="expPreviewPlayBtn" style="padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Lecture preview</button>
-        <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;max-width:200px;line-height:1.5">Les sous-titres s'affichent après la transcription</div>
-      </div><!-- /right -->
+      </div>
 
     </div><!-- /express -->
 
@@ -14781,11 +14579,175 @@ let _expressGameplayBlobUrl = null;
 let _expressGpSplit      = 60;   // % hauteur pour la vidéo principale (reste = gameplay)
 
 // ── Init ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  EXPRESS — créateur de vidéo en un clic (image+texte → vidéo IA)
+//  Réutilise GPT Image (still) + Veo 3.1 (image→vidéo) via proxy.
+// ══════════════════════════════════════════════════════════════
+window._expStyle  = 'realiste';
+window._expFormat = '9:16';
+window._expDur    = 5;
+window._expSubs   = false;
+window._expImgB64 = null;   // image fournie/générée (base64 brut, sans préfixe)
+
+const EXP_STYLES = [
+  { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic, cinematic lighting, real human, photorealistic' },
+  { id:'cartoon',  label:'Cartoon 3D', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
+  { id:'anime',    label:'Anime',      sub:'2D japonais',  prompt:'anime style, clean line art, expressive, studio quality 2D animation' },
+  { id:'studio',   label:'Studio',     sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
+];
+const EXP_FORMATS = [ {v:'9:16',l:'9:16'}, {v:'16:9',l:'16:9'} ];
+const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
+
 function initExpress(){
-  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('on'));
-  const expCard = document.getElementById('sc-exp-' + (selSubStyle || 'hormozi'));
-  if(expCard) expCard.classList.add('on');
-  _expSyncWpgUI(cfg.subWpg || 2);
+  // Style grid
+  const sg = document.getElementById('expStyleGrid');
+  if(sg){
+    sg.innerHTML = EXP_STYLES.map(s=>{
+      const on = s.id===window._expStyle;
+      return `<div onclick="_expPickStyle('${s.id}')" class="exp-style-card${on?' on':''}" data-exp-style="${s.id}" style="padding:11px 12px;border-radius:12px;border:1px solid ${on?'rgba(255,107,53,.5)':'var(--border2)'};background:${on?'rgba(255,107,53,.1)':'var(--bg3)'};cursor:pointer;transition:all .15s">
+        <div style="font-size:13px;font-weight:700;color:${on?'var(--orange2)':'var(--text)'}">${s.label}</div>
+        <div class="faint" style="font-size:10px;font-family:var(--mono);margin-top:2px">${s.sub}</div></div>`;
+    }).join('');
+  }
+  // Format
+  const fr = document.getElementById('expFormatRow');
+  if(fr){
+    fr.innerHTML = EXP_FORMATS.map(f=>{
+      const on=f.v===window._expFormat;
+      return `<button onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${f.l}</button>`;
+    }).join('');
+  }
+  // Durée
+  const dr = document.getElementById('expDurRow');
+  if(dr){
+    dr.innerHTML = EXP_DURS.map(d=>{
+      const on=d.v===window._expDur;
+      return `<button onclick="_expPickDur(${d.v})" data-exp-dur="${d.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${d.l}</button>`;
+    }).join('');
+  }
+  _expSyncSubToggle();
+}
+function _expPickStyle(id){ window._expStyle=id; initExpress(); }
+function _expPickFormat(v){ window._expFormat=v; initExpress(); }
+function _expPickDur(v){ window._expDur=v; initExpress(); }
+function _expToggleSubs(){ window._expSubs=!window._expSubs; _expSyncSubToggle(); }
+function _expSyncSubToggle(){
+  const t=document.getElementById('expSubToggle'), k=document.getElementById('expSubKnob');
+  if(!t||!k) return;
+  if(window._expSubs){ t.style.background='var(--orange)'; t.style.borderColor='var(--orange)'; k.style.left='20px'; k.style.background='#fff'; }
+  else { t.style.background='var(--bg4)'; t.style.borderColor='var(--border2)'; k.style.left='2px'; k.style.background='#888'; }
+}
+function _expQuick(txt){ const ta=document.getElementById('expPrompt'); if(ta){ ta.value=txt; ta.focus(); } }
+
+// ── Image optionnelle ──
+function _expOnImgDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border2)'; const f=e.dataTransfer?.files?.[0]; if(f) _expLoadImg(f); }
+function _expOnImgInput(input){ const f=input?.files?.[0]; if(f) _expLoadImg(f); }
+function _expLoadImg(file){
+  if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
+  const r=new FileReader();
+  r.onload=()=>{ window._expImgB64 = String(r.result).replace(/^data:image\/\w+;base64,/,''); const p=document.getElementById('expImgPreview'); if(p){ p.src=r.result; p.style.display='block'; } };
+  r.readAsDataURL(file);
+}
+
+// ── Génération principale ──
+async function expressCreate(){
+  const prompt = (document.getElementById('expPrompt')?.value || '').trim();
+  if(!prompt && !window._expImgB64){ toast('⚠️ Décris ta vidéo (ou ajoute une image)'); return; }
+  if(_gateFreeGenerate()) return;
+  if(typeof _hedraRemaining==='function' && _hedraRemaining()<=0){ toast('⛔ Quota vidéos épuisé ce mois'); openUpgradeModal(); return; }
+
+  const btn=document.getElementById('expGenBtn');
+  const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
+  const ph=document.getElementById('expResultPlaceholder'), vid=document.getElementById('expResultVid'), acts=document.getElementById('expResultActions');
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
+  if(ph) ph.style.display='none'; if(vid) vid.style.display='none'; if(acts) acts.style.display='none';
+  if(prog) prog.style.display='flex';
+  let p=0; const setP=(v,t)=>{ p=v; if(progBar)progBar.style.width=v+'%'; if(progTxt&&t)progTxt.textContent=t; };
+  const tick=setInterval(()=>{ if(p<90) setP(Math.min(90,p+ (p<60?1.4:0.4))); },800);
+
+  try {
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    const styleMeta=EXP_STYLES.find(s=>s.id===window._expStyle)||EXP_STYLES[0];
+
+    // 1) Image de départ : fournie, sinon générée via GPT Image
+    let imgB64=window._expImgB64;
+    if(!imgB64){
+      setP(8,'🎨 Création de l\'image…');
+      const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
+      const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
+      const url = await _imgGenerateOne(token, imgPrompt, size, null);
+      if(url.startsWith('data:')) imgB64=url.replace(/^data:image\/\w+;base64,/,'');
+      else { const b=await (await fetch(url)).blob(); imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/\w+;base64,/,''));fr.readAsDataURL(b);}); }
+      if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
+      if(typeof _updateImgQuotaLabel==='function') _updateImgQuotaLabel();
+    }
+
+    // 2) Animation image→vidéo via Veo 3.1 Fast
+    setP(Math.max(p,28),'🎬 Génération de la vidéo…');
+    const animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic';
+    const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning', {
+      method:'POST',
+      body: JSON.stringify({
+        instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
+        parameters:{ durationSeconds: (window._expDur||5)>=10?10:8, sampleCount:1, aspectRatio:window._expFormat, resolution:'720p', generateAudio:true }
+      })
+    });
+    if(!startResp.ok){ const e=await startResp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+startResp.status)); }
+    const { name:opName } = await startResp.json();
+    if(!opName) throw new Error('Opération vidéo introuvable');
+
+    let videoB64=null;
+    for(let i=0;i<60;i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const pr=await _cartoonProxyFetch('/v1beta/'+opName,{method:'GET'});
+      if(!pr.ok) continue;
+      const pd=await pr.json();
+      if(pd.done){ videoB64=pd?.response?.predictions?.[0]?.bytesBase64Encoded; break; }
+    }
+    if(!videoB64) throw new Error('Délai dépassé — la vidéo n\'a pas terminé');
+
+    const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
+    const blob=new Blob([bytes],{type:'video/mp4'});
+    if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
+    window._expVidUrl=URL.createObjectURL(blob);
+    window._expVidBlob=blob;
+
+    clearInterval(tick); setP(100,'✅ Vidéo prête !');
+    if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
+    if(prog) prog.style.display='none';
+    if(acts) acts.style.display='flex';
+    if(typeof _hedraIncrement==='function') _hedraIncrement();
+    if(typeof _cartoonUpdateQuota==='function') _cartoonUpdateQuota();
+    toast('⚡ Vidéo Express générée !');
+  } catch(e){
+    clearInterval(tick);
+    console.error('Express error:', e);
+    if(prog) prog.style.display='none';
+    if(ph) ph.style.display='block';
+    toast('⚠️ Express : ' + (e.message||e));
+  } finally {
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+  }
+}
+
+function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
+function expressReset(){
+  window._expImgB64=null; window._expVidBlob=null;
+  const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
+  const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
+  const vid=document.getElementById('expResultVid'); if(vid){ vid.style.display='none'; vid.src=''; }
+  const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='block';
+  const acts=document.getElementById('expResultActions'); if(acts) acts.style.display='none';
+}
+function expressOpenInEditor(){
+  if(!window._expVidBlob){ toast('⚠️ Génère une vidéo d\'abord'); return; }
+  try {
+    const f=new File([window._expVidBlob],'express.mp4',{type:'video/mp4'});
+    const navEl=document.querySelector('.nav-i[onclick*="studio"]');
+    nav('studio', navEl);
+    setTimeout(()=>{ if(typeof edRouteFile==='function') edRouteFile(f); }, 200);
+  } catch(e){ toast('⚠️ '+(e.message||e)); }
 }
 
 function _expUpdateUI(){
