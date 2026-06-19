@@ -3692,15 +3692,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <button onclick="authSignup()" id="signupBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
           Créer mon compte <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
         </button>
-        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">2 vidéos offertes · Sans carte bancaire</div>
+        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Plan gratuit · Sans carte bancaire</div>
       </div>
-
-      <!-- GUEST -->
-      <button onclick="loginGuest()" style="width:100%;margin-top:12px;padding:13px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:background .2s,border-color .2s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)'">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="var(--accent-2)" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
-        Essai gratuit — 2 vidéos
-        <span style="font-size:11px;font-family:var(--mono);color:var(--text-3)">(watermark)</span>
-      </button>
 
       <p style="text-align:center;margin-top:22px;font-size:12px;color:var(--text-3);line-height:1.6">
         En continuant, tu acceptes les <span style="text-decoration:underline;cursor:pointer">Conditions</span> et la <span style="text-decoration:underline;cursor:pointer">Confidentialité</span>.
@@ -4472,7 +4465,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
       </div>
     </div>
-    <button class="btn-paywall-cancel" onclick="closePaywall()">Continuer en mode essai — 2 vidéos gratuites (watermark)</button>
+    <button class="btn-paywall-cancel" onclick="closePaywall()">Plus tard — continuer à explorer</button>
   </div>
 </div>
 
@@ -4782,7 +4775,7 @@ function switchAuthTab(tab){
   const title = document.getElementById('login-title');
   const sub   = document.getElementById('login-sub');
   if(title) title.textContent = isLogin ? 'Bon retour' : 'Crée ton compte';
-  if(sub)   sub.textContent   = isLogin ? 'Reprends là où tu t\'es arrêté.' : '2 vidéos offertes pour commencer.';
+  if(sub)   sub.textContent   = isLogin ? 'Reprends là où tu t\'es arrêté.' : 'Crée ton compte gratuit pour commencer.';
   document.getElementById('auth-error').style.display   = 'none';
   document.getElementById('signup-error').style.display = 'none';
 }
@@ -7275,8 +7268,9 @@ function recUpdateUI(){
 
 // Sections accessibles uniquement aux plans payants (pas free / guest)
 // Stratégie : le plan gratuit a ACCÈS aux outils de préparation (enregistreur → biblio, images IA, éditeur).
-// Le paywall se déclenche au moment de GÉNÉRER (voir _gateFreeGenerate).
-const _PAID_ONLY_SECTIONS = ['affiliation','express','cartoon','youtube'];
+// Stratégie freemium : le plan gratuit a accès à TOUS les modules (il voit la valeur).
+// Le paywall se déclenche uniquement au moment de GÉNÉRER / EXPORTER (voir _gateFreeGenerate).
+const _PAID_ONLY_SECTIONS = [];
 
 // true = plan gratuit (ou invité) → bloqué pour la génération
 function _isFreePlan(){
@@ -15634,6 +15628,7 @@ async function _cartoonProxyFetch(path, options={}){
 async function cartoonGenImage(btn){
   const prompt = document.getElementById('cartoonCharPrompt').value.trim();
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
+  if(_gateFreeGenerate()) return;
 
   // Check image credits (uses same monthly quota as Images IA)
   if(_imgMonthRemaining() <= 0){
@@ -15707,6 +15702,7 @@ async function cartoonGenImage(btn){
 }
 
 async function cartoonGenVideo(btn){
+  if(_gateFreeGenerate()) return;
   if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
   if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
 
@@ -16341,6 +16337,7 @@ function _cartoonVoicePreview(){
 async function cartoonGenVoiceTTS(){
   const txt=(document.getElementById('cartoonTtsText')?.value||'').trim();
   if(!txt){ toast('⚠️ Écris le texte à dire'); return; }
+  if(_gateFreeGenerate()) return;
   const btn=document.getElementById('cartoonTtsBtn'); const lbl=btn?btn.textContent:'';
   if(btn){ btn.disabled=true; btn.textContent='⏳ Voix…'; }
   try{
