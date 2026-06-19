@@ -2999,7 +2999,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <textarea id="expVoiceText" placeholder="Écris ce que la voix doit dire…" style="width:100%;box-sizing:border-box;min-height:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:9px;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
             <div id="expGeminiVoicePanel" style="margin-top:7px">
               <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX GEMINI</div>
-              <div id="expGeminiVoiceRow" class="row" style="gap:5px;flex-wrap:wrap"></div>
+              <button onclick="openVoicePicker('gemini')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🎙 Voix : <b id="expGeminiVoiceLabel" style="color:var(--orange2)">Puck</b></span><span style="color:var(--text3);font-size:11px">écouter · parcourir ▾</span></button>
+            </div>
+            <div id="expElevenVoicePanel" style="display:none;margin-top:7px">
+              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX ELEVENLABS</div>
+              <button onclick="openVoicePicker('eleven')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🔊 Voix : <b id="expElevenVoiceLabel" style="color:var(--orange2)">Rachel</b></span><span style="color:var(--text3);font-size:11px">écouter · parcourir ▾</span></button>
             </div>
           </div>
           <div id="expVoiceImportPanel" style="display:none;margin-top:10px">
@@ -3010,26 +3014,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
         </div>
 
-        <!-- ④ OPTIONS -->
+        <!-- ④ SOUS-TITRES (après génération) -->
         <div class="exp-section" style="margin-bottom:0">
-          <div class="exp-section-title">⚙️ Options</div>
-          <label class="row" style="gap:10px;align-items:center;cursor:pointer;justify-content:space-between">
-            <span style="font-size:13px;font-weight:600">Sous-titres auto</span>
-            <span id="expSubToggle" onclick="_expToggleSubs()" style="width:42px;height:24px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);position:relative;transition:all .2s;flex-shrink:0;cursor:pointer">
-              <span id="expSubKnob" style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#888;transition:all .2s"></span>
-            </span>
-          </label>
-
-          <!-- Réglages sous-titres (visibles quand activé) -->
-          <div id="expSubPanel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:7px">STYLE</div>
-            <div id="expSubStyleRow" class="row" style="gap:6px;margin-bottom:12px;flex-wrap:wrap"></div>
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:7px">POSITION</div>
-            <div id="expSubPosRow" class="row" style="gap:6px;margin-bottom:12px"></div>
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:7px">TAILLE</div>
-            <div id="expSubSizeRow" class="row" style="gap:6px"></div>
-          </div>
-          <div id="expSubHint" class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:8px;line-height:1.5">Active pour régler style · position · taille</div>
+          <div class="exp-section-title">✍️ Sous-titres</div>
+          <div class="faint" style="font-size:11px;font-family:var(--mono);line-height:1.55">Génère d'abord ta vidéo, puis ajoute les sous-titres (style · position · taille) directement sur le rendu, dans l'<b style="color:var(--orange2)">Éditeur</b>.</div>
         </div>
 
         <div style="flex:1"></div>
@@ -3063,7 +3051,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- Actions post-génération -->
         <div id="expResultActions" class="row" style="display:none;gap:10px;justify-content:center;padding:0 28px 14px;flex-wrap:wrap">
-          <button onclick="expressOpenInEditor()" class="btn btn-ghost btn-sm">🎬 Ouvrir dans l'Éditeur</button>
+          <button onclick="expressOpenInEditor()" class="btn btn-sm" style="background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">✍️ Ajouter des sous-titres</button>
           <button onclick="expressDownload()" class="btn btn-ghost btn-sm">⬇ Télécharger</button>
           <button onclick="expressReset()" class="btn btn-ghost btn-sm">↺ Nouvelle vidéo</button>
         </div>
@@ -14739,7 +14727,7 @@ const EXP_STYLES = [
   { id:'anime',    label:'Anime',      sub:'2D japonais',  prompt:'anime style, clean line art, expressive, studio quality 2D animation' },
   { id:'studio',   label:'Studio',     sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
 ];
-const EXP_FORMATS = [ {v:'9:16',l:'9:16'}, {v:'16:9',l:'16:9'} ];
+const EXP_FORMATS = [ {v:'9:16',l:'📱 Portrait 9:16'}, {v:'16:9',l:'🖥 Paysage 16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 
 function initExpress(){
@@ -14798,22 +14786,16 @@ function _expRenderVoices(){
       </div>`;
     }).join('');
   }
-  // Gemini voice mini-row
-  const gr=document.getElementById('expGeminiVoiceRow');
-  if(gr){
-    gr.innerHTML = (typeof _CARTOON_VOICES!=='undefined'?_CARTOON_VOICES:[{id:'Puck',name:'Puck'}]).map(v=>{
-      const on=v.id===window._expGeminiVoice;
-      return `<button onclick="_expPickGeminiVoice('${v.id}')" class="btn ${on?'':'btn-ghost'} btn-sm" style="${on?'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${v.emoji||'🎙'} ${v.name}</button>`;
-    }).join('');
-  }
-  // Panels
-  const tts=document.getElementById('expVoiceTtsPanel'), imp=document.getElementById('expVoiceImportPanel'), gp=document.getElementById('expGeminiVoicePanel');
+  // Panels (gemini/eleven → menu modal partagé)
+  const tts=document.getElementById('expVoiceTtsPanel'), imp=document.getElementById('expVoiceImportPanel'),
+        gp=document.getElementById('expGeminiVoicePanel'), ep=document.getElementById('expElevenVoicePanel');
   if(tts) tts.style.display = (window._expVoice==='gemini'||window._expVoice==='eleven') ? 'block' : 'none';
   if(gp)  gp.style.display  = (window._expVoice==='gemini') ? 'block' : 'none';
+  if(ep)  ep.style.display  = (window._expVoice==='eleven') ? 'block' : 'none';
   if(imp) imp.style.display = (window._expVoice==='import') ? 'block' : 'none';
+  if(typeof _refreshVoiceLabels==='function') _refreshVoiceLabels();
 }
 function _expPickVoice(id){ window._expVoice=id; _expRenderVoices(); }
-function _expPickGeminiVoice(id){ window._expGeminiVoice=id; _expRenderVoices(); }
 function _expLoadVoiceFile(file){
   if(!file){ return; }
   if(!(file.type.startsWith('audio/')||file.type.startsWith('video/'))){ toast('⚠️ Importe un audio ou mp4'); return; }
@@ -14834,7 +14816,7 @@ async function _expBuildVoice(){
   if(window._expVoice==='gemini'){
     const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
       method:'POST',
-      body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:window._expGeminiVoice } } } } })
+      body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:(window._selGeminiVoice||window._expGeminiVoice||'Puck') } } } } })
     });
     if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||('Gemini TTS '+resp.status)); }
     const data=await resp.json();
@@ -15933,15 +15915,18 @@ function _elevenVoiceList(){
   return cloned.concat(_ELEVEN_VOICES);
 }
 
-// Met à jour le label du bouton voix Cartoon
-function _cartoonRenderVoices(){
-  const id=document.getElementById('cartoonTtsVoice')?.value||'Puck';
-  const v=_CARTOON_VOICES.find(x=>x.id===id);
-  const lbl=document.getElementById('cartoonGeminiVoiceLabel'); if(lbl&&v) lbl.textContent=v.name;
-  const ev=_elevenVoiceList().find(x=>x.id===selVoiceId);
-  const elbl=document.getElementById('cartoonElevenVoiceLabel'); if(elbl) elbl.textContent=ev?ev.name:'Rachel';
+// État partagé de la voix Gemini (Cartoon + Express)
+window._selGeminiVoice = window._selGeminiVoice || 'Puck';
+// Met à jour TOUS les labels de voix (Cartoon + Express)
+function _refreshVoiceLabels(){
+  const gid = window._selGeminiVoice || document.getElementById('cartoonTtsVoice')?.value || 'Puck';
+  const gv = _CARTOON_VOICES.find(x=>x.id===gid);
+  const ev = _elevenVoiceList().find(x=>x.id===selVoiceId);
+  ['cartoonGeminiVoiceLabel','expGeminiVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e&&gv) e.textContent=gv.name; });
+  ['cartoonElevenVoiceLabel','expElevenVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=ev?ev.name:'Rachel'; });
 }
-function cartoonPickVoice(id){ const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _cartoonRenderVoices(); }
+function _cartoonRenderVoices(){ _refreshVoiceLabels(); }
+function cartoonPickVoice(id){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _refreshVoiceLabels(); }
 
 // ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
 const _VOICE_SAMPLE = "Salut ! Voici ma voix, est-ce qu'elle colle bien à ton personnage ?";
@@ -15975,7 +15960,7 @@ function _renderVoicePickerList(engine){
   const list=document.getElementById('voicePickerList'); if(!list) return;
   const all = engine==='gemini' ? _CARTOON_VOICES : _elevenVoiceList();
   const favs=_voiceFavs(engine);
-  const curId = engine==='gemini' ? (document.getElementById('cartoonTtsVoice')?.value||'Puck') : selVoiceId;
+  const curId = engine==='gemini' ? (window._selGeminiVoice||'Puck') : selVoiceId;
   const sorted=[...all].sort((a,b)=> (favs.includes(b.id)?1:0)-(favs.includes(a.id)?1:0));
   list.innerHTML=sorted.map(v=>{
     const on=v.id===curId, fav=favs.includes(v.id);
@@ -15991,9 +15976,9 @@ function _renderVoicePickerList(engine){
   }).join('');
 }
 function _voiceSelectFromPicker(engine,id){
-  if(engine==='gemini'){ const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; }
+  if(engine==='gemini'){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; }
   else { selVoiceId=id; }
-  _cartoonRenderVoices();
+  _refreshVoiceLabels();
   closeVoicePicker();
   toast('✅ Voix sélectionnée');
 }
