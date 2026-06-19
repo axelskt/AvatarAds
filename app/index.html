@@ -3204,9 +3204,15 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
             </div>
 
-            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;padding:9px 11px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-radius:9px">
-              <span style="font-size:14px">🎬</span>
-              <div style="font-size:11px;font-weight:700;color:#c4a3f7">Veo 3.1 Fast <span style="font-weight:400;color:var(--text3);font-family:var(--mono);font-size:9px">· vidéo + audio natif · 10s</span></div>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:12px;margin-bottom:5px">Modèle d'animation :</div>
+            <div style="display:flex;gap:6px">
+              <button id="cartoonModelVeo" onclick="cartoonPickVidModel('veo',this)" style="flex:1;padding:9px 6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:9px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Veo 3.1<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">audio natif · 10s</span></button>
+              <button id="cartoonModelSeedance" onclick="cartoonPickVidModel('seedance',this)" style="flex:1;padding:9px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Seedance<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">cartoon · voix requise</span></button>
+            </div>
+            <div id="cartoonSeedanceDurRow" style="display:none;align-items:center;gap:6px;margin-top:8px">
+              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Durée :</span>
+              <button id="cartoonSdDur5" onclick="cartoonPickSeedanceDur(5000,this)" style="padding:5px 12px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">5s</button>
+              <button id="cartoonSdDur10" onclick="cartoonPickSeedanceDur(10000,this)" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">10s</button>
             </div>
           </div>
 
@@ -3214,23 +3220,33 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="cartoonModule3Voice" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
-              <div style="font-size:13px;font-weight:700">Voix <span style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel)</span></div>
+              <div style="font-size:13px;font-weight:700">Voix <span id="cartoonVoiceOptLabel" style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel)</span></div>
             </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, génère-la ci-dessous (on remplace l'audio Veo).</div>
+            <div id="cartoonVoiceHint" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, choisis une source ci-dessous (on remplace l'audio Veo).</div>
 
-            <!-- Moteur de voix -->
+            <!-- Source de voix : Import / Gemini / ElevenLabs -->
             <div style="display:flex;gap:6px;margin-bottom:8px">
-              <button id="cartoonVoiceEngGemini" onclick="cartoonPickVoiceEngine('gemini')" style="flex:1;padding:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">✨ Gemini TTS</button>
-              <button id="cartoonVoiceEngEleven" onclick="cartoonPickVoiceEngine('eleven')" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">🔊 ElevenLabs</button>
+              <button id="cartoonVoiceEngImport" onclick="cartoonPickVoiceEngine('import')" style="flex:1;padding:8px 4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer">🎙 Import</button>
+              <button id="cartoonVoiceEngGemini" onclick="cartoonPickVoiceEngine('gemini')" style="flex:1;padding:8px 4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer">✨ Gemini</button>
+              <button id="cartoonVoiceEngEleven" onclick="cartoonPickVoiceEngine('eleven')" style="flex:1;padding:8px 4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer">🔊 ElevenLabs</button>
             </div>
 
-            <div style="padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3)">
+            <!-- Import mp4/audio -->
+            <div id="cartoonImportWrap" style="display:none;margin-bottom:8px">
+              <div onclick="document.getElementById('cartoonVoiceFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='#a855f7'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';_cartoonHandleVoice(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s">
+                <div id="cartoonVoiceDrop" style="font-size:10px;font-family:var(--mono);color:var(--text3)">🎙️ Glisse ton fichier audio / mp4<br><span style="font-size:9px;opacity:.6">mp3 · wav · mp4 · m4a</span></div>
+                <div id="cartoonVoiceInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2)"></div>
+              </div>
+              <input type="file" id="cartoonVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_cartoonHandleVoice(this.files[0]);this.value=''">
+            </div>
+
+            <!-- TTS (Gemini / ElevenLabs) -->
+            <div id="cartoonTtsWrap" style="padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3)">
               <textarea id="cartoonTtsText" placeholder="Écris ce que le personnage doit dire…" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;min-height:46px;margin-bottom:6px"></textarea>
-              <input type="hidden" id="cartoonTtsVoice" value="Puck">
-              <!-- Voix Gemini -->
+              <!-- Menu voix Gemini -->
               <div id="cartoonGeminiVoiceWrap">
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">CHOISIS LA VOIX QUI COLLE AU PERSO</div>
-                <div id="cartoonVoiceRows" style="display:grid;gap:5px;margin-bottom:8px"></div>
+                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">CHOISIS LA VOIX QUI COLLE AU PERSO</div>
+                <select id="cartoonTtsVoice" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:9px 8px;margin-bottom:8px;cursor:pointer"></select>
               </div>
               <!-- Voix ElevenLabs -->
               <div id="cartoonElevenVoiceWrap" style="display:none;margin-bottom:8px">
@@ -15868,32 +15884,40 @@ function _cartoonGate(){
 }
 
 // ── Voix Gemini : rangées sélectionnables (la voix doit coller au perso) ──
+// Menu complet des voix Gemini TTS (gemini-2.5-flash-preview-tts)
 const _CARTOON_VOICES = [
-  { id:'Puck',   emoji:'⚡', name:'Puck',   desc:'énergique · jeune',   match:'perso fun / hype' },
-  { id:'Kore',   emoji:'🎯', name:'Kore',   desc:'clair · neutre',      match:'voix pro / explainer' },
-  { id:'Charon', emoji:'🐻', name:'Charon', desc:'grave · posé',        match:'mascotte masculine' },
-  { id:'Fenrir', emoji:'🔥', name:'Fenrir', desc:'punchy · intense',    match:'pub / accroche' },
-  { id:'Aoede',  emoji:'🌸', name:'Aoede',  desc:'douce · féminine',    match:'perso doux / lifestyle' },
+  { id:'Puck',       emoji:'⚡', name:'Puck',       desc:'enjoué · jeune',        match:'perso fun / hype' },
+  { id:'Fenrir',     emoji:'🔥', name:'Fenrir',     desc:'punchy · intense',      match:'pub / accroche' },
+  { id:'Kore',       emoji:'🎯', name:'Kore',       desc:'ferme · clair',         match:'voix pro / explainer' },
+  { id:'Charon',     emoji:'🐻', name:'Charon',     desc:'grave · informatif',    match:'mascotte masculine' },
+  { id:'Aoede',      emoji:'🌸', name:'Aoede',      desc:'douce · légère',        match:'perso doux / lifestyle' },
+  { id:'Leda',       emoji:'🧒', name:'Leda',       desc:'jeune · vive',          match:'enfant / cartoon kid' },
+  { id:'Orus',       emoji:'💼', name:'Orus',       desc:'assuré · ferme',        match:'corporate / autorité' },
+  { id:'Zephyr',     emoji:'☀️', name:'Zephyr',     desc:'lumineux · clair',      match:'lifestyle positif' },
+  { id:'Callirrhoe', emoji:'😎', name:'Callirrhoe', desc:'décontractée',          match:'casual / vlog' },
+  { id:'Autonoe',    emoji:'✨', name:'Autonoe',    desc:'lumineuse',             match:'beauté / feel-good' },
+  { id:'Enceladus',  emoji:'🌬️', name:'Enceladus',  desc:'soufflé · doux',        match:'ASMR / calme' },
+  { id:'Iapetus',    emoji:'🔷', name:'Iapetus',    desc:'clair · net',           match:'tuto / tech' },
+  { id:'Umbriel',    emoji:'🌙', name:'Umbriel',    desc:'posé · easy',           match:'storytelling' },
+  { id:'Algieba',    emoji:'🎵', name:'Algieba',    desc:'lisse · smooth',        match:'luxe / premium' },
+  { id:'Erinome',    emoji:'💎', name:'Erinome',    desc:'clair · précis',        match:'présentation produit' },
+  { id:'Algenib',    emoji:'🪨', name:'Algenib',    desc:'grave · granuleux',     match:'voix de marque forte' },
+  { id:'Rasalgethi', emoji:'📚', name:'Rasalgethi', desc:'informatif',            match:'éducatif / news' },
+  { id:'Laomedeia',  emoji:'🎉', name:'Laomedeia',  desc:'enjouée',               match:'promo / énergie' },
+  { id:'Achernar',   emoji:'🤍', name:'Achernar',   desc:'douce',                 match:'soin / bien-être' },
+  { id:'Gacrux',     emoji:'🎙️', name:'Gacrux',     desc:'mature',                match:'expert / posé' },
+  { id:'Sulafat',    emoji:'🔥', name:'Sulafat',    desc:'chaleureuse',           match:'proximité / DM' },
 ];
 function _cartoonRenderVoices(){
-  const wrap = document.getElementById('cartoonVoiceRows');
-  if(!wrap) return;
-  const cur = document.getElementById('cartoonTtsVoice')?.value || 'Puck';
-  wrap.innerHTML = _CARTOON_VOICES.map(v=>{
-    const on = v.id===cur;
-    return `<div onclick="cartoonPickVoice('${v.id}')" data-voice="${v.id}" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid ${on?'rgba(168,85,247,.5)':'var(--border2)'};background:${on?'rgba(168,85,247,.12)':'var(--bg4)'}">
-      <span style="font-size:16px;flex-shrink:0">${v.emoji}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:${on?'#c4a3f7':'var(--text)'}">${v.name} <span style="font-weight:400;color:var(--text3);font-size:10px">· ${v.desc}</span></div>
-        <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">idéal : ${v.match}</div>
-      </div>
-      <span style="width:15px;height:15px;border-radius:50%;flex-shrink:0;border:1.5px solid ${on?'#a855f7':'var(--border2)'};background:${on?'#a855f7':'transparent'};display:flex;align-items:center;justify-content:center">${on?'<svg width=\"9\" height=\"9\" viewBox=\"0 0 12 12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.4\"><path d=\"M2 6.5l2.5 2.5L10 3.5\"/></svg>':''}</span>
-    </div>`;
-  }).join('');
+  const sel = document.getElementById('cartoonTtsVoice');
+  if(!sel || sel.tagName !== 'SELECT') return;
+  const cur = sel.value || 'Puck';
+  sel.innerHTML = _CARTOON_VOICES.map(v=>
+    `<option value="${v.id}"${v.id===cur?' selected':''}>${v.emoji} ${v.name} — ${v.desc} (idéal : ${v.match})</option>`
+  ).join('');
 }
 function cartoonPickVoice(id){
   const inp = document.getElementById('cartoonTtsVoice'); if(inp) inp.value = id;
-  _cartoonRenderVoices();
 }
 
 // ── Importer une image comme personnage (biblio / upload) ──
@@ -16172,7 +16196,18 @@ function cartoonPickVidModel(m, el){
   if(durRow) durRow.style.display = (m==='seedance') ? 'flex' : 'none';
   const badge=document.getElementById('cartoonModelBadge');
   if(badge) badge.textContent = (m==='seedance') ? ('Seedance · '+((window._cartoonSeedanceDur||5000)/1000)+'s') : 'Veo 3.1 · 10s';
-  toast(m==='seedance' ? '🎬 Modèle : Seedance (anim cartoon + audio natif)' : '🎬 Modèle : Veo 3.1 Fast');
+  // Seedance = pas d'audio → voix obligatoire
+  const optLbl=document.getElementById('cartoonVoiceOptLabel'), hint=document.getElementById('cartoonVoiceHint');
+  if(optLbl){
+    if(m==='seedance'){ optLbl.textContent='(obligatoire)'; optLbl.style.color='#ff8a5b'; }
+    else { optLbl.textContent='(optionnel)'; optLbl.style.color='var(--text3)'; }
+  }
+  if(hint) hint.innerHTML = (m==='seedance')
+    ? '⚠️ <b style="color:#ff8a5b">Seedance n\'a pas d\'audio</b> — choisis une source de voix (Import / Gemini / ElevenLabs).'
+    : 'Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, choisis une source ci-dessous (on remplace l\'audio Veo).';
+  // Seedance → préselectionne Gemini si rien
+  if(m==='seedance' && !window._cartoonVoiceEngine){ cartoonPickVoiceEngine('gemini'); }
+  toast(m==='seedance' ? '🎬 Seedance — voix obligatoire (anim cartoon, sans audio)' : '🎬 Veo 3.1 Fast — audio natif');
 }
 function cartoonPickSeedanceDur(ms, el){
   window._cartoonSeedanceDur = ms;
@@ -16671,13 +16706,17 @@ function _cartoonVoicePreview(){
 window._cartoonVoiceEngine = 'gemini';
 function cartoonPickVoiceEngine(e){
   window._cartoonVoiceEngine = e;
-  const g=document.getElementById('cartoonVoiceEngGemini'), el=document.getElementById('cartoonVoiceEngEleven');
+  const base='flex:1;padding:8px 4px;border-radius:8px;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer;';
   const on='background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);color:#c084fc', off='background:var(--bg3);border:1px solid var(--border2);color:var(--text3)';
-  if(g) g.style.cssText='flex:1;padding:8px;border-radius:8px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;'+(e==='gemini'?on:off);
-  if(el) el.style.cssText='flex:1;padding:8px;border-radius:8px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;'+(e==='eleven'?on:off);
+  const map={ import:'cartoonVoiceEngImport', gemini:'cartoonVoiceEngGemini', eleven:'cartoonVoiceEngEleven' };
+  Object.keys(map).forEach(k=>{ const b=document.getElementById(map[k]); if(b) b.style.cssText=base+(e===k?on:off); });
+  const imp=document.getElementById('cartoonImportWrap'), tts=document.getElementById('cartoonTtsWrap');
   const gw=document.getElementById('cartoonGeminiVoiceWrap'), ew=document.getElementById('cartoonElevenVoiceWrap');
+  if(imp) imp.style.display = e==='import' ? 'block' : 'none';
+  if(tts) tts.style.display = e==='import' ? 'none' : 'block';
   if(gw) gw.style.display = e==='gemini' ? 'block' : 'none';
   if(ew) ew.style.display = e==='eleven' ? 'block' : 'none';
+  if(e==='gemini') _cartoonRenderVoices();
 }
 // Dispatch selon le moteur choisi
 function cartoonGenVoice(){
@@ -16801,6 +16840,12 @@ async function cartoonUseAsAvatarWithVoice(){
 
 async function cartoonUseAsAvatar(){
   if(!window._cartoonVidBlob){ toast('⚠️ Génère la vidéo d\'abord'); return; }
+  // Seedance = vidéo muette → une voix est obligatoire
+  if(window._cartoonVidModel==='seedance' && !_cartoonVoiceFile){
+    toast('🔊 Seedance n\'a pas d\'audio — ajoute une voix (Import / Gemini / ElevenLabs)');
+    const mv=document.getElementById('cartoonModule3Voice'); if(mv) mv.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   const charPrompt = document.getElementById('cartoonCharPrompt').value.trim() || 'cartoon-avatar';
   const name = charPrompt.slice(0,30).replace(/[^a-zA-Z0-9À-ž ]/g,'').trim() || 'cartoon-avatar';
   const file = new File([window._cartoonVidBlob], name+'.mp4', { type:'video/mp4' });
