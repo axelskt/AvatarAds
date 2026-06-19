@@ -6697,6 +6697,8 @@ function _imgShowSingle(url, size){
 async function generateImage(){
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
+  // ── Paywall plan gratuit : prompt prêt → on débloque la génération via un plan ──
+  if(_gateFreeGenerate()) return;
   if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
   const count = _imgSelectedCount || 1;
   const remaining = _imgMonthRemaining();
@@ -7469,10 +7471,24 @@ function recUpdateUI(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Sections accessibles uniquement aux plans payants (pas free / guest)
-const _PAID_ONLY_SECTIONS = ['library','imagegen','recorder','audioclean','affiliation','express','cartoon','studio','youtube'];
+// Stratégie : le plan gratuit a ACCÈS aux outils de préparation (enregistreur → biblio, images IA, éditeur).
+// Le paywall se déclenche au moment de GÉNÉRER (voir _gateFreeGenerate).
+const _PAID_ONLY_SECTIONS = ['affiliation','express','cartoon','youtube'];
+
+// true = plan gratuit (ou invité) → bloqué pour la génération
+function _isFreePlan(){
+  if(currentMember && currentMember.is_owner) return false;
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  return !currentMember || guestMode || p === 'free';
+}
+// Appelé en tête de chaque action de GÉNÉRATION : ouvre le paywall et bloque si gratuit
+function _gateFreeGenerate(){
+  if(_isFreePlan()){ showPlansSheet(); return true; }
+  return false;
+}
 
 function nav(id,el){
-  // ── Paywall free plan : toutes les sections sauf le générateur ──
+  // ── Paywall free plan : sections premium (génération) uniquement ──
   if(_PAID_ONLY_SECTIONS.includes(id)){
     const plan = (currentMember?.plan || 'free').toLowerCase();
     if(!currentMember || plan === 'free' || guestMode){
@@ -11206,6 +11222,8 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
 async function startGeneration(){
   const script = document.getElementById('f-script').value.trim();
   if(!script){ toast('⚠️ Écris ton script avant de générer'); return; }
+  // ── Paywall plan gratuit : tout est prêt → on débloque la génération via un plan ──
+  if(_gateFreeGenerate()) return;
   // Reset bypass — uniquement la sauvegarde de session, PAS le bypass actif (chargé depuis bibliothèque)
   if(!window._bypassHedraOn) localStorage.removeItem('aa_bypass_resume');
 
@@ -17553,6 +17571,8 @@ function edReset(){
 /* ---------- EXPORT ---------- */
 async function edExport(){
   if(!_ed) return;
+  // ── Paywall plan gratuit : montage prêt → on débloque l'export via un plan ──
+  if(_gateFreeGenerate()) return;
   const status=document.getElementById('edExportStatus'); status.style.display='block'; status.textContent='Préparation…';
   const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='⏳ Export…';
   edPause();
