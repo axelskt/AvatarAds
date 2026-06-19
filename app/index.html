@@ -2976,6 +2976,32 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="expDurRow" class="row" style="gap:8px"></div>
         </div>
 
+        <!-- ③b QUALITÉ -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">💎 Qualité</div>
+          <div id="expQualRow" class="row" style="gap:8px"></div>
+        </div>
+
+        <!-- ③c VOIX -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title">🎙 Voix</div>
+          <div id="expVoiceRows" style="display:grid;gap:5px"></div>
+          <!-- Sous-panneau selon le mode -->
+          <div id="expVoiceTtsPanel" style="display:none;margin-top:10px">
+            <textarea id="expVoiceText" placeholder="Écris ce que la voix doit dire…" style="width:100%;box-sizing:border-box;min-height:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:9px;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <div id="expGeminiVoicePanel" style="margin-top:7px">
+              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX GEMINI</div>
+              <div id="expGeminiVoiceRow" class="row" style="gap:5px;flex-wrap:wrap"></div>
+            </div>
+          </div>
+          <div id="expVoiceImportPanel" style="display:none;margin-top:10px">
+            <div onclick="document.getElementById('expVoiceFileIn').click()" style="border:1.5px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg3)" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div id="expVoiceFileLabel" style="font-size:11px;font-family:var(--mono);color:var(--text3)">📁 Importer un audio / mp4<br><span class="faint" style="font-size:9px">mp3 · wav · mp4 · m4a</span></div>
+            </div>
+            <input type="file" id="expVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_expLoadVoiceFile(this.files[0]);this.value=''">
+          </div>
+        </div>
+
         <!-- ④ OPTIONS -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title">⚙️ Options</div>
@@ -14604,6 +14630,18 @@ window._expFormat = '9:16';
 window._expDur    = 5;
 window._expSubs   = false;
 window._expImgB64 = null;   // image fournie/générée (base64 brut, sans préfixe)
+window._expQuality = '720p';
+window._expVoice   = 'native';        // native | gemini | eleven | import
+window._expGeminiVoice = 'Puck';
+window._expVoiceBlob = null;          // voix générée/importée (à muxer dans l'Éditeur)
+
+const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'} ];
+const EXP_VOICES = [
+  { id:'native', emoji:'🎬', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
+  { id:'gemini', emoji:'✨', name:'Gemini TTS',         desc:'voix IA depuis ton script' },
+  { id:'eleven', emoji:'🔊', name:'ElevenLabs',         desc:'voix premium / clonée' },
+  { id:'import', emoji:'📁', name:'Importer une voix',  desc:'mp3 · wav · mp4' },
+];
 
 const EXP_STYLES = [
   { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic, cinematic lighting, real human, photorealistic' },
@@ -14641,11 +14679,93 @@ function initExpress(){
       return `<button onclick="_expPickDur(${d.v})" data-exp-dur="${d.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${d.l}</button>`;
     }).join('');
   }
+  // Qualité
+  const qr = document.getElementById('expQualRow');
+  if(qr){
+    qr.innerHTML = EXP_QUALITIES.map(q=>{
+      const on=q.v===window._expQuality;
+      return `<button onclick="_expPickQual('${q.v}')" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${q.l}</button>`;
+    }).join('');
+  }
+  _expRenderVoices();
   _expSyncSubToggle();
 }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
 function _expPickDur(v){ window._expDur=v; initExpress(); }
+function _expPickQual(v){ window._expQuality=v; initExpress(); }
+
+// ── Voix ──
+function _expRenderVoices(){
+  const wrap=document.getElementById('expVoiceRows');
+  if(wrap){
+    wrap.innerHTML = EXP_VOICES.map(v=>{
+      const on=v.id===window._expVoice;
+      return `<div onclick="_expPickVoice('${v.id}')" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid ${on?'rgba(255,107,53,.5)':'var(--border2)'};background:${on?'rgba(255,107,53,.1)':'var(--bg3)'}">
+        <span style="font-size:15px">${v.emoji}</span>
+        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:${on?'var(--orange2)':'var(--text)'}">${v.name}</div><div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">${v.desc}</div></div>
+        <span style="width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1.5px solid ${on?'var(--orange)':'var(--border2)'};background:${on?'var(--orange)':'transparent'}"></span>
+      </div>`;
+    }).join('');
+  }
+  // Gemini voice mini-row
+  const gr=document.getElementById('expGeminiVoiceRow');
+  if(gr){
+    gr.innerHTML = (typeof _CARTOON_VOICES!=='undefined'?_CARTOON_VOICES:[{id:'Puck',name:'Puck'}]).map(v=>{
+      const on=v.id===window._expGeminiVoice;
+      return `<button onclick="_expPickGeminiVoice('${v.id}')" class="btn ${on?'':'btn-ghost'} btn-sm" style="${on?'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${v.emoji||'🎙'} ${v.name}</button>`;
+    }).join('');
+  }
+  // Panels
+  const tts=document.getElementById('expVoiceTtsPanel'), imp=document.getElementById('expVoiceImportPanel'), gp=document.getElementById('expGeminiVoicePanel');
+  if(tts) tts.style.display = (window._expVoice==='gemini'||window._expVoice==='eleven') ? 'block' : 'none';
+  if(gp)  gp.style.display  = (window._expVoice==='gemini') ? 'block' : 'none';
+  if(imp) imp.style.display = (window._expVoice==='import') ? 'block' : 'none';
+}
+function _expPickVoice(id){ window._expVoice=id; _expRenderVoices(); }
+function _expPickGeminiVoice(id){ window._expGeminiVoice=id; _expRenderVoices(); }
+function _expLoadVoiceFile(file){
+  if(!file){ return; }
+  if(!(file.type.startsWith('audio/')||file.type.startsWith('video/'))){ toast('⚠️ Importe un audio ou mp4'); return; }
+  window._expVoiceBlob = file;
+  const lbl=document.getElementById('expVoiceFileLabel');
+  if(lbl) lbl.innerHTML = '✅ '+file.name;
+  toast('✅ Voix importée');
+}
+// Génère la voix selon le mode choisi → renvoie un Blob audio (ou null pour native)
+async function _expBuildVoice(){
+  if(window._expVoice==='native') return null;
+  if(window._expVoice==='import'){
+    if(!window._expVoiceBlob) throw new Error('Importe un fichier voix d\'abord');
+    return window._expVoiceBlob;
+  }
+  const text=(document.getElementById('expVoiceText')?.value||'').trim();
+  if(!text) throw new Error('Écris le texte de la voix');
+  if(window._expVoice==='gemini'){
+    const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
+      method:'POST',
+      body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:window._expGeminiVoice } } } } })
+    });
+    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||('Gemini TTS '+resp.status)); }
+    const data=await resp.json();
+    const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
+    const b64=(part?.inlineData||part?.inline_data)?.data;
+    if(!b64) throw new Error('Pas d\'audio Gemini');
+    const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+    return new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
+  }
+  if(window._expVoice==='eleven'){
+    const authH=await getAuthHeader();
+    const vid=(typeof selVoiceId!=='undefined' && selVoiceId) ? selVoiceId : '21m00Tcm4TlvDq8ikWAM';
+    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${vid}`,{
+      method:'POST', headers:{...authH,'Content-Type':'application/json'},
+      body:JSON.stringify({ text, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} })
+    });
+    if(!resp.ok){ const e=await resp.text(); throw new Error('ElevenLabs '+resp.status+' '+e.slice(0,80)); }
+    return await resp.blob();
+  }
+  return null;
+}
 // Réglages sous-titres (passés à l'Éditeur)
 window._expSubStyle = 'punch';
 window._expSubPos   = 'bottom';
@@ -14723,6 +14843,14 @@ async function expressCreate(){
     const token=session?.access_token || SUPABASE_KEY;
     const styleMeta=EXP_STYLES.find(s=>s.id===window._expStyle)||EXP_STYLES[0];
 
+    // 0) Voix personnalisée (Gemini / ElevenLabs / import) → générée d'abord
+    let voiceBlob=null;
+    if(window._expVoice!=='native'){
+      setP(4,'🎙 Préparation de la voix…');
+      voiceBlob = await _expBuildVoice();
+    }
+    const useNativeAudio = (window._expVoice==='native');
+
     // 1) Image de départ : fournie, sinon générée via GPT Image
     let imgB64=window._expImgB64;
     if(!imgB64){
@@ -14743,7 +14871,7 @@ async function expressCreate(){
       method:'POST',
       body: JSON.stringify({
         instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
-        parameters:{ durationSeconds: (window._expDur||5)>=10?10:8, sampleCount:1, aspectRatio:window._expFormat, resolution:'720p', generateAudio:true }
+        parameters:{ durationSeconds: (window._expDur||5)>=10?10:8, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality||'720p'), generateAudio:useNativeAudio }
       })
     });
     if(!startResp.ok){ const e=await startResp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+startResp.status)); }
@@ -14765,8 +14893,9 @@ async function expressCreate(){
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
+    window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
 
-    clearInterval(tick); setP(100,'✅ Vidéo prête !');
+    clearInterval(tick); setP(100, voiceBlob ? '✅ Vidéo + voix prêtes !' : '✅ Vidéo prête !');
     if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
     if(prog) prog.style.display='none';
     if(acts) acts.style.display='flex';
@@ -14799,7 +14928,17 @@ function expressOpenInEditor(){
     const f=new File([window._expVidBlob],'express.mp4',{type:'video/mp4'});
     const navEl=document.querySelector('.nav-i[onclick*="studio"]');
     nav('studio', navEl);
-    setTimeout(()=>{ if(typeof edRouteFile==='function') edRouteFile(f); }, 200);
+    setTimeout(()=>{
+      if(typeof edRouteFile==='function'){
+        edRouteFile(f);
+        // Voix custom → ajoutée comme piste audio
+        if(window._expVoiceBlob){
+          const ext = (window._expVoiceBlob.type||'').includes('wav') ? 'wav' : (window._expVoiceBlob.name?.split('.').pop()||'mp3');
+          const vf=new File([window._expVoiceBlob],'voix.'+ext,{type:window._expVoiceBlob.type||'audio/mpeg'});
+          setTimeout(()=>{ edRouteFile(vf); toast('🎙 Voix ajoutée — cale-la dans la timeline'); }, 400);
+        }
+      }
+    }, 200);
   } catch(e){ toast('⚠️ '+(e.message||e)); }
 }
 
