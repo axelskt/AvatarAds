@@ -2627,19 +2627,12 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div class="row gap10" style="align-items:center;flex-wrap:wrap">
             <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">🖼</span>Images IA</h2>
             <span class="tag-beta">BETA</span>
-            <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> DALL·E 3 · 4K ULTRA</span>
+            <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> GPT IMAGE · 4K ULTRA</span>
           </div>
           <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
         </div>
 
-        <!-- MODÈLE IA -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 1l1.6 3.2 3.4.5-2.5 2.4.6 3.4L6 9.3 2.9 10.9l.6-3.4L1 5.1l3.4-.5z"/></svg>
-            Modèle IA
-          </div>
-          <div id="imgModelGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
-        </div>
+        <div id="imgModelGrid" style="display:none"></div>
 
         <!-- STYLE PRESETS -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
@@ -3677,8 +3670,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                      ondragover="event.preventDefault();this.style.borderColor='#3dd6c4';this.style.background='rgba(61,214,196,.07)'"
                      ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg3)'"
                      ondrop="event.preventDefault();this.style.borderColor='var(--border2)';this.style.background='var(--bg3)';[...event.dataTransfer.files].forEach(f=>edRouteFile(f))"
-                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:22px 14px;border:1.5px dashed var(--border2);border-radius:12px;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="width:30px;height:30px;border-radius:50%;background:#3dd6c4;display:flex;align-items:center;justify-content:center;color:#06302b;font-size:18px;font-weight:800;line-height:1">+</div>
+                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px 14px;border:1.5px dashed var(--border2);border-radius:14px;cursor:pointer;background:var(--bg3);transition:all .15s">
+                  <div style="width:46px;height:46px;border-radius:13px;background:rgba(61,214,196,.12);border:1px solid rgba(61,214,196,.45);display:flex;align-items:center;justify-content:center;color:#3dd6c4;font-size:26px;font-weight:500;line-height:1">+</div>
                   <div style="font-weight:700;font-size:13px;color:var(--text)">Importer</div>
                   <div class="faint" style="font-size:10.5px;font-family:var(--mono);text-align:center;line-height:1.5">vidéos · images · audio</div>
                 </div>
@@ -6451,7 +6444,19 @@ async function _imgRemoveBgRun(btn){
   try {
     const authH = await getAuthHeader();
     const src = img.src;
-    const body = src.startsWith('data:') ? { image_b64: src } : { image_url: src };
+    let body;
+    if(src.startsWith('data:')){
+      body = { image_b64: src };
+    } else {
+      // blob: et images locales ne sont pas accessibles par remove.bg → on convertit en base64 côté client
+      try {
+        const b   = await (await fetch(src)).blob();
+        const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(b); });
+        body = { image_b64: b64 };
+      } catch(_){
+        body = { image_url: src }; // fallback : URL publique que remove.bg peut récupérer
+      }
+    }
     const resp = await fetch(REMOVEBG_PROXY, {
       method:'POST',
       headers:{ ...authH, 'Content-Type':'application/json' },
