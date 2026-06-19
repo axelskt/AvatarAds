@@ -3554,21 +3554,21 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
     <div class="view" id="v-studio">
       <!-- IMPORT (état vide, centré) -->
-      <div id="edEmpty" class="scroll-y" style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:32px 24px">
+      <div id="edEmpty" class="scroll-y" style="flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding:56px 24px 24px">
         <div style="max-width:1120px;width:100%">
           <div style="margin-bottom:18px">
             <h2 class="display row gap12" style="font-size:30px;font-weight:800;align-items:center;line-height:1.1"><span style="font-size:26px">✂️</span>Éditeur vidéo <span class="tag-beta" style="font-size:9px;margin-left:2px">BETA</span></h2>
             <p class="muted" style="margin-top:8px;font-size:14.5px">Coupe, réorganise, ajoute texte, images, sons et musique — puis exporte ta vidéo verticale.</p>
           </div>
           <div onclick="document.getElementById('edFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';edLoadFile(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:440px;padding:48px 20px;border:1.5px dashed var(--border-2);border-radius:20px;cursor:pointer;background:rgba(255,255,255,.012);transition:border-color .15s">
-            <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;box-shadow:0 14px 34px -10px var(--accent-glow)">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 9h18M9 21V9"/></svg>
+            <div style="width:88px;height:88px;border-radius:24px;background:radial-gradient(circle at 50% 38%, rgba(255,90,31,.16), rgba(255,90,31,.04));border:1px solid rgba(255,90,31,.28);display:flex;align-items:center;justify-content:center;box-shadow:0 0 50px -10px rgba(255,90,31,.35)">
+              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
             </div>
-            <div style="font-weight:800;font-size:20px;color:var(--text)">Glisse ta vidéo ici</div>
+            <div style="font-weight:800;font-size:22px;color:var(--text);margin-top:4px">Glisse ta vidéo ici</div>
             <div class="faint" style="font-size:12px;font-family:var(--mono)">MP4 · MOV · WEBM · 9:16 recommandé</div>
-            <div class="row gap10" style="margin-top:6px">
-              <button onclick="event.stopPropagation();document.getElementById('edFileIn').click()" style="padding:12px 26px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">＋ Parcourir</button>
-              <button onclick="event.stopPropagation();edPickFromLibrary()" class="btn btn-ghost btn-sm" style="padding:12px 22px">📁 Bibliothèque</button>
+            <div class="row gap10" style="margin-top:10px">
+              <button onclick="event.stopPropagation();document.getElementById('edFileIn').click()" style="padding:15px 40px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 10px 26px -10px var(--accent-glow)">＋ Parcourir</button>
+              <button onclick="event.stopPropagation();edPickFromLibrary()" class="btn btn-ghost" style="padding:15px 26px">📁 Bibliothèque</button>
             </div>
           </div>
           <input type="file" id="edFileIn" accept="video/*" style="display:none" onchange="edLoadFile(this.files[0]);this.value=''">
@@ -3672,7 +3672,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="card" style="padding:16px;margin-bottom:14px">
                 <div class="label" style="margin-bottom:10px">🧰 Outils</div>
                 <button onclick="edAddText()" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-2px;margin-right:5px"><path d="M5 5h14M12 5v14"/></svg>Ajouter un texte</button>
-                <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">🖼 Ajouter une image</button>
+                <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;padding:13px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Ajouter une image</button>
                 <div onclick="document.getElementById('edImportIn').click()"
                      ondragover="event.preventDefault();this.style.borderColor='#3dd6c4';this.style.background='rgba(61,214,196,.07)'"
                      ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg3)'"
@@ -3696,20 +3696,20 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
 
               <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:10px">🎵 Bande son</div>
-                <div id="edMusicEmpty" class="faint mono" style="font-size:10.5px;line-height:1.6">🎵 Glisse un <b style="color:var(--text-2)">fichier audio</b> sur l'aperçu pour ajouter une musique de fond.</div>
+                <div class="label" style="margin-bottom:12px">🎵 Bande son</div>
+                <button id="edMusicEmpty" onclick="document.getElementById('edMusicIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:14px;padding:13px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Ajouter une musique</button>
                 <div id="edMusicLoaded" style="display:none">
                   <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
-                  <div class="faint mono" style="font-size:10px;margin-bottom:3px">Volume musique</div>
-                  <input type="range" min="0" max="100" value="70" oninput="edSetMusicVol(+this.value)" style="width:100%;margin-bottom:10px">
+                  <div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="faint mono" style="font-size:10px">🎵 Musique</span><span id="edMusicVolLbl" class="mono" style="font-size:10px;color:var(--accent-2)">70%</span></div>
+                  <input type="range" min="0" max="100" value="70" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'" style="width:100%;margin-bottom:12px;accent-color:var(--accent)">
                 </div>
-                <div class="faint mono" style="font-size:10px;margin:8px 0 3px">Volume vidéo (voix)</div>
-                <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value)" style="width:100%">
-                <div class="faint mono" style="font-size:10px;margin:11px 0 4px">Effets sonores — ajoutés au curseur (retirables sur la piste 🔊)</div>
-                <div class="row gap6" style="flex-wrap:wrap">
-                  <button onclick="edAddSfxAtPlayhead('pop')" class="btn btn-ghost btn-sm">🔊 Gloup</button>
-                  <button onclick="edAddSfxAtPlayhead('whoosh')" class="btn btn-ghost btn-sm">🌀 Transition</button>
-                  <button onclick="edAddSfxAtPlayhead('ding')" class="btn btn-ghost btn-sm">🔔 Ding</button>
+                <div class="row" style="justify-content:space-between;margin:0 0 5px"><span class="faint mono" style="font-size:10.5px">🎙 Voix vidéo</span><span id="edVoiceVolLbl" class="mono" style="font-size:10.5px;color:var(--accent-2)">100%</span></div>
+                <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'" style="width:100%;accent-color:var(--accent)">
+                <div class="label" style="margin:14px 0 9px;font-size:10px">Effets sonores — ajoutés au curseur</div>
+                <div class="row gap6">
+                  <button onclick="edAddSfxAtPlayhead('pop')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(20,184,166,.5);background:rgba(20,184,166,.12);color:#2dd4bf">🔊 Gloup</button>
+                  <button onclick="edAddSfxAtPlayhead('whoosh')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">🌀 Transition</button>
+                  <button onclick="edAddSfxAtPlayhead('ding')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🔔 Ding</button>
                 </div>
                 <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
               </div>
@@ -3749,6 +3749,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div class="card" style="padding:16px">
                 <div class="label" style="margin-bottom:10px">🎞 Export</div>
                 <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>Exporter MP4</button>
+                <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
                 <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
               </div>
           </div>
@@ -17538,9 +17539,12 @@ function edDeleteSelected(){ if(!_ed) return; const i=_ed.overlays.findIndex(o=>
 
 let _edFormat='9:16';
 function edUpdateOutputLabel(){
-  const out=document.getElementById('edOutputLabel');
   const labels={720:'720p',1080:'1080p',1440:'2K'};
+  const fmt=_edFormat.replace(':','/');
+  const out=document.getElementById('edOutputLabel');
   if(out) out.textContent='Sortie : '+_edFormat+' · '+(labels[_edQuality]||'1080p')+' · H.264';
+  const cap=document.getElementById('edExportCaption');
+  if(cap) cap.textContent=fmt+' · '+(labels[_edQuality]||'1080p')+' · H.264';
 }
 function edSyncFormatButtons(){
   [['edFmt916','9:16'],['edFmt45','4:5'],['edFmt11','1:1'],['edFmt169','16:9']].forEach(([id,fmt])=>{ const b=document.getElementById(id); if(!b) return; const on=fmt===_edFormat; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; const spans=b.querySelectorAll('span'); if(spans[0]) spans[0].style.borderColor=on?'var(--accent-2)':'var(--text-3)'; if(spans[1]) spans[1].style.color=on?'var(--text)':'var(--text-2)'; });
@@ -17787,8 +17791,15 @@ function edRenderClips(){
   _ed.clips.forEach((c,idx)=>{
     const main=idx===0, active=idx===_ed.activeIdx;
     const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border2)')+';background:'+(active?'var(--accent-soft)':'var(--bg3)');
-    row.innerHTML='<span style="font-size:13px">'+(main?'⭐':'🎞')+'</span><span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(main?'Clip principal':'Clip '+(idx+1))+(active?' • édition':'')+'</span><span class="faint mono" style="font-size:10px">'+edFmt(Math.max(0,c.trimB-c.trimA))+'</span>';
+    row.style.cssText='display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border2)')+';background:'+(active?'var(--accent-soft)':'var(--bg3)');
+    // vignette = première image du clip (pour se repérer)
+    const thumb=document.createElement('div');
+    thumb.style.cssText='width:36px;height:36px;border-radius:8px;flex:0 0 auto;border:1px solid var(--border2);background:repeating-linear-gradient(135deg,oklch(.4 .09 '+(c.hue||18)+') 0 7px,oklch(.28 .07 '+(c.hue||18)+') 7px 14px);background-size:cover;background-position:center';
+    try{ _edExtractThumbs(c,1).then(t=>{ if(t&&t[0]) thumb.style.background='#000 url('+t[0]+') center/cover'; }).catch(()=>{}); }catch(e){}
+    const star=document.createElement('span'); star.style.cssText='font-size:13px;flex:0 0 auto'; star.textContent=main?'⭐':'🎞';
+    const name=document.createElement('span'); name.style.cssText='font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600'; name.textContent=(main?'Clip principal':'Clip '+(idx+1))+(active?' • édition':'');
+    const dur=document.createElement('span'); dur.className='faint mono'; dur.style.cssText='font-size:10px;flex:0 0 auto'; dur.textContent=edFmt(Math.max(0,c.trimB-c.trimA));
+    row.appendChild(thumb); row.appendChild(star); row.appendChild(name); row.appendChild(dur);
     row.onclick=()=>edSelectClip(idx);
     if(!main){
       const up=document.createElement('button'); up.textContent='↑'; up.title='Monter'; up.style.cssText=_edClipBtnCss; up.onclick=(e)=>{e.stopPropagation();edMoveClip(idx,-1);};
