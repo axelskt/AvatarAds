@@ -16042,6 +16042,105 @@ function openVoicePicker(engine){
   _renderVoicePickerList(engine);
 }
 function closeVoicePicker(){ const ov=document.getElementById('voicePickerOverlay'); if(ov) ov.style.display='none'; if(_voicePreviewAudio){ _voicePreviewAudio.pause(); _voicePreviewAudio=null; } }
+
+// ═══════════ ELEVENLABS VOICE DESIGN — décris ta voix → 3 aperçus → choisis ═══════════
+const _VD_SAMPLE = "Salut ! Voici un aperçu de la voix que je viens de créer. Elle est faite sur mesure pour mes vidéos, naturelle et facile à écouter, parfaite pour capter l'attention dès les premières secondes.";
+window._vdPreviews = [];   // [{generated_voice_id, audioUrl, blob}]
+let _vdAudio = null;
+function openVoiceDesign(){
+  closeVoicePicker();
+  let ov=document.getElementById('voiceDesignOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='voiceDesignOverlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.onclick=(e)=>{ if(e.target===ov) closeVoiceDesign(); };
+    ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:480px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)"><div style="font-size:15px;font-weight:800">✨ Créer ma voix · Voice Design</div><button onclick="closeVoiceDesign()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:14px">✕</button></div>
+      <div style="overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:6px">DÉCRIS LA VOIX (genre, âge, ton, accent…)</div>
+          <textarea id="vdDesc" placeholder="ex : voix d'homme français, grave et chaleureuse, débit posé et rassurant, ton de coach expert, légèrement charismatique" style="width:100%;box-sizing:border-box;min-height:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:10px;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:6px">TEXTE D'EXEMPLE (≥ 100 caractères)</div>
+          <textarea id="vdText" style="width:100%;box-sizing:border-box;min-height:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;padding:10px;outline:none;resize:vertical"></textarea>
+        </div>
+        <button id="vdGenBtn" onclick="_vdGeneratePreviews()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">🎧 Générer 3 aperçus</button>
+        <div id="vdResults" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById('vdText').value=_VD_SAMPLE;
+  document.getElementById('vdResults').innerHTML='';
+  ov.style.display='flex';
+}
+function closeVoiceDesign(){ const ov=document.getElementById('voiceDesignOverlay'); if(ov) ov.style.display='none'; if(_vdAudio){ _vdAudio.pause(); _vdAudio=null; } }
+
+async function _vdGeneratePreviews(){
+  const desc=(document.getElementById('vdDesc')?.value||'').trim();
+  const text=(document.getElementById('vdText')?.value||'').trim();
+  if(desc.length<20){ toast('⚠️ Décris la voix un peu plus (≥ 20 caractères)'); return; }
+  if(text.length<100){ toast('⚠️ Le texte d\'exemple doit faire ≥ 100 caractères'); return; }
+  if(_gateFreeGenerate()) return;
+  const btn=document.getElementById('vdGenBtn'); const lbl=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='⏳ Génération des aperçus…'; }
+  const res=document.getElementById('vdResults'); if(res) res.innerHTML='';
+  try{
+    const authH=await getAuthHeader();
+    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-voice/create-previews`,{
+      method:'POST', headers:{...authH,'Content-Type':'application/json'},
+      body:JSON.stringify({ voice_description:desc, text })
+    });
+    if(!resp.ok){ const t=await resp.text().catch(()=>''); throw new Error((resp.status===401?'Abonnement ElevenLabs requis (Voice Design)':'ElevenLabs '+resp.status)+(t?' — '+t.slice(0,80):'')); }
+    const data=await resp.json();
+    const previews=data.previews||data.voice_previews||[];
+    if(!previews.length) throw new Error('Aucun aperçu renvoyé');
+    window._vdPreviews=previews.map((p,i)=>{
+      const b64=p.audio_base_64||p.audio_base64||p.audio;
+      let url=null;
+      try{ const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); url=URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'})); }catch(e){}
+      return { gid:p.generated_voice_id, url };
+    });
+    if(res){
+      res.innerHTML='<div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">ÉCOUTE & CHOISIS</div>'+
+        window._vdPreviews.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--border2);border-radius:11px;background:var(--bg3)">
+          <button onclick="_vdPlay(${i},this)" style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--bg4);border:1px solid var(--border2);color:var(--orange2);cursor:pointer;font-size:14px">▶</button>
+          <div style="flex:1;font-size:13px;font-weight:700">Voix ${i+1}</div>
+          <button onclick="_vdSelect(${i},this)" class="btn btn-sm" style="background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">Choisir</button>
+        </div>`).join('');
+    }
+  }catch(e){ toast('⚠️ '+(e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.innerHTML=lbl; } }
+}
+function _vdPlay(i,btn){
+  if(_vdAudio){ _vdAudio.pause(); _vdAudio=null; }
+  const p=window._vdPreviews[i]; if(!p||!p.url){ toast('⚠️ Aperçu indisponible'); return; }
+  _vdAudio=new Audio(p.url); _vdAudio.play().catch(()=>{});
+}
+async function _vdSelect(i,btn){
+  const p=window._vdPreviews[i]; if(!p||!p.gid){ toast('⚠️ Aperçu invalide'); return; }
+  const desc=(document.getElementById('vdDesc')?.value||'').trim();
+  const lbl=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
+  try{
+    const authH=await getAuthHeader();
+    const name='Ma voix — '+new Date().toLocaleDateString('fr-FR');
+    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-voice/create-voice-from-preview`,{
+      method:'POST', headers:{...authH,'Content-Type':'application/json'},
+      body:JSON.stringify({ voice_name:name, voice_description:desc, generated_voice_id:p.gid })
+    });
+    if(!resp.ok){ const t=await resp.text().catch(()=>''); throw new Error('ElevenLabs '+resp.status+(t?' — '+t.slice(0,80):'')); }
+    const data=await resp.json();
+    const voiceId=data.voice_id||data.voiceId; if(!voiceId) throw new Error('Pas de voice_id renvoyé');
+    // Sauvegarde + sélection
+    const arr=_getClonedVoices(); arr.unshift({ voice_id:voiceId, name, date:new Date().toLocaleDateString('fr-FR') }); _saveClonedVoices(arr);
+    selVoiceId=voiceId;
+    if(typeof _refreshVoiceLabels==='function') _refreshVoiceLabels();
+    closeVoiceDesign();
+    toast('✅ Ta voix est créée et sélectionnée !');
+  }catch(e){ toast('⚠️ '+(e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
+}
 function _renderVoicePickerList(engine){
   const list=document.getElementById('voicePickerList'); if(!list) return;
   const all = engine==='gemini' ? _CARTOON_VOICES : _elevenVoiceList();
@@ -16060,6 +16159,15 @@ function _renderVoicePickerList(engine){
       ${on?'<span style="flex-shrink:0;color:#a855f7;font-size:13px">✓</span>':''}
     </div>`;
   }).join('');
+  // ElevenLabs : bouton « Créer ma voix » (Voice Design) en tête
+  if(engine==='eleven'){
+    list.insertAdjacentHTML('afterbegin',
+      `<div onclick="openVoiceDesign()" style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:11px;border:1px solid rgba(255,107,53,.45);background:rgba(255,107,53,.08);cursor:pointer;margin-bottom:4px" onmouseover="this.style.background='rgba(255,107,53,.16)'" onmouseout="this.style.background='rgba(255,107,53,.08)'">
+        <span style="font-size:17px">✨</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:800;color:var(--orange2)">Créer ma voix (Voice Design)</div><div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">décris la voix exacte → 3 aperçus → tu choisis</div></div>
+        <span style="color:var(--orange2);font-size:16px">→</span>
+      </div>`);
+  }
 }
 function _voiceSelectFromPicker(engine,id){
   if(engine==='gemini'){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; }
