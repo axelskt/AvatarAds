@@ -16025,21 +16025,21 @@ async function _voicePreview(engine,id,btn){
         const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
           method:'POST', body:JSON.stringify({ contents:[{parts:[{text:_VOICE_SAMPLE}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:id } } } } })
         });
-        if(!resp.ok) throw new Error('preview '+resp.status);
+        if(!resp.ok){ const e=await resp.json().catch(()=>({})); const msg=e?.error?.message||('HTTP '+resp.status); console.error('Gemini preview',id,resp.status,e); throw new Error((resp.status===429?'Quota/limite atteinte — réessaie dans 1 min':msg)); }
         const data=await resp.json();
         const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-        const b64=(part?.inlineData||part?.inline_data)?.data; if(!b64) throw new Error('no audio');
+        const b64=(part?.inlineData||part?.inline_data)?.data; if(!b64) throw new Error('Pas d\'audio renvoyé (voix '+id+')');
         blob=new Blob([_pcmToWav(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),24000,1)],{type:'audio/wav'});
       } else {
         const authH=await getAuthHeader();
         const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${id}`,{ method:'POST', headers:{...authH,'Content-Type':'application/json'}, body:JSON.stringify({ text:_VOICE_SAMPLE, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} }) });
-        if(!resp.ok) throw new Error('preview '+resp.status);
+        if(!resp.ok){ const t=await resp.text().catch(()=>''); console.error('ElevenLabs preview',id,resp.status,t); throw new Error(resp.status===401?'Clé ElevenLabs manquante/expirée':('ElevenLabs '+resp.status)); }
         blob=await resp.blob();
       }
       url=URL.createObjectURL(blob); window._voicePreviewCache[key]=url;
     }
     _voicePreviewAudio=new Audio(url); _voicePreviewAudio.play();
-  }catch(e){ toast('⚠️ Aperçu indisponible'); }
+  }catch(e){ console.error('Voice preview error:',e); toast('⚠️ '+(e.message||'Aperçu indisponible')); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=orig||'▶'; } }
 }
 
