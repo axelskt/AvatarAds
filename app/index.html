@@ -625,7 +625,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <div class="nav-i" onclick="nav('imagegen',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
         Images IA
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(77,171,247,0.15);border:1px solid rgba(77,171,247,0.3);color:#4dabf7;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('recorder',this)">
         <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="5" height="7" rx="2.5"/><path d="M2.5 7.5A4.5 4.5 0 0011 9.5M7.5 11v2.5M5.5 13.5h4"/></svg>
@@ -1679,10 +1678,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
-                <!-- Générer depuis le script -->
-                <button onclick="applyScriptAsSubtitles()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
-                  📝 <span>Générer les sous-titres depuis mon script</span>
-                </button>
                 <!-- Tap Sync manuel — gratuit -->
                 <button onclick="startTapSync()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
                   🥁 <span>Tap Sync — synchroniser manuellement</span>
@@ -2626,7 +2621,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div style="margin-bottom:24px">
           <div class="row gap10" style="align-items:center;flex-wrap:wrap">
             <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">🖼</span>Images IA</h2>
-            <span class="tag-beta">BETA</span>
             <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> IMAGE 4K · ULTRA RÉALISTE</span>
           </div>
           <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
@@ -6210,11 +6204,11 @@ function _updateImgQuotaLabel(){
 
 const _IMG_STYLES = [
   { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Hyper-réaliste',   api:'natural', suffix:', hyperréaliste, lumière naturelle, style photo' },
-  { id:'cinema',  icon:'🎬', label:'Cinéma',       sub:'Dramatique',       api:'vivid',   suffix:', style cinématique, couleurs dramatiques, bokeh professionnel' },
-  { id:'studio',  icon:'💡', label:'Studio',       sub:'Fond épuré',       api:'natural', suffix:', fond blanc studio, éclairage professionnel, qualité advertising' },
+  { id:'cinema',  icon:'🧸', label:'Pixar 3D',     sub:'Rendu 3D Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
+  { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit humanisé', api:'vivid', suffix:', personnage fruit humanisé ultra réaliste avec un vrai visage expressif, bras et jambes, vêtements, style cartoon 3D cinématique type Pulpe Studio / FruitDrama, éclairage dramatique' },
   { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', style UGC authentique, casual, lumière naturelle de jour' },
-  { id:'premium', icon:'✨', label:'Premium',      sub:'Haut de gamme',    api:'vivid',   suffix:', style luxury brand, composition élégante, couleurs riches' },
-  { id:'dark',    icon:'🌑', label:'Dark Luxury',  sub:'Sombre & chic',    api:'natural', suffix:', fond sombre, ambiance luxe, éclairage contrasté, éditorial' },
+  { id:'premium', icon:'🤖', label:'Mascotte',     sub:'Perso de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
+  { id:'dark',    icon:'🎨', label:'Autre',        sub:'Style libre',      api:'natural', suffix:'' },
 ];
 
 const _IMG_FORMATS = [
