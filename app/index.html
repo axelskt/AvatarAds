@@ -3023,12 +3023,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
         </div>
 
-        <!-- ④ SOUS-TITRES (après génération) -->
-        <div class="exp-section" style="margin-bottom:0">
-          <div class="exp-section-title">✍️ Sous-titres</div>
-          <div class="faint" style="font-size:11px;font-family:var(--mono);line-height:1.55">Génère d'abord ta vidéo, puis ajoute les sous-titres (style · position · taille) directement sur le rendu, dans l'<b style="color:var(--orange2)">Éditeur</b>.</div>
-        </div>
-
         <div style="flex:1"></div>
 
         <!-- GÉNÉRER -->
@@ -8238,14 +8232,23 @@ function applyTranscript(){
   updateSubPreview();
   toast('✓ Sous-titres appliqués !');
 }
+// Assemble Hook + Script + CTA (= le texte réellement prononcé)
+function _genFullScript(){
+  const hook=(document.getElementById('f-hook')?.value||'').trim();
+  const body=(document.getElementById('voiceTranscriptTA')?.value?.trim()) || (document.getElementById('f-script')?.value?.trim()) || '';
+  const cta=(document.getElementById('f-cta')?.value||'').trim();
+  let full=body;
+  if(hook) full=hook+' '+full;
+  if(cta) full=full+' '+cta;
+  return full.trim();
+}
 function applyScriptAsSubtitles(){
-  const script = (document.getElementById('voiceTranscriptTA')?.value?.trim()) ||
-                 (document.getElementById('f-script')?.value?.trim());
-  if(!script){ toast('⚠️ Écris ton script dans l\'étape Voix d\'abord'); return; }
+  const full=_genFullScript();
+  if(!full){ toast('⚠️ Écris ton script (hook · corps · CTA) d\'abord'); return; }
   const ta = document.getElementById('transcriptInput');
-  if(ta) ta.value = script;
+  if(ta) ta.value = full;
   applyTranscript();
-  toast('✓ Sous-titres générés depuis le script !');
+  toast('✓ Sous-titres = hook + script + CTA !');
 }
 function syncVoiceTranscript(text){
   pendingTranscript = text;
@@ -11234,6 +11237,13 @@ async function startGeneration(){
   const cta = document.getElementById('f-cta').value.trim();
   if(hook) finalScript = hook + ' ' + finalScript;
   if(cta) finalScript = finalScript + ' ' + cta;
+
+  // ⏱️ Auto : copie le script (hook+corps+CTA) dans le transcript des sous-titres → pas besoin de re-transcrire
+  const _ti = document.getElementById('transcriptInput');
+  if(_ti && !_ti.value.trim()){
+    _ti.value = finalScript;
+    try{ pendingTranscript = finalScript; if(typeof populateWordEditor==='function') populateWordEditor(finalScript); if(typeof updateSubPreview==='function') updateSubPreview(); }catch(e){}
+  }
 
   // STEP 1: Script (toujours écrit par l'utilisateur)
   setStep('gp1','on');
@@ -15977,7 +15987,7 @@ function _cartoonRenderVoices(){ _refreshVoiceLabels(); }
 function cartoonPickVoice(id){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _refreshVoiceLabels(); }
 
 // ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
-const _VOICE_SAMPLE = "Salut ! Voici ma voix, est-ce qu'elle colle bien à ton personnage ?";
+const _VOICE_SAMPLE = "Bonjour, voici un aperçu de ma voix pour ta vidéo virale.";
 window._voicePreviewCache = {};
 let _voicePreviewAudio = null;
 function _voiceFavs(engine){ try{ return JSON.parse(localStorage.getItem('aa_fav_voices_'+engine)||'[]'); }catch(e){ return []; } }
