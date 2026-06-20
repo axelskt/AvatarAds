@@ -4341,9 +4341,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           </div>
           <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
         </div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:18px">
-          <div id="sheetPricePro" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1">49,99€</div>
+        <div style="display:flex;align-items:baseline;gap:9px;margin-top:18px">
+          <div id="sheetOldPro" style="font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">64,99€</div>
+          <div id="sheetPricePro" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1;color:#22c55e">49,99€</div>
           <div id="sheetPeriodPro" style="font-size:14px;color:var(--text-3)">/mois</div>
+          <span style="font-size:11px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:20px">-23%</span>
         </div>
         <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour</div>
         <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 150€/an</div>
@@ -5261,7 +5263,7 @@ function sheetToggleBilling(){
   if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
   if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
   const plans = { starter: { m:'29,99€', mp:'/mois', ms:'',               a:'20,83€', ap:'/mois', as:'soit 249,99€/an · -25%' },
-                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour', a:'37,50€', ap:'/mois', as:'soit 449,99€/an · 1,23€/jour' } };
+                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour', a:'37,50€', ap:'/mois', as:'soit 449,99€/an · 1,23€/jour', mOld:'64,99€', aOld:'55,99€' } };
   ['starter','pro'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
     const p = plans[k];
@@ -5273,6 +5275,7 @@ function sheetToggleBilling(){
     if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
     if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : p.ms;
     if(saveEl)   saveEl.style.display = _sheetAnnual ? 'block' : 'none';
+    if(k==='pro'){ const oldEl=document.getElementById('sheetOldPro'); if(oldEl) oldEl.textContent = _sheetAnnual ? p.aOld : p.mOld; }
   });
   // Elite — mise à jour via le tier slider actif
   setSheetEliteTier(_sheetEliteTier);
