@@ -2634,19 +2634,28 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- MODE : Génération / Correction -->
         <div class="row" style="gap:8px;margin-bottom:14px">
-          <button id="imgModeGen" onclick="_imgSetMode('generate')" class="btn btn-sm" style="flex:1;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px">✨ Génération</button>
-          <button id="imgModeCorrect" onclick="_imgSetMode('correct')" class="btn btn-ghost btn-sm" style="flex:1;padding:12px;font-weight:700">🪄 Correction d'image</button>
+          <button id="imgModeGen" onclick="_imgSetMode('generate')" class="btn btn-sm" style="flex:1;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;border:none">✨ Génération</button>
+          <button id="imgModeCorrect" onclick="_imgSetMode('correct')" class="btn btn-sm" style="flex:1;padding:12px;font-weight:700;background:var(--bg3);color:var(--text2);border:1px solid var(--border)">🪄 Correction d'image</button>
         </div>
 
         <div id="imgModelGrid" style="display:none"></div>
 
-        <!-- STYLE PRESETS -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
+        <!-- STYLE PRESETS (mode Génération) -->
+        <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 5c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4-4-1.8-4-4z"/><path d="M5 3v2l1.5 1.5"/></svg>
             Style visuel
           </div>
           <div id="imgStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
+        <!-- CORRECTIONS RAPIDES (mode Correction) -->
+        <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
+          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9l5-5 1.5 1.5-5 5H2z"/><path d="M7 4l1-1 1.5 1.5-1 1z"/></svg>
+            Corrections rapides
+          </div>
+          <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
         </div>
 
         <!-- FORMAT -->
@@ -2674,8 +2683,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:9px;line-height:1.5">Ex : « remplace le fond par un studio », « ajoute des lunettes de soleil », « change la couleur du t-shirt en rouge »</div>
         </div>
 
-        <!-- NOMBRE D'IMAGES -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
+        <!-- NOMBRE D'IMAGES (masqué en mode Correction = 1 seule) -->
+        <div id="imgCountSection" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="3.2" height="8" rx="1"/><rect x="5.8" y="1" width="3.2" height="8" rx="1"/></svg>
@@ -6262,16 +6271,38 @@ function _imgClearRef(){
 
 // ── Mode Génération / Correction (img2img) ──
 let _imgMode = 'generate';
+const _IMG_CORRECT_PRESETS = [
+  { emoji:'✨', label:'Améliorer 4K',   prompt:'améliore et remasterise cette image en 4K ultra haute définition, netteté et détails maximum, rendu photoréaliste pro, en préservant la composition et les visages' },
+  { emoji:'🎬', label:'Fond studio',    prompt:'remplace l\'arrière-plan par un studio lumineux et épuré, éclairage doux professionnel' },
+  { emoji:'🌅', label:'Meilleure lumière', prompt:'améliore l\'éclairage et la balance des couleurs, contraste équilibré, rendu professionnel naturel' },
+  { emoji:'🧹', label:'Supprimer un objet', prompt:'supprime proprement l\'objet/élément indésirable de l\'image et reconstruis le fond de façon réaliste' },
+  { emoji:'👤', label:'Retoucher visage',  prompt:'retouche le visage : peau lisse et naturelle, regard net, lumière flatteuse, sans effet artificiel' },
+  { emoji:'🎨', label:'Changer couleur',   prompt:'change la couleur de l\'élément principal (précise lequel et la couleur souhaitée)' },
+];
+function _imgRenderCorrectPresets(){
+  const g=document.getElementById('imgCorrectPresetsGrid'); if(!g) return;
+  g.innerHTML=_IMG_CORRECT_PRESETS.map(p=>
+    `<button onclick="_imgApplyCorrectPreset('${encodeURIComponent(p.prompt)}')" class="btn btn-sm" style="justify-content:flex-start;text-align:left;border:1px solid var(--border2);background:var(--bg3);font-weight:600;padding:11px 12px">${p.emoji} ${p.label}</button>`
+  ).join('');
+}
+function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
+
 function _imgSetMode(m){
   _imgMode = m;
   const gen = document.getElementById('imgModeGen'), cor = document.getElementById('imgModeCorrect');
-  const onCss = 'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;flex:1', offCss = 'padding:12px;font-weight:700;flex:1';
-  if(gen){ gen.className='btn btn-sm'+(m==='generate'?'':' btn-ghost'); gen.style.cssText = m==='generate'?onCss:offCss; }
-  if(cor){ cor.className='btn btn-sm'+(m==='correct'?'':' btn-ghost'); cor.style.cssText = m==='correct'?onCss:offCss; }
-  const panel = document.getElementById('imgCorrectionPanel'); if(panel) panel.style.display = m==='correct' ? 'block' : 'none';
-  // En correction, le style/preset n'a pas de sens → on grise (optionnel) ; le format reste utile
+  // bordures supprimées : actif = dégradé orange sans bordure ; inactif = fond sombre + bordure discrète
+  const onCss = 'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;flex:1;border:none', offCss = 'background:var(--bg3);color:var(--text2);padding:12px;font-weight:700;flex:1;border:1px solid var(--border)';
+  if(gen){ gen.className='btn btn-sm'; gen.style.cssText = m==='generate'?onCss:offCss; }
+  if(cor){ cor.className='btn btn-sm'; cor.style.cssText = m==='correct'?onCss:offCss; }
+  const corr = m==='correct';
+  const show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'':'none'; };
+  show('imgCorrectionPanel', corr);          // zone d'import
+  show('imgCorrectPresetsSection', corr);    // corrections rapides
+  show('imgStyleSection', !corr);            // style visuel (génération only)
+  show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
+  if(corr) _imgRenderCorrectPresets();
   const pr = document.getElementById('imgPrompt');
-  if(pr) pr.placeholder = m==='correct' ? 'Décris la correction à appliquer (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
+  if(pr) pr.placeholder = corr ? 'Décris la correction à appliquer (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
 }
 function _imgOnRefDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border-2)'; const f=e.dataTransfer?.files?.[0]; if(f) _imgLoadRef(f); }
 function _imgOnRefInput(input){ const f=input?.files?.[0]; if(f) _imgLoadRef(f); }
