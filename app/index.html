@@ -2987,10 +2987,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="expFormatRow" class="row" style="gap:8px"></div>
         </div>
 
-        <!-- ③ DURÉE -->
+        <!-- ③ DURÉE (slider 3→30s) -->
         <div class="exp-section" style="margin-bottom:0">
-          <div class="exp-section-title">⏱ Durée</div>
-          <div id="expDurRow" class="row" style="gap:8px"></div>
+          <div class="exp-section-title">⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">5 s</span></div>
+          <input id="expDurSlider" type="range" min="3" max="30" step="1" value="5" oninput="_expSetDur(this.value)" style="width:100%;accent-color:var(--orange);cursor:pointer">
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ -->
@@ -3005,7 +3006,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="expVoiceRows" style="display:grid;gap:5px"></div>
           <!-- Sous-panneau selon le mode -->
           <div id="expVoiceTtsPanel" style="display:none;margin-top:10px">
-            <textarea id="expVoiceText" placeholder="Écris ce que la voix doit dire…" style="width:100%;box-sizing:border-box;min-height:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:9px;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-bottom:7px;line-height:1.5">La voix lira ce que tu écris dans le prompt principal (ⓘ inclus la réplique dedans).</div>
             <div id="expGeminiVoicePanel" style="margin-top:7px">
               <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX GEMINI</div>
               <button onclick="openVoicePicker('gemini')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🎙 Voix : <b id="expGeminiVoiceLabel" style="color:var(--orange2)">Puck</b></span><span style="color:var(--text3);font-size:11px">écouter · parcourir ▾</span></button>
@@ -3024,12 +3025,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <div style="flex:1"></div>
-
-        <!-- GÉNÉRER -->
-        <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
-        </button>
-        <div class="center faint mono" style="font-size:11px;margin-top:-4px">1 vidéo IA · 720p · ~30 s</div>
+        <div class="faint mono" style="font-size:10px;text-align:center">Le bouton Générer est en bas à droite →</div>
       </div>
 
       <!-- ══ CENTER — Stage ══ -->
@@ -3073,8 +3069,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0">
-              <textarea id="expPrompt" placeholder="Décris la vidéo que tu veux créer…  (ex : un coach fitness explique sa routine du matin, énergique, face caméra)" style="flex:1;min-height:96px;max-height:160px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:14.5px;line-height:1.5;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-              <input id="expDialogue" type="text" placeholder="💬 Réplique (lip-sync) — ce que le perso dit à voix haute (optionnel)" style="box-sizing:border-box;background:var(--bg3);border:1px solid rgba(255,107,53,.35);border-radius:11px;padding:11px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='rgba(255,107,53,.35)'">
+              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:96px;max-height:160px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:14.5px;line-height:1.5;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <button onclick="_expEnhance()" class="btn btn-sm" style="background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.4);color:var(--orange2);font-weight:700">✦ Améliorer</button>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')">💬 Face caméra</span>
@@ -3083,6 +3078,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')">🛍 Produit</span>
               </div>
             </div>
+          </div>
+          <!-- Générer (bas à droite, style Remakeit) -->
+          <div class="row" style="justify-content:flex-end;align-items:center;gap:14px;margin-top:14px">
+            <span class="faint mono" id="expGenCaption" style="font-size:11px">1 vidéo IA · 720p · 5 s</span>
+            <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="min-width:220px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
+            </button>
           </div>
         </div>
       </div>
@@ -14766,7 +14768,7 @@ window._expVoice   = 'native';        // native | gemini | eleven | import
 window._expGeminiVoice = 'Puck';
 window._expVoiceBlob = null;          // voix générée/importée (à muxer dans l'Éditeur)
 
-const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'} ];
+const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'}, {v:'4k',l:'4K 👑'} ];
 const EXP_VOICES = [
   { id:'native', emoji:'🎬', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
   { id:'gemini', emoji:'✨', name:'Gemini TTS',         desc:'voix IA depuis ton script' },
@@ -14802,14 +14804,9 @@ function initExpress(){
       return `<button onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${f.l}</button>`;
     }).join('');
   }
-  // Durée
-  const dr = document.getElementById('expDurRow');
-  if(dr){
-    dr.innerHTML = EXP_DURS.map(d=>{
-      const on=d.v===window._expDur;
-      return `<button onclick="_expPickDur(${d.v})" data-exp-dur="${d.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${d.l}</button>`;
-    }).join('');
-  }
+  // Durée (slider)
+  const ds = document.getElementById('expDurSlider');
+  if(ds){ ds.value = window._expDur||5; const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDur||5)+' s'; }
   // Qualité
   const qr = document.getElementById('expQualRow');
   if(qr){
@@ -14820,10 +14817,15 @@ function initExpress(){
   }
   _expRenderVoices();
   _expSyncSubToggle();
+  _expUpdateGenCaption();
 }
+function _expUpdateGenCaption(){
+  const c=document.getElementById('expGenCaption');
+  if(c){ const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,''); c.textContent=`1 vidéo IA · ${q||'720p'} · ${window._expDur||5} s`; }
+}
+function _expSetDur(v){ window._expDur=parseInt(v)||5; const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=window._expDur+' s'; _expUpdateGenCaption(); }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
-function _expPickDur(v){ window._expDur=v; initExpress(); }
 function _expPickQual(v){ window._expQuality=v; initExpress(); }
 
 // ── Voix ──
@@ -14864,8 +14866,8 @@ async function _expBuildVoice(){
     if(!window._expVoiceBlob) throw new Error('Importe un fichier voix d\'abord');
     return window._expVoiceBlob;
   }
-  const text=(document.getElementById('expVoiceText')?.value||'').trim();
-  if(!text) throw new Error('Écris le texte de la voix');
+  const text=(document.getElementById('expPrompt')?.value||'').trim();
+  if(!text) throw new Error('Écris ton texte dans le prompt');
   if(window._expVoice==='gemini'){
     const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
       method:'POST',
@@ -14991,17 +14993,14 @@ async function expressCreate(){
 
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'🎬 Génération de la vidéo…');
-    let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic';
-    // 💬 Réplique → lip-sync Veo natif
-    const _expDiag = (document.getElementById('expDialogue')?.value||'').trim();
-    if(_expDiag && window._expVoice==='native'){
-      animPrompt += `. The subject looks at the camera and says out loud: "${_expDiag.replace(/"/g,'\\"')}". Accurate lip-sync, mouth movements matching the spoken words, clear audible voice.`;
-    }
+    // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
+    let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
+      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
     const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning', {
       method:'POST',
       body: JSON.stringify({
         instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
-        parameters:{ durationSeconds: (window._expDur||5)>=10?10:8, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality||'720p'), generateAudio:useNativeAudio }
+        parameters:{ durationSeconds: parseInt(window._expDur)||5, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality==='4k'?'2160p':(window._expQuality||'720p')), generateAudio:useNativeAudio }
       })
     });
     if(!startResp.ok){ const e=await startResp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+startResp.status)); }
@@ -15930,12 +15929,10 @@ function _cartoonGate(){
 const _CARTOON_VOICES = [
   { id:'Puck',       emoji:'⚡', name:'Puck',       desc:'enjoué · jeune',        match:'perso fun / hype' },
   { id:'Fenrir',     emoji:'🔥', name:'Fenrir',     desc:'punchy · intense',      match:'pub / accroche' },
-  { id:'Kore',       emoji:'🎯', name:'Kore',       desc:'ferme · clair',         match:'voix pro / explainer' },
   { id:'Charon',     emoji:'🐻', name:'Charon',     desc:'grave · informatif',    match:'mascotte masculine' },
   { id:'Aoede',      emoji:'🌸', name:'Aoede',      desc:'douce · légère',        match:'perso doux / lifestyle' },
   { id:'Leda',       emoji:'🧒', name:'Leda',       desc:'jeune · vive',          match:'enfant / cartoon kid' },
   { id:'Orus',       emoji:'💼', name:'Orus',       desc:'assuré · ferme',        match:'corporate / autorité' },
-  { id:'Zephyr',     emoji:'☀️', name:'Zephyr',     desc:'lumineux · clair',      match:'lifestyle positif' },
   { id:'Callirrhoe', emoji:'😎', name:'Callirrhoe', desc:'décontractée',          match:'casual / vlog' },
   { id:'Autonoe',    emoji:'✨', name:'Autonoe',    desc:'lumineuse',             match:'beauté / feel-good' },
   { id:'Enceladus',  emoji:'🌬️', name:'Enceladus',  desc:'soufflé · doux',        match:'ASMR / calme' },
@@ -15946,7 +15943,6 @@ const _CARTOON_VOICES = [
   { id:'Algenib',    emoji:'🪨', name:'Algenib',    desc:'grave · granuleux',     match:'voix de marque forte' },
   { id:'Rasalgethi', emoji:'📚', name:'Rasalgethi', desc:'informatif',            match:'éducatif / news' },
   { id:'Laomedeia',  emoji:'🎉', name:'Laomedeia',  desc:'enjouée',               match:'promo / énergie' },
-  { id:'Achernar',   emoji:'🤍', name:'Achernar',   desc:'douce',                 match:'soin / bien-être' },
   { id:'Gacrux',     emoji:'🎙️', name:'Gacrux',     desc:'mature',                match:'expert / posé' },
   { id:'Sulafat',    emoji:'🔥', name:'Sulafat',    desc:'chaleureuse',           match:'proximité / DM' },
 ];
@@ -15987,7 +15983,7 @@ function _cartoonRenderVoices(){ _refreshVoiceLabels(); }
 function cartoonPickVoice(id){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _refreshVoiceLabels(); }
 
 // ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
-const _VOICE_SAMPLE = "Bonjour, voici un aperçu de ma voix pour ta vidéo virale.";
+const _VOICE_SAMPLE = "Bonjour, voici un aperçu de ma voix.";
 window._voicePreviewCache = {};
 let _voicePreviewAudio = null;
 function _voiceFavs(engine){ try{ return JSON.parse(localStorage.getItem('aa_fav_voices_'+engine)||'[]'); }catch(e){ return []; } }
