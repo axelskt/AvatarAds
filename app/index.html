@@ -2662,16 +2662,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         <div id="imgCorrectionPanel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5"/><circle cx="4.3" cy="4.3" r=".9"/><path d="M10.5 7.5l-2.5-2.5L2.5 10.5"/></svg>
-            Image à corriger
+            <span id="imgRefTitle">Image à corriger</span>
+            <span id="imgRefClear" onclick="_imgClearRefZone()" style="display:none;margin-left:auto;cursor:pointer;color:var(--orange2);text-transform:none;letter-spacing:0">✕ retirer</span>
           </div>
           <div id="imgRefDrop" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_imgOnRefDrop(event)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:22px 20px;border:1.5px dashed var(--border-2);border-radius:12px;cursor:pointer;background:var(--bg3);transition:all .15s;position:relative;overflow:hidden;min-height:120px">
             <input type="file" id="imgRefInput" accept="image/*" style="display:none" onchange="_imgOnRefInput(this)">
             <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <div style="font-size:12.5px;font-weight:700;color:var(--text)">Importe l'image à modifier</div>
-            <div class="faint" style="font-size:10.5px;font-family:var(--mono)">puis décris la correction dans le prompt ci-dessous</div>
+            <div id="imgRefLabel" style="font-size:12.5px;font-weight:700;color:var(--text)">Importe l'image à modifier</div>
+            <div id="imgRefHint" class="faint" style="font-size:10.5px;font-family:var(--mono)">puis décris la correction dans le prompt ci-dessous</div>
           </div>
-          <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:9px;line-height:1.5">Ex : « remplace le fond par un studio », « ajoute des lunettes de soleil », « change la couleur du t-shirt en rouge »</div>
+          <div id="imgRefExamples" class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:9px;line-height:1.5">Ex : « remplace le fond par un studio », « ajoute des lunettes de soleil », « change la couleur du t-shirt en rouge »</div>
         </div>
 
         <!-- NOMBRE D'IMAGES (masqué en mode Correction = 1 seule) -->
@@ -6296,14 +6297,21 @@ function _imgSetMode(m){
   if(cor){ cor.className='btn btn-sm'; cor.style.cssText = m==='correct'?onCss:offCss; }
   const corr = m==='correct';
   const show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'':'none'; };
-  show('imgCorrectionPanel', corr);          // zone d'import
-  show('imgCorrectPresetsSection', corr);    // corrections rapides
+  show('imgCorrectionPanel', true);          // zone image : visible dans les 2 modes (réf optionnelle en génération)
+  show('imgCorrectPresetsSection', corr);    // corrections rapides (correction only)
   show('imgStyleSection', !corr);            // style visuel (génération only)
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
   if(corr) _imgRenderCorrectPresets();
+  // Labels de la zone image selon le mode
+  const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
+  setTxt('imgRefTitle', corr ? 'Image à corriger' : 'Image de référence (optionnel)');
+  setTxt('imgRefLabel', corr ? 'Importe l\'image à modifier' : 'Glisse une image de référence');
+  setTxt('imgRefHint',  corr ? 'puis décris la correction dans le prompt' : 'l\'IA s\'en inspire comme modèle');
+  show('imgRefExamples', corr);
   const pr = document.getElementById('imgPrompt');
   if(pr) pr.placeholder = corr ? 'Décris la correction à appliquer (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
 }
+function _imgClearRefZone(){ _imgClearRef(); const p=document.getElementById('imgRefPreview'); if(p){p.style.display='none';p.src='';} const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--border-2)'; const c=document.getElementById('imgRefClear'); if(c) c.style.display='none'; }
 // « Modifier cette image » : bascule en mode Correction avec l'image générée comme source
 async function _imgEditThis(){
   const img=document.getElementById('imgOutput');
@@ -6324,7 +6332,7 @@ function _imgLoadRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
   _imgRefFile = file;
   const r=new FileReader();
-  r.onload=()=>{ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)'; toast('✅ Image chargée'); };
+  r.onload=()=>{ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)'; const c=document.getElementById('imgRefClear'); if(c) c.style.display='inline'; toast('✅ Image chargée'); };
   r.readAsDataURL(file);
 }
 
@@ -6598,6 +6606,7 @@ function initImageGen(){
   _imgInitSuggestions();
   _imgRenderHistory();
   _updateImgQuotaLabel();
+  _imgSetMode(_imgMode||'generate'); // affiche la zone image de réf en génération
 }
 
 // Helper : génère UNE image et retourne son URL (ou throw) — GPT Image (gpt-image-1)
@@ -6672,22 +6681,24 @@ async function generateImage(){
     const suffix = _imgSelectedStyleSuffix;
     const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
 
-    // ── Mode CORRECTION (img2img) : 1 image éditée ──
-    if(_imgMode === 'correct'){
-      if(!_imgRefFile){ toast('⚠️ Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
+    // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
+    if(_imgMode === 'correct' || _imgRefFile){
+      if(_imgMode === 'correct' && !_imgRefFile){ toast('⚠️ Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
       const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
       const gptSize = sizeMap[size] || '1024x1024';
+      // En correction → prompt brut ; en génération avec réf → prompt + style
+      const editPrompt = (_imgMode === 'correct') ? prompt : enhancedPrompt;
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Correction en cours…';
-      const url = await _imgEditOne(token, prompt, _imgRefFile, gptSize);
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
+      const url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
       _imgMonthIncrement();
       _imgShowSingle(url, size);
-      _imgSaveHistory(url, 'Correction', size);
+      _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('🪄 Image corrigée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
