@@ -8944,7 +8944,11 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
       // « DANA WHITE » — grosse écriture blanche, contour noir épais + ombre/halo, MAJUSCULES
       html+=`<span style="${base}font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:${Math.round(sz*1.18)}px;color:#fff;-webkit-text-stroke:${stroke+2}px #000;text-shadow:0 0 4px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000,4px 5px 7px rgba(0,0,0,.65);margin:0 3px;text-transform:uppercase;letter-spacing:.6px">${w}</span>`;
     }
-    else if(style==='karaoke') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${active?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
+    else if(style==='karaoke'){
+      // Karaoké : le surlignage balaie de gauche à droite → tous les mots déjà prononcés sont remplis
+      const kFill = (activeIdx!==undefined && activeIdx!==null) ? (i <= activeIdx) : (i===0);
+      html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${kFill?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
+    }
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
   // During animated preview, never apply entry animation class (would re-trigger on every word)
@@ -13405,7 +13409,8 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       x = Math.max(W*0.04, Math.min(W*0.96 - lineW, x));
 
       lineIdxs.forEach(i=>{
-        const active = i === activeIdx;
+        // Surlignage cumulatif : tous les mots déjà prononcés sont remplis (balayage G→D)
+        const active = (activeIdx!==undefined && activeIdx!==null) ? (i <= activeIdx) : (i===0);
         const pw = widths[i];
         const ph = Math.round(sz * 1.25);
         const r  = Math.round(sz * 0.15);
