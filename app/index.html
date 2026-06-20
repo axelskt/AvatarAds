@@ -16030,8 +16030,11 @@ function _voiceSelectFromPicker(engine,id){
   closeVoicePicker();
   toast('✅ Voix sélectionnée');
 }
+const _SILENT_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
 async function _voicePreview(engine,id,btn){
-  if(_voicePreviewAudio){ _voicePreviewAudio.pause(); _voicePreviewAudio=null; }
+  // ── Déblocage autoplay Safari : on amorce l'élément audio DANS le geste utilisateur ──
+  const a = _voicePreviewAudio || (_voicePreviewAudio = new Audio());
+  try{ a.pause(); a.src=_SILENT_WAV; a.play().catch(()=>{}); }catch(e){}
   const key=engine+':'+id;
   const orig=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='⏳'; }
   try{
@@ -16055,7 +16058,9 @@ async function _voicePreview(engine,id,btn){
       }
       url=URL.createObjectURL(blob); window._voicePreviewCache[key]=url;
     }
-    _voicePreviewAudio=new Audio(url); _voicePreviewAudio.play();
+    // On réutilise l'élément amorcé dans le geste → lecture autorisée dès le 1er clic
+    a.src=url; a.currentTime=0;
+    try{ await a.play(); }catch(_){ toast('▶ Reclique pour écouter'); }
   }catch(e){ console.error('Voice preview error:',e); toast('⚠️ '+(e.message||'Aperçu indisponible')); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=orig||'▶'; } }
 }
