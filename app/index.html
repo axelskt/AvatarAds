@@ -3080,6 +3080,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0">
               <textarea id="expPrompt" placeholder="Décris la vidéo que tu veux créer…  (ex : un coach fitness explique sa routine du matin, énergique, face caméra)" style="flex:1;min-height:96px;max-height:160px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:14.5px;line-height:1.5;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <input id="expDialogue" type="text" placeholder="💬 Réplique (lip-sync) — ce que le perso dit à voix haute (optionnel)" style="box-sizing:border-box;background:var(--bg3);border:1px solid rgba(255,107,53,.35);border-radius:11px;padding:11px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='rgba(255,107,53,.35)'">
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <button onclick="_expEnhance()" class="btn btn-sm" style="background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.4);color:var(--orange2);font-weight:700">✦ Améliorer</button>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')">💬 Face caméra</span>
@@ -3199,6 +3200,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <button onclick="cartoonAnimPreset('danse de joie, bras levés, expression excitée, énergie positive')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">💃 Dance</button>
               <button onclick="cartoonAnimPreset('présente un produit à la caméra, clin d\'oeil, sourire complice')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">📦 Présente</button>
               <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'">👋 Salue</button>
+            </div>
+
+            <!-- 💬 Réplique → lip-sync Veo natif -->
+            <div id="cartoonDialogueWrap" style="margin-top:12px;padding:11px;border:1px solid rgba(168,85,247,0.28);border-radius:10px;background:rgba(168,85,247,0.05)">
+              <div style="font-size:10px;font-family:var(--mono);color:#c4a3f7;margin-bottom:6px">💬 Réplique du personnage <span style="color:var(--text3)">· lip-sync Veo</span></div>
+              <textarea id="cartoonDialogue" placeholder="Ce que le perso dit à voix haute, ex : Mon Dieu, mais qu'est-ce que tu fais ?!" style="width:100%;box-sizing:border-box;min-height:48px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.5)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <div style="display:flex;align-items:center;gap:7px;margin-top:7px">
+                <span style="font-size:9px;font-family:var(--mono);color:var(--text3)">Ton de voix :</span>
+                <input id="cartoonVoiceTone" type="text" placeholder="ex : voix féminine jeune, dramatique" style="flex:1;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--font);font-size:11px;padding:6px 8px;outline:none">
+              </div>
+              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:6px;line-height:1.5">Avec <b style="color:#c4a3f7">Veo</b>, la réplique est dite + bouche synchronisée (1 passe). Laisse vide pour une vidéo muette.</div>
             </div>
 
             <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:12px;margin-bottom:5px">Modèle d'animation :</div>
@@ -14969,7 +14981,12 @@ async function expressCreate(){
 
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'🎬 Génération de la vidéo…');
-    const animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic';
+    let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic';
+    // 💬 Réplique → lip-sync Veo natif
+    const _expDiag = (document.getElementById('expDialogue')?.value||'').trim();
+    if(_expDiag && window._expVoice==='native'){
+      animPrompt += `. The subject looks at the camera and says out loud: "${_expDiag.replace(/"/g,'\\"')}". Accurate lip-sync, mouth movements matching the spoken words, clear audible voice.`;
+    }
     const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning', {
       method:'POST',
       body: JSON.stringify({
@@ -16186,8 +16203,15 @@ async function cartoonGenVideo(btn){
   if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
   if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
 
-  const animPrompt = document.getElementById('cartoonAnimPrompt').value.trim() ||
+  let animPrompt = document.getElementById('cartoonAnimPrompt').value.trim() ||
     'The character walks toward the camera with enthusiasm, friendly expression, smooth Pixar-style animation';
+
+  // 💬 Réplique → lip-sync Veo natif (injectée dans le prompt)
+  const _diag = (document.getElementById('cartoonDialogue')?.value||'').trim();
+  const _tone = (document.getElementById('cartoonVoiceTone')?.value||'').trim();
+  if(_diag && window._cartoonVidModel !== 'seedance'){
+    animPrompt += `. The character looks at the camera and says out loud, in French${_tone?(' with '+_tone):''}: "${_diag.replace(/"/g,'\\"')}". Accurate lip-sync with mouth movements precisely matching the spoken words, clear audible voice.`;
+  }
 
   if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">⏳ Lancement…</span>'; }
   document.getElementById('cartoonVidProgress').style.display = 'block';
