@@ -17701,7 +17701,7 @@ function edPlay(){
 }
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
 
-function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed) el.textContent=edFmt(_ed.video.currentTime)+' / '+edFmt(_ed.dur); }
+function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmt(Math.min(edGlobalNow(),tot))+' / '+edFmt(tot); } }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
 // déplace la lecture au temps GLOBAL gt (gère le multi-clip en changeant de clip silencieusement)
 function edScrubTo(gt){
