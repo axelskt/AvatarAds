@@ -6170,9 +6170,9 @@ function _imgMonthKey(){ const d=new Date(); return 'aa_img_'+d.getFullYear()+'_
 function _imgMonthLimit(){
   const p=(currentMember?.plan||'free').toLowerCase();
   if(p==='developer') return 9999; // illimité
-  if(p==='elite')     return 50;
-  if(p==='pro')       return 20;
-  if(p==='starter')   return 10;
+  if(p==='elite')     return 100;
+  if(p==='pro')       return 50;
+  if(p==='starter')   return 20;
   return 0; // free → pas d'accès
 }
 function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
@@ -14813,7 +14813,7 @@ window._expVoice   = 'native';        // native | gemini | eleven | import
 window._expGeminiVoice = 'Puck';
 window._expVoiceBlob = null;          // voix générée/importée (à muxer dans l'Éditeur)
 
-const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'}, {v:'4k',l:'4K 👑'} ];
+const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'} ]; /* 4K réservé Élite plus tard */
 const EXP_VOICES = [
   { id:'native', emoji:'🎬', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
   { id:'gemini', emoji:'✨', name:'Gemini TTS',         desc:'voix IA depuis ton script' },
@@ -15041,7 +15041,7 @@ async function expressCreate(){
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
-    const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning', {
+    const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning', {
       method:'POST',
       body: JSON.stringify({
         instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
@@ -16406,7 +16406,7 @@ async function cartoonGenVideo(btn){
     } else {
       // 1. Démarrer la génération Veo 3.1 Fast
       const startResp = await _cartoonProxyFetch(
-        '/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning',
+        '/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning',
         {
           method: 'POST',
           body: JSON.stringify({
