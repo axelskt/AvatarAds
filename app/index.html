@@ -398,9 +398,13 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .exp-prog-pct{font-size:11px;font-family:var(--mono);color:var(--text3);min-width:32px;text-align:right}
 .exp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 22px;margin-bottom:14px}
 .exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.exp-wpg-chip{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;transition:all .15s}
-.exp-wpg-chip:hover{border-color:var(--border2);color:var(--text2)}
+.exp-wpg-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:22px;font-size:12.5px;font-weight:600;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s}
+.exp-wpg-chip:hover{border-color:var(--border);color:var(--text)}
 .exp-wpg-chip.on{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
+/* Cartes de presets Express (style · format · qualité · voix) — sélection = bordure orange + fond chaud */
+.exp-card{border:1.5px solid var(--border2);background:var(--bg3);border-radius:14px;cursor:pointer;transition:border-color .15s,background .15s}
+.exp-card:hover{border-color:var(--border)}
+.exp-card.on{border-color:rgba(255,107,53,.85);background:rgba(255,107,53,.08)}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
 .ph-title{font-size:20px;font-weight:800;letter-spacing:-0.5px}
 .ph-sub{font-size:12px;color:var(--text2);margin-top:3px}
@@ -3038,7 +3042,6 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
         </div>
 
         <div style="flex:1"></div>
-        <div class="faint mono" style="font-size:10px;text-align:center">Le bouton Générer est en bas à droite →</div>
       </div>
 
       <!-- ══ CENTER — Stage ══ -->
@@ -3049,42 +3052,43 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div id="expResultPlaceholder" style="width:100%;max-width:940px;align-self:center;max-height:100%;overflow-y:auto;padding:4px 2px">
             <h2 style="font-size:37px;font-weight:800;line-height:1.04;margin:0 0 12px;color:var(--text);letter-spacing:-.6px">Crée des vidéos en un clic</h2>
             <p class="muted" style="font-size:15.5px;line-height:1.5;margin:0 0 28px;max-width:600px">Plus de 250 styles de mouvement, cadrage et VFX — ou laisse l'IA gérer en mode auto.</p>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
 
               <!-- ① Choisis un style -->
-              <div class="card" style="position:relative;padding:18px 18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">1</div>
-                <div style="height:210px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:9px;overflow:hidden;position:relative;margin-bottom:16px">
-                  <div style="width:42px;height:104px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px"><span class="mono faint" style="font-size:6.5px">TRACKING</span></div>
-                  <div style="width:68px;height:150px;border-radius:11px;background:linear-gradient(160deg,#1e6b3a,#2fa35a);box-shadow:0 10px 24px -8px rgba(47,163,90,.6);position:relative">
-                    <span style="position:absolute;top:7px;right:7px;font-size:7px;font-weight:800;background:rgba(0,0,0,.4);color:#fff;border-radius:4px;padding:1px 4px">CC</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent-2)" style="position:absolute;bottom:8px;right:6px"><path d="M3 3l7.07 17 2.51-7.42L20 10.07z"/></svg>
+              <div class="card" style="position:relative;padding:18px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
+                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">1</div>
+                <div style="height:230px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:10px;overflow:hidden;position:relative;margin-bottom:16px">
+                  <div style="width:50px;height:120px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">TRACKING</span></div>
+                  <div style="width:84px;height:188px;border-radius:13px;background:linear-gradient(180deg,#16542b,#34995a);border:2px solid var(--orange);box-shadow:0 10px 26px -8px rgba(47,163,90,.55);position:relative">
+                    <span style="position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:2px 5px">CC</span>
+                    <span style="position:absolute;bottom:10px;right:10px;font-size:20px">👆</span>
                   </div>
-                  <div style="width:42px;height:104px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px"><span class="mono faint" style="font-size:6.5px">CORPORATE</span></div>
+                  <div style="width:50px;height:120px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">CORPORATE</span></div>
                 </div>
                 <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Choisis un style</div>
                 <div class="muted" style="font-size:12.5px;line-height:1.4">Sélectionne un style visuel : réaliste, cartoon, studio…</div>
               </div>
 
               <!-- ② Rédige ton script -->
-              <div class="card" style="position:relative;padding:18px 18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">2</div>
-                <div style="height:210px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);padding:18px;margin-bottom:16px;display:flex;flex-direction:column;justify-content:center">
-                  <div class="row gap6" style="margin-bottom:16px;color:var(--text2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span class="mono" style="font-size:9.5px;letter-spacing:1px;font-weight:700">TON SCRIPT</span></div>
-                  <div style="height:8px;border-radius:5px;background:var(--border2);margin-bottom:9px"></div>
-                  <div style="height:8px;border-radius:5px;background:var(--border2);margin-bottom:9px"></div>
-                  <div style="height:8px;width:62%;border-radius:5px;background:var(--accent);margin-bottom:18px"></div>
-                  <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:8px;padding:6px 11px">✦ Améliorer avec l'IA</span>
+              <div class="card" style="position:relative;padding:18px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
+                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">2</div>
+                <div style="height:230px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);padding:24px 22px;margin-bottom:16px;display:flex;flex-direction:column;justify-content:center">
+                  <div class="row" style="gap:9px;margin-bottom:20px;color:var(--text2);align-items:center"><span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--orange2);font-size:18px;line-height:1">T</span><span class="mono" style="font-size:10px;letter-spacing:1.5px;font-weight:700">TON SCRIPT</span></div>
+                  <div style="height:9px;border-radius:5px;background:var(--border2);margin-bottom:11px"></div>
+                  <div style="height:9px;width:90%;border-radius:5px;background:var(--border2);margin-bottom:11px"></div>
+                  <div style="height:9px;border-radius:5px;background:var(--border2);margin-bottom:18px"></div>
+                  <div class="row" style="align-items:center;gap:5px;margin-bottom:20px"><div style="height:9px;width:44%;border-radius:5px;background:var(--accent)"></div><div style="width:2px;height:15px;background:var(--orange2)"></div></div>
+                  <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--orange2);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:22px;padding:7px 14px">✦ Améliorer avec l'IA</span>
                 </div>
                 <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Rédige ton script</div>
                 <div class="muted" style="font-size:12.5px;line-height:1.4">Décris ta vidéo et ce que le perso doit dire à voix haute.</div>
               </div>
 
               <!-- ③ Obtiens ta vidéo -->
-              <div class="card" style="position:relative;padding:18px 18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">3</div>
-                <div style="height:210px;border-radius:12px;background:linear-gradient(120deg,#c8902f,#2c8f57 52%,#1f6ec0);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 10px 26px -12px rgba(0,0,0,.6)">
-                  <div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35)"><svg width="22" height="22" viewBox="0 0 24 24" fill="#111" style="margin-left:3px"><path d="M8 5v14l11-7z"/></svg></div>
+              <div class="card" style="position:relative;padding:18px;background:var(--bg3);border:1.5px solid rgba(255,107,53,.55);border-radius:18px;text-align:left">
+                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">3</div>
+                <div style="height:230px;border-radius:14px;background:linear-gradient(120deg,#c8902f,#2c8f57 52%,#1f6ec0);border:3px solid #fff;display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 10px 26px -12px rgba(0,0,0,.6)">
+                  <svg width="54" height="54" viewBox="0 0 24 24" fill="#fff" style="filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))"><path d="M8 5v14l11-7z"/></svg>
                 </div>
                 <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Obtiens ta vidéo</div>
                 <div class="muted" style="font-size:12.5px;line-height:1.4">Clique sur Générer pour créer ta vidéo animée finale !</div>
@@ -3129,7 +3133,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0">
               <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:96px;max-height:160px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:14.5px;line-height:1.5;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-                <button onclick="_expEnhance()" class="btn btn-sm" style="background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.4);color:var(--orange2);font-weight:700">✦ Améliorer</button>
+                <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')">💬 Face caméra</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')">🧸 Cartoon</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')">💪 Fitness</span>
@@ -14870,13 +14874,20 @@ window._expVoice   = 'native';        // native | gemini | eleven | import
 window._expGeminiVoice = 'Puck';
 window._expVoiceBlob = null;          // voix générée/importée (à muxer dans l'Éditeur)
 
-const EXP_QUALITIES = [ {v:'720p',l:'720p'}, {v:'1080p',l:'1080p ✦'} ]; /* 4K réservé Élite plus tard */
+const EXP_QUALITIES = [ {v:'720p',l:'720p',note:''}, {v:'1080p',l:'1080p',note:'✦'} ]; /* 4K réservé Élite plus tard */
 const EXP_VOICES = [
-  { id:'native', emoji:'🎬', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
-  { id:'gemini', emoji:'✨', name:'Gemini TTS',         desc:'voix IA depuis ton script' },
-  { id:'eleven', emoji:'🔊', name:'ElevenLabs',         desc:'voix premium / clonée' },
-  { id:'import', emoji:'📁', name:'Importer une voix',  desc:'mp3 · wav · mp4' },
+  { id:'native', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
+  { id:'gemini', name:'Gemini TTS',         desc:'voix générée · 11 timbres' },
+  { id:'eleven', name:'ElevenLabs',         desc:'Voice Design + presets' },
+  { id:'import', name:'Importer une voix',  desc:'MP3 · WAV · M4A · MP4' },
 ];
+// Icônes SVG par mode de voix
+const _EXP_VOICE_ICON = {
+  native:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
+  gemini:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>',
+  eleven:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7M19 5.5a8 8 0 0 1 0 13"/></svg>',
+  import:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>',
+};
 
 const EXP_STYLES = [
   { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic, cinematic lighting, real human, photorealistic' },
@@ -14884,7 +14895,7 @@ const EXP_STYLES = [
   { id:'ugc',      label:'UGC réel',   sub:'selfie authentique', prompt:'authentic UGC selfie style, handheld phone camera, natural daylight, casual realistic' },
   { id:'studio',   label:'Studio',     sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
 ];
-const EXP_FORMATS = [ {v:'9:16',l:'📱 Portrait 9:16'}, {v:'16:9',l:'🖥 Paysage 16:9'} ];
+const EXP_FORMATS = [ {v:'9:16',icon:'📱',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'🖥',name:'Paysage',ratio:'16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 
 function initExpress(){
@@ -14893,9 +14904,9 @@ function initExpress(){
   if(sg){
     sg.innerHTML = EXP_STYLES.map(s=>{
       const on = s.id===window._expStyle;
-      return `<div onclick="_expPickStyle('${s.id}')" class="exp-style-card${on?' on':''}" data-exp-style="${s.id}" style="padding:11px 12px;border-radius:12px;border:1px solid ${on?'rgba(255,107,53,.5)':'var(--border2)'};background:${on?'rgba(255,107,53,.1)':'var(--bg3)'};cursor:pointer;transition:all .15s">
-        <div style="font-size:13px;font-weight:700;color:${on?'var(--orange2)':'var(--text)'}">${s.label}</div>
-        <div class="faint" style="font-size:10px;font-family:var(--mono);margin-top:2px">${s.sub}</div></div>`;
+      return `<div onclick="_expPickStyle('${s.id}')" class="exp-card${on?' on':''}" data-exp-style="${s.id}" style="padding:15px 16px">
+        <div style="font-size:16px;font-weight:700;color:var(--text);line-height:1.2">${s.label}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">${s.sub}</div></div>`;
     }).join('');
   }
   // Format
@@ -14903,7 +14914,9 @@ function initExpress(){
   if(fr){
     fr.innerHTML = EXP_FORMATS.map(f=>{
       const on=f.v===window._expFormat;
-      return `<button onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${f.l}</button>`;
+      return `<div onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="exp-card${on?' on':''}" style="flex:1;display:flex;align-items:center;gap:11px;padding:13px 15px">
+        <span style="font-size:21px;line-height:1">${f.icon}</span>
+        <div style="line-height:1.25"><div style="font-size:15px;font-weight:700;color:var(--text)">${f.name}</div><div style="font-size:12px;color:var(--text3)">${f.ratio}</div></div></div>`;
     }).join('');
   }
   // Durée (slider)
@@ -14914,7 +14927,8 @@ function initExpress(){
   if(qr){
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      return `<button onclick="_expPickQual('${q.v}')" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${q.l}</button>`;
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" style="flex:1;padding:15px 12px;text-align:center">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${q.l}</div>${q.note?`<div style="font-size:11px;color:var(--orange2);margin-top:3px">${q.note}</div>`:''}</div>`;
     }).join('');
   }
   _expRenderVoices();
@@ -14939,10 +14953,18 @@ function _expRenderVoices(){
   if(wrap){
     wrap.innerHTML = EXP_VOICES.map(v=>{
       const on=v.id===window._expVoice;
-      return `<div onclick="_expPickVoice('${v.id}')" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:all .15s;border:1px solid ${on?'rgba(255,107,53,.5)':'var(--border2)'};background:${on?'rgba(255,107,53,.1)':'var(--bg3)'}">
-        <span style="font-size:15px">${v.emoji}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:${on?'var(--orange2)':'var(--text)'}">${v.name}</div><div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">${v.desc}</div></div>
-        <span style="width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1.5px solid ${on?'var(--orange)':'var(--border2)'};background:${on?'var(--orange)':'transparent'}"></span>
+      const isImport=v.id==='import';
+      // Indicateur à droite : ✓ si sélectionné · ⌃ chevron pour gemini/eleven · rien pour import
+      let right='';
+      if(on){ right='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'; }
+      else if(v.id==='gemini'||v.id==='eleven'){ right='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'; }
+      const iconColor = on ? 'var(--orange2)' : 'var(--text2)';
+      const border = isImport ? `1.5px dashed ${on?'rgba(255,107,53,.85)':'var(--border2)'}` : `1.5px solid ${on?'rgba(255,107,53,.85)':'var(--border2)'}`;
+      const bg = on ? 'rgba(255,107,53,.08)' : 'var(--bg3)';
+      return `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:13px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
+        <span style="flex-shrink:0;color:${iconColor};display:flex">${_EXP_VOICE_ICON[v.id]||''}</span>
+        <div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${v.name}</div><div style="font-size:11.5px;color:var(--text3);margin-top:2px">${v.desc}</div></div>
+        <span style="flex-shrink:0;display:flex">${right}</span>
       </div>`;
     }).join('');
   }
