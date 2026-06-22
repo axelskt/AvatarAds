@@ -221,19 +221,17 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
     <!-- RIGHT — showcase iPhone -->
     <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
-      <!-- sparkles -->
+      <!-- halo orange (voyant) derrière le téléphone central -->
+      <div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
+      <div style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,80,.42) 0%,rgba(255,107,53,.12) 50%,transparent 75%);filter:blur(6px);z-index:2;pointer-events:none"></div>
+
+      <!-- sparkles (discrètes, dans la zone noire — hors téléphones) -->
       <div style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:4">
-        <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:30%;top:5%;opacity:1;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:70%;top:11%;opacity:.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:92%;top:30%;opacity:.85;filter:drop-shadow(0 0 8px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:84%;top:80%;opacity:.9;filter:drop-shadow(0 0 8px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="13" height="13" style="position:absolute;left:9%;top:62%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.8))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <!-- étoiles supplémentaires dans la zone noire (hors téléphones) -->
-        <svg viewBox="0 0 48 48" width="17" height="17" style="position:absolute;left:48%;top:1%;opacity:.95;filter:drop-shadow(0 0 7px rgba(255,255,255,.9)) drop-shadow(0 0 12px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:4%;top:12%;opacity:.75;filter:drop-shadow(0 0 6px rgba(255,255,255,.8))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:96%;top:10%;opacity:.85;filter:drop-shadow(0 0 7px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="16" height="16" style="position:absolute;left:22%;top:92%;opacity:.85;filter:drop-shadow(0 0 7px rgba(255,255,255,.85))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:74%;top:95%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.8))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:48%;top:2%;opacity:.6;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
+        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:7%;top:9%;opacity:.4;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:94%;top:7%;opacity:.45;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
+        <svg viewBox="0 0 48 48" width="8" height="8" style="position:absolute;left:18%;top:88%;opacity:.35;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:90%;top:90%;opacity:.4;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
       </div>
 
       <!-- phone gauche : bactérie -->
