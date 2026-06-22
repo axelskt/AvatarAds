@@ -3095,7 +3095,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               </div>
 
             </div>
-            <div class="row gap6" style="margin-top:22px;color:var(--text3);align-items:center">
+            <div class="row gap6" style="margin-top:22px;color:var(--text3);align-items:center;justify-content:center">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
               <span class="mono" style="font-size:11.5px">Décris ta vidéo ci-dessous, puis clique sur Générer · <span id="expHeroFmt">9:16</span> · <span id="expHeroQual">720p</span></span>
             </div>
@@ -3138,15 +3138,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')">🧸 Cartoon</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')">💪 Fitness</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')">🛍 Produit</span>
+                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:210px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
+                </button>
               </div>
             </div>
-          </div>
-          <!-- Générer (bas à droite, style Remakeit) -->
-          <div class="row" style="justify-content:flex-end;align-items:center;gap:14px;margin-top:14px">
-            <span class="faint mono" id="expGenCaption" style="font-size:11px">1 vidéo IA · 720p · 5 s</span>
-            <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="min-width:220px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
-            </button>
           </div>
         </div>
       </div>
