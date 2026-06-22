@@ -3634,11 +3634,19 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 </div>
                 <div class="row" style="justify-content:space-between;margin:0 0 5px"><span class="faint mono" style="font-size:10.5px">🎙 Voix vidéo</span><span id="edVoiceVolLbl" class="mono" style="font-size:10.5px;color:var(--accent-2)">100%</span></div>
                 <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'" style="width:100%;accent-color:var(--accent)">
-                <div class="label" style="margin:14px 0 9px;font-size:10px">Effets sonores — ajoutés au curseur</div>
-                <div class="row gap6">
-                  <button onclick="edAddSfxAtPlayhead('pop')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(20,184,166,.5);background:rgba(20,184,166,.12);color:#2dd4bf">🔊 Gloup</button>
-                  <button onclick="edAddSfxAtPlayhead('whoosh')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">🌀 Transition</button>
-                  <button onclick="edAddSfxAtPlayhead('ding')" style="flex:1;padding:9px 4px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🔔 Ding</button>
+                <div class="label" style="margin:14px 0 9px;font-size:10px">Bruitages — ajoutés au curseur</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                  <button onclick="edAddSfxAtPlayhead('pop')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(20,184,166,.5);background:rgba(20,184,166,.12);color:#2dd4bf">🫧 Gloup</button>
+                  <button onclick="edAddSfxAtPlayhead('whoosh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">🌀 Transition</button>
+                  <button onclick="edAddSfxAtPlayhead('ding')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🔔 Ding</button>
+                  <button onclick="edAddSfxAtPlayhead('boom')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:#f87171">💥 Boom</button>
+                  <button onclick="edAddSfxAtPlayhead('riser')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">📈 Riser</button>
+                  <button onclick="edAddSfxAtPlayhead('hit')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(244,114,182,.5);background:rgba(244,114,182,.12);color:#f472b6">👊 Impact</button>
+                  <button onclick="edAddSfxAtPlayhead('coin')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🪙 Coin</button>
+                  <button onclick="edAddSfxAtPlayhead('success')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12);color:#22c55e">✅ Succès</button>
+                  <button onclick="edAddSfxAtPlayhead('magic')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">✨ Magie</button>
+                  <button onclick="edAddSfxAtPlayhead('click')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🖱 Click</button>
+                  <button onclick="edAddSfxAtPlayhead('buzz')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#f87171">🚫 Erreur</button>
                 </div>
                 <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
               </div>
@@ -7542,8 +7550,19 @@ function _isFreePlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
   return !currentMember || guestMode || p === 'free';
 }
-// Appelé en tête de chaque action de GÉNÉRATION : ouvre le paywall et bloque si gratuit
+// ── AB TEST : générateur complet gratuit, paywall uniquement à l'EXPORT ──
+// true  = le plan gratuit peut TOUT générer, le paywall ne se déclenche qu'au téléchargement/export.
+// false = comportement classique (paywall dès la génération).
+const AB_PAYWALL_AT_EXPORT = true;
+
+// Appelé en tête de chaque action de GÉNÉRATION : bloque si gratuit (sauf en mode AB export-only)
 function _gateFreeGenerate(){
+  if(AB_PAYWALL_AT_EXPORT) return false; // génération libre pour tous
+  if(_isFreePlan()){ showPlansSheet(); return true; }
+  return false;
+}
+// Appelé en tête de chaque action d'EXPORT / TÉLÉCHARGEMENT : ouvre le paywall et bloque si gratuit
+function _gateFreeExport(){
   if(_isFreePlan()){ showPlansSheet(); return true; }
   return false;
 }
@@ -12585,6 +12604,7 @@ const QUALITY_CONFIGS = {
 // ══════════════════════════════════════════════════════════════════
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('⚠️ Aucune vidéo à composer'); return; }
+  if(_gateFreeExport()) return; // paywall à l'export (AB test : génération libre)
   window._composeCancelled = false;
   if(btn){ btn.disabled = true; btn.innerHTML = '⏳ Chargement…'; }
   const compBar     = document.getElementById('composeProgressWrap');
@@ -15172,7 +15192,7 @@ async function expressCreate(){
   }
 }
 
-function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
+function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
   window._expImgB64=null; window._expVidBlob=null;
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
@@ -18183,29 +18203,50 @@ function edRenderMusicTrack(){
   _edDrawWave('edMusicWave', _ed.musicPeaks, 'rgba(130,195,255,.85)');
 }
 /* ---------- SFX (sons synthétisés Web Audio: gloup / transition / ding) ---------- */
+function _edNoise(ac,dur){ const len=Math.floor(ac.sampleRate*dur); const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len); const s=ac.createBufferSource(); s.buffer=buf; return s; }
+function _edTone(ac,g,type,f0,f1,t,dur,peak){ const o=ac.createOscillator(); o.type=type; o.frequency.setValueAtTime(f0,t); if(f1) o.frequency.exponentialRampToValueAtTime(f1,t+dur); const e=ac.createGain(); e.gain.setValueAtTime(0.0001,t); e.gain.exponentialRampToValueAtTime(peak,t+0.012); e.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(e); e.connect(g); try{o.start(t);o.stop(t+dur+0.02);}catch(err){} }
 function _edBlip(ac, outs, type, when){
   const t=when||ac.currentTime; const g=ac.createGain(); outs.forEach(n=>{try{g.connect(n);}catch(e){}});
-  if(type==='whoosh'){
-    const len=Math.floor(ac.sampleRate*0.3); const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
-    const src=ac.createBufferSource(); src.buffer=buf; const bp=ac.createBiquadFilter(); bp.type='bandpass';
-    bp.frequency.setValueAtTime(500,t); bp.frequency.exponentialRampToValueAtTime(3500,t+0.25);
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
-    src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.32);}catch(e){}
-  } else if(type==='ding'){
-    const o=ac.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(880,t);
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.35,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
-    o.connect(g); try{o.start(t);o.stop(t+0.45);}catch(e){}
-  } else { // pop / gloup
-    const o=ac.createOscillator(); o.type='sine';
-    o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(720,t+0.07); o.frequency.exponentialRampToValueAtTime(240,t+0.16);
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
-    o.connect(g); try{o.start(t);o.stop(t+0.25);}catch(e){}
+  switch(type){
+    case 'whoosh': {
+      const src=_edNoise(ac,0.3); const bp=ac.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.setValueAtTime(500,t); bp.frequency.exponentialRampToValueAtTime(3500,t+0.25);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
+      src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.32);}catch(e){} break;
+    }
+    case 'ding': { _edTone(ac,g,'triangle',880,null,t,0.4,0.35); break; }
+    case 'boom': {
+      const src=_edNoise(ac,0.5); const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(220,t);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.6,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+      src.connect(lp); lp.connect(g); try{src.start(t);src.stop(t+0.52);}catch(e){}
+      _edTone(ac,g,'sine',140,42,t,0.45,0.5); break;
+    }
+    case 'click': { _edTone(ac,g,'square',2200,1400,t,0.04,0.25); break; }
+    case 'riser': {
+      const src=_edNoise(ac,0.8); const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=4;
+      bp.frequency.setValueAtTime(300,t); bp.frequency.exponentialRampToValueAtTime(6000,t+0.78);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.0001+0.0001,t+0.01); g.gain.linearRampToValueAtTime(0.32,t+0.7); g.gain.exponentialRampToValueAtTime(0.0001,t+0.82);
+      src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.84);}catch(e){} break;
+    }
+    case 'coin': { _edTone(ac,g,'square',988,null,t,0.09,0.3); _edTone(ac,g,'square',1319,null,t+0.08,0.18,0.3); break; }
+    case 'buzz': { _edTone(ac,g,'sawtooth',150,120,t,0.32,0.28); break; }
+    case 'success': { _edTone(ac,g,'triangle',523,null,t,0.12,0.3); _edTone(ac,g,'triangle',659,null,t+0.1,0.12,0.3); _edTone(ac,g,'triangle',784,null,t+0.2,0.22,0.32); break; }
+    case 'magic': { for(let k=0;k<5;k++){ _edTone(ac,g,'sine',1200+k*400+Math.random()*200,2800+k*300,t+k*0.04,0.18,0.16); } break; }
+    case 'hit': {
+      const src=_edNoise(ac,0.12); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+      src.connect(g); try{src.start(t);src.stop(t+0.14);}catch(e){} _edTone(ac,g,'sine',180,60,t,0.12,0.4); break;
+    }
+    default: { // pop / gloup
+      const o=ac.createOscillator(); o.type='sine';
+      o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(720,t+0.07); o.frequency.exponentialRampToValueAtTime(240,t+0.16);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+      o.connect(g); try{o.start(t);o.stop(t+0.25);}catch(e){}
+    }
   }
 }
 function _edSfxAc(){ if(!_ed) return null; if(_ed.audio&&_ed.audio.ac) return _ed.audio.ac; if(!_ed._sfxAc){ try{ const AC=window.AudioContext||window.webkitAudioContext; _ed._sfxAc=new AC(); }catch(e){ _ed._sfxAc=null; } } return _ed._sfxAc; }
 function edPlaySfxPreview(type){ const ac=_edSfxAc(); if(!ac) return; if(ac.state==='suspended'){ try{ac.resume();}catch(e){} } _edBlip(ac,[ac.destination],type); }
-const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding' };
+const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding', boom:'Boom', click:'Click', riser:'Riser', coin:'Coin', buzz:'Erreur', success:'Succès', magic:'Magie', hit:'Impact' };
 function edAddSfx(type,t){ if(!_ed) return; if(!_ed.sfx) _ed.sfx=[]; _ed.sfx.push({ id:'sfx'+Date.now()+Math.random().toString(36).slice(2,6), type, t:Math.max(0,t||0), len:0.6, label:_SFX_LABEL[type]||'Son' }); edRenderSfxTrack(); }
 function edAddSfxAtPlayhead(type){ if(!_ed) return; edSnap(); edAddSfx(type, edGlobalNow()); edPlaySfxPreview(type); toast('🔊 Son ajouté au curseur'); }
 function edRemoveSfx(id){ if(!_ed||!_ed.sfx) return; edSnap(); _ed.sfx=_ed.sfx.filter(s=>s.id!==id); edRenderSfxTrack(); toast('🗑 Son retiré'); }
@@ -18382,7 +18423,7 @@ async function edExportAudio(){
 async function edExport(){
   if(!_ed) return;
   // ── Paywall plan gratuit : montage prêt → on débloque l'export via un plan ──
-  if(_gateFreeGenerate()) return;
+  if(_gateFreeExport()) return;
   const status=document.getElementById('edExportStatus'); status.style.display='block'; status.textContent='Préparation…';
   const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='⏳ Export…';
   edPause();
