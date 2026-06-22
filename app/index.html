@@ -3059,9 +3059,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">1</div>
                 <div style="height:186px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:10px;overflow:hidden;position:relative;margin-bottom:16px">
                   <div style="width:46px;height:104px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">TRACKING</span></div>
-                  <div style="width:76px;height:154px;border-radius:13px;background:linear-gradient(180deg,#16542b,#34995a);border:2px solid var(--orange);box-shadow:0 10px 26px -8px rgba(47,163,90,.55);position:relative">
-                    <span style="position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:2px 5px">CC</span>
-                    <span style="position:absolute;bottom:10px;right:10px;font-size:20px">👆</span>
+                  <div style="width:76px;height:154px;border-radius:13px;background:linear-gradient(180deg,#16542b,#34995a);border:2px solid var(--orange);box-shadow:0 10px 26px -8px rgba(47,163,90,.55);position:relative;overflow:hidden">
+                    <img src="../assets/hero-banana.png" alt="Avatar banane AvatarAds" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                    <span style="position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:2px 5px;z-index:2">CC</span>
+                    <span style="position:absolute;bottom:10px;right:10px;font-size:20px;z-index:2">👆</span>
                   </div>
                   <div style="width:46px;height:104px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">CORPORATE</span></div>
                 </div>
@@ -3131,14 +3132,14 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
-              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:116px;max-height:240px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:184px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')">💬 Face caméra</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')">🧸 Cartoon</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')">💪 Fitness</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')">🛍 Produit</span>
-                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:226px;font-size:16.5px;padding:16px 28px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:248px;font-size:17.5px;padding:18px 32px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
                 </button>
               </div>
