@@ -396,8 +396,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .exp-prog-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
 .exp-prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:3px;transition:width .15s}
 .exp-prog-pct{font-size:11px;font-family:var(--mono);color:var(--text3);min-width:32px;text-align:right}
-.exp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px 16px;margin-bottom:14px}
-.exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.exp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px 16px;margin-bottom:14px}
+.exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:6px}
 .exp-wpg-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:24px;font-size:13.5px;font-weight:600;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s}
 .exp-wpg-chip:hover{border-color:var(--border);color:var(--text)}
 .exp-wpg-chip.on{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
@@ -3139,7 +3139,7 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')">🧸 Cartoon</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')">💪 Fitness</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')">🛍 Produit</span>
-                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:248px;font-size:17.5px;padding:18px 32px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:272px;font-size:18.5px;padding:21px 34px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
                 </button>
               </div>
@@ -14901,7 +14901,7 @@ function initExpress(){
   if(sg){
     sg.innerHTML = EXP_STYLES.map(s=>{
       const on = s.id===window._expStyle;
-      return `<div onclick="_expPickStyle('${s.id}')" class="exp-card${on?' on':''}" data-exp-style="${s.id}" style="padding:11px 13px">
+      return `<div onclick="_expPickStyle('${s.id}')" class="exp-card${on?' on':''}" data-exp-style="${s.id}" style="padding:13px 14px">
         <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${s.label}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:3px">${s.sub}</div></div>`;
     }).join('');
@@ -14911,7 +14911,7 @@ function initExpress(){
   if(fr){
     fr.innerHTML = EXP_FORMATS.map(f=>{
       const on=f.v===window._expFormat;
-      return `<div onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="exp-card${on?' on':''}" style="flex:1;display:flex;align-items:center;gap:9px;padding:10px 13px">
+      return `<div onclick="_expPickFormat('${f.v}')" data-exp-fmt="${f.v}" class="exp-card${on?' on':''}" style="flex:1;display:flex;align-items:center;gap:9px;padding:12px 14px">
         <span style="font-size:18px;line-height:1">${f.icon}</span>
         <div style="line-height:1.25"><div style="font-size:14px;font-weight:700;color:var(--text)">${f.name}</div><div style="font-size:11px;color:var(--text3)">${f.ratio}</div></div></div>`;
     }).join('');
@@ -14924,8 +14924,8 @@ function initExpress(){
   if(qr){
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" style="flex:1;padding:11px 12px;text-align:center">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}</div>${q.note?`<div style="font-size:10px;color:var(--orange2);margin-top:2px">${q.note}</div>`:''}</div>`;
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" style="flex:1;padding:13px 12px;text-align:center">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${q.note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${q.note}</span>`:''}</div></div>`;
     }).join('');
   }
   _expRenderVoices();
@@ -14958,7 +14958,7 @@ function _expRenderVoices(){
       const iconColor = on ? 'var(--orange2)' : 'var(--text2)';
       const border = isImport ? `1.5px dashed ${on?'rgba(255,107,53,.85)':'var(--border2)'}` : `1.5px solid ${on?'rgba(255,107,53,.85)':'var(--border2)'}`;
       const bg = on ? 'rgba(255,107,53,.08)' : 'var(--bg3)';
-      return `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
+      return `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
         <span style="flex-shrink:0;color:${iconColor};display:flex">${_EXP_VOICE_ICON[v.id]||''}</span>
         <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${v.desc}</div></div>
         <span style="flex-shrink:0;display:flex">${right}</span>
