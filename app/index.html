@@ -584,6 +584,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
       <button id="btnUpgradePlan" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:6px 12px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.28)';this.style.borderColor='rgba(168,85,247,0.65)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08))';this.style.borderColor='rgba(168,85,247,0.4)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
+      <!-- Voir tous les plans -->
+      <button id="btnSeeAllPlans" onclick="showPlansSheet()" class="btn btn-sm" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-weight:700;gap:5px" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+        Voir tous les plans <span style="font-size:13px">→</span>
+      </button>
       <!-- + Crédits (style design : accent-soft) -->
       <button id="btnBuyCredits" onclick="openCreditsModal()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crédits
@@ -3034,10 +3038,55 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 
         <!-- Résultat / preview -->
         <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
-          <div id="expResultPlaceholder" style="text-align:center;color:var(--text3)">
-            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="opacity:.4"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="M10 9l5 3-5 3z"/></svg>
-            <div style="margin-top:14px;font-size:14px;font-weight:600;color:var(--text2)">Décris ta vidéo en bas, puis clique Générer</div>
-            <div class="faint mono" style="font-size:11px;margin-top:6px">La vidéo apparaîtra ici</div>
+          <div id="expResultPlaceholder" style="width:100%;max-width:940px;align-self:center;max-height:100%;overflow-y:auto;padding:4px 2px">
+            <h2 style="font-size:33px;font-weight:800;line-height:1.05;margin:0 0 10px;color:var(--text);letter-spacing:-.5px">Crée des vidéos en un clic</h2>
+            <p class="muted" style="font-size:15px;line-height:1.5;margin:0 0 26px;max-width:580px">Plus de 250 styles de mouvement, cadrage et VFX — ou laisse l'IA gérer en mode auto.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+
+              <!-- ① Choisis un style -->
+              <div class="card" style="position:relative;padding:16px 16px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;text-align:left">
+                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">1</div>
+                <div style="height:150px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:6px;overflow:hidden;position:relative;margin-bottom:14px">
+                  <div style="width:34px;height:70px;border-radius:7px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px"><span class="mono faint" style="font-size:6px">TRACKING</span></div>
+                  <div style="width:52px;height:104px;border-radius:9px;background:linear-gradient(160deg,#1e6b3a,#2fa35a);box-shadow:0 8px 20px -8px rgba(47,163,90,.6);position:relative">
+                    <span style="position:absolute;top:5px;right:5px;font-size:6px;font-weight:800;background:rgba(0,0,0,.4);color:#fff;border-radius:3px;padding:1px 3px">CC</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-2)" style="position:absolute;bottom:6px;right:4px"><path d="M3 3l7.07 17 2.51-7.42L20 10.07z"/></svg>
+                  </div>
+                  <div style="width:34px;height:70px;border-radius:7px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px"><span class="mono faint" style="font-size:6px">CORPORATE</span></div>
+                </div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px">Choisis un style</div>
+                <div class="muted" style="font-size:12.5px;line-height:1.4">Sélectionne un style visuel : réaliste, cartoon, studio…</div>
+              </div>
+
+              <!-- ② Rédige ton script -->
+              <div class="card" style="position:relative;padding:16px 16px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;text-align:left">
+                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">2</div>
+                <div style="height:150px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);padding:14px;margin-bottom:14px">
+                  <div class="row gap6" style="margin-bottom:11px;color:var(--text2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span class="mono" style="font-size:9px;letter-spacing:1px;font-weight:700">TON SCRIPT</span></div>
+                  <div style="height:7px;border-radius:4px;background:var(--border2);margin-bottom:7px"></div>
+                  <div style="height:7px;border-radius:4px;background:var(--border2);margin-bottom:7px"></div>
+                  <div style="height:7px;width:62%;border-radius:4px;background:var(--accent);margin-bottom:14px"></div>
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:7px;padding:5px 9px">✦ Améliorer avec l'IA</span>
+                </div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px">Rédige ton script</div>
+                <div class="muted" style="font-size:12.5px;line-height:1.4">Décris ta vidéo et ce que le perso doit dire à voix haute.</div>
+              </div>
+
+              <!-- ③ Obtiens ta vidéo -->
+              <div class="card" style="position:relative;padding:16px 16px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;text-align:left">
+                <div style="position:absolute;top:-10px;left:14px;width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px -4px var(--accent-glow)">3</div>
+                <div style="height:150px;border-radius:12px;background:linear-gradient(120deg,#b9892f,#2c8f57 55%,#1f6ec0);display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 10px 26px -12px rgba(0,0,0,.6)">
+                  <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.9);display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.35)"><svg width="18" height="18" viewBox="0 0 24 24" fill="#111"><path d="M8 5v14l11-7z"/></svg></div>
+                </div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px">Obtiens ta vidéo</div>
+                <div class="muted" style="font-size:12.5px;line-height:1.4">Clique sur Générer pour créer ta vidéo animée finale !</div>
+              </div>
+
+            </div>
+            <div class="row gap6" style="margin-top:22px;color:var(--text3);align-items:center">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
+              <span class="mono" style="font-size:11.5px">Décris ta vidéo ci-dessous, puis clique sur Générer · <span id="expHeroFmt">9:16</span> · <span id="expHeroQual">720p</span></span>
+            </div>
           </div>
           <video id="expResultVid" controls playsinline style="display:none;max-height:100%;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
 
@@ -14824,7 +14873,7 @@ const EXP_VOICES = [
 const EXP_STYLES = [
   { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic, cinematic lighting, real human, photorealistic' },
   { id:'cartoon',  label:'Cartoon 3D', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
-  { id:'anime',    label:'Anime',      sub:'2D japonais',  prompt:'anime style, clean line art, expressive, studio quality 2D animation' },
+  { id:'ugc',      label:'UGC réel',   sub:'selfie authentique', prompt:'authentic UGC selfie style, handheld phone camera, natural daylight, casual realistic' },
   { id:'studio',   label:'Studio',     sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
 ];
 const EXP_FORMATS = [ {v:'9:16',l:'📱 Portrait 9:16'}, {v:'16:9',l:'🖥 Paysage 16:9'} ];
@@ -14866,7 +14915,10 @@ function initExpress(){
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
-  if(c){ const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,''); c.textContent=`1 vidéo IA · ${q||'720p'} · ${window._expDur||5} s`; }
+  const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
+  if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||5} s`; }
+  const hf=document.getElementById('expHeroFmt'); if(hf) hf.textContent=window._expFormat||'9:16';
+  const hq=document.getElementById('expHeroQual'); if(hq) hq.textContent=q;
 }
 function _expSetDur(v){ window._expDur=parseInt(v)||5; const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=window._expDur+' s'; _expUpdateGenCaption(); }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
