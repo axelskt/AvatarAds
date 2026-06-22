@@ -102,6 +102,12 @@ input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webki
 .aa-iphone .scr{position:absolute;inset:4px;border-radius:34px;overflow:hidden;background:#0c0a0e}
 .aa-iphone .scr img{width:100%;height:100%;object-fit:cover;display:block}
 .aa-iphone .di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:58px;height:17px;border-radius:11px;background:#000;z-index:6}
+.aa-iphone .btns-l{position:absolute;left:-2px;top:20%;display:flex;flex-direction:column;gap:9px;z-index:2}
+.aa-iphone .btns-l i{display:block;width:3px;border-radius:3px 0 0 3px;background:linear-gradient(90deg,#15151a,#4c4c58);box-shadow:-1px 0 1px rgba(0,0,0,.5)}
+.aa-iphone .btns-l .b1{height:13px}
+.aa-iphone .btns-l .b2{height:30px;margin-top:5px}
+.aa-iphone .btns-l .b3{height:30px}
+.aa-iphone .btns-r{position:absolute;right:-2px;top:27%;width:3px;height:48px;border-radius:0 3px 3px 0;background:linear-gradient(270deg,#15151a,#4c4c58);box-shadow:1px 0 1px rgba(0,0,0,.5);z-index:2}
 .sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:all .25s;flex-shrink:0}
 .sc-dot.on{background:var(--accent);width:20px;border-radius:4px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
@@ -227,14 +233,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <!-- phone gauche : bactérie -->
       <div class="aa-iphone" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div>
+        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds"></div>
       </div>
 
       <!-- phone droite : fraise -->
       <div class="aa-iphone" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div>
+        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr"><img src="assets/hero-strawberry.png" alt="Cartoon fraise virale AvatarAds"></div>
-        <div class="card glass" style="position:absolute;top:9px;left:9px;z-index:5;padding:5px 9px;border-radius:10px">
+        <div class="card glass" style="position:absolute;top:52px;left:12px;z-index:5;padding:5px 9px;border-radius:10px">
           <span class="row gap6" style="font-size:11.5px;font-weight:700"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M8 5v14l11-7z"/></svg>7,2M vues</span>
         </div>
         <div class="card glass" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:5;padding:9px 13px;border-radius:14px;white-space:nowrap">
@@ -246,6 +254,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <!-- phone centre : placeholder vidéo -->
       <div class="aa-iphone" style="left:50%;top:18px;transform:translateX(-50%);width:244px;height:496px;border-radius:44px;padding:5px;z-index:3;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 40px 80px -30px rgba(0,0,0,.85),0 0 60px -14px var(--accent-glow)">
         <div class="di" style="width:74px;height:21px;top:14px"></div>
+        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr" style="border-radius:39px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 14px,transparent 14px 28px)">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="M10 9l5 3-5 3z"/></svg>
           <span class="mono" style="font-size:11px;opacity:.6">vidéo bientôt</span>
