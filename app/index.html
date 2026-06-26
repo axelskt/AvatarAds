@@ -1872,7 +1872,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- SUBTITLES -->
               <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:75%;width:90%">
-                <div id="subsContent"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">PASSE</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#ffffff;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">À</span></div>
+                <div id="subsContent" style="pointer-events:auto;cursor:grab;touch-action:none;display:inline-block" title="Glisse pour déplacer les sous-titres"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">PASSE</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#ffffff;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">À</span></div>
               </div>
 
               <!-- ── TIKTOK ── -->
@@ -9363,7 +9363,33 @@ function selectFormatGroup(group){
 }
 
 // ── SUBTITLE PREVIEW ──
+// Glisser-déposer des sous-titres directement dans le preview
+function _initSubDrag(){
+  const content = document.getElementById('subsContent');
+  const overlay = document.getElementById('subsOverlay');
+  if(!content || !overlay || content._dragInit) return;
+  content._dragInit = true;
+  let dragging = false;
+  content.addEventListener('pointerdown', e => { dragging = true; content.style.cursor='grabbing'; try{content.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
+  const move = e => {
+    if(!dragging) return;
+    const host = overlay.offsetParent || overlay.parentElement; if(!host) return;
+    const r = host.getBoundingClientRect(); if(!r.width||!r.height) return;
+    let xp = Math.round(((e.clientX - r.left)/r.width)*100);
+    let yp = Math.round(((e.clientY - r.top)/r.height)*100);
+    xp = Math.max(2, Math.min(98, xp)); yp = Math.max(2, Math.min(98, yp));
+    cfg.subPosX = xp; cfg.subPos = yp;
+    overlay.style.left = xp+'%'; overlay.style.top = yp+'%';
+    const sx=document.getElementById('subPosX'), sxv=document.getElementById('subPosXVal');
+    const sy=document.getElementById('subPos'),  syv=document.getElementById('subPosVal');
+    if(sx) sx.value=xp; if(sxv) sxv.textContent=xp+'%';
+    if(sy) sy.value=yp; if(syv) syv.textContent=yp+'%';
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', ()=>{ if(dragging){ dragging=false; content.style.cursor='grab'; } });
+}
 function updateSubPreview(){
+  _initSubDrag();
   const style  = selSubStyle || 'hormozi';
   const sz     = Math.max(10, Math.round((cfg.subSize || 72) * 0.25));
   const stroke = Math.max(1, Math.round(sz / 18));
@@ -14274,7 +14300,7 @@ function openLibVideoPicker(){
       ${videos.map(v => {
         const ri = library.indexOf(v);
         return `<div class="lvp-item" onclick="pickLibVideo(${ri})">
-          <div style="font-size:28px;flex-shrink:0">${v.emo||'🎬'}</div>
+          <div class="lvp-thumb" data-ri="${ri}" style="width:46px;height:60px;border-radius:8px;flex-shrink:0;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;position:relative">${v.emo||'🎬'}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name||'Vidéo'}</div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">${v.date||''} · ${v.style||'VIDEO'}</div>
@@ -14285,6 +14311,32 @@ function openLibVideoPicker(){
     </div>`;
 
   document.body.appendChild(modal);
+  _lvpLoadThumbs(modal);
+}
+// Charge un aperçu (1ère frame de la vidéo) pour chaque entrée du picker bibliothèque
+async function _lvpLoadThumbs(modal){
+  const cells = modal.querySelectorAll('.lvp-thumb[data-ri]');
+  for(const cell of cells){
+    const ri = +cell.getAttribute('data-ri');
+    const entry = library[ri]; if(!entry) continue;
+    try{
+      let blob = null;
+      if(entry.hedraIdbKey){ const s = await _idbLoad(entry.hedraIdbKey); blob = (s instanceof Blob) ? s : (s?.blob||null); }
+      if(!blob && entry.hedraUrl?.startsWith('blob:')){ const r = await fetch(entry.hedraUrl); if(r.ok) blob = await r.blob(); }
+      if(!blob && entry.posterUrl){ cell.innerHTML = `<img src="${entry.posterUrl}" style="width:100%;height:100%;object-fit:cover">`; continue; }
+      if(!blob) continue;
+      const url = URL.createObjectURL(blob);
+      const isImg = (blob.type||'').startsWith('image/');
+      if(isImg){ cell.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`; }
+      else {
+        const vid = document.createElement('video');
+        vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+        vid.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        vid.addEventListener('loadeddata', ()=>{ try{ vid.currentTime = Math.min(0.1, (vid.duration||1)/2); }catch(e){} });
+        cell.innerHTML = ''; cell.appendChild(vid);
+      }
+    }catch(e){ /* garde l'emoji */ }
+  }
 }
 
 async function pickLibVideo(idx){
@@ -15543,7 +15595,7 @@ function openExpLibPicker(){
       </div>
       <div style="overflow-y:auto;flex:1">
         ${videos.map(v=>{const ri=library.indexOf(v);return `<div class="lvp-item" onclick="_expPickLibVid(${ri})">
-          <div style="font-size:26px;flex-shrink:0">${v.emo||'🎬'}</div>
+          <div class="lvp-thumb" data-ri="${ri}" style="width:46px;height:60px;border-radius:8px;flex-shrink:0;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:23px;overflow:hidden;position:relative">${v.emo||'🎬'}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name||'Vidéo'}</div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">${v.date||''} · ${v.style||'VIDEO'}</div>
@@ -15553,6 +15605,7 @@ function openExpLibPicker(){
       </div>
     </div>`;
   document.body.appendChild(modal);
+  _lvpLoadThumbs(modal);
 }
 
 async function _expPickLibVid(idx){
