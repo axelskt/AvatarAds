@@ -8252,6 +8252,14 @@ function autoGenSubtitles(){
       const voiceTa = document.getElementById('voiceTranscriptTA');
       if(pendingTranscript && pendingTranscript.trim()) ta.value = pendingTranscript;
       else if(voiceTa && voiceTa.value.trim()) ta.value = voiceTa.value.trim();
+      else {
+        // Auto-remplir depuis le script écrit (hook + script + cta — le script peut déjà tout contenir)
+        const hk=(document.getElementById('f-hook')?.value||'').trim();
+        const sc=(document.getElementById('f-script')?.value||'').trim();
+        const ct=(document.getElementById('f-cta')?.value||'').trim();
+        const full=[hk,sc,ct].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+        if(full) ta.value = full;
+      }
     }
     if(ta) setTimeout(()=>ta.focus(), 50);
   }
@@ -8733,6 +8741,7 @@ let previewWordIndex = 0;
 
 function swapSplit(){
   splitSwapped = !splitSwapped;
+  cfg.gpPosition = splitSwapped ? 'top' : 'bottom'; // garder l'export synchronisé avec le preview
   const vc = document.getElementById('videoContent');
   const av = document.getElementById('avZone');
   const gp = document.getElementById('gameplayZone');
@@ -12811,10 +12820,14 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   function drawFrame(elapsed){
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
-    _cvDrawZone(ctx, hedraVid, {x:0,y:0,w:W,h:avH},
+    // Inverser : si splitSwapped (ou gpPosition='top'), le gameplay passe en haut et l'avatar en bas
+    const _gpOnTop = (typeof splitSwapped!=='undefined' && splitSwapped) || cfg.gpPosition==='top';
+    const _avY = (_gpOnTop && gpVid) ? gpH : 0;
+    const _gpY = _gpOnTop ? 0 : avH;
+    _cvDrawZone(ctx, hedraVid, {x:0,y:_avY,w:W,h:avH},
       cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H);
     if(gpVid)
-      _cvDrawZone(ctx, gpVid, {x:0,y:avH,w:W,h:gpH},
+      _cvDrawZone(ctx, gpVid, {x:0,y:_gpY,w:W,h:gpH},
         cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
     _cvHook(ctx, W, H);
     if(words.length > 0){
