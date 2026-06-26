@@ -557,13 +557,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .img-loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit}
 @keyframes imgPulse{0%,100%{opacity:.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
 /* ── Slider esthétique (durée cible) ── */
-.aa-slider{-webkit-appearance:none;appearance:none;height:7px;border-radius:6px;background:var(--bg4);outline:none;cursor:pointer}
-.aa-slider::-webkit-slider-runnable-track{height:7px;border-radius:6px;background:linear-gradient(90deg,var(--accent-2),var(--accent)) no-repeat;background-size:var(--aa-fill,50%) 100%;background-color:var(--bg4)}
-.aa-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid #1a0a02;box-shadow:0 2px 10px -2px var(--accent-glow),0 0 0 1px var(--accent);margin-top:-8px;cursor:grab;transition:transform .12s}
+.aa-slider{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
+.aa-slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:var(--accent) no-repeat;background-size:var(--aa-fill,50%) 100%;background-color:var(--surface-3)}
+.aa-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.25);margin-top:-6px;cursor:grab;transition:transform .12s}
 .aa-slider::-webkit-slider-thumb:active{transform:scale(1.12);cursor:grabbing}
-.aa-slider::-moz-range-track{height:7px;border-radius:6px;background:var(--bg4)}
-.aa-slider::-moz-range-progress{height:7px;border-radius:6px;background:linear-gradient(90deg,var(--accent-2),var(--accent))}
-.aa-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid #1a0a02;cursor:grab}
+.aa-slider::-moz-range-track{height:6px;border-radius:6px;background:var(--surface-3)}
+.aa-slider::-moz-range-progress{height:6px;border-radius:6px;background:var(--accent)}
+.aa-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:grab}
 .exp-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:var(--bg4);outline:none;cursor:pointer}
 .exp-slider::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:linear-gradient(90deg,var(--accent-2),var(--accent)) no-repeat;background-size:var(--aa-fill,30%) 100%;background-color:var(--bg4)}
 .exp-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.45);margin-top:-6px;cursor:grab;transition:transform .12s}
@@ -946,12 +946,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
                 ondragleave="ev=>{this.classList.remove('av-drag')}"
                 ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleAvatarFile(ev.dataTransfer.files[0])}"
-                style="border:2px dashed var(--border2);border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative">
+                style="border:1px dashed var(--border-2);border-radius:16px;padding:48px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-1);position:relative">
                 <div id="avatarDropContent">
-                  <div style="font-size:48px;margin-bottom:12px">🖼️</div>
-                  <div style="font-size:15px;font-weight:700;margin-bottom:6px">Glisse ta photo ici</div>
-                  <div style="font-size:12px;font-family:var(--mono);color:var(--text3)">PNG · JPG · WEBP · Portrait recommandé</div>
-                  <div style="margin-top:14px;display:inline-block;padding:8px 20px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:8px;font-size:13px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <div style="font-size:15.5px;font-weight:700;margin-bottom:6px;color:var(--text)">Glisse ta photo ici</div>
+                  <div style="font-size:11.5px;font-family:var(--mono);color:var(--text3)">PNG · JPG · WEBP · Portrait recommandé</div>
+                  <div style="margin-top:14px;display:inline-block;padding:9px 14px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:10px;font-size:13.5px;font-weight:600;color:var(--accent-2)">Parcourir</div>
                 </div>
                 <div id="avatarPreviewWrap" style="display:none">
                   <img id="avatarPreviewImg" style="max-height:180px;border-radius:10px;object-fit:cover;margin-bottom:10px">
@@ -973,7 +973,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- BIBLIOTHÈQUE D'AVATARS (bouton ouverture modale) -->
             <div class="fld" style="margin-bottom:16px">
               <button onclick="openAvatarModal()" style="width:100%;padding:14px;background:var(--bg3);border:2px dashed var(--border2);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-                <span style="font-size:20px">📸</span>
+                <span style="font-size:16px">⭐</span>
                 Voir les avatars IA <span style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:4px">(49)</span>
                 <span style="font-size:12px;opacity:.5">→</span>
               </button>
@@ -981,17 +981,17 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">📐 Hauteur de l'avatar</div>
+                <div class="flbl" style="font-size:10px;margin:0">↕ Hauteur de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
               </div>
-              <input type="range" id="avZoomSlider" min="10" max="400" value="100" step="5" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
+              <input type="range" id="avZoomSlider" class="aa-slider" min="10" max="400" value="100" step="5" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:23.08%">
             </div>
             <div class="fld" style="margin-bottom:12px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">↔️ Largeur de l'avatar</div>
+                <div class="flbl" style="font-size:10px;margin:0">↔ Largeur de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avWidthVal">100%</span>
               </div>
-              <input type="range" id="avWidthSlider" min="10" max="400" value="100" step="5" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';updateAvatarCrop()" style="width:100%;accent-color:var(--orange)">
+              <input type="range" id="avWidthSlider" class="aa-slider" min="10" max="400" value="100" step="5" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:23.08%">
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
 
@@ -1001,12 +1001,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="flbl" style="font-size:10px;margin:0">🎮 Ratio Avatar / Gameplay</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="splitRatioVal2">35 / 65</span>
               </div>
-              <input type="range" id="splitRatio2" min="20" max="70" value="35" step="5"
+              <input type="range" id="splitRatio2" class="aa-slider" min="20" max="70" value="35" step="5"
                 oninput="cfg.splitRatio=+this.value;
                   document.getElementById('splitRatioVal2').textContent=this.value+' / '+(100-this.value);
                   const sr=document.getElementById('splitRatio'); if(sr){sr.value=this.value; document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);}
-                  updateLivePreview()"
-                style="width:100%;accent-color:var(--orange)">
+                  _aaSliderFill(this);updateLivePreview()"
+                style="width:100%;--aa-fill:30%">
             </div>
 
             <!-- ══ BYPASS HEDRA — vidéo avatar existante ══ -->
@@ -1381,18 +1381,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom gameplay</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
-                  <input type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
                     oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
-                    style="width:100%;accent-color:var(--orange)">
+                    style="width:100%">
                 </div>
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur gameplay</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
                   </div>
-                  <input type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
                     oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal3').textContent=this.value+'%';const s4=document.getElementById('gpWidthSlider');if(s4){s4.value=this.value;document.getElementById('gpWidthVal').textContent=this.value+'%'}updateGpCrop()"
-                    style="width:100%;accent-color:var(--orange)">
+                    style="width:100%">
                 </div>
                 <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;padding:6px 8px;background:var(--bg4);border-radius:7px">✋ Glisse directement sur le preview pour recadrer</div>
               </div>
@@ -1482,7 +1482,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div class="flbl" style="font-size:10px;margin:0">Ratio Avatar / Gameplay</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="splitRatioVal">35 / 65</span>
                   </div>
-                  <input type="range" id="splitRatio" min="20" max="70" value="35" step="5" oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+                  <input class="aa-slider" type="range" id="splitRatio" min="20" max="70" value="35" step="5" oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()" style="width:100%">
                 </div>
                 <button onclick="swapSplit()" style="width:100%;margin-top:4px;padding:9px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser (avatar ⇄ clip)</button>
                 <div>
@@ -1490,14 +1490,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div class="flbl" style="font-size:10px;margin:0">Zoom gameplay</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal">100%</span>
                   </div>
-                  <input type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
+                  <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                 </div>
                   <div class="fld" style="margin-bottom:14px">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                       <div class="flbl" style="font-size:10px;margin:0">Largeur gameplay</div>
                       <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal">100%</span>
                     </div>
-                    <input type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%;accent-color:var(--orange)">
+                    <input class="aa-slider" type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px">✋ Glisse directement sur le preview pour recadrer les zones</div>
                 <!-- INVERSER + AVATAR AU-DESSUS -->
@@ -1591,42 +1591,42 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="flbl" style="font-size:10px;margin:0">Taille du texte</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subSizeVal">72px</span>
               </div>
-              <input type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subSize" min="36" max="120" value="72" oninput="cfg.subSize=+this.value;document.getElementById('subSizeVal').textContent=this.value+'px';updateSubPreview();updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Position verticale</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
               </div>
-              <input type="range" id="subPos" min="0" max="100" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subPos" min="0" max="100" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Position horizontale</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosXVal">50%</span>
               </div>
-              <input type="range" id="subPosX" min="0" max="100" value="50" oninput="cfg.subPosX=+this.value;document.getElementById('subPosXVal').textContent=this.value+'%';updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subPosX" min="0" max="100" value="50" oninput="cfg.subPosX=+this.value;document.getElementById('subPosXVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Étirement vertical</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subLineHVal">1.0×</span>
               </div>
-              <input type="range" id="subLineH" min="10" max="30" value="10" oninput="cfg.subLineH=+this.value/10;document.getElementById('subLineHVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subLineH" min="10" max="30" value="10" oninput="cfg.subLineH=+this.value/10;document.getElementById('subLineHVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview();updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Étirement horizontal</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subScaleXVal">1.0×</span>
               </div>
-              <input type="range" id="subScaleX" min="5" max="30" value="10" step="1" oninput="cfg.subScaleX=+this.value/10;document.getElementById('subScaleXVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subScaleX" min="5" max="30" value="10" step="1" oninput="cfg.subScaleX=+this.value/10;document.getElementById('subScaleXVal').textContent=(+this.value/10).toFixed(1)+'×';updateSubPreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Mots par groupe</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
               </div>
-              <input type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%;accent-color:var(--orange)">
+              <input class="aa-slider" type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%">
               <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
                 <button onclick="resetSubStyle()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↺ Défaut</button>
                 <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
@@ -7577,7 +7577,7 @@ function nav(id,el){
   if(id==='cartoon')    initCartoon();
   if(id==='audioclean') initAudioCleanView();
   if(id==='studio')     initStudio();
-  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); }
+  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); }
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
@@ -12550,6 +12550,9 @@ function _updateDurationLock(plan){
 }
 // Remplit visuellement la piste du slider (webkit) selon la valeur
 function _aaSliderFill(el){ if(!el) return; const min=+el.min||0, max=+el.max||100, v=+el.value; el.style.setProperty('--aa-fill', (max>min?((v-min)/(max-min)*100):50)+'%'); }
+// Tous les sliders .aa-slider : remplissage auto à l'input + init de tous
+document.addEventListener('input', function(e){ const t=e.target; if(t && t.classList && t.classList.contains('aa-slider')) _aaSliderFill(t); }, true);
+function _aaInitSliders(){ document.querySelectorAll('.aa-slider').forEach(_aaSliderFill); }
 
 function _updateQualityLocks(plan){
   // 540p : tous les plans
