@@ -3123,15 +3123,17 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
           <div class="row" style="gap:16px;align-items:stretch">
             <!-- Image (mise en avant) -->
             <div id="expImgDrop" onclick="document.getElementById('expImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="_expOnImgDrop(event)" style="flex:0 0 210px;border:1.5px dashed var(--border2);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;cursor:pointer;background:linear-gradient(180deg,rgba(255,107,53,.06),var(--bg3));transition:all .15s;position:relative;overflow:hidden;min-height:158px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="if(!window._expImgB64)this.style.borderColor='var(--border2)'">
-              <input type="file" id="expImgInput" accept="image/*" style="display:none" onchange="_expOnImgInput(this)">
+              <input type="file" id="expImgInput" accept="image/*" multiple style="display:none" onchange="_expOnImgInput(this)">
               <img id="expImgPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+              <span id="expImgCount" style="display:none;position:absolute;top:7px;right:7px;z-index:3;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:20px"></span>
               <div style="width:56px;height:56px;border-radius:16px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.4);display:flex;align-items:center;justify-content:center">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;line-height:1.3">Ajoute ton image<br><span class="faint" style="font-weight:400;font-size:11px;font-family:var(--mono)">avatar · produit · perso</span></div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;line-height:1.3">Ajoute tes images<br><span class="faint" style="font-weight:400;font-size:11px;font-family:var(--mono)">avatar · produit · perso</span></div>
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
+              <div id="expImgThumbs" style="display:none;gap:9px;flex-wrap:wrap;align-items:center"></div>
               <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
@@ -15110,13 +15112,27 @@ function _expEnhance(){
 }
 
 // ── Image optionnelle ──
-function _expOnImgDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border2)'; const f=e.dataTransfer?.files?.[0]; if(f) _expLoadImg(f); }
-function _expOnImgInput(input){ const f=input?.files?.[0]; if(f) _expLoadImg(f); }
+window._expImgs = window._expImgs || [];  // images multiples (max EXP_MAX_IMGS)
+const EXP_MAX_IMGS = 4;
+function _expOnImgDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border2)'; [...(e.dataTransfer?.files||[])].forEach(_expLoadImg); }
+function _expOnImgInput(input){ [...(input?.files||[])].forEach(_expLoadImg); if(input) input.value=''; }
 function _expLoadImg(file){
   if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
+  if(window._expImgs.length>=EXP_MAX_IMGS){ toast('⚠️ Maximum '+EXP_MAX_IMGS+' images'); return; }
   const r=new FileReader();
-  r.onload=()=>{ window._expImgB64 = String(r.result).replace(/^data:image\/\w+;base64,/,''); const p=document.getElementById('expImgPreview'); if(p){ p.src=r.result; p.style.display='block'; } const d=document.getElementById('expImgDrop'); if(d) d.style.borderColor='var(--orange)'; toast('✅ Image ajoutée'); };
+  r.onload=()=>{ window._expImgs.push({ b64:String(r.result).replace(/^data:image\/\w+;base64,/,''), url:r.result }); window._expImgB64=window._expImgs[0].b64; _expRenderImgs(); toast('✅ Image ajoutée ('+window._expImgs.length+'/'+EXP_MAX_IMGS+')'); };
   r.readAsDataURL(file);
+}
+function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); window._expImgB64=(window._expImgs[0]&&window._expImgs[0].b64)||null; _expRenderImgs(); }
+function _expRenderImgs(){
+  const imgs=window._expImgs||[];
+  const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
+  if(imgs.length){ if(p){ p.src=imgs[0].url; p.style.display='block'; } if(d) d.style.borderColor='var(--orange)'; if(cnt){ cnt.style.display=imgs.length>1?'block':'none'; cnt.textContent=imgs.length+'/'+EXP_MAX_IMGS; } }
+  else { if(p){ p.style.display='none'; p.src=''; } if(d) d.style.borderColor='var(--border2)'; if(cnt) cnt.style.display='none'; }
+  const wrap=document.getElementById('expImgThumbs'); if(!wrap) return;
+  if(!imgs.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:50px;height:50px;border-radius:10px;overflow:hidden;border:1px solid var(--border2);flex:0 0 auto"><img src="${im.url}" style="width:100%;height:100%;object-fit:cover"><button onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#15151a;border:1px solid var(--border2);color:#fff;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">×</button></div>`).join('');
 }
 
 // ── Génération principale ──
@@ -15226,7 +15242,7 @@ async function expressCreate(){
 
 function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
-  window._expImgB64=null; window._expVidBlob=null;
+  window._expImgB64=null; window._expVidBlob=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
   const vid=document.getElementById('expResultVid'); if(vid){ vid.style.display='none'; vid.src=''; }
