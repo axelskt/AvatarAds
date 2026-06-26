@@ -152,12 +152,12 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 .sidebar{width:248px;background:var(--bg-grad);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .nav-g{padding:14px 10px 6px}
 .nav-gl{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;padding:0 10px;margin-bottom:4px}
-.nav-i{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;font-size:14px;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .18s;position:relative;margin-bottom:2px;border:1px solid transparent}
+.nav-i{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;font-size:14.5px;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .18s;position:relative;margin-bottom:2px;border:1px solid transparent}
 .nav-i:hover{background:var(--surface);color:var(--text)}
-.nav-i.on{background:var(--accent-soft);color:var(--text);border-color:var(--accent-line)}
-.nav-i.on::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2.5px;background:var(--accent);border-radius:0 2px 2px 0;box-shadow:0 0 8px var(--accent)}
-.nav-i svg{width:16px;height:16px;flex-shrink:0;opacity:.5}
-.nav-i:hover svg{opacity:.75}
+.nav-i.on{background:var(--accent-soft);color:var(--text);border-color:var(--accent-line);font-weight:600}
+.nav-i svg{width:18px;height:18px;flex-shrink:0;color:var(--text-3)}
+.nav-i:hover svg{color:var(--text-2)}
+.nav-i.on svg{color:var(--accent-2)}
 .nav-i.on svg{opacity:1;color:var(--accent-2)}
 
 /* MAIN */
@@ -323,7 +323,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .btn-gen:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 28px rgba(255,107,53,0.4)}
 .btn-gen:active:not(:disabled){transform:translateY(0)}
 .btn-gen:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-back{width:100%;padding:10px;background:transparent;border:1px solid var(--border);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-top:8px}
+.btn-back{flex:0 0 auto;padding:13px 22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-back:hover{background:var(--surface-2);border-color:var(--border-2);color:var(--text)}
 .btn-back:hover{background:var(--bg3);color:var(--text2);border-color:var(--border2)}
 .cost-hint{text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;letter-spacing:.3px}
 .cost-hint span{color:var(--orange2)}
@@ -642,59 +643,59 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="nav-g">
       <div class="nav-gl">Outils</div>
       <div class="nav-i on" onclick="nav('generator',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 1l1.8 3.6L13 5.6l-2.75 2.68.65 3.78L7.5 10.2l-3.4 1.86.65-3.78L2 5.6l3.7-1Z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
         Générateur
       </div>
       <div class="nav-i" onclick="nav('library',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="13" height="10" rx="1.5"/><path d="M5 1v2M10 1v2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>
         Bibliothèque
       </div>
       <div class="nav-i" onclick="nav('imagegen',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         Images IA
       </div>
       <div class="nav-i" onclick="nav('recorder',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="5" height="7" rx="2.5"/><path d="M2.5 7.5A4.5 4.5 0 0011 9.5M7.5 11v2.5M5.5 13.5h4"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
         Enregistreur
       </div>
       <div class="nav-i" onclick="nav('audioclean',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 7.5h2l2-5 2 10 2-7 2 4 1-2h2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg>
         Nettoyage audio
       </div>
     </div>
     <div class="nav-g" style="margin-top:14px">
       <div class="nav-gl">Studio</div>
       <div class="nav-i" onclick="nav('express',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg>
         Express
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('cartoon',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="6" r="3.5"/><path d="M3 12.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><path d="M11.5 2.5l1 1M3.5 2.5l-1 1"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
         Cartoon
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('studio',this)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="12" height="9" rx="1.5"/><path d="M1.5 6h12M5 3v9"/><path d="M3 4.5h0.5M3 7.5h0.5M3 10.5h0.5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
         Éditeur
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
       <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2"/><circle cx="10" cy="10" r="2"/><path d="M7 5h1a2 2 0 012 2v1"/><path d="M8 10H7a2 2 0 01-2-2V7"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h0M18 12h0"/></svg>
         Parrainage
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-i" onclick="openSetup()">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2.5M7.5 11.5V14M1 7.5h2.5M11.5 7.5H14M3.2 3.2l1.77 1.77M10.03 10.03l1.77 1.77M3.2 11.8l1.77-1.77M10.03 4.97l1.77-1.77"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
         Connexions
       </div>
       <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
         Mon compte
       </div>
       <div class="nav-i" id="navReportBug" onclick="openBugReport()" style="color:var(--text2)">
-        <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="5" height="8" rx="2.5"/><path d="M5 5.5H2.5M5 8H2.5M10 5.5h2.5M10 8h2.5M7.5 3V1M6 1.8l1 1.2M9 1.8l-1 1.2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg>
         Report bug
       </div>
     </div>
@@ -1802,9 +1803,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <div class="gen-footer" id="genFooter">
-          <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box">
-            <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()">Continuer →</button>
+          <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;gap:10px;align-items:stretch">
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
+            <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()" style="flex:1">Continuer →</button>
           </div>
         </div>
       </div><!-- /gen-left -->
@@ -7566,6 +7567,7 @@ function nav(id,el){
   if(id==='express' || id==='cartoon') vEl.style.flexDirection='row';
   if(id==='studio') vEl.style.flexDirection='column';
   if(el) el.classList.add('on');
+  else { const _auto=[...document.querySelectorAll('.nav-i')].find(n=>{const o=n.getAttribute('onclick')||'';return o.includes("nav('"+id+"'")||o.includes('nav("'+id+'"');}); if(_auto) _auto.classList.add('on'); }
   if(id==='library')    renderLibrary();
   if(id==='youtube')    refreshYoutubeView();
   if(id==='imagegen')   initImageGen();
