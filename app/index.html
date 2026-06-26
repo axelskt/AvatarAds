@@ -7550,14 +7550,13 @@ function _isFreePlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
   return !currentMember || guestMode || p === 'free';
 }
-// ── AB TEST : générateur complet gratuit, paywall uniquement à l'EXPORT ──
-// true  = le plan gratuit peut TOUT générer, le paywall ne se déclenche qu'au téléchargement/export.
-// false = comportement classique (paywall dès la génération).
-const AB_PAYWALL_AT_EXPORT = true;
+// ── Paywall : le plan gratuit est bloqué DÈS LA GÉNÉRATION (la vidéo n'est pas produite sans abonnement) ──
+// false = comportement strict (paywall dès la génération). true = AB test (génération libre, paywall à l'export) — DÉSACTIVÉ.
+const AB_PAYWALL_AT_EXPORT = false;
 
-// Appelé en tête de chaque action de GÉNÉRATION : bloque si gratuit (sauf en mode AB export-only)
+// Appelé en tête de chaque action de GÉNÉRATION : ouvre le paywall et bloque si gratuit
 function _gateFreeGenerate(){
-  if(AB_PAYWALL_AT_EXPORT) return false; // génération libre pour tous
+  if(AB_PAYWALL_AT_EXPORT) return false; // (désactivé) génération libre pour tous
   if(_isFreePlan()){ showPlansSheet(); return true; }
   return false;
 }
