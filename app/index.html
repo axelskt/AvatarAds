@@ -8831,9 +8831,22 @@ async function togglePreviewPlay(){
     btn.style.color = 'var(--orange2)';
     let activeAudio = null;
     _previewUsingCleanAudio = false;
-    // Priorité : audio sans silences
-    const cleanUrl = silenceKeepSegs.length > 0 ? await _getOrBuildCleanBlobUrl() : null;
-    if(cleanUrl){
+    window._bypassPreviewIsVideo = false;
+    // Une vidéo lipsync (Hedra générée OU bypass importée) est affichée dans le preview ?
+    const bpv0 = document.getElementById('bypassPreviewVid');
+    const hedraVidShown = bpv0 && bpv0.src && bpv0.style.display !== 'none' &&
+      ((results && results.hedraUrl) || (window._bypassHedraOn && window._bypassHedraUrl));
+    // Priorité : audio sans silences (sauf si la vidéo lipsync a déjà sa propre voix bakée)
+    const cleanUrl = (!hedraVidShown && silenceKeepSegs.length > 0) ? await _getOrBuildCleanBlobUrl() : null;
+    if(hedraVidShown){
+      // La vidéo lipsync est sa PROPRE source audio → une seule horloge pour
+      // voix + personnage + sous-titres (sinon ils se désynchronisent à la lecture)
+      bpv0.muted = false; bpv0.loop = false; bpv0.currentTime = 0;
+      await new Promise(r => { if(bpv0.readyState >= 1) return r(); bpv0.onloadedmetadata = r; bpv0.onerror = r; setTimeout(r, 2000); });
+      bpv0.play().catch(()=>{});
+      activeAudio = bpv0;
+      window._bypassPreviewIsVideo = true;
+    } else if(cleanUrl){
       const cleanEl = new Audio(cleanUrl);
       // Attendre que la durée soit disponible avant de lancer l'anim
       await new Promise(r => { cleanEl.onloadedmetadata = r; cleanEl.onerror = r; setTimeout(r, 800); });
@@ -8846,13 +8859,6 @@ async function togglePreviewPlay(){
     } else if(results && results.audioBlob){
       const el = document.getElementById('audioEl');
       if(el){ el.currentTime = 0; el.play().catch(()=>{}); activeAudio = el; }
-    } else if(window._bypassHedraOn && window._bypassHedraUrl){
-      // Mode bypass : jouer l'audio de la vidéo lipsync pour l'aperçu
-      const bypassAudio = new Audio(window._bypassHedraUrl);
-      await new Promise(r => { bypassAudio.onloadedmetadata = r; bypassAudio.onerror = r; setTimeout(r, 2000); });
-      bypassAudio.currentTime = 0;
-      bypassAudio.play().catch(()=>{});
-      activeAudio = bypassAudio;
     } else {
       const sel = document.querySelector('.voice-row.on audio');
       if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
@@ -8912,9 +8918,11 @@ function startPreviewAnim(audioEl){
   // Si silences actifs en preview → seeking virtuel pour sauter les mêmes silences que l'audio
   const _gpSilenceSync = _previewUsingCleanAudio && silenceKeepSegs.length > 0 && gpVid && gpVid.src;
   if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
-  // Lancer la vidéo avatar en sync avec l'audio
+  // Lancer la vidéo avatar en sync avec l'audio.
+  // Si la vidéo lipsync EST elle-même la source audio (audioEl), ne pas la re-piloter ici
+  // (sinon on la relance/repositionne et on recrée la désync qu'on vient de corriger).
   const bpv = document.getElementById('bypassPreviewVid');
-  if(bpv && bpv.src){ bpv.currentTime=0; bpv.play().catch(()=>{}); }
+  if(bpv && bpv.src && bpv !== audioEl){ bpv.currentTime=0; bpv.play().catch(()=>{}); }
 
   // Affiche le premier groupe immédiatement
   updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
@@ -9006,6 +9014,9 @@ function stopPreviewAnim(){
   if(gpVid) gpVid.pause();
   const bpv = document.getElementById('bypassPreviewVid');
   if(bpv && !bpv.paused) bpv.pause();
+  // Si la vidéo lipsync servait de source audio, on la remet en boucle muette
+  // (état visuel statique du preview) pour la prochaine fois.
+  if(bpv && window._bypassPreviewIsVideo){ bpv.muted = true; bpv.loop = true; window._bypassPreviewIsVideo = false; }
   updateSubPreview();
 }
 
@@ -14330,9 +14341,11 @@ async function _lvpLoadThumbs(modal){
       if(isImg){ cell.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`; }
       else {
         const vid = document.createElement('video');
-        vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+        vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
         vid.style.cssText = 'width:100%;height:100%;object-fit:cover';
-        vid.addEventListener('loadeddata', ()=>{ try{ vid.currentTime = Math.min(0.1, (vid.duration||1)/2); }catch(e){} });
+        const _seekThumb = ()=>{ try{ if(vid.currentTime < 0.05) vid.currentTime = Math.min(0.1, (vid.duration||1)/2); }catch(e){} };
+        vid.addEventListener('loadedmetadata', _seekThumb);
+        vid.addEventListener('loadeddata', _seekThumb);
         cell.innerHTML = ''; cell.appendChild(vid);
       }
     }catch(e){ /* garde l'emoji */ }
