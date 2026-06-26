@@ -1085,10 +1085,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- MODE VOIX SELECTOR -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-              <button id="voiceModeBtnClone" onclick="selectVoiceMode('clone')" style="padding:10px 8px;background:var(--orange);border:2px solid var(--orange);border-radius:10px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center">🎤 Clone / Preset</button>
-              <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center">🎬 Audio MP4</button>
+            <!-- MODE VOIX SELECTOR — contrôle segmenté (réf. spec) -->
+            <div class="seg" style="display:flex;width:100%;margin-bottom:14px">
+              <button id="voiceModeBtnClone" class="on" onclick="selectVoiceMode('clone')" style="flex:1">🎙 Clone / Preset</button>
+              <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="flex:1">🎬 Audio MP4</button>
             </div>
 
             <div id="voice-el-sections">
@@ -9573,31 +9573,29 @@ function toggleMp4AudioOption(force){
     const elSections = document.getElementById('voice-el-sections');
     if(elSections){ elSections.style.opacity = '1'; elSections.style.pointerEvents=''; }
   }
-  // Sync mode selector buttons
+  // Sync mode selector buttons (contrôle segmenté .seg → toggle .on)
   const btnC = document.getElementById('voiceModeBtnClone');
   const btnM = document.getElementById('voiceModeBtnMp4');
   if(mp4AudioEnabled){
-    if(btnC){ btnC.style.background='var(--bg3)'; btnC.style.border='2px solid var(--border)'; btnC.style.color='var(--text2)'; }
-    if(btnM){ btnM.style.background='var(--orange)'; btnM.style.border='2px solid var(--orange)'; btnM.style.color='#fff'; }
+    if(btnC) btnC.classList.remove('on');
+    if(btnM) btnM.classList.add('on');
   } else {
-    if(btnC){ btnC.style.background='var(--orange)'; btnC.style.border='2px solid var(--orange)'; btnC.style.color='#fff'; }
-    if(btnM){ btnM.style.background='var(--bg3)'; btnM.style.border='2px solid var(--border)'; btnM.style.color='var(--text2)'; }
+    if(btnC) btnC.classList.add('on');
+    if(btnM) btnM.classList.remove('on');
   }
 }
 
 function selectVoiceMode(mode){
   const btnClone = document.getElementById('voiceModeBtnClone');
   const btnMp4   = document.getElementById('voiceModeBtnMp4');
-  const elSec    = document.getElementById('voice-el-sections');
-  const mp4Wrap  = document.getElementById('mp4AudioPanel')?.closest('.fld');
   if(mode === 'mp4'){
     toggleMp4AudioOption(true);
-    if(btnClone){ btnClone.style.background='var(--bg3)'; btnClone.style.border='2px solid var(--border)'; btnClone.style.color='var(--text2)'; }
-    if(btnMp4)  { btnMp4.style.background='var(--orange)'; btnMp4.style.border='2px solid var(--orange)'; btnMp4.style.color='#fff'; }
+    if(btnClone) btnClone.classList.remove('on');
+    if(btnMp4)   btnMp4.classList.add('on');
   } else {
     toggleMp4AudioOption(false);
-    if(btnClone){ btnClone.style.background='var(--orange)'; btnClone.style.border='2px solid var(--orange)'; btnClone.style.color='#fff'; }
-    if(btnMp4)  { btnMp4.style.background='var(--bg3)'; btnMp4.style.border='2px solid var(--border)'; btnMp4.style.color='var(--text2)'; }
+    if(btnClone) btnClone.classList.add('on');
+    if(btnMp4)   btnMp4.classList.remove('on');
   }
 }
 
