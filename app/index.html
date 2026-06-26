@@ -399,6 +399,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 .exp-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px 16px;margin-bottom:14px}
 .exp-section-title{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:6px}
 .exp-wpg-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:22px;font-size:12px;font-weight:600;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s}
+details.adv>summary{list-style:none}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .exp-wpg-chip:hover{border-color:var(--border);color:var(--text)}
 .exp-wpg-chip.on{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
 /* Cartes de presets Express (style · format · qualité · voix) — sélection = bordure orange + fond chaud */
@@ -922,6 +925,11 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div id="splitToggleS2" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
                 <div id="splitThumbS2" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
               </div>
+            </div>
+            <!-- Panneau split (étape Avatar) : bouton inverser quand le split est actif -->
+            <div id="splitPanelStep2" style="display:none;margin-bottom:16px;padding:12px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <button onclick="swapSplit()" style="width:100%;padding:10px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser clip ⇄ Avatar</button>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:7px">Échange la position du clip et de l'avatar (haut / bas)</div>
             </div>
 
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -1541,6 +1549,10 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
             </div>
 
+            <!-- RÉGLAGES AVANCÉS (repliable, fermé par défaut) -->
+            <details class="adv" style="margin-bottom:16px">
+              <summary style="cursor:pointer;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:10px;user-select:none"><span>⚙️ Réglages avancés <span style="font-weight:400;color:var(--text3);font-family:var(--mono);font-size:10px">couleurs · taille · position · étirement</span></span><span class="adv-caret" style="font-size:11px;color:var(--text3);transition:transform .2s">▾</span></summary>
+            <div style="margin-top:12px">
             <!-- COULEURS -->
             <div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">🎨 Couleurs</div>
@@ -1620,6 +1632,8 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
                 <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
               </div>
             </div>
+            </div>
+            </details>
 
             <!-- hidden timing inputs kept for JS compat -->
             <input type="hidden" id="subAdvanceSlider" value="3">
@@ -9098,6 +9112,7 @@ function toggleSplit(){
   const clipDiv  = document.getElementById('clipOrAvatarDivider');
   if(clipPick) clipPick.style.display = splitEnabled ? 'block' : 'none';
   if(clipDiv)  clipDiv.style.display  = splitEnabled ? 'flex'  : 'none';
+  const sp2 = document.getElementById('splitPanelStep2'); if(sp2) sp2.style.display = splitEnabled ? 'block' : 'none';
   if(splitEnabled){
     // Étape 4
     toggle.style.background = 'var(--orange)';
