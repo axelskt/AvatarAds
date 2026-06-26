@@ -9051,8 +9051,8 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
       html+=`<span style="${base}font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:${Math.round(sz*1.18)}px;color:#fff;-webkit-text-stroke:${stroke+2}px #000;text-shadow:0 0 4px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000,4px 5px 7px rgba(0,0,0,.65);margin:0 3px;text-transform:uppercase;letter-spacing:.6px">${w}</span>`;
     }
     else if(style==='karaoke'){
-      // Karaoké : le surlignage balaie de gauche à droite → tous les mots déjà prononcés sont remplis
-      const kFill = (activeIdx!==undefined && activeIdx!==null) ? (i <= activeIdx) : (i===0);
+      // Karaoké : un SEUL mot surligné à la fois (le mot actif)
+      const kFill = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
       html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;font-weight:900;margin:0 3px;border-radius:6px;${kFill?`background:linear-gradient(90deg,#1E90FF,#00D4AA);color:#fff;padding:2px 8px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
     }
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
@@ -13521,8 +13521,8 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       x = Math.max(W*0.04, Math.min(W*0.96 - lineW, x));
 
       lineIdxs.forEach(i=>{
-        // Surlignage cumulatif : tous les mots déjà prononcés sont remplis (balayage G→D)
-        const active = (activeIdx!==undefined && activeIdx!==null) ? (i <= activeIdx) : (i===0);
+        // Un SEUL mot surligné à la fois (le mot actif)
+        const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         const pw = widths[i];
         const ph = Math.round(sz * 1.25);
         const r  = Math.round(sz * 0.15);
@@ -15048,6 +15048,21 @@ async function _expBuildVoice(){
   }
   return null;
 }
+// Fallback voix (Gemini TTS) quand Veo natif refuse l'audio — la voix est ajoutée dans l'Éditeur
+async function _expTtsFallback(text){
+  if(!text) return null;
+  const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
+    method:'POST',
+    body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:(window._selGeminiVoice||window._expGeminiVoice||'Puck') } } } } })
+  });
+  if(!resp.ok) return null;
+  const data=await resp.json();
+  const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
+  const b64=(part?.inlineData||part?.inline_data)?.data;
+  if(!b64) return null;
+  const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  return new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
+}
 // Réglages sous-titres (passés à l'Éditeur)
 window._expSubStyle = 'punch';
 window._expSubPos   = 'bottom';
@@ -15151,14 +15166,26 @@ async function expressCreate(){
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
-    const startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning', {
-      method:'POST',
-      body: JSON.stringify({
-        instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
-        parameters:{ durationSeconds: parseInt(window._expDur)||5, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality==='4k'?'2160p':(window._expQuality||'720p')), generateAudio:useNativeAudio }
-      })
+    const _veoBody = (withAudio)=>({
+      instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
+      parameters:Object.assign(
+        { durationSeconds: parseInt(window._expDur)||5, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality==='4k'?'2160p':(window._expQuality||'720p')) },
+        withAudio ? { generateAudio:true } : {}
+      )
     });
-    if(!startResp.ok){ const e=await startResp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+startResp.status)); }
+    // Veo natif : on tente avec audio ; si le modèle refuse generateAudio, on relance sans (vidéo quand même produite)
+    let startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning', {
+      method:'POST', body: JSON.stringify(_veoBody(useNativeAudio))
+    });
+    if(!startResp.ok){
+      const e=await startResp.json().catch(()=>({})); const msg=e?.error?.message||('HTTP '+startResp.status);
+      if(useNativeAudio && /generateAudio|generate_audio|audio/i.test(msg)){
+        // fallback : relance sans audio natif puis génère la voix via Gemini TTS (ajoutée dans l'Éditeur)
+        startResp = await _cartoonProxyFetch('/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning', { method:'POST', body: JSON.stringify(_veoBody(false)) });
+        if(!startResp.ok){ const e2=await startResp.json().catch(()=>({})); throw new Error(e2?.error?.message||('HTTP '+startResp.status)); }
+        try{ if(!voiceBlob && prompt){ setP(Math.max(p,20),'🎙 Génération de la voix…'); voiceBlob = await _expTtsFallback(prompt); window._expVoiceBlob = voiceBlob; } }catch(_){}
+      } else { throw new Error(msg); }
+    }
     const { name:opName } = await startResp.json();
     if(!opName) throw new Error('Opération vidéo introuvable');
 
@@ -17646,6 +17673,8 @@ function initStudio(){
   }
 }
 function edFmt(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+String(s).padStart(2,'0'); }
+// Format précis avec millièmes de seconde (m:ss.mmm) — pour le curseur/playhead
+function edFmtMs(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60), ms=Math.floor((t%1)*1000); return m+':'+String(s).padStart(2,'0')+'.'+String(ms).padStart(3,'0'); }
 
 function edPickFromLibrary(){
   const vids=((typeof library!=='undefined'&&library)||window.library||[]).filter(v=>v.hedraIdbKey);
@@ -17811,7 +17840,7 @@ function edPlay(){
 }
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
 
-function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmt(Math.min(edGlobalNow(),tot))+' / '+edFmt(tot); } }
+function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmtMs(Math.min(edGlobalNow(),tot))+' / '+edFmtMs(tot); } }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
 // déplace la lecture au temps GLOBAL gt (gère le multi-clip en changeant de clip silencieusement)
 function edScrubTo(gt){
