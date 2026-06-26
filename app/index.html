@@ -1676,7 +1676,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
                 <!-- Tap Sync manuel — gratuit -->
                 <button onclick="startTapSync()" style="width:100%;margin-bottom:8px;padding:11px 14px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)';this.style.background='var(--orange-dim)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)';this.style.background='var(--bg4)'">
-                  🥁 <span>Tap Sync — synchroniser manuellement</span>
+                  🎯 <span>Tap Sync — synchroniser manuellement</span>
                 </button>
                 <!-- Whisper IA — Elite/Pro uniquement -->
                 <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
@@ -12374,7 +12374,7 @@ function _syncUIFromState(){
         if(subtitlesEnabled){
           sw.style.background = 'var(--orange)';
           if(thumb) thumb.style.left = '21px';
-          if(lbl)   lbl.textContent = 'Activés — style ' + (selSubStyle || 'Hormozi');
+          if(lbl)   lbl.textContent = 'Activés — style ' + (typeof _subStyleLabel==='function' ? _subStyleLabel(selSubStyle) : (selSubStyle || 'Hormozi'));
           if(row)   row.style.borderColor = 'rgba(255,107,53,0.3)';
           if(overlay) overlay.style.visibility = 'visible';
         } else {
@@ -17529,13 +17529,91 @@ function startTapSync(){
   _tapSyncIdx    = 0;
   _tapSyncActive = false;
 
-  // Montrer la page d'intro
+  // Afficher le panneau unique (réf. spec) + rendu initial
   const overlay = document.getElementById('tapSyncOverlay');
-  const intro   = document.getElementById('tapSyncIntro');
-  const session = document.getElementById('tapSyncSession');
-  if(intro)   intro.style.display   = 'flex';
-  if(session) session.style.display = 'none';
+  const playBtn = document.getElementById('tapSyncPlay');
+  if(playBtn) playBtn.textContent = '▶';
+  _tapSyncRenderUI();
+  _tapSyncRenderWave(0);
+  const tEl = document.getElementById('tapSyncT'); if(tEl) tEl.textContent = '0:00';
+  const dEl = document.getElementById('tapSyncDur'); if(dEl) dEl.textContent = _tsMmss(_tapSyncAudio && _tapSyncAudio.duration ? _tapSyncAudio.duration : Math.max(12,_tapSyncGroups.length*0.42));
   overlay.style.display = 'flex';
+}
+
+// mm:ss
+function _tsMmss(x){ x=Math.max(0,x||0); return Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0'); }
+
+// Play / Pause — démarre l'audio au 1er clic (geste utilisateur → autoplay Safari OK)
+function _tapSyncPlayPause(){
+  const playBtn = document.getElementById('tapSyncPlay');
+  if(!_tapSyncActive){
+    _tapSyncGo();                       // démarre l'audio, cale le groupe 0, idx=1
+    if(playBtn) playBtn.textContent = '⏸';
+    _tapSyncWaveLoop();
+    return;
+  }
+  if(_tapSyncAudio && !_tapSyncAudio.paused){
+    _tapSyncAudio.pause();
+    if(playBtn) playBtn.textContent = '▶';
+  } else if(_tapSyncAudio){
+    _tapSyncAudio.play().catch(()=>{});
+    if(playBtn) playBtn.textContent = '⏸';
+    _tapSyncWaveLoop();
+  }
+}
+
+// Animation waveform + temps
+let _tapSyncWaveRaf = null;
+function _tapSyncRenderWave(pct){
+  const wave = document.getElementById('tapSyncWave');
+  if(!wave) return;
+  if(wave.querySelectorAll('.tsw-bar').length < 70){
+    let h='';
+    for(let i=0;i<70;i++){ h+=`<div class="tsw-bar" style="flex:1;height:${(22+Math.abs(Math.sin(i*0.7))*60).toFixed(1)}%;border-radius:2px;background:var(--surface-3);transition:background .1s"></div>`; }
+    h+='<div id="tapSyncHead" style="position:absolute;top:0;bottom:0;left:0%;width:2px;background:#fff;box-shadow:0 0 8px #fff"></div>';
+    wave.innerHTML=h;
+  }
+  const bars = wave.querySelectorAll('.tsw-bar');
+  bars.forEach((b,i)=>{ b.style.background = (i/70*100 <= pct) ? 'var(--accent)' : 'var(--surface-3)'; });
+  const head = document.getElementById('tapSyncHead'); if(head) head.style.left = pct+'%';
+}
+function _tapSyncWaveLoop(){
+  if(!_tapSyncAudio) return;
+  const dur = _tapSyncAudio.duration || Math.max(12,_tapSyncGroups.length*0.42);
+  const t   = _tapSyncAudio.currentTime || 0;
+  _tapSyncRenderWave(Math.min(100, t/dur*100));
+  const tEl=document.getElementById('tapSyncT');   if(tEl) tEl.textContent = _tsMmss(t);
+  const dEl=document.getElementById('tapSyncDur');  if(dEl) dEl.textContent = _tsMmss(dur);
+  if(_tapSyncActive && _tapSyncAudio && !_tapSyncAudio.paused){
+    _tapSyncWaveRaf = requestAnimationFrame(_tapSyncWaveLoop);
+  }
+}
+
+// Annuler le dernier tap
+function _tapSyncUndo(){
+  if(_tapSyncIdx <= 1) return;          // on ne peut pas annuler le groupe 0 (départ audio)
+  _tapSyncTimes.pop();
+  _tapSyncIdx--;
+  _tapSyncRenderUI();
+}
+
+// Recommencer (garde l'audio chargé)
+function _tapSyncReset(){
+  _tapSyncTimes = [];
+  _tapSyncIdx   = 0;
+  _tapSyncActive = false;
+  document.removeEventListener('keydown', _tapSyncKeydown);
+  if(_tapSyncAudio){ try{ _tapSyncAudio.pause(); _tapSyncAudio.currentTime=0; }catch(e){} }
+  const playBtn=document.getElementById('tapSyncPlay'); if(playBtn) playBtn.textContent='▶';
+  _tapSyncRenderUI();
+  _tapSyncRenderWave(0);
+  const tEl=document.getElementById('tapSyncT'); if(tEl) tEl.textContent='0:00';
+}
+
+// Appliquer la sync (seulement quand tous les groupes sont calés)
+function _tapSyncApply(){
+  if(_tapSyncIdx < _tapSyncGroups.length){ toast('Continue de taper jusqu\'au dernier mot 🎯'); return; }
+  _tapSyncFinish();
 }
 
 function _tapSyncGo(){
@@ -17570,27 +17648,39 @@ function _tapSyncKeydown(e){
 
 function _tapSyncTap(){
   if(!_tapSyncActive || !_tapSyncAudio) return;
-  const t = _tapSyncAudio.currentTime;
-  _tapSyncTimes.push(t);
+  if(_tapSyncIdx >= _tapSyncGroups.length){ return; } // tous calés → attendre « Appliquer »
+  _tapSyncTimes.push(_tapSyncAudio.currentTime);
   _tapSyncIdx++;
-  if(_tapSyncIdx > _tapSyncGroups.length){ _tapSyncFinish(); return; }
   _tapSyncRenderUI();
   // Flash feedback
   const tapBtn = document.getElementById('tapSyncBtn');
-  if(tapBtn){ tapBtn.style.background='var(--orange)'; setTimeout(()=>{ tapBtn.style.background=''; }, 120); }
+  if(tapBtn){ tapBtn.style.transform='scale(.98)'; setTimeout(()=>{ if(tapBtn) tapBtn.style.transform=''; }, 100); }
 }
 
 function _tapSyncRenderUI(){
-  const cur  = document.getElementById('tapSyncCurrent');
-  const next = document.getElementById('tapSyncNext');
-  const prog = document.getElementById('tapSyncProg');
-  const grpN = document.getElementById('tapSyncGrpN');
-  const idx  = _tapSyncIdx;
+  const chips = document.getElementById('tapSyncChips');
   const total = _tapSyncGroups.length;
-  if(cur)  cur.textContent  = idx < total ? _tapSyncGroups[idx].join(' ') : '✓ FIN';
-  if(next) next.textContent = idx + 1 < total ? _tapSyncGroups[idx + 1].join(' ') : '';
-  if(prog) prog.style.width = Math.min(100, Math.round((idx / total) * 100)) + '%';
-  if(grpN) grpN.textContent = Math.min(idx + 1, total) + ' / ' + total;
+  const idx   = _tapSyncIdx;
+  if(chips){
+    let html='';
+    _tapSyncGroups.forEach((g, gi)=>{
+      const stamped = gi < idx, current = gi === idx;
+      const bg  = current ? 'var(--accent)' : (stamped ? 'var(--accent-soft)' : 'var(--surface-2)');
+      const col = current ? '#1A0A02'       : (stamped ? 'var(--accent-2)'   : 'var(--text-2)');
+      const bd  = current ? 'var(--accent)' : (stamped ? 'var(--accent-line)': 'var(--border)');
+      const sh  = current ? 'box-shadow:0 0 0 4px var(--accent-soft);' : '';
+      (g||[]).forEach(w=>{
+        html += `<span style="display:inline-block;padding:2px 7px;margin:0 3px 4px 0;border-radius:7px;font-size:14.5px;font-weight:${current?700:500};background:${bg};color:${col};border:1px solid ${bd};${sh}transition:.12s">${w}</span>`;
+      });
+    });
+    chips.innerHTML = html;
+    // auto-scroll vers le groupe courant
+    const cur = chips.querySelector('span[style*="0 0 0 4px"]');
+    if(cur && cur.offsetTop > chips.clientHeight*0.6){ chips.scrollTop = cur.offsetTop - chips.clientHeight*0.5; }
+  }
+  const cnt = document.getElementById('tapSyncCount'); if(cnt) cnt.textContent = Math.min(idx,total) + '/' + total;
+  const apply = document.getElementById('tapSyncApply');
+  if(apply){ const done = idx >= total && total > 0; apply.style.opacity = done?'1':'.5'; apply.style.cursor = done?'pointer':'not-allowed'; }
 }
 
 function _tapSyncFinish(){
@@ -17644,74 +17734,51 @@ function _tapSyncCancel(){
 </script>
 
 <!-- ── TAP SYNC OVERLAY ── -->
-<div id="tapSyncOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+<div id="tapSyncOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px">
+  <div class="card" style="width:100%;max-width:620px;padding:24px;background:var(--bg2);box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
 
-  <!-- ── PHASE 1 : INTRO / INSTRUCTIONS ── -->
-  <div id="tapSyncIntro" style="width:100%;max-width:440px;padding:32px 28px;display:flex;flex-direction:column;align-items:center;gap:0">
-    <div style="font-size:28px;margin-bottom:10px">🥁</div>
-    <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:4px;letter-spacing:-0.5px">Tap Sync</div>
-    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);margin-bottom:28px">Synchronise tes sous-titres à la main, en temps réel</div>
+    <!-- header -->
+    <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div class="eyebrow" style="color:var(--accent-2)">Synchronisation manuelle</div>
+        <h3 class="display" style="font-size:23px;font-weight:700;margin-top:8px;display:flex;align-items:center;gap:10px;line-height:1.1"><span style="font-size:20px">🎯</span>Tap Sync</h3>
+      </div>
+      <button onclick="_tapSyncCancel()" style="font-size:18px;background:none;border:none;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+    </div>
+    <p style="font-size:13.5px;margin-bottom:18px;color:var(--text2);line-height:1.5">Lance la lecture, puis appuie sur <span class="pill mono" style="padding:1px 8px;font-size:11px">Espace</span> (ou TAP) à chaque mot pour caler tes sous-titres en rythme.</p>
 
-    <!-- Étapes -->
-    <div style="width:100%;display:flex;flex-direction:column;gap:12px;margin-bottom:28px">
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
-        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">1</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">🎧 Mets tes écouteurs</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">L'audio de ta vidéo va se lancer dès que tu cliques <strong style="color:var(--orange2)">Go →</strong>. Tu dois l'entendre clairement.</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
-        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">2</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">👁 Regarde le mot affiché</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">L'écran te montre <strong style="color:#fff">le groupe de mots suivant</strong> à faire apparaître. Prépare-toi à taper au bon moment.</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
-        <div style="width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0">3</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">👆 Tape au bon moment</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Clique le gros bouton <strong style="color:#fff">ou appuie sur Espace</strong> exactement quand tu entends le mot dans l'audio. Répète pour chaque groupe.</div>
-        </div>
+    <!-- transcript chips -->
+    <div id="tapSyncChips" class="card" style="padding:16px;margin-bottom:16px;max-height:150px;overflow-y:auto;line-height:2;background:var(--panel-1)"></div>
+
+    <!-- waveform -->
+    <div id="tapSyncWave" style="position:relative;height:54px;border-radius:12px;background:var(--panel-1);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;gap:2px;padding:0 10px;margin-bottom:6px"></div>
+    <div class="row" style="justify-content:space-between;margin-bottom:18px">
+      <span class="mono faint" id="tapSyncT" style="font-size:11.5px">0:00</span>
+      <span class="mono faint" id="tapSyncDur" style="font-size:11.5px">0:00</span>
+    </div>
+
+    <!-- controls -->
+    <div class="row" style="align-items:stretch;gap:12px">
+      <button id="tapSyncPlay" onclick="_tapSyncPlayPause()" class="btn btn-ghost" style="flex:0 0 auto;width:54px;font-size:16px">▶</button>
+      <button id="tapSyncBtn" onclick="_tapSyncTap()" class="btn btn-primary" style="flex:1;font-size:17px;font-weight:800;min-height:54px;letter-spacing:.02em">TAP <span class="mono" id="tapSyncCount" style="font-size:12px;font-weight:600;opacity:.7;margin-left:6px">0/0</span></button>
+      <button onclick="_tapSyncUndo()" class="btn btn-ghost" style="flex:0 0 auto;width:54px;font-size:17px" title="Annuler le dernier tap">↶</button>
+    </div>
+
+    <!-- footer -->
+    <div class="row" style="justify-content:space-between;margin-top:18px">
+      <button onclick="_tapSyncReset()" class="btn btn-quiet btn-sm" style="background:none">↻ Recommencer</button>
+      <div class="row" style="gap:10px">
+        <button onclick="_tapSyncCancel()" class="btn btn-ghost btn-sm">Annuler</button>
+        <button id="tapSyncApply" onclick="_tapSyncApply()" class="btn btn-primary btn-sm" style="opacity:.5;cursor:not-allowed">✓ Appliquer la sync</button>
       </div>
     </div>
 
-    <!-- Bouton GO -->
-    <button onclick="_tapSyncGo()" style="width:100%;padding:18px;background:var(--orange);border:none;border-radius:14px;color:#fff;font-family:var(--font);font-size:17px;font-weight:900;cursor:pointer;letter-spacing:0.5px;transition:opacity .15s;margin-bottom:12px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-      🔊 Go — Lancer l'audio →
-    </button>
-    <button onclick="_tapSyncCancel()" style="background:transparent;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;cursor:pointer;padding:4px 12px">✕ Annuler</button>
+    <!-- ancres legacy (compat) -->
+    <div id="tapSyncIntro" style="display:none"></div>
+    <div id="tapSyncSession" style="display:none"></div>
+    <span id="tapSyncCurrent" style="display:none"></span><span id="tapSyncNext" style="display:none"></span>
+    <span id="tapSyncProg" style="display:none"></span><span id="tapSyncGrpN" style="display:none"></span>
   </div>
-
-  <!-- ── PHASE 2 : TAP INTERFACE ── -->
-  <div id="tapSyncSession" style="display:none;width:100%;max-width:420px;padding:32px 28px;flex-direction:column;align-items:center;gap:20px">
-
-    <div style="font-size:12px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase">🥁 Tap Sync — en cours</div>
-
-    <!-- Groupe actuel -->
-    <div style="text-align:center;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">PROCHAIN GROUPE →</div>
-      <div id="tapSyncCurrent" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;text-align:center">…</div>
-      <div id="tapSyncNext" style="font-size:15px;color:var(--text3);font-family:var(--mono);letter-spacing:1px"></div>
-    </div>
-
-    <!-- Barre de progression -->
-    <div style="width:100%;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
-      <div id="tapSyncProg" style="height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .1s"></div>
-    </div>
-    <div id="tapSyncGrpN" style="font-size:11px;font-family:var(--mono);color:var(--text3)">1 / ?</div>
-
-    <!-- Bouton TAP principal -->
-    <button id="tapSyncBtn" onclick="_tapSyncTap()" style="width:100%;padding:26px;background:var(--bg3);border:2px solid var(--border2);border-radius:16px;color:#fff;font-family:var(--font);font-size:20px;font-weight:900;cursor:pointer;transition:background .08s;letter-spacing:1px;user-select:none;-webkit-user-select:none" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
-      ↵ &nbsp;Maintenant !
-    </button>
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Ou appuie sur <kbd style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px">Espace</kbd></div>
-
-    <!-- Annuler -->
-    <button onclick="_tapSyncCancel()" style="background:transparent;border:none;color:var(--text3);font-family:var(--mono);font-size:12px;cursor:pointer;padding:4px 12px">✕ Annuler</button>
-  </div>
-
 </div>
 
 <!-- Legal footer — visible par les bots de vérification Google -->
