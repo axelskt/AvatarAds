@@ -559,11 +559,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 /* ── Slider esthétique (durée cible) ── */
 .aa-slider{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
 .aa-slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:var(--accent) no-repeat;background-size:var(--aa-fill,50%) 100%;background-color:var(--surface-3)}
-.aa-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.25);margin-top:-6px;cursor:grab;transition:transform .12s}
+.aa-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px -1px var(--accent-glow),0 0 0 1px rgba(0,0,0,.3);margin-top:-7px;cursor:grab;transition:transform .12s}
 .aa-slider::-webkit-slider-thumb:active{transform:scale(1.12);cursor:grabbing}
 .aa-slider::-moz-range-track{height:6px;border-radius:6px;background:var(--surface-3)}
 .aa-slider::-moz-range-progress{height:6px;border-radius:6px;background:var(--accent)}
-.aa-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:grab}
+.aa-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid #fff;cursor:grab}
 .exp-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:var(--bg4);outline:none;cursor:pointer}
 .exp-slider::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:linear-gradient(90deg,var(--accent-2),var(--accent)) no-repeat;background-size:var(--aa-fill,30%) 100%;background-color:var(--bg4)}
 .exp-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.45);margin-top:-6px;cursor:grab;transition:transform .12s}
@@ -886,7 +886,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div id="clipPickerSection" style="margin-bottom:16px;display:none">
               <!-- Aucun clip sélectionné -->
               <div id="clipNoSelRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
-                <span style="font-size:18px;opacity:.5">🎬</span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
                 <div style="flex:1">
                   <div style="font-size:12px;font-weight:600;color:var(--text3)">Clip gameplay</div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — fond vidéo animé</div>
@@ -917,7 +917,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
             <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
               <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:18px">🎮</span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                 <div>
                   <div style="font-size:13px;font-weight:700">Split Screen</div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Avatar + vidéo gameplay · réglages dans Style</div>
@@ -965,14 +965,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer avatar</button>
               </div>
               <div style="display:flex;gap:6px;margin-top:6px">
-                <button onclick="openAvatarPresetPicker()" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↩ Avatars sauvegardés</button>
-                <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">💾 Sauvegarder avatar</button>
+                <button onclick="openAvatarPresetPicker()" style="flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">↩ Avatars sauvegardés</button>
+                <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">💾 Sauvegarder avatar</button>
               </div>
             </div>
 
             <!-- BIBLIOTHÈQUE D'AVATARS (bouton ouverture modale) -->
             <div class="fld" style="margin-bottom:16px">
-              <button onclick="openAvatarModal()" style="width:100%;padding:14px;background:var(--bg3);border:2px dashed var(--border2);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+              <button onclick="openAvatarModal()" style="width:100%;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
                 <span style="font-size:16px">⭐</span>
                 Voir les avatars IA <span style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:4px">(49)</span>
                 <span style="font-size:12px;opacity:.5">→</span>
@@ -1079,7 +1079,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- STATUT SOURCE VOIX (géré depuis l'étape Style) -->
             <div id="voice-gp-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;display:none;align-items:center;gap:10px">
-              <span style="font-size:20px">🎮</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
               <div>
                 <div style="font-size:13px;font-weight:700;color:var(--green)">Mode "Audio gameplay" activé</div>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">La voix de ton gameplay animera la bouche de l'avatar · ElevenLabs ignoré</div>
@@ -1367,7 +1367,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div id="gpSizeStep3" class="fld" style="display:none;margin-top:18px">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:12px">
                 <div style="display:flex;align-items:center;gap:9px">
-                  <span style="font-size:15px">🎮</span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                   <div>
                     <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom gameplay</div>
                     <div id="gpStep3FileLabel" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px"></div>
@@ -1441,7 +1441,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" style="margin-bottom:18px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" onclick="toggleSplit()" id="splitToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:20px">🎮</span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                   <div>
                     <div style="font-size:13px;font-weight:700">Split Screen</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Avatar en haut · Gameplay en bas · Subs au milieu</div>
@@ -1803,8 +1803,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <div class="gen-footer" id="genFooter">
-          <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;gap:10px;align-items:stretch">
+          <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;gap:10px;align-items:center">
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
+            <span id="footerStepLbl" class="mono" style="font-size:12px;color:var(--text-3);white-space:nowrap;padding:0 6px">Étape 1 / 5</span>
             <button class="btn-gen" id="mainBtn" onclick="handleMainBtn()" style="flex:1">Continuer →</button>
           </div>
         </div>
@@ -5605,46 +5606,48 @@ function openClipPickerModal() {
   document.getElementById('_clipPickerModal')?.remove();
   const modal = document.createElement('div');
   modal.id = '_clipPickerModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);padding:24px';
   modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
 
   const cats = ['all','gaming','asmr','lifestyle'];
-  const catLabels = { all:'Tous', gaming:'🎮 Gaming', asmr:'🧼 ASMR', lifestyle:'🚶 Lifestyle' };
+  const catLabels = { all:'Tous', gaming:'🎮 Gaming', asmr:'🎧 ASMR', lifestyle:'🚶 Lifestyle' };
   let activeCat = 'all';
 
   function renderModalClips(cat) {
     activeCat = cat;
     const clips = cat === 'all' ? PRESET_CLIPS : PRESET_CLIPS.filter(c => c.category === cat);
     const maxDur = _clipMaxDuration();
-    return clips.map(clip => {
+    return clips.map((clip, i) => {
       const ok = _clipAccessible(clip.tier);
       const isOn = _selectedClipId === clip.id;
+      const hue = (i*53 + 15) % 360;
+      const thumb = `background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 10px,transparent 10px 20px),linear-gradient(160deg, oklch(0.46 0.13 ${hue}), oklch(0.24 0.08 ${hue}))`;
       return `<div onclick="${ok ? `_pickClipFromModal('${clip.id}','${clip.label}')` : `toast('⛔ Clip ${clip.tier} — upgrade ton plan')`}"
-        style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isOn?'rgba(255,107,53,0.1)':'var(--bg3)'};border:1.5px solid ${isOn?'rgba(255,107,53,0.45)':'var(--border)'};border-radius:10px;cursor:pointer;margin-bottom:7px;transition:all .15s;${!ok?'opacity:.5':''}">
-        <span style="font-size:22px">${clip.emoji}</span>
+        style="display:flex;align-items:center;gap:12px;padding:10px;background:${isOn?'var(--accent-soft)':'var(--surface)'};border:1px solid ${isOn?'var(--accent-line)':'var(--border)'};border-radius:14px;cursor:pointer;margin-bottom:8px;transition:all .15s;${!ok?'opacity:.6':''}">
+        <div style="width:48px;height:48px;border-radius:10px;flex-shrink:0;${thumb}"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clip.label}</div>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">${clip.category} · max ${maxDur}s</div>
+          <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clip.label}</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:2px">${clip.category} · max ${maxDur}s</div>
         </div>
-        ${isOn ? '<span style="font-size:16px">✅</span>' : (ok ? '<span style="font-size:10px;font-family:var(--mono);color:var(--orange2);font-weight:700">Choisir →</span>' : '<span style="font-size:12px">🔒</span>')}
+        ${isOn ? '<span style="font-size:16px">✅</span>' : (ok ? '<span style="font-size:11px;font-family:var(--mono);color:var(--accent-2);font-weight:700;flex-shrink:0">Choisir →</span>' : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>')}
       </div>`;
     }).join('');
   }
 
   modal.innerHTML = `
-    <div class="lvp-sheet" style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:78vh;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0">
+    <div class="card" style="width:100%;max-width:480px;background:var(--bg2);border-radius:20px;padding:22px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-shrink:0">
         <div>
-          <div style="font-size:14px;font-weight:800">🎬 Choisir un clip</div>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Joue en fond de ta vidéo · segment aléatoire</div>
+          <div class="display" style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px">🎬 Choisir un clip</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--text3);margin-top:5px">Joue en fond de ta vidéo · segment aléatoire</div>
         </div>
-        <button onclick="document.getElementById('_clipPickerModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+        <button onclick="document.getElementById('_clipPickerModal').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">✕</button>
       </div>
-      <div style="display:flex;gap:5px;margin-bottom:12px;flex-shrink:0;overflow-x:auto;padding-bottom:2px" id="cpmTabs">
-        ${cats.map(c=>`<button onclick="document.getElementById('cpmTabs').querySelectorAll('button').forEach(b=>b.style.background='var(--bg4)');this.style.background='var(--orange-dim)';document.getElementById('cpmList').innerHTML=window._cpmRender('${c}')" style="padding:5px 12px;background:${c==='all'?'var(--orange-dim)':'var(--bg4)'};border:1px solid ${c==='all'?'rgba(255,107,53,0.35)':'var(--border2)'};border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;color:${c==='all'?'var(--orange2)':'var(--text3)'};cursor:pointer;white-space:nowrap">${catLabels[c]}</button>`).join('')}
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0;overflow-x:auto;padding-bottom:2px" id="cpmTabs">
+        ${cats.map(c=>`<button onclick="document.getElementById('cpmTabs').querySelectorAll('button').forEach(b=>{b.style.background='var(--surface)';b.style.color='var(--text-3)';b.style.borderColor='var(--border)'});this.style.background='var(--accent)';this.style.color='#1A0A02';this.style.borderColor='var(--accent)';document.getElementById('cpmList').innerHTML=window._cpmRender('${c}')" style="padding:7px 14px;background:${c==='all'?'var(--accent)':'var(--surface)'};border:1px solid ${c==='all'?'var(--accent)':'var(--border)'};border-radius:999px;font-size:12.5px;font-weight:600;color:${c==='all'?'#1A0A02':'var(--text-3)'};cursor:pointer;white-space:nowrap">${catLabels[c]}</button>`).join('')}
       </div>
       <div id="cpmList" style="overflow-y:auto;flex:1">${renderModalClips('all')}</div>
-      ${_selectedClipId ? `<button onclick="clearSelectedClip();document.getElementById('_clipPickerModal').remove()" style="margin-top:10px;width:100%;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">✕ Supprimer le clip</button>` : ''}
+      ${_selectedClipId ? `<button onclick="clearSelectedClip();document.getElementById('_clipPickerModal').remove()" style="margin-top:12px;width:100%;padding:11px;background:var(--surface);border:1px solid rgba(255,71,87,0.25);border-radius:12px;color:var(--red);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0">✕ Supprimer le clip</button>` : ''}
     </div>`;
 
   window._cpmRender = renderModalClips;
@@ -7725,6 +7728,7 @@ function updateSteps(){
   const btn=document.getElementById('mainBtn');
   const back=document.getElementById('backBtn');
   back.style.display=step>1?'block':'none';
+  const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+step+' / 5';
   btn.style.display='block';
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
