@@ -886,7 +886,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
             <!-- RESET TOTAL — uniquement ici (1er onglet Produit), visible -->
-            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🔄 Réinitialiser totalement</button>
+            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="width:100%;margin-top:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:none;border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:all .2s" onmouseover="this.style.color='#ff4757'" onmouseout="this.style.color='var(--text3)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Réinitialiser totalement</button>
           </div>
 
           <!-- STEP 2 -->
@@ -1273,7 +1273,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" id="genTtsSilenceFld" style="margin-top:18px">
               <label style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:16px">✂️</span>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences — voix IA</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix ElevenLabs (clone/preset) · voix plus punchy</div>
@@ -1318,9 +1318,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <input type="hidden" id="silencePaddingSlider" value="80">
 
                 <!-- ONE button -->
-                <button id="silenceAnalyzeBtn" onclick="analyzeSilences()" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-                  🔇 Supprimer les silences automatiquement
-                </button>
+                <button id="silenceAnalyzeBtn" onclick="analyzeSilences()" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Supprimer les silences automatiquement</span></button>
 
                 <!-- Waveform + trim handles -->
                 <div id="silenceWaveWrap" style="display:none;margin-top:12px">
@@ -9736,7 +9734,7 @@ async function analyzeSilences(){
     toast('⚠️ Erreur : ' + (e.message||e));
     console.error(e);
   } finally {
-    btn.innerHTML = '🔇 Supprimer les silences automatiquement'; btn.disabled = false;
+    btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-3px;margin-right:7px\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>Supprimer les silences automatiquement</span>'; btn.disabled = false;
   }
 }
 
@@ -17176,7 +17174,7 @@ async function _acAnalyze(){
   } catch(e){
     console.error('_acAnalyze:', e);
     toast('⚠️ Erreur : ' + (e.message||e).slice(0,80));
-    if(btn){ btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = false; }
+    if(btn){ btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-3px;margin-right:7px\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>Supprimer les silences automatiquement</span>'; btn.disabled = false; }
   }
 }
 
@@ -17222,7 +17220,7 @@ function _acReset(){
   if(waveWrap) waveWrap.style.display = 'none';
   if(resEl)    resEl.innerHTML = '';
   if(tipEl)    tipEl.style.display = 'block';
-  if(btn){     btn.textContent = '🔇 Supprimer les silences automatiquement'; btn.disabled = true; btn.style.opacity = '.5'; }
+  if(btn){     btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-3px;margin-right:7px\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>Supprimer les silences automatiquement</span>'; btn.disabled = true; btn.style.opacity = '.5'; }
   if(fileIn)   fileIn.value = '';
 }
 
@@ -17447,51 +17445,51 @@ async function cartoonUseAsAvatar(){
 const _AV_LIST = [
   {path:'Avatar/Gemini_Generated_Image_10pj4510pj4510pj.jpg',name:'Avatar 1',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_1tixsv1tixsv1tix.jpg',name:'Avatar 2',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg',name:'Avatar 3',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_1xnaol1xnaol1xna.jpg',name:'Avatar 3',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_407a5b407a5b407a.jpg',name:'Avatar 4',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_50swtj50swtj50sw.jpg',name:'Avatar 5',genre:'f'},
-  {path:'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg',name:'Avatar 6',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg',name:'Avatar 7',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_5a5g7h5a5g7h5a5g.jpg',name:'Avatar 6',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_5ma8185ma8185ma8.jpg',name:'Avatar 7',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_5u1a095u1a095u1a.jpg',name:'Avatar 8',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_5uqktp5uqktp5uqk.jpg',name:'Avatar 9',genre:'f'},
-  {path:'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg',name:'Avatar 10',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_7oth357oth357oth.jpg',name:'Avatar 10',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_80d4t480d4t480d4.jpg',name:'Avatar 11',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_958arf958arf958a.jpg',name:'Avatar 12',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg',name:'Avatar 13',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_9txbrv9txbrv9txb.jpg',name:'Avatar 13',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_b82ln9b82ln9b82l.jpg',name:'Avatar 14',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg',name:'Avatar 15',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_bzdo2fbzdo2fbzdo.jpg',name:'Avatar 15',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_c9gbjwc9gbjwc9gb.jpg',name:'Avatar 16',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_ccpd2jccpd2jccpd.jpg',name:'Avatar 17',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_cdpvxhcdpvxhcdpv.jpg',name:'Avatar 18',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg',name:'Avatar 19',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_cvws3zcvws3zcvws.jpg',name:'Avatar 19',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_e78jj2e78jj2e78j.jpg',name:'Avatar 20',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg',name:'Avatar 21',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_en0a01en0a01en0a.jpg',name:'Avatar 21',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_f92tyxf92tyxf92t.jpg',name:'Avatar 22',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_g6rt0qg6rt0qg6rt.jpg',name:'Avatar 23',genre:'f'},
-  {path:'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg',name:'Avatar 24',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg',name:'Avatar 25',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_hzcb6vhzcb6vhzcb.jpg',name:'Avatar 24',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_ipk16xipk16xipk1.jpg',name:'Avatar 25',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_jm5drajm5drajm5d.jpg',name:'Avatar 26',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg',name:'Avatar 27',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_joaqesjoaqesjoaq.jpg',name:'Avatar 27',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_js8w1hjs8w1hjs8w.jpg',name:'Avatar 28',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg',name:'Avatar 29',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_lf7aarlf7aarlf7a.jpg',name:'Avatar 29',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_nn2ifnnn2ifnnn2i.jpg',name:'Avatar 30',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg',name:'Avatar 31',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_oeqsoboeqsoboeqs.jpg',name:'Avatar 31',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_onnt4ionnt4ionnt.jpg',name:'Avatar 32',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg',name:'Avatar 33',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_pdy1r0pdy1r0pdy1.jpg',name:'Avatar 33',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_pgg829pgg829pgg8.jpg',name:'Avatar 34',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg',name:'Avatar 35',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_pk6o7ypk6o7ypk6o.jpg',name:'Avatar 35',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_rbbacsrbbacsrbba.jpg',name:'Avatar 36',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_rhmemqrhmemqrhme.jpg',name:'Avatar 37',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_sbayi7sbayi7sbay.jpg',name:'Avatar 38',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg',name:'Avatar 39',genre:'f'},
-  {path:'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg',name:'Avatar 40',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_skxnjzskxnjzskxn.jpg',name:'Avatar 39',genre:'m'},
+  {path:'Avatar/Gemini_Generated_Image_smvrblsmvrblsmvr.jpg',name:'Avatar 40',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_soy06xsoy06xsoy0.jpg',name:'Avatar 41',genre:'f'},
-  {path:'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg',name:'Avatar 42',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg',name:'Avatar 43',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_t00mrct00mrct00m.jpg',name:'Avatar 42',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_uirl7kuirl7kuirl.jpg',name:'Avatar 43',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_vbx3zwvbx3zwvbx3.jpg',name:'Avatar 44',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_ve2motve2motve2m.jpg',name:'Avatar 45',genre:'f'},
   {path:'Avatar/Gemini_Generated_Image_wbx8llwbx8llwbx8.jpg',name:'Avatar 46',genre:'m'},
-  {path:'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg',name:'Avatar 47',genre:'f'},
+  {path:'Avatar/Gemini_Generated_Image_wx1kgmwx1kgmwx1k.jpg',name:'Avatar 47',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_x3yqafx3yqafx3yq.jpg',name:'Avatar 48',genre:'m'},
   {path:'Avatar/Gemini_Generated_Image_z8gnocz8gnocz8gn.jpg',name:'Avatar 49',genre:'f'},
 ];
@@ -17502,7 +17500,7 @@ function openAvatarModal(){
   const grid = document.getElementById('avModalGrid');
   if(grid && grid.children.length === 0){
     const _FNAMES=['Sofia','Maya','Emma','Clara','Lina','Jade','Camille','Inès','Léa','Chloé','Manon','Sarah','Nina','Eva','Zoé','Alice','Louise','Anna','Lucie','Julia','Rose','Mila','Lola','Iris','Nora'];
-    const _MNAMES=['Liam','Noah','Hugo','Adam','Théo','Ryan','Lucas','Nathan','Gabriel','Maël','Ethan','Léo','Tom','Raphaël','Axel','Jules','Marius','Sacha','Enzo','Eliott','Mathis','Noé','Yanis','Marco','Diego'];
+    const _MNAMES=['Liam','Noah','Hugo','Adam','Théo','Ryan','Lucas','Nathan','Gabriel','Maël','Ethan','Léo','Tom','Raphaël','Axel','Jules','Marius','Sacha','Enzo','Eliott','Mathis','Noé','Yanis','Marco','Diego','Victor','Paul','Antoine','Louis','Arthur','Clément','Baptiste','Romain','Quentin','Maxime'];
     let _fi=0,_mi=0;
     _AV_LIST.forEach((av,i) => {
       const prenom = av.genre==='f' ? _FNAMES[_fi++ % _FNAMES.length] : _MNAMES[_mi++ % _MNAMES.length];
