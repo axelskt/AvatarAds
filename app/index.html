@@ -297,14 +297,18 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* VOICE SAMPLE */
 .voice-list{display:flex;flex-direction:column;gap:5px}
-.voice-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s}
-.voice-row:hover{border-color:var(--border2);background:var(--bg3)}
-.voice-row.on{border-color:rgba(255,107,53,0.35);background:rgba(255,107,53,0.06)}
-.voice-play{width:30px;height:30px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;border:1px solid var(--border2);transition:all .15s}
-.voice-row.on .voice-play{background:var(--orange);border-color:var(--orange);color:#fff}
-.voice-info{flex:1}
-.voice-name{font-size:12px;font-weight:600;letter-spacing:-0.1px}
-.voice-desc{font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px}
+.voice-row{display:flex;align-items:center;gap:14px;padding:13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s}
+.voice-row:hover{border-color:var(--border-2)}
+.voice-row.on{border:2px solid var(--accent);background:var(--accent-soft);padding:12px 13px}
+.voice-play{width:42px;height:42px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border:1px solid var(--border);color:var(--accent-2);transition:all .15s;cursor:pointer}
+.voice-play:hover{border-color:var(--accent-line)}
+.voice-row.on .voice-play{border-color:var(--accent-line)}
+.voice-info{flex:1;min-width:0}
+.voice-name{font-size:14.5px;font-weight:600;letter-spacing:-0.1px;display:flex;align-items:center;gap:8px}
+.voice-lang{font-size:9.5px;font-family:var(--mono);font-weight:600;padding:2px 7px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);letter-spacing:.04em}
+.voice-desc{font-size:12px;color:var(--text-3);margin-top:3px}
+.voice-check{display:none;color:var(--accent-2);font-size:16px;flex-shrink:0}
+.voice-row.on .voice-check{display:block}
 .voice-id{font-size:9px;font-family:var(--mono);color:var(--text3);margin-left:auto}
 
 /* SUBTITLE STYLE */
@@ -564,7 +568,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 @keyframes imgPulse{0%,100%{opacity:.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
 /* ── Slider esthétique (durée cible) ── */
 .aa-slider{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
-.aa-slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:var(--accent) no-repeat;background-size:var(--aa-fill,50%) 100%;background-color:var(--surface-3)}
+.aa-slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(90deg, var(--accent) 0%, var(--accent) var(--aa-fill,50%), var(--surface-3) var(--aa-fill,50%), var(--surface-3) 100%)}
 .aa-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:18px;border-radius:9px;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.12);margin-top:-6px;cursor:grab;transition:transform .12s}
 .aa-slider::-webkit-slider-thumb:active{transform:scale(1.08);cursor:grabbing}
 .aa-slider::-moz-range-track{height:6px;border-radius:6px;background:var(--surface-3)}
@@ -1139,7 +1143,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button onclick="clearSavedVoice()" style="padding:5px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer">✕</button>
               </div>
               <button id="cloneBtn" onclick="cloneVoice()" disabled
-                style="width:100%;margin-top:10px;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:not-allowed;transition:all .2s">
+                style="width:100%;margin-top:10px;padding:13px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:not-allowed;transition:all .2s">
                 Cloner ma voix avec ElevenLabs →
               </button>
 
@@ -1170,34 +1174,34 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="voice-row" id="vr-charlotte" onclick="pickVoice(this,'XB0fDUnXU5powFXDhCwa','Charlotte','Féminine · chaleureuse · naturelle')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('XB0fDUnXU5powFXDhCwa','charlotte-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Charlotte</div>
+                    <div class="voice-name">Charlotte <span class="voice-lang">FR</span></div>
                     <div class="voice-desc">Féminine · chaleureuse · naturelle</div>
                   </div>
-                  <audio id="charlotte-prev" style="display:none"></audio>
+                  <span class="voice-check">✓</span><audio id="charlotte-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-aria" onclick="pickVoice(this,'9BWtsMINqrJLrRacOk9x','Aria','Féminine · expressive · moderne')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('9BWtsMINqrJLrRacOk9x','aria-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Aria</div>
+                    <div class="voice-name">Aria <span class="voice-lang">EN</span></div>
                     <div class="voice-desc">Féminine · expressive · moderne</div>
                   </div>
-                  <audio id="aria-prev" style="display:none"></audio>
+                  <span class="voice-check">✓</span><audio id="aria-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-liam" onclick="pickVoice(this,'TX3LPaxmHKxFdv7VOQHJ','Liam','Masculine · fluide · conversationnel')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('TX3LPaxmHKxFdv7VOQHJ','liam-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Liam</div>
+                    <div class="voice-name">Liam <span class="voice-lang">EN</span></div>
                     <div class="voice-desc">Masculine · fluide · conversationnel</div>
                   </div>
-                  <audio id="liam-prev" style="display:none"></audio>
+                  <span class="voice-check">✓</span><audio id="liam-prev" style="display:none"></audio>
                 </div>
                 <div class="voice-row" id="vr-daniel" onclick="pickVoice(this,'onwK4e9ZLuTAKqWW03F9','Daniel','Masculine · posé · confiant')">
                   <button class="voice-play" onclick="event.stopPropagation();previewVoice('onwK4e9ZLuTAKqWW03F9','daniel-prev')">▶</button>
                   <div class="voice-info">
-                    <div class="voice-name">Daniel</div>
+                    <div class="voice-name">Daniel <span class="voice-lang">EN</span></div>
                     <div class="voice-desc">Masculine · posé · confiant</div>
                   </div>
-                  <audio id="daniel-prev" style="display:none"></audio>
+                  <span class="voice-check">✓</span><audio id="daniel-prev" style="display:none"></audio>
                 </div>
               </div>
             </div>
@@ -1226,12 +1230,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
                   ondragleave="ev=>{this.classList.remove('av-drag')}"
                   ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleMp4AudioFile(ev.dataTransfer.files[0])}"
-                  style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg4);margin-bottom:12px">
+                  style="border:1px dashed var(--border-2);border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel-1);margin-bottom:12px">
                   <div id="mp4AudioDropContent">
-                    <div style="font-size:28px;margin-bottom:8px">🎬</div>
-                    <div style="font-size:13px;font-weight:700;margin-bottom:4px">Glisse ton fichier ici</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · MP3 · WAV · M4A</div>
-                    <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:11px;font-weight:600;color:var(--orange2)">Parcourir</div>
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+                    <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text)">Glisse ton fichier ici</div>
+                    <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">MP4 · MOV · MP3 · WAV · M4A</div>
+                    <div style="margin-top:10px;display:inline-block;padding:8px 14px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:10px;font-size:12px;font-weight:600;color:var(--accent-2)">Parcourir</div>
                   </div>
                   <div id="mp4AudioFileInfo" style="display:none">
                     <div style="font-size:28px;margin-bottom:6px">✅</div>
@@ -1284,7 +1288,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" style="margin-top:18px">
               <div onclick="toggleSilenceTool()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:16px">🔇</span>
+                                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Nettoie l'audio · supprime les pauses</div>
@@ -1297,13 +1301,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
                 <!-- Source info -->
                 <div id="silenceSourceInfo" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;padding:8px 10px;background:var(--bg4);border-radius:7px">
-                  🎙️ Source : <span id="silenceSourceLabel">aucun fichier audio détecté</span>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg> Source : <span id="silenceSourceLabel">aucun fichier audio détecté</span>
                 </div>
 
                 <!-- Gameplay upload -->
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">🎮 Synchronise le gameplay à la voix <span style="opacity:.6">(optionnel)</span></div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Synchronise le gameplay à la voix <span style="opacity:.6">(optionnel)</span></div>
                 <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:12px">
-                  <div id="silenceGpDropContent"><div style="font-size:20px">🎮</div><div style="font-size:11px;font-weight:600;margin-top:4px">Glisse ton gameplay ici</div><div style="font-size:9px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div></div>
+                  <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div></div>
                   <div id="silenceGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
                 </div>
                 <input type="file" id="silenceGpFileIn" accept="video/*" style="display:none" onchange="handleSilenceGameplayFile(this.files[0])">
@@ -7585,7 +7589,7 @@ function nav(id,el){
   if(id==='cartoon')    initCartoon();
   if(id==='audioclean') initAudioCleanView();
   if(id==='studio')     initStudio();
-  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); }
+  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !mp4AudioFile && !mp4AudioEnabled){ selectVoiceMode('clone'); } }
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
@@ -13801,7 +13805,7 @@ function setStep(id,state){
 const _LIB_IMPORT_CARD = `
   <div class="vid-card" onclick="document.getElementById('libImportInput').click()" style="cursor:pointer;border:2px dashed rgba(255,107,53,0.3);background:rgba(255,107,53,0.04);transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.background='rgba(255,107,53,0.09)'" onmouseout="this.style.borderColor='rgba(255,107,53,0.3)';this.style.background='rgba(255,107,53,0.04)'">
     <div class="vid-thumb" style="background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-      <div style="font-size:32px">📥</div>
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 13h5l1 2h4l1-2h5"/></svg>
       <div style="font-size:11px;font-weight:700;color:var(--orange2);text-align:center;padding:0 8px;line-height:1.4">Importer une vidéo avatar</div>
     </div>
     <div class="vid-meta">
@@ -14026,7 +14030,7 @@ function renderLibrary(){
     return;
   }
   if(!items.length){
-    grid.innerHTML = _LIB_IMPORT_CARD + `<div style="grid-column:2/-1;display:flex;align-items:center;justify-content:center;padding:40px 20px"><div style="text-align:center"><div style="font-size:36px;margin-bottom:12px">🎬</div><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">Aucune vidéo pour l'instant</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Lance ton premier avatar<br>ou importe une vidéo →</div></div></div>`;
+    grid.innerHTML = _LIB_IMPORT_CARD + `<div style="grid-column:2/-1;display:flex;align-items:center;justify-content:center;padding:40px 20px"><div style="text-align:center"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--text-3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">Aucune vidéo pour l'instant</div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.6">Lance ton premier avatar<br>ou importe une vidéo →</div></div></div>`;
     return;
   }
 
