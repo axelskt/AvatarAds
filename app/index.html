@@ -499,19 +499,25 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .crop-handle.br{bottom:-6px;right:-6px;cursor:se-resize}
 
 /* AVATAR MODAL */
-#avatarModal{position:fixed;inset:0;background:rgba(7,8,10,0.95);backdrop-filter:blur(12px);z-index:900;display:none;flex-direction:column}
+#avatarModal{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:900;display:none;align-items:center;justify-content:center;padding:32px}
 #avatarModal.open{display:flex}
-.av-modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
-.av-modal-title{font-size:16px;font-weight:700}
-.av-modal-filters{display:flex;gap:6px}
-.av-modal-close{padding:6px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s}
-.av-modal-close:hover{border-color:var(--orange);color:var(--orange2)}
-.av-modal-grid{flex:1;overflow-y:auto;padding:20px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
-.av-modal-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all .2s;background:var(--bg3);width:calc(50% - 7px);flex-shrink:0}
-.av-modal-card:hover{border-color:var(--orange);transform:scale(1.01);box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.av-modal-card.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
-.av-modal-card img{width:100%;height:260px;object-fit:contain;object-position:center center;display:block;background:#111}
-.av-modal-card .av-modal-label{font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px 10px;text-align:center;background:var(--bg4)}
+.av-modal-inner{width:100%;max-width:1000px;max-height:88vh;background:var(--bg2);border:1px solid var(--border);border-radius:22px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 40px 100px -30px rgba(0,0,0,.85)}
+.av-modal-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.av-modal-title{font-size:20px;font-weight:700;font-family:var(--display);letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.av-modal-filters{display:inline-flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px;gap:2px}
+.av-modal-close{padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.av-modal-close:hover{border-color:var(--border-2);color:var(--text);background:var(--surface-2)}
+.av-modal-grid{flex:1;overflow-y:auto;padding:22px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+.av-modal-card{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;border:1px solid var(--border);transition:all .18s;background:var(--surface);width:calc(33.333% - 10px);aspect-ratio:3/4;flex-shrink:0}
+.av-modal-card:hover{border-color:var(--border-2);transform:translateY(-2px);box-shadow:0 10px 28px -8px rgba(0,0,0,.5)}
+.av-modal-card.on{border:2px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.av-modal-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;display:block;background:#111}
+.av-modal-card .av-badge{position:absolute;top:9px;left:9px;min-width:24px;height:24px;padding:0 6px;border-radius:7px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--mono);z-index:2}
+.av-modal-card .av-check{position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#1A0A02;font-size:13px;font-weight:800;display:none;align-items:center;justify-content:center;z-index:2;box-shadow:0 2px 8px -1px var(--accent-glow)}
+.av-modal-card.on .av-check{display:flex}
+.av-modal-card .av-name{position:absolute;left:0;right:0;bottom:0;padding:24px 12px 11px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.88));color:#fff;font-size:14px;font-weight:600;z-index:2}
+.av-modal-filters .lib-av-filter{padding:7px 14px;border:none;border-radius:9px;background:none;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.av-modal-filters .lib-av-filter.on{background:var(--surface-2);color:var(--text)}
 /* ── Recorder timeline ── */
 .rec-timeline{display:none;flex-wrap:nowrap;gap:3px;background:var(--bg4);border-radius:9px;padding:5px;min-height:38px;margin-top:10px;overflow:hidden}
 .rec-seg{flex:1;border-radius:6px;cursor:default;position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 5px;min-width:24px;transition:filter .15s}
@@ -7729,6 +7735,7 @@ function updateSteps(){
   const back=document.getElementById('backBtn');
   back.style.display=step>1?'block':'none';
   const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+step+' / 5';
+  if(typeof _aaInitSliders==='function') setTimeout(_aaInitSliders, 0);
   btn.style.display='block';
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
@@ -17380,19 +17387,21 @@ async function cartoonUseAsAvatar(){
 </script>
 <!-- AVATAR MODAL -->
 <div id="avatarModal">
-  <div class="av-modal-header">
-    <div class="av-modal-title">📸 Choisir un avatar IA <span style="color:var(--text3);font-weight:400;font-size:13px">(49 disponibles)</span></div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="av-modal-filters" id="avModalFilters">
-        <button class="lib-av-filter on" onclick="filterAvModal('tous',this)">Tous</button>
-        <button class="lib-av-filter" onclick="filterAvModal('f',this)">Femmes</button>
-        <button class="lib-av-filter" onclick="filterAvModal('m',this)">Hommes</button>
+  <div class="av-modal-inner">
+    <div class="av-modal-header">
+      <div class="av-modal-title">🎭 Choisir un avatar IA <span class="mono" style="color:var(--text-3);font-weight:400;font-size:12px;margin-left:4px">49 disponibles</span></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="av-modal-filters" id="avModalFilters">
+          <button class="lib-av-filter on" onclick="filterAvModal('tous',this)">Tous</button>
+          <button class="lib-av-filter" onclick="filterAvModal('f',this)">Femmes</button>
+          <button class="lib-av-filter" onclick="filterAvModal('m',this)">Hommes</button>
+        </div>
+        <button class="av-modal-close" onclick="closeAvatarModal()">✕ Fermer</button>
       </div>
-      <button class="av-modal-close" onclick="closeAvatarModal()">✕ Fermer</button>
     </div>
-  </div>
-  <div class="av-modal-grid" id="avModalGrid">
-    <!-- Les cartes seront générées dynamiquement par JS -->
+    <div class="av-modal-grid" id="avModalGrid">
+      <!-- Les cartes seront générées dynamiquement par JS -->
+    </div>
   </div>
 </div>
 
@@ -17460,7 +17469,7 @@ function openAvatarModal(){
       card.className = 'av-modal-card lib-av-card';
       card.dataset.genre = av.genre;
       card.title = av.name;
-      card.innerHTML = `<div style="width:100%;height:300px;overflow:hidden;background:#111;flex-shrink:0"><img src="${av.path}" loading="eager" style="width:100%;height:100%;object-fit:cover;object-position:center center;display:block" onerror="this.style.display='none'"></div><div class="av-modal-label">${i+1} · ${av.genre==='f'?'F':'H'}</div>`;
+      card.innerHTML = `<img src="${av.path}" loading="lazy" onerror="this.style.display='none'"><span class="av-badge">${av.genre==='f'?'F':'H'}</span><span class="av-check">✓</span><div class="av-name">Avatar ${i+1}</div>`;
       card.onclick = () => { pickLibraryAvatarFromModal(card, av.path, av.name); };
       grid.appendChild(card);
     });
