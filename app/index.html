@@ -526,9 +526,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .rec-seg-del{background:rgba(0,0,0,0.45);border:none;border-radius:4px;color:rgba(255,255,255,0.9);font-size:10px;cursor:pointer;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;transition:background .12s}
 .rec-seg-del:hover{background:rgba(220,30,30,0.7)}
 /* ── Library filter tabs ── */
-.lib-filter-tab{padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap}
-.lib-filter-tab:hover{border-color:var(--border3);color:var(--text2)}
-.lib-filter-tab.on{background:var(--bg4);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
+.lib-filter-tab{padding:7px 16px;background:none;border:none;border-radius:9px;font-size:13px;font-family:var(--font);font-weight:600;color:var(--text-3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.lib-filter-tab:hover{color:var(--text-2)}
+.lib-filter-tab.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
 /* ── Image Generator premium ── */
 .img-style-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:12px 10px;cursor:pointer;transition:all .18s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
 .img-style-card:hover{border-color:var(--border3);background:var(--bg4)}
@@ -2327,27 +2327,25 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="privateModeBanner" style="display:none;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--orange2);line-height:1.5">
           🔒 <strong>Navigation privée</strong> — La bibliothèque ne persiste pas entre les sessions privées. Les vidéos créées cette session sont visibles, mais elles seront perdues à la fermeture de l'onglet.
         </div>
-        <div class="ph">
+        <div class="ph" style="align-items:flex-start">
           <div>
-            <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><span style="font-size:24px">🗂</span>Bibliothèque</h2>
-            <div class="muted" id="libCount" style="margin-top:6px;font-size:14px">0 élément</div>
+            <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</h2>
+            <div class="muted" style="margin-top:6px;font-size:14px">Toutes tes vidéos générées · réutilise dans le Générateur ou Express, ou supprime</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 14px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
-              📥 Importer
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 16px;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px" onmouseover="this.style.borderColor='var(--border-2)';this.style.background='var(--surface-2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 13h5l1 2h4l1-2h5"/></svg> Importer
             </button>
             <input type="file" id="libImportInput" accept="video/*" style="display:none" onchange="importHedraToLibrary(this.files[0])">
-            <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px" onclick="nav('generator',document.querySelector('.nav-i'))">✨ Nouvelle vidéo</button>
+            <button class="btn-gen" style="width:auto;padding:9px 18px;font-size:13px;display:flex;align-items:center;gap:7px" onclick="nav('generator',document.querySelector('.nav-i'))"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Nouvelle vidéo</button>
           </div>
         </div>
-        <!-- Filter tabs -->
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-          <button class="lib-filter-tab on" id="libTab-all"     onclick="libSetTab('all')">Tout</button>
-          <button class="lib-filter-tab"    id="libTab-fav"     onclick="libSetTab('fav')">⭐ Favoris</button>
-          <button class="lib-filter-tab"    id="libTab-avatar"  onclick="libSetTab('avatar')">🎭 Avatars</button>
-          <button class="lib-filter-tab"    id="libTab-video"   onclick="libSetTab('video')">🎬 Vidéos</button>
-          <button class="lib-filter-tab"    id="libTab-audio"   onclick="libSetTab('audio')">🎙️ Audio</button>
-          <button class="lib-filter-tab"    id="libTab-image"   onclick="libSetTab('image')">🖼️ Images</button>
+        <!-- Filter — contrôle segmenté -->
+        <div class="seg" style="display:inline-flex;margin-bottom:16px;margin-top:4px">
+          <button class="lib-filter-tab on" id="libTab-all"   onclick="libSetTab('all')">Toutes</button>
+          <button class="lib-filter-tab"    id="libTab-video" onclick="libSetTab('video')">Vidéos</button>
+          <button class="lib-filter-tab"    id="libTab-audio" onclick="libSetTab('audio')">Audio</button>
+          <button class="lib-filter-tab"    id="libTab-image" onclick="libSetTab('image')">Images</button>
         </div>
         <div class="lib-grid" id="libGrid">
           <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3);font-family:var(--mono);font-size:12px">
@@ -8840,7 +8838,7 @@ async function togglePreviewPlay(){
   previewPlaying = !previewPlaying;
   const btn = document.getElementById('previewPlayBtn');
   if(previewPlaying){
-    btn.textContent = '⏸ Pause';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg> Lecture…';
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange2)';
     let activeAudio = null;
