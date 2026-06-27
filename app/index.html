@@ -1470,7 +1470,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   ondragleave="ev=>{this.classList.remove('av-drag')}"
                   ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleGameplayFile(ev.dataTransfer.files[0])}"
                   style="border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--bg4)">
-                  <div id="gameplayDropContent"><div style="font-size:24px">🎮</div><div style="font-size:12px;font-weight:600;margin-top:6px">Gameplay · Satisfying · Mindmap</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div></div>
+                  <div id="gameplayDropContent"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg><div style="font-size:12px;font-weight:600;margin-top:6px">Gameplay · Satisfying · Mindmap</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div></div>
                   <div id="gameplayFileInfo" style="display:none"><div style="font-size:22px">✅</div><div id="gameplayFileName" style="font-size:12px;font-weight:600;margin-top:4px"></div></div>
                 </div>
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
@@ -1712,14 +1712,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- EFFETS IA — Pro & Élite -->
-            <div class="fld" style="margin-bottom:18px">
-              <button onclick="expressGenerateEffects()" style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,45,120,0.08));border:1.5px solid rgba(255,107,53,0.35);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='rgba(255,107,53,.7)'" onmouseout="this.style.transform='none';this.style.borderColor='rgba(255,107,53,.35)'">
-                <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800">✨ Analyser &amp; Générer les effets IA <span style="font-size:9px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:700">PRO+</span></div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom punch-in · Hook texte · Vignette · Shake · Rythmé VSL</div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,0.2);padding:2px 10px;border-radius:20px">🖼️ 1 crédit image IA</div>
-              </button>
-            </div>
+            <!-- EFFETS IA — retiré de l'étape Style (à replacer après la génération / module VSL) -->
 
             <!-- ROGNAGE -->
             <div class="fld" style="margin-bottom:8px">
@@ -9059,6 +9052,11 @@ function stopPreviewAnim(){
   updateSubPreview();
 }
 
+// Contour texte via text-shadow multi-directions (Safari-safe — évite les artefacts de -webkit-text-stroke épais)
+function _outline(o){
+  o = Math.max(1, o|0);
+  return `${o}px 0 0 #000,-${o}px 0 0 #000,0 ${o}px 0 #000,0 -${o}px 0 #000,${o}px ${o}px 0 #000,-${o}px -${o}px 0 #000,${o}px -${o}px 0 #000,-${o}px ${o}px 0 #000,0 ${Math.round(o*1.6)}px ${Math.max(2,o)}px rgba(0,0,0,.5)`;
+}
 function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
   const el = document.getElementById('subsContent');
   if(!el) return;
@@ -9084,16 +9082,16 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
     else if(style==='mrbeast'){
       // MrBeast : box pleine (couleur c1) sur le mot actif — distinct du Karaoké (bleu)
       const box = active;
-      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:8px;${box?`background:${c1};color:#fff;padding:3px 10px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${Math.max(1,stroke-1)}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
+      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${box?`background:${c1};color:#fff;padding:1px 7px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`;
     }
     else if(style==='badis'){
-      // « White » (réf. spec) — Bricolage Grotesque 800, blanc, gros contour noir + ombre, MAJUSCULES
-      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:#fff;-webkit-text-stroke:${Math.max(2,Math.round(sz*0.16))}px #000;paint-order:stroke fill;text-shadow:0 3px 5px rgba(0,0,0,.6);margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`;
+      // « White » (réf. spec) — Bricolage Grotesque 800, blanc, contour noir via text-shadow (Safari-safe), MAJUSCULES
+      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:#fff;text-shadow:${_outline(Math.max(2,Math.round(sz*0.09)))};margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`;
     }
     else if(style==='karaoke'){
       // Karaoké : un SEUL mot surligné à la fois (le mot actif)
       const kFill = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
-      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:8px;${kFill?`background:#5FD0EC;color:#0A2540;padding:3px 10px`:`color:#fff;-webkit-text-stroke:${Math.max(1,stroke-1)}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`;
+      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${kFill?`background:#5FD0EC;color:#0A2540;padding:1px 7px`:`color:#fff;text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`;
     }
     else html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`;
   });
@@ -9466,7 +9464,7 @@ function updateSubPreview(){
       `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};-webkit-text-stroke:${stroke}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">${w}</span>`
     ).join(''),
     mrbeast: () => shown.map((w,i) =>
-      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:8px;${i===0?`background:${c1};color:#fff;padding:3px 10px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;-webkit-text-stroke:${Math.max(1,stroke-1)}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`
+      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${i===0?`background:${c1};color:#fff;padding:1px 7px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:#fff;text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`
     ).join(''),
     iman: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`
@@ -9481,10 +9479,10 @@ function updateSubPreview(){
       `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
     ).join(''),
     badis: () => shown.map((w) =>
-      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:#fff;-webkit-text-stroke:${Math.max(2,Math.round(sz*0.16))}px #000;paint-order:stroke fill;text-shadow:0 3px 5px rgba(0,0,0,.6);margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`
+      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:#fff;text-shadow:${_outline(Math.max(2,Math.round(sz*0.09)))};margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`
     ).join(''),
     karaoke: () => shown.map((w,i) =>
-      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:8px;${i===0?`background:#5FD0EC;color:#0A2540;padding:3px 10px`:`color:#fff;-webkit-text-stroke:${Math.max(1,stroke-1)}px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9)`}">${w}</span>`
+      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${i===0?`background:#5FD0EC;color:#0A2540;padding:1px 7px`:`color:#fff;text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`
     ).join(''),
   };
 
@@ -13568,7 +13566,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         ctx.font = font;
         // ombre portée (halo noir)
         ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = Math.round(sz*0.18); ctx.shadowOffsetX = Math.round(sz*0.04); ctx.shadowOffsetY = Math.round(sz*0.05);
-        ctx.lineWidth   = strokeW + Math.max(3, Math.round(sz*0.085));
+        ctx.lineWidth   = Math.max(3, Math.round(sz*0.09));
         ctx.strokeStyle = '#000';
         ctx.fillStyle   = '#fff';
         ctx.strokeText(upWords[i], x, lineY);
@@ -13608,7 +13606,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   } else if(style === 'mrbeast'){
     // ── MrBeast : mot actif dans une box pleine rouge (c1), autres en blanc outline ──
     ctx.font = `800 ${sz}px 'Bricolage Grotesque',sans-serif`;
-    const pad  = Math.round(sz * 0.18);
+    const pad  = Math.round(sz * 0.12);
     const gapK = Math.round(sz * 0.10);
     const widths = shown.map(w => ctx.measureText(w).width + pad*2);
     const lines  = _splitSubLines(widths.map((w,i)=>w+gapK), maxLineW);
@@ -13624,7 +13622,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       lineIdxs.forEach(i=>{
         const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         const pw = widths[i];
-        const ph = Math.round(sz * 1.25);
+        const ph = Math.round(sz * 1.08);
         const r  = Math.round(sz * 0.15);
 
         if(active){
@@ -13651,7 +13649,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   } else if(style === 'karaoke'){
     // ── Style Karaoke : mot actif avec fond dégradé bleu→vert, autres en blanc outline ──
     ctx.font = `800 ${sz}px 'Bricolage Grotesque',sans-serif`;
-    const pad  = Math.round(sz * 0.18);
+    const pad  = Math.round(sz * 0.12);
     const gapK = Math.round(sz * 0.10);
     const widths = shown.map(w => ctx.measureText(w).width + pad*2);
     const lines  = _splitSubLines(widths.map((w,i)=>w+gapK), maxLineW);
@@ -13668,7 +13666,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         // Un SEUL mot surligné à la fois (le mot actif)
         const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         const pw = widths[i];
-        const ph = Math.round(sz * 1.25);
+        const ph = Math.round(sz * 1.08);
         const r  = Math.round(sz * 0.15);
 
         if(active){
