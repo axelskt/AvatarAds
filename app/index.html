@@ -319,6 +319,11 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .sub-name{font-size:11px;font-weight:600;margin-bottom:6px;color:var(--text2)}
 .sub-card.on .sub-name{color:var(--orange2)}
 .sub-preview{background:#000;border-radius:4px;padding:8px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+/* Cartes STYLE des sous-titres — layout 2 colonnes, plus grandes (réf. maquette) */
+.style-card{padding:16px 18px 20px;border-radius:14px}
+.style-card .sub-name{font-size:13.5px;font-weight:600;margin-bottom:16px;color:var(--text-3)}
+.style-card.on .sub-name{color:var(--accent-2)}
+.style-card .sub-preview{background:transparent;border-radius:6px;padding:4px 6px 8px;min-height:46px;gap:5px}
 
 /* GEN FOOTER */
 .gen-footer{padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
@@ -1521,38 +1526,38 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div class="flbl" style="font-size:11px;margin:0">Style des sous-titres</div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="sub-card style-card on" id="sc-hormozi" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#FFE500;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;-webkit-text-stroke:.5px #000;margin-left:3px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:21px;color:#FFE500;-webkit-text-stroke:.7px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:21px;color:#fff;-webkit-text-stroke:.7px #000;margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-mrbeast" onclick="pickSub(this,'mrbeast')">
                   <div class="sub-name">MrBeast</div>
-                  <div class="sub-preview" style="gap:3px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:11px;color:#fff;background:#FF2D2D;padding:1px 5px;border-radius:3px">ACTION</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;background:#FF2D2D;padding:2px 10px;border-radius:7px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-iman" onclick="pickSub(this,'iman')">
                   <div class="sub-name">Iman</div>
-                  <div class="sub-preview" style="background:#111"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900;letter-spacing:1px">PASSE ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:#fff;font-weight:900;letter-spacing:1.5px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-tiktok" onclick="pickSub(this,'tiktok')">
                   <div class="sub-name">TikTok Pills</div>
-                  <div class="sub-preview" style="gap:3px"><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#fff;background:#FF2D55;padding:1px 5px;border-radius:3px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:9px;color:#000;background:#FFE500;padding:1px 5px;border-radius:3px">ACTION</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Arial Black',sans-serif;font-size:16px;color:#fff;background:#FF2D55;padding:2px 10px;border-radius:6px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:16px;color:#000;background:#FFE500;padding:2px 10px;border-radius:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-neon" onclick="pickSub(this,'neon')">
                   <div class="sub-name">Néon</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:11px;color:#00FF87;text-shadow:0 0 8px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#BF5FFF;text-shadow:0 0 8px #BF5FFF;margin-left:3px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:19px;color:#00FF87;text-shadow:0 0 10px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:19px;color:#BF5FFF;text-shadow:0 0 10px #BF5FFF;margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-podcast" onclick="pickSub(this,'podcast')">
                   <div class="sub-name">Podcast</div>
-                  <div class="sub-preview" style="background:#0a0a0a"><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-left:3px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:rgba(255,255,255,.4);margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-badis" onclick="pickSub(this,'badis')">
                   <div class="sub-name">White</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:12px;color:#fff;font-weight:900;-webkit-text-stroke:.8px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;color:#fff;font-weight:800;-webkit-text-stroke:1px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-karaoke" onclick="pickSub(this,'karaoke')">
                   <div class="sub-name">Karaoke 🎤</div>
-                  <div class="sub-preview" style="gap:3px"><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">OÙ</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:.4px #000">TA</span><span style="font-family:Impact,sans-serif;font-size:11px;color:#fff;background:linear-gradient(90deg,#1E90FF,#00D4AA);padding:1px 5px;border-radius:3px">MATURITÉ</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;-webkit-text-stroke:.4px #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;background:linear-gradient(90deg,#1E90FF,#00D4AA);padding:2px 10px;border-radius:7px">MATURITÉ</span></div>
                 </div>
               </div>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
