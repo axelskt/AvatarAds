@@ -320,10 +320,10 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .sub-card.on .sub-name{color:var(--orange2)}
 .sub-preview{background:#000;border-radius:4px;padding:8px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 /* Cartes STYLE des sous-titres — layout 2 colonnes, plus grandes (réf. maquette) */
-.style-card{padding:16px 18px 20px;border-radius:14px}
-.style-card .sub-name{font-size:13.5px;font-weight:600;margin-bottom:16px;color:var(--text-3)}
+.style-card{padding:11px 16px 13px;border-radius:13px}
+.style-card .sub-name{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-3)}
 .style-card.on .sub-name{color:var(--accent-2)}
-.style-card .sub-preview{background:transparent;border-radius:6px;padding:4px 6px 8px;min-height:46px;gap:5px}
+.style-card .sub-preview{background:transparent;border-radius:6px;padding:2px 6px 4px;min-height:32px;gap:5px}
 
 /* GEN FOOTER */
 .gen-footer{padding:16px 20px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
@@ -1526,38 +1526,38 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div class="flbl" style="font-size:11px;margin:0">Style des sous-titres</div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <div class="sub-card style-card on" id="sc-hormozi" onclick="pickSub(this,'hormozi')">
                   <div class="sub-name">Hormozi</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:21px;color:#FFE500;-webkit-text-stroke:.7px #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:21px;color:#fff;-webkit-text-stroke:.7px #000;margin-left:6px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:20px;color:#FFE500;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">PASSE</span><span style="font-family:Impact,sans-serif;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-mrbeast" onclick="pickSub(this,'mrbeast')">
                   <div class="sub-name">MrBeast</div>
-                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;-webkit-text-stroke:.5px #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;background:#FF2D2D;padding:2px 10px;border-radius:7px">ACTION</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;background:#FF2D2D;padding:1px 9px;border-radius:7px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-iman" onclick="pickSub(this,'iman')">
                   <div class="sub-name">Iman</div>
-                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:#fff;font-weight:900;letter-spacing:1.5px">PASSE ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#fff;font-weight:900;letter-spacing:1.5px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-tiktok" onclick="pickSub(this,'tiktok')">
                   <div class="sub-name">TikTok Pills</div>
-                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Arial Black',sans-serif;font-size:16px;color:#fff;background:#FF2D55;padding:2px 10px;border-radius:6px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:16px;color:#000;background:#FFE500;padding:2px 10px;border-radius:6px">ACTION</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#fff;background:#FF2D55;padding:1px 9px;border-radius:6px">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#000;background:#FFE500;padding:1px 9px;border-radius:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-neon" onclick="pickSub(this,'neon')">
                   <div class="sub-name">Néon</div>
-                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:19px;color:#00FF87;text-shadow:0 0 10px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:19px;color:#BF5FFF;text-shadow:0 0 10px #BF5FFF;margin-left:6px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:20px;color:#00FF87;text-shadow:0 0 10px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:20px;color:#BF5FFF;text-shadow:0 0 10px #BF5FFF;margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-podcast" onclick="pickSub(this,'podcast')">
                   <div class="sub-name">Podcast</div>
-                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:18px;color:rgba(255,255,255,.4);margin-left:6px">ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:rgba(255,255,255,.4);margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-badis" onclick="pickSub(this,'badis')">
                   <div class="sub-name">White</div>
-                  <div class="sub-preview"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;color:#fff;font-weight:800;-webkit-text-stroke:1px #000;text-shadow:1.5px 1.5px 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
+                  <div class="sub-preview"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;color:#fff;font-weight:800;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 2px 0 #000,0 -2px 0 #000,2px 0 0 #000,-2px 0 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-karaoke" onclick="pickSub(this,'karaoke')">
                   <div class="sub-name">Karaoke 🎤</div>
-                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#fff;-webkit-text-stroke:.4px #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#0A2540;background:#5FD0EC;padding:2px 10px;border-radius:7px">MATURITÉ</span></div>
+                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#0A2540;background:#5FD0EC;padding:1px 9px;border-radius:7px">MATURITÉ</span></div>
                 </div>
               </div>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
@@ -1693,9 +1693,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   🎯 <span>Tap Sync — synchroniser manuellement</span>
                 </button>
                 <!-- Whisper IA — Elite/Pro uniquement -->
-                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800">🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
-                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px 10px 0 0;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;border-bottom:none;display:block"></textarea>
-                <button onclick="applyTranscript()" style="width:100%;padding:9px;background:var(--orange);border:none;border-radius:0 0 10px 10px;color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s">✓ Appliquer comme sous-titres</button>
+                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,107,53,0.2),rgba(255,107,53,0.06));border:2px solid rgba(255,107,53,0.5);border-radius:14px;color:var(--orange2);font-family:var(--font);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;gap:5px;box-shadow:0 0 20px rgba(255,107,53,0.1)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 28px rgba(255,107,53,0.25)';this.style.borderColor='rgba(255,107,53,0.8)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 20px rgba(255,107,53,0.1)';this.style.borderColor='rgba(255,107,53,0.5)'"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:3px 9px;border-radius:20px;font-family:var(--mono)">ELITE</span></div><div style="font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400">Précision maximale en quelques secondes · Plan Pro / Elite</div></button>
+                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" style="width:100%;box-sizing:border-box;min-height:80px;padding:10px 12px;background:var(--bg3);border:1px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;line-height:1.5;outline:none;display:block"></textarea>
+                <button onclick="applyTranscript()" style="width:100%;margin-top:10px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:13px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,0.25)" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 26px rgba(255,107,53,0.35)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 20px rgba(255,107,53,0.25)'"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg>Appliquer comme sous-titres</button>
               </div>
               <!-- Éditeur de groupes — collapsible -->
               <div id="wordEditorWrap" style="margin-top:6px">
@@ -15799,7 +15799,7 @@ async function expressWhisper(){
     try{ const j=JSON.parse(msg); msg=(j?.error?.message||msg).slice(0,150); }catch(_){}
     toast('⚠️ Whisper : '+msg.slice(0,140));
   } finally {
-    if(btn){ btn.innerHTML='🎙️ Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-family:var(--mono)">PRO</span>'; btn.disabled=false; }
+    if(btn){ btn.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Transcrire automatiquement (Whisper IA) <span style="font-size:10px;background:var(--orange);color:#fff;padding:2px 8px;border-radius:20px;font-family:var(--mono)">PRO</span></div>'; btn.disabled=false; }
   }
 }
 
