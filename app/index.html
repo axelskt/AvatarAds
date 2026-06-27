@@ -1047,7 +1047,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleBypassHedraFile(event.dataTransfer.files[0])"
                 style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:10px">
                 <div id="bypassHedraDropContent">
-                  <div style="font-size:28px;margin-bottom:8px">🎬</div>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;opacity:.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
                   <div style="font-size:13px;font-weight:700;margin-bottom:4px">Glisse ta vidéo avatar ici</div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — vidéo Hedra ou autre avatar</div>
                   <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:11px;font-weight:600;color:var(--orange2)">Parcourir</div>
@@ -1062,8 +1062,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <input type="file" id="bypassHedraFileIn" accept="video/*" style="display:none" onchange="handleBypassHedraFile(this.files[0])">
 
               <!-- Bibliothèque picker -->
-              <button onclick="openLibVideoPicker()" style="width:100%;padding:8px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text3);font-size:11px;font-family:var(--mono);cursor:pointer;margin-bottom:10px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
-                <span style="font-size:13px">📚</span> ou utilise une vidéo depuis la bibliothèque
+              <button onclick="openLibVideoPicker()" style="width:100%;padding:9px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text);font-size:11.5px;font-family:var(--mono);font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text)'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> ou utilise une vidéo depuis la bibliothèque
               </button>
 
               <div id="bypassQuotaInfo" style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
@@ -7587,7 +7587,7 @@ function nav(id,el){
   if(id==='cartoon')    initCartoon();
   if(id==='audioclean') initAudioCleanView();
   if(id==='studio')     initStudio();
-  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !mp4AudioFile && !mp4AudioEnabled){ selectVoiceMode('clone'); } }
+  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !mp4AudioFile){ selectVoiceMode('clone'); } }
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
