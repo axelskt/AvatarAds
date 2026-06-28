@@ -2785,6 +2785,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <span style="font-size:14px">✂️</span> Détourer le fond
                 </button>
               </div>
+              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (HD)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE</span></button>
               <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:rgba(255,107,53,.1);border:1.5px solid rgba(255,107,53,.4);border-radius:11px;color:var(--orange2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,.18)'" onmouseout="this.style.background='rgba(255,107,53,.1)'">🪄 Modifier cette image</button>
               <div style="display:flex;gap:8px">
                 <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
@@ -6808,6 +6809,37 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
 }
 
 // Affiche une image dans le bloc résultat principal (single)
+// ── Restauration HD (Clarity Upscaler via Replicate · proxy Supabase) — Élite ──
+async function _imgUpscaleHD(btn){
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(!['elite','developer'].includes(plan)){ toast('🔒 Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
+  const img=document.getElementById('imgOutput');
+  if(!img||!img.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration HD… (~30s)';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
+    const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+    let d=await post({ image: img.src, scale_factor:2 });
+    if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur upscale'));
+    if(!d.url && d.id){
+      for(let i=0;i<45 && !d.url;i++){
+        await new Promise(r=>setTimeout(r,2500));
+        const p=await post({poll:d.id});
+        if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
+        if(p.status==='failed'||p.status==='canceled') throw new Error('Upscale échoué');
+        if(p.url) d.url=p.url;
+      }
+    }
+    if(!d.url) throw new Error('Délai dépassé — réessaie');
+    img.src=d.url;
+    try{ _imgSaveHistory(d.url, 'HD', _imgSelectedFormat); _imgRenderHistory(); }catch(e){}
+    toast('✨ Détails restaurés en HD');
+  }catch(e){ toast('⚠️ '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
+}
 function _imgShowSingle(url, size){
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
