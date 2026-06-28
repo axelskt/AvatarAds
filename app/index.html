@@ -15286,11 +15286,16 @@ function _expRenderVoices(){
       const iconColor = on ? 'var(--orange2)' : 'var(--text2)';
       const border = isImport ? `1.5px dashed ${on?'rgba(255,107,53,.85)':'var(--border2)'}` : `1.5px solid ${on?'rgba(255,107,53,.85)':'var(--border2)'}`;
       const bg = on ? 'rgba(255,107,53,.08)' : 'var(--bg3)';
-      return `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
+      const row = `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
         <span style="flex-shrink:0;color:${iconColor};display:flex">${_EXP_VOICE_ICON[v.id]||''}</span>
         <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2">${v.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${v.desc}</div></div>
         <span style="flex-shrink:0;display:flex">${right}</span>
       </div>`;
+      // Bandeau « Recommandé » au-dessus de la voix native Veo
+      if(v.id==='native'){
+        return `<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);font-weight:800;letter-spacing:.6px;color:var(--orange2);text-transform:uppercase;padding-left:2px"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--orange2)"><path d="M12 2l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>Recommandé</div>${row}</div>`;
+      }
+      return row;
     }).join('');
   }
   // Panels (gemini/eleven → menu modal partagé)
