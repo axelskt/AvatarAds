@@ -1716,13 +1716,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- ROGNAGE -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">✂️ Rognage (clic pour activer, puis glisse sur le preview)</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Rognage (clic pour activer, puis glisse sur le preview)</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <button id="crop-btn-av" onclick="toggleCropMode('avatar')" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">
-                  <span>👤</span> Rogner avatar
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg> Rogner avatar
                 </button>
                 <button id="crop-btn-gp" onclick="toggleCropMode('gameplay')" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">
-                  <span>🎮</span> Rogner gameplay
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Rogner gameplay
                 </button>
               </div>
               <div id="crop-hint" style="display:none;margin-top:8px;font-size:10px;font-family:var(--mono);color:var(--orange2);text-align:center;padding:6px;background:var(--orange-dim);border-radius:6px">✋ Mode rognage actif — glisse sur la zone dans le preview · Clic à nouveau pour désactiver</div>
@@ -1734,7 +1734,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Qualité d'export MP4</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Qualité d'export MP4</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px" id="qualityBtnsStep4">
                 <button onclick="setQuality(540,this)" class="qual-btn on" data-q="540" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700">540p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif</div>
@@ -1752,7 +1752,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- MODÈLE IA AVATAR -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">🤖 Modèle IA Avatar</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>Modèle IA Avatar</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                 <button onclick="pickModel('character3',this)" id="modelBtn-character3" class="model-btn on" style="padding:9px 6px;background:var(--orange-dim);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700;font-size:11px">Character 3</div>
@@ -1767,10 +1767,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- CLIP GAMEPLAY — sélecteur compact étape 4 (en bas) -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px">🎬 Clip Gameplay</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>Clip Gameplay</div>
               <!-- Aucun clip -->
               <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
-                <span style="font-size:20px;opacity:.45">🎬</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;opacity:.55"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>
                 <div style="flex:1">
                   <div style="font-size:12px;font-weight:600;color:var(--text3)">Aucun clip</div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — joue en fond</div>
@@ -7585,7 +7585,7 @@ function nav(id,el){
   if(id==='cartoon')    initCartoon();
   if(id==='audioclean') initAudioCleanView();
   if(id==='studio')     initStudio();
-  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !mp4AudioFile){ selectVoiceMode('clone'); } }
+  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); } }
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
