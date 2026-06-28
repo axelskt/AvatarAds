@@ -6284,7 +6284,7 @@ function _updateImgQuotaLabel(){
 // ═══════════════════════════════════════════════════════════════════
 
 const _IMG_STYLES = [
-  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Hyper-réaliste',   api:'natural', suffix:', hyperréaliste, lumière naturelle, style photo' },
+  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Hyper-réaliste',   api:'natural', suffix:', portrait hyperréaliste, peau naturelle avec texture réaliste (pores, grain de peau, micro-détails), traits du visage nets et bien définis, yeux détaillés et regard naturel, cheveux détaillés, lumière douce naturelle, photographie de studio professionnelle 85mm, mise au point nette sur le visage, rendu non lissé et non plastique' },
   { id:'cinema',  icon:'🧸', label:'Pixar 3D',     sub:'Rendu 3D Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
   { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit humanisé', api:'vivid', suffix:', personnage fruit humanisé style Pixar 3D, rendu animation studio propre et soigné (Pixar/DreamWorks), visage mignon et expressif, grands yeux, proportions cartoon, bras et jambes, vêtements, éclairage cinématique doux, couleurs vives, character design adorable — PAS photoréaliste, PAS effrayant' },
   { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', style UGC authentique, casual, lumière naturelle de jour' },
@@ -6302,8 +6302,8 @@ let _imgSelectedStyleId    = 'photo';
 let _imgSelectedStyleApi   = 'natural';
 let _imgSelectedStyleSuffix= _IMG_STYLES[0].suffix;
 let _imgSelectedStyleLabel = _IMG_STYLES[0].label;
-let _imgSelectedFormat     = '1024x1024';
-let _imgSelectedFormatId   = 'square';
+let _imgSelectedFormat     = '1024x1792'; // → 1024x1536 (portrait, résolution max de gpt-image-1, idéal 9:16)
+let _imgSelectedFormatId   = 'portrait';
 let _imgSelectedCount      = 1;
 let _imgSelectedModel      = 'gptimage'; // gptimage (gpt-image-1, le meilleur — évolution de DALL·E 3)
 let _imgRefFile            = null;       // image de référence (img2img)
@@ -6761,7 +6761,7 @@ async function generateImage(){
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
-    const enhancedPrompt = prompt + suffix + ', 4K, ultra haute définition, qualité professionnelle';
+    const enhancedPrompt = prompt + suffix + ', extrêmement détaillé, netteté maximale, mise au point nette, haute résolution, rendu propre et précis, qualité professionnelle, sans flou, sans artefacts';
 
     // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
     if(_imgMode === 'correct' || _imgRefFile){
