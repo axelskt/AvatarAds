@@ -1735,19 +1735,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Qualité d'export MP4</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px" id="qualityBtnsStep4">
-                <button onclick="setQuality(540,this)" class="qual-btn on" data-q="540" style="padding:7px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">540p</div><div style="font-size:9px;color:var(--green);margin-top:1px">⚡ Natif</div>
-                </button>
-                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="qualityBtnsStep4">
+                <button onclick="setQuality(720,this)" class="qual-btn on" data-q="720" style="padding:9px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
                   <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Recommandé</div>
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">✨ Starter+</div>
+                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">✨ Standard</div>
                 </button>
-                <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:7px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:9px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Pro+</div>
                 </button>
               </div>
-              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">540p natif Hedra · 720p upscale canvas · 1080p upscale Pro/Élite</div>
+              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">720p upscale net · 1080p qualité max (Pro / Élite)</div>
             </div>
 
             <!-- MODÈLE IA AVATAR -->
@@ -12572,7 +12569,7 @@ function downloadVideo(){
 
 // ══════════════════════════════════════════════════════════════════
 // ── Qualité d'export ──
-let _composeQuality = 540; // défaut 540p (ajusté selon plan au login)
+let _composeQuality = 720; // défaut 720p (540p retiré — trop bas) ; 1080p = Pro+
 
 // Affiche le verrou 🔒 sur les qualités inaccessibles et met à jour le défaut
 function _updateDurationLock(plan){
@@ -12601,14 +12598,13 @@ function _updateQualityLocks(plan){
   // 720p : starter, byok, pro, elite
   // 1080p : pro, elite uniquement
   const p = (plan||'free').toLowerCase();
-  const can720  = ['starter','byok','pro','elite','developer'].includes(p);
+  const can720  = true; // 720p = plancher pour tous (540p retiré)
   const can1080 = ['pro','elite','developer'].includes(p);
 
   document.querySelectorAll('.qual-btn').forEach(btn => {
     const q = parseInt(btn.dataset.q || '0');
     let locked = false;
     let lockLabel = '';
-    if(q === 720  && !can720 ){ locked = true; lockLabel = '🔒 Starter+'; }
     if(q === 1080 && !can1080){ locked = true; lockLabel = '🔒 Pro+';  }
     let badge = btn.querySelector('.qual-lock');
     if(locked){
@@ -12626,11 +12622,10 @@ function _updateQualityLocks(plan){
     }
   });
 
-  // Définir la qualité par défaut selon plan et corriger si hors limite
-  const defaultQ = can720 ? 720 : 540; // 720p par défaut (meilleur équilibre vitesse/qualité)
-  const maxQ     = defaultQ;
-  // Toujours appliquer le defaultQ du plan (sélection automatique au login)
-  _composeQuality = Math.min(_composeQuality > 540 ? _composeQuality : defaultQ, maxQ);
+  // 720p par défaut pour tous ; Pro/Élite peuvent monter à 1080p
+  const defaultQ = 720;
+  const maxQ     = can1080 ? 1080 : 720;
+  _composeQuality = Math.min(_composeQuality >= 720 ? _composeQuality : defaultQ, maxQ);
   // Sync visuel des boutons
   document.querySelectorAll('.qual-btn').forEach(b => {
     const bq = parseInt(b.dataset.q||'0');
@@ -12645,9 +12640,7 @@ function _updateQualityLocks(plan){
 function setQuality(q, btn){
   // ── Vérification plan ──
   const plan = (currentMember?.plan || 'free').toLowerCase();
-  const can720  = ['starter','byok','pro','elite','developer'].includes(plan);
   const can1080 = ['pro','elite','developer'].includes(plan);
-  if(q === 720  && !can720 ){ toast('⚠️ 720p réservé aux plans Starter et supérieurs'); openUpgradeModal(); return; }
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
   _composeQuality = q;
   // Sync tous les boutons qual-btn par data-q
