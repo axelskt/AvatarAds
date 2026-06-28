@@ -6283,7 +6283,7 @@ function _updateImgQuotaLabel(){
 const _IMG_STYLES = [
   { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Hyper-réaliste',   api:'natural', suffix:', portrait hyperréaliste, peau naturelle avec texture réaliste (pores, grain de peau, micro-détails), traits du visage nets et bien définis, yeux détaillés et regard naturel, cheveux détaillés, lumière douce naturelle, photographie de studio professionnelle 85mm, mise au point nette sur le visage, rendu non lissé et non plastique' },
   { id:'cinema',  icon:'🧸', label:'Pixar 3D',     sub:'Rendu 3D Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
-  { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit humanisé', api:'vivid', suffix:', personnage fruit humanisé style Pixar 3D, rendu animation studio propre et soigné (Pixar/DreamWorks), visage mignon et expressif, grands yeux, proportions cartoon, bras et jambes, vêtements, éclairage cinématique doux, couleurs vives, character design adorable — PAS photoréaliste, PAS effrayant' },
+  { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit réaliste', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', style UGC authentique, casual, lumière naturelle de jour' },
   { id:'premium', icon:'🤖', label:'Mascotte',     sub:'Perso de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
   { id:'dark',    icon:'🎨', label:'Autre',        sub:'Style libre',      api:'natural', suffix:'' },
@@ -6294,6 +6294,18 @@ const _IMG_FORMATS = [
   { id:'portrait', label:'Portrait', sub:'9:16 · Stories',   value:'1024x1792',  w:9,  h:16 },
   { id:'land',     label:'Paysage',  sub:'16:9 · YouTube',   value:'1792x1024',  w:16, h:9  },
 ];
+
+// Booster réalisme « dermatologique » — appliqué aux styles réalistes (Photo, UGC) pour un rendu HUMAIN/NATUREL, surtout pas « IA »
+const _IMG_REALISM = ', 200MP professional photography, authentic skin pores, realistic skin texture, subtle natural skin imperfections, individual hair strands, detailed eyelashes, photorealistic eyes with natural iris structure, true-to-life human anatomy, no beauty retouching, no CGI look, no AI artifacts, no plastic skin, no overly smooth skin, shot on Sony A7R V 85mm lens f/2.8, HDR, documentary photography quality, physically accurate natural lighting, subject blending naturally into the real environment, extremely detailed yet natural and human';
+// Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
+const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
+// Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
+function _imgQualityForPlan(){
+  const p = (currentMember?.plan || 'free').toLowerCase();
+  if(['elite','developer'].includes(p)) return 'high';
+  if(['starter','byok','pro'].includes(p)) return 'medium';
+  return 'low'; // gratuit
+}
 
 let _imgSelectedStyleId    = 'photo';
 let _imgSelectedStyleApi   = 'natural';
@@ -6423,6 +6435,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
   fd.append('prompt', prompt);
   fd.append('n', '1');
   fd.append('size', gptSize);
+  fd.append('quality', _imgQualityForPlan());
   const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
     method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
   });
@@ -6697,7 +6710,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
   const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-image-1', prompt: enhancedPrompt, n: 1, size: gptSize, quality: 'high' })
+    body: JSON.stringify({ model: 'gpt-image-1', prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgQualityForPlan() })
   });
   const data = await res.json();
   if(data.error){ throw new Error(data.error.message||'Erreur génération'); }
@@ -6758,7 +6771,12 @@ async function generateImage(){
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
-    const enhancedPrompt = prompt + suffix + ', extrêmement détaillé, netteté maximale, mise au point nette, haute résolution, rendu propre et précis, qualité professionnelle, sans flou, sans artefacts';
+    // Booster qualité selon le type de style : réalisme « dermato » (photo/UGC) vs rendu 3D propre (cartoon)
+    const _sid = _imgSelectedStyleId;
+    const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
+                   : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
+                   : ', extrêmement détaillé, netteté maximale, haute résolution, qualité professionnelle, sans flou, sans artefacts');
+    const enhancedPrompt = prompt + suffix + _qSuffix;
 
     // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
     if(_imgMode === 'correct' || _imgRefFile){
