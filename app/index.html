@@ -3099,15 +3099,21 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- Composer (style Remakeit) -->
         <div style="border-top:1px solid var(--border);padding:18px 28px 24px;background:var(--surface)">
           <div class="row" style="gap:16px;align-items:stretch">
-            <!-- Image (mise en avant) -->
-            <div id="expImgDrop" onclick="document.getElementById('expImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="_expOnImgDrop(event)" style="flex:0 0 210px;border:1.5px dashed var(--border2);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;cursor:pointer;background:linear-gradient(180deg,rgba(255,107,53,.06),var(--bg3));transition:all .15s;position:relative;overflow:hidden;min-height:158px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="if(!window._expImgB64)this.style.borderColor='var(--border2)'">
-              <input type="file" id="expImgInput" accept="image/*" multiple style="display:none" onchange="_expOnImgInput(this)">
-              <img id="expImgPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
-              <span id="expImgCount" style="display:none;position:absolute;top:7px;right:7px;z-index:3;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:20px"></span>
-              <div style="width:56px;height:56px;border-radius:16px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.4);display:flex;align-items:center;justify-content:center">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+            <!-- Colonne gauche : ~65% "Ajoute tes images" + ~35% "Importer depuis la bibliothèque" -->
+            <div style="flex:0 0 210px;display:flex;flex-direction:column;gap:9px">
+              <div id="expImgDrop" onclick="document.getElementById('expImgInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="_expOnImgDrop(event)" style="flex:1 1 auto;border:1.5px dashed var(--border2);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;cursor:pointer;background:linear-gradient(180deg,rgba(255,107,53,.06),var(--bg3));transition:all .15s;position:relative;overflow:hidden;min-height:118px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="if(!window._expImgB64)this.style.borderColor='var(--border2)'">
+                <input type="file" id="expImgInput" accept="image/*" multiple style="display:none" onchange="_expOnImgInput(this)">
+                <img id="expImgPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                <span id="expImgCount" style="display:none;position:absolute;top:7px;right:7px;z-index:3;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:20px"></span>
+                <div style="width:48px;height:48px;border-radius:14px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.4);display:flex;align-items:center;justify-content:center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
+                <div style="font-size:13px;font-weight:700;color:var(--text);text-align:center;line-height:1.3">Ajoute tes images<br><span class="faint" style="font-weight:400;font-size:10.5px;font-family:var(--mono)">avatar · produit · perso</span></div>
               </div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;line-height:1.3">Ajoute tes images<br><span class="faint" style="font-weight:400;font-size:11px;font-family:var(--mono)">avatar · produit · perso</span></div>
+              <button onclick="openExpLibPicker()" style="flex:0 0 62px;border:1.5px dashed var(--border2);border-radius:14px;background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;color:var(--text2);transition:all .15s;font-family:var(--font)" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>
+                <span style="font-size:11px;font-weight:700;text-align:center;line-height:1.2">Importer depuis<br>la bibliothèque</span>
+              </button>
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
@@ -3146,6 +3152,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
           <h2 class="display row gap10" style="font-size:26px;font-weight:700;align-items:center;line-height:1.1;margin-bottom:4px"><span style="font-size:23px">🎭</span>Avatar Cartoon IA</h2>
           <p class="muted" style="font-size:13px">Mascotte animée avec voix — sans avatar réel</p>
+        </div>
+
+        <!-- BIENTÔT DISPONIBLE (module bloqué en attendant le tunnel FruitDrama) -->
+        <div id="cartoonComingSoon" style="display:none;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;padding:44px 28px;text-align:center;margin-bottom:16px">
+          <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:16px;background:rgba(168,85,247,0.12);display:flex;align-items:center;justify-content:center">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </div>
+          <div style="font-size:21px;font-weight:800;margin-bottom:8px">Bientôt disponible</div>
+          <div style="font-size:13.5px;color:var(--text3);line-height:1.6;max-width:440px;margin:0 auto">On prépare un vrai tunnel de création de personnages fruits &amp; légumes qui parlent — façon <strong style="color:#c084fc">FruitDrama</strong> : persos réalistes intégrés au décor, avec voix et dialogue. <strong style="color:var(--text2)">Reste connecté 👀</strong></div>
         </div>
 
         <!-- PAYWALL ELITE -->
@@ -15309,6 +15324,36 @@ function _expLoadImg(file){
   r.readAsDataURL(file);
 }
 function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); window._expImgB64=(window._expImgs[0]&&window._expImgs[0].b64)||null; _expRenderImgs(); }
+// ── Importer une image depuis la bibliothèque (Images IA générées) ──
+function openExpLibPicker(){
+  let hist=[]; try{ hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(e){}
+  hist = hist.filter(h=>h && h.url);
+  if(!hist.length){ toast('⚠️ Aucune image dans ta bibliothèque — génère-en dans Images IA'); return; }
+  document.getElementById('_explpModal')?.remove();
+  const modal=document.createElement('div'); modal.id='_explpModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.remove(); });
+  modal.innerHTML='<div style="width:100%;max-width:520px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:74vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Images de la bibliothèque</div>'
+    +'<button onclick="document.getElementById(\'_explpModal\').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1">✕</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+    +hist.map((im,i)=>'<div onclick="_expPickFromLib('+i+')" title="Utiliser" style="aspect-ratio:9/16;border-radius:12px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border2);background:var(--bg4);transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--orange2)\'" onmouseout="this.style.borderColor=\'var(--border2)\'"><img src="'+im.url+'" style="width:100%;height:100%;object-fit:cover"></div>').join('')
+    +'</div></div>';
+  document.body.appendChild(modal);
+}
+function _expPickFromLib(i){
+  let hist=[]; try{ hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(e){}
+  hist = hist.filter(h=>h && h.url);
+  const im=hist[i]; if(!im||!im.url){ return; }
+  window._expImgs = window._expImgs || [];
+  if(window._expImgs.length>=EXP_MAX_IMGS){ toast('⚠️ Maximum '+EXP_MAX_IMGS+' images'); return; }
+  window._expImgs.push({ b64:String(im.url).replace(/^data:image\/\w+;base64,/,''), url:im.url });
+  window._expImgB64=window._expImgs[0].b64;
+  _expRenderImgs();
+  document.getElementById('_explpModal')?.remove();
+  toast('✅ Image importée depuis la bibliothèque');
+}
 function _expRenderImgs(){
   const imgs=window._expImgs||[];
   const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
@@ -16292,11 +16337,10 @@ const CARTOON_STYLE_PROMPTS = {
 };
 
 function initCartoon(){
-  // Freemium : tout le monde explore le module. Le paywall tombe au clic Générer (voir _cartoonGate).
-  const pw = document.getElementById('cartoonPaywall'); if(pw) pw.style.display = 'none';
-  const ct = document.getElementById('cartoonContent'); if(ct) ct.style.display = 'block';
-  _cartoonUpdateQuota();
-  if(typeof _cartoonRenderVoices === 'function') _cartoonRenderVoices();
+  // Module bloqué « Bientôt disponible » en attendant le tunnel FruitDrama (#65).
+  const cs = document.getElementById('cartoonComingSoon'); if(cs) cs.style.display = 'block';
+  const pw = document.getElementById('cartoonPaywall');     if(pw) pw.style.display = 'none';
+  const ct = document.getElementById('cartoonContent');     if(ct) ct.style.display = 'none';
 }
 
 // Gate de génération Cartoon : free → fiche plans ; payant non-Élite → upgrade Élite.
