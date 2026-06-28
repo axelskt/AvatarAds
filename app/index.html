@@ -467,13 +467,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .btn-publish:hover{border-color:var(--orange);color:var(--orange2);background:var(--orange-dim)}
 
 /* ══ PROGRESS STEPS (generation) ══ */
-.genprog{display:flex;flex-direction:column;gap:8px;width:280px}
-.gp-step{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:var(--r-sm);font-size:12px;font-family:var(--mono);color:var(--text3);transition:all .3s}
-.gp-step.on{color:var(--text);background:var(--bg3);border:1px solid var(--border)}
-.gp-step.done{color:var(--green);background:rgba(0,217,126,0.05)}
-.gp-icon{width:20px;height:20px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.genprog{display:flex;flex-direction:column;gap:8px;width:100%;max-width:380px}
+.gp-step{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;font-size:13.5px;font-weight:600;font-family:var(--font);color:var(--text-3);background:var(--surface);border:1px solid var(--border);transition:all .3s;position:relative}
+.gp-step::after{content:'';margin-left:auto;font-size:10px;font-family:var(--mono);letter-spacing:.04em;color:var(--text-3)}
+.gp-step.on{color:var(--text);border-color:var(--accent-line);background:var(--accent-soft)}
+.gp-step.on::after{content:'en cours…';color:var(--accent-2)}
+.gp-step.done{color:var(--text);background:var(--surface)}
+.gp-step.done::after{content:'OK';color:var(--green);font-weight:700}
+.gp-icon{width:30px;height:30px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .gp-step.done .gp-icon{background:var(--green);color:#000}
-.gp-step.on .gp-icon{background:var(--orange);color:#fff}
+.gp-step.on .gp-icon{background:var(--accent);color:#fff}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes recPulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
 .spinner{width:12px;height:12px;border:2px solid rgba(255,107,53,.3);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
@@ -2128,25 +2131,34 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- GENERATING -->
         <div id="genProgArea" style="display:none;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
 
-          <!-- Header + chronomètre -->
+          <!-- Roue de progression + chronomètre -->
           <div style="text-align:center">
-            <div style="font-size:26px;margin-bottom:8px">🎬</div>
-            <div style="font-size:16px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours…</div>
-            <div id="genTimer" style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--orange);letter-spacing:2px;margin:4px 0">0:00</div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Nous nous efforçons de réduire au maximum votre temps d'attente ⚡</div>
+            <div style="position:relative;width:128px;height:128px;margin:0 auto 10px">
+              <svg width="128" height="128" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg4)" stroke-width="8"/>
+                <circle id="genRingFill" cx="60" cy="60" r="52" fill="none" stroke="url(#genRingGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s ease"/>
+                <defs><linearGradient id="genRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+                <div id="genRingPct" style="font-size:27px;font-weight:800;font-family:var(--font);line-height:1">0%</div>
+                <div id="genTimer" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text-3);letter-spacing:1px">0:00</div>
+              </div>
+            </div>
+            <div style="font-size:17px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours…</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text-3)">On réduit ton temps d'attente au maximum ⚡</div>
           </div>
 
           <!-- Warning -->
           <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.35);border-radius:10px;max-width:320px;width:100%">
             <span style="font-size:14px;flex-shrink:0">⚠️</span>
-            <span style="font-size:11px;font-family:var(--mono);color:#ff8a94;font-weight:600;line-height:1.4">Ne pas quitter ou rafraîchir cette page</span>
+            <span style="font-size:11px;font-family:var(--mono);color:#ff8a94;font-weight:600;line-height:1.4">Ne quitte pas et ne rafraîchis pas cette page</span>
           </div>
 
           <!-- Étapes -->
           <div class="genprog" id="genprog">
             <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Analyse du script</div>
-            <div class="gp-step" id="gp2"><div class="gp-icon">🎙️</div>Audio ElevenLabs</div>
-            <div class="gp-step" id="gp3"><div class="gp-icon">🤖</div>Synchronisation bouche IA</div>
+            <div class="gp-step" id="gp2"><div class="gp-icon">🎙️</div>Audio (ElevenLabs)</div>
+            <div class="gp-step" id="gp3"><div class="gp-icon">🤖</div>Lipsync avatar (Hedra)</div>
             <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:4px auto 0">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                 <span>Rendu IA en cours…</span><span id="hedraProgressPct">0%</span>
@@ -2195,16 +2207,25 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- TÉLÉCHARGEMENT -->
             <div id="downloadCard" class="result-card" style="display:none">
-              <div class="result-title">🎬 Ta vidéo est prête !</div>
+              <div style="text-align:center;margin-bottom:14px">
+                <div style="width:54px;height:54px;margin:0 auto 12px;border-radius:16px;background:var(--accent-soft);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div class="display" style="font-size:19px;font-weight:800">Ta vidéo est prête 🎬</div>
+                <div id="genReadyMeta" style="font-size:12px;font-family:var(--mono);color:var(--text-3);margin-top:5px">Format 9:16 · TikTok</div>
+              </div>
               <div id="hedraVideoWrap" style="margin-bottom:12px">
-                <div style="position:relative;border-radius:8px;overflow:hidden">
-                  <video id="hedraVideo" controls style="width:100%;border-radius:8px;max-height:200px;background:#000;display:block"></video>
+                <div style="position:relative;border-radius:10px;overflow:hidden">
+                  <video id="hedraVideo" controls style="width:100%;border-radius:10px;max-height:200px;background:#000;display:block"></video>
                   <div class="watermark-overlay" id="videoWatermark">
                     <div class="watermark-text">AvatarAds • Mode Essai</div>
                   </div>
                 </div>
               </div>
-              <button id="composeBtn" onclick="composeVideo(this)" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger</button>
+              <div class="row" style="gap:8px;align-items:stretch">
+                <button id="composeBtn" onclick="composeVideo(this)" style="flex:1.7;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger</button>
+                <button onclick="nav('library')" style="flex:1;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</button>
+              </div>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -2214,6 +2235,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <button id="composeCancelBtn" onclick="window._composeCancelled=true;this.style.display='none';document.getElementById('composeBtn').disabled=false;document.getElementById('composeBtn').innerHTML='⬇ Télécharger';document.getElementById('composeProgressWrap').style.display='none';toast('⚠️ Composition annulée — clique Télécharger pour réessayer')" style="display:none;width:100%;margin-top:6px;padding:7px;background:var(--bg4);border:1px solid rgba(255,71,87,0.3);border-radius:8px;color:var(--red);font-family:var(--mono);font-size:11px;cursor:pointer">✕ Annuler la composition</button>
               </div>
+              <button onclick="if(confirm('Créer une nouvelle vidéo ? Le brouillon actuel sera réinitialisé.'))resetAll()" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:none;color:var(--text-3);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:color .15s" onmouseover="this.style.color='var(--accent-2)'" onmouseout="this.style.color='var(--text-3)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Créer une nouvelle vidéo</button>
             </div>
 
             <!-- HEDRA WORKFLOW -->
@@ -7766,6 +7788,16 @@ function _showResultArea(){
   document.getElementById('genStatusCard').style.display = 'none';
   if(results.hedraUrl){
     document.getElementById('hedraVideo').src = results.hedraUrl;
+    // Ligne "Format · durée · plateforme" sous le titre "Ta vidéo est prête"
+    const _meta = document.getElementById('genReadyMeta');
+    if(_meta){
+      const _platLbl = {tiktok:'TikTok',reels:'Reels',instagram:'Instagram',youtube:'YouTube',facebook:'Facebook',linkedin:'LinkedIn'}[(currentPlatform||'tiktok')] || 'TikTok';
+      const _ratio = (currentPlatform==='youtube') ? '16:9' : '9:16';
+      const _vid = document.getElementById('hedraVideo');
+      const _set = (d)=>{ _meta.textContent = 'Format ' + _ratio + (d && isFinite(d) ? ' · ' + Math.round(d) + 's' : '') + ' · ' + _platLbl; };
+      _set(_vid && isFinite(_vid.duration) ? _vid.duration : 0);
+      if(_vid){ _vid.addEventListener('loadedmetadata', ()=>_set(_vid.duration), {once:true}); }
+    }
     // Afficher la vidéo générée dans le preview phone
     const bpv = document.getElementById('bypassPreviewVid');
     if(bpv && bpv.src !== results.hedraUrl){
@@ -13936,6 +13968,23 @@ function refreshSocialCards(){
 }
 
 // ── PROGRESS ──
+// Roue de progression circulaire (étape 5)
+function _setGenRing(pct){
+  pct = Math.max(0, Math.min(100, pct));
+  const ring=document.getElementById('genRingFill');
+  const txt=document.getElementById('genRingPct');
+  if(txt) txt.textContent=Math.round(pct)+'%';
+  if(ring){ const C=2*Math.PI*52; ring.style.strokeDashoffset=String(C*(1-pct/100)); }
+}
+function _updateGenRing(){
+  let done=0, hasOn=false;
+  ['gp1','gp2','gp3','gp4','gp5'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    if(el.classList.contains('done')) done++;
+    else if(el.classList.contains('on')) hasOn=true;
+  });
+  _setGenRing(done*20 + (hasOn?10:0));
+}
 function resetProgSteps(){
   ['gp1','gp2','gp3','gp4','gp5'].forEach(id=>{
     const el=document.getElementById(id);
@@ -13943,12 +13992,14 @@ function resetProgSteps(){
     const icons={gp1:'📝',gp2:'🎙️',gp3:'🤖',gp4:'✍️',gp5:'✅'};
     el.querySelector('.gp-icon').textContent=icons[id];
   });
+  _setGenRing(0);
 }
 function setStep(id,state){
   const el=document.getElementById(id);
   el.classList.remove('on','done');
   if(state==='on'){el.classList.add('on');el.querySelector('.gp-icon').innerHTML='<div class="spinner"></div>';}
   else if(state==='done'){el.classList.add('done');el.querySelector('.gp-icon').textContent='✓';}
+  _updateGenRing();
 }
 
 // ── LIBRARY ──
