@@ -13183,52 +13183,65 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       }
       drawFrame(0); // Re-draw après éventuel resize → pas de noir au début
 
-      let _wcFrameNum = 0;
-      // +30 frames (1s buffer) pour s'assurer que la dernière frame est bien capturée
-      const _wcTotalFrames = Math.ceil(totalDuration * _fps) + 30;
-      let _wcEncErr = null;
-      // hedraVid.loop = false (défaut) — Hedra génère exactement la durée du WAV envoyé.
-      // Si un léger écart persiste, la dernière frame est tenue jusqu'à la fin de l'audio.
+      // ── SYNC PARFAITE : encodage frame-précis par SEEK (plus de lecture temps-réel) ──
+      // Avant : la vidéo était jouée en temps réel (hedraVid.play()) pendant qu'on encodait des
+      // frames à timestamp séquentiel. Dès que l'encodage prenait du retard, le CONTENU vidéo
+      // dérivait puis se figeait sur la dernière frame pendant que l'audio (linéaire) continuait
+      // → voix décalée / image figée en fin. La biblio lit le fichier Hedra brut (nativement
+      // synchro) d'où l'absence de bug là-bas.
+      // Ici on SEEK la vidéo à l'instant EXACT de chaque frame → contenu(frame N) = N/fps pile,
+      // et l'audio embarqué Hedra (même durée) reste parfaitement calé du début à la fin.
+      hedraVid.pause();
+      if(gpVid) gpVid.pause();
 
-      // Timeout WebCodecs : si 1080p trop lent → throw → fallback MediaRecorder
-      // Budget = 3× durée vidéo + 45s, minimum 90s
-      const _wcBudgetMs = Math.max(90000, totalDuration * 3 * 1000 + 45000);
+      let _wcFrameNum = 0;
+      let _wcEncErr = null;
+      // Durée maître = max(vidéo, audio) pour ne jamais couper la voix
+      const _audDurForVid = (typeof _audioPCMBuf !== 'undefined' && _audioPCMBuf && _audioPCMBuf.duration > 0.2) ? _audioPCMBuf.duration : totalDuration;
+      const _wcMasterDur  = Math.max(totalDuration, _audDurForVid);
+      const _wcTotalFrames = Math.ceil(_wcMasterDur * _fps);
+      const _hedraDur = (hedraVid.duration && isFinite(hedraVid.duration) && hedraVid.duration > 0.15) ? hedraVid.duration : _wcMasterDur;
+      const _gpDur    = (gpVid && gpVid.duration && isFinite(gpVid.duration) && gpVid.duration > 0.1) ? gpVid.duration : 0;
+
+      // Budget élargi : le seek image par image est plus lent que la lecture temps-réel
+      const _wcBudgetMs = Math.max(120000, _wcMasterDur * 8 * 1000 + 60000);
       let _wcTimedOut = false;
       const _wcTimeoutId = setTimeout(() => { _wcTimedOut = true; }, _wcBudgetMs);
 
-      await new Promise(resolve => {
-        let _lastMediaTime = -1;
-        const _wcInterval = setInterval(() => {
-          if(window._composeCancelled || _wcEncErr || _wcEncErr2 || _wcTimedOut){ clearInterval(_wcInterval); resolve(); return; }
-          // Backpressure : si la queue VideoEncoder sature (surtout en 1080p), ralentir
-          if(videoEncoder.encodeQueueSize > 10){ return; }
-          const t = hedraVid.currentTime || 0;
-          if(t !== _lastMediaTime){ drawFrame(t); _lastMediaTime = t; }
-          // Timestamp séquentiel strict → CFR garanti (indépendant du jitter JS du setInterval)
-          try {
-            const vf = new VideoFrame(canvas, {
-              timestamp: Math.round(_wcFrameNum / _fps * 1e6),
-              duration:  Math.round(1e6 / _fps),
-            });
-            videoEncoder.encode(vf, { keyFrame: _wcFrameNum % (_fps * 2) === 0 });
-            vf.close();
-          } catch(encErr){ _wcEncErr = encErr; clearInterval(_wcInterval); resolve(); return; }
-          _wcFrameNum++;
-          const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
-          if(compFill) compFill.style.width = pct + '%';
-          if(compPct)  compPct.textContent  = pct + '%';
-          // Arrêt quand on a encodé toutes les frames de la durée Hedra
-          const _frameSec = _wcFrameNum / _fps;
-          if(_frameSec >= totalDuration || _wcFrameNum >= _wcTotalFrames){
-            clearInterval(_wcInterval);
-            resolve();
-          }
-        }, 1000 / _fps);
-        Promise.all([
-          hedraVid.play().catch(()=>{}),
-          gpVid ? gpVid.play().catch(()=>{}) : Promise.resolve(),
-        ]);
+      // Seek fiable (Safari + Chrome) avec garde-fou si 'seeked' ne se déclenche pas
+      const _seekVid = (vid, t) => new Promise(res => {
+        if(!vid){ return res(); }
+        const dur = (vid.duration && isFinite(vid.duration)) ? vid.duration : t;
+        const tt  = Math.max(0, Math.min(t, dur - 1/(_fps*2)));
+        if(vid.readyState >= 2 && Math.abs((vid.currentTime||0) - tt) < 1e-3){ return res(); }
+        let done = false;
+        const fin = () => { if(done) return; done = true; vid.onseeked = null; res(); };
+        vid.onseeked = fin;
+        try { vid.currentTime = tt; } catch(e){ fin(); }
+        setTimeout(fin, 400);
       });
+
+      while(_wcFrameNum < _wcTotalFrames){
+        if(window._composeCancelled || _wcEncErr || _wcEncErr2 || _wcTimedOut) break;
+        const tSec = _wcFrameNum / _fps;
+        await _seekVid(hedraVid, Math.min(tSec, _hedraDur - 1/(_fps*2)));
+        if(gpVid && _gpDur > 0){ await _seekVid(gpVid, tSec % _gpDur); }
+        drawFrame(tSec);
+        try {
+          const vf = new VideoFrame(canvas, {
+            timestamp: Math.round(_wcFrameNum / _fps * 1e6),
+            duration:  Math.round(1e6 / _fps),
+          });
+          videoEncoder.encode(vf, { keyFrame: _wcFrameNum % (_fps * 2) === 0 });
+          vf.close();
+        } catch(encErr){ _wcEncErr = encErr; break; }
+        // Backpressure : laisser l'encodeur respirer si la queue sature (surtout en 1080p)
+        if(videoEncoder.encodeQueueSize > 8){ await new Promise(r => setTimeout(r, 4)); }
+        _wcFrameNum++;
+        const pct = Math.min(99, Math.round(18 + _wcFrameNum / _wcTotalFrames * 81));
+        if(compFill) compFill.style.width = pct + '%';
+        if(compPct)  compPct.textContent  = pct + '%';
+      }
       clearTimeout(_wcTimeoutId);
 
       if(_wcTimedOut) throw new Error('WebCodecs timeout — résolution trop haute, passage en mode classique');
