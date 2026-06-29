@@ -6890,12 +6890,21 @@ async function generateImage(){
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
     const suffix = _imgSelectedStyleSuffix;
-    // Booster qualité selon le type de style : réalisme « dermato » (photo/UGC) vs rendu 3D propre (cartoon)
-    const _sid = _imgSelectedStyleId;
-    const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
-                   : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
-                   : ', extrêmement détaillé, netteté maximale, haute résolution, qualité professionnelle, sans flou, sans artefacts');
-    const enhancedPrompt = prompt + suffix + _qSuffix;
+    // Détecte une demande de PLANCHE / LAYOUT (reference sheet, mockup, palette…) :
+    // dans ce cas on N'AJOUTE PAS le suffixe de style ("portrait hyperréaliste") ni le booster dermato,
+    // qui cassent la mise en page → on laisse le prompt de l'utilisateur piloter.
+    const _sid  = _imgSelectedStyleId;
+    const _pLow = (prompt||'').toLowerCase();
+    const _isLayout = /(reference sheet|référence|model sheet|character sheet|fiche personnage|planche|mood ?board|mockup|grille|collage|palette|multiple angles|plusieurs angles|panel|feuille de perso|character design)/.test(_pLow);
+    let enhancedPrompt;
+    if(_isLayout){
+      enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
+    } else {
+      const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
+                     : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
+                     : ', extrêmement détaillé, netteté maximale, haute résolution, qualité professionnelle, sans flou, sans artefacts');
+      enhancedPrompt = prompt + suffix + _qSuffix;
+    }
 
     // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
     if(_imgMode === 'correct' || _imgRefFile){
