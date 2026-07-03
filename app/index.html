@@ -6911,6 +6911,28 @@ async function _imgGenerateFlux(token, prompt, size, tier){
   }catch(e){ return d.url; }
 }
 
+// ── Cohérence de personnage via Flux Kontext (garde le perso de l'image de réf, change la scène) ──
+async function _imgGenerateFluxKontext(token, prompt, refFile, size){
+  const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(refFile); });
+  const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
+  const aspect_ratio = arMap[size] || '9:16';
+  const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
+  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+  let d = await post({ mode:'kontext', prompt, input_image:dataUrl, aspect_ratio });
+  if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Kontext'));
+  if(!d.url && d.id){
+    for(let i=0;i<45 && !d.url;i++){
+      await new Promise(r=>setTimeout(r,2000));
+      const p=await post({poll:d.id});
+      if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
+      if(p.status==='failed'||p.status==='canceled') throw new Error('Génération échouée — réessaie');
+      if(p.url) d.url=p.url;
+    }
+  }
+  if(!d.url) throw new Error('Délai dépassé — réessaie');
+  try{ const resp=await fetch(d.url); const blob=await resp.blob(); return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); }); }catch(e){ return d.url; }
+}
+
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
   // Styles réalistes (Photo Réel / UGC) → Flux raw (palier selon le slider qualité : éco/pro/ultra)
   if(_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc'){
@@ -7045,13 +7067,19 @@ async function generateImage(){
       if(_imgMode === 'correct' && !_imgRefFile){ toast('⚠️ Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
       const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
       const gptSize = sizeMap[size] || '1024x1024';
+      // Styles réalistes + génération avec réf → Flux Kontext (cohérence de personnage)
+      const _useKontext = (_imgMode!=='correct') && (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
       // En correction → prompt brut ; en génération avec réf → prompt + style
-      const editPrompt = (_imgMode === 'correct') ? prompt : enhancedPrompt;
+      const editPrompt = (_imgMode === 'correct') ? prompt
+                       : (_useKontext ? (prompt + ', keep the exact same person, face and identity from the reference image' + _IMG_FLUX_TAIL)
+                                      : enhancedPrompt);
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
-      const url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+      const url = _useKontext
+        ? await _imgGenerateFluxKontext(token, editPrompt, _imgRefFile, size)
+        : await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
       _imgMonthIncrement();
       _imgShowSingle(url, size);
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
