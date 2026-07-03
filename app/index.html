@@ -6204,12 +6204,16 @@ function initAffiliation(){
   const link = _affLink(code);
   const inp  = document.getElementById('affLink');
   if(inp) inp.value = link;
-  // Charger stats filleuls depuis Supabase
-  sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', currentMember.id).then(({count})=>{
+  // Charger stats filleuls — via RPC sécurisée (get_referral_count) ; repli sur l'ancienne méthode si la RPC n'existe pas encore
+  const _setRefs = (n)=>{
     const el = document.getElementById('affStatRefs');
-    if(el) el.textContent = count || 0;
+    if(el) el.textContent = n || 0;
     const earn = document.getElementById('affStatEarnings');
     if(earn) earn.textContent = '—';
+  };
+  sb.rpc('get_referral_count').then(({data, error})=>{
+    if(!error && (data || data===0)){ _setRefs(data); return; }
+    sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', currentMember.id).then(({count})=>_setRefs(count));
   });
   // Init calculateur
   affUpdateCalc(10);
