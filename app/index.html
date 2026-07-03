@@ -6391,21 +6391,33 @@ function _imgPickQuality(id){
   if(_IMG_Q_ORDER[id] > _IMG_Q_ORDER[cap]){ toast('🔒 Qualité « Max » réservée au plan Élite'); openUpgradeModal(); return; }
   _imgQuality = id; _imgRenderQuality();
 }
+function _imgSliderQuality(v){
+  const id = ['low','medium','high'][Number(v)] || 'low';
+  const cap = _imgQualityCap();
+  if(_IMG_Q_ORDER[id] > _IMG_Q_ORDER[cap]){ toast('🔒 Qualité « Max » réservée au plan Élite'); openUpgradeModal(); _imgRenderQuality(); return; }
+  _imgQuality = id; _imgRenderQuality();
+}
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
   const cap = _imgQualityCap();
   if(!_imgQuality) _imgQuality = 'low'; // éco par défaut (coût maîtrisé)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
-  g.innerHTML = '';
-  _IMG_QUALITIES.forEach(q => {
+  const val = _IMG_Q_ORDER[_imgQuality];
+  g.style.display = 'block';
+  g.style.gridTemplateColumns = 'none';
+  const labels = _IMG_QUALITIES.map((q,i)=>{
+    const on = i===val;
     const locked = _IMG_Q_ORDER[q.id] > _IMG_Q_ORDER[cap];
-    const on = q.id === _imgQuality;
-    const el = document.createElement('button');
-    el.style.cssText = 'position:relative;padding:10px 6px;border-radius:12px;border:1.5px solid '+(on?'var(--orange)':'var(--border2)')+';background:'+(on?'var(--orange-dim)':'var(--bg3)')+';color:'+(on?'var(--orange2)':(locked?'var(--text3)':'var(--text2)'))+';cursor:'+(locked?'not-allowed':'pointer')+';opacity:'+(locked?'.55':'1')+';text-align:center;transition:all .15s;font-family:var(--font)';
-    el.innerHTML = '<div style="font-size:12px;font-weight:800">'+q.label+'</div><div style="font-size:9px;font-family:var(--mono);margin-top:2px;opacity:.8">'+(locked?'🔒 Élite':q.sub)+'</div>';
-    el.onclick = () => _imgPickQuality(q.id);
-    g.appendChild(el);
-  });
+    const align = i===0?'flex-start':(i===2?'flex-end':'center');
+    return '<div style="display:flex;flex-direction:column;align-items:'+align+';flex:1;cursor:'+(locked?'not-allowed':'pointer')+'" onclick="_imgSliderQuality('+i+')">'+
+      '<div style="font-size:12px;font-weight:800;color:'+(on?'var(--orange2)':(locked?'var(--text3)':'var(--text2)'))+'">'+q.label+'</div>'+
+      '<div style="font-size:9px;font-family:var(--mono);margin-top:2px;color:var(--text3)">'+(locked?'🔒 Élite':q.sub)+'</div>'+
+    '</div>';
+  }).join('');
+  g.innerHTML =
+    '<input type="range" min="0" max="2" step="1" value="'+val+'" oninput="_imgSliderQuality(this.value)" '+
+      'style="width:100%;accent-color:var(--orange);height:6px;cursor:pointer;margin:2px 0 4px">'+
+    '<div style="display:flex;justify-content:space-between;gap:4px">'+labels+'</div>';
 }
 
 let _imgSelectedStyleId    = 'photo';
