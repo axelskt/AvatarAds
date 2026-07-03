@@ -6385,7 +6385,7 @@ function _imgQualityCap(){
 }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
-  let q = _imgQuality || 'low';
+  let q = _imgQuality || 'high'; // défaut = Max (Flux Ultra), plafonné par le plan
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
 }
@@ -6408,7 +6408,7 @@ function _imgSliderQuality(v){
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
   const cap = _imgQualityCap();
-  if(!_imgQuality) _imgQuality = 'low'; // éco par défaut (coût maîtrisé)
+  if(!_imgQuality) _imgQuality = 'high'; // défaut = Max/Flux Ultra (plafonné par le plan)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   const val = _IMG_Q_ORDER[_imgQuality];
   g.style.display = 'block';
