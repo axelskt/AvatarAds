@@ -6354,6 +6354,8 @@ const _IMG_FORMATS = [
 const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
+// Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
+const _IMG_FLUX_TAIL = ', natural realistic photograph, real skin texture with visible pores, bright natural lighting, sharp detailed background';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -6375,9 +6377,14 @@ function _imgQualityCap(){
 }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
-  let q = _imgQuality || _imgQualityForPlan();
+  let q = _imgQuality || 'low';
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
+}
+// Palier Flux dérivé du slider qualité : Rapide=éco (flux-dev) · Standard=pro · Max=ultra (flux-1.1-pro-ultra)
+function _imgFluxTier(){
+  const q = _imgEffectiveQuality();
+  return q==='high' ? 'ultra' : (q==='medium' ? 'pro' : 'eco');
 }
 function _imgPickQuality(id){
   const cap = _imgQualityCap();
@@ -6387,7 +6394,7 @@ function _imgPickQuality(id){
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
   const cap = _imgQualityCap();
-  if(!_imgQuality) _imgQuality = _imgQualityForPlan();
+  if(!_imgQuality) _imgQuality = 'low'; // éco par défaut (coût maîtrisé)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   g.innerHTML = '';
   _IMG_QUALITIES.forEach(q => {
@@ -6858,12 +6865,12 @@ async function _imgEnrichPrompt(userPrompt, aspect){
 
 // ── Génération réaliste via Flux 1.1 Pro Ultra (mode raw) — proxy Replicate ──
 // Renvoie une data URL (les URLs Replicate expirent ~1h → on convertit pour la persistance).
-async function _imgGenerateFlux(token, prompt, size){
+async function _imgGenerateFlux(token, prompt, size, tier){
   const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
   const aspect_ratio = arMap[size] || '9:16';
   const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
   const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
-  let d = await post({ mode:'flux', prompt, aspect_ratio, raw:true });
+  let d = await post({ mode:'flux', prompt, aspect_ratio, raw:true, tier: tier||'eco' });
   if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Flux'));
   if(!d.url && d.id){
     for(let i=0;i<45 && !d.url;i++){
@@ -6884,9 +6891,9 @@ async function _imgGenerateFlux(token, prompt, size){
 }
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
-  // Styles réalistes (Photo Réel / UGC) → Flux 1.1 Pro Ultra raw (bien plus réaliste que gpt-image)
+  // Styles réalistes (Photo Réel / UGC) → Flux raw (palier selon le slider qualité : éco/pro/ultra)
   if(_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc'){
-    return await _imgGenerateFlux(token, enhancedPrompt, size);
+    return await _imgGenerateFlux(token, enhancedPrompt, size, _imgFluxTier());
   }
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
@@ -7001,11 +7008,12 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes : on enrichit d'abord le prompt façon ChatGPT (GPT-4o), puis booster réalisme
+      // Styles réalistes (Flux) : enrichissement léger façon ChatGPT (GPT-4o) + petite queue naturelle
+      // PAS de booster lourd _IMG_REALISM ici : Flux raw est déjà photoréaliste, le pavé de négations dégrade le rendu
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Optimisation du prompt…';
       const _aspect = size==='1024x1792' ? '9:16 vertical' : (size==='1792x1024' ? '16:9 horizontal' : '1:1 square');
       const _enr = await _imgEnrichPrompt(prompt, _aspect);
-      enhancedPrompt = (_enr || (prompt + suffix)) + _IMG_REALISM;
+      enhancedPrompt = (_enr || prompt) + _IMG_FLUX_TAIL;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
