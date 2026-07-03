@@ -6366,6 +6366,9 @@ const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinémat
 const _IMG_FLUX_TAIL = ', the person looking directly into the camera, medium close-up framing from the waist up (not a wide full-body shot), natural realistic photograph, real skin texture with visible pores, bright natural lighting, sharp detailed background';
 // Moteur des styles réalistes SANS référence : 'gptimage' (prompt brut, test) | 'flux' (Flux Ultra)
 const _IMG_REALISTIC_ENGINE = 'gptimage';
+// Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
+// Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
+const _IMG_REALISM_SUFFIX = '. Natural human skin with visible pores, micro skin texture, subtle imperfections, realistic facial anatomy, authentic expression, natural asymmetry, documentary photography realism, luxury commercial photography, natural window daylight, sharp detailed background, no beauty filter, no AI-generated appearance, no plastic skin, no wax texture.';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -7064,8 +7067,8 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes sans réf : ZÉRO ajout — on envoie STRICTEMENT le prompt de l'utilisateur.
-      enhancedPrompt = prompt;
+      // Styles réalistes sans réf : prompt user + bloc réalisme (méthode ChatGPT).
+      enhancedPrompt = prompt + _IMG_REALISM_SUFFIX;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
