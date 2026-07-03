@@ -7064,9 +7064,8 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes sans réf : prompt user BRUT.
-      // Moteur Flux → petite queue ; moteur gpt-image → strictement rien (test prompt brut).
-      enhancedPrompt = prompt + (_IMG_REALISTIC_ENGINE==='flux' ? _IMG_FLUX_TAIL : '');
+      // Styles réalistes sans réf : ZÉRO ajout — on envoie STRICTEMENT le prompt de l'utilisateur.
+      enhancedPrompt = prompt;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
