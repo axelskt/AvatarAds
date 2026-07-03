@@ -7029,12 +7029,10 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes (Flux) : enrichissement léger façon ChatGPT (GPT-4o) + petite queue naturelle
-      // PAS de booster lourd _IMG_REALISM ici : Flux raw est déjà photoréaliste, le pavé de négations dégrade le rendu
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Optimisation du prompt…';
-      const _aspect = size==='1024x1792' ? '9:16 vertical' : (size==='1792x1024' ? '16:9 horizontal' : '1:1 square');
-      const _enr = await _imgEnrichPrompt(prompt, _aspect);
-      enhancedPrompt = (_enr || prompt) + _IMG_FLUX_TAIL;
+      // Styles réalistes (Flux) : on envoie le prompt de l'utilisateur QUASI BRUT.
+      // L'enrichissement GPT-4o polluait le rendu (ambiance sombre/cinématique, regard baissé) → supprimé.
+      // Flux raw est déjà photoréaliste : juste une petite queue (regard caméra + lumière naturelle).
+      enhancedPrompt = prompt + _IMG_FLUX_TAIL;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
