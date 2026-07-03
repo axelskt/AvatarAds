@@ -6856,7 +6856,38 @@ async function _imgEnrichPrompt(userPrompt, aspect){
   }catch(e){ return null; }
 }
 
+// ── Génération réaliste via Flux 1.1 Pro Ultra (mode raw) — proxy Replicate ──
+// Renvoie une data URL (les URLs Replicate expirent ~1h → on convertit pour la persistance).
+async function _imgGenerateFlux(token, prompt, size){
+  const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
+  const aspect_ratio = arMap[size] || '9:16';
+  const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
+  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+  let d = await post({ mode:'flux', prompt, aspect_ratio, raw:true });
+  if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Flux'));
+  if(!d.url && d.id){
+    for(let i=0;i<45 && !d.url;i++){
+      await new Promise(r=>setTimeout(r,2000));
+      const p=await post({poll:d.id});
+      if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
+      if(p.status==='failed'||p.status==='canceled') throw new Error('Génération échouée — réessaie');
+      if(p.url) d.url=p.url;
+    }
+  }
+  if(!d.url) throw new Error('Délai dépassé — réessaie');
+  // Conversion en data URL (persistance bibliothèque)
+  try{
+    const resp = await fetch(d.url);
+    const blob = await resp.blob();
+    return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); });
+  }catch(e){ return d.url; }
+}
+
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
+  // Styles réalistes (Photo Réel / UGC) → Flux 1.1 Pro Ultra raw (bien plus réaliste que gpt-image)
+  if(_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc'){
+    return await _imgGenerateFlux(token, enhancedPrompt, size);
+  }
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
   const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
