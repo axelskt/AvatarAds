@@ -6930,7 +6930,18 @@ async function _imgGenerateFluxKontext(token, prompt, refFile, size){
     }
   }
   if(!d.url) throw new Error('Délai dépassé — réessaie');
-  try{ const resp=await fetch(d.url); const blob=await resp.blob(); return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); }); }catch(e){ return d.url; }
+  // Auto-HD (Clarity) : Kontext adoucit le fond → on le re-nettoie/détaille automatiquement
+  let finalUrl = d.url;
+  try{
+    let hd = await post({ image: d.url, scale_factor:2 });
+    if(!hd.error){
+      if(!hd.url && hd.id){
+        for(let i=0;i<40 && !hd.url;i++){ await new Promise(r=>setTimeout(r,2500)); const p=await post({poll:hd.id}); if(p.url) hd.url=p.url; if(p.status==='failed'||p.status==='canceled') break; }
+      }
+      if(hd.url) finalUrl = hd.url;
+    }
+  }catch(e){}
+  try{ const resp=await fetch(finalUrl); const blob=await resp.blob(); return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); }); }catch(e){ return finalUrl; }
 }
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
