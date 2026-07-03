@@ -6896,7 +6896,11 @@ async function generateImage(){
     // qui cassent la mise en page → on laisse le prompt de l'utilisateur piloter.
     const _sid  = _imgSelectedStyleId;
     const _pLow = (prompt||'').toLowerCase();
-    const _isLayout = /(reference sheet|référence|model sheet|character sheet|fiche personnage|planche|mood ?board|mockup|grille|collage|palette|multiple angles|plusieurs angles|panel|feuille de perso|character design)/.test(_pLow);
+    // Détection PLANCHE stricte : uniquement si AUCUNE image de réf (sinon = photo à partir de la réf)
+    // ET si la demande porte clairement sur une planche/fiche en SORTIE. On exige un verbe de création
+    // + un mot planche, pour ne PAS déclencher quand l'user mentionne juste « le reference sheet » en contexte.
+    const _wantsSheet = /(crée|creer|créer|génère|genere|générer|fais|faire|generate|create|make)[^.]{0,40}(reference sheet|model sheet|character sheet|planche|fiche personnage|moodboard|mood board|grille de|feuille de perso)/.test(_pLow);
+    const _isLayout = !_imgRefFile && _wantsSheet;
     let enhancedPrompt;
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
