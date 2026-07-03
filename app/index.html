@@ -6333,7 +6333,7 @@ function _updateImgQuotaLabel(){
 // ═══════════════════════════════════════════════════════════════════
 
 const _IMG_STYLES = [
-  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Photo naturelle',   api:'natural', suffix:', photo prise sur le vif au smartphone en lumière naturelle du jour, personne normale et ordinaire, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et bien définis, yeux détaillés et regard naturel, cheveux détaillés, cadrage simple et naturel comme une vraie photo du quotidien, rendu non lissé, non plastique, non retouché, pas de pose de mannequin, pas de look commercial' },
+  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Photo réaliste',   api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
   { id:'cinema',  icon:'🧸', label:'Pixar 3D',     sub:'Rendu 3D Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
   { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit réaliste', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', vrai selfie/photo UGC au smartphone tenu à la main, casual et spontané, lumière naturelle de jour, cadrage imparfait, non retouché, non professionnel' },
@@ -6349,7 +6349,7 @@ const _IMG_FORMATS = [
 
 // Booster réalisme « dermatologique » — appliqué aux styles réalistes (Photo, UGC) pour un rendu HUMAIN/NATUREL, surtout pas « IA »
 // = combinaison des 2 prompts d'Axel : paragraphe "photographe commercial" (physique de l'image) + liste de garde-fous anti-look IA
-const _IMG_REALISM = '. Candid amateur smartphone photo, shot on a modern phone (iPhone) in natural available light, as if a friend quickly snapped a picture. CRUCIAL: it depicts an ordinary, average-looking everyday real person — NOT a model, NOT conventionally beautiful, NOT glamorous — with a naturally asymmetric face and genuine human imperfections. It must look like a normal everyday photo, NOT a professional or commercial shoot: no studio lighting, no softbox, no beauty retouching, no cinematic color grading, no glossy magazine or advertising look, no perfect model pose, no perfect symmetry. Natural imperfect available lighting with real ambient shadows, ordinary casual composition, slightly imperfect framing, plain everyday background. VERY IMPORTANT: the ENTIRE scene is in sharp focus with a large deep depth of field like a normal phone camera — the background is clearly visible, sharp and detailed, NOT blurred. Absolutely NO background blur, NO bokeh, NO shallow depth of field, NO portrait-mode blur, NO out-of-focus background. Real human skin with full macro microtexture preserved everywhere: visible pores unevenly distributed across the whole face, fine peach fuzz, natural translucency, subtle blemishes, slight redness and uneven skin tone, a few small freckles or marks, natural under-eye texture and natural skin oil, real facial asymmetry. Hair as individual strands, individual eyebrow hairs and eyelashes, detailed iris, natural lip texture. Authentic true-to-life color science, mild natural phone-sensor grain, believable everyday dynamic range. Absolutely avoid: plastic or waxy skin, airbrushing, skin smoothing, flawless perfect skin, artificial perfection, symmetric model face, over-sharpening, exaggerated HDR, oversaturation, beauty filters, 3D render, CGI, digital-art look, obvious AI artifacts. The result must look like a genuine unedited photograph of a normal everyday person, completely indistinguishable from a real casual phone photo.';
+const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
@@ -6795,6 +6795,34 @@ function initImageGen(){
 }
 
 // Helper : génère UNE image et retourne son URL (ou throw) — GPT Image (gpt-image-1)
+// ── Enrichissement du prompt (ce que fait ChatGPT en coulisse) ──
+// GPT-4o réécrit la courte description de l'user en UN prompt photo ultra-détaillé
+// → c'est ce qui fait 90% de l'écart de qualité entre l'API brute et ChatGPT.
+// Renvoie le prompt enrichi, ou null en cas d'échec (fallback géré par l'appelant).
+async function _imgEnrichPrompt(userPrompt, aspect){
+  try{
+    const sys = "Tu es un directeur photo expert en prompts pour la génération d'images PHOTORÉALISTES (gpt-image). "
+      + "Réécris la description de l'utilisateur en UN SEUL prompt riche et détaillé en anglais pour UNE VRAIE PHOTOGRAPHIE hyper-réaliste, indistinguable d'une vraie photo. "
+      + "Garde fidèlement le sujet, la scène et l'intention de l'utilisateur, mais AJOUTE des détails concrets : décor et arrière-plan précis et détaillés, lumière naturelle réaliste, matières et textures, texture de peau réelle (pores, grain, micro-imperfections, jamais plastique ni lissée), rendu photo réaliste et net. "
+      + "La personne doit ressembler à un VRAI humain photographié, pas à une image IA, pas de peau plastique, pas de flou d'arrière-plan excessif. "
+      + "Format de l'image : " + aspect + ". "
+      + "Réponds UNIQUEMENT avec le prompt final en anglais, sans guillemets, sans préambule, sans markdown, ~120 mots maximum.";
+    const res = await fetch(OPENAI_PROXY+'?path=/v1/chat/completions', {
+      method:'POST',
+      headers:{...await getAuthHeader(),'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'gpt-4o', max_tokens:320, temperature:0.7, messages:[
+        {role:'system',content:sys},
+        {role:'user',content:userPrompt}
+      ]})
+    });
+    const data = await res.json();
+    let out = (data.choices?.[0]?.message?.content || '').trim();
+    out = out.replace(/^["'`]+|["'`]+$/g,'').trim();
+    if(out.length < 20) return null;
+    return out;
+  }catch(e){ return null; }
+}
+
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
@@ -6908,6 +6936,12 @@ async function generateImage(){
     let enhancedPrompt;
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
+    } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
+      // Styles réalistes : on enrichit d'abord le prompt façon ChatGPT (GPT-4o), puis booster réalisme
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Optimisation du prompt…';
+      const _aspect = size==='1024x1792' ? '9:16 vertical' : (size==='1792x1024' ? '16:9 horizontal' : '1:1 square');
+      const _enr = await _imgEnrichPrompt(prompt, _aspect);
+      enhancedPrompt = (_enr || (prompt + suffix)) + _IMG_REALISM;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
