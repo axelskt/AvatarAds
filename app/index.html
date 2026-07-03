@@ -6355,7 +6355,7 @@ const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detai
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
 // Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
-const _IMG_FLUX_TAIL = ', natural realistic photograph, real skin texture with visible pores, bright natural lighting, sharp detailed background';
+const _IMG_FLUX_TAIL = ', the person looking directly into the camera, medium close-up framing from the waist up (not a wide full-body shot), natural realistic photograph, real skin texture with visible pores, bright natural lighting, sharp detailed background';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -6845,6 +6845,7 @@ async function _imgEnrichPrompt(userPrompt, aspect){
       + "Réécris la description de l'utilisateur en UN SEUL prompt riche et détaillé en anglais pour UNE VRAIE PHOTOGRAPHIE hyper-réaliste, indistinguable d'une vraie photo. "
       + "Garde fidèlement le sujet, la scène et l'intention de l'utilisateur, mais AJOUTE des détails concrets : décor et arrière-plan précis et détaillés, lumière naturelle réaliste, matières et textures, texture de peau réelle (pores, grain, micro-imperfections, jamais plastique ni lissée), rendu photo réaliste et net. "
       + "La personne doit ressembler à un VRAI humain photographié, pas à une image IA, pas de peau plastique, pas de flou d'arrière-plan excessif. "
+      + "PAR DÉFAUT (sauf si l'utilisateur demande explicitement autre chose) : la personne regarde DIRECTEMENT l'objectif, et le cadrage est un plan rapproché/medium (à partir de la taille, buste), pas un plan large en pied. "
       + "Format de l'image : " + aspect + ". "
       + "Réponds UNIQUEMENT avec le prompt final en anglais, sans guillemets, sans préambule, sans markdown, ~120 mots maximum.";
     const res = await fetch(OPENAI_PROXY+'?path=/v1/chat/completions', {
