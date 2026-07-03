@@ -2670,6 +2670,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9l5-5 1.5 1.5-5 5H2z"/><path d="M7 4l1-1 1.5 1.5-1 1z"/></svg>
             Corrections rapides
           </div>
+          <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-bottom:6px;padding:13px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(255,107,53,.22)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>Rendre réaliste — 1 clic</button>
+          <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.5">Sur une image déjà propre → ajoute pores, grain de peau, duvet, taches de rousseur &amp; détails cheveux, sans changer la personne.</div>
           <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
         </div>
 
@@ -6470,6 +6472,37 @@ function _imgRenderCorrectPresets(){
   ).join('');
 }
 function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
+
+// ── « Rendre réaliste » en 1 clic (img2img) : garde la personne/pose/décor, ajoute la micro-texture réelle ──
+const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, framing, composition, clothing and background — do NOT change the scene or the layout. ONLY change the rendering so the image looks like a genuine real photograph taken with a real camera or phone, completely indistinguishable from a real photo and clearly NOT AI-generated. Add highly realistic skin with visible pores and natural skin texture, subtle freckles and tiny blemishes, fine peach fuzz on the face, natural skin-tone variation and slight redness, realistic under-eye texture; a natural detailed hairline with fine baby hairs and individual strands; realistic eyebrows, eyelashes and a detailed iris; natural lip texture with fine vertical lines; realistic skin detail on any visible body part (arms, hands, legs). Remove every plastic, waxy, airbrushed, over-smoothed, glossy or CGI look. Keep natural human imperfections and true-to-life colors. The final result must look like a real, unedited photograph.';
+
+async function _imgMakeRealistic(btn){
+  if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
+  if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à rendre réaliste'); return; }
+  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
+  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.7';
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Rendu réaliste… (~20s)';
+  const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+    const gptSize=sizeMap[_imgSelectedFormat]||'1024x1024';
+    if(multiWrap) multiWrap.style.display='none';
+    if(singleWrap) singleWrap.style.display='block';
+    const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
+    if(overlay) overlay.style.display='flex';
+    const url=await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, gptSize);
+    _imgMonthIncrement();
+    _imgShowSingle(url, _imgSelectedFormat);
+    _imgSaveHistory(url, 'Réaliste', _imgSelectedFormat);
+    _imgRenderHistory();
+    const rem=_imgMonthRemaining();
+    toast('✨ Image rendue réaliste · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
+  }catch(e){ toast('⚠️ '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; if(overlay) overlay.style.display='none'; }
+}
 
 function _imgSetMode(m){
   _imgMode = m;
