@@ -6365,7 +6365,7 @@ const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinémat
 // Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
 const _IMG_FLUX_TAIL = ', the person looking directly into the camera, medium close-up framing from the waist up (not a wide full-body shot), natural realistic photograph, real skin texture with visible pores, bright natural lighting, sharp detailed background';
 // Moteur des styles réalistes SANS référence : 'gptimage' (prompt brut, test) | 'flux' (Flux Ultra)
-const _IMG_REALISTIC_ENGINE = 'gptimage';
+const _IMG_REALISTIC_ENGINE = 'flux';
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
 const _IMG_REALISM_SUFFIX = '. Natural human skin with visible pores, micro skin texture, subtle imperfections, realistic facial anatomy, authentic expression, natural asymmetry, documentary photography realism, luxury commercial photography, natural window daylight, sharp detailed background, no beauty filter, no AI-generated appearance, no plastic skin, no wax texture.';
@@ -6390,7 +6390,7 @@ function _imgQualityCap(){
 }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
-  let q = _imgQuality || 'high'; // défaut = Max (Flux Ultra), plafonné par le plan
+  let q = _imgQuality || 'low'; // défaut = Rapide/Éco, plafonné par le plan
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
 }
@@ -6413,7 +6413,7 @@ function _imgSliderQuality(v){
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
   const cap = _imgQualityCap();
-  if(!_imgQuality) _imgQuality = 'high'; // défaut = Max/Flux Ultra (plafonné par le plan)
+  if(!_imgQuality) _imgQuality = 'low'; // défaut = Rapide/Éco (plafonné par le plan)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   const val = _IMG_Q_ORDER[_imgQuality];
   g.style.display = 'block';
@@ -7067,8 +7067,8 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes sans réf : prompt user + bloc réalisme (méthode ChatGPT).
-      enhancedPrompt = prompt + _IMG_REALISM_SUFFIX;
+      // Styles réalistes sans réf : Flux → queue légère (formule testC/D) ; gpt-image → bloc réalisme ChatGPT.
+      enhancedPrompt = prompt + (_IMG_REALISTIC_ENGINE==='flux' ? _IMG_FLUX_TAIL : _IMG_REALISM_SUFFIX);
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['cinema','studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
