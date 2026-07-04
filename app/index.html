@@ -6592,7 +6592,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
   fd.append('prompt', prompt);
   fd.append('n', '1');
   fd.append('size', gptSize);
-  fd.append('quality', _imgEffectiveQuality());
+  fd.append('quality', 'high'); // qualité max forcée (comme ChatGPT) pour la génération avec référence
   const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
     method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
   });
@@ -7081,19 +7081,16 @@ async function generateImage(){
       if(_imgMode === 'correct' && !_imgRefFile){ toast('⚠️ Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
       const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
       const gptSize = sizeMap[size] || '1024x1024';
-      // Styles réalistes + génération avec réf → Flux Kontext (cohérence de personnage)
-      const _useKontext = (_imgMode!=='correct') && (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc') && _IMG_REALISTIC_ENGINE==='flux';
-      // En correction → prompt brut ; en génération avec réf → prompt + style
+      // Génération AVEC référence → gpt-image /edits (comme ChatGPT), en qualité HIGH forcée.
+      const _isRealistic = (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
+      // En correction → prompt brut ; en génération réaliste avec réf → prompt + bloc réalisme détaillé
       const editPrompt = (_imgMode === 'correct') ? prompt
-                       : (_useKontext ? (prompt + ', keep the exact same person, face and identity from the reference image' + _IMG_FLUX_TAIL)
-                                      : enhancedPrompt);
+                       : (_isRealistic ? (prompt + _IMG_FLUX_TAIL) : enhancedPrompt);
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
-      const url = _useKontext
-        ? await _imgGenerateFluxKontext(token, editPrompt, _imgRefFile, size)
-        : await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+      const url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
       _imgMonthIncrement();
       _imgShowSingle(url, size);
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
