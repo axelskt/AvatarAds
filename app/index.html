@@ -7017,8 +7017,11 @@ async function _imgUpscaleHD(btn){
       }
     }
     if(!d.url) throw new Error('Délai dépassé — réessaie');
-    img.src=d.url;
-    try{ _imgSaveHistory(d.url, 'HD', _imgSelectedFormat); _imgRenderHistory(); }catch(e){}
+    // Conversion en data URL (les URLs Replicate expirent ~1h → persistance bibliothèque)
+    let finalUrl = d.url;
+    try{ const resp=await fetch(d.url); const blob=await resp.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }catch(e){}
+    img.src=finalUrl;
+    try{ _imgSaveHistory(finalUrl, 'HD', _imgSelectedFormat); _imgRenderHistory(); }catch(e){}
     toast('✨ Détails restaurés en HD');
   }catch(e){ toast('⚠️ '+(e.message||e)); }
   finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
