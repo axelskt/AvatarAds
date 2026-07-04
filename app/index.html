@@ -2767,8 +2767,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <img id="imgOutput" style="width:100%;display:block" alt="Image générée">
               <!-- Loading overlay -->
               <div id="imgLoadingOverlay" class="img-loading-overlay" style="display:none;border-radius:0">
-                <div style="width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin 0.9s linear infinite"></div>
-                <div style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,0.7)">Génération en cours…</div>
+                <div style="position:relative;width:74px;height:74px">
+                  <svg width="74" height="74" viewBox="0 0 74 74" style="transform:rotate(-90deg)">
+                    <circle cx="37" cy="37" r="32" fill="none" stroke="rgba(255,107,53,0.18)" stroke-width="5"/>
+                    <circle id="imgProgArc" cx="37" cy="37" r="32" fill="none" stroke="var(--orange)" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" style="transition:stroke-dashoffset .35s linear"/>
+                  </svg>
+                  <div id="imgProgPct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;font-family:var(--font);color:#fff">1%</div>
+                </div>
+                <div id="imgProgLabel" style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,0.7)">Génération en cours…</div>
               </div>
               <!-- Badges -->
               <div id="imgBadges" style="position:absolute;top:12px;left:12px;display:flex;gap:6px"></div>
@@ -2786,16 +2792,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
                 Utiliser comme avatar &amp; créer une vidéo
               </button>
-              <div style="display:flex;gap:8px;margin-bottom:10px">
-                <button onclick="_imgUpscale(this)" id="imgUpscaleBtn" style="flex:1;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                  Upscale HD
-                </button>
-                <button onclick="_imgRemoveBgRun(this)" id="imgDetourBtn" style="flex:1;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
+              <div style="margin-bottom:10px">
+                <button onclick="_imgRemoveBgRun(this)" id="imgDetourBtn" style="width:100%;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
                   <span style="font-size:14px">✂️</span> Détourer le fond
                 </button>
               </div>
               <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (HD)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE</span></button>
+              <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
               <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:rgba(255,107,53,.1);border:1.5px solid rgba(255,107,53,.4);border-radius:11px;color:var(--orange2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,.18)'" onmouseout="this.style.background='rgba(255,107,53,.1)'">🪄 Modifier cette image</button>
               <div style="display:flex;gap:8px">
                 <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
@@ -2823,11 +2826,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="imgMultiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
         </div>
 
-        <!-- HISTORIQUE LOCAL -->
-        <div id="imgHistoryWrap" style="display:none">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Récentes</div>
-          <div id="imgHistoryGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
-        </div>
+        <!-- (section Récentes supprimée à la demande) -->
+        <div id="imgHistoryWrap" style="display:none"><div id="imgHistoryGrid"></div></div>
 
       </div>
     </div><!-- /imagegen -->
@@ -6790,6 +6790,8 @@ function _imgSaveHistory(url, styleLabel, size){
 }
 
 function _imgRenderHistory(){
+  const _hw = document.getElementById('imgHistoryWrap'); if(_hw) _hw.style.display='none';
+  return; // section "Récentes" désactivée
   try {
     const history = JSON.parse(localStorage.getItem('imgHistory')||'[]');
     const wrap = document.getElementById('imgHistoryWrap');
@@ -6993,11 +6995,40 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
 
 // Affiche une image dans le bloc résultat principal (single)
 // ── Restauration HD (Clarity Upscaler via Replicate · proxy Supabase) — Élite ──
+// ── Rond de progression 1→99% (estimé, gpt-image n'expose pas la vraie progression) ──
+let _imgProgTimer=null, _imgProgVal=0;
+function _imgSetProg(p){
+  _imgProgVal=p;
+  const arc=document.getElementById('imgProgArc'), pct=document.getElementById('imgProgPct');
+  if(arc) arc.style.strokeDashoffset = String(201 - 201*(Math.min(100,p)/100));
+  if(pct) pct.textContent = Math.round(Math.min(100,p))+'%';
+}
+function _imgProgStart(label){
+  const l=document.getElementById('imgProgLabel'); if(l&&label) l.textContent=label;
+  _imgSetProg(1);
+  clearInterval(_imgProgTimer);
+  _imgProgTimer=setInterval(()=>{ if(_imgProgVal<99) _imgSetProg(_imgProgVal + Math.max(0.4,(99-_imgProgVal)*0.05)); }, 350);
+}
+function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); }
+
+// ── Revenir à l'image d'avant la restauration HD ──
+let _imgPrevSrc=null;
+function _imgRevertHD(){
+  const img=document.getElementById('imgOutput');
+  if(!img||!_imgPrevSrc){ return; }
+  img.src=_imgPrevSrc;
+  try{ document.getElementById('imgDownloadBtn').href=_imgPrevSrc; }catch(e){}
+  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none';
+  _imgPrevSrc=null;
+  toast('↩️ Image d\'origine restaurée');
+}
+
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('🔒 Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
   const img=document.getElementById('imgOutput');
   if(!img||!img.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  _imgPrevSrc = img.src; // mémorise avant HD pour pouvoir revenir en arrière
   const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
   btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration HD… (~30s)';
   try{
@@ -7021,12 +7052,16 @@ async function _imgUpscaleHD(btn){
     let finalUrl = d.url;
     try{ const resp=await fetch(d.url); const blob=await resp.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }catch(e){}
     img.src=finalUrl;
-    try{ _imgSaveHistory(finalUrl, 'HD', _imgSelectedFormat); _imgRenderHistory(); }catch(e){}
+    try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
+    const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     toast('✨ Détails restaurés en HD');
   }catch(e){ toast('⚠️ '+(e.message||e)); }
   finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
 }
 function _imgShowSingle(url, size){
+  _imgProgStop();
+  const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
+  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null;
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
   const img = document.getElementById('imgOutput');
@@ -7112,6 +7147,7 @@ async function generateImage(){
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+      _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
       const url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
       _imgMonthIncrement();
@@ -7130,6 +7166,7 @@ async function generateImage(){
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
+      _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
       const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
       _imgMonthIncrement();
@@ -7203,6 +7240,7 @@ async function generateImage(){
     console.error('generateImage:', e);
     toast('⚠️ Erreur : ' + e.message);
   } finally {
+    _imgProgStop();
     overlay.style.display = 'none';
     btn.innerHTML = baseLabel;
     btn.disabled = false; btn.style.opacity = '1';
