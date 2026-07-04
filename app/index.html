@@ -6364,8 +6364,10 @@ const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detai
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
 // Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
 const _IMG_FLUX_TAIL = ', professional photorealistic lifestyle photograph, the person looking directly at the camera, medium framing from the waist up (not a wide full-body shot), natural realistic skin with visible pores and subtle imperfections, natural facial asymmetry, authentic expression, no beauty filter, no plastic skin, no CGI look, shot on Sony A7R V 50mm lens at eye level, bright natural daylight, soft natural shadows, true-to-life colors, detailed sharp background (no heavy blur), ultra realistic commercial lifestyle photography, high detail';
-// Moteur des styles réalistes SANS référence : 'gptimage' (prompt brut, test) | 'flux' (Flux Ultra)
-const _IMG_REALISTIC_ENGINE = 'flux';
+// Moteur des styles réalistes SANS référence : 'gptimage' | 'flux' (Flux Ultra)
+const _IMG_REALISTIC_ENGINE = 'gptimage';
+// Modèles gpt-image essayés dans l'ordre (gpt-image-2 récent → fallback gpt-image-1)
+const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
 const _IMG_REALISM_SUFFIX = '. Natural human skin with visible pores, micro skin texture, subtle imperfections, realistic facial anatomy, authentic expression, natural asymmetry, documentary photography realism, luxury commercial photography, natural window daylight, sharp detailed background, no beauty filter, no AI-generated appearance, no plastic skin, no wax texture.';
@@ -6586,22 +6588,30 @@ function _imgLoadRef(file){
 
 // Édition d'image via gpt-image-1 /v1/images/edits (multipart)
 async function _imgEditOne(token, prompt, refFile, gptSize){
-  const fd = new FormData();
-  fd.append('model', 'gpt-image-1');
-  fd.append('image', refFile, refFile.name || 'image.png');
-  fd.append('prompt', prompt);
-  fd.append('n', '1');
-  fd.append('size', gptSize);
-  fd.append('quality', 'high'); // qualité max forcée (comme ChatGPT) pour la génération avec référence
-  const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
-    method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
-  });
-  const data = await res.json();
-  if(data.error){ throw new Error(data.error.message||'Erreur correction'); }
-  const item = data.data?.[0];
-  if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
-  if(item?.url) return item.url;
-  throw new Error('Aucune image retournée');
+  let lastErr = 'Erreur correction';
+  for(const model of _GPT_IMG_MODELS){
+    const fd = new FormData();
+    fd.append('model', model);
+    fd.append('image', refFile, refFile.name || 'image.png');
+    fd.append('prompt', prompt);
+    fd.append('n', '1');
+    fd.append('size', gptSize);
+    fd.append('quality', _imgEffectiveQuality()); // qualité pilotée par le slider
+    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
+      method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
+    });
+    const data = await res.json();
+    if(data.error){
+      lastErr = data.error.message || 'Erreur correction';
+      if(/model|not found|does not exist|unsupported/i.test(lastErr)) continue;
+      throw new Error(lastErr);
+    }
+    const item = data.data?.[0];
+    if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    if(item?.url) return item.url;
+    lastErr = 'Aucune image retournée';
+  }
+  throw new Error(lastErr);
 }
 function _imgToggleBg(){
   _imgRemoveBg = !_imgRemoveBg;
@@ -6958,17 +6968,26 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
   const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
   const gptSize = sizeMap[size] || '1024x1024';
-  const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-image-1', prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgEffectiveQuality() })
-  });
-  const data = await res.json();
-  if(data.error){ throw new Error(data.error.message||'Erreur génération'); }
-  const item = data.data?.[0];
-  if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
-  if(item?.url) return item.url; // fallback si le proxy renvoie une URL
-  throw new Error('Aucune image retournée');
+  let lastErr = 'Erreur génération';
+  for(const model of _GPT_IMG_MODELS){
+    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgEffectiveQuality() })
+    });
+    const data = await res.json();
+    if(data.error){
+      lastErr = data.error.message || 'Erreur génération';
+      // modèle inconnu/non dispo → on tente le suivant ; autre erreur → on arrête
+      if(/model|not found|does not exist|unsupported/i.test(lastErr)) continue;
+      throw new Error(lastErr);
+    }
+    const item = data.data?.[0];
+    if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    if(item?.url) return item.url;
+    lastErr = 'Aucune image retournée';
+  }
+  throw new Error(lastErr);
 }
 
 // Affiche une image dans le bloc résultat principal (single)
