@@ -6392,7 +6392,7 @@ function _imgQualityCap(){
 }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
-  let q = _imgQuality || 'low'; // défaut = Rapide/Éco, plafonné par le plan
+  let q = _imgQuality || 'medium'; // défaut = Standard (gpt-image-2 ~0,04$, bon rapport qualité/prix)
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
 }
@@ -6415,7 +6415,7 @@ function _imgSliderQuality(v){
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
   const cap = _imgQualityCap();
-  if(!_imgQuality) _imgQuality = 'low'; // défaut = Rapide/Éco (plafonné par le plan)
+  if(!_imgQuality) _imgQuality = 'medium'; // défaut = Standard (bon rapport qualité/prix sur gpt-image-2)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   const val = _IMG_Q_ORDER[_imgQuality];
   g.style.display = 'block';
@@ -6597,6 +6597,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     fd.append('n', '1');
     fd.append('size', gptSize);
     fd.append('quality', _imgEffectiveQuality()); // qualité pilotée par le slider
+    fd.append('moderation', 'low'); // filtre moins restrictif (contenu influenceur)
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
       method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
     });
@@ -6973,7 +6974,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgEffectiveQuality() })
+      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgEffectiveQuality(), moderation: 'low' })
     });
     const data = await res.json();
     if(data.error){
