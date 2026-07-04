@@ -10,9 +10,11 @@ permissions:
   pages: write
   id-token: write
 
+# Réglage officiel GitHub Pages : on NE PAS annuler un déploiement en cours,
+# sinon Pages reste bloqué en "pending" et le run suivant échoue ("Deployment failed, try again later").
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
