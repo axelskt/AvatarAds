@@ -2678,9 +2678,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9l5-5 1.5 1.5-5 5H2z"/><path d="M7 4l1-1 1.5 1.5-1 1z"/></svg>
             Corrections rapides
           </div>
-          <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-bottom:6px;padding:13px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(255,107,53,.22)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>Rendre réaliste / Améliorer la qualité</button>
-          <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.5">Sur une image déjà propre → ajoute pores, grain de peau, duvet, taches de rousseur &amp; détails cheveux, sans changer la personne.</div>
-          <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
+          <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px"></div>
+          <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;padding:13px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>Rendre réaliste / Améliorer la qualité</button>
+          <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-top:8px;line-height:1.5">Sur une image déjà propre → ajoute pores, grain de peau, duvet, taches de rousseur &amp; détails cheveux, sans changer la personne.</div>
         </div>
 
         <!-- FORMAT -->
@@ -6497,12 +6497,22 @@ const _IMG_CORRECT_PRESETS = [
   { emoji:'🎭', label:'Créer un référence sheet', prompt:'crée une planche de référence (character sheet) de CETTE MÊME personne : garde exactement le même visage, la même identité, la même coiffure et la même tenue, et présente-la sous plusieurs angles (face, 3/4, profil) avec 2-3 expressions, sur un fond neutre gris clair uniforme, éclairage studio doux' },
   { emoji:'🔳', label:'Modifier le format', prompt:'adapte cette image au format choisi ci-dessus en complétant naturellement le décor sur les bords (outpainting), sans déformer ni recadrer la personne, en gardant le même style, la même lumière et la même ambiance' },
   { emoji:'🤲', label:'Faire tenir un objet', prompt:'fais tenir naturellement à la personne l\'objet/produit suivant dans sa main (précise lequel) : prise en main réaliste, doigts et pouce naturels, bonne échelle, ombres et reflets cohérents avec la lumière de la scène' },
+  { emoji:'🏝️', label:'Changer le décor', prompt:'remplace l\'arrière-plan par le décor suivant (précise lequel : plage, bureau moderne, rue, studio…), en gardant EXACTEMENT la même personne, la même pose et le même cadrage, avec une lumière cohérente entre le sujet et le nouveau décor' },
+  { emoji:'✍️', label:'Autres', action:'_imgCorrectOther' },
 ];
+// « Autres » : laisse l'utilisateur écrire sa propre correction dans le champ prompt.
+function _imgCorrectOther(){
+  const pr=document.getElementById('imgPrompt');
+  if(pr){ pr.value=''; pr.focus(); try{ pr.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+  toast('✍️ Décris ta correction dans le champ ci-dessous');
+}
 function _imgRenderCorrectPresets(){
   const g=document.getElementById('imgCorrectPresetsGrid'); if(!g) return;
-  g.innerHTML=_IMG_CORRECT_PRESETS.map(p=>
-    `<button onclick="_imgApplyCorrectPreset('${encodeURIComponent(p.prompt)}')" class="btn btn-sm" style="justify-content:flex-start;text-align:left;border:1px solid var(--border2);background:var(--bg3);font-weight:600;padding:11px 12px">${p.emoji} ${p.label}</button>`
-  ).join('');
+  g.innerHTML=_IMG_CORRECT_PRESETS.map(p=>{
+    const onclick = p.action ? `${p.action}()` : `_imgApplyCorrectPreset('${encodeURIComponent(p.prompt)}')`;
+    const border  = p.action ? '1px dashed var(--border3)' : '1px solid var(--border2)';
+    return `<button onclick="${onclick}" class="btn btn-sm" style="justify-content:flex-start;text-align:left;border:${border};background:var(--bg3);font-weight:600;padding:11px 12px">${p.emoji} ${p.label}</button>`;
+  }).join('');
 }
 function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
 
