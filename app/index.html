@@ -2801,7 +2801,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
               <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:rgba(255,107,53,.1);border:1.5px solid rgba(255,107,53,.4);border-radius:11px;color:var(--orange2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,.18)'" onmouseout="this.style.background='rgba(255,107,53,.1)'">🪄 Modifier cette image</button>
               <div style="display:flex;gap:8px">
-                <a id="imgDownloadBtn" download="avatarads-image.png" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
+                <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
                   Télécharger
                 </a>
@@ -7012,15 +7012,31 @@ function _imgProgStart(label){
 function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); }
 
 // ── Revenir à l'image d'avant la restauration HD ──
-let _imgPrevSrc=null;
+let _imgPrevSrc=null, _imgIsHD=false;
 function _imgRevertHD(){
   const img=document.getElementById('imgOutput');
   if(!img||!_imgPrevSrc){ return; }
   img.src=_imgPrevSrc;
   try{ document.getElementById('imgDownloadBtn').href=_imgPrevSrc; }catch(e){}
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none';
-  _imgPrevSrc=null;
+  _imgPrevSrc=null; _imgIsHD=false;
   toast('↩️ Image d\'origine restaurée');
+}
+// ── Téléchargement robuste (Safari échoue sur les gros data URLs via <a download>) ──
+async function _imgDownload(ev){
+  if(ev) ev.preventDefault();
+  const img=document.getElementById('imgOutput');
+  if(!img||!img.src){ toast('⚠️ Génère une image d\'abord'); return; }
+  const name='avatarads-image'+(_imgIsHD?'-HD':'')+'.png';
+  try{
+    const resp=await fetch(img.src);
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }catch(e){ try{ window.open(img.src,'_blank'); }catch(_){ toast('⚠️ Téléchargement impossible'); } }
 }
 
 async function _imgUpscaleHD(btn){
@@ -7051,7 +7067,7 @@ async function _imgUpscaleHD(btn){
     // Conversion en data URL (les URLs Replicate expirent ~1h → persistance bibliothèque)
     let finalUrl = d.url;
     try{ const resp=await fetch(d.url); const blob=await resp.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }catch(e){}
-    img.src=finalUrl;
+    img.src=finalUrl; _imgIsHD=true;
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     toast('✨ Détails restaurés en HD');
@@ -7061,7 +7077,7 @@ async function _imgUpscaleHD(btn){
 function _imgShowSingle(url, size){
   _imgProgStop();
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
-  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null;
+  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
   const img = document.getElementById('imgOutput');
