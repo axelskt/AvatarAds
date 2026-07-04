@@ -6370,7 +6370,7 @@ const _IMG_REALISTIC_ENGINE = 'gptimage';
 const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
-const _IMG_REALISM_SUFFIX = '. Natural human skin with visible pores, micro skin texture, subtle imperfections, realistic facial anatomy, authentic expression, natural asymmetry, documentary photography realism, luxury commercial photography, natural window daylight, sharp detailed background, no beauty filter, no AI-generated appearance, no plastic skin, no wax texture.';
+const _IMG_REALISM_SUFFIX = '. Hyper-realistic natural human skin with visible pores and fine micro skin texture, subtle freckles and small beauty marks, fine peach fuzz and vellus hair on the skin, slight natural redness and uneven skin tone, subtle blemishes and imperfections, realistic detailed hands with natural skin and knuckle creases, natural skin texture on ALL visible skin (face, neck, arms, legs, hands), detailed natural hairline with fine baby hairs, individual eyebrow hairs and eyelashes, detailed iris with catchlights, realistic lip texture with fine vertical lines, natural facial asymmetry, authentic candid expression, documentary photography realism, natural window daylight, sharp detailed background, no beauty filter, no airbrushing, no plastic skin, no wax texture, no AI-generated look.';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -7108,7 +7108,7 @@ async function generateImage(){
       const _isRealistic = (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
       // En correction → prompt brut ; en génération réaliste avec réf → prompt + bloc réalisme détaillé
       const editPrompt = (_imgMode === 'correct') ? prompt
-                       : (_isRealistic ? (prompt + _IMG_FLUX_TAIL) : enhancedPrompt);
+                       : (_isRealistic ? (prompt + _IMG_REALISM_SUFFIX) : enhancedPrompt);
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
