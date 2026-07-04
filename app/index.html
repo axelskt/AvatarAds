@@ -6492,12 +6492,20 @@ function _imgClearRef(){
 
 // ── Mode Génération / Correction (img2img) ──
 let _imgMode = 'generate';
+// Prompt back-end détaillé pour la planche de référence personnage (façon fiche ALEX).
+const _IMG_REF_SHEET_PROMPT = 'Transform this into a professional CHARACTER REFERENCE SHEET (character model sheet / turnaround) of the EXACT SAME person shown in the image — keep the identical face, identity, hairstyle, skin tone and body type across every single panel. Clean light-beige studio background, minimalist editorial layout with thin separating lines and small uppercase labels. Arrange, as panels on ONE single wide image: (1) a left column with the character NAME in big bold type and an info card (âge, taille, corpulence, cheveux, yeux, teint, origine, signe particulier) plus a COLOR PALETTE with labelled swatches for skin, hair, eyes, lips and clothing; (2) three FULL-BODY shots of the same person standing in the same outfit — FACE (front), PROFIL (side) and DOS (back) — a consistent character turnaround; (3) a PORTRAITS grid of 4 head-and-shoulders close-ups with different natural expressions and slight angle variations; (4) a DÉTAILS row with two extreme close-ups (eye/skin texture and hair texture); (5) a bottom TENUES row showing the same person in 4-5 different outfits (décontracté, casual, sport, élégant, habillé); (6) a small INSPIRATION / AMBIANCE strip of 3-4 lifestyle reference thumbnails. Photorealistic, natural realistic skin with visible pores and texture, the SAME identical face in every panel, coherent soft studio lighting, high detail, sharp in-focus. It must look like a real professional model reference sheet.';
+
 const _IMG_CORRECT_PRESETS = [
-  { emoji:'🧹', label:'Supprimer un objet', prompt:'supprime proprement l\'objet/élément indésirable de l\'image et reconstruis le fond de façon réaliste (précise quel objet retirer)' },
-  { emoji:'🎭', label:'Créer un référence sheet', prompt:'crée une planche de référence (character sheet) de CETTE MÊME personne : garde exactement le même visage, la même identité, la même coiffure et la même tenue, et présente-la sous plusieurs angles (face, 3/4, profil) avec 2-3 expressions, sur un fond neutre gris clair uniforme, éclairage studio doux' },
-  { emoji:'🔳', label:'Modifier le format', prompt:'adapte cette image au format choisi ci-dessus en complétant naturellement le décor sur les bords (outpainting), sans déformer ni recadrer la personne, en gardant le même style, la même lumière et la même ambiance' },
-  { emoji:'🤲', label:'Faire tenir un objet', prompt:'fais tenir naturellement à la personne l\'objet/produit suivant dans sa main (précise lequel) : prise en main réaliste, doigts et pouce naturels, bonne échelle, ombres et reflets cohérents avec la lumière de la scène' },
-  { emoji:'🏝️', label:'Changer le décor', prompt:'remplace l\'arrière-plan par le décor suivant (précise lequel : plage, bureau moderne, rue, studio…), en gardant EXACTEMENT la même personne, la même pose et le même cadrage, avec une lumière cohérente entre le sujet et le nouveau décor' },
+  { emoji:'🧹', label:'Supprimer un objet', needs:true, hint:'quel objet retirer', spin:'Suppression…',
+    back:'Remove the unwanted object/element (described by the user) cleanly from the image and realistically reconstruct the background behind it. Keep everything else identical: same person, same face, same pose, same lighting and same style. Seamless result, no trace or ghost of the removed object.' },
+  { emoji:'🎭', label:'Créer un référence sheet', spin:'Planche perso… (~30s)', fmt:'1792x1024',
+    back:_IMG_REF_SHEET_PROMPT },
+  { emoji:'🔳', label:'Modifier le format', spin:'Recadrage…',
+    back:'Reframe and extend this exact image to fill the target aspect ratio by naturally continuing (outpainting) the environment on the missing sides. Do NOT distort, stretch, squeeze or crop the person. Keep the exact same person, same clothing, same style, same lighting and same mood; only add believable surrounding scenery to complete the new frame.' },
+  { emoji:'🤲', label:'Faire tenir un objet', needs:true, hint:'quel objet/produit', spin:'Objet en main…',
+    back:'Make the person naturally hold the product/object (described by the user) in their hand: realistic grip with natural fingers and thumb, correct real-world scale, with shadows and reflections consistent with the scene lighting. Keep the exact same person, face, expression, pose and background.' },
+  { emoji:'🏝️', label:'Changer le décor', needs:true, hint:'quel décor', spin:'Nouveau décor…',
+    back:'Replace ONLY the background/scene with the new environment (described by the user), keeping the EXACT same person, identity, face, pose, framing and clothing. Match the lighting direction, color temperature, shadows and perspective between the subject and the new background so it looks like a genuine photo actually taken there. Sharp, in-focus background, no blur.' },
   { emoji:'✍️', label:'Autres', action:'_imgCorrectOther' },
 ];
 // « Autres » : laisse l'utilisateur écrire sa propre correction dans le champ prompt.
@@ -6508,8 +6516,8 @@ function _imgCorrectOther(){
 }
 function _imgRenderCorrectPresets(){
   const g=document.getElementById('imgCorrectPresetsGrid'); if(!g) return;
-  g.innerHTML=_IMG_CORRECT_PRESETS.map(p=>{
-    const onclick = p.action ? `${p.action}()` : `_imgApplyCorrectPreset('${encodeURIComponent(p.prompt)}')`;
+  g.innerHTML=_IMG_CORRECT_PRESETS.map((p,i)=>{
+    const onclick = p.action ? `${p.action}()` : `_imgRunCorrection(${i}, this)`;
     const border  = p.action ? '1px dashed var(--border3)' : '1px solid var(--border2)';
     return `<button onclick="${onclick}" class="btn btn-sm" style="justify-content:flex-start;text-align:left;border:${border};background:var(--bg3);font-weight:600;padding:11px 12px">${p.emoji} ${p.label}</button>`;
   }).join('');
@@ -6519,32 +6527,52 @@ function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPromp
 // ── « Rendre réaliste » en 1 clic (img2img) : garde la personne/pose/décor, ajoute la micro-texture réelle ──
 const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, framing, composition, clothing and background — do NOT change the scene or the layout. ONLY change the rendering so the image looks like a genuine real photograph taken with a real camera or phone, completely indistinguishable from a real photo and clearly NOT AI-generated. Add highly realistic skin with visible pores and natural skin texture, subtle freckles and tiny blemishes, fine peach fuzz on the face, natural skin-tone variation and slight redness, realistic under-eye texture; a natural detailed hairline with fine baby hairs and individual strands; realistic eyebrows, eyelashes and a detailed iris; natural lip texture with fine vertical lines; realistic skin detail on any visible body part (arms, hands, legs). Remove every plastic, waxy, airbrushed, over-smoothed, glossy or CGI look. Keep natural human imperfections and true-to-life colors. The final result must look like a real, unedited photograph.';
 
-async function _imgMakeRealistic(btn){
+// Cœur commun des corrections 1-clic (img2img) : prompt back-end détaillé envoyé directement à gpt-image.
+async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
-  if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à rendre réaliste'); return; }
+  if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
   if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
-  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.7';
-  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Rendu réaliste… (~20s)';
+  const orig = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> '+(spinLabel||'Traitement…'); }
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
   try{
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
+    const dispFmt = fmtOverride || _imgSelectedFormat;
     const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
-    const gptSize=sizeMap[_imgSelectedFormat]||'1024x1024';
+    const gptSize=sizeMap[dispFmt]||'1024x1024';
     if(multiWrap) multiWrap.style.display='none';
     if(singleWrap) singleWrap.style.display='block';
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
     if(overlay) overlay.style.display='flex';
-    const url=await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, gptSize);
+    const url=await _imgEditOne(token, promptText, _imgRefFile, gptSize);
     _imgMonthIncrement();
-    _imgShowSingle(url, _imgSelectedFormat);
-    _imgSaveHistory(url, 'Réaliste', _imgSelectedFormat);
+    _imgShowSingle(url, dispFmt);
+    _imgSaveHistory(url, styleLabel||'Correction', dispFmt);
     _imgRenderHistory();
     const rem=_imgMonthRemaining();
-    toast('✨ Image rendue réaliste · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
+    toast('✨ Terminé · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
   }catch(e){ toast('⚠️ '+(e.message||e)); }
-  finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; if(overlay) overlay.style.display='none'; }
+  finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
+}
+
+// « Rendre réaliste / Améliorer la qualité » — 1 clic, prompt réalisme back-end.
+function _imgMakeRealistic(btn){ return _imgDoEdit(_IMG_REALISM_EDIT, btn, 'Rendu réaliste… (~20s)', 'Réaliste'); }
+
+// Corrections rapides (grille) — exécutent directement leur prompt back-end.
+// Si la correction a besoin d'une précision (objet, décor…), on lit le champ prompt ; sinon on focus dessus.
+function _imgRunCorrection(idx, btn){
+  const p=_IMG_CORRECT_PRESETS[idx]; if(!p||!p.back) return;
+  const pr=document.getElementById('imgPrompt');
+  const extra=(pr && pr.value ? pr.value.trim() : '');
+  if(p.needs && !extra){
+    if(pr){ pr.focus(); try{ pr.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+    toast('✍️ Précise d\'abord dans le champ : '+(p.hint||'ta demande'));
+    return;
+  }
+  const full = extra ? (p.back + ' User request (may be in French): "' + extra + '".') : p.back;
+  _imgDoEdit(full, btn, (p.spin||'Correction…'), p.label, p.fmt);
 }
 
 function _imgSetMode(m){
