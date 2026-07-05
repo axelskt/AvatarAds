@@ -18,7 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<!-- Whop embedded checkout (monte l'iframe sur les <div data-whop-checkout-plan-id>) -->
+<!-- Whop embedded checkout (préconnexion = chargement quasi-instantané + monte l'iframe) -->
+<link rel="preconnect" href="https://whop.com" crossorigin>
+<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="dns-prefetch" href="https://whop.com">
 <script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -68,6 +71,8 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 .scroll-y{overflow-y:auto}
 /* Images IA — slider qualité (accent) */
 .ed-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
+.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}
+@keyframes whopspin{to{transform:rotate(360deg)}}
 .ed-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .ed-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft);cursor:pointer}
 /* Images IA — scrollbars fines rail/canvas */
@@ -635,10 +640,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button id="btnUpgradePlan" onclick="showPlansSheet()" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:6px 12px;color:#c084fc;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(168,85,247,0.28)';this.style.borderColor='rgba(168,85,247,0.65)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.18),rgba(168,85,247,0.08))';this.style.borderColor='rgba(168,85,247,0.4)'">
         ⬆ <span id="btnUpgradePlanLabel">Upgrade</span>
       </button>
-      <!-- Voir tous les plans -->
-      <button id="btnSeeAllPlans" onclick="showPlansSheet()" class="btn btn-sm" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-weight:700;gap:5px" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-        Voir tous les plans <span style="font-size:13px">→</span>
-      </button>
+      <!-- (bouton « Voir tous les plans » N&B retiré — on garde le violet btnUpgradePlan) -->
       <!-- + Crédits (style design : accent-soft) -->
       <button id="btnBuyCredits" onclick="openCreditsModal()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crédits
@@ -5499,24 +5501,31 @@ function _whopCheckout(url){
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
   const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
   body.innerHTML = '';
-  const d = document.createElement('div');
-  d.setAttribute('data-whop-checkout-plan-id', pid);
-  d.setAttribute('data-whop-checkout-theme', 'dark');
-  d.setAttribute('data-whop-checkout-theme-accent-color', 'orange');
-  d.setAttribute('data-whop-checkout-return-url', 'https://avatarads.fr/app/?checkout=success');
-  if(email) d.setAttribute('data-whop-checkout-prefill-email', email);
-  d.style.minHeight = '640px';
-  body.appendChild(d);
+  // Spinner immédiat (ressenti instantané) affiché DERRIÈRE l'iframe Whop, qui le recouvre au chargement.
+  const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:640px';
+  const sp = document.createElement('div'); sp.className = 'whop-loading';
+  sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
+  sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
+  // Iframe Whop construite directement = instantané et fiable (pas d'attente du loader).
+  let _whopLoaded = false;
+  const d = document.createElement('iframe');
+  let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
+  if(email) _q += '&email=' + encodeURIComponent(email);
+  d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
+  d.style.cssText = 'position:relative;z-index:1;width:100%;min-height:640px;border:0;display:block;background:transparent';
+  d.setAttribute('allow', 'payment');
+  d.onload = () => { _whopLoaded = true; sp.style.display = 'none'; };
+  wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   const m = document.getElementById('whopCoModal');
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   // Sécurité : si l'iframe Whop n'apparaît pas (loader bloqué/adblock) au bout de 6s → redirection classique
   clearTimeout(window._whopCoTimer);
   window._whopCoTimer = setTimeout(() => {
-    if(body.querySelector('iframe')) return;
+    if(_whopLoaded) return;
     closeWhopCheckout();
     if(url) window.open(url, '_blank');
-  }, 6000);
+  }, 10000);
 }
 function closeWhopCheckout(){
   clearTimeout(window._whopCoTimer);
