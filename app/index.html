@@ -18,6 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Whop embedded checkout (monte l'iframe sur les <div data-whop-checkout-plan-id>) -->
+<script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -4538,6 +4540,22 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   </div>
 </div>
 
+<!-- ══ CHECKOUT WHOP INTÉGRÉ (embed, sans redirection) ══ -->
+<div id="whopCoModal" style="display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center">
+  <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px)"></div>
+  <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
+      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;color:var(--accent-2);display:flex;align-items:center;gap:7px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+        PAIEMENT SÉCURISÉ · WHOP
+      </div>
+      <button onclick="closeWhopCheckout()" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);font-size:14px;transition:all .15s" onmouseover="this.style.color='var(--text)';this.style.background='var(--border-2)'" onmouseout="this.style.color='var(--text-2)';this.style.background='var(--surface-2)'">✕</button>
+    </div>
+    <div id="whopCoBody" style="flex:1;min-height:0;overflow:auto;background:var(--panel-1)"></div>
+    <div style="flex:0 0 auto;text-align:center;padding:9px;font-size:9.5px;font-family:var(--mono);color:var(--text-3);border-top:1px solid var(--border)">🔒 Paiement traité par Whop · Annulation à tout moment</div>
+  </div>
+</div>
+
 <!-- CHECKOUT MODAL — kept as empty shell, logic now redirects directly -->
 <div id="checkoutModal2" style="display:none">
   <!-- backdrop -->
@@ -5458,18 +5476,54 @@ function sheetCheckout(plan){
     const tier = SHEET_ELITE_TIERS[_sheetEliteTier];
     const url  = PLAN_CHECKOUT_URLS[billing][tier.checkoutKey];
     if(!url){ toast('⚠️ Lien indisponible — contacte le support'); return; }
-    window.open(url, '_blank');
     closePlansSheet();
+    _whopCheckout(url);
     return;
   }
   const keyMap = { starter:'free', pro:'starter' };
   const url = PLAN_CHECKOUT_URLS[billing][keyMap[plan]];
   if(!url){ toast('⚠️ Lien indisponible — contacte le support'); return; }
-  window.open(url, '_blank');
   closePlansSheet();
+  _whopCheckout(url);
 }
 function openCheckoutModal2(){}
 function closeCheckoutModal2(){ document.getElementById('checkoutModal2').style.display='none'; }
+
+// ── Checkout Whop INTÉGRÉ (embed) — remplace les redirections window.open ──
+// Le loader Whop (chargé dans le <head>) détecte le <div data-whop-checkout-plan-id> et monte l'iframe.
+function _whopPlanId(url){ const m = String(url||'').match(/plan_[A-Za-z0-9]+/); return m ? m[0] : null; }
+function _whopCheckout(url){
+  const pid = _whopPlanId(url);
+  const body = document.getElementById('whopCoBody');
+  // Fallback : pas d'ID de plan reconnu OU conteneur absent → ancienne redirection
+  if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
+  const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
+  body.innerHTML = '';
+  const d = document.createElement('div');
+  d.setAttribute('data-whop-checkout-plan-id', pid);
+  d.setAttribute('data-whop-checkout-theme', 'dark');
+  d.setAttribute('data-whop-checkout-theme-accent-color', 'orange');
+  d.setAttribute('data-whop-checkout-return-url', 'https://avatarads.fr/app/?checkout=success');
+  if(email) d.setAttribute('data-whop-checkout-prefill-email', email);
+  d.style.minHeight = '640px';
+  body.appendChild(d);
+  const m = document.getElementById('whopCoModal');
+  if(m) m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Sécurité : si l'iframe Whop n'apparaît pas (loader bloqué/adblock) au bout de 6s → redirection classique
+  clearTimeout(window._whopCoTimer);
+  window._whopCoTimer = setTimeout(() => {
+    if(body.querySelector('iframe')) return;
+    closeWhopCheckout();
+    if(url) window.open(url, '_blank');
+  }, 6000);
+}
+function closeWhopCheckout(){
+  clearTimeout(window._whopCoTimer);
+  const m = document.getElementById('whopCoModal'); if(m) m.style.display = 'none';
+  const b = document.getElementById('whopCoBody'); if(b) b.innerHTML = '';
+  document.body.style.overflow = '';
+}
 
 // ── BUY CREDITS ──
 // LemonSqueezy variant IDs pour les packs de minutes (à remplir après création dans LS)
@@ -5877,8 +5931,7 @@ function paywallCheckout(plan){
   // If user clicks their upgrade path use currentPlan key, else map by card
   const urlKey = keyMap[plan] || currentPlan;
   const url = PLAN_CHECKOUT_URLS[billing][urlKey];
-  if(url) window.open(url, '_blank');
-  closePaywall();
+  if(url){ closePaywall(); _whopCheckout(url); }
 }
 
 function openBuyCredits(){
@@ -6003,14 +6056,14 @@ function goUpgradePlan(){
   const plan    = (currentMember?.plan || 'free').toLowerCase();
   const billing = _paywallAnnual ? 'annual' : 'monthly';
   const url     = PLAN_CHECKOUT_URLS[billing][plan];
-  window.open(url || 'https://whop.com/avatarads', '_blank');
   closeUpgradeModal();
+  _whopCheckout(url || 'https://whop.com/avatarads');
 }
 function buyCredits(pack){
   const url = CREDIT_PACK_URLS[pack];
   if(!url){ toast('⚠️ Boutique bientôt disponible !'); return; }
-  window.open(url, '_blank');
   closeBuyCredits();
+  _whopCheckout(url);
 }
 
 // ── Packs crédits images (Whop) ──
@@ -6024,8 +6077,8 @@ const IMG_CREDIT_PACK_QTY = { img_s: 10, img_m: 25, img_l: 40 };
 function buyImageCredits(pack){
   const url = IMG_CREDIT_PACK_URLS[pack];
   if(!url){ toast('⚠️ Boutique bientôt disponible !'); return; }
-  window.open(url, '_blank');
   closeUpgradeModal();
+  _whopCheckout(url);
 }
 
 // Appelée par le webhook Stripe après paiement confirmé (ou par l'admin)
