@@ -17,6 +17,11 @@
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
+<link rel="preconnect" href="https://whop.com" crossorigin>
+<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="dns-prefetch" href="https://whop.com">
+<script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{overflow-x:hidden;max-width:100vw}
@@ -606,7 +611,7 @@ function renderPricing(){
       // L'encadré porte déjà les quotas → pas de chips redondants pour Elite
       chips='';
     }
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
   document.getElementById('pricing-grid').innerHTML=html;
 }
@@ -646,6 +651,43 @@ faqs.forEach(([q,a],i)=>{
   item.innerHTML=`<button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">${q}</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">${a}</div>`;
   faqList.appendChild(item);
 });
+
+// ── Checkout Whop INTÉGRÉ (embed) sur la LP — plus de redirection ──
+function _whopPlanId(u){var m=String(u||'').match(/plan_[A-Za-z0-9]+/);return m?m[0]:null;}
+function _whopCheckout(url){
+  var pid=_whopPlanId(url); var body=document.getElementById('whopCoBody');
+  if(!pid||!body){ if(url) window.open(url,'_blank'); return; }
+  body.innerHTML='';
+  var wrap=document.createElement('div'); wrap.style.cssText='position:relative;min-height:640px';
+  var sp=document.createElement('div'); sp.className='whop-loading';
+  sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
+  sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
+  var loaded=false;
+  var f=document.createElement('iframe');
+  f.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
+  f.style.cssText='position:relative;z-index:1;width:100%;min-height:640px;border:0;display:block;background:transparent';
+  f.setAttribute('allow','payment');
+  f.onload=function(){ loaded=true; sp.style.display='none'; };
+  wrap.appendChild(sp); wrap.appendChild(f); body.appendChild(wrap);
+  var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex';
+  document.body.style.overflow='hidden';
+  clearTimeout(window._whopCoTimer);
+  window._whopCoTimer=setTimeout(function(){ if(loaded)return; closeWhopCheckout(); if(url) window.open(url,'_blank'); },10000);
+}
+function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
 </script>
+
+<style>.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}@keyframes whopspin{to{transform:rotate(360deg)}}</style>
+<div id="whopCoModal" style="display:none;position:fixed;inset:0;z-index:950;align-items:center;justify-content:center">
+  <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(10px)"></div>
+  <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
+      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;color:var(--accent-2)">🔒 PAIEMENT SÉCURISÉ · WHOP</div>
+      <button onclick="closeWhopCheckout()" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);font-size:14px">✕</button>
+    </div>
+    <div id="whopCoBody" style="flex:1;min-height:0;overflow:auto;background:var(--panel-1)"></div>
+    <div class="mono" style="flex:0 0 auto;text-align:center;padding:9px;font-size:9.5px;color:var(--text-3);border-top:1px solid var(--border)">🔒 Paiement traité par Whop · Annulation à tout moment</div>
+  </div>
+</div>
 </body>
 </html>
