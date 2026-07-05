@@ -62,8 +62,15 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
 .col{display:flex;flex-direction:column}
 .grow{flex:1}
 .center{text-align:center}
-.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap14{gap:14px}.gap16{gap:16px}.gap24{gap:24px}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap14{gap:14px}.gap16{gap:16px}.gap24{gap:24px}
 .scroll-y{overflow-y:auto}
+/* Images IA — slider qualité (accent) */
+.ed-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
+.ed-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+.ed-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft);cursor:pointer}
+/* Images IA — scrollbars fines rail/canvas */
+#v-imagegen .scroll-y::-webkit-scrollbar{width:5px}
+#v-imagegen .scroll-y::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:4px}
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;border:1px solid transparent;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap;font-family:var(--font);color:var(--text)}
 .btn:active{transform:translateY(1px) scale(.99)}
@@ -2644,124 +2651,98 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <!-- ══ IMAGES IA ══ -->
     <div class="view" id="v-imagegen">
-      <div class="lib-view" style="width:100%;max-width:880px;margin:0 auto;padding-top:24px;padding-bottom:40px">
+      <div class="row" style="flex:1;min-height:0;align-items:stretch">
 
-        <!-- HEADER -->
-        <div style="margin-bottom:24px">
-          <div class="row gap10" style="align-items:center;flex-wrap:wrap">
-            <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><span style="font-size:24px">🖼</span>Images IA</h2>
-            <span class="pill mono" style="font-size:10px;letter-spacing:.06em;color:var(--orange2);border-color:var(--accent-line);background:var(--accent-soft)"><svg width="6" height="6" viewBox="0 0 6 6" fill="var(--accent)"><circle cx="3" cy="3" r="3"/></svg> IMAGE 4K · ULTRA RÉALISTE</span>
-          </div>
-          <p class="muted" style="margin-top:8px;font-size:14.5px">Génère des visuels, B-roll et miniatures à insérer dans tes vidéos</p>
-        </div>
+        <!-- ═══════════ RAIL GAUCHE : réglages ═══════════ -->
+        <div class="col scroll-y" id="imgRail" style="width:334px;flex:0 0 auto;border-right:1px solid var(--border);padding:20px 18px;gap:14px;background:var(--bg-grad)">
 
-        <!-- MODE : Génération / Correction -->
-        <div class="row" style="gap:8px;margin-bottom:14px">
-          <button id="imgModeGen" onclick="_imgSetMode('generate')" class="btn btn-sm" style="flex:1;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;border:none">✨ Génération</button>
-          <button id="imgModeCorrect" onclick="_imgSetMode('correct')" class="btn btn-sm" style="flex:1;padding:12px;font-weight:700;background:var(--bg3);color:var(--text2);border:1px solid var(--border)">🪄 Correction d'image</button>
-        </div>
-
-        <div id="imgModelGrid" style="display:none"></div>
-
-        <!-- STYLE PRESETS (mode Génération) -->
-        <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 5c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4-4-1.8-4-4z"/><path d="M5 3v2l1.5 1.5"/></svg>
-            Style visuel
-          </div>
-          <div id="imgStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-        </div>
-
-        <!-- CORRECTIONS RAPIDES (mode Correction) -->
-        <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 9l5-5 1.5 1.5-5 5H2z"/><path d="M7 4l1-1 1.5 1.5-1 1z"/></svg>
-            Corrections rapides
-          </div>
-          <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px"></div>
-          <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;padding:13px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>Rendre réaliste / Améliorer la qualité</button>
-          <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-top:8px;line-height:1.5">Sur une image déjà propre → ajoute pores, grain de peau, duvet, taches de rousseur &amp; détails cheveux, sans changer la personne.</div>
-        </div>
-
-        <!-- FORMAT -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5"/></svg>
-            Format
-          </div>
-          <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-        </div>
-
-        <!-- QUALITÉ IMAGE -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
-            Qualité
-          </div>
-          <div id="imgQualityGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-          <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-top:8px">Plus la qualité est haute, plus le rendu est détaillé (et coûteux).</div>
-        </div>
-
-        <!-- IMAGE À CORRIGER (mode Correction) -->
-        <div id="imgCorrectionPanel" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5"/><circle cx="4.3" cy="4.3" r=".9"/><path d="M10.5 7.5l-2.5-2.5L2.5 10.5"/></svg>
-            <span id="imgRefTitle">Image à corriger</span>
-            <span id="imgRefClear" onclick="_imgClearRefZone()" style="display:none;margin-left:auto;cursor:pointer;color:var(--orange2);text-transform:none;letter-spacing:0">✕ retirer</span>
-          </div>
-          <div id="imgRefDrop" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_imgOnRefDrop(event)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:22px 20px;border:1.5px dashed var(--border-2);border-radius:12px;cursor:pointer;background:var(--bg3);transition:all .15s;position:relative;overflow:hidden;min-height:120px">
-            <input type="file" id="imgRefInput" accept="image/*" style="display:none" onchange="_imgOnRefInput(this)">
-            <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <div id="imgRefLabel" style="font-size:12.5px;font-weight:700;color:var(--text)">Importe l'image à modifier</div>
-            <div id="imgRefHint" class="faint" style="font-size:10.5px;font-family:var(--mono)">puis décris la correction dans le prompt ci-dessous</div>
-          </div>
-          <div id="imgRefExamples" class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:9px;line-height:1.5">Ex : « remplace le fond par un studio », « ajoute des lunettes de soleil », « change la couleur du t-shirt en rouge »</div>
-        </div>
-
-        <!-- NOMBRE D'IMAGES (masqué en mode Correction = 1 seule) -->
-        <div id="imgCountSection" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="3.2" height="8" rx="1"/><rect x="5.8" y="1" width="3.2" height="8" rx="1"/></svg>
-              Nombre d'images
+          <!-- HEADER -->
+          <div>
+            <div class="row gap10" style="align-items:center;flex-wrap:wrap">
+              <h2 class="display row gap8" style="font-size:23px;font-weight:700;align-items:center;line-height:1.1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Images IA</h2>
+              <span class="pill mono" style="align-self:center;font-size:9px;letter-spacing:.05em;color:var(--accent-2);border-color:var(--accent-line);background:var(--accent-soft)">4K</span>
             </div>
-            <span id="imgCountCost" style="font-size:10px;font-family:var(--mono);color:var(--text3)">1 crédit</span>
+            <p class="muted" style="margin-top:8px;font-size:13px;line-height:1.5">Visuels, B-roll et miniatures pour tes vidéos.</p>
           </div>
-          <div id="imgCountGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-        </div>
 
-        <!-- PROMPT -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 18px 16px;margin-bottom:10px">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 2.5h7M1.5 5h5M1.5 7.5h6"/></svg>
-            Décris l'image
+          <!-- TABS Génération / Correction -->
+          <div class="seg" style="width:100%">
+            <button id="imgTabGen" class="on" style="flex:1" onclick="_imgSetMode('generate')">Génération</button>
+            <button id="imgTabCorrect" style="flex:1" onclick="_imgSetMode('correct')">Correction</button>
           </div>
-          <div style="position:relative">
-            <textarea id="imgPrompt" placeholder="Ex: Un entrepreneur souriant en studio moderne, fond épuré, lumière naturelle, style publicité tech…" style="width:100%;min-height:96px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13px;padding:13px 13px 38px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.55" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border2)'" oninput="_imgUpdateCharCount(this)"></textarea>
-            <div style="position:absolute;bottom:10px;left:12px;right:10px;display:flex;align-items:center;justify-content:space-between;pointer-events:none">
-              <span id="imgCharCount" style="font-size:10px;font-family:var(--mono);color:var(--text3)">0 / 1000</span>
-              <button onclick="enhanceImagePrompt()" id="imgEnhanceBtn" style="pointer-events:all;display:flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.22);border-radius:6px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,107,53,0.16)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 1v1.5M5 7.5V9M1 5h1.5M7.5 5H9M2.5 2.5l1 1M6.5 6.5l1 1M2.5 7.5l1-1M6.5 3.5l1-1"/></svg>
-                ✦ Améliorer
-              </button>
+
+          <div id="imgModelGrid" style="display:none"></div>
+
+          <!-- STYLE PRESETS (mode Génération) -->
+          <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+            <div class="row gap8" style="align-items:center;margin-bottom:14px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg>
+              <span class="label" style="margin:0">Style visuel</span>
             </div>
+            <div id="imgStyleGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
           </div>
 
-          <!-- Inspirations rapides -->
-          <div id="imgSuggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div>
+          <!-- CORRECTIONS RAPIDES (mode Correction) -->
+          <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+            <div class="row gap8" style="align-items:center;margin-bottom:14px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
+              <span class="label" style="margin:0">Corrections rapides</span>
+            </div>
+            <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+            <button id="imgMakeRealBtn" class="btn row gap8" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);color:var(--text);font-weight:700;font-size:13px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Rendre réaliste / +qualité</button>
+          </div>
 
-          <!-- Generate -->
-          <button onclick="generateImage()" id="imgGenBtn" style="margin-top:16px;width:100%;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.3px;box-shadow:0 6px 22px rgba(255,107,53,0.32)" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 32px rgba(255,107,53,0.48)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 22px rgba(255,107,53,0.32)'">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg>
-            Générer l'image
-          </button>
-          <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
-        </div>
+          <!-- FORMAT -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+            <div class="row gap8" style="align-items:center;margin-bottom:14px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>
+              <span class="label" style="margin:0">Format</span>
+            </div>
+            <div id="imgFormatGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+          </div>
+
+          <!-- QUALITÉ IMAGE -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+            <div class="row gap8" style="align-items:center;margin-bottom:14px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent-2)" stroke="none"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
+              <span class="label" style="margin:0">Qualité</span>
+            </div>
+            <div id="imgQualityGrid" style="display:block"></div>
+          </div>
+
+          <!-- NOMBRE D'IMAGES (masqué en mode Correction = 1 seule) -->
+          <div id="imgCountSection" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+              <div class="row gap8" style="align-items:center">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M7 4l4 0M21 8v10a2 2 0 01-2 2H9"/></svg>
+                <span class="label" style="margin:0">Nombre</span>
+              </div>
+              <span id="imgCountCost" class="mono faint" style="font-size:11px">1 créd.</span>
+            </div>
+            <div id="imgCountGrid"></div>
+          </div>
+
+        </div><!-- /imgRail -->
+
+        <!-- ═══════════ CENTRE : canvas + composer ═══════════ -->
+        <div class="col" style="flex:1;min-width:0">
+
+          <!-- CANVAS RÉSULTATS -->
+          <div class="col grow scroll-y" id="imgCanvas" style="padding:26px;background:radial-gradient(600px 320px at 50% 0%, rgba(255,90,31,.05), transparent), var(--bg);align-items:center;justify-content:flex-start">
+
+            <!-- État vide -->
+            <div id="imgIdle" class="col" style="margin:auto;align-items:center;gap:16px;color:var(--text-3);text-align:center">
+              <div style="width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
+              <div class="display" id="imgIdleTitle" style="font-size:21px;font-weight:600;color:var(--text-2)">Décris ton image en bas, puis génère</div>
+              <span class="mono faint" id="imgIdleMeta" style="font-size:12px"></span>
+            </div>
 
         <!-- RÉSULTAT -->
-        <div id="imgResult" style="display:none;margin-bottom:10px">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+        <div id="imgResult" class="rise" style="display:none;width:100%;max-width:520px;margin:0 auto">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
             <!-- Image zone -->
             <div style="position:relative;background:var(--bg4);min-height:200px">
               <img id="imgOutput" style="width:100%;display:block" alt="Image générée">
@@ -2819,7 +2800,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <!-- RÉSULTAT MULTI (2-3 images) -->
-        <div id="imgResultMulti" style="display:none;margin-bottom:10px">
+        <div id="imgResultMulti" class="rise" style="display:none;width:100%;max-width:640px;margin:0 auto">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="8" height="8" rx="1.5"/><path d="M1 6.5l2.2-2 2 1.8 1.8-2.3L9 6"/></svg>
             Variations générées · clique pour sélectionner
@@ -2827,10 +2808,48 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="imgMultiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
         </div>
 
-        <!-- (section Récentes supprimée à la demande) -->
-        <div id="imgHistoryWrap" style="display:none"><div id="imgHistoryGrid"></div></div>
+          <!-- (section Récentes supprimée à la demande) -->
+          <div id="imgHistoryWrap" style="display:none"><div id="imgHistoryGrid"></div></div>
 
-      </div>
+          </div><!-- /imgCanvas -->
+
+          <!-- ═══════════ COMPOSER (docké en bas) ═══════════ -->
+          <div style="border-top:1px solid var(--border);background:var(--bg-grad);padding:16px 22px">
+            <div class="row" style="gap:14px;align-items:stretch">
+
+              <!-- Image de référence / à corriger -->
+              <button id="imgRefBtnComposer" class="col" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=(_imgMode==='correct'?'var(--accent-line)':'var(--border-2)')" ondrop="_imgOnRefDrop(event)" style="position:relative;overflow:hidden;gap:6px;width:120px;flex:0 0 auto;border-radius:14px;padding:12px 8px;border:1px solid var(--border-2);background:var(--panel-1);cursor:pointer;align-items:center;justify-content:center;text-align:center;transition:border-color .15s">
+                <input type="file" id="imgRefInput" accept="image/*" style="display:none" onchange="_imgOnRefInput(this)">
+                <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000">
+                <span id="imgRefFace" class="col" style="align-items:center;gap:6px">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span id="imgRefTitle" style="font-weight:700;font-size:12px;color:var(--text)">Image de référence</span>
+                  <span id="imgRefSubLabel" class="faint" style="font-size:9.5px">optionnel</span>
+                </span>
+                <span id="imgRefClear" onclick="event.stopPropagation();_imgClearRefZone()" style="display:none;position:absolute;top:5px;right:5px;z-index:2;background:rgba(0,0,0,.65);border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center;color:#fff;font-size:11px;cursor:pointer">✕</span>
+              </button>
+
+              <!-- Prompt + suggestions + generate -->
+              <div class="col grow" style="gap:12px">
+                <div style="position:relative;flex:1">
+                  <textarea id="imgPrompt" maxlength="1000" class="field" style="height:100%;min-height:104px;resize:none;padding-right:124px;font-size:15.5px;line-height:1.5" placeholder="Décris l'image que tu veux générer…" oninput="_imgUpdateCharCount(this)"></textarea>
+                  <button onclick="enhanceImagePrompt()" id="imgEnhanceBtn" class="btn btn-sm row gap6" style="position:absolute;right:10px;top:10px;padding:8px 13px;font-size:12.5px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:600">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Améliorer</button>
+                  <span id="imgCharCount" class="mono faint" style="position:absolute;right:14px;bottom:9px;font-size:10px;pointer-events:none">0 / 1000</span>
+                </div>
+                <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                  <div id="imgSuggestions" class="row gap8" style="flex-wrap:wrap;flex:1;min-width:0"></div>
+                  <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:16px 34px;font-weight:800;font-size:17px;border-radius:16px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</button>
+                </div>
+                <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
+              </div>
+
+            </div>
+          </div><!-- /composer -->
+
+        </div><!-- /imgCenter -->
+      </div><!-- /two-panel -->
     </div><!-- /imagegen -->
 
     <!-- ══════════════════════════════════════════════════════ ENREGISTREUR ══ -->
@@ -6343,19 +6362,38 @@ function _updateImgQuotaLabel(){
 // ── IMAGE GENERATOR — Premium UI helpers ────────────────────────────
 // ═══════════════════════════════════════════════════════════════════
 
+// ── Jeu d'icônes SVG (identique au design Claude) — remplace les emojis d'Images IA ──
+const _IMGIC = {
+  camera:'<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.2"/>',
+  cube:'<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/>',
+  fruit:'<path d="M12 8c-3.5 0-6 2.5-6 6s2.5 6 5 6c.7 0 1.3-.3 1-.3s.3.3 1 .3c2.5 0 5-2.5 5-6s-2.5-6-6-6z"/><path d="M12 8c0-2 1-3.5 3-4M12 8c0-1.5-.6-2.6-2-3"/>',
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+  robot:'<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9 4h6"/><circle cx="9.5" cy="13" r="1.1"/><circle cx="14.5" cy="13" r="1.1"/><path d="M2 12v3M22 12v3"/>',
+  palette:'<path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/>',
+  eraser:'<path d="M4 14l7-7 6 6-6 6H8zM14 21H4"/>',
+  cards:'<rect x="3" y="4" width="14" height="16" rx="2"/><path d="M7 4l4 0M21 8v10a2 2 0 01-2 2H9"/>',
+  crop:'<path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/>',
+  hand:'<path d="M7 11V6a1.5 1.5 0 013 0v4M10 10V4.5a1.5 1.5 0 013 0V10M13 10V6a1.5 1.5 0 013 0v6M7 11c0-1-2-2-3-1s0 3 1 4l2 4a5 5 0 004 2h2a5 5 0 005-5v-4"/>',
+  scene:'<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 14l5-4 4 3 3-2 6 5M21 22H3"/><circle cx="8" cy="9" r="1.3"/>',
+  wand:'<path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/>',
+};
+function _imgIco(name, size, color){
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto">'+(_IMGIC[name]||'')+'</svg>';
+}
+
 const _IMG_STYLES = [
-  { id:'photo',   icon:'📸', label:'Photo Réel',  sub:'Photo réaliste',   api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
-  { id:'cinema',  icon:'🧸', label:'Pixar 3D',     sub:'Rendu 3D Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
-  { id:'studio',  icon:'🍊', label:'Fruit',        sub:'Perso fruit réaliste', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
-  { id:'ugc',     icon:'📱', label:'UGC Réel',     sub:'Authentique',      api:'natural', suffix:', vrai selfie/photo UGC au smartphone tenu à la main, casual et spontané, lumière naturelle de jour, cadrage imparfait, non retouché, non professionnel' },
-  { id:'premium', icon:'🤖', label:'Mascotte',     sub:'Perso de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
-  { id:'dark',    icon:'🎨', label:'Autre',        sub:'Style libre',      api:'natural', suffix:'' },
+  { id:'photo',   ic:'camera',  label:'Photo Réel',  sub:'réaliste',      api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
+  { id:'cinema',  ic:'cube',    label:'Pixar 3D',     sub:'Toy Story', api:'vivid',  suffix:', style Pixar 3D, rendu 3D cartoon type Toy Story, personnage très expressif, couleurs vives, qualité studio d\'animation' },
+  { id:'studio',  ic:'fruit',   label:'Fruit',        sub:'perso fruit', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
+  { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', vrai selfie/photo UGC au smartphone tenu à la main, casual et spontané, lumière naturelle de jour, cadrage imparfait, non retouché, non professionnel' },
+  { id:'premium', ic:'robot',   label:'Mascotte',     sub:'de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
+  { id:'dark',    ic:'palette', label:'Autre',        sub:'style libre',      api:'natural', suffix:'' },
 ];
 
 const _IMG_FORMATS = [
-  { id:'square',   label:'Carré',    sub:'1:1 · Universel',  value:'1024x1024',  w:1,  h:1  },
-  { id:'portrait', label:'Portrait', sub:'9:16 · Stories',   value:'1024x1792',  w:9,  h:16 },
-  { id:'land',     label:'Paysage',  sub:'16:9 · YouTube',   value:'1792x1024',  w:16, h:9  },
+  { id:'square',   label:'Carré',    sub:'1:1',  value:'1024x1024',  w:1,  h:1  },
+  { id:'portrait', label:'Portrait', sub:'9:16', value:'1024x1792',  w:9,  h:16 },
+  { id:'land',     label:'Paysage',  sub:'16:9', value:'1792x1024',  w:16, h:9  },
 ];
 
 // Booster réalisme « dermatologique » — appliqué aux styles réalistes (Photo, UGC) pour un rendu HUMAIN/NATUREL, surtout pas « IA »
@@ -6419,21 +6457,18 @@ function _imgRenderQuality(){
   if(!_imgQuality) _imgQuality = 'medium'; // défaut = Standard (bon rapport qualité/prix sur gpt-image-2)
   if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   const val = _IMG_Q_ORDER[_imgQuality];
+  const pct = (val/2*100);
   g.style.display = 'block';
-  g.style.gridTemplateColumns = 'none';
   const labels = _IMG_QUALITIES.map((q,i)=>{
     const on = i===val;
     const locked = _IMG_Q_ORDER[q.id] > _IMG_Q_ORDER[cap];
-    const align = i===0?'flex-start':(i===2?'flex-end':'center');
-    return '<div style="display:flex;flex-direction:column;align-items:'+align+';flex:1;cursor:'+(locked?'not-allowed':'pointer')+'" onclick="_imgSliderQuality('+i+')">'+
-      '<div style="font-size:12px;font-weight:800;color:'+(on?'var(--orange2)':(locked?'var(--text3)':'var(--text2)'))+'">'+q.label+'</div>'+
-      '<div style="font-size:9px;font-family:var(--mono);margin-top:2px;color:var(--text3)">'+(locked?'🔒 Élite':q.sub)+'</div>'+
-    '</div>';
+    return '<button onclick="_imgSliderQuality('+i+')" style="background:none;padding:0;font-size:11.5px;cursor:'+(locked?'not-allowed':'pointer')+';font-weight:'+(on?700:500)+';color:'+(on?'var(--accent-2)':(locked?'var(--text-3)':'var(--text-3)'))+'">'+(locked?'🔒 ':'')+q.label+'</button>';
   }).join('');
   g.innerHTML =
-    '<input type="range" class="img-q-slider" min="0" max="2" step="1" value="'+val+'" oninput="_imgSliderQuality(this.value)" '+
-      'style="--aa-fill:'+(val*50)+'%;margin:2px 0 8px">'+
-    '<div style="display:flex;justify-content:space-between;gap:4px">'+labels+'</div>';
+    '<input type="range" class="ed-range" min="0" max="2" step="1" value="'+val+'" oninput="_imgSliderQuality(this.value)" '+
+      'style="background:linear-gradient(90deg, var(--accent) '+pct+'%, var(--surface-3) '+pct+'%)">'+
+    '<div class="row" style="justify-content:space-between;margin-top:9px">'+labels+'</div>';
+  _imgUpdateIdleMeta();
 }
 
 let _imgSelectedStyleId    = 'photo';
@@ -6496,17 +6531,17 @@ let _imgMode = 'generate';
 const _IMG_REF_SHEET_PROMPT = 'Create a professional CHARACTER REFERENCE SHEET (model sheet / turnaround) of the person in the provided image. CRITICAL — IDENTITY LOCK: the person in the provided image is the ONE and ONLY ground-truth identity. EVERY face on the whole sheet must be the EXACT SAME individual, photographically identical to the reference — same face shape and bone structure, same nose, same eye shape and eye color, same eyebrows, same lips, same jawline, same hairline and same hairstyle, same skin tone, same age. Treat it as the same real person photographed several times in one studio session, NOT lookalikes or siblings. NO identity drift, NO age change, NO different faces, NO younger/older versions, NO variation of facial features between panels — the face must be consistent and recognisable as the same person in every single panel. Clean light-beige studio background, minimalist editorial layout with thin separating lines and small uppercase labels. IMPORTANT LAYOUT: this is ONE single TALL portrait sheet, a DENSE professional model sheet of 16 to 20 panels arranged in FOUR compact rows and filled edge-to-edge — it MUST always contain AT LEAST 15 distinct panels; NEVER produce only 3-4 large photos, NEVER leave large empty areas. Compose EXACTLY like this: ROW 1 — three THREE-QUARTER-LENGTH turnaround shots in the same outfit and the same calm relaxed pose: FACE (front), PROFIL (side), DOS (back), each framed TIGHT from the head down to just below the knees so the face is large and sharp (NOT a tiny distant figure); the front-facing face especially must be perfect — symmetrical, correct anatomy, well-defined eyes looking straight ahead, natural eyebrows, relaxed CLOSED mouth (calm, never mid-speech, never open, never melted or distorted). ROW 2 — four head-and-shoulders PORTRAITS side by side (front, three-quarter, side profile, back of the head), next to a MODEL REFERENCE info card (name, taille, poids, corpulence, yeux, cheveux, âge, ethnicité, nationalité) and a small labelled COLOR PALETTE. ROW 3 — one LARGE hero face portrait, a cluster of extreme CLOSE-UPS (one eye, the nose, the mouth, the lips, one ear, the neck) and one full-body standing shot. ROW 4 — a bottom strip of CLOSE-UPS of the HANDS (three to four hand shots showing fingers) and the legs/feet. Every panel shows the SAME identical person. Photorealistic, natural realistic skin with visible pores and fine texture, coherent soft studio lighting, high detail, sharp and in focus, no blur. Every face — even the small/distant ones in the full-body panels — MUST have correct, undistorted, symmetrical eyes and a well-formed natural mouth; never render melted, asymmetric, malformed or blurry eyes, mouths or teeth. It must look like a real professional model reference sheet with ONE consistent identity throughout.';
 
 const _IMG_CORRECT_PRESETS = [
-  { emoji:'🧹', label:'Supprimer un objet', needs:true, hint:'quel objet retirer', spin:'Suppression…',
+  { ic:'eraser', label:'Supprimer un objet', needs:true, hint:'quel objet retirer', spin:'Suppression…',
     back:'Remove the unwanted object/element (described by the user) cleanly from the image and realistically reconstruct the background behind it. Keep everything else identical: same person, same face, same pose, same lighting and same style. Seamless result, no trace or ghost of the removed object.' },
-  { emoji:'🎭', label:'Créer un référence sheet', spin:'Planche perso… (~30s)', fmt:'1024x1792',
+  { ic:'cards', label:'Créer un référence sheet', spin:'Planche perso… (~30s)', fmt:'1024x1792',
     back:_IMG_REF_SHEET_PROMPT },
-  { emoji:'🔳', label:'Modifier le format', spin:'Recadrage…',
+  { ic:'crop', label:'Modifier le format', spin:'Recadrage…',
     back:'Reframe and extend this exact image to fill the target aspect ratio by naturally continuing (outpainting) the environment on the missing sides. Do NOT distort, stretch, squeeze or crop the person. Keep the exact same person, same clothing, same style, same lighting and same mood; only add believable surrounding scenery to complete the new frame.' },
-  { emoji:'🤲', label:'Faire tenir un objet', needs:true, hint:'quel objet/produit', spin:'Objet en main…',
+  { ic:'hand', label:'Faire tenir un objet', needs:true, hint:'quel objet/produit', spin:'Objet en main…',
     back:'Make the person naturally hold the product/object (described by the user) in their hand: realistic grip with natural fingers and thumb, correct real-world scale, with shadows and reflections consistent with the scene lighting. Keep the exact same person, face, expression, pose and background.' },
-  { emoji:'🏝️', label:'Changer le décor', needs:true, hint:'quel décor', spin:'Nouveau décor…',
+  { ic:'scene', label:'Changer le décor', needs:true, hint:'quel décor', spin:'Nouveau décor…',
     back:'Replace ONLY the background/scene with the new environment (described by the user), keeping the EXACT same person, identity, face, pose, framing and clothing. Match the lighting direction, color temperature, shadows and perspective between the subject and the new background so it looks like a genuine photo actually taken there. Sharp, in-focus background, no blur.' },
-  { emoji:'✍️', label:'Autres', action:'_imgCorrectOther' },
+  { ic:'wand', label:'Autres', action:'_imgCorrectOther' },
 ];
 // « Autres » : laisse l'utilisateur écrire sa propre correction dans le champ prompt.
 function _imgCorrectOther(){
@@ -6518,8 +6553,9 @@ function _imgRenderCorrectPresets(){
   const g=document.getElementById('imgCorrectPresetsGrid'); if(!g) return;
   g.innerHTML=_IMG_CORRECT_PRESETS.map((p,i)=>{
     const onclick = p.action ? `${p.action}()` : `_imgRunCorrection(${i}, this)`;
-    const border  = p.action ? '1px dashed var(--border3)' : '1px solid var(--border2)';
-    return `<button onclick="${onclick}" class="btn btn-sm" style="justify-content:flex-start;text-align:left;border:${border};background:var(--bg3);font-weight:600;padding:11px 12px">${p.emoji} ${p.label}</button>`;
+    const border  = p.action ? '1px dashed var(--border-2)' : '1px solid var(--border)';
+    return `<button onclick="${onclick}" class="row gap8" style="padding:11px 12px;border-radius:11px;text-align:left;border:${border};background:var(--panel-1);transition:.15s" onmouseenter="this.style.borderColor='var(--accent-line)'" onmouseleave="this.style.borderColor='${p.action?'var(--border-2)':'var(--border)'}'">`+
+      _imgIco(p.ic,15,'var(--accent-2)')+`<span style="font-weight:600;font-size:11.5px;line-height:1.15;color:var(--text)">${p.label}</span></button>`;
   }).join('');
 }
 function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
@@ -6545,6 +6581,7 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
     if(multiWrap) multiWrap.style.display='none';
     if(singleWrap) singleWrap.style.display='block';
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
+    _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     const url=await _imgEditOne(token, promptText, _imgRefFile, gptSize);
     _imgMonthIncrement();
@@ -6577,28 +6614,40 @@ function _imgRunCorrection(idx, btn){
 
 function _imgSetMode(m){
   _imgMode = m;
-  const gen = document.getElementById('imgModeGen'), cor = document.getElementById('imgModeCorrect');
-  // bordures supprimées : actif = dégradé orange sans bordure ; inactif = fond sombre + bordure discrète
-  const onCss = 'background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:12px;flex:1;border:none', offCss = 'background:var(--bg3);color:var(--text2);padding:12px;font-weight:700;flex:1;border:1px solid var(--border)';
-  if(gen){ gen.className='btn btn-sm'; gen.style.cssText = m==='generate'?onCss:offCss; }
-  if(cor){ cor.className='btn btn-sm'; cor.style.cssText = m==='correct'?onCss:offCss; }
   const corr = m==='correct';
+  // Onglets segmentés (design)
+  const tg=document.getElementById('imgTabGen'), tc=document.getElementById('imgTabCorrect');
+  if(tg) tg.classList.toggle('on', !corr);
+  if(tc) tc.classList.toggle('on', corr);
   const show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'':'none'; };
-  show('imgCorrectionPanel', true);          // zone image : visible dans les 2 modes (réf optionnelle en génération)
   show('imgCorrectPresetsSection', corr);    // corrections rapides (correction only)
   show('imgStyleSection', !corr);            // style visuel (génération only)
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
   if(corr) _imgRenderCorrectPresets();
-  // Labels de la zone image selon le mode
+  _imgInitSuggestions();
+  // Composer : bouton image de référence — bordure/label selon le mode
   const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
-  setTxt('imgRefTitle', corr ? 'Image à corriger' : 'Image de référence (optionnel)');
-  setTxt('imgRefLabel', corr ? 'Importe l\'image à modifier' : 'Glisse une image de référence');
-  setTxt('imgRefHint',  corr ? 'puis décris la correction dans le prompt' : 'l\'IA s\'en inspire comme modèle');
-  show('imgRefExamples', corr);
+  setTxt('imgRefTitle',    corr ? 'Image à corriger' : 'Image de référence');
+  setTxt('imgRefSubLabel', corr ? 'requis' : 'optionnel');
+  const rb=document.getElementById('imgRefBtnComposer');
+  if(rb && !_imgRefFile){ rb.style.borderColor = corr ? 'var(--accent-line)' : 'var(--border-2)'; rb.style.background = corr ? 'var(--accent-soft)' : 'var(--panel-1)'; }
+  // Titre de l'état vide + placeholder du prompt
+  setTxt('imgIdleTitle', corr ? 'Importe une image et décris la correction' : 'Décris ton image en bas, puis génère');
   const pr = document.getElementById('imgPrompt');
-  if(pr) pr.placeholder = corr ? 'Décris la correction à appliquer (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
+  if(pr) pr.placeholder = corr ? 'Décris la correction (ex : remplace le fond par un studio lumineux)…' : 'Décris l\'image que tu veux générer…';
+  _imgUpdateIdleMeta();
 }
-function _imgClearRefZone(){ _imgClearRef(); const p=document.getElementById('imgRefPreview'); if(p){p.style.display='none';p.src='';} const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--border-2)'; const c=document.getElementById('imgRefClear'); if(c) c.style.display='none'; }
+// Ligne méta de l'état vide : « 9:16 · 1 image · qualité Standard »
+function _imgUpdateIdleMeta(){
+  const el=document.getElementById('imgIdleMeta'); if(!el) return;
+  const fmt=(_IMG_FORMATS.find(f=>f.id===_imgSelectedFormatId)||{sub:'1:1'}).sub;
+  const qLabel={low:'Rapide',medium:'Standard',high:'Max'}[_imgEffectiveQuality()]||'Standard';
+  const n=_imgSelectedCount||1;
+  el.textContent = _imgMode==='correct' ? (fmt+' · correction · qualité '+qLabel) : (fmt+' · '+n+' image'+(n>1?'s':'')+' · qualité '+qLabel);
+}
+// Affiche/masque l'état vide du canvas
+function _imgIdleShow(on){ const e=document.getElementById('imgIdle'); if(e) e.style.display = on?'':'none'; }
+function _imgClearRefZone(){ _imgClearRef(); const p=document.getElementById('imgRefPreview'); if(p){p.style.display='none';p.src='';} const c=document.getElementById('imgRefClear'); if(c) c.style.display='none'; const face=document.getElementById('imgRefFace'); if(face) face.style.display=''; const rb=document.getElementById('imgRefBtnComposer'); if(rb){ const corr=_imgMode==='correct'; rb.style.borderColor = corr?'var(--accent-line)':'var(--border-2)'; rb.style.background = corr?'var(--accent-soft)':'var(--panel-1)'; } }
 // « Modifier cette image » : bascule en mode Correction avec l'image générée comme source
 async function _imgEditThis(){
   const img=document.getElementById('imgOutput');
@@ -6619,7 +6668,7 @@ function _imgLoadRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
   _imgRefFile = file;
   const r=new FileReader();
-  r.onload=()=>{ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)'; const c=document.getElementById('imgRefClear'); if(c) c.style.display='inline'; toast('✅ Image chargée'); };
+  r.onload=()=>{ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)'; const c=document.getElementById('imgRefClear'); if(c) c.style.display='block'; const face=document.getElementById('imgRefFace'); if(face) face.style.display='none'; const rb=document.getElementById('imgRefBtnComposer'); if(rb){ rb.style.borderColor='var(--accent)'; rb.style.background='#000'; } toast('✅ Image chargée'); };
   r.readAsDataURL(file);
 }
 
@@ -6738,40 +6787,34 @@ function _imgFmtLabel(val){ return (_IMG_FORMATS.find(f=>f.value===val)||{sub:'C
 
 function _imgInitCountGrid(){
   const g = document.getElementById('imgCountGrid'); if(!g) return;
-  g.innerHTML = '';
-  [1,2,3].forEach(n => {
-    const el = document.createElement('div');
-    el.className = 'img-fmt-card' + (n===_imgSelectedCount?' on':'');
-    el.innerHTML = '<div class="ifc-preview"><div style="font-size:18px;font-weight:900;font-family:var(--mono)">'+n+'</div></div><div class="ifc-label">'+n+' image'+(n>1?'s':'')+'</div><div class="ifc-sub">'+n+' crédit'+(n>1?'s':'')+'</div>';
-    el.onclick = () => _imgPickCount(n);
-    g.appendChild(el);
-  });
+  g.className = 'seg'; g.style.width = '100%';
+  g.innerHTML = [1,2,3].map(n =>
+    '<button class="'+(n===_imgSelectedCount?'on':'')+'" style="flex:1" onclick="_imgPickCount('+n+')">'+n+'</button>'
+  ).join('');
 }
 
 function _imgPickCount(n){
   _imgSelectedCount = n;
-  document.querySelectorAll('#imgCountGrid .img-fmt-card').forEach((el,i) => {
-    el.classList.toggle('on', (i+1)===n);
-  });
+  _imgInitCountGrid();
   const cost = document.getElementById('imgCountCost');
-  if(cost) cost.textContent = n + ' crédit' + (n>1?'s':'');
-  // Update generate button label
+  if(cost) cost.textContent = n + ' créd.';
+  // Libellé du bouton Générer
   const btn = document.getElementById('imgGenBtn');
   if(btn && !btn.disabled){
-    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer ' + (n>1? n+' images' : 'l\'image');
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer ' + (n>1? n+' images' : 'l\'image');
   }
+  _imgUpdateIdleMeta();
 }
 
 function _imgInitStyleGrid(){
   const g = document.getElementById('imgStyleGrid'); if(!g) return;
-  g.innerHTML = '';
-  _IMG_STYLES.forEach(s => {
-    const el = document.createElement('div');
-    el.className = 'img-style-card' + (s.id===_imgSelectedStyleId?' on':'');
-    el.innerHTML = '<div class="isc-icon">'+s.icon+'</div><div class="isc-label">'+s.label+'</div><div class="isc-sub">'+s.sub+'</div>';
-    el.onclick = () => _imgPickStyle(s.id);
-    g.appendChild(el);
-  });
+  g.innerHTML = _IMG_STYLES.map(s => {
+    const on = s.id===_imgSelectedStyleId;
+    return '<button onclick="_imgPickStyle(\''+s.id+'\')" class="row gap10" style="padding:11px 12px;border-radius:12px;text-align:left;transition:.15s;'
+      + 'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--panel-1)')+'">'
+      + _imgIco(s.ic,17, on?'var(--accent-2)':'var(--text-2)')
+      + '<div class="col" style="line-height:1.2;min-width:0"><span style="font-weight:600;font-size:12.5px;color:var(--text)">'+s.label+'</span><span class="faint" style="font-size:10.5px">'+s.sub+'</span></div></button>';
+  }).join('');
 }
 
 function _imgPickStyle(id){
@@ -6780,35 +6823,29 @@ function _imgPickStyle(id){
   _imgSelectedStyleApi    = s.api;
   _imgSelectedStyleSuffix = s.suffix;
   _imgSelectedStyleLabel  = s.label;
-  document.querySelectorAll('#imgStyleGrid .img-style-card').forEach(el => {
-    el.classList.toggle('on', el.querySelector('.isc-label').textContent === s.label);
-  });
+  _imgInitStyleGrid();
 }
 
 function _imgInitFormatGrid(){
   const g = document.getElementById('imgFormatGrid'); if(!g) return;
-  g.innerHTML = '';
-  _IMG_FORMATS.forEach(f => {
-    const maxDim = 28;
-    const ratio  = f.w / f.h;
+  g.innerHTML = _IMG_FORMATS.map(f => {
+    const on = f.id===_imgSelectedFormatId;
+    const maxDim = 20, ratio = f.w/f.h;
     let pw, ph;
-    if(ratio >= 1){ pw = maxDim; ph = Math.round(maxDim / ratio); }
-    else           { ph = maxDim; pw = Math.round(maxDim * ratio); }
-    const el = document.createElement('div');
-    el.className = 'img-fmt-card' + (f.id===_imgSelectedFormatId?' on':'');
-    el.innerHTML = '<div class="ifc-preview"><div style="width:'+pw+'px;height:'+ph+'px;border-radius:3px;border:1.5px solid currentColor;opacity:0.6"></div></div><div class="ifc-label">'+f.label+'</div><div class="ifc-sub">'+f.sub+'</div>';
-    el.onclick = () => _imgPickFormat(f.id);
-    g.appendChild(el);
-  });
+    if(ratio >= 1){ pw = maxDim; ph = Math.round(maxDim/ratio); } else { ph = maxDim; pw = Math.round(maxDim*ratio); }
+    return '<button onclick="_imgPickFormat(\''+f.id+'\')" class="col" style="padding:13px 6px;border-radius:11px;gap:7px;align-items:center;'
+      + 'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--panel-1)')+'">'
+      + '<span style="width:'+pw+'px;height:'+ph+'px;border-radius:3px;border:2px solid '+(on?'var(--accent-2)':'var(--text-3)')+'"></span>'
+      + '<span style="font-weight:700;font-size:11.5px;color:var(--text)">'+f.sub+'</span></button>';
+  }).join('');
 }
 
 function _imgPickFormat(id){
   const f = _IMG_FORMATS.find(x=>x.id===id); if(!f) return;
   _imgSelectedFormat   = f.value;
   _imgSelectedFormatId = id;
-  document.querySelectorAll('#imgFormatGrid .img-fmt-card').forEach(el => {
-    el.classList.toggle('on', el.querySelector('.ifc-label').textContent === f.label);
-  });
+  _imgInitFormatGrid();
+  _imgUpdateIdleMeta();
 }
 
 function _imgUpdateCharCount(el){
@@ -6819,6 +6856,9 @@ function _imgUpdateCharCount(el){
 function _imgNewPrompt(){
   document.getElementById('imgPrompt').value = '';
   document.getElementById('imgCharCount').textContent = '0 / 1000';
+  const r=document.getElementById('imgResult'); if(r) r.style.display='none';
+  const m=document.getElementById('imgResultMulti'); if(m) m.style.display='none';
+  _imgIdleShow(true); _imgUpdateIdleMeta();
   document.getElementById('imgPrompt').focus();
 }
 
@@ -6948,25 +6988,30 @@ function cartoonEnhancePrompt(){
   toast('✨ Prompt d\'amélioration ajouté');
 }
 
+const _IMG_SUGGEST_GEN = [
+  'Entrepreneur en studio moderne, MacBook, lumière naturelle',
+  'Face cam UGC outdoor, micro-cravate, t-shirt uni',
+  'Personal branding loft minimaliste, contre-jour',
+  'Mockup iPhone 15 Pro sur bureau bois, ombres douces',
+];
+const _IMG_SUGGEST_FIX = [
+  'remplace le fond par un studio lumineux',
+  'ajoute des lunettes de soleil',
+  'change la couleur du t-shirt en rouge',
+];
 function _imgInitSuggestions(){
-  const suggestions = [
-    'Entrepreneur en studio moderne, MacBook, lumière cinématique, fond sombre',
-    'Face cam UGC outdoor, micro-cravate, tenue casual, fond urbain flou',
-    'Personal branding loft minimaliste, costume ouvert, lumière dorée',
-    'Mockup iPhone 15 Pro sur bureau bois, app business, fond épuré',
-    'Thumbnail YouTube motivationnel, personne confiante, texte bold',
-    'Dark luxury product shot, fond noir, éclairage accent dramatique',
-  ];
   const c = document.getElementById('imgSuggestions'); if(!c) return;
+  const list = (_imgMode==='correct' ? _IMG_SUGGEST_FIX : _IMG_SUGGEST_GEN).slice(0,2);
   c.innerHTML = '';
-  suggestions.forEach(s => {
+  list.forEach(s => {
     const b = document.createElement('button');
-    b.textContent = s.length > 40 ? s.slice(0,38)+'…' : s;
+    b.className = 'pill';
+    b.textContent = s.length > 34 ? s.slice(0,32)+'…' : s;
     b.title = s;
-    b.style.cssText = 'padding:5px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text3);font-size:10px;font-family:var(--mono);cursor:pointer;transition:all .15s;white-space:nowrap';
-    b.onmouseover = () => { b.style.borderColor='rgba(255,107,53,0.35)'; b.style.color='var(--orange2)'; };
-    b.onmouseout  = () => { b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; };
-    b.onclick = () => { document.getElementById('imgPrompt').value = s; _imgUpdateCharCount(document.getElementById('imgPrompt')); };
+    b.style.cssText += 'cursor:pointer;font-size:12.5px;padding:7px 13px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    b.onmouseover = () => { b.style.borderColor='var(--accent-line)'; b.style.color='var(--accent-2)'; };
+    b.onmouseout  = () => { b.style.borderColor='var(--border)'; b.style.color='var(--text-2)'; };
+    b.onclick = () => { const p=document.getElementById('imgPrompt'); p.value = s; _imgUpdateCharCount(p); p.focus(); };
     c.appendChild(b);
   });
 }
@@ -6981,6 +7026,7 @@ function initImageGen(){
   _imgRenderHistory();
   _updateImgQuotaLabel();
   _imgSetMode(_imgMode||'generate'); // affiche la zone image de réf en génération
+  _imgUpdateIdleMeta();
 }
 
 // Helper : génère UNE image et retourne son URL (ou throw) — GPT Image (gpt-image-1)
@@ -7116,6 +7162,7 @@ function _imgSetProg(p){
 }
 function _imgProgStart(label){
   const l=document.getElementById('imgProgLabel'); if(l&&label) l.textContent=label;
+  if(typeof _imgIdleShow==='function') _imgIdleShow(false);
   _imgSetProg(1);
   clearInterval(_imgProgTimer);
   _imgProgTimer=setInterval(()=>{ if(_imgProgVal<99) _imgSetProg(_imgProgVal + Math.max(0.4,(99-_imgProgVal)*0.05)); }, 350);
@@ -7191,6 +7238,7 @@ function _imgShowSingle(url, size){
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
+  _imgIdleShow(false);
   const img = document.getElementById('imgOutput');
   img.style.display = 'block';
   img.src = url;
