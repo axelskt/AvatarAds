@@ -2686,12 +2686,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- CORRECTIONS RAPIDES (mode Correction) -->
-          <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;flex:1 0 auto;flex-direction:column">
+          <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;flex:0 0 auto;flex-direction:column">
             <div class="row gap8" style="align-items:center;margin-bottom:10px">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
               <span class="label" style="margin:0">Corrections rapides</span>
             </div>
-            <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1 0 auto;grid-auto-rows:1fr"></div>
+            <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
             <button id="imgMakeRealBtn" class="btn row gap8" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);color:var(--text);font-weight:700;font-size:13px">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Rendre réaliste / +qualité</button>
           </div>
@@ -6606,11 +6606,18 @@ function _imgMakeRealistic(btn){ return _imgDoEdit(_IMG_REALISM_EDIT, btn, 'Rend
 // Si la correction a besoin d'une précision (objet, décor…), on lit le champ prompt ; sinon on focus dessus.
 function _imgRunCorrection(idx, btn){
   const p=_IMG_CORRECT_PRESETS[idx]; if(!p||!p.back) return;
+  // 1) Image REQUISE en premier — sans elle, aucune correction n'est possible.
+  if(!_imgRefFile){
+    toast('🖼️ Importe d\'abord l\'image à corriger');
+    const inp=document.getElementById('imgRefInput'); if(inp) inp.click(); // ouvre le sélecteur de fichier
+    return;
+  }
+  // 2) Ensuite seulement, la précision éventuelle (objet, décor…).
   const pr=document.getElementById('imgPrompt');
   const extra=(pr && pr.value ? pr.value.trim() : '');
   if(p.needs && !extra){
     if(pr){ pr.focus(); try{ pr.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
-    toast('✍️ Précise d\'abord dans le champ : '+(p.hint||'ta demande'));
+    toast('✍️ Précise maintenant dans le champ : '+(p.hint||'ta demande'));
     return;
   }
   const full = extra ? (p.back + ' User request (may be in French): "' + extra + '".') : p.back;
