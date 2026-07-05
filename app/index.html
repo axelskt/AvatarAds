@@ -2673,6 +2673,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
           <div id="imgModelGrid" style="display:none"></div>
 
+          <!-- Cartes de réglages : remplissent la hauteur du rail -->
+          <div class="col" id="imgRailCards" style="flex:1;min-height:0;gap:14px;justify-content:space-between">
+
           <!-- STYLE PRESETS (mode Génération) -->
           <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
             <div class="row gap8" style="align-items:center;margin-bottom:14px">
@@ -2723,6 +2726,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div id="imgCountGrid"></div>
           </div>
 
+          </div><!-- /imgRailCards -->
         </div><!-- /imgRail -->
 
         <!-- ═══════════ CENTRE : canvas + composer ═══════════ -->
@@ -2839,7 +2843,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
                   <div id="imgSuggestions" class="row gap8" style="flex-wrap:wrap;flex:1;min-width:0"></div>
-                  <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:16px 34px;font-weight:800;font-size:17px;border-radius:16px">
+                  <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:16px 52px;font-weight:800;font-size:17px;border-radius:16px;flex-shrink:0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</button>
                 </div>
                 <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
@@ -6462,7 +6466,8 @@ function _imgRenderQuality(){
   const labels = _IMG_QUALITIES.map((q,i)=>{
     const on = i===val;
     const locked = _IMG_Q_ORDER[q.id] > _IMG_Q_ORDER[cap];
-    return '<button onclick="_imgSliderQuality('+i+')" style="background:none;padding:0;font-size:11.5px;cursor:'+(locked?'not-allowed':'pointer')+';font-weight:'+(on?700:500)+';color:'+(on?'var(--accent-2)':(locked?'var(--text-3)':'var(--text-3)'))+'">'+(locked?'🔒 ':'')+q.label+'</button>';
+    const al = i===0?'flex-start':(i===2?'flex-end':'center');
+    return '<button onclick="_imgSliderQuality('+i+')" style="flex:1;display:flex;justify-content:'+al+';background:none;border:none;-webkit-appearance:none;appearance:none;padding:0;font-family:var(--font);font-size:11.5px;cursor:'+(locked?'not-allowed':'pointer')+';font-weight:'+(on?700:500)+';color:'+(on?'var(--accent-2)':'var(--text-3)')+'">'+(locked?'🔒 ':'')+q.label+'</button>';
   }).join('');
   g.innerHTML =
     '<input type="range" class="ed-range" min="0" max="2" step="1" value="'+val+'" oninput="_imgSliderQuality(this.value)" '+
@@ -7001,7 +7006,7 @@ const _IMG_SUGGEST_FIX = [
 ];
 function _imgInitSuggestions(){
   const c = document.getElementById('imgSuggestions'); if(!c) return;
-  const list = (_imgMode==='correct' ? _IMG_SUGGEST_FIX : _IMG_SUGGEST_GEN).slice(0,2);
+  const list = (_imgMode==='correct' ? _IMG_SUGGEST_FIX : _IMG_SUGGEST_GEN).slice(0,3);
   c.innerHTML = '';
   list.forEach(s => {
     const b = document.createElement('button');
