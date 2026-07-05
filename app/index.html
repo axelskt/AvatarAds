@@ -2674,24 +2674,24 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="imgModelGrid" style="display:none"></div>
 
           <!-- Cartes de réglages (flux naturel — pas de stretch pour éviter le scroll) -->
-          <div class="col" id="imgRailCards" style="gap:11px">
+          <div class="col" id="imgRailCards" style="flex:1;gap:11px">
 
           <!-- STYLE PRESETS (mode Génération) -->
-          <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+          <div id="imgStyleSection" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;flex:1 0 auto;flex-direction:column">
             <div class="row gap8" style="align-items:center;margin-bottom:10px">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg>
               <span class="label" style="margin:0">Style visuel</span>
             </div>
-            <div id="imgStyleGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+            <div id="imgStyleGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 0 auto;grid-auto-rows:1fr"></div>
           </div>
 
           <!-- CORRECTIONS RAPIDES (mode Correction) -->
-          <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px">
+          <div id="imgCorrectPresetsSection" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;flex:1 0 auto;flex-direction:column">
             <div class="row gap8" style="align-items:center;margin-bottom:10px">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
               <span class="label" style="margin:0">Corrections rapides</span>
             </div>
-            <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+            <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1 0 auto;grid-auto-rows:1fr"></div>
             <button id="imgMakeRealBtn" class="btn row gap8" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);color:var(--text);font-weight:700;font-size:13px">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Rendre réaliste / +qualité</button>
           </div>
@@ -6625,8 +6625,9 @@ function _imgSetMode(m){
   if(tg) tg.classList.toggle('on', !corr);
   if(tc) tc.classList.toggle('on', corr);
   const show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'':'none'; };
-  show('imgCorrectPresetsSection', corr);    // corrections rapides (correction only)
-  show('imgStyleSection', !corr);            // style visuel (génération only)
+  const showFlex=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'flex':'none'; };
+  showFlex('imgCorrectPresetsSection', corr);// corrections rapides (correction only) — carte extensible
+  showFlex('imgStyleSection', !corr);        // style visuel (génération only) — carte extensible
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
   if(corr) _imgRenderCorrectPresets();
   _imgInitSuggestions();
