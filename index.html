@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden;max-width:100vw}
 :root{
   --bg:#0B0B0D;--bg-grad:#0E0D10;
   --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
@@ -117,6 +118,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 @media(max-width:900px){
   .wrap{padding:0 20px}
   .hide-mobile{display:none!important}
+  .hero2-grid,.hero2-grid>*{min-width:0!important}
+  .hero2-grid form{max-width:100%!important}
   .grid-3{grid-template-columns:1fr!important}
   .grid-5{grid-template-columns:1fr 1fr!important}
   .grid-5>div:last-child{grid-column:1/-1!important;border-left:none!important;border-top:1px solid var(--border)!important}
@@ -177,8 +180,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <button class="nav-link" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</button>
       </div>
       <div class="row" style="gap:12px">
-        <a href="/app/" class="btn btn-quiet btn-sm">Se connecter</a>
-        <a href="/app/" class="btn btn-primary btn-sm">Commencer gratuitement <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5"/></svg></a>
+        <a href="/app/" class="btn btn-quiet btn-sm hide-mobile">Se connecter</a>
+        <a href="/app/" class="btn btn-primary btn-sm">Commencer <span class="hide-mobile">gratuitement</span> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5"/></svg></a>
       </div>
     </div>
   </div>
@@ -193,8 +196,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="rise" style="display:inline-flex">
         <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · +10K UTILISATEURS ACTIFS</span></div>
       </div>
-      <h1 class="display rise" style="font-size:clamp(40px,5.6vw,88px);font-weight:800;margin-top:22px;line-height:.98">
-        Obtiens <span class="accent">plus de vues</span><br>sans montrer ton visage
+      <h1 class="display rise" style="font-size:clamp(31px,5.6vw,88px);font-weight:800;margin-top:22px;line-height:1.02;overflow-wrap:break-word">
+        Obtiens <span class="accent">plus de vues</span> <br class="hide-mobile">sans montrer ton visage
       </h1>
       <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
         Crée des vidéos faceless virales. Plus de contenu · plus de clients.<br>
