@@ -103,7 +103,12 @@ nav{position:sticky;top:0;z-index:50}
 input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
 .hero2-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
 @media(max-width:900px){.hero2-grid{grid-template-columns:1fr;gap:20px}.hero2-show{height:420px!important;margin-top:10px}}
-@media(max-width:560px){.hero2-show{display:none!important}}
+@media(max-width:640px){
+  /* Mobile (style remakeit) : garder UNIQUEMENT le téléphone central, centré et réduit */
+  .hero-side{display:none!important}
+  .hero2-show .card{display:none!important}
+  .hero2-show{height:440px!important;margin-top:18px!important;transform:scale(.84);transform-origin:top center}
+}
 .aa-iphone{position:absolute;border-radius:38px;background:linear-gradient(135deg,#3a3a42,#0d0d11);padding:4px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 30px 60px -26px rgba(0,0,0,.85)}
 .aa-iphone .scr{position:absolute;inset:4px;border-radius:34px;overflow:hidden;background:#0c0a0e}
 .aa-iphone .scr img{width:100%;height:100%;object-fit:cover;display:block}
@@ -195,9 +200,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <!-- HERO -->
 <!-- HERO V2 -->
 <section class="wrap" style="padding-top:64px;padding-bottom:30px">
-  <div class="hero2-grid">
-    <!-- LEFT -->
-    <div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <!-- HERO CENTRÉ (style remakeit.io) -->
+    <div style="max-width:760px;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center">
       <div class="rise" style="display:inline-flex">
         <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · +10K UTILISATEURS ACTIFS</span></div>
       </div>
@@ -227,8 +232,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
     </div>
 
-    <!-- RIGHT — showcase iPhone -->
-    <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
+    <!-- SHOWCASE iPhone (centré, sous le texte — style remakeit) -->
+    <div class="rise hero2-show" style="position:relative;height:560px;width:min(660px,100%);margin:44px auto 0;perspective:1500px">
       <!-- halo orange (voyant) derrière le téléphone central -->
       <div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
       <div style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,80,.42) 0%,rgba(255,107,53,.12) 50%,transparent 75%);filter:blur(6px);z-index:2;pointer-events:none"></div>
@@ -243,14 +248,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
 
       <!-- phone gauche : bactérie -->
-      <div class="aa-iphone" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
+      <div class="aa-iphone hero-side" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds"></div>
       </div>
 
       <!-- phone droite : fraise -->
-      <div class="aa-iphone" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
+      <div class="aa-iphone hero-side" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr"><img src="assets/hero-strawberry.png" alt="Cartoon fraise virale AvatarAds"></div>
