@@ -662,19 +662,31 @@ function _whopCheckout(url){
   var sp=document.createElement('div'); sp.className='whop-loading';
   sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
   sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  var loaded=false;
-  var f=document.createElement('iframe');
-  f.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
-  f.style.cssText='position:relative;z-index:1;width:100%;min-height:640px;border:0;display:block;background:transparent';
-  f.setAttribute('allow','payment');
-  f.onload=function(){ loaded=true; sp.style.display='none'; };
-  wrap.appendChild(sp); wrap.appendChild(f); body.appendChild(wrap);
+  var d=document.createElement('div');
+  d.setAttribute('data-whop-checkout-plan-id',pid);
+  d.setAttribute('data-whop-checkout-theme','dark');
+  d.setAttribute('data-whop-checkout-theme-accent-color','orange');
+  d.setAttribute('data-whop-checkout-return-url','https://avatarads.fr/app/?checkout=success');
+  d.style.cssText='position:relative;z-index:1;min-height:200px';
+  wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex';
   document.body.style.overflow='hidden';
-  clearTimeout(window._whopCoTimer);
-  window._whopCoTimer=setTimeout(function(){ if(loaded)return; closeWhopCheckout(); if(url) window.open(url,'_blank'); },10000);
+  var tries=0; clearInterval(window._whopCoIv);
+  window._whopCoIv=setInterval(function(){
+    if(d.querySelector('iframe')){ clearInterval(window._whopCoIv); sp.style.display='none'; return; }
+    if(++tries>23){ // loader lent → iframe directe (hauteur généreuse)
+      clearInterval(window._whopCoIv);
+      d.removeAttribute('data-whop-checkout-plan-id'); d.innerHTML='';
+      var fb=document.createElement('iframe');
+      fb.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
+      fb.style.cssText='width:100%;height:880px;border:0;display:block;background:transparent';
+      fb.setAttribute('allow','payment');
+      fb.onload=function(){ sp.style.display='none'; };
+      d.appendChild(fb);
+    }
+  },150);
 }
-function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
+function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
 </script>
 
 <style>.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}@keyframes whopspin{to{transform:rotate(360deg)}}</style>
