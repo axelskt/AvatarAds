@@ -723,7 +723,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
-      <div class="nav-i" onclick="openSetup()">
+      <div class="nav-i" id="navConnexions" onclick="openSetup()" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
         Connexions
       </div>
@@ -4443,7 +4443,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">✦ 5</span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">= 10</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 10</b> images IA · DALL·E 3</span>
+              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 10</b> images IA</span>
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
@@ -4454,7 +4454,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <div id="sheetSubStarter" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)"></div>
         <div id="sheetSaveStarter" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 90€/an</div>
-        <button onclick="sheetCheckout('starter')" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px" onmouseover="this.style.background='var(--border-2)'" onmouseout="this.style.background='var(--surface-2)'">Choisir Starter →</button>
+        <button onclick="sheetCheckout('starter')" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px" onmouseover="this.style.background='var(--border-2)'" onmouseout="this.style.background='var(--surface-2)'">Choisir STARTER →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Inclus :</div>
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:var(--text-2);flex:1">
           <div>✏️ Sous-titres animés</div>
@@ -4475,7 +4475,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">✦ 15</span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">= 30</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 20</b> images IA · DALL·E 3</span>
+              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 20</b> images IA</span>
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
@@ -4488,7 +4488,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour</div>
         <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 150€/an</div>
-        <button onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 32px -8px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir Pro →</button>
+        <button onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 32px -8px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir PRO →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Starter, plus :</div>
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:var(--text-2);flex:1">
           <div>🎵 Whisper IA · synchronisation voix/texte pro</div>
@@ -4508,7 +4508,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">30</span></span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)"><b id="sheetEliteVideos" style="color:var(--text-2)">60</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b id="sheetEliteImages" style="color:var(--text-2)">50</b> images IA · DALL·E 3</span>
+              <span style="font-size:12.5px;color:var(--text-3)"><b id="sheetEliteImages" style="color:var(--text-2)">50</b> images IA</span>
             </div>
           </div>
           <div>
@@ -4526,7 +4526,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <div id="sheetSubElite" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)"></div>
         <div id="sheetSaveElite" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 280€/an</div>
-        <button id="sheetBtnElite" onclick="sheetCheckout('elite')" style="width:100%;padding:13px;background:var(--violet);border:none;border-radius:10px;color:#0c0a16;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .2s;margin:20px 0 22px;box-shadow:0 12px 30px -12px rgba(154,124,255,.6)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir Elite →</button>
+        <button id="sheetBtnElite" onclick="sheetCheckout('elite')" style="width:100%;padding:13px;background:var(--violet);border:none;border-radius:10px;color:#0c0a16;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .2s;margin:20px 0 22px;box-shadow:0 12px 30px -12px rgba(154,124,255,.6)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir ELITE →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Pro, plus :</div>
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:var(--text-2);flex:1">
           <div>🏆 Export 4K · modèle Élite exclusif</div>
@@ -5173,9 +5173,12 @@ function enterApp(profile){
   // Bouton orange "Voir les plans" : caché (remplacé par btnUpgradePlan pour tous)
   const seePlansBtn = document.getElementById('btnSeePlans');
   if(seePlansBtn) seePlansBtn.style.display = 'none';
-  // Bouton "Connexions" : visible uniquement pour le plan BYOK
+  // "Connexions" (topbar + nav latéral) : visible uniquement pour BYOK (membres formation) — masqué au grand public
+  const _byokVisible = ['byok','developer'].includes(profile.plan);
   const connexionsBtn = document.getElementById('btnConnexions');
-  if(connexionsBtn) connexionsBtn.style.display = profile.plan === 'byok' ? 'flex' : 'none';
+  if(connexionsBtn) connexionsBtn.style.display = _byokVisible ? 'flex' : 'none';
+  const navConn = document.getElementById('navConnexions');
+  if(navConn) navConn.style.display = _byokVisible ? 'flex' : 'none';
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
@@ -5426,7 +5429,7 @@ function sheetToggleBilling(){
     const saveEl   = document.getElementById('sheetSave'   + cap);
     if(priceEl)  priceEl.textContent  = _sheetAnnual ? p.a  : p.m;
     if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
-    if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : p.ms;
+    if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : (p.ms || 'paiement mensuel · sans engagement');
     if(saveEl)   saveEl.style.display = _sheetAnnual ? 'block' : 'none';
     if(k==='pro'){ const oldEl=document.getElementById('sheetOldPro'); if(oldEl) oldEl.textContent = _sheetAnnual ? p.aOld : p.mOld; }
   });
@@ -5463,7 +5466,7 @@ function setSheetEliteTier(idx){
   var imgEl    = document.getElementById('sheetEliteImages');
   var btnEl    = document.getElementById('sheetBtnElite');
   if(priceEl)  priceEl.textContent  = _sheetAnnual ? tier.a  : tier.m;
-  if(subEl)    subEl.textContent    = _sheetAnnual ? tier.as : tier.ms;
+  if(subEl)    subEl.textContent    = _sheetAnnual ? tier.as : (tier.ms || 'paiement mensuel · sans engagement');
   if(saveEl){  saveEl.textContent   = 'économise '+tier.save+'€/an'; saveEl.style.display = _sheetAnnual ? 'block' : 'none'; }
   if(avEl)     avEl.textContent     = tier.avatars;
   if(vidEl)    vidEl.textContent    = tier.videos;
@@ -5500,34 +5503,42 @@ function _whopCheckout(url){
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
   const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
   body.innerHTML = '';
-  // Spinner immédiat (ressenti instantané) affiché DERRIÈRE l'iframe Whop, qui le recouvre au chargement.
-  const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:640px';
+  const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
   sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
   sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  // Iframe Whop construite directement = instantané et fiable (pas d'attente du loader).
-  let _whopLoaded = false;
-  const d = document.createElement('iframe');
-  let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
-  if(email) _q += '&email=' + encodeURIComponent(email);
-  d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
-  d.style.cssText = 'position:relative;z-index:1;width:100%;min-height:640px;border:0;display:block;background:transparent';
-  d.setAttribute('allow', 'payment');
-  d.onload = () => { _whopLoaded = true; sp.style.display = 'none'; };
+  // 1) Loader Whop = auto-redimensionne l'iframe (pas de scroll interne / contenu coupé). Fallback iframe directe si le loader tarde.
+  const d = document.createElement('div');
+  d.setAttribute('data-whop-checkout-plan-id', pid);
+  d.setAttribute('data-whop-checkout-theme', 'dark');
+  d.setAttribute('data-whop-checkout-theme-accent-color', 'orange');
+  d.setAttribute('data-whop-checkout-return-url', 'https://avatarads.fr/app/?checkout=success');
+  if(email) d.setAttribute('data-whop-checkout-prefill-email', email);
+  d.style.cssText = 'position:relative;z-index:1;min-height:200px';
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   const m = document.getElementById('whopCoModal');
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  // Sécurité : si l'iframe Whop n'apparaît pas (loader bloqué/adblock) au bout de 6s → redirection classique
-  clearTimeout(window._whopCoTimer);
-  window._whopCoTimer = setTimeout(() => {
-    if(_whopLoaded) return;
-    closeWhopCheckout();
-    if(url) window.open(url, '_blank');
-  }, 10000);
+  let _tries = 0;
+  clearInterval(window._whopCoIv);
+  window._whopCoIv = setInterval(() => {
+    if(d.querySelector('iframe')){ clearInterval(window._whopCoIv); sp.style.display = 'none'; return; }
+    if(++_tries > 23){ // ~3.5s : loader absent → iframe directe (hauteur généreuse)
+      clearInterval(window._whopCoIv);
+      d.removeAttribute('data-whop-checkout-plan-id'); d.innerHTML = '';
+      const fb = document.createElement('iframe');
+      let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
+      if(email) _q += '&email=' + encodeURIComponent(email);
+      fb.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
+      fb.style.cssText = 'width:100%;height:880px;border:0;display:block;background:transparent';
+      fb.setAttribute('allow', 'payment');
+      fb.onload = () => { sp.style.display = 'none'; };
+      d.appendChild(fb);
+    }
+  }, 150);
 }
 function closeWhopCheckout(){
-  clearTimeout(window._whopCoTimer);
+  clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv);
   const m = document.getElementById('whopCoModal'); if(m) m.style.display = 'none';
   const b = document.getElementById('whopCoBody'); if(b) b.innerHTML = '';
   document.body.style.overflow = '';
@@ -6414,8 +6425,7 @@ function _updateImgQuotaLabel(){
   }
   if(!el) return;
   if(lim<=0){
-    el.textContent = '⛔ Disponible à partir du plan Starter · Upgrade →';
-    el.style.color = 'var(--red,#ff6b6b)';
+    el.textContent = '';   // (message « Disponible à partir du plan Starter » retiré — inutile)
     return;
   }
   const bonusTxt = bonus > 0 ? ' (+ '+bonus+' bonus)' : '';
@@ -6505,28 +6515,18 @@ function _imgFluxTier(){
   const q = _imgEffectiveQuality();
   return q==='high' ? 'ultra' : (q==='medium' ? 'pro' : 'eco');
 }
-function _imgPickQuality(id){
-  const cap = _imgQualityCap();
-  if(_IMG_Q_ORDER[id] > _IMG_Q_ORDER[cap]){ toast('🔒 Qualité « Max » réservée au plan Élite'); openUpgradeModal(); return; }
-  _imgQuality = id; _imgRenderQuality();
-}
-function _imgSliderQuality(v){
-  const id = ['low','medium','high'][Number(v)] || 'low';
-  const cap = _imgQualityCap();
-  if(_IMG_Q_ORDER[id] > _IMG_Q_ORDER[cap]){ toast('🔒 Qualité « Max » réservée au plan Élite'); openUpgradeModal(); _imgRenderQuality(); return; }
-  _imgQuality = id; _imgRenderQuality();
-}
+// Qualité librement sélectionnable (Max inclus) — le paywall se déclenche uniquement à « Générer »
+function _imgPickQuality(id){ _imgQuality = id; _imgRenderQuality(); }
+function _imgSliderQuality(v){ _imgQuality = ['low','medium','high'][Number(v)] || 'low'; _imgRenderQuality(); }
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
-  const cap = _imgQualityCap();
   if(!_imgQuality) _imgQuality = 'medium'; // défaut = Standard (bon rapport qualité/prix sur gpt-image-2)
-  if(_IMG_Q_ORDER[_imgQuality] > _IMG_Q_ORDER[cap]) _imgQuality = cap;
   const val = _IMG_Q_ORDER[_imgQuality];
   const pct = (val/2*100);
   g.style.display = 'block';
   const labels = _IMG_QUALITIES.map((q,i)=>{
     const on = i===val;
-    const locked = _IMG_Q_ORDER[q.id] > _IMG_Q_ORDER[cap];
+    const locked = false;
     const al = i===0?'flex-start':(i===2?'flex-end':'center');
     return '<button onclick="_imgSliderQuality('+i+')" style="flex:1;display:flex;justify-content:'+al+';background:none;border:none;-webkit-appearance:none;appearance:none;padding:0;font-family:var(--font);font-size:11.5px;cursor:'+(locked?'not-allowed':'pointer')+';font-weight:'+(on?700:500)+';color:'+(on?'var(--accent-2)':'var(--text-3)')+'">'+(locked?'🔒 ':'')+q.label+'</button>';
   }).join('');
