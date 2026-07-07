@@ -2777,27 +2777,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- Actions -->
             <div style="padding:16px 18px">
-              <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:-0.2px;box-shadow:0 6px 20px rgba(255,107,53,0.32);transition:all .2s;margin-bottom:10px" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 9px 28px rgba(255,107,53,0.48)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(255,107,53,0.32)'">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
-                Utiliser comme avatar &amp; créer une vidéo
-              </button>
-              <div style="margin-bottom:10px">
-                <button onclick="_imgRemoveBgRun(this)" id="imgDetourBtn" style="width:100%;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'">
-                  <span style="font-size:14px">✂️</span> Détourer le fond
-                </button>
-              </div>
               <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (HD)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE</span></button>
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
-              <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:rgba(255,107,53,.1);border:1.5px solid rgba(255,107,53,.4);border-radius:11px;color:var(--orange2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,.18)'" onmouseout="this.style.background='rgba(255,107,53,.1)'">🪄 Modifier cette image</button>
+              <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--border-3)'" onmouseout="this.style.borderColor='var(--border-2)'">🪄 Modifier cette image</button>
               <button onclick="_imgSaveToLibrary(this)" id="imgSaveLibBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Enregistrer dans la bibliothèque</button>
               <div style="display:flex;gap:8px">
-                <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
+                <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--accent-line);border-radius:10px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--accent-line)'">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
                   Télécharger
                 </a>
-                <button onclick="_imgCopyUrl()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="7" height="7" rx="1.2"/><path d="M4 4V2.5A1.5 1.5 0 002.5 1h0A1.5 1.5 0 001 2.5V8a1.5 1.5 0 001.5 1.5H4"/></svg>
-                  Copier l'URL
+                <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
+                  Utiliser en avatar
                 </button>
                 <button onclick="_imgNewPrompt()" style="padding:11px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" title="Nouveau prompt">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9.5L8.5 3l1-.5a1 1 0 011 1L10 4.5 3.5 11H2V9.5z"/><path d="M7 4l1.5 1.5"/></svg>
@@ -5503,39 +5494,22 @@ function _whopCheckout(url){
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
   const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
   body.innerHTML = '';
+  // Iframe Whop construite EN DIRECT = ouverture instantanée (pas d'attente du loader). Hauteur généreuse → contenu jamais coupé.
   const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
   sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
   sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  // 1) Loader Whop = auto-redimensionne l'iframe (pas de scroll interne / contenu coupé). Fallback iframe directe si le loader tarde.
-  const d = document.createElement('div');
-  d.setAttribute('data-whop-checkout-plan-id', pid);
-  d.setAttribute('data-whop-checkout-theme', 'dark');
-  d.setAttribute('data-whop-checkout-theme-accent-color', 'orange');
-  d.setAttribute('data-whop-checkout-return-url', 'https://avatarads.fr/app/?checkout=success');
-  if(email) d.setAttribute('data-whop-checkout-prefill-email', email);
-  d.style.cssText = 'position:relative;z-index:1;min-height:200px';
+  let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
+  if(email) _q += '&email=' + encodeURIComponent(email);
+  const d = document.createElement('iframe');
+  d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
+  d.style.cssText = 'position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
+  d.setAttribute('allow', 'payment');
+  d.onload = () => { sp.style.display = 'none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   const m = document.getElementById('whopCoModal');
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  let _tries = 0;
-  clearInterval(window._whopCoIv);
-  window._whopCoIv = setInterval(() => {
-    if(d.querySelector('iframe')){ clearInterval(window._whopCoIv); sp.style.display = 'none'; return; }
-    if(++_tries > 23){ // ~3.5s : loader absent → iframe directe (hauteur généreuse)
-      clearInterval(window._whopCoIv);
-      d.removeAttribute('data-whop-checkout-plan-id'); d.innerHTML = '';
-      const fb = document.createElement('iframe');
-      let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
-      if(email) _q += '&email=' + encodeURIComponent(email);
-      fb.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
-      fb.style.cssText = 'width:100%;height:880px;border:0;display:block;background:transparent';
-      fb.setAttribute('allow', 'payment');
-      fb.onload = () => { sp.style.display = 'none'; };
-      d.appendChild(fb);
-    }
-  }, 150);
 }
 function closeWhopCheckout(){
   clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv);
@@ -6386,6 +6360,7 @@ function _imgMonthLimit(){
   if(p==='elite')     return 100;
   if(p==='pro')       return 50;
   if(p==='starter')   return 20;
+  if(p==='byok')      return 10; // BYOK (membres formation) : Images IA sur ta clé Google, 10/mois
   return 0; // free → pas d'accès
 }
 function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
@@ -6649,6 +6624,7 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
+    _imgProgStart(spinLabel||'Traitement…');   // anime le rond 1→99% (au lieu de rester bloqué à 1%)
     const url=await _imgEditOne(token, promptText, _imgRefFile, gptSize);
     _imgMonthIncrement();
     _imgShowSingle(url, dispFmt);
@@ -6657,7 +6633,7 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
     const rem=_imgMonthRemaining();
     toast('✨ Terminé · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
   }catch(e){ toast('⚠️ '+(e.message||e)); }
-  finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
+  finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
 // « Rendre réaliste / Améliorer la qualité » — 1 clic, prompt réalisme back-end.
