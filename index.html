@@ -625,7 +625,7 @@ function renderPricing(){
       // L'encadré porte déjà les quotas → pas de chips redondants pour Elite
       chips='';
     }
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
+    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onmouseenter="_whopPrewarm(this.href)" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
   }
   document.getElementById('pricing-grid').innerHTML=html;
 }
@@ -668,22 +668,35 @@ faqs.forEach(([q,a],i)=>{
 
 // ── Checkout Whop INTÉGRÉ (embed) sur la LP — plus de redirection ──
 function _whopPlanId(u){var m=String(u||'').match(/plan_[A-Za-z0-9]+/);return m?m[0]:null;}
+window._whopCache = window._whopCache || {};
+function _whopPrewarm(url){
+  var pid=_whopPlanId(url); if(!pid || window._whopCache[pid]) return;
+  var host=document.getElementById('whopPrewarm');
+  if(!host){ host=document.createElement('div'); host.id='whopPrewarm'; host.style.cssText='position:fixed;left:-99999px;top:0;width:440px;height:900px;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(host); }
+  var f=document.createElement('iframe');
+  f.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
+  f.style.cssText='width:440px;height:900px;border:0'; f.setAttribute('allow','payment');
+  window._whopCache[pid]=f; host.appendChild(f);
+}
 function _whopCheckout(url){
   var pid=_whopPlanId(url); var body=document.getElementById('whopCoBody');
   if(!pid||!body){ if(url) window.open(url,'_blank'); return; }
+  var m=document.getElementById('whopCoModal');
+  // Iframe préchauffée (survol) → instantané
+  var cached=window._whopCache&&window._whopCache[pid];
+  if(cached){ delete window._whopCache[pid]; body.innerHTML=''; cached.style.cssText='width:100%;height:900px;border:0;display:block;background:transparent'; body.appendChild(cached); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; return; }
   body.innerHTML='';
   var wrap=document.createElement('div'); wrap.style.cssText='position:relative;min-height:640px';
   var sp=document.createElement('div'); sp.className='whop-loading';
   sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
   sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  // Iframe Whop en direct = instantané ; hauteur généreuse → jamais coupé
   var d=document.createElement('iframe');
   d.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
   d.style.cssText='position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
   d.setAttribute('allow','payment');
   d.onload=function(){ sp.style.display='none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
-  var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex';
+  if(m) m.style.display='flex';
   document.body.style.overflow='hidden';
 }
 function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
