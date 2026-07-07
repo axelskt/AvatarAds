@@ -662,7 +662,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     </div>
   </div>
   <div class="topbar-right">
-    <button id="btnConnexions" class="btn-keys" onclick="openSetup()" style="display:none">⚙ Connexions</button>
+    <!-- (bouton « Connexions » topbar retiré — l'accès BYOK passe par le menu latéral navConnexions) -->
   </div>
 </div>
 
@@ -4331,7 +4331,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button onclick="previewUpgradeAs('starter')" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer">Starter</button>
       <button onclick="previewUpgradeAs('pro')" style="padding:3px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;color:#a855f7;font-family:var(--mono);font-size:10px;cursor:pointer">Pro</button>
     </div>
-    <button class="btn-credits-close" onclick="closeUpgradeModal()">Fermer</button>
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-top:6px">
+      <button onclick="closeUpgradeModal();showPlansSheet()" style="background:none;border:none;color:var(--accent-2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">Voir tous les plans →</button>
+      <button class="btn-credits-close" style="width:auto;margin-top:0" onclick="closeUpgradeModal()">Fermer</button>
+    </div>
   </div>
 </div>
 
@@ -5394,6 +5397,8 @@ function showPlansSheet(){
   });
   document.getElementById('plansSheet').style.display = 'block';
   document.body.style.overflow = 'hidden';
+  // Préchauffe les checkouts en fond → le clic sur un plan ouvre le paiement INSTANTANÉMENT
+  try{ const mm=PLAN_CHECKOUT_URLS.monthly; _whopPrewarm(mm.free); _whopPrewarm(mm.starter); _whopPrewarm(mm.pro); }catch(e){}
 }
 function closePlansSheet(){
   document.getElementById('plansSheet').style.display = 'none';
@@ -5493,8 +5498,20 @@ function _whopCheckout(url){
   // Fallback : pas d'ID de plan reconnu OU conteneur absent → ancienne redirection
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
   const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
+  const m = document.getElementById('whopCoModal');
+  // 1) Iframe PRÉCHAUFFÉE (déjà chargée en fond) → ouverture INSTANTANÉE
+  const cached = window._whopCache && window._whopCache[pid];
+  if(cached){
+    delete window._whopCache[pid];
+    body.innerHTML = '';
+    cached.style.cssText = 'width:100%;height:900px;border:0;display:block;background:transparent';
+    body.appendChild(cached);
+    if(m) m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+  // 2) Sinon, iframe en direct (spinner le temps du chargement)
   body.innerHTML = '';
-  // Iframe Whop construite EN DIRECT = ouverture instantanée (pas d'attente du loader). Hauteur généreuse → contenu jamais coupé.
   const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
   sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
@@ -5507,9 +5524,23 @@ function _whopCheckout(url){
   d.setAttribute('allow', 'payment');
   d.onload = () => { sp.style.display = 'none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
-  const m = document.getElementById('whopCoModal');
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+}
+// Préchauffe (charge en fond, caché) le checkout d'un plan → clic ultérieur instantané
+window._whopCache = window._whopCache || {};
+function _whopPrewarm(url){
+  const pid = _whopPlanId(url); if(!pid || window._whopCache[pid]) return;
+  let host = document.getElementById('whopPrewarm');
+  if(!host){ host = document.createElement('div'); host.id = 'whopPrewarm'; host.style.cssText = 'position:fixed;left:-99999px;top:0;width:440px;height:900px;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(host); }
+  const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
+  let q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
+  if(email) q += '&email=' + encodeURIComponent(email);
+  const f = document.createElement('iframe');
+  f.src = 'https://whop.com/embedded/checkout/' + pid + '/' + q;
+  f.style.cssText = 'width:440px;height:900px;border:0';
+  f.setAttribute('allow', 'payment');
+  window._whopCache[pid] = f; host.appendChild(f);
 }
 function closeWhopCheckout(){
   clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv);
