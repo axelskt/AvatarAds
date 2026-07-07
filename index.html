@@ -104,10 +104,19 @@ input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webki
 .hero2-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
 @media(max-width:900px){.hero2-grid{grid-template-columns:1fr;gap:20px}.hero2-show{height:420px!important;margin-top:10px}}
 @media(max-width:640px){
-  /* Mobile (style remakeit) : garder UNIQUEMENT le téléphone central, centré et réduit */
-  .hero-side{display:none!important}
-  .hero2-show .card{display:none!important}
-  .hero2-show{height:440px!important;margin-top:18px!important;transform:scale(.84);transform-origin:top center}
+  /* Mobile UNIQUEMENT (style remakeit) — desktop inchangé. Hero resserré pour voir les 3 tél. dès l'arrivée */
+  .hero-sec{padding-top:12px!important;padding-bottom:6px!important}
+  .hero2-grid{gap:0!important}
+  .hero-left{display:flex!important;flex-direction:column;align-items:center;text-align:center}
+  .hero-left h1{font-size:27px!important;margin-top:12px!important;line-height:1.08!important}
+  .hero-left p{margin-top:11px!important;font-size:14.5px!important}
+  .hero-left form{max-width:100%!important;margin-top:15px!important;padding:6px 7px 6px 9px!important}
+  .hero-left form>div:first-child{width:36px!important;height:36px!important;flex:0 0 auto}
+  .hero-left #lpPrompt{font-size:15px!important;padding:0 9px!important}
+  .hero-left form button[type=submit]{padding:10px 15px!important;font-size:14px!important}
+  .hero-left .row{justify-content:center!important;margin-top:12px!important;gap:14px!important}
+  /* Les 3 téléphones visibles, réduits pour tenir dans l'écran (animation .rise coupée sinon elle force transform:none) */
+  .hero2-show{height:430px!important;margin-top:0!important;margin-bottom:8px!important;animation:none!important;transform:scale(.56)!important;transform-origin:top center}
 }
 .aa-iphone{position:absolute;border-radius:38px;background:linear-gradient(135deg,#3a3a42,#0d0d11);padding:4px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 30px 60px -26px rgba(0,0,0,.85)}
 .aa-iphone .scr{position:absolute;inset:4px;border-radius:34px;overflow:hidden;background:#0c0a0e}
@@ -199,10 +208,10 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
 <!-- HERO -->
 <!-- HERO V2 -->
-<section class="wrap" style="padding-top:64px;padding-bottom:30px">
-  <div style="display:flex;flex-direction:column;align-items:center">
-    <!-- HERO CENTRÉ (style remakeit.io) -->
-    <div style="max-width:760px;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center">
+<section class="wrap hero-sec" style="padding-top:64px;padding-bottom:30px">
+  <div class="hero2-grid">
+    <!-- LEFT (desktop = original ; mobile = centré via CSS) -->
+    <div class="hero-left">
       <div class="rise" style="display:inline-flex">
         <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · +10K UTILISATEURS ACTIFS</span></div>
       </div>
@@ -219,7 +228,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <div style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>
         </div>
-        <input id="lpPrompt" placeholder="Décris la vidéo que tu veux créer…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:18px;font-weight:500;padding:0 16px">
+        <input id="lpPrompt" placeholder="Décris ta vidéo…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:18px;font-weight:500;padding:0 16px">
         <button type="submit" class="btn btn-primary" style="flex:0 0 auto;padding:15px 30px;font-size:17px;font-weight:800;border-radius:999px">Générer <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></button>
       </form>
 
@@ -232,8 +241,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
     </div>
 
-    <!-- SHOWCASE iPhone (centré, sous le texte — style remakeit) -->
-    <div class="rise hero2-show" style="position:relative;height:560px;width:min(660px,100%);margin:44px auto 0;perspective:1500px">
+    <!-- RIGHT — showcase iPhone -->
+    <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
       <!-- halo orange (voyant) derrière le téléphone central -->
       <div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
       <div style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,80,.42) 0%,rgba(255,107,53,.12) 50%,transparent 75%);filter:blur(6px);z-index:2;pointer-events:none"></div>
@@ -667,29 +676,15 @@ function _whopCheckout(url){
   var sp=document.createElement('div'); sp.className='whop-loading';
   sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
   sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  var d=document.createElement('div');
-  d.setAttribute('data-whop-checkout-plan-id',pid);
-  d.setAttribute('data-whop-checkout-theme','dark');
-  d.setAttribute('data-whop-checkout-theme-accent-color','orange');
-  d.setAttribute('data-whop-checkout-return-url','https://avatarads.fr/app/?checkout=success');
-  d.style.cssText='position:relative;z-index:1;min-height:200px';
+  // Iframe Whop en direct = instantané ; hauteur généreuse → jamais coupé
+  var d=document.createElement('iframe');
+  d.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
+  d.style.cssText='position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
+  d.setAttribute('allow','payment');
+  d.onload=function(){ sp.style.display='none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex';
   document.body.style.overflow='hidden';
-  var tries=0; clearInterval(window._whopCoIv);
-  window._whopCoIv=setInterval(function(){
-    if(d.querySelector('iframe')){ clearInterval(window._whopCoIv); sp.style.display='none'; return; }
-    if(++tries>23){ // loader lent → iframe directe (hauteur généreuse)
-      clearInterval(window._whopCoIv);
-      d.removeAttribute('data-whop-checkout-plan-id'); d.innerHTML='';
-      var fb=document.createElement('iframe');
-      fb.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
-      fb.style.cssText='width:100%;height:880px;border:0;display:block;background:transparent';
-      fb.setAttribute('allow','payment');
-      fb.onload=function(){ sp.style.display='none'; };
-      d.appendChild(fb);
-    }
-  },150);
 }
 function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
 </script>
