@@ -515,9 +515,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         </div>
       </div>
       <div class="grow col" style="border-radius:22px;padding:26px;background:rgba(23,21,25,.72);backdrop-filter:blur(16px);border:1px solid var(--accent-line);box-shadow:0 40px 90px -34px rgba(0,0,0,.85),0 0 0 4px var(--accent-soft);min-height:268px">
-        <div class="grow" style="color:var(--text-2);font-size:17px;padding:2px 2px">Décris la vidéo que tu veux créer…</div>
+        <textarea id="genPrompt" placeholder="Décris la vidéo que tu veux créer…" style="flex:1;min-height:140px;background:transparent;border:none;outline:none;color:var(--text);font-size:17px;line-height:1.5;resize:none;font-family:inherit;padding:2px 2px"></textarea>
         <div class="row" style="gap:10px;flex-wrap:wrap">
-          <span class="pill" style="font-size:13px;font-weight:600;background:var(--surface);padding:7px 13px"><span style="width:17px;height:17px;border-radius:5px;background:linear-gradient(135deg,#9A7CFF,#6C4BFF);display:inline-grid;place-items:center;font-size:9px">✦</span> Veo3 3.1</span>
           <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
           <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
         </div>
@@ -532,7 +531,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           <path d="M90 44l16 3M104 44l-4 -16" stroke="var(--text-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
       </div>
-      <a href="/app/" class="btn btn-primary btn-lg grow" style="font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></a>
+      <button onclick="lpGenerateFrom('genPrompt')" class="btn btn-primary btn-lg grow" style="font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
     </div>
   </div>
 
@@ -543,15 +542,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div style="width:100px;height:178px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative"><img src="assets/lp/gen-fan-1.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
       <div style="width:100px;height:178px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative"><img src="assets/lp/gen-fan-4.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
     </div>
-    <div class="card" style="padding:16px;border-color:var(--accent-line)">
-      <div style="min-height:84px;color:var(--text-2);font-size:15px">Décris la vidéo que tu veux créer…</div>
+    <div class="card col" style="padding:16px;border-color:var(--accent-line)">
+      <textarea id="genPromptM" placeholder="Décris la vidéo que tu veux créer…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
       <div class="row" style="gap:10px;flex-wrap:wrap">
-        <span class="pill" style="font-size:13px;font-weight:600;background:var(--surface);padding:7px 13px"><span style="width:17px;height:17px;border-radius:5px;background:linear-gradient(135deg,#9A7CFF,#6C4BFF);display:inline-grid;place-items:center;font-size:9px">✦</span> Veo3 3.1</span>
         <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
         <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
       </div>
     </div>
-    <a href="/app/" class="btn btn-primary btn-lg" style="width:100%;font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></a>
+    <button onclick="lpGenerateFrom('genPromptM')" class="btn btn-primary btn-lg" style="width:100%;font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
     <p class="center faint mono" style="font-size:11.5px">Essaie gratuitement nos modèles de génération</p>
   </div>
 </section>
@@ -682,6 +680,13 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
 <script>
 /* ══════════ Funnel hero : prompt mémorisé → app ══════════ */
+function lpGenerateFrom(id){
+  try{
+    var v=(document.getElementById(id)||{}).value||'';
+    if(v.trim()) localStorage.setItem('aa_lp_prompt', v.trim());
+  }catch(_){}
+  window.location.href='/app/';
+}
 function lpGenerate(e){
   if(e && e.preventDefault) e.preventDefault();
   try{
