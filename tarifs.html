@@ -42,7 +42,7 @@ html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth}
 body{
   background:
     radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),
-    radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),
+    radial-gradient(900px 600px at 0% 100%,rgba(154,124,255,.05),transparent 55%),
     var(--bg);
   color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
 }
@@ -58,12 +58,11 @@ a{color:inherit;text-decoration:none}
 .btn:active{transform:translateY(1px) scale(.99)}
 .btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)}
 .btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
-.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
-.btn-ghost:hover{background:var(--surface-2);border-color:var(--border-2)}
+.btn-ghost{background:var(--surface-2);border:1px solid var(--border-2);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-3)}
 .btn-quiet{background:transparent;color:var(--text-2)}
 .btn-quiet:hover{color:var(--text)}
 .btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
-.btn-lg{padding:16px 26px;font-size:16.5px}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
 .glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
@@ -79,7 +78,6 @@ a{color:inherit;text-decoration:none}
 .brandmark{display:grid;place-items:center;flex:0 0 auto}
 .logo-wordmark{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em}
 input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
 .elite-range{height:6px;border-radius:6px}
 input[type=range].elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
@@ -112,23 +110,23 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 </div>
 
 <!-- TARIFS -->
-<section id="tarifs" class="wrap" style="padding-top:56px;padding-bottom:80px">
+<section id="tarifs" class="wrap" style="padding-top:56px;padding-bottom:60px">
   <div class="center rise" style="margin-bottom:34px">
     <div class="eyebrow">Tarifs</div>
     <h1 class="display" style="font-size:clamp(34px,4.6vw,60px);font-weight:800;margin-top:14px;line-height:1.02">Choisis ton plan.<br><span class="accent">Scale ton contenu.</span></h1>
     <p class="muted" style="margin-top:16px;font-size:16.5px">Sans engagement. Résiliation en 1 clic. 2 vidéos offertes pour tester.</p>
   </div>
-  <div class="row" style="gap:12px;justify-content:center;margin:0 0 40px;align-items:center">
+  <div class="row" style="gap:12px;justify-content:center;margin:0 0 34px;align-items:center">
     <span id="label-monthly" style="font-weight:700;color:var(--text)">Mensuel</span>
     <button id="annual-toggle" onclick="toggleAnnual()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div id="toggle-thumb" style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button>
     <span id="label-annual" style="font-weight:500;color:var(--text-2)">Annuel</span>
-    <div class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px">-25%</div>
+    <div class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px">3 mois offerts</div>
   </div>
   <div id="pricing-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;max-width:1180px;margin:0 auto"></div>
   <div class="row" style="justify-content:center;gap:22px;margin-top:40px;flex-wrap:wrap">
-    <span class="faint mono" style="font-size:12">✓ Paiement sécurisé Whop</span>
-    <span class="faint mono" style="font-size:12">↻ Annulation à tout moment</span>
-    <span class="faint mono" style="font-size:12">🔒 Sans carte pour l'essai</span>
+    <span class="faint mono" style="font-size:12px">✓ Paiement sécurisé Whop</span>
+    <span class="faint mono" style="font-size:12px">↻ Annulation à tout moment</span>
+    <span class="faint mono" style="font-size:12px">🔒 Sans carte pour l'essai</span>
   </div>
   <div class="card" style="max-width:1180px;margin:40px auto 0;padding:26px 30px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
     <div style="max-width:680px">
@@ -144,42 +142,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   </div>
 </section>
 
-<!-- PARRAINAGE -->
-<section id="affiliation" style="border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:radial-gradient(800px 360px at 50% 0%,rgba(255,90,31,.08),transparent 60%)">
-  <div class="wrap" style="padding:90px 32px">
-    <div class="center" style="margin-bottom:40px">
-      <div class="eyebrow">Programme de parrainage</div>
-      <h2 class="display" style="font-size:clamp(30px,4.6vw,58px);font-weight:800;margin-top:14px;line-height:1.02">Recommande AvatarAds.<br><span class="accent">Touche 30% par mois.</span></h2>
-      <p class="muted" style="margin-top:16px;font-size:16.5px;max-width:620px;margin-inline:auto">Commission récurrente chaque mois tant que ton filleul reste abonné. Zéro effort après le partage de ton lien.</p>
-    </div>
-    <div class="row" style="gap:16px;justify-content:center;margin-bottom:34px;flex-wrap:wrap">
-      <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800;color:var(--accent)">30%</div><div class="faint" style="font-size:12.5px;margin-top:6px">Commission récurrente</div></div>
-      <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800">0€</div><div class="faint" style="font-size:12.5px;margin-top:6px">Pour commencer</div></div>
-      <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800;color:var(--violet)">∞</div><div class="faint" style="font-size:12.5px;margin-top:6px">Durée des commissions</div></div>
-    </div>
-    <div class="center" style="margin-bottom:50px"><a href="https://whop.com/affiliates/avatarads/" target="_blank" rel="noopener" class="btn btn-primary btn-lg">Créer mon compte affilié →</a></div>
-    <div class="card" style="max-width:680px;margin:0 auto;padding:30px 28px">
-      <p class="center muted" style="font-size:16px">Si je ramène <b class="accent" id="aff-n" style="font-size:19px">50</b> filleuls/mois</p>
-      <input type="range" min="0" max="500" value="50" id="aff-range" oninput="updateAff(this.value)" style="margin:20px 0 8px;background:linear-gradient(90deg,var(--accent) 10%,var(--surface-3) 10%)">
-      <div class="row" style="justify-content:space-between"><span class="mono faint" style="font-size:11px">0</span><span class="mono faint" style="font-size:11px">250</span><span class="mono faint" style="font-size:11px">500</span></div>
-      <div class="center" style="margin-top:20px"><span class="display accent" id="aff-rev" style="font-size:56px;font-weight:800">570</span><span class="faint" style="font-size:14px;margin-left:6px">€/mois</span></div>
-    </div>
-    <div style="max-width:760px;margin:50px auto 0">
-      <div class="center" style="margin-bottom:30px">
-        <h3 class="display" style="font-size:clamp(24px,3vw,38px);font-weight:800;line-height:1.05">Simple. <span class="accent">Récurrent.</span></h3>
-        <p class="muted" style="margin-top:12px;font-size:15.5px">Partage ton lien — touche 30% sur chaque abonnement que tu génères, mois après mois.</p>
-      </div>
-      <div class="col" style="gap:12px">
-        <div class="row card" style="gap:16px;padding:18px 20px;align-items:center"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--surface-2);font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">1</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Partage ton lien unique</span><span class="faint" style="font-size:13px">Sur TikTok, YouTube, Instagram, ta newsletter — partout</span></div></div>
-        <div class="row card" style="gap:16px;padding:18px 20px;align-items:center"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--surface-2);font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">2</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Ils s'inscrivent &amp; s'abonnent</span><span class="faint" style="font-size:13px">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</span></div></div>
-        <div class="row card" style="gap:16px;padding:18px 20px;align-items:center;border-color:var(--accent-line);background:var(--accent-soft)"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--accent);color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">3</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Tu gagnes 30% par mois</span><span class="faint" style="font-size:13px">Sur chaque renouvellement tant que ton filleul est abonné — sans plafond</span></div><div class="col" style="align-items:flex-end;line-height:1"><span class="display accent" style="font-size:26px;font-weight:800">30%</span><span class="mono accent" style="font-size:9px;letter-spacing:.1em">RÉCURRENT</span></div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- FOOTER -->
-<footer style="border-top:1px solid var(--border)">
+<footer style="border-top:1px solid var(--border);margin-top:30px">
   <div class="wrap" style="padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
     <a href="/" class="row gap10">
       <img src="assets/avatarads-logo.png" alt="" width="20" height="20" style="border-radius:6px;display:block">
@@ -197,7 +161,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 </footer>
 
 <script>
-/* ══════════ TARIFS — prix & Whop inchangés ══════════ */
+/* ══════════ TARIFS — design proto Claude, prix & plans Whop INCHANGÉS ══════════ */
 let isAnnual=false;
 const CHECKOUT={
   starter:{ m:'https://whop.com/checkout/plan_YKcdyPT6RRQSi', a:'https://whop.com/checkout/plan_cNydK89X39PLE' },
@@ -208,10 +172,92 @@ const CHECKOUT={
 };
 var eliteSlider=0;
 const ELITE_TIERS=[
-  {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', annualPct:25, savings:'280', checkoutId:'elite'},
-  {avatars:60, videos:120, images:100, price:'158,99',annual:'119,99',annualPct:25, savings:'468', checkoutId:'elite60'},
-  {avatars:90, videos:180, images:150, price:'224,99',annual:'157,99',annualPct:30, savings:'804', checkoutId:'elite90'},
+  {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', checkoutId:'elite'},
+  {avatars:60, videos:120, images:100, price:'158,99',annual:'119,99',checkoutId:'elite60'},
+  {avatars:90, videos:180, images:150, price:'224,99',annual:'157,99',checkoutId:'elite90'},
 ];
+const PLANS=[
+  { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
+    price:'29,99', annual:'20,83', accent:'var(--text)',
+    av:5, vid:10, img:10, note:'sans engagement',
+    listHead:'INCLUS :', feats:[['✏️','Sous-titres animés'],['🎙️','Voix clonée ElevenLabs'],['✂️','Split-screen · gameplay'],['📤','Export vertical sans watermark']] },
+  { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
+    price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
+    av:15, vid:30, img:20, note:'soit 1,67€/jour',
+    listHead:'TOUT STARTER, PLUS :', feats:[['🎵','Whisper IA · sync voix avancée'],['✨','Effets VSL · export 1080p'],['✂️','Suppression silences avancée'],['🎨','Sous-titres styles cinématiques']] },
+  { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux. Choisis ta puissance.',
+    accent:'var(--violet)',
+    note:'paiement mensuel · sans engagement',
+    listHead:'TOUT PRO, PLUS :', feats:[['🏆','Export 4K · modèle Élite exclusif'],['📚','Bibliothèque clips illimitée'],['⚡','Support prioritaire + early access'],['📦','Clips presets Starter + Pro + Élite']] },
+];
+function _quotaBox(pl, tier){
+  var violet = pl.id==='elite';
+  var bd = violet ? 'rgba(154,124,255,.35)' : 'var(--border-2)';
+  var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
+  var av  = tier ? tier.avatars : pl.av;
+  var vid = tier ? tier.videos  : pl.vid;
+  var img = tier ? tier.images  : pl.img;
+  var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
+    +'<div class="row" style="gap:9px;align-items:baseline">'
+    +'<span style="color:'+(violet?'var(--violet)':'var(--accent-2)')+';font-size:17px">✦</span>'
+    +'<span'+(violet?' id="lpEliteAv"':'')+' class="display" style="font-size:27px;font-weight:800;color:'+(violet?'var(--violet)':'var(--text)')+'">'+av+'</span>'
+    +'<span style="font-weight:700;font-size:15px">AvatarIA / mois</span></div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)">= <span'+(violet?' id="lpEliteVid"':'')+'>'+vid+'</span></b> vidéos générées</div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:5px"><b style="color:var(--text)">~ <span'+(violet?' id="lpEliteImg"':'')+'>'+img+'</span></b> images IA · DALL·E 3</div>';
+  if(violet){
+    var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
+    for(var t=0;t<ELITE_TIERS.length;t++){
+      var act=t===idx;
+      marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
+    }
+    h+='<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+idx+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;margin-top:12px;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
+      +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>';
+  } else {
+    h+='<div class="mono" style="margin-top:12px;border:1px solid var(--border);border-radius:9px;padding:7px 11px;font-size:11px;color:var(--text-3)">✓&nbsp; Quantité fixe / mois</div>';
+  }
+  return h+'</div>';
+}
+function renderPricing(){
+  var html='';
+  for(var i=0;i<PLANS.length;i++){
+    var pl=PLANS[i], pop=!!pl.popular, elite=pl.id==='elite';
+    var tier=elite?ELITE_TIERS[eliteSlider]:null;
+    var price=tier?(isAnnual?tier.annual:tier.price):(isAnnual?pl.annual:pl.price);
+    var strike=pl.strike?(isAnnual?pl.annualStrike:pl.strike):'';
+    var note=isAnnual?'facturé annuellement · 3 mois offerts':pl.note;
+    var checkoutId=tier?tier.checkoutId:pl.id;
+    var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
+    var borderColor=pop?'var(--accent)':(elite?'rgba(154,124,255,.35)':'var(--border)');
+    var bg=pop?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.10),var(--surface))':(elite?'radial-gradient(500px 220px at 50% 0,rgba(154,124,255,.08),var(--surface))':'var(--surface)');
+    var shadow=pop?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none';
+    var badge=pop?'<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:11px;font-weight:800;padding:5px 15px;border-radius:999px;white-space:nowrap">⚡ LE PLUS POPULAIRE</div>':'';
+    // CTA
+    var ctaLabel='Choisir &nbsp;'+(elite?'Elite':pl.name)+' →';
+    var ctaCls=pop?'btn btn-primary':'btn btn-ghost';
+    var ctaStyle='width:100%;display:flex;justify-content:center;text-decoration:none;font-weight:800;';
+    if(elite){ ctaCls='btn'; ctaStyle+='background:var(--violet);color:#140F2A;box-shadow:0 12px 30px -12px rgba(154,124,255,.6);'; }
+    // Liste features
+    var feats='<div class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--text-3);margin:22px 0 12px">'+pl.listHead+'</div><div class="col" style="gap:11px">';
+    for(var k=0;k<pl.feats.length;k++){
+      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;font-size:14px;line-height:1.4">'+pl.feats[k][0]+'</span><span style="line-height:1.45">'+pl.feats[k][1]+'</span></div>';
+    }
+    feats+='</div>';
+    html+='<div class="card" style="padding:26px 24px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+'">'
+      +badge
+      +'<div class="mono" style="font-size:13px;letter-spacing:.16em;font-weight:600;color:'+pl.accent+'">'+pl.name+'</div>'
+      +'<p class="muted" style="margin-top:9px;font-size:14.5px;line-height:1.45;min-height:42px">'+pl.tagline+'</p>'
+      +_quotaBox(pl,tier)
+      +'<div class="row" style="align-items:baseline;gap:5px;flex-wrap:wrap">'
+      +(strike?'<span class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px">'+strike+'€</span>':'')
+      +'<span'+(elite?' id="lpElitePrice"':'')+' class="display" style="font-size:42px;font-weight:800">'+price+'€</span>'
+      +'<span class="faint" style="font-size:15px">/mois</span></div>'
+      +'<div'+(elite?' id="lpEliteNote"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+(isAnnual?'var(--green)':'var(--text-3)')+'">'+note+'</div>'
+      +'<a'+(elite?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onmouseenter="_whopPrewarm(this.href)" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+ctaCls+'" style="'+ctaStyle+'margin-top:18px">'+ctaLabel+'</a>'
+      +feats
+      +'</div>';
+  }
+  document.getElementById('pricing-grid').innerHTML=html;
+}
 function setEliteSlider(idx){
   eliteSlider=idx;
   var tier=ELITE_TIERS[idx]; if(!tier) return;
@@ -221,76 +267,8 @@ function setEliteSlider(idx){
   var img=document.getElementById('lpEliteImg'); if(img) img.textContent=tier.images;
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
-  var price=document.getElementById('lpElitePrice'); if(price) price.textContent=isAnnual?tier.annual:tier.price;
-  var al=document.getElementById('lpEliteAnnualLabel'); if(al) al.textContent=isAnnual?('Économise '+tier.annualPct+'% · facturé annuellement'):'Facturé mensuellement';
-  var sv=document.getElementById('lpEliteSave'); if(sv) sv.innerHTML=isAnnual?'🎁 Économisez <span style="font-size:14px">€'+tier.savings+'</span> par rapport au mensuel':'';
+  var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
   var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=(CHECKOUT[tier.checkoutId]&&CHECKOUT[tier.checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/'; }
-}
-const plans=[
-  {id:"starter",name:"STARTER",tagline:"Pour commencer à créer du contenu vidéo IA sans se ruiner.",price:"29,99",annual:"20,83",savings:"110",accent:"var(--text)",popular:false,chips:["5 avatar/mois","10 vidéos/mois","20s/avatar"],foot:"Idéal pour tester et lancer ses premières vidéos",feats:["Clip max 40s · sans watermark · export vertical","Script IA GPT-4o optimisé","Voix clonée ElevenLabs","5 Avatar IA/mois · lipsync HD · sous-titres animés","Enregistreur vocal + suppression silences","Split-screen · gameplay · sync voix/texte","10 images IA/mois · DALL·E 3 4K"]},
-  {id:"pro",name:"PRO",tagline:"Pour les créateurs qui veulent scaler sérieusement.",price:"49,99",annual:"37,50",strike:"64,99",annualStrike:"48,75",savings:"150",accent:"var(--accent)",popular:true,chips:["15 avatar/mois","30 vidéos/mois","30s/avatar"],foot:"Le plus choisi · 3× plus de vidéos avatar que Starter",feats:["Tout Starter + clip max 70s · export 1080p","Whisper IA · synchronisation voix/texte pro","Suppression silences avancée","15 Avatar IA/mois · lipsync HD · effets avancés","Sous-titres styles cinématiques (karaoke, bounce…)","Split-screen · effets visuels · export multi-format","20 images IA/mois · DALL·E 3 4K"]},
-  {id:"elite",name:"ELITE ✦",tagline:"Le maximum pour les créateurs les plus ambitieux.",price:"89,99",annual:"66,67",savings:"280",accent:"var(--violet)",popular:false,chips:["30 avatar/mois","60 vidéos/mois","35s/avatar"],foot:"Le meilleur rapport qualité/prix du marché",feats:["Tout Pro + clip max 120s · export 4K","Meilleur lipsync du marché · rendu 1080p","Bibliothèque illimitée · export illimité","30 Avatar IA/mois · modèle avatar exclusif Élite","Support prioritaire direct + early access","50 images IA/mois · DALL·E 3 4K"]},
-];
-const CHECK='<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="var(--accent-2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>';
-function renderPricing(){
-  var html='';
-  for(var i=0;i<plans.length;i++){
-    var pl=plans[i];
-    var price=isAnnual?pl.annual:pl.price;
-    var chipBg=pl.id==='elite'?'rgba(154,124,255,.1)':pl.id==='pro'?'var(--accent-soft)':'var(--surface-2)';
-    var chipBorder=pl.id==='elite'?'rgba(154,124,255,.35)':pl.id==='pro'?'var(--accent-line)':'var(--border-2)';
-    var borderColor=pl.popular?'var(--accent)':pl.id==='elite'?'rgba(154,124,255,.3)':'var(--border)';
-    var bg=pl.popular?'radial-gradient(500px 220px at 50% 0,rgba(255,90,31,.12),var(--surface))':'var(--surface)';
-    var shadow=pl.popular?'0 0 0 3px var(--accent-soft),0 40px 70px -34px var(--accent-glow)':'none';
-    var transform=pl.popular?'translateY(-10px)':'none';
-    var badge=pl.popular?'<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:11px;font-weight:800;padding:5px 15px;border-radius:999px;white-space:nowrap">⚡ LE PLUS POPULAIRE</div>':'';
-    var btnCls=pl.popular?'btn btn-primary':'btn';
-    var btnStyle='width:100%;margin-bottom:22px;display:flex;justify-content:center;text-decoration:none;';
-    if(!pl.popular){
-      var btnBg=pl.id==='elite'?'rgba(154,124,255,.14)':'var(--surface-2)';
-      var btnBorder=pl.id==='elite'?'rgba(154,124,255,.35)':'var(--border-2)';
-      var btnColor=pl.id==='elite'?'var(--violet)':'var(--text)';
-      btnStyle+='background:'+btnBg+';border:1px solid '+btnBorder+';color:'+btnColor+';font-weight:700';
-    }
-    var chips='';
-    for(var j=0;j<pl.chips.length;j++){
-      var c=pl.chips[j];
-      chips+='<span class="pill mono" style="font-size:11px;padding:5px 10px;color:'+(j===0?pl.accent:'var(--text-2)')+';border-color:'+(j===0?chipBorder:'var(--border)')+';background:'+(j===0?chipBg:'var(--surface)')+'">'+c+'</span>';
-    }
-    var feats='';
-    for(var k=0;k<pl.feats.length;k++){
-      feats+='<div class="row" style="gap:10px;font-size:13.5px;align-items:flex-start"><span style="width:18px;height:18px;border-radius:50%;flex:0 0 auto;margin-top:1px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center">'+CHECK+'</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
-    }
-    var tier=pl.id==='elite'?ELITE_TIERS[eliteSlider]:null;
-    var displayPrice=tier?(isAnnual?tier.annual:tier.price):price;
-    var displayStrike=pl.strike?(isAnnual?pl.annualStrike:pl.strike):'';
-    var displaySavings=tier?tier.savings:pl.savings;
-    var displayPct=tier?tier.annualPct:25;
-    var checkoutId=tier?tier.checkoutId:pl.id;
-    var annualColor=isAnnual?'var(--green)':'var(--text-3)';
-    var annualLabel=isAnnual?('Économise '+displayPct+'% · facturé annuellement'):'Facturé mensuellement';
-    var savingsLine='<div id="'+(pl.id==='elite'?'lpEliteSave':'save-'+pl.id)+'" style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">'+(isAnnual?'🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel':'')+'</div>';
-    var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
-    var sliderHtml='';
-    if(pl.id==='elite'&&tier){
-      var pct=eliteSlider/(ELITE_TIERS.length-1)*100;
-      var marks='';
-      for(var t=0;t<ELITE_TIERS.length;t++){
-        var act=t===eliteSlider;
-        marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
-      }
-      sliderHtml=''
-        +'<div style="padding:16px 18px;background:rgba(154,124,255,.06);border:1px solid rgba(154,124,255,.3);border-radius:14px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:10.5px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)">Avatars IA / mois</span><span id="lpEliteAv" style="font-size:26px;font-weight:800;color:var(--violet);line-height:1">'+tier.avatars+'</span></div>'
-        +'<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+eliteSlider+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
-        +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>'
-        +'<div style="border-top:1px solid rgba(154,124,255,.18);margin-top:10px;padding-top:10px;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text-3);font-family:var(--mono)"><span><b id="lpEliteVid" style="color:var(--text-2)">'+tier.videos+'</b> vidéos</span><span><b id="lpEliteImg" style="color:var(--text-2)">'+tier.images+'</b> images</span><span>35s/avatar</span></div>'
-        +'</div>';
-      chips='';
-    }
-    html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onmouseenter="_whopPrewarm(this.href)" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
-  }
-  document.getElementById('pricing-grid').innerHTML=html;
 }
 renderPricing();
 function toggleAnnual(){
@@ -301,13 +279,6 @@ function toggleAnnual(){
   document.getElementById('label-monthly').style.cssText=`font-weight:${isAnnual?500:700};color:${isAnnual?'var(--text-2)':'var(--text)'}`;
   document.getElementById('label-annual').style.cssText=`font-weight:${isAnnual?700:500};color:${isAnnual?'var(--text)':'var(--text-2)'}`;
   renderPricing();
-}
-
-/* ══════════ Parrainage ══════════ */
-function updateAff(n){
-  document.getElementById('aff-n').textContent=n;
-  document.getElementById('aff-rev').textContent=Math.round(n*38*0.30).toLocaleString('fr-FR');
-  document.getElementById('aff-range').style.background=`linear-gradient(90deg,var(--accent) ${n/500*100}%,var(--surface-3) ${n/500*100}%)`;
 }
 
 /* ══════════ Checkout Whop INTÉGRÉ (embed) — inchangé ══════════ */
