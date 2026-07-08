@@ -16,6 +16,7 @@
 <link rel="shortcut icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
@@ -23,8 +24,7 @@
 <link rel="dns-prefetch" href="https://whop.com">
 <script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{overflow-x:hidden;max-width:100vw}
+/* ══════════ DESIGN SYSTEM (handoff Claude Design — 1:1) ══════════ */
 :root{
   --bg:#0B0B0D;--bg-grad:#0E0D10;
   --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
@@ -35,255 +35,305 @@ html{overflow-x:hidden;max-width:100vw}
   --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
   --accent-glow:color-mix(in srgb,var(--accent) 48%,transparent);
   --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;
-  --r:14px;--r-sm:10px;--r-lg:20px;
+  --r-sm:10px;--r:14px;--r-lg:20px;--r-xl:28px;
+  --maxw:1320px;
   --font:'Hanken Grotesk',system-ui,sans-serif;
   --display:'Bricolage Grotesque',sans-serif;
   --mono:'JetBrains Mono',monospace;
-  --maxw:1320px;
+  font-synthesis:none;
 }
-html{scroll-behavior:smooth}
-body{background:radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden}
-a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-::selection{background:var(--accent);color:#0B0B0D}
-::-webkit-scrollbar{width:8px}
-::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:20px;border:2px solid transparent;background-clip:padding-box}
-.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
-.row{display:flex;align-items:center}
-.col{display:flex;flex-direction:column}
-.center{text-align:center}
-.grow{flex:1}
-.muted{color:var(--text-2)}
-.faint{color:var(--text-3)}
-.accent{color:var(--accent)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden;max-width:100vw;scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),
+    radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),
+    var(--bg);
+  color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden;
+}
 .mono{font-family:var(--mono)}
 .display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s,box-shadow .2s,background .2s;white-space:nowrap;font-family:var(--font)}
+::selection{background:var(--accent);color:#0B0B0D}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:20px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap}
 .btn:active{transform:translateY(1px) scale(.99)}
 .btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow)}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
 .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 .btn-ghost:hover{background:var(--surface-2);border-color:var(--border-2)}
 .btn-quiet{background:transparent;color:var(--text-2)}
 .btn-quiet:hover{color:var(--text)}
 .btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
 .btn-lg{padding:16px 26px;font-size:16.5px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
-.glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+/* chips & pills */
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
-.divider{height:1px;background:var(--border)}
-.seg{display:inline-flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px}
-.seg button{padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-3);transition:.18s;white-space:nowrap;font-family:var(--font)}
-.seg.accent-seg button.on{background:var(--accent);color:#1A0A02}
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+/* layout helpers */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap24{gap:24px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;color:#fff;flex:0 0 auto}
+.logo-wordmark{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.02em}
 .logo-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border-2);flex:0 0 auto}
+/* animations */
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}
+@keyframes lipTalk{0%,100%{height:6px}50%{height:14px}}
+@keyframes ctaPulse{0%,100%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 14px 36px -10px var(--accent-glow),0 0 0 0 var(--accent-glow)}50%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 44px -8px var(--accent-glow),0 0 0 10px rgba(255,90,31,0)}}
+.cta-hero{font-size:18px;font-weight:800;padding:18px 32px;border-radius:16px;letter-spacing:.005em;animation:ctaPulse 2.6s ease-in-out infinite}
+.cta-hero:hover{transform:translateY(-2px) scale(1.015)}
 .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
-nav{position:sticky;top:0;z-index:50}
-.nav-inner{border-bottom:1px solid var(--border);backdrop-filter:blur(12px);background:linear-gradient(180deg,rgba(11,11,13,.9),rgba(11,11,13,.7))}
-.nav-link{font-size:14.5px;font-weight:500;color:var(--text-2);cursor:pointer;transition:.2s;background:none;border:none;padding:0;font-family:var(--font)}
-.nav-link:hover{color:var(--text)}
-.faq-item{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:border-color .2s}
-.faq-item.open{border-color:var(--accent-line)}
-.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;padding:20px 22px;text-align:left;gap:16px;background:none;border:none;cursor:pointer;font-family:var(--font);color:var(--text)}
-.faq-a{display:none;padding:0 22px 22px;font-size:14.5px;line-height:1.6;color:var(--text-2);max-width:720px}
-.faq-item.open .faq-a{display:block}
-.faq-icon{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2);transition:.2s;flex:0 0 auto}
-.faq-item.open .faq-icon{background:var(--accent);color:#1A0A02;transform:rotate(45deg)}
-.showcase-frame{position:relative;width:100%;height:100%;border-radius:26px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
-.showcase-frame video,.showcase-frame img{width:100%;height:100%;object-fit:cover;display:block}
-.showcase-overlay{position:absolute;left:0;right:0;bottom:46px;padding:0 16px;text-align:center}
-.showcase-caption{display:inline-block;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);border-radius:8px;padding:5px 9px;font-weight:800;font-size:13px;line-height:1.15;font-family:var(--display)}
-.showcase-likes{position:absolute;right:10px;bottom:60px;display:flex;flex-direction:column;gap:14px;align-items:center;color:#fff}
-.showcase-bar{position:absolute;left:14px;right:14px;bottom:18px;height:3px;border-radius:3px;background:rgba(255,255,255,.18)}
-.showcase-bar-fill{width:42%;height:100%;border-radius:3px;background:#fff}
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal-2{transition-delay:.09s}
+.reveal-3{transition-delay:.18s}
+.reveal-4{transition-delay:.27s}
+@media (prefers-reduced-motion:reduce){
+  .rise{animation:none}
+  .cta-hero{animation:none}
+  .reveal{opacity:1 !important;transform:none !important;transition:none}
+}
+.seg{display:inline-flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px}
+.seg button{padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-3);transition:.18s;white-space:nowrap}
+.seg button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.divider{height:1px;background:var(--border)}
 .ph{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 10px,rgba(255,255,255,0) 10px 20px),var(--panel-1);border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.05em;border-radius:var(--r)}
 input[type=range]{width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
-.hero2-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
-@media(max-width:900px){.hero2-grid{grid-template-columns:1fr;gap:20px}.hero2-show{height:420px!important;margin-top:10px}}
-@media(max-width:640px){
-  /* Mobile UNIQUEMENT (style remakeit) — desktop inchangé. Hero resserré pour voir les 3 tél. dès l'arrivée */
-  .hero-sec{padding-top:12px!important;padding-bottom:6px!important}
-  .hero2-grid{gap:0!important}
-  .hero-left{display:flex!important;flex-direction:column;align-items:center;text-align:center}
-  .hero-left h1{font-size:27px!important;margin-top:12px!important;line-height:1.08!important}
-  .hero-left p{margin-top:11px!important;font-size:14.5px!important}
-  .hero-left form{max-width:100%!important;margin-top:15px!important;padding:6px 7px 6px 9px!important}
-  .hero-left form>div:first-child{width:36px!important;height:36px!important;flex:0 0 auto}
-  .hero-left #lpPrompt{font-size:15px!important;padding:0 9px!important}
-  .hero-left form button[type=submit]{padding:10px 15px!important;font-size:14px!important}
-  .hero-left .row{justify-content:center!important;margin-top:12px!important;gap:14px!important}
-  /* Les 3 téléphones visibles, réduits pour tenir dans l'écran (animation .rise coupée sinon elle force transform:none) */
-  .hero2-show{height:430px!important;margin-top:0!important;margin-bottom:8px!important;animation:none!important;transform:scale(.56)!important;transform-origin:top center}
-}
-.aa-iphone{position:absolute;border-radius:38px;background:linear-gradient(135deg,#3a3a42,#0d0d11);padding:4px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 30px 60px -26px rgba(0,0,0,.85)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
+.elite-range{height:6px;border-radius:6px}
+input[type=range].elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
+/* nav */
+.nav-link{font-size:14.5px;font-weight:500;color:var(--text-2);cursor:pointer;transition:.2s;background:none;border:none;padding:0}
+.nav-link:hover{color:var(--text)}
+/* iPhone frame (titane sombre + Dynamic Island) */
+.aa-iphone{position:absolute;border-radius:38px;background:linear-gradient(135deg,#26242c,#3a3843,#201e26 60%,#2c2a33);padding:4px;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 30px 60px -28px rgba(0,0,0,.8)}
 .aa-iphone .scr{position:absolute;inset:4px;border-radius:34px;overflow:hidden;background:#0c0a0e}
 .aa-iphone .scr img{width:100%;height:100%;object-fit:cover;display:block}
-.aa-iphone .di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:58px;height:17px;border-radius:11px;background:#000;z-index:6}
+.aa-iphone .di{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:58px;height:17px;border-radius:11px;background:#000;z-index:6;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.aa-iphone .refl{position:absolute;inset:4px;border-radius:34px;pointer-events:none;z-index:5;background:linear-gradient(125deg,rgba(255,255,255,.16),transparent 26%,transparent 82%,rgba(255,255,255,.08))}
 .aa-iphone .btns-l{position:absolute;left:-2px;top:20%;display:flex;flex-direction:column;gap:9px;z-index:2}
 .aa-iphone .btns-l i{display:block;width:3px;border-radius:3px 0 0 3px;background:linear-gradient(90deg,#15151a,#4c4c58);box-shadow:-1px 0 1px rgba(0,0,0,.5)}
 .aa-iphone .btns-l .b1{height:13px}
 .aa-iphone .btns-l .b2{height:30px;margin-top:5px}
 .aa-iphone .btns-l .b3{height:30px}
 .aa-iphone .btns-r{position:absolute;right:-2px;top:27%;width:3px;height:48px;border-radius:0 3px 3px 0;background:linear-gradient(270deg,#15151a,#4c4c58);box-shadow:1px 0 1px rgba(0,0,0,.5);z-index:2}
-.sc-dot{width:7px;height:7px;border-radius:50%;background:var(--border-2);transition:all .25s;flex-shrink:0}
-.sc-dot.on{background:var(--accent);width:20px;border-radius:4px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px var(--accent-glow)}
-.elite-range{height:6px;border-radius:6px}
-input[type=range].elite-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
-input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
-@media(max-width:900px){
-  .wrap{padding:0 20px}
-  .hide-mobile{display:none!important}
-  .hero2-grid,.hero2-grid>*{min-width:0!important}
-  .hero2-grid form{max-width:100%!important}
-  .grid-3{grid-template-columns:1fr!important}
-  .grid-5{grid-template-columns:1fr 1fr!important}
-  .grid-5>div:last-child{grid-column:1/-1!important;border-left:none!important;border-top:1px solid var(--border)!important}
-  #tarifs{padding-top:40px!important}
-  /* Showcase carousel */
-  .showcase-row{
-    display:flex!important;
-    flex-direction:row!important;
-    overflow-x:scroll!important;
-    overflow-y:hidden!important;
-    scroll-snap-type:x mandatory!important;
-    -webkit-overflow-scrolling:touch!important;
-    height:auto!important;
-    margin-top:24px!important;
-    gap:16px!important;
-    padding:0 24px 12px!important;
-    align-items:center!important;
-    perspective:none!important;
-    scrollbar-width:none!important;
-  }
-  .showcase-row::-webkit-scrollbar{display:none!important}
-  .showcase-side{
-    display:flex!important;
-    width:180px!important;
-    height:360px!important;
-    flex:0 0 180px!important;
-    transform:none!important;
-    scroll-snap-align:center!important;
-  }
-  .showcase-center{
-    width:200px!important;
-    height:400px!important;
-    flex:0 0 200px!important;
-    scroll-snap-align:center!important;
-  }
+/* rail TikTok sur téléphones */
+.ph-rail{position:absolute;right:9px;bottom:16px;display:flex;flex-direction:column;gap:13px;align-items:center;color:#fff;z-index:3}
+.ph-rail .it{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ph-rail .it span{font-family:var(--mono);font-size:8px;opacity:.9}
+/* showcase media tilt */
+.sc-media{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;border:1px solid rgba(255,255,255,.1);transform:perspective(1600px) rotateY(-7deg) rotateX(2deg);transform-style:preserve-3d;box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 70px -24px var(--accent-glow)}
+.sc-media.flip{transform:perspective(1600px) rotateY(7deg) rotateX(2deg)}
+.sc-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.sc-play{position:absolute;inset:0;display:grid;place-items:center;z-index:2;pointer-events:none}
+.sc-play>div{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+/* features tabs */
+.feat-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.feat-tabs::-webkit-scrollbar{display:none}
+.feat-tabs button{padding:11px 20px;border-radius:10px;font-size:14.5px;font-weight:600;white-space:nowrap;transition:.18s;color:var(--text-3)}
+.feat-tabs button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
+.feat-mock.on{display:grid}
+.feat-img{position:relative;width:100%;max-width:460px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
+.feat-img img{display:block;width:100%;height:100%;object-fit:cover}
+/* testimonials */
+.tst-grid{column-count:3;column-gap:18px}
+.tst-card{padding:26px;margin-bottom:18px;break-inside:avoid;display:flex;flex-direction:column}
+.tst-fade{position:absolute;left:0;right:0;bottom:0;height:230px;pointer-events:none;background:linear-gradient(180deg,transparent,var(--bg) 82%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
+#tstWrap:not(.open) .tst-more{display:none}
+#tstWrap.open .tst-fade{display:none}
+/* FAQ */
+.faq-item{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:border-color .2s;background:var(--surface)}
+.faq-item.open{border-color:var(--accent-line)}
+.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;padding:20px 22px;text-align:left;gap:16px;background:none;border:none;cursor:pointer;color:var(--text)}
+.faq-a{display:none;padding:0 22px 22px;font-size:14.5px;line-height:1.6;color:var(--text-2);max-width:720px}
+.faq-item.open .faq-a{display:block}
+.faq-icon{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2);transition:.2s;flex:0 0 auto}
+.faq-item.open .faq-icon{background:var(--accent);color:#1A0A02;transform:rotate(45deg)}
+/* hero grid */
+.hero2-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center}
+/* card-stack (Comment ça marche) */
+#stackSec{height:470vh;position:relative}
+#stackSticky{position:sticky;top:0;height:100vh;display:flex;align-items:center;overflow:hidden}
+.stack-card{position:absolute;inset:0;border-radius:26px;transition:opacity .2s}
+.step-visual{position:relative;width:100%;aspect-ratio:1/1;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.45)}
+.step-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.step-badge{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px}
+/* responsive */
+.only-mobile{display:none}
+@media (max-width:1060px){ .nav-center{display:none !important} }
+@media (max-width:1700px){ .nav-tarifs-btn{display:none !important} }
+@media (max-width:900px){
+  .grid-3{grid-template-columns:1fr !important}
+}
+@media (max-width:760px){
+  .wrap{padding:0 18px}
+  .only-mobile{display:flex}
+  .hide-mobile{display:none !important}
+  .hero2-grid{grid-template-columns:1fr;gap:0}
+  .hero-sec{padding-top:16px !important;padding-bottom:6px !important}
+  .hero-left{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .hero-left h1{font-size:38px !important;margin-top:18px !important;line-height:1.02 !important}
+  .hero-left p{margin-top:16px !important;font-size:15.5px !important}
+  .hero-left form{max-width:100% !important;margin-top:22px !important;padding:6px 7px 6px 9px !important}
+  .hero-left form>div:first-child{width:38px !important;height:38px !important}
+  .hero-left #lpPrompt{font-size:14.5px !important;padding:0 10px !important}
+  .hero-left form button[type=submit]{padding:11px 16px !important;font-size:14px !important}
+  .hero-left .trust-row{flex-direction:column;justify-content:center !important;margin-top:20px !important;gap:10px !important}
+  .hero2-show{height:430px !important;margin-top:14px !important;margin-bottom:8px !important;animation:none !important;transform:scale(.62) !important;transform-origin:top center}
+  .sc-grid{grid-template-columns:1fr !important;gap:24px !important}
+  .sc-grid .sc-text{order:2}
+  .sc-grid .sc-mediawrap{order:1}
+  .feat-card-grid{grid-template-columns:1fr !important}
+  .feat-mockwrap{min-height:260px !important;border-right:none !important;border-bottom:1px solid var(--border)}
+  .tst-grid{column-count:auto;display:flex;flex-direction:column;gap:14px}
+  .tst-card{margin-bottom:0}
+  #tstWrap:not(.open) .tst-mid{display:none}
+  .tst-fade{height:190px;padding-bottom:6px}
+  .mob-scroll{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -18px;padding:0 18px 14px}
+  .mob-scroll::-webkit-scrollbar{display:none}
 }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
+<!-- ══════════ 1 · STICKY CTA (apparaît au scroll) ══════════ -->
+<div id="stickyCta" style="position:fixed;left:0;right:0;top:0;z-index:55;transform:translateY(-110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);pointer-events:none">
+  <div class="glass" style="border-bottom:1px solid var(--border);background:rgba(14,13,16,.9)">
+    <div class="wrap row" style="height:60px;justify-content:space-between;gap:12px">
+      <div class="row gap10" style="min-width:0">
+        <img src="assets/avatarads-logo.png" alt="" width="19" height="19" style="border-radius:5px;display:block">
+        <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
+      </div>
+      <a href="/app/" class="btn btn-primary btn-sm" style="white-space:nowrap">Commencer <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 2 · NAV ══════════ -->
+<div style="position:sticky;top:0;z-index:50">
+  <div class="glass" style="border-bottom:1px solid var(--border)">
     <div class="wrap row" style="height:72px;justify-content:space-between">
-      <div class="row" style="gap:12px">
-        <div style="width:34px;height:34px;background:#0a0a0a;border-radius:10px;display:grid;place-items:center;border:1px solid var(--border-2);flex-shrink:0">
-          <svg viewBox="0 0 36 36" width="22" height="22" fill="none"><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg>
-        </div>
+      <div class="row gap12">
+        <div class="brandmark"><img src="assets/avatarads-logo.png" alt="AvatarAds" width="22" height="22" style="border-radius:6px;display:block"></div>
         <div class="col" style="line-height:1">
-          <span style="font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.02em">AvatarAds</span>
-          <span class="mono faint" style="font-size:9px;letter-spacing:.1em;margin-top:2px">BY IA MANAGER</span>
+          <span class="logo-wordmark">AvatarAds</span>
+          <span class="mono faint" style="font-size:9.5px;letter-spacing:.1em;margin-top:3px">BY IA MANAGER</span>
         </div>
       </div>
-      <div class="row hide-mobile" style="gap:28px;position:absolute;left:50%;transform:translateX(-50%)">
-        <button class="nav-link" onclick="document.getElementById('apropos').scrollIntoView({behavior:'smooth'})">Comment ça marche</button>
-        <button class="nav-link" onclick="document.getElementById('tarifs').scrollIntoView({behavior:'smooth'})">Tarifs</button>
+      <div class="row gap24 nav-center" style="position:absolute;left:50%;transform:translateX(-50%)">
+        <button class="nav-link" onclick="document.getElementById('etapes').scrollIntoView({behavior:'smooth'})">Comment ça marche</button>
+        <button class="nav-link" onclick="document.getElementById('tarifs').scrollIntoView({behavior:'smooth'})">Découvrir les tarifs</button>
         <button class="nav-link" onclick="document.getElementById('affiliation').scrollIntoView({behavior:'smooth'})">Parrainage</button>
         <button class="nav-link" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</button>
       </div>
-      <div class="row" style="gap:12px">
+      <div class="row gap12">
+        <button class="btn btn-quiet btn-sm hide-mobile nav-tarifs-btn" onclick="document.getElementById('tarifs').scrollIntoView({behavior:'smooth'})">Découvrir les tarifs</button>
         <a href="/app/" class="btn btn-quiet btn-sm hide-mobile">Se connecter</a>
-        <a href="/app/" class="btn btn-primary btn-sm">Commencer <span class="hide-mobile">gratuitement</span> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2.5 7h9M8 3.5l3.5 3.5L8 10.5"/></svg></a>
+        <a href="/app/" class="btn btn-primary btn-sm">Commencer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
     </div>
   </div>
-</nav>
+</div>
 
-<!-- HERO -->
-<!-- HERO V2 -->
+<!-- ══════════ 3 · HERO V2 ══════════ -->
 <section class="wrap hero-sec" style="padding-top:64px;padding-bottom:30px">
   <div class="hero2-grid">
-    <!-- LEFT (desktop = original ; mobile = centré via CSS) -->
     <div class="hero-left">
       <div class="rise" style="display:inline-flex">
         <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · +10K UTILISATEURS ACTIFS</span></div>
       </div>
-      <h1 class="display rise" style="font-size:clamp(31px,5.6vw,88px);font-weight:800;margin-top:22px;line-height:1.02;overflow-wrap:break-word">
-        Obtiens <span class="accent">plus de vues</span> <br class="hide-mobile">sans montrer ton visage
+      <h1 class="display rise" style="font-size:clamp(40px,5.6vw,88px);font-weight:800;margin-top:22px;line-height:.98;overflow-wrap:break-word">
+        Obtiens <span class="accent">plus de vues</span><br class="hide-mobile">
+        sans montrer ton visage
       </h1>
       <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
         Crée des vidéos faceless virales. Plus de contenu · plus de clients.<br>
         <b style="color:var(--text)">Avatar IA · Voix clonée · Sous-titres.</b>
       </p>
 
-      <!-- Prompt bar (funnel → connexion) -->
-      <form class="rise" onsubmit="lpGenerate(event)" style="margin-top:30px;display:flex;gap:0;align-items:center;max-width:600px;width:100%;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:9px 9px 9px 12px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
-        <div style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>
+      <!-- PromptBar (funnel → connexion) -->
+      <form class="rise" onsubmit="lpGenerate(event)" style="margin-top:30px;display:flex;gap:0;align-items:center;max-width:600px;width:100%;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
+        <div style="width:38px;height:38px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         </div>
-        <input id="lpPrompt" placeholder="Décris ta vidéo…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:18px;font-weight:500;padding:0 16px">
-        <button type="submit" class="btn btn-primary" style="flex:0 0 auto;padding:15px 30px;font-size:17px;font-weight:800;border-radius:999px">Générer <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></button>
+        <input id="lpPrompt" placeholder="Décris la vidéo que tu veux créer…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:14.5px;font-weight:500;padding:0 12px">
+        <button type="submit" class="btn btn-primary" style="flex:0 0 auto;padding:13px 26px;font-size:16px;font-weight:800;border-radius:999px">Générer <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
       </form>
 
-      <div class="row rise" style="gap:24px;margin-top:24px;flex-wrap:wrap">
+      <div class="row rise trust-row" style="gap:24px;margin-top:24px;flex-wrap:wrap">
         <div class="pill" style="padding:8px 14px">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="var(--amber)"><path d="M7 1l1.55 3.14L12 4.84l-2.5 2.43.59 3.43L7 9.1l-3.09 1.6.59-3.43L2 4.84l3.45-.7z"/></svg>
-          <b style="color:var(--text)">+40K</b><span class="faint">utilisateurs satisfaits</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
+          <b style="color:var(--text)" data-countup="+40K">+40K</b><span class="faint">utilisateurs satisfaits</span>
         </div>
-        <div class="row faint" style="gap:8px;font-size:13.5px"><b style="color:var(--text)">+2 milliards</b> de vues générées</div>
+        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span> milliards</b> de vues générées</div>
       </div>
     </div>
 
-    <!-- RIGHT — showcase iPhone -->
+    <!-- HeroShowcase — 3 iPhones -->
     <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
-      <!-- halo orange (voyant) derrière le téléphone central -->
       <div style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
-      <div style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,80,.42) 0%,rgba(255,107,53,.12) 50%,transparent 75%);filter:blur(6px);z-index:2;pointer-events:none"></div>
-
-      <!-- sparkles (discrètes, dans la zone noire — hors téléphones) -->
+      <!-- sparkles -->
       <div style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:4">
-        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:48%;top:2%;opacity:.6;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:7%;top:9%;opacity:.4;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:94%;top:7%;opacity:.45;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="8" height="8" style="position:absolute;left:18%;top:88%;opacity:.35;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:90%;top:90%;opacity:.4;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 2c1 11 8.5 19.5 22 22-13.5 2.5-21 11-22 22-1-11-8.5-19.5-22-22C15.5 21.5 23 13 24 2z" fill="#ffd9c2"/></svg>
+        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:48%;top:2%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:7%;top:9%;opacity:.5;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:94%;top:7%;opacity:.55;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
+        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:18%;top:88%;opacity:.4;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:90%;top:90%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
       </div>
 
       <!-- phone gauche : bactérie -->
-      <div class="aa-iphone hero-side" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
-        <div class="di"></div>
+      <div class="aa-iphone" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
+        <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds"></div>
+        <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds" loading="lazy"></div>
       </div>
 
-      <!-- phone droite : fraise -->
-      <div class="aa-iphone hero-side" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
-        <div class="di"></div>
+      <!-- phone droite : fraise + badges -->
+      <div class="aa-iphone" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
+        <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-strawberry.png" alt="Cartoon fraise virale AvatarAds"></div>
+        <div class="scr"><img src="assets/hero-strawberry.png" alt="Cartoon fraise virale AvatarAds" loading="lazy"></div>
         <div class="card glass" style="position:absolute;top:52px;left:12px;z-index:5;padding:5px 9px;border-radius:10px">
-          <span class="row gap6" style="font-size:11.5px;font-weight:700"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M8 5v14l11-7z"/></svg>7,2M vues</span>
+          <span class="row gap6" style="font-size:11.5px;font-weight:700"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M7 4l13 8-13 8z"/></svg>7,2M vues</span>
         </div>
-        <div class="card glass" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:5;padding:9px 13px;border-radius:14px;white-space:nowrap">
-          <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>
+        <div class="card glass" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
+          <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
             <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
         </div>
       </div>
 
-      <!-- phone centre : placeholder vidéo -->
-      <div class="aa-iphone" style="left:50%;top:18px;transform:translateX(-50%);width:244px;height:496px;border-radius:44px;padding:5px;z-index:3;box-shadow:0 0 0 1px rgba(255,255,255,.18),0 40px 80px -30px rgba(0,0,0,.85),0 0 60px -14px var(--accent-glow)">
-        <div class="di" style="width:74px;height:21px;top:14px"></div>
+      <!-- phone central : avatar humain, incliné 3D -->
+      <div class="aa-iphone" style="left:50%;top:18px;width:244px;height:496px;border-radius:44px;padding:5px;z-index:3;transform:translateX(-50%) perspective(1400px) rotateY(-14deg) rotateX(3deg);box-shadow:0 0 0 1px rgba(255,255,255,.06),-28px 40px 70px -28px rgba(0,0,0,.9),0 0 60px -14px var(--accent-glow)">
+        <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr" style="border-radius:39px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 14px,transparent 14px 28px)">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="M10 9l5 3-5 3z"/></svg>
-          <span class="mono" style="font-size:11px;opacity:.6">vidéo bientôt</span>
+        <div class="scr" style="inset:5px;border-radius:39px">
+          <img src="assets/lp/hero-center.jpg" alt="Avatar IA AvatarAds" fetchpriority="high">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
+          <div class="ph-rail" style="bottom:22px">
+            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
+            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg><span>840</span></div>
+            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg><span>2,1K</span></div>
+          </div>
         </div>
       </div>
 
@@ -295,82 +345,253 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   </div>
 </section>
 
-<!-- FACELESS -->
-<section style="padding-bottom:80px">
-  <div class="wrap center" style="margin-bottom:46px">
-    <div style="display:inline-flex"><div class="pill"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="5" r="2.5"/><path d="M2 13c0-3 2.5-5 5-5s5 2 5 5"/></svg><span style="font-size:12.5px">Contenu Faceless</span></div></div>
-    <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:18px;line-height:1.04">Crée du contenu viral<br><span class="accent">sans montrer ton visage</span></h2>
-    <p class="muted" style="margin-top:16px;font-size:16.5px;max-width:560px;margin-inline:auto">Un avatar IA parle à ta place. Ta voix clonée. Ton produit. Zéro caméra. Zéro gêne.</p>
-  </div>
-  <div class="wrap grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
-    <div class="card center" style="padding:34px 26px"><div style="font-size:34px">🎭</div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:16px">Avatar IA à ta place</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.5">Un visage généré parle à la caméra. Toi, tu restes invisible.</p></div>
-    <div class="card center" style="padding:34px 26px"><div style="font-size:34px">🎙️</div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:16px">Ta voix, clonée par IA</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.5">L'avatar parle avec ta propre voix. Authentique, sans enregistrement vidéo.</p></div>
-    <div class="card center" style="padding:34px 26px"><div style="font-size:34px">📱</div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:16px">Prêt pour TikTok & Reels</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.5">Format 9:16, sous-titres style Hormozi, gameplay intégré. Publie en 1 clic.</p></div>
-  </div>
-  <div style="margin-top:48px;overflow:hidden;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
-    <div id="marquee" style="display:flex;gap:40px;width:max-content;animation:marquee 26s linear infinite"></div>
-  </div>
-</section>
+<!-- ══════════ 4 · SHOWCASES HÉROS (Lipsync · Images IA · Express) ══════════ -->
+<div style="padding-top:20px">
 
-<!-- HOW IT WORKS -->
-<section id="apropos" class="wrap" style="padding-bottom:90px;padding-top:20px">
-  <div style="margin-bottom:44px">
-    <div class="eyebrow">Comment ça marche</div>
-    <h2 class="display" style="font-size:clamp(32px,4.6vw,60px);font-weight:800;margin-top:14px;line-height:1.0">5 étapes. <span class="accent">Une vidéo virale.</span></h2>
-    <p class="muted" style="margin-top:14px;font-size:16.5px">De l'idée à la vidéo publiable en moins de 5 minutes.</p>
-  </div>
-  <div class="card grid-5" style="display:grid;grid-template-columns:repeat(5,1fr);overflow:hidden">
-    <div style="padding:28px 22px"><div class="mono accent" style="font-size:13px;font-weight:600">01</div><div style="font-size:26px;margin-top:16px">📦</div><h3 class="display" style="font-size:18px;font-weight:600;margin-top:14px">Ton produit</h3><p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.5">Décris ton offre en quelques mots. L'IA fait le reste.</p></div>
-    <div style="padding:28px 22px;border-left:1px solid var(--border)"><div class="mono accent" style="font-size:13px;font-weight:600">02</div><div style="font-size:26px;margin-top:16px">🧑</div><h3 class="display" style="font-size:18px;font-weight:600;margin-top:14px">Choisis ton avatar</h3><p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.5">Importe ta photo ou choisis un avatar IA prédéfini.</p></div>
-    <div style="padding:28px 22px;border-left:1px solid var(--border)"><div class="mono accent" style="font-size:13px;font-weight:600">03</div><div style="font-size:26px;margin-top:16px">🎙️</div><h3 class="display" style="font-size:18px;font-weight:600;margin-top:14px">Clone ta voix</h3><p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.5">30 secondes d'audio suffisent. Ou choisis une voix premium.</p></div>
-    <div style="padding:28px 22px;border-left:1px solid var(--border)"><div class="mono accent" style="font-size:13px;font-weight:600">04</div><div style="font-size:26px;margin-top:16px">🎨</div><h3 class="display" style="font-size:18px;font-weight:600;margin-top:14px">Style & format</h3><p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.5">TikTok, Reels, Shorts. Sous-titres animés inclus.</p></div>
-    <div style="padding:28px 22px;border-left:1px solid var(--border)"><div class="mono accent" style="font-size:13px;font-weight:600">05</div><div style="font-size:26px;margin-top:16px">⚡</div><h3 class="display" style="font-size:18px;font-weight:600;margin-top:14px">Génère & publie</h3><p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.5">Télécharge ou publie directement sur tes réseaux.</p></div>
-  </div>
-</section>
+  <!-- Lipsync IA -->
+  <section class="wrap" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div class="sc-media">
+          <img src="assets/lp/lipsync.jpg" alt="Lipsync IA — avatar parlant" loading="lazy">
+          <div class="sc-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
+        </div>
+      </div>
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <span class="pill" style="align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;font-size:12.5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Lipsync IA</span>
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Personne ne voit que c'est une IA</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Un avatar qui parle avec ta voix, en synchro labiale parfaite.</p>
+      </div>
+    </div>
+  </section>
 
-<!-- FEATURES -->
-<section class="wrap" style="padding-bottom:90px">
-  <div style="margin-bottom:44px">
+  <!-- Images IA (flip) — avant/après -->
+  <section class="wrap" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <span class="pill" style="align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;font-size:12.5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Images IA</span>
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Des visuels dignes d'un studio, en 1 prompt</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Qualité 4K, lumière cinéma, détails nets, peau humaine.</p>
+      </div>
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div style="transform:perspective(1600px) rotateY(7deg) rotateX(2deg);transform-style:preserve-3d">
+          <div class="row" style="gap:12px;position:relative;border-radius:20px;filter:drop-shadow(0 30px 60px rgba(0,0,0,.7))">
+            <div style="flex:1;min-width:0"><img src="assets/lp/ia-before.jpg" alt="Avant — image floue" loading="lazy" style="display:block;width:100%;height:300px;object-fit:cover;border-radius:16px"></div>
+            <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+            <div style="flex:1;min-width:0"><img src="assets/lp/ia-after.jpg" alt="Après — version 4K" loading="lazy" style="display:block;width:100%;height:300px;object-fit:cover;border-radius:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Express · Veo 3.1 -->
+  <section class="wrap" style="padding-bottom:88px">
+    <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div class="reveal sc-mediawrap" style="position:relative">
+        <div class="sc-media">
+          <img src="assets/lp/express-veo.jpg" alt="Express — vidéo générée par Veo 3.1" loading="lazy">
+          <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px">✦ Veo 3.1</span>
+          <div class="sc-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
+        </div>
+      </div>
+      <div class="reveal sc-text col" style="gap:16px;justify-content:center">
+        <span class="pill" style="align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;font-size:12.5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express · Veo 3.1</span>
+        <h2 class="display" style="font-size:clamp(28px,3.2vw,40px);font-weight:800;line-height:1.06">Ton idée la plus folle, filmée par l'IA</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Décris une scène impossible, Veo 3.1 la génère en vidéo.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════ 5 · FEATURES (onglets) ══════════ -->
+<section id="features" class="wrap" style="padding-bottom:100px">
+  <div class="center reveal" style="margin-bottom:40px">
     <div class="eyebrow">Fonctionnalités</div>
-    <h2 class="display" style="font-size:clamp(32px,4.6vw,60px);font-weight:800;margin-top:14px;line-height:1.0">Tout ce qu'il faut<br>pour <span class="accent">scaler</span> ton contenu</h2>
-    <p class="muted" style="margin-top:14px;font-size:16.5px">Un outil pensé pour aller vite, sans compromis sur la qualité.</p>
+    <h2 class="display" style="font-size:clamp(28px,4.6vw,56px);font-weight:800;margin-top:14px;line-height:1.02">
+      Tout ce qu'il faut<br>pour <span class="accent">scaler</span> ton contenu
+    </h2>
   </div>
-  <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1l2 4 4.5.65-3.25 3.17.77 4.5L9 11.2l-4.02 2.12.77-4.5L2.5 5.65 7 5z"/></svg></div><span class="pill" style="font-size:11px;padding:4px 10px;color:var(--accent-2);border-color:var(--accent-line);background:var(--accent-soft)">IA Générative</span></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Script optimisé par l'IA</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">Hook, développement, CTA — structuré pour accrocher dans les 3 premières secondes. Calibré TikTok.</p></div>
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="1" width="6" height="9" rx="3"/><path d="M3 9.5A5.5 5.5 0 009 15M9 15a5.5 5.5 0 006-5.5M9 15v2.5M6.5 17.5h5"/></svg></div><span class="pill" style="font-size:11px;padding:4px 10px;color:var(--accent-2);border-color:var(--accent-line);background:var(--accent-soft)">ElevenLabs</span></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Voix clonée en 30 sec</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">ElevenLabs clone ta voix à partir d'un extrait audio. Résultat indiscernable du vrai.</p></div>
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="7" r="4"/><path d="M4 15c0-3 2.5-5 5-5s5 2 5 5"/><path d="M13.5 2.5l1.2 1.2M4.5 2.5l-1.2 1.2"/></svg></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Avatar lipsync ultra-réaliste</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">Ton avatar bouge les lèvres en parfaite synchronisation. Sans toi devant la caméra.</p></div>
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="2"/><path d="M6 4V2M12 4V2"/></svg></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Sous-titres animés</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">Style Hormozi, MrBeast, Minimal ou Karaoke. Les sous-titres qui font exploser l'engagement.</p></div>
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="14" height="14" rx="2"/><path d="M7 7l4 2-4 2V7z"/></svg></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Multi-format natif</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">TikTok 9:16, Reels carré, YouTube Shorts — adapté en un clic pour chaque plateforme.</p></div>
-    <div class="card" style="padding:26px;display:flex;flex-direction:column"><div class="logo-mark"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="7,1 7,8 2,8 11,17 11,10 16,10"/></svg></div><h3 class="display" style="font-size:21px;font-weight:600;margin-top:20px">Outils IA inclus</h3><p class="muted" style="margin-top:10px;font-size:14.5px;line-height:1.55;flex:1">Toute la stack IA est intégrée dans ton abonnement. Zéro configuration, zéro abonnement supplémentaire.</p><div class="pill" style="margin-top:18px;align-self:flex-start;font-size:11.5px;color:var(--green);border-color:rgba(40,199,149,.3);background:rgba(40,199,149,.08)">Valeur +79€/mois · Offert</div></div>
+  <div class="row" style="justify-content:center;margin-bottom:30px">
+    <div class="feat-tabs" id="featTabs"></div>
+  </div>
+  <div class="card feat-card-grid" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
+    <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
+      <!-- split -->
+      <div class="feat-mock" data-feat="split"><div class="feat-img" style="aspect-ratio:1.35/1"><img src="assets/lp/feat-split.jpg" alt="Split-screen" loading="lazy"></div></div>
+      <!-- soustitres -->
+      <div class="feat-mock" data-feat="soustitres"><div class="feat-img" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres.jpg" alt="Sous-titres animés" loading="lazy"></div></div>
+      <!-- voix -->
+      <div class="feat-mock" data-feat="voix">
+        <div class="col" style="align-items:center;gap:20px;width:80%;max-width:380px">
+          <div style="width:66px;height:66px;border-radius:18px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div>
+          <div class="row" style="gap:3px;align-items:center;height:42px" id="voiceBars"></div>
+          <span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:13px">Clonée en 30 s</span>
+        </div>
+      </div>
+      <!-- plateforme -->
+      <div class="feat-mock" data-feat="plateforme"><div class="feat-img" style="aspect-ratio:1/1"><img src="assets/lp/feat-plateforme.jpg" alt="Multi-plateforme" loading="lazy"></div></div>
+      <!-- audio -->
+      <div class="feat-mock" data-feat="audio">
+        <div class="col" style="width:82%;max-width:400px;gap:16px">
+          <div class="row gap8" style="align-items:center">
+            <span class="mono faint" style="font-size:10px;width:44px;text-align:right">avant</span>
+            <div class="row" style="flex:1;gap:3px;align-items:center;height:30px" id="audioBarsBefore"></div>
+          </div>
+          <div class="row gap8" style="align-items:center">
+            <span class="mono accent" style="font-size:10px;width:44px;text-align:right">après</span>
+            <div class="row" style="flex:1;gap:3px;align-items:center;height:30px" id="audioBarsAfter"></div>
+          </div>
+          <span class="pill" style="align-self:center;background:rgba(40,199,149,.12);border-color:rgba(40,199,149,.3);color:var(--green);font-weight:700;font-size:12.5px">✂️ Silences supprimés</span>
+        </div>
+      </div>
+      <!-- editeur -->
+      <div class="feat-mock" data-feat="editeur"><div class="feat-img" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur.jpg" alt="Éditeur vidéo" loading="lazy"></div></div>
+      <!-- library -->
+      <div class="feat-mock" data-feat="library">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:80%;max-width:360px" id="libGrid"></div>
+      </div>
+    </div>
+    <div class="col" style="padding:44px 40px;justify-content:center;gap:16px">
+      <h3 class="display" id="featTitle" style="font-size:30px;font-weight:700;line-height:1.08"></h3>
+      <p class="muted" id="featDesc" style="font-size:16.5px;line-height:1.55"></p>
+    </div>
   </div>
 </section>
 
-<!-- TESTIMONIALS -->
+<!-- ══════════ 6 · TÉMOIGNAGES ══════════ -->
 <section class="wrap" style="padding-bottom:100px">
-  <div class="center" style="margin-bottom:48px">
+  <div class="center reveal" style="margin-bottom:48px">
     <div class="eyebrow">Témoignages</div>
-    <h2 class="display" style="font-size:clamp(30px,4vw,52px);font-weight:700;margin-top:14px;line-height:1.05">Ils ont déjà <span class="accent">cartonné</span></h2>
-    <p class="muted" style="margin-top:14px;font-size:16.5px"><span style="color:var(--amber);letter-spacing:1px">★★★★★</span> <b style="color:var(--text)">4,9/5</b> · plus de <b class="accent">+40K créateurs</b> utilisent AvatarAds</p>
+    <h2 class="display" style="font-size:clamp(28px,4vw,52px);font-weight:700;margin-top:14px;line-height:1.05">
+      Ils ont déjà <span class="accent">cartonné</span>
+    </h2>
+    <div class="row" style="justify-content:center;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+      <span style="color:var(--amber);letter-spacing:2px;font-size:16px">★★★★★</span>
+      <span class="muted" style="font-size:16px"><b style="color:var(--text)">4,9/5</b> · <b style="color:var(--text)">+40K créateurs</b></span>
+    </div>
   </div>
-  <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
-    <div class="card" style="padding:28px;display:flex;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#c05020,#802010);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">LM</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Lucas M.</span><span class="faint" style="font-size:12.5px">E-commerce</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">+80k vues · 40 leads</div></div>
-    <div class="card" style="padding:28px;display:flex;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Je n'aimais pas me filmer. Mon avatar parle à ma place avec ma propre voix. Mes abonnés ne font pas la différence.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#206050,#103530);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">SK</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Sarah K.</span><span class="faint" style="font-size:12.5px">Coach business</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">2 vidéos/jour automatisées</div></div>
-    <div class="card" style="padding:28px;display:flex;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Tout est inclus, je me connecte et je génère. Avant je payais des abonnements séparés pour chaque outil, là c'est tout en un. Game changer.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#203060,#101830);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">MR</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Mehdi R.</span><span class="faint" style="font-size:12.5px">Créateur de contenu</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">Stack IA complète incluse</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Je poste 30 fois plus qu'avant sans jamais me montrer. Mes vues ont explosé en deux semaines, c'est irréel.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#1f7a4d,#0e3a28);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">IB</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Inès B.</span><span class="faint" style="font-size:12.5px">Nutrition &amp; fitness</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">×30 sur les vues</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#176b6b,#0c3535);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">TD</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Thomas D.</span><span class="faint" style="font-size:12.5px">Agence SMMA</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">−1500€/mois économisés</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Le clone de voix est dingue. J'ai enregistré 30 secondes et maintenant mon avatar parle exactement comme moi.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#5b3aa6,#2a1854);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">CV</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Camille V.</span><span class="faint" style="font-size:12.5px">Infopreneuse</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">Voix clonée en 30s</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Je sors 5 vidéos produit par jour pour tester mes angles. Plus besoin de tourner quoi que ce soit, je teste tout en automatique.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#a8701f,#5e3d0f);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">RT</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Rayan T.</span><span class="faint" style="font-size:12.5px">Dropshipping</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">5 vidéos/jour</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Les sous-titres et le lipsync sont bluffants. On dirait vraiment un vrai créateur qui parle. Personne ne capte que c'est de l'IA.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#a63a6e,#54183a);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">YA</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Yasmine A.</span><span class="faint" style="font-size:12.5px">Beauté &amp; lifestyle</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">Lipsync indétectable</div></div>
-    <div class="card rev-more" style="display:none;padding:28px;flex-direction:column"><div style="color:var(--amber);font-size:16px;margin-bottom:16px;letter-spacing:2px">★★★★★</div><p style="font-size:15.5px;line-height:1.55;flex:1">Premier mois : 3 vidéos virales, 12k nouveaux abonnés et mes premières ventes en automatique. Je ne reviendrai jamais en arrière.</p><div class="row" style="gap:12px;margin-top:22px"><div style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,#1f4a8a,#0e244a);display:grid;place-items:center"><span style="font-weight:800;font-size:14.5px;color:#fff;letter-spacing:.5px">HL</span></div><div class="col" style="line-height:1.3"><span style="font-weight:700;font-size:14.5px">Hugo L.</span><span class="faint" style="font-size:12.5px">Finance perso</span></div></div><div class="pill" style="margin-top:16px;align-self:flex-start;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:12px;font-weight:600">+12k abonnés / mois</div></div>
+  <div id="tstWrap" style="position:relative">
+    <div class="tst-grid" id="tstGrid"></div>
+    <div class="tst-fade">
+      <button class="btn btn-primary btn-lg" style="pointer-events:auto;border-radius:999px;padding:15px 34px;font-weight:800" onclick="tstToggle(true)">
+        Voir tous les avis <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
   </div>
-  <div class="center" style="margin-top:34px">
-    <button onclick="var s=this.closest('section').querySelectorAll('.rev-more');var show=s[0].style.display==='none';s.forEach(c=>c.style.display=show?'flex':'none');this.innerHTML=show?'Voir moins d\'avis &#9652;':'Voir plus d\'avis &#9662;'" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 30px;color:var(--text);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)'" onmouseout="this.style.borderColor='var(--border)'">Voir plus d'avis &#9662;</button>
+  <div class="center" id="tstLess" style="margin-top:28px;display:none">
+    <button class="btn btn-ghost" onclick="tstToggle(false)">Réduire ↑</button>
   </div>
 </section>
 
-<!-- TARIFS -->
-<section id="tarifs" class="wrap" style="padding-top:90px;padding-bottom:80px">
+<!-- ══════════ 7 · GÉNÉRATION IA (éventail) ══════════ -->
+<section class="wrap" style="padding-bottom:96px">
+  <div class="center reveal" style="margin-bottom:16px">
+    <div class="eyebrow">✦ Génération IA</div>
+    <h2 class="display" style="font-size:clamp(28px,4.6vw,58px);font-weight:800;margin-top:12px;line-height:1.02">
+      Génère des <span class="accent">vidéos IA virales</span>
+    </h2>
+    <p class="muted" style="margin-top:10px;font-size:17px">Avec les meilleurs modèles du marché.</p>
+  </div>
+
+  <!-- desktop : arc + cartes chevauchantes -->
+  <div class="reveal hide-mobile" style="position:relative;max-width:1080px;margin:0 auto">
+    <div class="row" style="justify-content:center;align-items:flex-start;gap:0;padding-bottom:10px">
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+    </div>
+
+    <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
+      <div style="width:300px;height:268px;flex:0 0 auto;border-radius:22px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.12);box-shadow:0 34px 70px -30px rgba(0,0,0,.85)">
+        <img src="assets/lp/gen-veo.jpg" alt="Veo 3" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.72));pointer-events:none"></div>
+        <div style="position:absolute;left:18px;bottom:18px;right:18px;pointer-events:none">
+          <div class="display" style="font-size:24px;font-weight:800;color:#fff">Veo 3</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.82);margin-top:5px;line-height:1.35">Crée des vidéos IA rapidement avec un simple prompt.</div>
+        </div>
+      </div>
+      <div class="grow col" style="border-radius:22px;padding:26px;background:rgba(23,21,25,.72);backdrop-filter:blur(16px);border:1px solid var(--accent-line);box-shadow:0 40px 90px -34px rgba(0,0,0,.85),0 0 0 4px var(--accent-soft);min-height:268px">
+        <div class="grow" style="color:var(--text-2);font-size:17px;padding:2px 2px">Décris la vidéo que tu veux créer…</div>
+        <div class="row" style="gap:10px;flex-wrap:wrap">
+          <span class="pill" style="font-size:13px;font-weight:600;background:var(--surface);padding:7px 13px"><span style="width:17px;height:17px;border-radius:5px;background:linear-gradient(135deg,#9A7CFF,#6C4BFF);display:inline-grid;place-items:center;font-size:9px">✦</span> Veo3 3.1</span>
+          <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
+          <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px;position:relative;z-index:6;align-items:flex-end;gap:14px">
+      <div style="flex:0 0 auto;width:300px;position:relative;height:74px">
+        <div class="muted" style="position:absolute;left:10px;top:6px;font-size:14.5px;font-family:var(--display);font-weight:500;line-height:1.2;transform:rotate(-4deg);max-width:170px">Essaie gratuitement nos modèles de génération</div>
+        <svg width="120" height="56" viewBox="0 0 120 56" fill="none" style="position:absolute;left:186px;top:-11px;width:117px;height:75px">
+          <path d="M6 10C34 6 74 14 104 44" stroke="var(--text-2)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+          <path d="M90 44l16 3M104 44l-4 -16" stroke="var(--text-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <a href="/app/" class="btn btn-primary btn-lg grow" style="font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></a>
+    </div>
+  </div>
+
+  <!-- mobile -->
+  <div class="reveal only-mobile" style="flex-direction:column;gap:16px;max-width:460px;margin:0 auto">
+    <div class="row" style="gap:8px;justify-content:center">
+      <div style="width:100px;height:178px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative"><img src="assets/lp/gen-fan-2.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+      <div style="width:100px;height:178px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative"><img src="assets/lp/gen-fan-1.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+      <div style="width:100px;height:178px;flex:0 0 auto;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative"><img src="assets/lp/gen-fan-4.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+    </div>
+    <div class="card" style="padding:16px;border-color:var(--accent-line)">
+      <div style="min-height:84px;color:var(--text-2);font-size:15px">Décris la vidéo que tu veux créer…</div>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <span class="pill" style="font-size:13px;font-weight:600;background:var(--surface);padding:7px 13px"><span style="width:17px;height:17px;border-radius:5px;background:linear-gradient(135deg,#9A7CFF,#6C4BFF);display:inline-grid;place-items:center;font-size:9px">✦</span> Veo3 3.1</span>
+        <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
+        <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
+      </div>
+    </div>
+    <a href="/app/" class="btn btn-primary btn-lg" style="width:100%;font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></a>
+    <p class="center faint mono" style="font-size:11.5px">Essaie gratuitement nos modèles de génération</p>
+  </div>
+</section>
+
+<!-- ══════════ 8 · COMMENT ÇA MARCHE — card-stack au scroll ══════════ -->
+<!-- desktop -->
+<section id="etapes" class="hide-mobile-alt"></section>
+<section id="stackSec" class="hide-mobile" style="display:block">
+  <div id="stackSticky">
+    <div class="wrap" style="width:100%">
+      <div class="center" style="margin-bottom:8px">
+        <div class="eyebrow">Comment ça marche</div>
+        <h2 class="display" style="font-size:clamp(32px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.03">
+          De l'idée à la vidéo virale<br><span class="accent">en 5 étapes</span>
+        </h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:24px">
+        <div style="position:relative" id="stackTexts"></div>
+        <div style="position:relative;height:560px;display:grid;place-items:center">
+          <div style="position:relative;width:500px;max-width:100%;aspect-ratio:1/1" id="stackCards"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- mobile -->
+<section class="wrap only-mobile" id="stackMobile" style="flex-direction:column;padding-top:20px;padding-bottom:60px">
   <div class="center" style="margin-bottom:34px">
+    <div class="eyebrow">Comment ça marche</div>
+    <h2 class="display" style="font-size:30px;font-weight:800;margin-top:14px;line-height:1.03">
+      De l'idée à la vidéo virale<br><span class="accent">en 5 étapes</span>
+    </h2>
+  </div>
+  <div class="col" style="gap:30px" id="stackMobileList"></div>
+</section>
+
+<!-- ══════════ 9 · TARIFS (checkout Whop conservé) ══════════ -->
+<section id="tarifs" class="wrap" style="padding-top:90px;padding-bottom:80px">
+  <div class="center reveal" style="margin-bottom:34px">
     <div class="eyebrow">Tarifs</div>
     <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.02">Choisis ton plan.<br><span class="accent">Scale ton contenu.</span></h2>
     <p class="muted" style="margin-top:16px;font-size:16.5px">Sans engagement. Résiliation en 1 clic.</p>
@@ -387,30 +608,30 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <h3 class="display" style="font-size:20px;font-weight:700">🏢 Vous êtes une agence ?</h3>
       <p class="muted" style="margin-top:8px;font-size:14px">Multi-sièges, quotas sur-mesure, white label, facturation pro, support prioritaire. On construit l'offre autour de vos besoins.</p>
       <div class="row" style="gap:18px;margin-top:12px;flex-wrap:wrap">
-        <span class="row faint" style="gap:8px;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>À partir de 150€/mois</span>
-        <span class="row faint" style="gap:8px;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>3–10 sièges</span>
-        <span class="row faint" style="gap:8px;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>White label</span>
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>À partir de 150€/mois</span>
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>3–10 sièges</span>
+        <span class="row faint gap8" style="font-size:12.5px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 3"/></svg>White label</span>
       </div>
     </div>
     <a href="mailto:contact@avatarads.fr" class="btn btn-ghost" style="flex:0 0 auto">Nous contacter →</a>
   </div>
 </section>
 
-<!-- AFFILIATION -->
+<!-- ══════════ 10 · PARRAINAGE ══════════ -->
 <section id="affiliation" style="border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:radial-gradient(800px 360px at 50% 0%,rgba(255,90,31,.08),transparent 60%)">
   <div class="wrap" style="padding:90px 32px">
-    <div class="center" style="margin-bottom:40px">
+    <div class="center reveal" style="margin-bottom:40px">
       <div class="eyebrow">Programme de parrainage</div>
       <h2 class="display" style="font-size:clamp(30px,4.6vw,58px);font-weight:800;margin-top:14px;line-height:1.02">Recommande AvatarAds.<br><span class="accent">Touche 30% par mois.</span></h2>
       <p class="muted" style="margin-top:16px;font-size:16.5px;max-width:620px;margin-inline:auto">Commission récurrente chaque mois tant que ton filleul reste abonné. Zéro effort après le partage de ton lien.</p>
     </div>
-    <div class="row" style="gap:16px;justify-content:center;margin-bottom:34px;flex-wrap:wrap">
+    <div class="row reveal" style="gap:16px;justify-content:center;margin-bottom:34px;flex-wrap:wrap">
       <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800;color:var(--accent)">30%</div><div class="faint" style="font-size:12.5px;margin-top:6px">Commission récurrente</div></div>
       <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800">0€</div><div class="faint" style="font-size:12.5px;margin-top:6px">Pour commencer</div></div>
       <div class="card center" style="padding:22px 30px;min-width:200px"><div class="display" style="font-size:34px;font-weight:800;color:var(--violet)">∞</div><div class="faint" style="font-size:12.5px;margin-top:6px">Durée des commissions</div></div>
     </div>
     <div class="center" style="margin-bottom:50px"><a href="https://whop.com/affiliates/avatarads/" target="_blank" rel="noopener" class="btn btn-primary btn-lg">Créer mon compte affilié →</a></div>
-    <div class="card" style="max-width:680px;margin:0 auto;padding:30px 28px">
+    <div class="card reveal" style="max-width:680px;margin:0 auto;padding:30px 28px">
       <p class="center muted" style="font-size:16px">Si je ramène <b class="accent" id="aff-n" style="font-size:19px">50</b> filleuls/mois</p>
       <input type="range" min="0" max="500" value="50" id="aff-range" oninput="updateAff(this.value)" style="margin:20px 0 8px;background:linear-gradient(90deg,var(--accent) 10%,var(--surface-3) 10%)">
       <div class="row" style="justify-content:space-between"><span class="mono faint" style="font-size:11px">0</span><span class="mono faint" style="font-size:11px">250</span><span class="mono faint" style="font-size:11px">500</span></div>
@@ -423,16 +644,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="col" style="gap:12px">
         <div class="row card" style="gap:16px;padding:18px 20px;align-items:center"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--surface-2);font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">1</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Partage ton lien unique</span><span class="faint" style="font-size:13px">Sur TikTok, YouTube, Instagram, ta newsletter — partout</span></div></div>
-        <div class="row card" style="gap:16px;padding:18px 20px;align-items:center"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--surface-2);font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">2</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Ils s'inscrivent & s'abonnent</span><span class="faint" style="font-size:13px">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</span></div></div>
+        <div class="row card" style="gap:16px;padding:18px 20px;align-items:center"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--surface-2);font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">2</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Ils s'inscrivent &amp; s'abonnent</span><span class="faint" style="font-size:13px">Le cookie est permanent — même s'ils reviennent 6 mois plus tard</span></div></div>
         <div class="row card" style="gap:16px;padding:18px 20px;align-items:center;border-color:var(--accent-line);background:var(--accent-soft)"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;background:var(--accent);color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;border:1px solid var(--border)">3</span><div class="col grow" style="line-height:1.4"><span style="font-weight:700;font-size:15.5px">Tu gagnes 30% par mois</span><span class="faint" style="font-size:13px">Sur chaque renouvellement tant que ton filleul est abonné — sans plafond</span></div><div class="col" style="align-items:flex-end;line-height:1"><span class="display accent" style="font-size:26px;font-weight:800">30%</span><span class="mono accent" style="font-size:9px;letter-spacing:.1em">RÉCURRENT</span></div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- FAQ -->
-<section id="faq" class="wrap" style="padding-bottom:90px;max-width:920px">
-  <div class="center" style="margin-bottom:46px">
+<!-- ══════════ 11 · FAQ ══════════ -->
+<section id="faq" class="wrap" style="padding-top:90px;padding-bottom:90px;max-width:920px">
+  <div class="center reveal" style="margin-bottom:46px">
     <div class="eyebrow">FAQ</div>
     <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.02">Questions <span class="accent">fréquentes</span></h2>
     <p class="muted" style="margin-top:14px;font-size:16.5px">Tout ce que tu dois savoir avant de commencer.</p>
@@ -440,75 +661,90 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="col" style="gap:12px" id="faq-list"></div>
 </section>
 
-<!-- FINAL CTA -->
-<section class="wrap center" style="padding:90px 32px 100px">
-  <div style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">Script · Voix · Avatar · Sans caméra</span></div></div>
-  <h2 class="display" style="font-size:clamp(40px,6.5vw,86px);font-weight:800;margin-top:24px;line-height:1">Crée. Publie. <span class="accent">Scale.</span></h2>
-  <p class="muted" style="margin-top:18px;font-size:18px;max-width:560px;margin-inline:auto">Rejoins AvatarAds et génère des vidéos virales avec l'IA dès aujourd'hui.</p>
-  <a href="/app/" class="btn btn-primary btn-lg" style="margin-top:32px">Commencer gratuitement →</a>
-  <p class="faint mono" style="margin-top:16px;font-size:12.5px">Sans engagement · Résiliation en 1 clic</p>
-  <div class="row" style="gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap">
-    <span class="pill" style="font-size:12px;padding:7px 14px">Mastercard</span>
-    <span class="pill" style="font-size:12px;padding:7px 14px">Visa</span>
-    <span class="pill" style="font-size:12px;padding:7px 14px">Apple Pay</span>
-    <span class="pill" style="font-size:12px;padding:7px 14px;color:var(--green);border-color:rgba(40,199,149,.3);background:rgba(40,199,149,.08)"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="10" height="7" rx="1.5"/><path d="M5 6V4a2 2 0 014 0v2"/></svg>Paiement sécurisé</span>
+<!-- ══════════ 12 · CTA FINAL (carte orange) ══════════ -->
+<section class="wrap" style="padding-bottom:100px">
+  <div class="card reveal" style="position:relative;overflow:hidden;text-align:center;padding:80px 32px;border-color:var(--accent-line);background:radial-gradient(700px 320px at 50% 0%,rgba(255,90,31,.18),var(--surface))">
+    <div style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:1">
+      <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;opacity:1;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="16" height="16" style="position:absolute;left:9%;top:20%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:84%;top:78%;opacity:.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:16%;top:82%;opacity:.55;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+      <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:60%;top:92%;opacity:.7;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+    </div>
+    <h2 class="display" style="position:relative;z-index:2;font-size:clamp(30px,5vw,64px);font-weight:800;line-height:1.02;max-width:780px;margin-inline:auto">
+      Prêt à générer tes<br>premiers <span class="accent">millions de vues</span> ?
+    </h2>
+    <p class="muted" style="position:relative;z-index:2;margin-top:18px;font-size:18px">Rejoins les +40K créateurs qui postent sans jamais montrer leur visage.</p>
+    <a href="/app/" class="btn btn-primary cta-hero" style="position:relative;z-index:2;margin-top:30px;display:inline-flex">Commencer gratuitement <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <div class="row" style="position:relative;z-index:2;justify-content:center;gap:22px;margin-top:24px;flex-wrap:wrap">
+      <span class="row gap8 faint" style="font-size:13.5px">✓ 2 vidéos offertes</span>
+      <span class="row gap8 faint" style="font-size:13.5px">🔒 Sans carte bancaire</span>
+      <span class="row gap8 faint" style="font-size:13.5px">↻ Annulation en 1 clic</span>
+    </div>
   </div>
 </section>
 
-<!-- FOOTER -->
-<footer style="border-top:1px solid var(--border)">
-  <div class="wrap" style="padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
-    <div class="row" style="gap:10px">
-      <div style="width:28px;height:28px;background:#0a0a0a;border-radius:8px;display:grid;place-items:center;border:1px solid var(--border-2)"><svg viewBox="0 0 36 36" width="18" height="18" fill="none"><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
-      <span style="font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-.02em">AvatarAds</span>
+<!-- ══════════ 13 · FOOTER ══════════ -->
+<footer style="border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(124,92,255,.05),transparent 40%),var(--bg);overflow:hidden">
+  <div class="wrap" style="padding-top:64px;padding-bottom:10px">
+    <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px">
+      <div>
+        <div class="row gap10" style="align-items:center">
+          <div class="brandmark"><img src="assets/avatarads-logo.png" alt="" width="26" height="26" style="border-radius:7px;display:block"></div>
+          <span class="logo-wordmark" style="font-size:20px">AvatarAds</span>
+        </div>
+        <p class="muted" style="margin-top:16px;font-size:14px;line-height:1.6;max-width:320px">
+          Crée des vidéos faceless virales avec l'IA : avatar, voix clonée, sous-titres — sans caméra. Une question ? Notre équipe est disponible pour t'aider.
+        </p>
+        <div class="row gap12" style="margin-top:20px">
+          <a href="mailto:contact@avatarads.fr" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg></a>
+          <a href="https://whop.com/avatarads/" target="_blank" rel="noopener" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Aide</div>
+        <div class="col" style="gap:12px">
+          <a href="mailto:contact@avatarads.fr" class="muted foot-link" style="font-size:14px">Nous contacter</a>
+          <a href="/app/" class="muted foot-link" style="font-size:14px">Accéder à l'outil</a>
+        </div>
+      </div>
+      <div>
+        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Entreprise</div>
+        <div class="col" style="gap:12px">
+          <a href="mailto:contact@avatarads.fr" class="muted foot-link" style="font-size:14px">Propositions commerciales</a>
+          <a href="#affiliation" class="muted foot-link" style="font-size:14px">Parrainage</a>
+          <a href="#etapes" class="muted foot-link" style="font-size:14px">À propos</a>
+          <a href="#tarifs" class="muted foot-link" style="font-size:14px">Tarification</a>
+        </div>
+      </div>
+      <div>
+        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Mentions légales</div>
+        <div class="col" style="gap:12px">
+          <a href="/cgv.html" class="muted foot-link" style="font-size:14px">Conditions générales</a>
+          <a href="/confidentialite.html" class="muted foot-link" style="font-size:14px">Politique de confidentialité</a>
+          <a href="/cgv.html" class="muted foot-link" style="font-size:14px">Politique de remboursement</a>
+          <a href="/cgv.html" class="muted foot-link" style="font-size:14px">Politique d'annulation</a>
+        </div>
+      </div>
     </div>
-    <div class="row" style="gap:22px;flex-wrap:wrap">
-      <a href="/app/" class="faint" style="font-size:13px">Accéder à l'outil</a>
-      <button onclick="document.getElementById('tarifs').scrollIntoView({behavior:'smooth'})" class="faint" style="font-size:13px;background:none;border:none;cursor:pointer;font-family:var(--font)">Tarifs</button>
-      <a href="mailto:contact@avatarads.fr" class="faint" style="font-size:13px">Contact</a>
-      <a href="/cgv.html" class="faint" style="font-size:13px">CGV</a>
-      <a href="/confidentialite.html" class="faint" style="font-size:13px">Confidentialité</a>
+    <div style="text-align:center;margin-top:54px">
+      <div class="display" style="font-size:clamp(44px,12vw,168px);font-weight:800;line-height:.9;letter-spacing:-.03em;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03));-webkit-background-clip:text;background-clip:text;color:transparent">AvatarAds</div>
+      <div class="mono faint" style="font-size:12px;margin-top:10px">© 2026 AvatarAds · by IA Manager</div>
     </div>
-    <span class="mono faint" style="font-size:11.5px">© 2026 AvatarAds · IA Manager</span>
   </div>
 </footer>
+<style>
+.foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
+.foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
+@media (max-width:760px){ .foot-grid{grid-template-columns:1fr !important;gap:32px !important} footer .wrap{padding-top:44px} }
+</style>
 
 <script>
-// Showcase carousel dots (mobile)
-(function(){
-  const isMobile = () => window.innerWidth <= 900;
-  const row = document.querySelector('.showcase-row');
-  const dots = document.getElementById('showcaseDots');
-  const dotEls = dots ? dots.querySelectorAll('.sc-dot') : [];
-  function updateDots(){
-    if(!row||!dots) return;
-    if(!isMobile()){dots.style.display='none';return;}
-    dots.style.display='flex';
-    const cards = row.querySelectorAll('.showcase-side,.showcase-center');
-    const rowRect = row.getBoundingClientRect();
-    let closest=0, minDist=Infinity;
-    cards.forEach((c,i)=>{
-      const rect=c.getBoundingClientRect();
-      const center=rect.left+rect.width/2;
-      const dist=Math.abs(center-(rowRect.left+rowRect.width/2));
-      if(dist<minDist){minDist=dist;closest=i;}
-    });
-    dotEls.forEach((d,i)=>d.classList.toggle('on',i===closest));
-  }
-  if(row){
-    row.addEventListener('scroll',updateDots,{passive:true});
-    window.addEventListener('resize',updateDots);
-    setTimeout(updateDots,100);
-  }
-})();
-
-// Platform tabs
-function setPlatform(btn){
-  document.querySelectorAll('#platformSeg button').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-}
-
-// Funnel hero : on mémorise le prompt tapé puis on redirige vers l'app (connexion → Express pré-rempli)
+/* ══════════ Funnel hero : prompt mémorisé → app ══════════ */
 function lpGenerate(e){
   if(e && e.preventDefault) e.preventDefault();
   try{
@@ -518,19 +754,222 @@ function lpGenerate(e){
   window.location.href='/app/';
 }
 
-// Marquee
-const marqueeItems=["Avatar lipsync","Sans caméra","TikTok · Reels · YT Shorts","Vidéo en 2 minutes","Voix clonée","Scripts IA","ElevenLabs voix"];
-const m=document.getElementById('marquee');
-[...marqueeItems,...marqueeItems,...marqueeItems].forEach(s=>{
-  const span=document.createElement('span');
-  span.style.cssText='display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;white-space:nowrap;color:var(--text-3)';
-  span.innerHTML=`<svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="var(--accent)" stroke-width="1.5"><polygon points="6,1 6,7 2,7 9,14 9,8 13,8"/></svg>${s}`;
-  m.appendChild(span);
+/* ══════════ Sticky CTA ══════════ */
+(function(){
+  var bar=document.getElementById('stickyCta');
+  function on(){ var s=window.scrollY>620; bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
+  window.addEventListener('scroll',on,{passive:true}); on();
+})();
+
+/* ══════════ Scroll-reveal (IntersectionObserver) ══════════ */
+var _revIO=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); _revIO.unobserve(e.target); } });
+},{threshold:0.12,rootMargin:'0px 0px -8% 0px'});
+function revealScan(){ document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ _revIO.observe(el); }); }
+
+/* ══════════ CountUp (ease-out cubic, déclenché à la vue) ══════════ */
+document.querySelectorAll('[data-countup]').forEach(function(el){
+  var value=el.getAttribute('data-countup');
+  var m=String(value).match(/^(\D*)([\d.,]+)(.*)$/);
+  if(!m) return;
+  var pre=m[1],numStr=m[2],suf=m[3];
+  var dec=numStr.indexOf(',')>=0?1:0;
+  var target=parseFloat(numStr.replace(',','.'));
+  var started=false, dur=1400;
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+    if(e.isIntersecting && !started){ started=true;
+      var t0=performance.now();
+      (function tick(now){
+        var p=Math.min(1,(now-t0)/dur), v=target*(1-Math.pow(1-p,3));
+        el.textContent=pre+v.toFixed(dec).replace('.',',')+suf;
+        if(p<1) requestAnimationFrame(tick);
+      })(t0);
+      io.disconnect();
+    }
+  }); },{threshold:0.4});
+  io.observe(el);
 });
 
-// Pricing
+/* ══════════ Features — onglets ══════════ */
+var FEAT_TABS=[
+  { id:"split", tab:"Split-screen", t:"Le format qui scotche jusqu'au bout", d:"Entièrement personnalisable. La rétention qui fait exploser tes vues." },
+  { id:"soustitres", tab:"Sous-titres", t:"Le détail qui retient le scroll", d:"Augmente de 200% le taux de rétention sur tes vidéos." },
+  { id:"voix", tab:"Clonage de voix", t:"Ta voix, sans jamais l'enregistrer", d:"30 secondes suffisent pour cloner ta voix. Publie chaque jour sans ouvrir le micro." },
+  { id:"plateforme", tab:"Multi-plateforme", t:"Publie partout en un clic", d:"TikTok, Reels, Shorts, Facebook, LinkedIn — chaque format optimisé, zéro export manuel." },
+  { id:"audio", tab:"Nettoyage audio", t:"Un rythme punchy, zéro blanc", d:"Les silences coupés automatiquement pour garder le dynamisme sur tes vidéos et ton audience captive." },
+  { id:"editeur", tab:"Éditeur", t:"Peaufine tout, comme sur CapCut", d:"Timeline multi-pistes, calques, musique, effets. Le contrôle total sans quitter AvatarAds." },
+  { id:"library", tab:"Bibliothèque", t:"Toutes tes vidéos, au même endroit", d:"Retrouve, réutilise et republie chaque création. Ton studio de contenu centralisé." }
+];
+(function(){
+  var tabsEl=document.getElementById('featTabs');
+  FEAT_TABS.forEach(function(x,i){
+    var b=document.createElement('button');
+    b.textContent=x.tab; if(i===0) b.className='on';
+    b.onclick=function(){ setFeat(x.id,b); };
+    tabsEl.appendChild(b);
+  });
+  // mock: voix bars
+  var vb=document.getElementById('voiceBars');
+  for(var i=0;i<32;i++){ var d=document.createElement('div'); var a=Math.abs(Math.sin(i*0.7));
+    d.style.cssText='width:4px;border-radius:3px;height:'+(20+a*70)+'%;background:var(--accent);opacity:'+(0.5+a*0.5); vb.appendChild(d); }
+  // mock: audio bars
+  [[70,12,8,60,10,9,80,8,12,55,9,7,68],'audioBarsBefore',[70,60,80,55,68,74,62,78],'audioBarsAfter'].forEach(function(_,__){});
+  [70,12,8,60,10,9,80,8,12,55,9,7,68].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:'+(h<20?'var(--surface-3)':'var(--text-3)'); document.getElementById('audioBarsBefore').appendChild(d); });
+  [70,60,80,55,68,74,62,78].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:var(--accent)'; document.getElementById('audioBarsAfter').appendChild(d); });
+  // mock: library grid
+  [18,265,150,40,200,330].forEach(function(h){
+    var d=document.createElement('div');
+    d.style.cssText='aspect-ratio:9/16;border-radius:10px;position:relative;overflow:hidden;border:1px solid var(--border-2);background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 8px,transparent 8px 16px),linear-gradient(180deg,oklch(0.4 0.1 '+h+'),oklch(0.2 0.05 '+h+'))';
+    d.innerHTML='<div style="position:absolute;inset:0;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,.8)"><path d="M7 4l13 8-13 8z"/></svg></div>';
+    document.getElementById('libGrid').appendChild(d);
+  });
+  setFeat('split', tabsEl.children[0]);
+})();
+function setFeat(id, btn){
+  document.querySelectorAll('#featTabs button').forEach(function(b){ b.classList.remove('on'); });
+  if(btn) btn.classList.add('on');
+  document.querySelectorAll('.feat-mock').forEach(function(m){ m.classList.toggle('on', m.getAttribute('data-feat')===id); });
+  var cur=FEAT_TABS.find(function(x){ return x.id===id; })||FEAT_TABS[0];
+  var t=document.getElementById('featTitle'), d=document.getElementById('featDesc');
+  t.textContent=cur.t; d.textContent=cur.d;
+  t.classList.remove('rise'); void t.offsetWidth; t.classList.add('rise');
+  var z=document.getElementById('featMockZone'); z.classList.remove('rise'); void z.offsetWidth; z.classList.add('rise');
+}
+
+/* ══════════ Témoignages ══════════ */
+var TST=[
+  { q:"3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.", n:"Lucas M.", r:"E-commerce", tag:"+80k vues · 40 leads", h:18 },
+  { q:"Je n'aimais pas me filmer. Mon avatar parle à ma place avec ma propre voix. Mes abonnés ne font pas la différence.", n:"Sarah K.", r:"Coach business", tag:"2 vidéos/jour automatisées", h:330 },
+  { q:"Tout est inclus, je me connecte et je génère. Avant je payais 4 abonnements séparés, là c'est tout en un. Game changer.", n:"Mehdi R.", r:"Créateur de contenu", tag:"Stack IA complète incluse", h:265 },
+  { q:"De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", n:"Inès B.", r:"Nutrition & fitness", tag:"×30 sur les vues", h:150 },
+  { q:"Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.", n:"Thomas D.", r:"Agence SMMA", tag:"−1500€/mois économisés", h:200 },
+  { q:"Les sous-titres et le lipsync sont bluffants. On dirait vraiment un vrai créateur qui parle. Personne ne capte que c'est IA.", n:"Yasmine A.", r:"Beauté & lifestyle", tag:"Lipsync indétectable", h:20 },
+  { q:"J'ai lancé une boutique et une chaîne faceless en parallèle. 5 vidéos avatar le matin, je publie, je passe à autre chose.", n:"Karim Z.", r:"Dropshipping", tag:"5 vidéos/jour", h:40 },
+  { q:"Le clone de voix est dingue. J'ai enregistré 30 secondes et maintenant mon avatar parle exactement comme moi.", n:"Camille V.", r:"Infopreneuse", tag:"Voix clonée en 30s", h:290 },
+  { q:"Premier mois : 3 vidéos virales, 12k nouveaux abonnés et mes premières ventes en automatique. Je ne reviendrai jamais en arrière.", n:"Hugo L.", r:"Finance perso", tag:"+12k abonnés / mois", h:240 }
+];
+(function(){
+  var grid=document.getElementById('tstGrid');
+  var stars='<div class="row" style="gap:3px;color:var(--amber);margin-bottom:14px;letter-spacing:2px;font-size:14px">★★★★★</div>';
+  TST.forEach(function(t,i){
+    var cls='tst-card card'+(i>=2&&i<6?' tst-mid':'')+(i>=6?' tst-more':'');
+    var card=document.createElement('div'); card.className=cls;
+    card.innerHTML=stars
+      +'<p style="font-size:15px;line-height:1.55;color:var(--text);flex:1;font-weight:500">'+t.q+'</p>'
+      +'<div class="row" style="margin-top:20px;align-items:center;justify-content:space-between;gap:12px">'
+      +'<div class="row gap12" style="align-items:center;min-width:0">'
+      +'<div style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;overflow:hidden;position:relative;background:linear-gradient(150deg,oklch(0.62 0.13 '+t.h+'),oklch(0.4 0.1 '+(t.h+20)+'));border:1px solid rgba(255,255,255,.14)">'
+      +'<span style="position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:17px;color:#fff">'+t.n[0]+'</span></div>'
+      +'<div class="col" style="line-height:1.35;min-width:0"><span style="font-weight:700;font-size:14.5px">'+t.n+'</span>'
+      +'<span style="font-size:13px;font-weight:600;color:var(--accent-2)">'+t.r+'</span></div></div>'
+      +'<div class="pill" style="flex:0 0 auto;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-size:11px;font-weight:600;white-space:nowrap">'+t.tag+'</div>'
+      +'</div>';
+    grid.appendChild(card);
+  });
+})();
+function tstToggle(open){
+  document.getElementById('tstWrap').classList.toggle('open', open);
+  document.getElementById('tstLess').style.display=open?'block':'none';
+}
+
+/* ══════════ Comment ça marche — card-stack au scroll ══════════ */
+var STEPS=[
+  { n:"01", src:"assets/lp/step-01.jpg", t:"Décris ton idée", d:"Écris ton concept ou colle ton script. L'IA structure hook, développement et CTA.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
+  { n:"02", src:"assets/lp/step-02.jpg", t:"Choisis ton avatar", d:"Un avatar IA faceless ou le tien. Il parlera à ta place, face caméra.", ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
+  { n:"03", src:"assets/lp/step-03.jpg", t:"Clone ta voix", d:"30 secondes suffisent. Ou choisis une voix premium ElevenLabs / Gemini.", ic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>' },
+  { n:"04", src:"assets/lp/step-04.jpg", t:"Style & sous-titres", d:"Format 9:16, sous-titres animés, split-screen, musique — calibrés pour percer.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
+  { n:"05", src:"assets/lp/step-05.jpg", t:"Génère & publie", d:"Ta vidéo prête en 2 minutes. Télécharge ou publie directement sur tes réseaux.", ic:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="currentColor" stroke="none"/>' }
+];
+var V='#7C5CFF';
+(function(){
+  // desktop : textes + cartes
+  var texts=document.getElementById('stackTexts'), cards=document.getElementById('stackCards');
+  STEPS.forEach(function(s,i){
+    var tx=document.createElement('div');
+    tx.className='stack-text'; tx.setAttribute('data-i',i);
+    tx.style.cssText='transition:opacity .4s,transform .4s;position:'+(i===0?'relative':'absolute')+';top:0;opacity:'+(i===0?1:0)+';transform:'+(i===0?'none':'translateY(12px)')+';pointer-events:'+(i===0?'auto':'none')+';max-width:460px';
+    var dots='';
+    for(var j=0;j<STEPS.length;j++){ dots+='<span class="stk-dot" data-j="'+j+'" style="width:'+(j===i?26:8)+'px;height:8px;border-radius:999px;background:'+(j===i?V:'var(--surface-3)')+';transition:.3s;display:inline-block;margin-right:8px"></span>'; }
+    tx.innerHTML='<span class="mono" style="font-size:13px;color:'+V+';font-weight:700">'+s.n+' / 05</span>'
+      +'<h3 class="display" style="font-size:34px;font-weight:800;margin-top:10px;line-height:1.05">'+s.t+'</h3>'
+      +'<p class="muted" style="font-size:17px;line-height:1.55;margin-top:16px">'+s.d+'</p>'
+      +'<div style="margin-top:26px">'+dots+'</div>';
+    texts.appendChild(tx);
+    var c=document.createElement('div');
+    c.className='stack-card'; c.style.zIndex=i+1; c.style.opacity=i===0?1:0;
+    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" loading="lazy"><span class="step-badge">'+s.n+' / 05</span></div>';
+    cards.appendChild(c);
+  });
+  // mobile
+  var ml=document.getElementById('stackMobileList');
+  STEPS.forEach(function(s){
+    var d=document.createElement('div'); d.className='reveal';
+    d.innerHTML='<div class="row gap12" style="align-items:center;margin-bottom:14px">'
+      +'<span style="width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(160deg,#8b6dff,#5b3ce0)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+s.ic+'</svg></span>'
+      +'<div><span class="mono" style="font-size:11px;color:'+V+';font-weight:600">'+s.n+'</span>'
+      +'<h3 class="display" style="font-size:20px;font-weight:700">'+s.t+'</h3></div></div>'
+      +'<p class="muted" style="font-size:14.5px;line-height:1.55;margin-bottom:14px">'+s.d+'</p>'
+      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" loading="lazy"><span class="step-badge">'+s.n+' / 05</span></div>';
+    ml.appendChild(d);
+  });
+})();
+/* progression au scroll — throttlée en rAF avec easing continu */
+(function(){
+  var sec=document.getElementById('stackSec');
+  if(!sec) return;
+  var N=STEPS.length, target=0, cur=0, raf=0, lastAct=-1;
+  var mq=window.matchMedia('(min-width:761px)');
+  function readTarget(){
+    var r=sec.getBoundingClientRect();
+    var total=sec.offsetHeight-window.innerHeight;
+    target=Math.min(1,Math.max(0,-r.top/total))*N;
+  }
+  function apply(p){
+    var act=Math.min(N-1,Math.floor(p+0.5));
+    var cardEls=document.querySelectorAll('#stackCards .stack-card');
+    cardEls.forEach(function(c,i){
+      var local=p-i;
+      var enter=Math.min(1,Math.max(0,p-(i-1)));
+      var ty=local>=0?0:(1-enter)*116;
+      var settled=local>=0;
+      var scale=settled?1-Math.min(0.06,local*0.03):0.99;
+      c.style.transform='translateY('+ty+'%) scale('+scale+')';
+      c.style.opacity=enter<=0?0:1;
+      c.style.boxShadow=settled?'0 40px 90px -30px rgba(0,0,0,.9),0 0 70px -26px rgba(124,92,255,.5)':'none';
+    });
+    if(act!==lastAct){
+      lastAct=act;
+      document.querySelectorAll('#stackTexts .stack-text').forEach(function(tx,i){
+        var on=i===act;
+        tx.style.position=on?'relative':'absolute';
+        tx.style.opacity=on?1:0;
+        tx.style.transform=on?'none':'translateY(12px)';
+        tx.style.pointerEvents=on?'auto':'none';
+        tx.querySelectorAll('.stk-dot').forEach(function(dt,j){
+          dt.style.width=(j===act?26:8)+'px';
+          dt.style.background=j===act?V:'var(--surface-3)';
+        });
+      });
+    }
+  }
+  function loop(){
+    cur+=(target-cur)*0.12;
+    if(Math.abs(target-cur)<0.0015) cur=target;
+    apply(cur);
+    raf=requestAnimationFrame(loop);
+  }
+  function start(){
+    if(!mq.matches) return;
+    readTarget(); cur=target; apply(cur);
+    window.addEventListener('scroll',readTarget,{passive:true});
+    window.addEventListener('resize',readTarget);
+    raf=requestAnimationFrame(loop);
+  }
+  start();
+})();
+
+/* ══════════ TARIFS (identique — prix & Whop inchangés) ══════════ */
 let isAnnual=false;
-// Whop checkout URLs — monthly & annual
 const CHECKOUT={
   starter:{ m:'https://whop.com/checkout/plan_YKcdyPT6RRQSi', a:'https://whop.com/checkout/plan_cNydK89X39PLE' },
   pro:    { m:'https://whop.com/checkout/plan_g4BVtDmk6hgjQ', a:'https://whop.com/checkout/plan_P7WIywSa6YrxT' },
@@ -538,8 +977,7 @@ const CHECKOUT={
   elite60:{ m:'https://whop.com/checkout/plan_pZmWh1dVdmIWT', a:'https://whop.com/checkout/plan_uWTkJDl1GvxNR' },
   elite90:{ m:'https://whop.com/checkout/plan_63PGeG3MesbJR', a:'https://whop.com/checkout/plan_x2kDWR6ur2W5E' },
 };
-// Elite slider state
-var eliteSlider=0; // 0=30av, 1=60av, 2=90av
+var eliteSlider=0;
 const ELITE_TIERS=[
   {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', annualPct:25, savings:'280', checkoutId:'elite'},
   {avatars:60, videos:120, images:100, price:'158,99',annual:'119,99',annualPct:25, savings:'468', checkoutId:'elite60'},
@@ -594,19 +1032,16 @@ function renderPricing(){
     for(var k=0;k<pl.feats.length;k++){
       feats+='<div class="row" style="gap:10px;font-size:13.5px;align-items:flex-start"><span style="width:18px;height:18px;border-radius:50%;flex:0 0 auto;margin-top:1px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center">'+CHECK+'</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
     }
-    // Elite slider override
     var tier=pl.id==='elite'?ELITE_TIERS[eliteSlider]:null;
     var displayPrice=tier?(isAnnual?tier.annual:tier.price):price;
     var displayStrike=pl.strike?(isAnnual?pl.annualStrike:pl.strike):'';
     var displaySavings=tier?tier.savings:pl.savings;
     var displayPct=tier?tier.annualPct:25;
-    var displayAvatars=tier?tier.avatars:null;
     var checkoutId=tier?tier.checkoutId:pl.id;
     var annualColor=isAnnual?'var(--green)':'var(--text-3)';
     var annualLabel=isAnnual?('Économise '+displayPct+'% · facturé annuellement'):'Facturé mensuellement';
     var savingsLine='<div id="'+(pl.id==='elite'?'lpEliteSave':'save-'+pl.id)+'" style="text-align:center;margin-top:10px;font-size:12.5px;font-weight:700;color:#22c55e;font-family:var(--mono)">'+(isAnnual?'🎁 Économisez <span style="font-size:14px">€'+displaySavings+'</span> par rapport au mensuel':'')+'</div>';
     var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
-    // Elite slider HTML — barre (design Claude, screen 2)
     var sliderHtml='';
     if(pl.id==='elite'&&tier){
       var pct=eliteSlider/(ELITE_TIERS.length-1)*100;
@@ -622,7 +1057,6 @@ function renderPricing(){
         +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>'
         +'<div style="border-top:1px solid rgba(154,124,255,.18);margin-top:10px;padding-top:10px;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text-3);font-family:var(--mono)"><span><b id="lpEliteVid" style="color:var(--text-2)">'+tier.videos+'</b> vidéos</span><span><b id="lpEliteImg" style="color:var(--text-2)">'+tier.images+'</b> images</span><span>35s/avatar</span></div>'
         +'</div>';
-      // L'encadré porte déjà les quotas → pas de chips redondants pour Elite
       chips='';
     }
     html+='<div class="card" style="padding:30px 26px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+';transform:'+transform+'">'+badge+'<div class="center"><div class="display" style="font-size:24px;font-weight:800;color:'+pl.accent+'">'+pl.name+'</div><p class="muted" style="margin-top:8px;font-size:13.5px;min-height:40px;line-height:1.4">'+pl.tagline+'</p><div class="row" style="align-items:baseline;gap:4px;justify-content:center;margin-top:14px">'+(displayStrike?'<span class="faint" style="font-size:23px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:7px">€'+displayStrike+'</span>':'')+'<span class="faint" style="font-size:22px;font-weight:700">€</span><span'+(pl.id==='elite'?' id="lpElitePrice"':'')+' class="display" style="font-size:48px;font-weight:800">'+displayPrice+'</span><span class="faint" style="font-size:15px">/mois</span></div><div'+(pl.id==='elite'?' id="lpEliteAnnualLabel"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+annualColor+'">'+annualLabel+'</div></div><div style="min-height:150px;display:flex;flex-direction:column;justify-content:center;margin:20px 0">'+(pl.id==='elite'?sliderHtml:'<div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center">'+chips+'</div>')+'</div><a'+(pl.id==='elite'?' id="lpEliteCta"':'')+' href="'+checkoutUrl+'" onmouseenter="_whopPrewarm(this.href)" onclick="_whopCheckout(this.href);return false" target="_blank" rel="noopener" class="'+btnCls+'" style="'+btnStyle+'">Commencer →</a>'+savingsLine+'<div class="col" style="gap:12px;margin-top:24px">'+feats+'</div><p class="center faint" style="font-size:11.5px;margin-top:20px">'+pl.foot+'</p></div>';
@@ -630,11 +1064,9 @@ function renderPricing(){
   document.getElementById('pricing-grid').innerHTML=html;
 }
 renderPricing();
-
 function toggleAnnual(){
   isAnnual=!isAnnual;
   const t=document.getElementById('annual-toggle');
-  const th=document.getElementById('toggle-thumb');
   t.style.background=isAnnual?'var(--accent)':'var(--surface-3)';
   t.style.justifyContent=isAnnual?'flex-end':'flex-start';
   document.getElementById('label-monthly').style.cssText=`font-weight:${isAnnual?500:700};color:${isAnnual?'var(--text-2)':'var(--text)'}`;
@@ -642,31 +1074,34 @@ function toggleAnnual(){
   renderPricing();
 }
 
-// Affiliation
+/* ══════════ Parrainage ══════════ */
 function updateAff(n){
   document.getElementById('aff-n').textContent=n;
   document.getElementById('aff-rev').textContent=Math.round(n*38*0.30).toLocaleString('fr-FR');
   document.getElementById('aff-range').style.background=`linear-gradient(90deg,var(--accent) ${n/500*100}%,var(--surface-3) ${n/500*100}%)`;
 }
 
-// FAQ
+/* ══════════ FAQ ══════════ */
 const faqs=[
   ["C'est quoi AvatarAds, concrètement ?","Un générateur de vidéos faceless : tu écris (ou laisses l'IA écrire) un script, tu choisis un avatar IA et une voix, et l'outil produit une vidéo verticale (TikTok, Reels, Shorts) prête à poster en quelques minutes — sans jamais montrer ton visage ni filmer quoi que ce soit."],
   ["Est-ce qu'on voit que c'est une IA ?","Non, et c'est tout l'intérêt. Le lipsync et la voix clonée sont ultra-réalistes : la grande majorité des spectateurs ne font pas la différence avec un vrai créateur face caméra. Tes vidéos restent naturelles et engageantes."],
   ["Je n'ai pas une belle voix / je n'aime pas parler. Ça marche quand même ?","Oui. Tu peux cloner ta voix à partir de 30 secondes d'audio, choisir parmi des dizaines de voix premium (ElevenLabs & Gemini TTS), ou importer un fichier. Tu n'as jamais besoin d'enregistrer face caméra."],
   ["En combien de temps j'ai ma première vidéo ?","Environ 2 minutes. Tu décris ta vidéo, l'IA génère l'avatar, la voix et les sous-titres, puis tu exportes en 9:16 prêt à publier. La plupart des créateurs produisent 3 à 5 vidéos par jour."],
   ["Pour quel type de business c'est fait ?","Dropshipping, e-commerce, coachs, infoproduits, agences SMMA, comptes de niche faceless, affiliation… Dès que tu as besoin de publier beaucoup de contenu vidéo régulièrement sans te filmer, AvatarAds est fait pour toi."],
-  ["Puis-je utiliser les vidéos commercialement ?","Oui, à 100%. Tes vidéos t'appartiennent : utilise-les pour tes publicités, ta marque, tes clients ou tes réseaux — sans limite ni mention obligatoire. Et tu résilies en 1 clic, sans engagement."],
+  ["Comment fonctionne l'essai gratuit ?","Tu démarres avec 2 vidéos offertes, sans carte bancaire. Tu testes le générateur complet, puis tu choisis un plan quand tu es prêt — résiliable en 1 clic, sans engagement."],
 ];
 const faqList=document.getElementById('faq-list');
 faqs.forEach(([q,a],i)=>{
   const item=document.createElement('div');
-  item.className='faq-item';
+  item.className='faq-item'+(i===0?' open':'');
   item.innerHTML=`<button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">${q}</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">${a}</div>`;
   faqList.appendChild(item);
 });
 
-// ── Checkout Whop INTÉGRÉ (embed) sur la LP — plus de redirection ──
+/* lance le scan reveal une fois tout le DOM construit */
+revealScan();
+
+/* ══════════ Checkout Whop INTÉGRÉ (embed) — inchangé ══════════ */
 function _whopPlanId(u){var m=String(u||'').match(/plan_[A-Za-z0-9]+/);return m?m[0]:null;}
 window._whopCache = window._whopCache || {};
 function _whopPrewarm(url){
@@ -682,7 +1117,6 @@ function _whopCheckout(url){
   var pid=_whopPlanId(url); var body=document.getElementById('whopCoBody');
   if(!pid||!body){ if(url) window.open(url,'_blank'); return; }
   var m=document.getElementById('whopCoModal');
-  // Iframe préchauffée (survol) → instantané
   var cached=window._whopCache&&window._whopCache[pid];
   if(cached){ delete window._whopCache[pid]; body.innerHTML=''; cached.style.cssText='width:100%;height:900px;border:0;display:block;background:transparent'; body.appendChild(cached); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; return; }
   body.innerHTML='';
