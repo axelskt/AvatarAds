@@ -120,7 +120,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <span id="label-monthly" style="font-weight:700;color:var(--text)">Mensuel</span>
     <button id="annual-toggle" onclick="toggleAnnual()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div id="toggle-thumb" style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button>
     <span id="label-annual" style="font-weight:500;color:var(--text-2)">Annuel</span>
-    <div class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px">3 mois offerts</div>
+    <div class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px">-25%</div>
   </div>
   <div id="pricing-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;max-width:1180px;margin:0 auto"></div>
   <div class="row" style="justify-content:center;gap:22px;margin-top:40px;flex-wrap:wrap">
@@ -170,6 +170,7 @@ const CHECKOUT={
   elite60:{ m:'https://whop.com/checkout/plan_pZmWh1dVdmIWT', a:'https://whop.com/checkout/plan_uWTkJDl1GvxNR' },
   elite90:{ m:'https://whop.com/checkout/plan_63PGeG3MesbJR', a:'https://whop.com/checkout/plan_x2kDWR6ur2W5E' },
 };
+function perDay(p){ return (parseFloat(String(p).replace(',','.'))/30).toFixed(2).replace('.',','); }
 var eliteSlider=0;
 const ELITE_TIERS=[
   {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', checkoutId:'elite'},
@@ -224,7 +225,7 @@ function renderPricing(){
     var tier=elite?ELITE_TIERS[eliteSlider]:null;
     var price=tier?(isAnnual?tier.annual:tier.price):(isAnnual?pl.annual:pl.price);
     var strike=pl.strike?(isAnnual?pl.annualStrike:pl.strike):'';
-    var note=isAnnual?'facturé annuellement · 3 mois offerts':pl.note;
+    var note='soit '+perDay(price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
     var checkoutId=tier?tier.checkoutId:pl.id;
     var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
     var borderColor=pop?'var(--accent)':(elite?'rgba(154,124,255,.35)':'var(--border)');
@@ -268,6 +269,7 @@ function setEliteSlider(idx){
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
+  var note=document.getElementById('lpEliteNote'); if(note) note.textContent='soit '+perDay(isAnnual?tier.annual:tier.price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
   var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=(CHECKOUT[tier.checkoutId]&&CHECKOUT[tier.checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/'; }
 }
 renderPricing();

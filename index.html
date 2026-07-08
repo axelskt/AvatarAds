@@ -391,9 +391,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <img src="assets/lp/express-veo.jpg" alt="Express — vidéo générée par Veo 3.1" loading="lazy">
+          <video src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo.jpg" autoplay muted loop playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
           <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px">✦ Veo 3.1</span>
-          <div class="sc-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -925,6 +924,14 @@ faqs.forEach(([q,a],i)=>{
   item.className='faq-item'+(i===0?' open':'');
   item.innerHTML=`<button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">${q}</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">${a}</div>`;
   faqList.appendChild(item);
+});
+
+/* vidéos autoplay : lecture quand visibles, pause sinon (autoplay muet parfois bloqué hors écran) */
+document.querySelectorAll('video[autoplay]').forEach(function(v){
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+    if(e.isIntersecting){ v.play().catch(function(){}); } else { v.pause(); }
+  }); },{threshold:0.25});
+  io.observe(v);
 });
 
 /* lance le scan reveal une fois tout le DOM construit */
