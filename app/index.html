@@ -7482,10 +7482,10 @@ async function generateImage(){
           }
         } catch(err){
           console.error('Image '+(i+1)+':', err);
-          const _m=((err&&err.message)||'Échec').toString();
+          const _m=_imgFriendlyErr((err&&err.message)||'Échec');
           const slot = document.getElementById('_imgMultiSlot'+i);
           if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠️ '+_m.replace(/</g,'&lt;').slice(0,180)+'</div>'; }
-          if(i===0) toast('⚠️ '+_m.slice(0,140));
+          if(i===0) toast('⚠️ '+_m.slice(0,180));
         }
       }
       _imgRenderHistory();
@@ -7495,13 +7495,28 @@ async function generateImage(){
     _updateImgQuotaLabel();
   } catch(e){
     console.error('generateImage:', e);
-    toast('⚠️ Erreur : ' + e.message);
+    toast('⚠️ ' + _imgFriendlyErr(e.message));
   } finally {
     _imgProgStop();
     overlay.style.display = 'none';
     btn.innerHTML = baseLabel;
     btn.disabled = false; btn.style.opacity = '1';
   }
+}
+
+// Traduit les erreurs OpenAI brutes en message clair et actionnable
+function _imgFriendlyErr(m){
+  m = String(m||'Échec');
+  if(/safety|content.?policy|policy.?violation|moderation.?blocked|rejected/i.test(m)){
+    const kind = /sexual/i.test(m) ? 'photo jugée trop suggestive'
+              : /violence|graphic/i.test(m) ? 'contenu jugé violent'
+              : /child|minor|csam/i.test(m) ? 'contenu refusé'
+              : 'image refusée par le filtre de contenu';
+    return '🚫 Génération refusée par le filtre de sécurité d\'OpenAI ('+kind+'). Essaie une autre photo, un cadrage plus serré (visage/épaules) ou une tenue moins suggestive — le filtre est appliqué par OpenAI, pas par AvatarAds.';
+  }
+  if(/billing|quota|insufficient/i.test(m)) return 'Quota du moteur d\'images atteint — réessaie dans quelques minutes.';
+  if(/timeout|timed out/i.test(m)) return 'Délai dépassé — réessaie.';
+  return m;
 }
 
 // Sélectionne une image depuis la grille multi → l'affiche en grand (single)
