@@ -3047,7 +3047,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- ③ DURÉE (slider 3→30s) -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title">⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">5 s</span></div>
-          <input id="expDurSlider" class="exp-slider" type="range" min="3" max="30" step="1" value="5" oninput="_expSetDur(this.value);_aaSliderFill(this)" style="width:100%">
+          <input id="expDurSlider" class="exp-slider" type="range" min="4" max="8" step="2" value="6" oninput="_expSetDur(this.value);_aaSliderFill(this)" style="width:100%">
           <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
         </div>
 
@@ -15724,7 +15724,7 @@ let _expressGpSplit      = 60;   // % hauteur pour la vidéo principale (reste =
 // ══════════════════════════════════════════════════════════════
 window._expStyle  = 'realiste';
 window._expFormat = '9:16';
-window._expDur    = 5;
+window._expDur    = 6;   // Veo 3.1 : 4, 6 ou 8 s uniquement
 window._expSubs   = false;
 window._expImgB64 = null;   // image fournie/générée (base64 brut, sans préfixe)
 window._expQuality = '720p';
@@ -15800,10 +15800,22 @@ function _expUpdateGenCaption(){
   const hf=document.getElementById('expHeroFmt'); if(hf) hf.textContent=window._expFormat||'9:16';
   const hq=document.getElementById('expHeroQual'); if(hq) hq.textContent=q;
 }
-function _expSetDur(v){ window._expDur=parseInt(v)||5; const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=window._expDur+' s'; _expUpdateGenCaption(); }
+function _expSetDur(v){
+  let d=parseInt(v)||6; d = d<=4?4:(d<=6?6:8); // Veo 3.1 : 4/6/8 s uniquement
+  window._expDur=d;
+  const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=d+' s';
+  // 1080p exige 8 s (limite Google) → repli auto sur 720p si durée plus courte
+  if(window._expQuality==='1080p' && d!==8){ window._expQuality='720p'; initExpress(); toast('ℹ️ 1080p dispo uniquement en 8 s → qualité repassée en 720p'); return; }
+  _expUpdateGenCaption();
+}
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
-function _expPickQual(v){ window._expQuality=v; initExpress(); }
+function _expPickQual(v){
+  window._expQuality=v;
+  // 1080p exige 8 s (limite Google Veo) → cale la durée automatiquement
+  if(v==='1080p' && (parseInt(window._expDur)||6)!==8){ window._expDur=8; toast('ℹ️ 1080p → durée réglée sur 8 s (limite Google)'); }
+  initExpress();
+}
 
 // ── Voix ──
 function _expRenderVoices(){
@@ -16086,10 +16098,14 @@ async function expressCreate(){
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
+    // ── Contraintes Veo 3.1 : durées 4/6/8 s ; 1080p uniquement en 8 s ──
+    let _dur = parseInt(window._expDur)||6; _dur = _dur<=4?4:(_dur<=6?6:8);
+    let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
+    if(_res!=='720p' && _dur!==8){ _res='720p'; toast('ℹ️ 1080p dispo uniquement en 8 s — vidéo générée en 720p'); }
     const _veoBody = (withAudio)=>({
       instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:imgMime } }],
       parameters:Object.assign(
-        { durationSeconds: parseInt(window._expDur)||5, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality==='4k'?'2160p':(window._expQuality||'720p')) },
+        { durationSeconds: _dur, sampleCount:1, aspectRatio:window._expFormat, resolution:_res },
         withAudio ? { generateAudio:true } : {}
       )
     });
@@ -16122,7 +16138,7 @@ async function expressCreate(){
     const { name:opName } = await startResp.json();
     if(!opName) throw new Error('Opération vidéo introuvable');
 
-    let videoB64=null, opErr=null;
+    let videoB64=null, videoUri=null, opErr=null;
     for(let i=0;i<120;i++){ // jusqu'à 10 min — Veo peut être lent aux heures de pointe
       await new Promise(r=>setTimeout(r,5000));
       const pr=await _cartoonProxyFetch('/v1beta/'+opName,{method:'GET'});
@@ -16132,15 +16148,24 @@ async function expressCreate(){
         if(pd.error){ opErr=pd.error.message||'Génération refusée par Google'; break; }
         videoB64 = pd?.response?.predictions?.[0]?.bytesBase64Encoded
                 || pd?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
-        if(!videoB64) opErr='Vidéo terminée mais introuvable dans la réponse — réessaie';
+        // Veo Fast renvoie souvent une URI de téléchargement au lieu du base64
+        videoUri = videoB64 ? null : (pd?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+                || pd?.response?.predictions?.[0]?.videoUri || pd?.response?.predictions?.[0]?.video?.uri || null);
+        if(!videoB64 && !videoUri) opErr='Vidéo terminée mais introuvable dans la réponse — réessaie';
         break;
       }
     }
     if(opErr) throw new Error(opErr);
-    if(!videoB64) throw new Error('Délai dépassé — la vidéo n\'a pas terminé, réessaie');
+    if(!videoB64 && !videoUri) throw new Error('Délai dépassé — la vidéo n\'a pas terminé, réessaie');
 
-    const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
-    const blob=new Blob([bytes],{type:'video/mp4'});
+    let blob;
+    if(videoB64){
+      const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
+      blob=new Blob([bytes],{type:'video/mp4'});
+    } else {
+      setP(Math.max(p,92),'⬇️ Téléchargement de la vidéo…');
+      blob = await _veoDownloadUri(videoUri);
+    }
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
@@ -17363,6 +17388,16 @@ async function _cartoonProxyFetch(path, options={}){
   });
 }
 
+// Télécharge une vidéo Veo renvoyée sous forme d'URI (via le proxy, clé côté serveur)
+async function _veoDownloadUri(uri){
+  let path = String(uri).replace(/^https?:\/\/generativelanguage\.googleapis\.com/,'');
+  if(!/[?&]alt=media/.test(path)) path += (path.includes('?')?'&':'?')+'alt=media';
+  const dl = await _cartoonProxyFetch(path, { method:'GET' });
+  if(!dl.ok) throw new Error('Téléchargement vidéo impossible (HTTP '+dl.status+')');
+  const b = await dl.blob();
+  return new Blob([b], { type:'video/mp4' });
+}
+
 async function cartoonGenImage(btn){
   const prompt = document.getElementById('cartoonCharPrompt').value.trim();
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
@@ -17509,7 +17544,7 @@ async function cartoonGenVideo(btn){
       if(!opName) throw new Error('Opération Veo introuvable');
 
       // 2. Polling jusqu'à completion (jusqu'à 10 min — Veo peut être lent)
-      let videoB64 = null, opErr = null;
+      let videoB64 = null, videoUri = null, opErr = null;
       for(let i=0; i<120; i++){
         await new Promise(r=>setTimeout(r,5000));
         const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
@@ -17519,16 +17554,23 @@ async function cartoonGenVideo(btn){
           if(pollData.error){ opErr = pollData.error.message || 'Génération refusée par Google'; break; }
           videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded
                   || pollData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
-          if(!videoB64) opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
+          videoUri = videoB64 ? null : (pollData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+                  || pollData?.response?.predictions?.[0]?.videoUri || pollData?.response?.predictions?.[0]?.video?.uri || null);
+          if(!videoB64 && !videoUri) opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
           break;
         }
       }
       if(opErr) throw new Error(opErr);
-      if(!videoB64) throw new Error('Délai dépassé — Veo n\'a pas terminé, réessaie');
+      if(!videoB64 && !videoUri) throw new Error('Délai dépassé — Veo n\'a pas terminé, réessaie');
 
-      // 3. Créer le blob
-      const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
-      videoBlob = new Blob([videoBytes], { type:'video/mp4' });
+      // 3. Créer le blob (base64 direct, ou téléchargement de l'URI via le proxy)
+      if(videoB64){
+        const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
+        videoBlob = new Blob([videoBytes], { type:'video/mp4' });
+      } else {
+        if(progTxt) progTxt.textContent = '⬇️ Téléchargement de la vidéo…';
+        videoBlob = await _veoDownloadUri(videoUri);
+      }
     }
 
     if(window._cartoonVidUrl) URL.revokeObjectURL(window._cartoonVidUrl);
