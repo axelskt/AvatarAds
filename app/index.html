@@ -15959,10 +15959,41 @@ function _expLoadImg(file){
   if(!file || !file.type.startsWith('image/')){ toast('⚠️ Choisis une image'); return; }
   if(window._expImgs.length>=EXP_MAX_IMGS){ toast('⚠️ Maximum '+EXP_MAX_IMGS+' images'); return; }
   const r=new FileReader();
-  r.onload=()=>{ window._expImgs.push({ b64:String(r.result).replace(/^data:image\/\w+;base64,/,''), url:r.result }); window._expImgB64=window._expImgs[0].b64; _expRenderImgs(); toast('✅ Image ajoutée ('+window._expImgs.length+'/'+EXP_MAX_IMGS+')'); };
+  r.onload=()=>{
+    const durl=String(r.result);
+    const img=new Image();
+    img.onload=()=>{
+      let mime=(durl.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png', finalUrl=durl;
+      // Veo n'accepte que PNG/JPEG → conversion canvas si autre format (webp, heic…)
+      if(mime!=='image/png' && mime!=='image/jpeg'){
+        try{
+          const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+          c.getContext('2d').drawImage(img,0,0);
+          finalUrl=c.toDataURL('image/png'); mime='image/png';
+        }catch(_){}
+      }
+      window._expImgs.push({ b64:finalUrl.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''), url:finalUrl, mime });
+      window._expImgB64=window._expImgs[0].b64;
+      window._expImgMime=window._expImgs[0].mime||'image/png';
+      // 1ʳᵉ image → format Express calé sur l'orientation de l'image
+      if(window._expImgs.length===1) _expAutoFormatFromImg(img.naturalWidth, img.naturalHeight);
+      _expRenderImgs(); toast('✅ Image ajoutée ('+window._expImgs.length+'/'+EXP_MAX_IMGS+')');
+    };
+    img.onerror=()=>toast('⚠️ Image illisible');
+    img.src=durl;
+  };
   r.readAsDataURL(file);
 }
-function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); window._expImgB64=(window._expImgs[0]&&window._expImgs[0].b64)||null; _expRenderImgs(); }
+function _expAutoFormatFromImg(w,h){
+  if(!w||!h) return;
+  const fmt = w>h ? '16:9' : '9:16';
+  if(window._expFormat!==fmt){
+    window._expFormat=fmt;
+    if(typeof initExpress==='function') initExpress();
+    toast('📐 Format ajusté sur ton image : '+(fmt==='16:9'?'Paysage':'Portrait'));
+  }
+}
+function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); window._expImgB64=(window._expImgs[0]&&window._expImgs[0].b64)||null; window._expImgMime=(window._expImgs[0]&&window._expImgs[0].mime)||'image/png'; _expRenderImgs(); }
 // ── Importer une image depuis la bibliothèque (Images IA générées) ──
 function openExpLibPicker(){
   let hist=[]; try{ hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(e){}
@@ -15987,8 +16018,12 @@ function _expPickFromLib(i){
   const im=hist[i]; if(!im||!im.url){ return; }
   window._expImgs = window._expImgs || [];
   if(window._expImgs.length>=EXP_MAX_IMGS){ toast('⚠️ Maximum '+EXP_MAX_IMGS+' images'); return; }
-  window._expImgs.push({ b64:String(im.url).replace(/^data:image\/\w+;base64,/,''), url:im.url });
+  const durl=String(im.url);
+  const mime=(durl.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png';
+  window._expImgs.push({ b64:durl.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''), url:durl, mime });
   window._expImgB64=window._expImgs[0].b64;
+  window._expImgMime=window._expImgs[0].mime||'image/png';
+  if(window._expImgs.length===1){ const probe=new Image(); probe.onload=()=>_expAutoFormatFromImg(probe.naturalWidth,probe.naturalHeight); probe.src=durl; }
   _expRenderImgs();
   document.getElementById('_explpModal')?.remove();
   toast('✅ Image importée depuis la bibliothèque');
@@ -16034,14 +16069,14 @@ async function expressCreate(){
     const useNativeAudio = (window._expVoice==='native');
 
     // 1) Image de départ : fournie, sinon générée via GPT Image
-    let imgB64=window._expImgB64;
+    let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
     if(!imgB64){
       setP(8,'🎨 Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
       const url = await _imgGenerateOne(token, imgPrompt, size, null);
-      if(url.startsWith('data:')) imgB64=url.replace(/^data:image\/\w+;base64,/,'');
-      else { const b=await (await fetch(url)).blob(); imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/\w+;base64,/,''));fr.readAsDataURL(b);}); }
+      if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
+      else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(b);}); }
       if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
       if(typeof _updateImgQuotaLabel==='function') _updateImgQuotaLabel();
     }
@@ -16052,7 +16087,7 @@ async function expressCreate(){
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
     const _veoBody = (withAudio)=>({
-      instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:'image/png' } }],
+      instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:imgMime } }],
       parameters:Object.assign(
         { durationSeconds: parseInt(window._expDur)||5, sampleCount:1, aspectRatio:window._expFormat, resolution:(window._expQuality==='4k'?'2160p':(window._expQuality||'720p')) },
         withAudio ? { generateAudio:true } : {}
@@ -16087,15 +16122,22 @@ async function expressCreate(){
     const { name:opName } = await startResp.json();
     if(!opName) throw new Error('Opération vidéo introuvable');
 
-    let videoB64=null;
-    for(let i=0;i<60;i++){
-      await new Promise(r=>setTimeout(r,3000));
+    let videoB64=null, opErr=null;
+    for(let i=0;i<120;i++){ // jusqu'à 10 min — Veo peut être lent aux heures de pointe
+      await new Promise(r=>setTimeout(r,5000));
       const pr=await _cartoonProxyFetch('/v1beta/'+opName,{method:'GET'});
       if(!pr.ok) continue;
       const pd=await pr.json();
-      if(pd.done){ videoB64=pd?.response?.predictions?.[0]?.bytesBase64Encoded; break; }
+      if(pd.done){
+        if(pd.error){ opErr=pd.error.message||'Génération refusée par Google'; break; }
+        videoB64 = pd?.response?.predictions?.[0]?.bytesBase64Encoded
+                || pd?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
+        if(!videoB64) opErr='Vidéo terminée mais introuvable dans la réponse — réessaie';
+        break;
+      }
     }
-    if(!videoB64) throw new Error('Délai dépassé — la vidéo n\'a pas terminé');
+    if(opErr) throw new Error(opErr);
+    if(!videoB64) throw new Error('Délai dépassé — la vidéo n\'a pas terminé, réessaie');
 
     const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
     const blob=new Blob([bytes],{type:'video/mp4'});
@@ -16124,7 +16166,7 @@ async function expressCreate(){
 
 function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
-  window._expImgB64=null; window._expVidBlob=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
+  window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
   const vid=document.getElementById('expResultVid'); if(vid){ vid.style.display='none'; vid.src=''; }
@@ -17466,19 +17508,23 @@ async function cartoonGenVideo(btn){
       const { name: opName } = await startResp.json();
       if(!opName) throw new Error('Opération Veo introuvable');
 
-      // 2. Polling jusqu'à completion
-      let videoB64 = null;
-      for(let i=0; i<60; i++){
-        await new Promise(r=>setTimeout(r,3000));
+      // 2. Polling jusqu'à completion (jusqu'à 10 min — Veo peut être lent)
+      let videoB64 = null, opErr = null;
+      for(let i=0; i<120; i++){
+        await new Promise(r=>setTimeout(r,5000));
         const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
         if(!pollResp.ok) continue;
         const pollData = await pollResp.json();
         if(pollData.done){
-          videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded;
+          if(pollData.error){ opErr = pollData.error.message || 'Génération refusée par Google'; break; }
+          videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded
+                  || pollData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
+          if(!videoB64) opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
           break;
         }
       }
-      if(!videoB64) throw new Error('Timeout — Veo n\'a pas terminé dans les 3 minutes');
+      if(opErr) throw new Error(opErr);
+      if(!videoB64) throw new Error('Délai dépassé — Veo n\'a pas terminé, réessaie');
 
       // 3. Créer le blob
       const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
