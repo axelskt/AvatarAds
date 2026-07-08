@@ -3154,7 +3154,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- Actions post-génération -->
         <div id="expResultActions" class="row" style="display:none;gap:10px;justify-content:center;padding:0 28px 14px;flex-wrap:wrap">
-          <button onclick="expressOpenInEditor()" class="btn btn-sm" style="background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">✍️ Ajouter des sous-titres</button>
+          <button onclick="expressAddSubs()" class="btn btn-sm" style="background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">✍️ Ajouter des sous-titres</button>
           <button onclick="expressDownload()" class="btn btn-ghost btn-sm">⬇ Télécharger</button>
           <button onclick="expressReset()" class="btn btn-ghost btn-sm">↺ Nouvelle vidéo</button>
         </div>
@@ -15793,7 +15793,7 @@ function initExpress(){
   if(qr){
     const _plan=(currentMember?.plan||'free').toLowerCase();
     const _canHD=['pro','elite','developer'].includes(_plan);
-    const _dur8=(parseInt(window._expDur)||6)===8;
+    const _dur8=(parseInt(window._expDur)||6)>=8; // 1080p dispo dès 8 s (y compris durées longues Élite)
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
       const lockPlan = q.v==='1080p' && !_canHD;
@@ -15825,8 +15825,8 @@ function _expSetDur(v){
   d = a.reduce((best,x)=>Math.abs(x-d)<Math.abs(best-d)?x:best, a[0]); // snap sur la valeur permise la plus proche
   window._expDur=d;
   const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=d+' s';
-  // 1080p exige 8 s (limite Google) → repli auto sur 720p si autre durée
-  if(window._expQuality==='1080p' && d!==8){ window._expQuality='720p'; toast('ℹ️ 1080p dispo uniquement en 8 s → qualité repassée en 720p'); }
+  // 1080p exige au moins 8 s (limite Google) → repli auto sur 720p si durée plus courte
+  if(window._expQuality==='1080p' && d<8){ window._expQuality='720p'; toast('ℹ️ 1080p dispo à partir de 8 s → qualité repassée en 720p'); }
   initExpress(); // re-render : état grisé/actif du 1080p selon la durée
 }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
@@ -15836,8 +15836,8 @@ function _expPickQual(v){
     // Réservé Pro et + → paywall
     const plan=(currentMember?.plan||'free').toLowerCase();
     if(!['pro','elite','developer'].includes(plan)){ toast('🔒 La 1080p est réservée au plan Pro et +'); openUpgradeModal(); return; }
-    // Grisé tant que la durée n'est pas 8 s (limite Google Veo)
-    if((parseInt(window._expDur)||6)!==8){ toast('ℹ️ 1080p dispo uniquement en 8 s — mets la durée sur 8 s'); return; }
+    // Grisé tant que la durée est sous 8 s (limite Google Veo)
+    if((parseInt(window._expDur)||6)<8){ toast('ℹ️ 1080p dispo à partir de 8 s — monte la durée'); return; }
   }
   window._expQuality=v; initExpress();
 }
@@ -16127,11 +16127,12 @@ async function expressCreate(){
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
     const _planNow=(currentMember?.plan||'free').toLowerCase();
     const _extElite=['elite','developer'].includes(_planNow);
-    let _dur = parseInt(window._expDur)||6, _extCount=0;
+    const _reqDur = parseInt(window._expDur)||6;
+    let _dur = _reqDur, _extCount=0;
     if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
     else { _dur = _dur<=4?4:(_dur<=6?6:8); }
     let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
-    if(_res!=='720p' && (_dur!==8 || _extCount>0)){ _res='720p'; toast('ℹ️ 1080p dispo uniquement en 8 s — vidéo générée en 720p'); }
+    if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('ℹ️ 1080p dispo à partir de 8 s — vidéo générée en 720p'); }
     const _veoBody = (withAudio)=>({
       instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:imgMime } }],
       parameters:Object.assign(
@@ -16180,7 +16181,7 @@ async function expressCreate(){
       const _vidRef = videoUri ? { uri: videoUri } : { bytesBase64Encoded: videoB64, mimeType:'video/mp4' };
       const _extBody = (withAudio)=>JSON.stringify({
         instances:[{ prompt: animPrompt, video: _vidRef }],
-        parameters: Object.assign({ sampleCount:1, aspectRatio:window._expFormat, resolution:'720p' }, withAudio?{generateAudio:true}:{})
+        parameters: Object.assign({ sampleCount:1, aspectRatio:window._expFormat, resolution:_res }, withAudio?{generateAudio:true}:{})
       });
       let extResp = await _cartoonProxyFetch('/v1beta/models/'+_veoModel+':predictLongRunning',{ method:'POST', body:_extBody(_usedAudio) });
       if(!extResp.ok && _usedAudio){
@@ -16210,6 +16211,7 @@ async function expressCreate(){
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
+    window._expVidBlobRaw=null; // nouvelle vidéo → la version "sans sous-titres" repart de celle-ci
     window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
 
     clearInterval(tick); setP(100, voiceBlob ? '✅ Vidéo + voix prêtes !' : '✅ Vidéo prête !');
@@ -16232,13 +16234,170 @@ async function expressCreate(){
 
 function expressDownload(){ if(!window._expVidUrl){ toast('⚠️ Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
-  window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
+  window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expVidBlobRaw=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
   const vid=document.getElementById('expResultVid'); if(vid){ vid.style.display='none'; vid.src=''; }
   const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='block';
   const acts=document.getElementById('expResultActions'); if(acts) acts.style.display='none';
 }
+// ── Sous-titres Express : modal style → Whisper IA → incrustation → téléchargement direct ──
+function expressAddSubs(){
+  if(!window._expVidBlob){ toast('⚠️ Génère une vidéo d\'abord'); return; }
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(!['pro','elite','byok','developer'].includes(plan)){ toast('🔒 Sous-titres Whisper IA — plans Pro et +'); openUpgradeModal(); return; }
+  document.getElementById('_expSubsModal')?.remove();
+  const m=document.createElement('div'); m.id='_expSubsModal';
+  m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(5px)';
+  m.addEventListener('click',e=>{ if(e.target===m && !window._expSubsBusy) m.remove(); });
+  m.innerHTML=`<div style="width:100%;max-width:460px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:22px 20px 20px;margin:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:15px;font-weight:800">✍️ Sous-titres automatiques</div>
+      <button onclick="if(!window._expSubsBusy)document.getElementById('_expSubsModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:14px">Whisper IA transcrit la voix mot à mot, incruste les sous-titres et télécharge la vidéo.</div>
+    <div class="mono" style="font-size:10px;color:var(--text3);margin-bottom:6px">STYLE</div>
+    <div id="_esmStyle" class="row" style="gap:8px;margin-bottom:12px"></div>
+    <div class="mono" style="font-size:10px;color:var(--text3);margin-bottom:6px">POSITION</div>
+    <div id="_esmPos" class="row" style="gap:8px;margin-bottom:12px"></div>
+    <div class="mono" style="font-size:10px;color:var(--text3);margin-bottom:6px">TAILLE</div>
+    <div id="_esmSize" class="row" style="gap:8px;margin-bottom:16px"></div>
+    <div id="_esmProg" style="display:none;margin-bottom:12px">
+      <div class="mono" id="_esmProgTxt" style="font-size:11px;color:var(--text2);margin-bottom:6px">…</div>
+      <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="_esmProgBar" style="height:100%;width:0%;background:var(--orange);transition:width .3s"></div></div>
+    </div>
+    <button id="_esmGo" onclick="_expBurnSubs()" class="btn" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;padding:13px">🎙 Sous-titrer & télécharger</button>
+    <button onclick="document.getElementById('_expSubsModal').remove();expressOpenInEditor()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px">Ouvrir dans l'Éditeur (réglages avancés)</button>
+  </div>`;
+  document.body.appendChild(m);
+  _expSubsModalRender();
+}
+function _expSubsModalRender(){
+  const mk=(id,arr,cur,fn)=>{ const el=document.getElementById(id); if(!el) return;
+    el.innerHTML=arr.map(o=>{ const on=o.id===cur;
+      return `<button onclick="${fn}('${o.id}');_expSubsModalRender()" class="btn ${on?'':'btn-ghost'} btn-sm" style="flex:1${on?';background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700':''}">${o.l}</button>`;
+    }).join(''); };
+  mk('_esmStyle', EXP_SUB_STYLES, window._expSubStyle, '_expPickSubStyle');
+  mk('_esmPos',   EXP_SUB_POS,    window._expSubPos,   '_expPickSubPos');
+  mk('_esmSize',  EXP_SUB_SIZES,  window._expSubSize,  '_expPickSubSize');
+}
+async function _expBurnSubs(){
+  if(window._expSubsBusy) return;
+  // On repart toujours de la vidéo SANS sous-titres (permet de changer de style et re-générer)
+  const raw = window._expVidBlobRaw || window._expVidBlob;
+  if(!raw){ toast('⚠️ Aucune vidéo'); return; }
+  window._expVidBlobRaw = raw;
+  const go=document.getElementById('_esmGo'), prog=document.getElementById('_esmProg'), ptxt=document.getElementById('_esmProgTxt'), pbar=document.getElementById('_esmProgBar');
+  const setp=(v,t)=>{ if(pbar)pbar.style.width=v+'%'; if(ptxt&&t)ptxt.textContent=t; };
+  window._expSubsBusy=true;
+  if(go){ go.disabled=true; go.style.opacity='.6'; }
+  if(prog) prog.style.display='block';
+  // Sauvegarde des globaux lus par _cvSubs (partagés avec le Générateur)
+  const _sv={ style:(typeof selSubStyle!=='undefined')?selSubStyle:'hormozi', size:cfg.subSize, pos:cfg.subPos, posX:cfg.subPosX, scaleX:cfg.subScaleX };
+  let vid=null, actx=null, url=null;
+  try{
+    // 1) Transcription Whisper (mots + timestamps)
+    setp(8,'🎙 Transcription Whisper IA…');
+    const fd=new FormData();
+    fd.append('file', raw, 'video.mp4');
+    fd.append('model','whisper-1');
+    fd.append('language','fr');
+    fd.append('response_format','verbose_json');
+    fd.append('timestamp_granularities[]','word');
+    const wr=await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions',{ method:'POST', headers: await getAuthHeader(), body: fd });
+    if(!wr.ok) throw new Error('Whisper : '+(await wr.text()).slice(0,120));
+    const wd=await wr.json();
+    const words=(wd.words||[]).map(w=>({ word:String(w.word||'').replace(/[.,!?;:"«»]/g,'').trim(), start:w.start, end:w.end })).filter(w=>w.word);
+    if(!words.length) throw new Error('Aucune parole détectée dans la vidéo');
+    const WPG=3, groups=[];
+    for(let i=0;i<words.length;i+=WPG) groups.push(words.slice(i,i+WPG));
+    // 2) Vidéo + canvas
+    setp(25,'🎬 Préparation du rendu…');
+    url=URL.createObjectURL(raw);
+    vid=document.createElement('video'); vid.src=url; vid.playsInline=true;
+    await new Promise((res,rej)=>{ vid.onloadedmetadata=res; vid.onerror=()=>rej(new Error('Vidéo illisible')); vid.load(); });
+    const W=vid.videoWidth||1080, H=vid.videoHeight||1920, dur=vid.duration||8;
+    const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
+    const bctx=canvas.getContext('2d');
+    // Audio routé dans le flux d'enregistrement (pas vers les hauts-parleurs)
+    const vstream=canvas.captureStream(30);
+    let stream=vstream;
+    try{
+      actx=new (window.AudioContext||window.webkitAudioContext)();
+      if(actx.state==='suspended') await actx.resume();
+      const dest=actx.createMediaStreamDestination();
+      actx.createMediaElementSource(vid).connect(dest);
+      stream=new MediaStream([...vstream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+    }catch(e){ console.warn('Audio route subs:',e); }
+    // 3) Encodeur
+    const mimes=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=h264,opus','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    let mime=''; for(const mt of mimes){ if(MediaRecorder.isTypeSupported(mt)){ mime=mt; break; } }
+    if(!mime) throw new Error('Encodeur non supporté sur ce navigateur');
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8_000_000,audioBitsPerSecond:128_000});
+    const chunks=[]; rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+    // 4) Style choisi → globaux _cvSubs (restaurés en finally)
+    const styleMap={punch:'badis',hormozi:'hormozi',karaoke:'karaoke',tiktok:'tiktok'};
+    const posMap={top:22,center:50,bottom:76};
+    const sizeMap={small:56,medium:72,large:92};
+    selSubStyle=styleMap[window._expSubStyle]||'hormozi';
+    cfg.subSize=sizeMap[window._expSubSize]||72;
+    cfg.subPos=posMap[window._expSubPos]||76;
+    cfg.subPosX=50; cfg.subScaleX=1;
+    // 5) Rendu temps réel (l'horloge = currentTime de la vidéo → synchro structurelle)
+    setp(35,'✍️ Incrustation… ('+Math.round(dur)+' s en temps réel)');
+    let lastGi=-1, lastGiT=0;
+    const draw=()=>{
+      const t=vid.currentTime||0;
+      bctx.drawImage(vid,0,0,W,H);
+      let gi=-1, wi=0;
+      for(let g=0; g<groups.length; g++){
+        const st=groups[g][0].start, en=groups[g][groups[g].length-1].end;
+        if(t>=st && t<=en+0.15){ gi=g; wi=groups[g].findIndex(w=>t>=w.start&&t<=w.end); if(wi<0) wi=groups[g].length-1; break; }
+      }
+      if(gi>=0){
+        if(gi!==lastGi){ lastGi=gi; lastGiT=t; }
+        _cvSubs(bctx, groups[gi].map(w=>w.word), wi, t-lastGiT, W, H);
+      }
+    };
+    draw();
+    rec.start(200);
+    vid.currentTime=0;
+    await vid.play();
+    await new Promise(res=>{
+      const loop=()=>{
+        draw();
+        const t=vid.currentTime||0;
+        setp(Math.min(97,35+Math.round(t/dur*62)),'✍️ Incrustation… '+Math.round(t)+'/'+Math.round(dur)+' s');
+        if(t<dur-0.08 && !vid.ended){ requestAnimationFrame(loop); } else res();
+      };
+      requestAnimationFrame(loop);
+    });
+    await new Promise(res=>{ rec.onstop=res; rec.stop(); });
+    vid.pause();
+    // 6) Blob final → preview + téléchargement direct
+    const isWebm=mime.startsWith('video/webm');
+    const out=new Blob(chunks,{type:isWebm?'video/webm':'video/mp4'});
+    if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
+    window._expVidBlob=out;
+    window._expVidUrl=URL.createObjectURL(out);
+    const pv=document.getElementById('expResultVid'); if(pv){ pv.src=window._expVidUrl; pv.load(); }
+    const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express-sous-titres.'+(isWebm?'webm':'mp4'); a.click();
+    setp(100,'✅ Vidéo sous-titrée téléchargée !');
+    toast('✅ Sous-titres incrustés — vidéo téléchargée');
+    setTimeout(()=>{ document.getElementById('_expSubsModal')?.remove(); }, 1200);
+  }catch(e){
+    console.error('Express subs error:',e);
+    toast('⚠️ Sous-titres : '+(e.message||e));
+    if(prog) prog.style.display='none';
+  }finally{
+    try{ selSubStyle=_sv.style; cfg.subSize=_sv.size; cfg.subPos=_sv.pos; cfg.subPosX=_sv.posX; cfg.subScaleX=_sv.scaleX; }catch(_){}
+    if(actx){ try{ actx.close(); }catch(_){} }
+    if(url) setTimeout(()=>URL.revokeObjectURL(url),5000);
+    window._expSubsBusy=false;
+    const go2=document.getElementById('_esmGo'); if(go2){ go2.disabled=false; go2.style.opacity='1'; }
+  }
+}
+
 function expressOpenInEditor(){
   if(!window._expVidBlob){ toast('⚠️ Génère une vidéo d\'abord'); return; }
   try {
