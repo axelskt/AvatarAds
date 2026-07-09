@@ -9130,8 +9130,9 @@ async function cloneVoice(){
     fd.append('name', 'Ma voix — ' + Date.now());
     fd.append('description', 'Clone voix IA Manager');
     fd.append('files', voiceFile, voiceFile.name);
+    const authH = await getAuthHeader();
     const cloneRes = await fetch(EL_PROXY + '?path=/v1/voices/add', {
-      method: 'POST',  body: fd
+      method: 'POST', headers: authH, body: fd
     });
     if(!cloneRes.ok){ const err=await cloneRes.json(); toast('✗ ElevenLabs : '+(err.detail?.message||cloneRes.status)); btn.textContent='Cloner ma voix →';btn.disabled=false;status.textContent='';return; }
     const cloneData = await cloneRes.json();
@@ -9151,7 +9152,7 @@ async function cloneVoice(){
       status.textContent = `🎵 Génération variation ${i+1}/3...`;
       try {
         const ttsRes = await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${clonedVoiceId}`,{
-          method:'POST', headers:{'Content-Type':'application/json','Accept':'audio/mpeg'},
+          method:'POST', headers:{...authH,'Content-Type':'application/json','Accept':'audio/mpeg'},
           body:JSON.stringify({text:previewText,model_id:'eleven_multilingual_v2',voice_settings:{stability:v.stability,similarity_boost:v.similarity,style:0.3,use_speaker_boost:true}})
         });
         if(!ttsRes.ok) continue;
@@ -9257,8 +9258,9 @@ async function previewVoice(voiceId,audioElId){
   if(audioEl.src){audioEl.play();return;}
   toast('Génération du sample...');
   try{
+    const _authH=await getAuthHeader();
     const res=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${voiceId}`,{
-      method:'POST',headers:{'Content-Type':'application/json','Accept':'audio/mpeg'},
+      method:'POST',headers:{..._authH,'Content-Type':'application/json','Accept':'audio/mpeg'},
       body:JSON.stringify({text:'Le meilleur business en ligne c\'est celui que tu lances maintenant.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.28,similarity_boost:0.82,style:0.35,use_speaker_boost:true}})
     });
     if(!res.ok){toast('✗ ElevenLabs '+res.status);return;}
@@ -12430,9 +12432,10 @@ function audioBufferToWav(buffer){
 async function callElevenLabs(text){
   const voiceId=selVoiceId;
   try{
+    const _authH=await getAuthHeader();
     const res=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${voiceId}`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'audio/mpeg'},
+      headers:{..._authH,'Content-Type':'application/json','Accept':'audio/mpeg'},
       body:JSON.stringify({
         text:text.substring(0,2500),
         model_id:'eleven_multilingual_v2',
