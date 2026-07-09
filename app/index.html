@@ -3204,7 +3204,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
       <!-- ══ EXPRESS MOBILE (design proto : image · format · durée sur une ligne + prompt + générer) ══ -->
       <div id="mExp">
-        <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:10px">
+        <div style="position:relative;margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:stretch">
           <button id="mExpQualBtn" onclick="_mExpQualTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M7 12h2l1.5 2 2-4 1.5 2h3"/></svg>
             <span id="mExpQualVal">720p</span> <span style="color:var(--text-3);font-size:11px">⌄</span>
@@ -3218,11 +3219,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <span id="mExpDurVal">6 s</span> <span id="mExpDurChev" style="color:var(--text-3);font-size:11px">⌄</span>
           </button>
         </div>
-        <div id="mExpQualPop" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;margin-bottom:10px;gap:6px">
+        <div id="mExpQualPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;gap:6px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
           <button onclick="_expPickQual('720p');_mExpQualTog();_mExpSync()" id="mExpQual720" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">720p · rapide</button>
           <button onclick="_expPickQual('1080p');_mExpQualTog();_mExpSync()" id="mExpQual1080" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">1080p · dès 8 s</button>
         </div>
-        <div id="mExpFmtPop" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;margin-bottom:10px;gap:6px">
+        <div id="mExpFmtPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;gap:6px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
           <button onclick="_expPickFormat('9:16');_mExpFmtTog();_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg> 9:16 · vertical
           </button>
@@ -3230,10 +3231,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <svg width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg> 16:9 · paysage
           </button>
         </div>
-        <div id="mExpDurPop" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div id="mExpDurPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
           <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--text-3)">DURÉE</span><span class="mono" id="mExpDurVal2" style="font-size:12px;color:var(--accent-2)">6s</span></div>
           <input id="mExpDurRange" type="range" min="3" max="30" step="1" value="6" oninput="_mExpDurInput(this)" onchange="_mExpDurChange(this)" style="width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:none;background:linear-gradient(90deg,var(--accent) 11%,var(--surface-3) 11%)">
           <div style="display:flex;justify-content:space-between;margin-top:6px"><span class="mono" style="font-size:10.5px;color:var(--text-3)">3s</span><span class="mono" style="font-size:10.5px;color:var(--text-3)">30s</span></div>
+        </div>
         </div>
         <div onclick="document.getElementById('expImgInput').click()" style="position:relative;border:1.5px dashed var(--border-2);border-radius:14px;padding:16px 14px;text-align:center;cursor:pointer;margin-bottom:10px">
           <span class="mono" style="position:absolute;top:10px;right:12px;font-size:9.5px;letter-spacing:.08em;color:var(--text-3)">Optionnel</span>
@@ -6097,8 +6099,8 @@ function openCreditsModal(mode, force){
   if(!force && (!currentMember || currentMember.plan === 'free')){
     showPaywall(); return;
   }
-  const plan = currentMember.plan;
-  const bal  = ['elite','developer'].includes(plan) ? '∞ (Dev)' : secsToDisplay(currentMember.credits_remaining || 0);
+  const plan = (currentMember?.plan) || 'free';
+  const bal  = ['elite','developer'].includes(plan) ? '∞ (Dev)' : secsToDisplay(currentMember?.credits_remaining || 0);
   document.getElementById('upgradeModalBalance').textContent = bal;
 
   const upg = UPGRADE_PLANS[plan]; // null for elite
@@ -20293,6 +20295,11 @@ function edBandDrag(ov,track,e,mode){
   #mImgGenBtn{display:flex !important;width:calc(100% - 28px) !important;margin:8px 14px 8px !important}
   /* modales (Mon compte, Connexions…) : contenu scrollable sur iPhone */
   .setup-box{max-height:calc(100dvh - 28px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  /* modale crédits (Recharger des crédits) : scrollable + packs sur 2 lignes propres */
+  .credits-overlay{align-items:flex-start !important;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px !important}
+  .credits-overlay>div{margin:10px 0 30px;padding:20px 14px 16px !important;max-width:100% !important}
+  .credits-pack{flex-wrap:wrap;row-gap:12px}
+  .credits-pack>div:last-child{flex:1 1 100%;justify-content:space-between}
   /* Éditeur : première page fixe (plus de zone de glisser géante) */
   #edEmpty div[ondrop]{min-height:0 !important;border-style:solid !important;padding:26px 16px !important}
   /* Images IA : formulaire puis résultat, empilés */
