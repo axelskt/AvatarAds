@@ -744,9 +744,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <!-- ══ GENERATOR ══ -->
     <div class="view on" id="v-generator">
       <div class="gen-left">
-        <div style="padding:26px 40px 6px;flex-shrink:0;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box">
-          <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/5</div>
-          <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Décris ton produit</h2>
+        <div style="padding:26px 40px 6px;flex-shrink:0;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div style="min-width:0">
+            <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/5</div>
+            <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Décris ton produit</h2>
+          </div>
+          <button id="mPrevBtn" onclick="mPreviewOpen()" style="display:none;flex:0 0 auto;align-items:center;gap:6px;padding:9px 13px;border-radius:11px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-weight:700;font-size:13px;font-family:var(--font);cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg> Aperçu
+          </button>
         </div>
         <div class="steps-bar">
           <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Produit</div>
@@ -20177,9 +20182,28 @@ function edBandDrag(ov,track,e,mode){
 #mMore .mm-ic svg{width:19px;height:19px}
 #mMore .mm-ghost{width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:13px 16px;border-radius:12px;
   background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer}
+#mPreview{display:none}
+@media(max-width:768px){
+  #mPrevBtn{display:inline-flex !important}
+  #v-generator .gen-left>div:first-child{padding:18px 16px 6px !important}
+  #genStepTitle{font-size:24px !important}
+  #mPreview.on{display:flex;flex-direction:column;position:fixed;left:0;right:0;top:54px;bottom:calc(62px + env(safe-area-inset-bottom));z-index:380;background:var(--bg);animation:rise .25s ease both}
+  #mPreview .mp-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
+  #mPreview .mp-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  #mPreview .gen-right{display:flex !important;width:100% !important;flex:1 !important;border-left:none !important}
+}
 </style>
 <div id="mNav"></div>
 <div id="mMore"></div>
+<div id="mPreview">
+  <div class="mp-head">
+    <button onclick="mPreviewClose()" style="display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--text);font-family:var(--font);font-weight:600;font-size:14.5px;cursor:pointer">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Retour
+    </button>
+    <span class="mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)">Aperçu</span>
+  </div>
+  <div class="mp-body" id="mPreviewBody"></div>
+</div>
 <script>
 (function(){
   var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
@@ -20286,10 +20310,26 @@ function edBandDrag(ov,track,e,mode){
   }
   function showMore(){ moreOpen=true; renderMore(); document.getElementById('mMore').classList.add('on'); paint(); }
 
-  window._mNavSync=function(id){ current=id; hideMore(); paint(); };
+  window._mNavSync=function(id){ current=id; hideMore(); if(window.mPreviewClose) mPreviewClose(); paint(); };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', renderNav);
   else renderNav();
 })();
+
+/* Aperçu plein écran du Générateur (mobile) : déplace #genRight dans l'overlay puis le remet */
+window.mPreviewOpen=function(){
+  var gr=document.getElementById('genRight'), body=document.getElementById('mPreviewBody');
+  if(!gr||!body) return;
+  window._mPrevHome=gr.parentNode; window._mPrevNext=gr.nextSibling;
+  body.appendChild(gr);
+  document.getElementById('mPreview').classList.add('on');
+};
+window.mPreviewClose=function(){
+  var mp=document.getElementById('mPreview');
+  if(!mp||!mp.classList.contains('on')) return;
+  mp.classList.remove('on');
+  var gr=document.getElementById('genRight');
+  if(gr&&window._mPrevHome){ if(window._mPrevNext&&window._mPrevNext.parentNode===window._mPrevHome) window._mPrevHome.insertBefore(gr,window._mPrevNext); else window._mPrevHome.appendChild(gr); }
+};
 </script>
 </body>
 </html>
