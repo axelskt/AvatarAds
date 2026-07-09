@@ -646,11 +646,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Crédits
       </button>
       <!-- Séparateur -->
-      <div style="width:1px;height:26px;background:var(--border)"></div>
+      <div class="tb-sep" style="width:1px;height:26px;background:var(--border)"></div>
       <!-- Compte -->
       <div class="row" style="gap:9px">
-        <div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:grid;place-items:center;font-weight:800;color:#1A0A02;font-size:13px;flex:0 0 auto">A</div>
-        <div class="col" style="line-height:1.2;align-items:flex-start">
+        <div onclick="openAccountSettings()" style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:grid;place-items:center;font-weight:800;color:#1A0A02;font-size:13px;flex:0 0 auto;cursor:pointer">A</div>
+        <div class="col tb-account-col" style="line-height:1.2;align-items:flex-start">
           <span style="font-size:13.5px;font-weight:600" id="memberName">—</span>
           <span id="memberPlanBadge" style="font-size:9px;font-family:var(--mono);letter-spacing:.6px;text-transform:uppercase;padding:1px 7px;border-radius:10px;background:var(--bg4);border:1px solid var(--border2);color:var(--text3);margin-top:2px">FREE</span>
         </div>
@@ -8298,6 +8298,7 @@ function nav(id,el){
   if(id==='audioclean') initAudioCleanView();
   if(id==='studio')     initStudio();
   if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); } }
+  if(window._mNavSync) _mNavSync(id);
 }
 function refreshYoutubeView(){
   const hasVideo = results && results.hedraUrl;
@@ -20137,6 +20138,158 @@ function edBandDrag(ov,track,e,mode){
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
 
+</script>
+
+<!-- ══════════ SHELL MOBILE : topbar compacte + bottom-nav + page « Plus » ══════════ -->
+<style>
+#mNav,#mMore{display:none}
+@media(max-width:768px){
+  .sidebar{display:none !important}
+  .layout{flex-direction:column !important;overflow:auto}
+  .topbar{height:54px;padding:0 12px}
+  .tb-account-col{display:none !important}
+  .tb-sep{display:none !important}
+  #memberBar{gap:8px !important}
+  #memberBar button[title="Se déconnecter"]{display:none !important}
+  #btnBuyCredits{display:none !important}
+  #memberImgQuotaBox{display:none !important}
+  #memberCreditsLabel{display:none}
+  #memberQuotaBox{padding:6px 10px !important}
+  #btnSeePlans,#btnUpgradePlan{padding:6px 10px !important;font-size:10.5px !important;white-space:nowrap}
+  .layout{padding-bottom:calc(66px + env(safe-area-inset-bottom));background:var(--bg2)}
+  #mNav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:400;height:calc(62px + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--border);background:var(--bg-grad);
+    justify-content:space-around;align-items:stretch}
+  #mMore.on{display:block;position:fixed;left:0;right:0;top:54px;bottom:calc(62px + env(safe-area-inset-bottom));z-index:390;
+    background:var(--bg);overflow-y:auto;padding:20px 16px 24px;-webkit-overflow-scrolling:touch}
+  .guest-banner{padding:6px 12px;flex-wrap:wrap}
+  .guest-banner-text{font-size:11px}
+}
+#mNav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;
+  color:var(--text-3);font-family:var(--font);font-size:9.5px;font-weight:500;cursor:pointer;padding:0;min-width:0}
+#mNav button.on{color:var(--accent-2)}
+#mNav button.on span{font-weight:700}
+#mNav button svg{width:21px;height:21px;flex:0 0 auto}
+#mMore .mm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
+#mMore .mm-tool{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;text-align:left;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer}
+#mMore .mm-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)}
+#mMore .mm-ic svg{width:19px;height:19px}
+#mMore .mm-ghost{width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:13px 16px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer}
+</style>
+<div id="mNav"></div>
+<div id="mMore"></div>
+<script>
+(function(){
+  var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+  var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',recorder:'Enregist.',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
+  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',recorder:'Enregistreur',audioclean:'Nettoyage audio',affiliation:'Parrainage',cartoon:'Cartoon IA'};
+  var CUSTOMIZABLE=['generator','library','imagegen','express','studio','recorder','audioclean','affiliation','cartoon'];
+  var DEFAULT=['generator','library','imagegen','express','studio'];
+  var current='generator', moreOpen=false;
+
+  function tabs(){ try{var s=JSON.parse(localStorage.getItem('aa_navtabs')); return (Array.isArray(s)&&s.length)?s.filter(function(id){return SHORT[id];}):DEFAULT.slice(); }catch(e){ return DEFAULT.slice(); } }
+  function saveTabs(t){ try{localStorage.setItem('aa_navtabs',JSON.stringify(t));}catch(e){} }
+  function iconOf(id){
+    var el=document.querySelector('.nav-i[onclick*="nav(\''+id+'\'"] svg');
+    return el?el.outerHTML:GRID;
+  }
+  function setupIcon(){
+    var el=document.querySelector('#navConnexions svg');
+    return el?el.outerHTML:GRID;
+  }
+
+  function paint(){
+    document.querySelectorAll('#mNav button').forEach(function(b){ b.classList.toggle('on', b.dataset.tool===(moreOpen?'__more':current)); });
+  }
+  function hideMore(){ moreOpen=false; var m=document.getElementById('mMore'); if(m) m.classList.remove('on'); }
+  function goTool(id){ hideMore(); if(id==='__setup'){ openSetup(); paint(); return; } nav(id); }
+
+  function renderNav(){
+    var host=document.getElementById('mNav'); if(!host) return;
+    host.innerHTML='';
+    tabs().forEach(function(id){
+      var b=document.createElement('button'); b.dataset.tool=id;
+      b.innerHTML=iconOf(id)+'<span>'+SHORT[id]+'</span>';
+      b.onclick=function(){ goTool(id); };
+      host.appendChild(b);
+    });
+    var plus=document.createElement('button'); plus.dataset.tool='__more';
+    plus.innerHTML=GRID+'<span>Plus</span>';
+    plus.onclick=showMore;
+    host.appendChild(plus);
+    paint();
+  }
+
+  var navOpen=false;
+  function renderMore(){
+    var m=document.getElementById('mMore'); if(!m) return;
+    var t=tabs();
+    var tools=[
+      ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['cartoon','Mascotte animée'],
+      ['studio','Montage type CapCut'],['imagegen','Visuels 4K'],['recorder','Clone ta voix'],
+      ['audioclean','Supprime les silences'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie'],['__setup','Réglages & API']
+    ];
+    var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+    tools.forEach(function(tl){
+      var id=tl[0], name=id==='__setup'?'Connexions':FULL[id];
+      h+='<button class="mm-tool" data-go="'+id+'"><span class="mm-ic">'+(id==='__setup'?setupIcon():iconOf(id))+'</span>'
+        +'<span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14.5px">'+name+'</b>'
+        +'<span style="font-size:11.5px;color:var(--text-3);line-height:1.3">'+tl[1]+'</span></span></button>';
+    });
+    h+='</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">'
+      +'<button class="mm-ghost" data-act="account">👤 Mon compte</button>'
+      +'<button class="mm-ghost" data-act="credits">⚡ Acheter des crédits</button>'
+      +'<button class="mm-ghost" data-act="logout" style="color:#ff6b6b">↩ Déconnexion</button></div>';
+    /* personnalisation de la barre du bas */
+    h+='<div class="mm-card" style="margin-top:24px;overflow:hidden">'
+      +'<button data-act="navopen" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:none;border:none;color:var(--text);font-family:var(--font);cursor:pointer;text-align:left">'
+      +'<span style="display:flex;align-items:center;gap:10px"><span style="font-size:16px">⚙️</span><b style="font-size:14.5px">Barre du bas</b>'
+      +'<span class="mono" style="font-size:11.5px;color:var(--text-3)">'+t.length+'/5 raccourcis</span></span>'
+      +'<span style="color:var(--text-3);transform:'+(navOpen?'rotate(90deg)':'none')+';transition:.2s">›</span></button>';
+    if(navOpen){
+      h+='<div style="padding:0 13px 14px"><p style="font-size:12px;color:var(--text-3);margin:0 0 12px;line-height:1.5">Appuie pour activer / désactiver (Plus reste toujours affiché).</p><div style="display:flex;flex-direction:column;gap:8px">';
+      CUSTOMIZABLE.forEach(function(id){
+        var on=t.indexOf(id)>=0;
+        var dis=(on&&t.length<=1)||(!on&&t.length>=5);
+        h+='<button data-toggle="'+id+'" '+(dis?'disabled':'')+' style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:12px;font-family:var(--font);cursor:pointer;'
+          +'border:1px solid '+(on?'var(--accent-line)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+';color:var(--text);opacity:'+(dis?'.5':'1')+'">'
+          +'<span style="width:32px;height:32px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border);color:'+(on?'var(--accent-2)':'var(--text-3)')+'">'+iconOf(id)+'</span>'
+          +'<span style="font-size:14px;font-weight:500;flex:1">'+FULL[id]+'</span>'
+          +'<span style="color:'+(on?'var(--accent-2)':'var(--text-3)')+';font-size:15px;font-weight:700">'+(on?'✓':'+')+'</span></button>';
+      });
+      h+='</div></div>';
+    }
+    h+='</div>';
+    m.innerHTML=h;
+    m.querySelectorAll('[data-go]').forEach(function(b){ b.onclick=function(){ goTool(b.dataset.go); }; });
+    m.querySelectorAll('[data-act]').forEach(function(b){
+      b.onclick=function(){
+        var a=b.dataset.act;
+        if(a==='account'){ hideMore(); paint(); openAccountSettings(); }
+        else if(a==='credits'){ hideMore(); paint(); openCreditsModal(); }
+        else if(a==='logout'){ authLogout(); }
+        else if(a==='navopen'){ navOpen=!navOpen; renderMore(); }
+      };
+    });
+    m.querySelectorAll('[data-toggle]').forEach(function(b){
+      b.onclick=function(){
+        var id=b.dataset.toggle, t2=tabs();
+        if(t2.indexOf(id)>=0){ if(t2.length<=1) return; t2=t2.filter(function(x){return x!==id;}); }
+        else { if(t2.length>=5) return; t2.push(id); }
+        saveTabs(t2); renderNav(); renderMore();
+      };
+    });
+  }
+  function showMore(){ moreOpen=true; renderMore(); document.getElementById('mMore').classList.add('on'); paint(); }
+
+  window._mNavSync=function(id){ current=id; hideMore(); paint(); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', renderNav);
+  else renderNav();
+})();
 </script>
 </body>
 </html>
