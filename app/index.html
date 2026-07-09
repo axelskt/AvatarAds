@@ -20212,6 +20212,11 @@ function edBandDrag(ov,track,e,mode){
   /* Composer Images IA : la colonne prompt doit pouvoir rétrécir */
   #v-imagegen .grow{min-width:0}
   #imgPrompt{padding-right:14px !important}
+  /* Éditeur : layout vertical type CapCut (aperçu + timeline puis outils dessous) */
+  #edMain>.row{flex-direction:column !important;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #edMain>.row>.col{flex:0 0 auto !important;width:100%}
+  #edPreviewZone{min-height:46vh}
+  #edMain>.row>.scroll-y{width:100% !important;flex:0 0 auto !important;border-left:none !important;border-top:1px solid var(--border);overflow:visible !important;max-height:none}
 }
 </style>
 <div id="mNav"></div>
