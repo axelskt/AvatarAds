@@ -8445,7 +8445,7 @@ function updateSteps(){
   var _stepTitles=['Décris ton produit','Choisis ton avatar','Donne-lui une voix','Peaufine le style','Lance la génération'];
   var _eyb=document.getElementById('genStepEyebrow');
   var _ttl=document.getElementById('genStepTitle');
-  if(_eyb) _eyb.textContent='Générateur · Étape '+step+'/5';
+  if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+step+'/5';
   if(_ttl) _ttl.textContent=_stepTitles[step-1]||'';
   if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
@@ -20150,8 +20150,23 @@ function edBandDrag(ov,track,e,mode){
 #mNav,#mMore{display:none}
 @media(max-width:768px){
   .sidebar{display:none !important}
-  .layout{flex-direction:column !important;overflow:auto}
-  .topbar{height:54px;padding:0 12px}
+  /* Scroll naturel de la page (iOS) — supprime la bande noire et le blocage */
+  html,body{overflow:auto !important;height:auto !important}
+  body{padding-top:54px}
+  .layout{display:block !important;height:auto !important;min-height:calc(100dvh - 54px);overflow:visible !important;background:var(--bg2)}
+  .main{overflow:visible !important;height:auto !important;display:block !important}
+  .view{overflow:visible !important;height:auto !important}
+  .view.on{display:flex;flex-direction:column}
+  .gen-view{overflow:visible !important}
+  .gen-left{overflow:visible !important;border-right:none !important}
+  .gen-form{overflow:visible !important;max-height:none !important}
+  /* Footer générateur 1:1 proto : Continuer pleine largeur, Retour dessous, plus de barre sticky */
+  .gen-footer{position:static !important;border-top:none !important;padding:6px 16px 18px;background:transparent !important}
+  #footerBtns{flex-direction:column-reverse;gap:10px;align-items:stretch}
+  #footerStepLbl{display:none}
+  #backBtn{width:100%;margin-top:0;padding:13px}
+  #mainBtn{width:100%;padding:16px;font-size:15px;border-radius:14px}
+  .topbar{height:54px;padding:0 12px;position:fixed;top:0;left:0;right:0;z-index:350}
   .tb-account-col{display:none !important}
   .tb-sep{display:none !important}
   #memberBar{gap:8px !important}
@@ -20161,7 +20176,7 @@ function edBandDrag(ov,track,e,mode){
   #memberCreditsLabel{display:none}
   #memberQuotaBox{padding:6px 10px !important}
   #btnSeePlans,#btnUpgradePlan{padding:6px 10px !important;font-size:10.5px !important;white-space:nowrap}
-  .layout{padding-bottom:calc(66px + env(safe-area-inset-bottom));background:var(--bg2)}
+  .layout{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
   #mNav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:400;height:calc(62px + env(safe-area-inset-bottom));
     padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--border);background:var(--bg-grad);
     justify-content:space-around;align-items:stretch}
@@ -20235,11 +20250,16 @@ function edBandDrag(ov,track,e,mode){
   var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
   var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',recorder:'Enregist.',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
   var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',recorder:'Enregistreur',audioclean:'Nettoyage audio',affiliation:'Parrainage',cartoon:'Cartoon IA'};
-  var CUSTOMIZABLE=['generator','library','imagegen','express','studio','recorder','audioclean','affiliation','cartoon'];
-  var DEFAULT=['generator','library','imagegen','express','studio'];
+  var CUSTOMIZABLE=['generator','imagegen','express','studio','library','recorder','audioclean','affiliation','cartoon'];
+  var DEFAULT=['generator','imagegen','express','studio','library'];
   var current='generator', moreOpen=false;
 
-  function tabs(){ try{var s=JSON.parse(localStorage.getItem('aa_navtabs')); return (Array.isArray(s)&&s.length)?s.filter(function(id){return SHORT[id];}):DEFAULT.slice(); }catch(e){ return DEFAULT.slice(); } }
+  function tabs(){ try{
+    var raw=localStorage.getItem('aa_navtabs');
+    if(raw==='["generator","library","imagegen","express","studio"]'){ localStorage.removeItem('aa_navtabs'); raw=null; } // migration ancien ordre par défaut
+    var s=raw?JSON.parse(raw):null;
+    return (Array.isArray(s)&&s.length)?s.filter(function(id){return SHORT[id];}):DEFAULT.slice();
+  }catch(e){ return DEFAULT.slice(); } }
   function saveTabs(t){ try{localStorage.setItem('aa_navtabs',JSON.stringify(t));}catch(e){} }
   function iconOf(id){
     var el=document.querySelector('.nav-i[onclick*="nav(\''+id+'\'"] svg');
@@ -20337,8 +20357,13 @@ function edBandDrag(ov,track,e,mode){
   function showMore(){ moreOpen=true; renderMore(); document.getElementById('mMore').classList.add('on'); paint(); }
 
   window._mNavSync=function(id){ current=id; hideMore(); if(window.mPreviewClose) mPreviewClose(); paint(); };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', renderNav);
-  else renderNav();
+  function boot(){
+    renderNav();
+    /* eyebrow court sur mobile (1:1 proto) */
+    if(window.innerWidth<=768){ var ey=document.getElementById('genStepEyebrow'); if(ey) ey.textContent=ey.textContent.replace('Générateur · ',''); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 
 /* Aperçu plein écran du Générateur (mobile) : déplace #genRight dans l'overlay puis le remet */
