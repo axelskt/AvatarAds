@@ -4430,6 +4430,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .elite-range{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--violet) 0%,var(--surface-3) 0%);outline:none;cursor:pointer}
 .elite-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .elite-range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--violet);border:none;box-shadow:0 0 0 4px rgba(154,124,255,.22),0 0 14px rgba(154,124,255,.85);cursor:pointer}
+@media(max-width:768px){
+  #plansSheet>div{padding:26px 16px 44px !important}
+  #sheetGrid{grid-template-columns:1fr !important;gap:16px !important;max-width:440px;margin:0 auto}
+  .sheet-card-pro{transform:none !important;order:0}
+}
 </style>
 <div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:99990;background:#07080a;overflow-y:auto;min-height:100vh">
   <div style="max-width:1180px;margin:0 auto;padding:56px 32px 64px">
@@ -4448,10 +4453,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
       </div>
       <span id="sheetLblAnnual" style="font-size:15px;color:var(--text-2)">Annuel</span>
-      <span class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px;padding:4px 11px">2 mois offerts</span>
+      <span class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px;padding:4px 11px">−25%</span>
     </div>
     <!-- Cards -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
+    <div id="sheetGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
 
       <!-- STARTER -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column">
@@ -4472,7 +4477,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="sheetPriceStarter" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1">29,99€</div>
           <div id="sheetPeriodStarter" style="font-size:14px;color:var(--text-3)">/mois</div>
         </div>
-        <div id="sheetSubStarter" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)"></div>
+        <div id="sheetSubStarter" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,00€/jour · sans engagement</div>
         <div id="sheetSaveStarter" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 90€/an</div>
         <button onclick="sheetCheckout('starter')" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px" onmouseover="this.style.background='var(--border-2)'" onmouseout="this.style.background='var(--surface-2)'">Choisir STARTER →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Inclus :</div>
@@ -4485,7 +4490,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
 
       <!-- PRO (highlighted, surélevé — design Claude) -->
-      <div style="background:radial-gradient(500px 200px at 50% 0,rgba(255,90,31,.12),var(--surface));border:2px solid var(--accent);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 3px var(--accent-soft),0 30px 60px -30px var(--accent-glow);transform:translateY(-8px)">
+      <div class="sheet-card-pro" style="background:radial-gradient(500px 200px at 50% 0,rgba(255,90,31,.12),var(--surface));border:2px solid var(--accent);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 3px var(--accent-soft),0 30px 60px -30px var(--accent-glow);transform:translateY(-8px)">
         <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:11px;font-weight:800;padding:5px 16px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 14px rgba(255,107,53,0.4)">⚡ LE PLUS POPULAIRE</div>
         <div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--orange)">PRO</div>
         <div style="font-size:14px;color:var(--text-3);margin-top:8px;min-height:42px;line-height:1.4">Pour les créateurs qui veulent scaler.</div>
@@ -4506,7 +4511,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="sheetPeriodPro" style="font-size:14px;color:var(--text-3)">/mois</div>
           <span style="font-size:11px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:20px">-23%</span>
         </div>
-        <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour</div>
+        <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour · sans engagement</div>
         <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 150€/an</div>
         <button onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 32px -8px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir PRO →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Starter, plus :</div>
@@ -4544,7 +4549,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="sheetPriceElite" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1">89,99€</div>
           <div id="sheetPeriodElite" style="font-size:14px;color:var(--text-3)">/mois</div>
         </div>
-        <div id="sheetSubElite" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)"></div>
+        <div id="sheetSubElite" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 3,00€/jour · sans engagement</div>
         <div id="sheetSaveElite" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 280€/an</div>
         <button id="sheetBtnElite" onclick="sheetCheckout('elite')" style="width:100%;padding:13px;background:var(--violet);border:none;border-radius:10px;color:#0c0a16;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .2s;margin:20px 0 22px;box-shadow:0 12px 30px -12px rgba(154,124,255,.6)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir ELITE →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Pro, plus :</div>
@@ -4557,7 +4562,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
 
     </div>
-    <div style="text-align:center;margin-top:28px;font-size:12px;color:var(--text3);font-family:var(--mono)">✓ Paiement sécurisé Whop · Annulation à tout moment · APIs inclus</div>
+    <div style="text-align:center;margin-top:28px;font-size:12px;color:var(--text3);font-family:var(--mono)">✓ Paiement sécurisé Whop · Annulation à tout moment</div>
   </div>
 </div>
 
@@ -5412,13 +5417,13 @@ function showPlansSheet(){
   if(lblM)   { lblM.style.color='var(--text)'; lblM.style.fontWeight='700'; }
   if(lblA)   { lblA.style.color='var(--text3)'; lblA.style.fontWeight='400'; }
   // Reset prices to monthly
-  const prices = { starter:['29,99€','/mois',''], pro:['49,99€','/mois','soit 1,67€/jour'], elite:['89,99€','/mois',''] };
+  const prices = { starter:['29,99€','/mois','soit 1,00€/jour · sans engagement'], pro:['49,99€','/mois','soit 1,67€/jour · sans engagement'], elite:['89,99€','/mois','soit 3,00€/jour · sans engagement'] };
   ['starter','pro','elite'].forEach(k=>{
     const cap=k.charAt(0).toUpperCase()+k.slice(1);
     const p=prices[k];
     const pe=document.getElementById('sheetPrice'+cap);   if(pe) pe.textContent=p[0];
     const pp=document.getElementById('sheetPeriod'+cap);  if(pp) pp.textContent=p[1];
-    const ps=document.getElementById('sheetSub'+cap);     if(ps) ps.textContent=p[2];
+    const ps=document.getElementById('sheetSub'+cap);     if(ps){ ps.textContent=p[2]; if(k!=='pro') ps.style.color='var(--text-3)'; }
     const sv=document.getElementById('sheetSave'+cap);    if(sv) sv.style.display='none';
   });
   document.getElementById('plansSheet').style.display = 'block';
@@ -5440,8 +5445,8 @@ function sheetToggleBilling(){
   if(toggle) toggle.style.background = _sheetAnnual ? '#22c55e' : 'var(--border2)';
   if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
   if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
-  const plans = { starter: { m:'29,99€', mp:'/mois', ms:'',               a:'20,83€', ap:'/mois', as:'soit 249,99€/an · -25%' },
-                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour', a:'37,50€', ap:'/mois', as:'soit 449,99€/an · 1,23€/jour', mOld:'64,99€', aOld:'55,99€' } };
+  const plans = { starter: { m:'29,99€', mp:'/mois', ms:'soit 1,00€/jour · sans engagement', a:'20,83€', ap:'/mois', as:'110€ économisés · soit 0,69€/jour' },
+                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour · sans engagement', a:'37,50€', ap:'/mois', as:'150€ économisés · soit 1,25€/jour', mOld:'64,99€', aOld:'55,99€' } };
   ['starter','pro'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
     const p = plans[k];
@@ -5451,8 +5456,9 @@ function sheetToggleBilling(){
     const saveEl   = document.getElementById('sheetSave'   + cap);
     if(priceEl)  priceEl.textContent  = _sheetAnnual ? p.a  : p.m;
     if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
-    if(subEl)    subEl.textContent    = _sheetAnnual ? p.as : (p.ms || 'paiement mensuel · sans engagement');
-    if(saveEl)   saveEl.style.display = _sheetAnnual ? 'block' : 'none';
+    if(subEl){   subEl.textContent    = _sheetAnnual ? p.as : (p.ms || 'sans engagement');
+                 if(k!=='pro') subEl.style.color = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
+    if(saveEl)   saveEl.style.display = 'none';
     if(k==='pro'){ const oldEl=document.getElementById('sheetOldPro'); if(oldEl) oldEl.textContent = _sheetAnnual ? p.aOld : p.mOld; }
   });
   // Elite — mise à jour via le tier slider actif
@@ -5461,9 +5467,9 @@ function sheetToggleBilling(){
 // Elite slider dans le plansSheet
 let _sheetEliteTier = 0; // 0=30av, 1=60av, 2=90av
 const SHEET_ELITE_TIERS = [
-  { avatars:30, videos:60,  images:50,  checkoutKey:'pro',     m:'89,99€',  a:'66,67€',  ms:'',                          as:'soit 799,99€/an · -25%',  save:'280' },
-  { avatars:60, videos:120, images:100, checkoutKey:'elite60', m:'158,99€', a:'119,99€', ms:'',                          as:'soit 1439,88€/an · -25%', save:'468' },
-  { avatars:90, videos:180, images:150, checkoutKey:'elite90', m:'224,99€', a:'157,99€', ms:'',                          as:'soit 1895,88€/an · -30%', save:'804' },
+  { avatars:30, videos:60,  images:50,  checkoutKey:'pro',     m:'89,99€',  a:'66,67€',  ms:'soit 3,00€/jour · sans engagement', as:'280€ économisés · soit 2,22€/jour', save:'280' },
+  { avatars:60, videos:120, images:100, checkoutKey:'elite60', m:'158,99€', a:'119,99€', ms:'soit 5,30€/jour · sans engagement', as:'468€ économisés · soit 4,00€/jour', save:'468' },
+  { avatars:90, videos:180, images:150, checkoutKey:'elite90', m:'224,99€', a:'157,99€', ms:'soit 7,50€/jour · sans engagement', as:'804€ économisés · soit 5,27€/jour', save:'804' },
 ];
 function setSheetEliteTier(idx){
   _sheetEliteTier = idx;
@@ -5488,8 +5494,9 @@ function setSheetEliteTier(idx){
   var imgEl    = document.getElementById('sheetEliteImages');
   var btnEl    = document.getElementById('sheetBtnElite');
   if(priceEl)  priceEl.textContent  = _sheetAnnual ? tier.a  : tier.m;
-  if(subEl)    subEl.textContent    = _sheetAnnual ? tier.as : (tier.ms || 'paiement mensuel · sans engagement');
-  if(saveEl){  saveEl.textContent   = 'économise '+tier.save+'€/an'; saveEl.style.display = _sheetAnnual ? 'block' : 'none'; }
+  if(subEl){   subEl.textContent    = _sheetAnnual ? tier.as : (tier.ms || 'sans engagement');
+               subEl.style.color    = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
+  if(saveEl)   saveEl.style.display = 'none';
   if(avEl)     avEl.textContent     = tier.avatars;
   if(vidEl)    vidEl.textContent    = tier.videos;
   if(imgEl)    imgEl.textContent    = tier.images;
