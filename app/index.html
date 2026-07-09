@@ -20151,11 +20151,17 @@ function edBandDrag(ov,track,e,mode){
 @media(max-width:768px){
   .sidebar{display:none !important}
   /* Scroll naturel de la page (iOS) — supprime la bande noire et le blocage */
-  html,body{overflow:auto !important;height:auto !important}
+  html,body{overflow:auto;height:auto !important}
   body{padding-top:54px}
   .layout{display:block !important;height:auto !important;min-height:calc(100dvh - 54px);overflow:visible !important;background:var(--bg2)}
   .main{overflow:visible !important;height:auto !important;display:block !important}
   .view{overflow:visible !important;height:auto !important}
+  /* plus aucun scroller imbriqué dans les vues : la page défile, c'est tout */
+  .view .scroll-y{overflow:visible !important;max-height:none !important}
+  #v-imagegen>.row>*{overflow:visible !important;height:auto !important}
+  /* panneau tarifs : scroll interne fiable sur iOS, sans entraîner la page derrière */
+  #plansSheet{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+  #plansSheet>div{padding-bottom:110px !important}
   .view.on{display:flex;flex-direction:column}
   .gen-view{overflow:visible !important}
   .gen-left{overflow:visible !important;border-right:none !important}
