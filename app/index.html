@@ -20191,6 +20191,27 @@ function edBandDrag(ov,track,e,mode){
   #mPreview .mp-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
   #mPreview .mp-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
   #mPreview .gen-right{display:flex !important;width:100% !important;flex:1 !important;border-left:none !important}
+  /* Express & Cartoon : aperçu au-dessus, formulaire en dessous (colonne) */
+  #v-express{flex-direction:column !important}
+  #v-cartoon{flex-direction:column !important}
+  #v-express>div:first-child,#v-cartoon>div:first-child{flex:0 0 auto !important;width:100% !important;border-right:none !important;order:2}
+  #v-express>div:last-child,#v-cartoon>div:last-child{order:1;min-height:300px;border-bottom:1px solid var(--border)}
+  /* Images IA : formulaire puis résultat, empilés */
+  #v-imagegen>.row{flex-direction:column !important;align-items:stretch !important}
+  #v-imagegen>.row>*{width:100% !important;max-width:100% !important;flex:0 0 auto !important;border-right:none !important;border-left:none !important}
+  /* En-têtes de modules : titre + actions passent à la ligne */
+  .lib-view .ph{flex-wrap:wrap;gap:10px}
+  .lib-view h2.display{font-size:24px !important}
+  /* Enregistreur : rangée d'actions qui déborde → wrap */
+  #v-recorder div:has(>#recUseBtn){flex-wrap:wrap}
+  #recUseBtn{flex:1 1 100% !important}
+  /* Express : cartes explicatives 1-2-3 en colonne */
+  #expResultPlaceholder div[style*="repeat(3,1fr)"]{grid-template-columns:1fr !important}
+  /* Grilles 3 colonnes génériques trop larges → 1 colonne */
+  #v-imagegen div[style*="repeat(3,1fr)"]{grid-template-columns:1fr 1fr !important}
+  /* Composer Images IA : la colonne prompt doit pouvoir rétrécir */
+  #v-imagegen .grow{min-width:0}
+  #imgPrompt{padding-right:14px !important}
 }
 </style>
 <div id="mNav"></div>
