@@ -5665,21 +5665,15 @@ function openCheckoutModal2(){}
 function closeCheckoutModal2(){ document.getElementById('checkoutModal2').style.display='none'; }
 
 // ── Checkout Whop INTÉGRÉ (embed) — remplace les redirections window.open ──
-// Le loader Whop (chargé dans le <head>) détecte le <div data-whop-checkout-plan-id> et monte l'iframe.
+// MONTAGE OFFICIEL via le loader js.whop.com (div[data-whop-checkout-plan-id]) :
+// obligatoire pour qu'Apple Pay s'affiche DANS l'embed (le loader fait la liaison
+// avec le domaine vérifié avatarads.fr ; une iframe manuelle ne l'a pas).
 function _whopPlanId(url){ const m = String(url||'').match(/plan_[A-Za-z0-9]+/); return m ? m[0] : null; }
-// Safari bloque Apple Pay dans les iframes cross-origin → bouton  Pay qui ouvre le checkout
-// hébergé whop.com (où Apple Pay fonctionne) ; visible uniquement sur les appareils compatibles.
-function _applePayBar(url){
-  try{ if(!(window.ApplePaySession && ApplePaySession.canMakePayments())) return null; }catch(e){ return null; }
-  const b = document.createElement('button');
-  b.style.cssText = 'width:100%;padding:14px;background:#000;border:1px solid #2e2e2e;border-radius:12px;color:#fff;font-family:-apple-system,BlinkMacSystemFont,var(--font);font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px';
-  b.innerHTML = 'Payer avec&nbsp;<span style="font-size:18px;font-weight:700">&hairsp;Pay</span>';
-  b.onclick = function(){
-    window.open(url, '_blank');
-    toast('🍎 Paiement Apple Pay ouvert — reviens ici après, ton plan s\'activera tout seul');
-  };
-  return b;
-}
+// Callback officiel Whop à la fin du paiement (data-whop-checkout-on-complete)
+window._whopEmbedComplete = function(){
+  toast('🎉 Paiement reçu — activation en cours…');
+  _whopWatchPayment(1200); // vérifications rapprochées le temps que le webhook crédite
+};
 function _whopCheckout(url){
   const pid = _whopPlanId(url);
   const body = document.getElementById('whopCoBody');
@@ -5687,23 +5681,38 @@ function _whopCheckout(url){
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
   const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
   const m = document.getElementById('whopCoModal');
-  // 1) Iframe PRÉCHAUFFÉE (déjà chargée en fond) → ouverture INSTANTANÉE
-  const cached = window._whopCache && window._whopCache[pid];
-  if(cached){
-    delete window._whopCache[pid];
-    body.innerHTML = '';
-    const ap1 = _applePayBar(url); if(ap1) body.appendChild(ap1);
-    cached.style.cssText = 'width:100%;height:900px;border:0;display:block;background:transparent';
-    body.appendChild(cached);
-    if(m) m.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    _whopWatchPayment();
-    setTimeout(() => _whopPrewarm(url), 4000); // re-préchauffe pour la prochaine ouverture
-    return;
-  }
-  // 2) Sinon, iframe en direct (spinner le temps du chargement)
   body.innerHTML = '';
-  const ap2 = _applePayBar(url); if(ap2) body.appendChild(ap2);
+  const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:560px';
+  const sp = document.createElement('div'); sp.className = 'whop-loading';
+  sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
+  sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
+  const mount = document.createElement('div');
+  mount.style.cssText = 'position:relative;z-index:1;min-height:560px';
+  mount.setAttribute('data-whop-checkout-plan-id', pid);
+  mount.setAttribute('data-whop-checkout-theme', 'dark');
+  mount.setAttribute('data-whop-checkout-locale', 'fr');
+  mount.setAttribute('data-whop-checkout-skip-redirect', 'true');
+  mount.setAttribute('data-whop-checkout-on-complete', '_whopEmbedComplete');
+  if(email) mount.setAttribute('data-whop-checkout-prefill-email', email);
+  wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
+  // spinner masqué dès que le loader a monté son iframe
+  try{
+    new MutationObserver(function(_, obs){
+      if(mount.querySelector('iframe')){ sp.style.display = 'none'; obs.disconnect(); }
+    }).observe(mount, { childList:true, subtree:true });
+  }catch(e){}
+  // repli : si le loader n'a rien monté en 5 s → iframe manuelle (ancien comportement)
+  setTimeout(function(){
+    if(!mount.querySelector('iframe')) _whopManualMount(pid, email, body);
+    else sp.style.display = 'none';
+  }, 5000);
+  if(m) m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  _whopWatchPayment();
+}
+// Repli si le loader officiel est indisponible (bloqueur de pub, réseau) — pas d'Apple Pay ici
+function _whopManualMount(pid, email, body){
+  body.innerHTML = '';
   const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
   sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
@@ -5714,12 +5723,9 @@ function _whopCheckout(url){
   d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
   d.style.cssText = 'position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
   d.setAttribute('allow', 'payment *');
-  d.setAttribute('allowpaymentrequest', 'true'); // Apple Pay dans l'iframe (anciens Safari)
+  d.setAttribute('allowpaymentrequest', 'true');
   d.onload = () => { sp.style.display = 'none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
-  if(m) m.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  _whopWatchPayment();
 }
 // Préchauffe (charge en fond, caché) le checkout d'un plan → clic ultérieur instantané
 window._whopCache = window._whopCache || {};
@@ -5747,7 +5753,7 @@ function closeWhopCheckout(){
 // ── Détection automatique de fin de paiement ──
 // Le webhook Whop crédite le profil en base → on surveille plan/crédits tant que la modale est ouverte :
 // dès que ça bouge, on ferme tout, on met l'UI à jour et on confirme. Plus besoin de recharger la page.
-function _whopWatchPayment(){
+function _whopWatchPayment(ms){
   clearInterval(window._whopCoIv);
   if(typeof currentMember === 'undefined' || !currentMember || !currentMember.id) return;
   const base = {
@@ -5777,7 +5783,7 @@ function _whopWatchPayment(){
       try{ _updateImgQuotaLabel(); }catch(e){}
       toast('🎉 Paiement confirmé — c\'est activé !');
     }catch(e){}
-  }, 3000);
+  }, ms || 3000);
 }
 
 // ── BUY CREDITS ──
