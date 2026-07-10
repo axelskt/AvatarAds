@@ -625,12 +625,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   <div class="topbar-right" style="flex:1;justify-content:flex-end">
     <div id="memberBar" style="display:none;align-items:center;gap:12px">
       <!-- Compteur vidéos -->
-      <div class="row" id="memberQuotaBox" style="gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px">
+      <div class="row" id="memberQuotaBox" style="gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px;cursor:pointer" onclick="openCreditsMenu()" title="Voir mes crédits">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
         <span class="mono" style="font-size:12.5px"><b id="memberCredits" style="color:var(--text)">—</b> <span class="faint" id="memberCreditsLabel">vidéos</span></span>
       </div>
       <!-- Compteur images -->
-      <div class="row" id="memberImgQuotaBox" style="display:none;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px;cursor:pointer" onclick="nav('imagegen',document.querySelector('.nav-i[onclick*=imagegen]'))" title="Crédits images IA ce mois">
+      <div class="row" id="memberImgQuotaBox" style="display:none;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px 12px;cursor:pointer" onclick="openCreditsMenu()" title="Voir mes crédits">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <span class="mono" style="font-size:12.5px"><b id="memberImgCredits" style="color:var(--text)">—</b> <span class="accent">img</span></span>
       </div>
@@ -4414,6 +4414,54 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   </div>
 </div>
 
+<!-- MES CRÉDITS (clic sur les compteurs de la topbar) -->
+<div id="creditsMenuModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:20px" onclick="if(event.target===this)closeCreditsMenu()">
+  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:24px 22px 18px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,.6);margin:6vh 0 30px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase">Mes crédits</div>
+        <div style="font-size:19px;font-weight:800;margin-top:4px">Plan <span id="cmPlan" style="color:var(--orange)">—</span></div>
+      </div>
+      <button onclick="closeCreditsMenu()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:6px 11px;cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+          <span style="font-size:13.5px;color:var(--text2)">Vidéos ce mois</span>
+        </div>
+        <b id="cmVideos" class="mono" style="font-size:14px">—</b>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span style="font-size:13.5px;color:var(--text2)">Images ce mois</span>
+        </div>
+        <b id="cmImages" class="mono" style="font-size:14px">—</b>
+      </div>
+      <div id="cmBonusRow" style="display:none;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:13px 15px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.9H22l-5.8 4.3 2.2 6.8L12 15.8 5.6 20l2.2-6.8L2 8.9h7.6z"/></svg>
+          <span style="font-size:13.5px;color:var(--text2)">Images bonus (packs)</span>
+        </div>
+        <b id="cmBonus" class="mono" style="font-size:14px;color:#22c55e">—</b>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <span style="font-size:13.5px;color:var(--text2)">Crédit avatar (durée)</span>
+        </div>
+        <b id="cmAvatarSecs" class="mono" style="font-size:14px">—</b>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+      <button onclick="closeCreditsMenu();openCreditsModal(null,true)" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer">+ Recharger des crédits</button>
+      <button onclick="closeCreditsMenu();showPlansSheet()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Voir les plans →</button>
+    </div>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:12px">Quotas remis à zéro chaque mois · les images bonus n'expirent pas</div>
+  </div>
+</div>
+
 <!-- AVATAR PRESET SAVE MODAL -->
 <div id="avatarPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
   <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
@@ -5083,6 +5131,26 @@ function _updateQuotaDisplay(){
     }
   }
 }
+
+// ── MENU « MES CRÉDITS » (clic sur les compteurs de la topbar) ──
+function openCreditsMenu(){
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  const labels = { free:'Free', starter:'Starter', pro:'Pro', elite:'Élite', byok:'BYOK', developer:'Développeur' };
+  const el = id => document.getElementById(id);
+  if(el('cmPlan')) el('cmPlan').textContent = labels[plan] || plan;
+  const q = _getPlanQuota(plan);
+  if(el('cmVideos')) el('cmVideos').textContent = q.videos >= 999 ? '∞' : (_videosRemaining() + ' / ' + q.videos + ' restantes');
+  const imgLim = _imgMonthLimit();
+  if(el('cmImages')) el('cmImages').textContent = imgLim >= 9999 ? '∞' : (Math.max(0, imgLim - _imgMonthUsed()) + ' / ' + imgLim + ' restantes');
+  const bonus = _imgBonus();
+  const bonusRow = el('cmBonusRow');
+  if(bonusRow) bonusRow.style.display = bonus > 0 ? 'flex' : 'none';
+  if(el('cmBonus')) el('cmBonus').textContent = '+' + bonus;
+  const secs = ['elite','developer'].includes(plan) && currentMember?.is_owner ? '∞' : secsToDisplay(currentMember?.credits_remaining || 0);
+  if(el('cmAvatarSecs')) el('cmAvatarSecs').textContent = plan==='developer' ? '∞' : secs;
+  document.getElementById('creditsMenuModal').style.display = 'flex';
+}
+function closeCreditsMenu(){ document.getElementById('creditsMenuModal').style.display = 'none'; }
 
 // ── AUTH TAB SWITCH ──
 function switchAuthTab(tab){
@@ -6542,7 +6610,11 @@ function _imgMonthLimit(){
   if(p==='byok')      return 10; // BYOK (membres formation) : Images IA sur ta clé Google, 10/mois
   return 0; // free → pas d'accès
 }
-function _imgMonthUsed(){ try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; } }
+function _imgMonthUsed(){
+  // Compteur serveur (synchronisé entre appareils, anti-triche) ; localStorage = repli invité
+  if(currentMember && typeof currentMember.images_used === 'number') return Math.max(0, currentMember.images_used);
+  try{ return parseInt(localStorage.getItem(_imgMonthKey())||'0',10); }catch(e){ return 0; }
+}
 function _imgBonus(){ return typeof window._imgBonusCreditsCache === 'number' ? Math.max(0, window._imgBonusCreditsCache) : 0; }
 function _imgMonthRemaining(){
   const monthRem = Math.max(0, _imgMonthLimit() - _imgMonthUsed());
@@ -6553,8 +6625,15 @@ function _imgMonthIncrement(){
     const used = _imgMonthUsed();
     const lim  = _imgMonthLimit();
     if(used < lim){
-      // consomme d'abord le quota mensuel (localStorage)
-      localStorage.setItem(_imgMonthKey(), String(used + 1));
+      // consomme d'abord le quota mensuel — incrément côté serveur (RPC anti-triche, sync multi-appareils)
+      if(currentMember){
+        currentMember.images_used = used + 1; // optimiste, corrigé par la réponse serveur
+        sb.rpc('use_image_quota').then(({ data }) => {
+          if(typeof data === 'number'){ currentMember.images_used = data; _updateImgQuotaLabel(); }
+        });
+      } else {
+        localStorage.setItem(_imgMonthKey(), String(used + 1));
+      }
     } else {
       // quota épuisé → consomme un crédit bonus, décrément côté serveur (RPC anti-triche)
       window._imgBonusCreditsCache = Math.max(0, _imgBonus() - 1);
@@ -6562,6 +6641,7 @@ function _imgMonthIncrement(){
         if(typeof data === 'number' && data >= 0) window._imgBonusCreditsCache = data;
       });
     }
+    _updateImgQuotaLabel();
   }catch(e){}
 }
 
