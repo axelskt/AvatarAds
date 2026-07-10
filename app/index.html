@@ -5667,6 +5667,19 @@ function closeCheckoutModal2(){ document.getElementById('checkoutModal2').style.
 // ── Checkout Whop INTÉGRÉ (embed) — remplace les redirections window.open ──
 // Le loader Whop (chargé dans le <head>) détecte le <div data-whop-checkout-plan-id> et monte l'iframe.
 function _whopPlanId(url){ const m = String(url||'').match(/plan_[A-Za-z0-9]+/); return m ? m[0] : null; }
+// Safari bloque Apple Pay dans les iframes cross-origin → bouton  Pay qui ouvre le checkout
+// hébergé whop.com (où Apple Pay fonctionne) ; visible uniquement sur les appareils compatibles.
+function _applePayBar(url){
+  try{ if(!(window.ApplePaySession && ApplePaySession.canMakePayments())) return null; }catch(e){ return null; }
+  const b = document.createElement('button');
+  b.style.cssText = 'width:100%;padding:14px;background:#000;border:1px solid #2e2e2e;border-radius:12px;color:#fff;font-family:-apple-system,BlinkMacSystemFont,var(--font);font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px';
+  b.innerHTML = 'Payer avec&nbsp;<span style="font-size:18px;font-weight:700">&hairsp;Pay</span>';
+  b.onclick = function(){
+    window.open(url, '_blank');
+    toast('🍎 Paiement Apple Pay ouvert — reviens ici après, ton plan s\'activera tout seul');
+  };
+  return b;
+}
 function _whopCheckout(url){
   const pid = _whopPlanId(url);
   const body = document.getElementById('whopCoBody');
@@ -5679,6 +5692,7 @@ function _whopCheckout(url){
   if(cached){
     delete window._whopCache[pid];
     body.innerHTML = '';
+    const ap1 = _applePayBar(url); if(ap1) body.appendChild(ap1);
     cached.style.cssText = 'width:100%;height:900px;border:0;display:block;background:transparent';
     body.appendChild(cached);
     if(m) m.style.display = 'flex';
@@ -5689,6 +5703,7 @@ function _whopCheckout(url){
   }
   // 2) Sinon, iframe en direct (spinner le temps du chargement)
   body.innerHTML = '';
+  const ap2 = _applePayBar(url); if(ap2) body.appendChild(ap2);
   const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
   sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
