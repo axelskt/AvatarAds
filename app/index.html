@@ -5028,23 +5028,22 @@ async function _checkAndResetQuota(){
   const isOldMonth = !resetDate || new Date(resetDate).getMonth() !== now.getMonth()
                      || new Date(resetDate).getFullYear() !== now.getFullYear();
   if(isOldMonth){
-    const today = now.toISOString().split('T')[0];
-    await sb.from('profiles').update({ videos_used: 0, quota_reset_date: today }).eq('id', currentMember.id);
-    currentMember.videos_used = 0;
-    currentMember.quota_reset_date = today;
+    // Reset géré côté serveur (RPC — l'écriture directe des compteurs est verrouillée)
+    try{
+      const { data } = await sb.rpc('ensure_quota_month');
+      currentMember.videos_used = data || 0;
+      currentMember.quota_reset_date = now.toISOString().split('T')[0];
+    }catch(e){ console.warn('ensure_quota_month error:', e); }
   }
 }
 
 async function _incrementVideosUsed(){
   if(!currentMember) return;
-  // Toujours re-lire la valeur depuis la DB avant d'incrémenter
-  // → empêche la manipulation client-side (currentMember.videos_used = 0)
   try {
-    const { data } = await sb.from('profiles').select('videos_used').eq('id', currentMember.id).single();
-    const serverCount = (data?.videos_used || 0);
-    const newCount = serverCount + 1;
-    await sb.from('profiles').update({ videos_used: newCount }).eq('id', currentMember.id);
-    currentMember.videos_used = newCount;
+    // Incrément atomique côté serveur (RPC SECURITY DEFINER, reset auto si nouveau mois) — anti-triche
+    const { data, error } = await sb.rpc('use_video_quota');
+    if(error) throw error;
+    currentMember.videos_used = data || ((currentMember.videos_used || 0) + 1);
   } catch(e) {
     // fallback conservatif si la DB est inaccessible
     currentMember.videos_used = (currentMember.videos_used || 0) + 1;
@@ -5227,6 +5226,8 @@ function enterApp(profile){
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
+  // Préchauffe les checkouts en fond dès la connexion → 1er clic sur un plan = ouverture instantanée
+  setTimeout(function(){ try{ const mm=PLAN_CHECKOUT_URLS.monthly; _whopPrewarm(mm.free); _whopPrewarm(mm.starter); _whopPrewarm(mm.pro); }catch(e){} }, 2500);
   const planColors = { free:'var(--text3)', starter:'#4dabf7', pro:'#a855f7', elite:'var(--orange)' };
   const planLabels = { free:'Free', starter:'Starter', pro:'Pro', elite:'Elite' };
   const displayName = profile.first_name || (profile.email||'').split('@')[0];
@@ -5306,13 +5307,15 @@ async function decrementCredit(durationSecs){
     toast('✗ Il te faut ' + needed + ' min — tu n\'en as plus assez !');
     showPaywall(); return false;
   }
-  const newSecs = remaining - secs;
-  const { error } = await sb.from('profiles')
-    .update({ credits_remaining: newSecs })
-    .eq('id', currentMember.id);
-  if(error){ console.warn('Minutes update error:', error); }
-  currentMember.credits_remaining = newSecs;
-  document.getElementById('memberCredits').textContent = secsToDisplay(newSecs);
+  // Décrément côté serveur (RPC SECURITY DEFINER : le solde est vérifié en base — anti-triche)
+  const { data: newBal, error } = await sb.rpc('spend_credits', { p_secs: secs });
+  if(error){ console.warn('spend_credits error:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
+  if(newBal === -1){
+    toast('✗ Solde insuffisant !');
+    showPaywall(); return false;
+  }
+  currentMember.credits_remaining = newBal;
+  document.getElementById('memberCredits').textContent = secsToDisplay(newBal);
   return true;
 }
 
@@ -5504,6 +5507,8 @@ function sheetToggleBilling(){
   if(toggle) toggle.style.background = _sheetAnnual ? '#22c55e' : 'var(--border2)';
   if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
   if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
+  // Préchauffe les checkouts annuels dès le passage sur Annuel → clic instantané
+  if(_sheetAnnual){ try{ const aa=PLAN_CHECKOUT_URLS.annual; _whopPrewarm(aa.free); _whopPrewarm(aa.starter); _whopPrewarm(aa.pro); }catch(e){} }
   // Annuel : prix barré = le tarif mensuel du plan (Pro garde son barré promo 64,99€ en mensuel)
   const plans = { starter: { m:'29,99€', mp:'/mois', ms:'soit 1,00€/jour · sans engagement', a:'20,83€', ap:'/mois', as:'110€ économisés · soit 0,69€/jour', aOld:'29,99€' },
                   pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour · sans engagement', a:'37,50€', ap:'/mois', as:'150€ économisés · soit 1,25€/jour', mOld:'64,99€', aOld:'49,99€' } };
@@ -5599,7 +5604,7 @@ function _whopCheckout(url){
   const body = document.getElementById('whopCoBody');
   // Fallback : pas d'ID de plan reconnu OU conteneur absent → ancienne redirection
   if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
-  const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
+  const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
   const m = document.getElementById('whopCoModal');
   // 1) Iframe PRÉCHAUFFÉE (déjà chargée en fond) → ouverture INSTANTANÉE
   const cached = window._whopCache && window._whopCache[pid];
@@ -5610,6 +5615,8 @@ function _whopCheckout(url){
     body.appendChild(cached);
     if(m) m.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    _whopWatchPayment();
+    setTimeout(() => _whopPrewarm(url), 4000); // re-préchauffe pour la prochaine ouverture
     return;
   }
   // 2) Sinon, iframe en direct (spinner le temps du chargement)
@@ -5623,11 +5630,13 @@ function _whopCheckout(url){
   const d = document.createElement('iframe');
   d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
   d.style.cssText = 'position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
-  d.setAttribute('allow', 'payment');
+  d.setAttribute('allow', 'payment *');
+  d.setAttribute('allowpaymentrequest', 'true'); // Apple Pay dans l'iframe (anciens Safari)
   d.onload = () => { sp.style.display = 'none'; };
   wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  _whopWatchPayment();
 }
 // Préchauffe (charge en fond, caché) le checkout d'un plan → clic ultérieur instantané
 window._whopCache = window._whopCache || {};
@@ -5635,13 +5644,14 @@ function _whopPrewarm(url){
   const pid = _whopPlanId(url); if(!pid || window._whopCache[pid]) return;
   let host = document.getElementById('whopPrewarm');
   if(!host){ host = document.createElement('div'); host.id = 'whopPrewarm'; host.style.cssText = 'position:fixed;left:-99999px;top:0;width:440px;height:900px;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(host); }
-  const email = (window.currentMember && currentMember.email) ? currentMember.email : '';
+  const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
   let q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
   if(email) q += '&email=' + encodeURIComponent(email);
   const f = document.createElement('iframe');
   f.src = 'https://whop.com/embedded/checkout/' + pid + '/' + q;
   f.style.cssText = 'width:440px;height:900px;border:0';
-  f.setAttribute('allow', 'payment');
+  f.setAttribute('allow', 'payment *');
+  f.setAttribute('allowpaymentrequest', 'true');
   window._whopCache[pid] = f; host.appendChild(f);
 }
 function closeWhopCheckout(){
@@ -5649,6 +5659,42 @@ function closeWhopCheckout(){
   const m = document.getElementById('whopCoModal'); if(m) m.style.display = 'none';
   const b = document.getElementById('whopCoBody'); if(b) b.innerHTML = '';
   document.body.style.overflow = '';
+}
+
+// ── Détection automatique de fin de paiement ──
+// Le webhook Whop crédite le profil en base → on surveille plan/crédits tant que la modale est ouverte :
+// dès que ça bouge, on ferme tout, on met l'UI à jour et on confirme. Plus besoin de recharger la page.
+function _whopWatchPayment(){
+  clearInterval(window._whopCoIv);
+  if(typeof currentMember === 'undefined' || !currentMember || !currentMember.id) return;
+  const base = {
+    plan:     currentMember.plan,
+    credits:  currentMember.credits_remaining || 0,
+    imgBonus: currentMember.img_bonus_credits || 0
+  };
+  window._whopCoIv = setInterval(async () => {
+    try{
+      const modal = document.getElementById('whopCoModal');
+      if(!modal || modal.style.display === 'none'){ clearInterval(window._whopCoIv); return; }
+      const { data } = await sb.from('profiles').select('*').eq('id', currentMember.id).single();
+      if(!data) return;
+      const paid = data.plan !== base.plan
+        || (data.credits_remaining || 0) > base.credits
+        || (data.img_bonus_credits  || 0) > base.imgBonus;
+      if(!paid) return;
+      clearInterval(window._whopCoIv);
+      Object.assign(currentMember, data);
+      window._userPlan = data.plan || 'free';
+      window._imgBonusCreditsCache = data.img_bonus_credits || 0;
+      closeWhopCheckout();
+      try{ closePlansSheet(); }catch(e){}
+      try{ closeUpgradeModal(); }catch(e){}
+      try{ updateAccountMenu(currentMember); }catch(e){}
+      try{ _updateQuotaDisplay(); }catch(e){}
+      try{ _updateImgQuotaLabel(); }catch(e){}
+      toast('🎉 Paiement confirmé — c\'est activé !');
+    }catch(e){}
+  }, 3000);
 }
 
 // ── BUY CREDITS ──
@@ -6510,10 +6556,11 @@ function _imgMonthIncrement(){
       // consomme d'abord le quota mensuel (localStorage)
       localStorage.setItem(_imgMonthKey(), String(used + 1));
     } else {
-      // quota épuisé → consomme un crédit bonus (Supabase)
-      const newBonus = Math.max(0, _imgBonus() - 1);
-      window._imgBonusCreditsCache = newBonus;
-      if(currentMember) sb.from('profiles').update({ img_bonus_credits: newBonus }).eq('id', currentMember.id);
+      // quota épuisé → consomme un crédit bonus, décrément côté serveur (RPC anti-triche)
+      window._imgBonusCreditsCache = Math.max(0, _imgBonus() - 1);
+      if(currentMember) sb.rpc('spend_img_bonus', { p_qty: 1 }).then(({ data }) => {
+        if(typeof data === 'number' && data >= 0) window._imgBonusCreditsCache = data;
+      });
     }
   }catch(e){}
 }
