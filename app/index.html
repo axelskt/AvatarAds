@@ -4502,7 +4502,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="sheetBillingThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
       </div>
       <span id="sheetLblAnnual" style="font-size:15px;color:var(--text-2)">Annuel</span>
-      <span class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px;padding:4px 11px">−25%</span>
+      <span class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px;padding:4px 11px">−25% · 2 mois offert</span>
     </div>
     <!-- Cards -->
     <div id="sheetGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
@@ -4523,6 +4523,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:18px">
+          <div id="sheetOldStarter" style="display:none;font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">29,99€</div>
           <div id="sheetPriceStarter" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1">29,99€</div>
           <div id="sheetPeriodStarter" style="font-size:14px;color:var(--text-3)">/mois</div>
         </div>
@@ -4558,7 +4559,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="sheetOldPro" style="font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">64,99€</div>
           <div id="sheetPricePro" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1;color:#22c55e">49,99€</div>
           <div id="sheetPeriodPro" style="font-size:14px;color:var(--text-3)">/mois</div>
-          <span style="font-size:11px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:20px">-23%</span>
+          <span id="sheetBadgePro" style="font-size:11px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:20px">-23%</span>
         </div>
         <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour · sans engagement</div>
         <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 150€/an</div>
@@ -4595,6 +4596,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:18px">
+          <div id="sheetOldElite" style="display:none;font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">89,99€</div>
           <div id="sheetPriceElite" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1">89,99€</div>
           <div id="sheetPeriodElite" style="font-size:14px;color:var(--text-3)">/mois</div>
         </div>
@@ -5478,6 +5480,11 @@ function showPlansSheet(){
     const ps=document.getElementById('sheetSub'+cap);     if(ps){ ps.textContent=p[2]; if(k!=='pro') ps.style.color='var(--text-3)'; }
     const sv=document.getElementById('sheetSave'+cap);    if(sv) sv.style.display='none';
   });
+  // Reset des prix barrés (mode mensuel) : Starter/Élite masqués, Pro = barré promo 64,99€
+  const oS=document.getElementById('sheetOldStarter'); if(oS) oS.style.display='none';
+  const oE=document.getElementById('sheetOldElite');   if(oE) oE.style.display='none';
+  const oP=document.getElementById('sheetOldPro');     if(oP){ oP.style.display='block'; oP.textContent='64,99€'; }
+  const bP=document.getElementById('sheetBadgePro');   if(bP) bP.textContent='-23%';
   document.getElementById('plansSheet').style.display = 'block';
   document.body.style.overflow = 'hidden';
   // Préchauffe les checkouts en fond → le clic sur un plan ouvre le paiement INSTANTANÉMENT
@@ -5497,8 +5504,9 @@ function sheetToggleBilling(){
   if(toggle) toggle.style.background = _sheetAnnual ? '#22c55e' : 'var(--border2)';
   if(lblM)   { lblM.style.color = _sheetAnnual ? 'var(--text3)' : 'var(--text)'; lblM.style.fontWeight = _sheetAnnual ? '400' : '700'; }
   if(lblA)   { lblA.style.color = _sheetAnnual ? 'var(--text)' : 'var(--text3)'; lblA.style.fontWeight = _sheetAnnual ? '700' : '400'; }
-  const plans = { starter: { m:'29,99€', mp:'/mois', ms:'soit 1,00€/jour · sans engagement', a:'20,83€', ap:'/mois', as:'110€ économisés · soit 0,69€/jour' },
-                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour · sans engagement', a:'37,50€', ap:'/mois', as:'150€ économisés · soit 1,25€/jour', mOld:'64,99€', aOld:'55,99€' } };
+  // Annuel : prix barré = le tarif mensuel du plan (Pro garde son barré promo 64,99€ en mensuel)
+  const plans = { starter: { m:'29,99€', mp:'/mois', ms:'soit 1,00€/jour · sans engagement', a:'20,83€', ap:'/mois', as:'110€ économisés · soit 0,69€/jour', aOld:'29,99€' },
+                  pro:     { m:'49,99€', mp:'/mois', ms:'soit 1,67€/jour · sans engagement', a:'37,50€', ap:'/mois', as:'150€ économisés · soit 1,25€/jour', mOld:'64,99€', aOld:'49,99€' } };
   ['starter','pro'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
     const p = plans[k];
@@ -5511,8 +5519,15 @@ function sheetToggleBilling(){
     if(subEl){   subEl.textContent    = _sheetAnnual ? p.as : (p.ms || 'sans engagement');
                  if(k!=='pro') subEl.style.color = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
     if(saveEl)   saveEl.style.display = 'none';
-    if(k==='pro'){ const oldEl=document.getElementById('sheetOldPro'); if(oldEl) oldEl.textContent = _sheetAnnual ? p.aOld : p.mOld; }
+    const oldEl = document.getElementById('sheetOld' + cap);
+    if(oldEl){
+      const oldTxt = _sheetAnnual ? p.aOld : p.mOld;
+      oldEl.style.display = oldTxt ? 'block' : 'none';
+      if(oldTxt) oldEl.textContent = oldTxt;
+    }
   });
+  const badgePro = document.getElementById('sheetBadgePro');
+  if(badgePro) badgePro.textContent = _sheetAnnual ? '-25%' : '-23%';
   // Elite — mise à jour via le tier slider actif
   setSheetEliteTier(_sheetEliteTier);
 }
@@ -5549,6 +5564,8 @@ function setSheetEliteTier(idx){
   if(subEl){   subEl.textContent    = _sheetAnnual ? tier.as : (tier.ms || 'sans engagement');
                subEl.style.color    = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
   if(saveEl)   saveEl.style.display = 'none';
+  var oldElE = document.getElementById('sheetOldElite');
+  if(oldElE){ oldElE.style.display = _sheetAnnual ? 'block' : 'none'; oldElE.textContent = tier.m; }
   if(avEl)     avEl.textContent     = tier.avatars;
   if(vidEl)    vidEl.textContent    = tier.videos;
   if(imgEl)    imgEl.textContent    = tier.images;
