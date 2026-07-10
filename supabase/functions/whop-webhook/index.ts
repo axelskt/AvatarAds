@@ -40,18 +40,25 @@ const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
 }
 
 // ─── Vérifie la signature HMAC-SHA256 de Whop ───────────────────
-// Whop envoie: header "Whop-Signature: sha256=XXXX"
+// Formats acceptés : "sha256=HEX", HEX brut, ou style Stripe "t=TS,v1=HEX" (HMAC de "TS.body")
+async function _hmacHex(payload: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(WHOP_WEBHOOK_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const mac = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
+  return Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
 async function verifySignature(body: string, sigHeader: string): Promise<boolean> {
   try {
-    const signature = sigHeader.replace(/^sha256=/, '')
-    const enc = new TextEncoder()
-    const key = await crypto.subtle.importKey(
-      'raw', enc.encode(WHOP_WEBHOOK_SECRET),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    )
-    const mac = await crypto.subtle.sign('HMAC', key, enc.encode(body))
-    const hex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
-    return hex === signature
+    if (sigHeader.includes('v1=')) {
+      const t  = (sigHeader.match(/t=([^,]+)/) ?? [])[1] ?? ''
+      const v1 = (sigHeader.match(/v1=([0-9a-f]+)/i) ?? [])[1] ?? ''
+      if (t && v1 && (await _hmacHex(`${t}.${body}`)) === v1.toLowerCase()) return true
+    }
+    const plain = sigHeader.replace(/^sha256=/, '').trim().toLowerCase()
+    return (await _hmacHex(body)) === plain
   } catch { return false }
 }
 
@@ -73,10 +80,14 @@ serve(async (req) => {
   try { event = JSON.parse(body) }
   catch { return new Response('Invalid JSON', { status: 400 }) }
 
-  const action = event.action as string   // ex: "membership.went_valid"
+  // Formats supportés : ancien ("membership.went_valid") et nouveau V1 ("membership_activated")
+  const action = String(event.action ?? event.event ?? event.type ?? '')
   const data   = event.data ?? {}
-  const email  = (data.user?.email ?? '').toLowerCase().trim()
-  const planId = data.plan?.id ?? ''
+  const email  = (data.user?.email ?? data.member?.user?.email ?? data.customer?.email ?? data.email ?? '').toLowerCase().trim()
+  const planId = data.plan?.id ?? data.plan_id ?? ''
+  const isActivate   = action === 'membership.went_valid'   || action === 'membership_activated'
+  const isDeactivate = action === 'membership.went_invalid' || action === 'membership_deactivated'
+  const isRenew      = action === 'membership.renewed'      || action === 'invoice_paid' || action === 'payment.succeeded'
 
   console.log(`📨 Whop webhook: ${action} · plan=${planId} · email=${email || '—'}`)
 
@@ -93,7 +104,7 @@ serve(async (req) => {
   }
 
   // ─── membership.went_valid → abonnement actif OU pack acheté ──
-  if (action === 'membership.went_valid') {
+  if (isActivate) {
     if (!email) { console.error('❌ Email manquant'); return new Response('Missing email', { status: 400 }) }
 
     const sub  = SUB_MAP[planId]
@@ -149,7 +160,7 @@ serve(async (req) => {
   }
 
   // ─── membership.went_invalid → annulation / expiration ────────
-  else if (action === 'membership.went_invalid') {
+  else if (isDeactivate) {
     if (!email) return new Response('OK', { status: 200 })
     // Les packs one-shot n'affectent jamais le plan
     if (PACK_MAP[planId] || !SUB_MAP[planId]) return new Response('OK', { status: 200 })
@@ -169,7 +180,7 @@ serve(async (req) => {
   }
 
   // ─── membership.renewed → renouvellement mensuel ──────────────
-  else if (action === 'membership.renewed') {
+  else if (isRenew) {
     if (!email) return new Response('OK', { status: 200 })
     const sub = SUB_MAP[planId]
     if (!sub) return new Response('OK', { status: 200 })
