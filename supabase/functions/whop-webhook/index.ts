@@ -106,19 +106,24 @@ serve(async (req) => {
   catch { return new Response('Invalid JSON', { status: 400 }) }
 
   // Formats supportés : ancien ("membership.went_valid") et nouveau V1 ("membership_activated")
-  const action = String(event.action ?? event.event ?? event.type ?? '')
+  // Noms d'événements Whop : 3 orthographes selon la version ("membership.went_valid",
+  // "membership_activated" dans le dashboard, "membership.activated" dans le payload réel) → matching tolérant
+  const action = String(event.action ?? event.event ?? event.type ?? '').toLowerCase()
   const data   = event.data ?? {}
   const email  = (data.user?.email ?? data.member?.user?.email ?? data.customer?.email ?? data.email ?? '').toLowerCase().trim()
   const planId = data.plan?.id ?? data.plan_id ?? ''
-  const isActivate   = action === 'membership.went_valid'   || action === 'membership_activated'
-  const isDeactivate = action === 'membership.went_invalid' || action === 'membership_deactivated'
-  const isRenew      = action === 'membership.renewed'      || action === 'invoice_paid' || action === 'payment.succeeded'
+  const isActivate   = /membership[._](went[._]valid|activated)/.test(action)
+  const isDeactivate = /membership[._](went[._]invalid|deactivated)/.test(action)
+  const isRenew      = /membership[._]renewed|invoice[._]paid|payment[._]succeeded/.test(action)
 
   console.log(`📨 Whop webhook: ${action} · plan=${planId} · email=${email || '—'}`)
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false }
   })
+
+  // DEBUG TEMPORAIRE : capture du payload brut pour caler le parsing sur le format réel Whop V1
+  try { await sb.from('webhook_events').insert({ body: event }) } catch (_) {}
 
   const findProfile = async () => {
     if (!email) return null
