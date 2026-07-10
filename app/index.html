@@ -4108,7 +4108,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button onclick="changeSubscription();closeAccountSettings()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
         <span style="font-size:15px">📋</span> Changer mon abonnement
       </button>
-      <button id="accountPanelCancelBtn" onclick="cancelSubscription();closeAccountSettings()" style="display:none;width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+      <button id="accountPanelCancelBtn" onclick="cancelSubscription()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:none;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
         <span style="font-size:15px">⏸️</span> Annuler l'abonnement
       </button>
       <button onclick="authLogout()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,71,87,.2);border-radius:10px;color:#ff4757;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='rgba(255,71,87,.08)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,71,87,.2)'">
@@ -5459,8 +5459,32 @@ async function resetPassword(){
     toast('📧 Email envoyé à ' + user.email + ' — vérifie ta boîte mail.');
   }
 }
-function cancelSubscription(){
-  window.location.href = 'https://whop.com/orders/';
+async function cancelSubscription(){
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  if(!currentMember || plan === 'free'){ toast('ℹ️ Aucun abonnement actif'); return; }
+  if(currentMember.whop_cancel_at_period_end){ toast('ℹ️ Annulation déjà programmée — ton plan reste actif jusqu\'à la fin de la période'); return; }
+  const labels = { starter:'Starter', pro:'Pro', elite:'Élite' };
+  if(!confirm('Annuler ton abonnement ' + (labels[plan]||plan) + ' ?\n\nTu gardes l\'accès et tes crédits jusqu\'à la fin de la période déjà payée, puis ton compte repassera en Free.')) return;
+  toast('⏳ Annulation en cours…');
+  try{
+    const session = (await sb.auth.getSession()).data.session;
+    const res = await fetch(SUPABASE_URL + '/functions/v1/whop-cancel', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + (session?.access_token || ''),
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: '{}'
+    });
+    const out = await res.json().catch(() => ({}));
+    if(!res.ok){ toast('⚠️ ' + (out.error || 'Erreur — réessaie ou contacte le support')); return; }
+    currentMember.whop_cancel_at_period_end = true;
+    _syncCancelBtn();
+    toast('✅ Abonnement annulé — il reste actif jusqu\'à la fin de la période payée');
+  }catch(e){
+    toast('⚠️ Erreur réseau — réessaie');
+  }
 }
 function changeSubscription(){
   const plan = currentMember?.plan;
@@ -6427,8 +6451,25 @@ function openAccountSettings(){
     const newEmailInp = document.getElementById('accountNewEmail');
     if(newEmailInp) newEmailInp.value = '';
   }
+  _syncCancelBtn();
 }
 function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
+
+// Bouton « Annuler l'abonnement » : visible seulement pour les plans payants liés à Whop
+function _syncCancelBtn(){
+  const b = document.getElementById('accountPanelCancelBtn');
+  if(!b) return;
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  const paid = !['free','byok','developer'].includes(plan) && !!currentMember?.whop_member_id;
+  b.style.display = paid ? 'flex' : 'none';
+  if(currentMember?.whop_cancel_at_period_end){
+    b.innerHTML = '<span style="font-size:15px">⏸️</span> Annulation programmée — actif jusqu\'à la fin de la période';
+    b.style.opacity = '.6'; b.style.pointerEvents = 'none';
+  } else {
+    b.innerHTML = '<span style="font-size:15px">⏸️</span> Annuler l\'abonnement';
+    b.style.opacity = ''; b.style.pointerEvents = '';
+  }
+}
 
 async function saveAccountProfile(){
   if(!currentMember){ toast('⚠️ Non connecté'); return; }
