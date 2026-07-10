@@ -15536,11 +15536,7 @@ function randBg(){
   return bgs[Math.floor(Math.random()*bgs.length)];
 }
 
-// Mobile nav
-if(window.innerWidth <= 768){
-  document.getElementById('mobileNav').style.display = 'flex';
-  document.body.style.paddingBottom = '70px';
-}
+// (ancienne mobile nav supprimée — remplacée par #mNav, le padding est géré par .layout)
 
 // ══ YOUTUBE OAUTH2 + UPLOAD ══
 const YT_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
@@ -20224,7 +20220,7 @@ function edBandDrag(ov,track,e,mode){
   .gen-left{overflow:visible !important;border-right:none !important}
   .gen-form{overflow:visible !important;max-height:none !important}
   /* Footer générateur 1:1 proto : Continuer pleine largeur, Retour dessous, plus de barre sticky */
-  .gen-footer{position:static !important;border-top:none !important;padding:6px 16px 18px;background:transparent !important}
+  .gen-footer{position:static !important;border-top:none !important;padding:6px 16px 0;background:transparent !important}
   #footerBtns{flex-direction:column-reverse;gap:10px;align-items:stretch}
   #footerStepLbl{display:none}
   #backBtn{width:100%;margin-top:0;padding:13px}
@@ -20239,7 +20235,16 @@ function edBandDrag(ov,track,e,mode){
   #memberCreditsLabel{display:none}
   #memberQuotaBox{padding:6px 10px !important}
   #btnSeePlans,#btnUpgradePlan{padding:6px 10px !important;font-size:10.5px !important;white-space:nowrap}
-  .layout{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+  .layout{padding-bottom:calc(67px + env(safe-area-inset-bottom))} /* nav 62px + 5px de marge */
+  /* les boutons Générer sont dockés en bas : les vues remplissent l'écran et le bouton descend */
+  .view.on{min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  .gen-left{display:flex !important;flex-direction:column;min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  .gen-footer{margin-top:auto}
+  #v-imagegen>.row{min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  #v-imagegen>.row>*:last-child{display:flex;flex-direction:column;flex:1 0 auto !important}
+  #edEmpty{align-items:stretch !important;padding-bottom:5px !important}
+  #edEmpty>div{display:flex;flex-direction:column;width:100%}
+  #edEmpty div[ondrop]{flex:1}
   #mNav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:400;height:calc(62px + env(safe-area-inset-bottom));
     padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--border);background:var(--bg-grad);
     justify-content:space-around;align-items:stretch}
@@ -20262,6 +20267,7 @@ function edBandDrag(ov,track,e,mode){
   background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer}
 #mPreview{display:none}
 #mExp{display:none}
+#mobileNav{display:none !important} /* ancienne nav mobile — obsolète */
 #mExpDurRange::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.55);cursor:pointer;border:none}
 #mExpDurRange::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 8px rgba(0,0,0,.55)}
 @media(max-width:768px){
@@ -20275,8 +20281,8 @@ function edBandDrag(ov,track,e,mode){
   /* Express mobile (design proto) : aperçu + contrôles compacts, formulaire desktop masqué */
   #v-express{flex-direction:column !important}
   #v-express>div:nth-child(1){display:none !important}
-  #v-express>div:nth-child(2){order:1;min-height:200px;flex:0 0 auto !important;width:100% !important;border-bottom:1px solid var(--border)}
-  #mExp{display:block;order:2;padding:14px 16px 6px}
+  #v-express>div:nth-child(2){order:1;min-height:200px;flex:1 0 auto !important;width:100% !important;border-bottom:1px solid var(--border)}
+  #mExp{display:block;order:2;padding:14px 16px 0}
   /* composer du bas (desktop) masqué — remplacé par #mExp */
   #v-express>div:nth-child(2)>div[style*="border-top"]{display:none !important}
   /* état vide compact (design proto) à la place du grand explicatif */
@@ -20303,7 +20309,8 @@ function edBandDrag(ov,track,e,mode){
   #imgQuotaLabel{display:none !important}
   #v-imagegen div:has(>#imgGenBtn){display:none !important}
   #v-imagegen div[style*="border-top"]:has(#imgRefBtnComposer){border-top:none !important;background:transparent !important;padding:6px 14px 0 !important}
-  #mImgGenBtn{display:flex !important;width:calc(100% - 28px) !important;margin:8px 14px 2px !important}
+  #mImgGenBtn{display:flex !important;width:calc(100% - 28px) !important;margin:8px 14px 0 !important;flex:0 0 auto}
+  #imgCanvas{flex:1 0 auto !important}
   /* modales (Mon compte, Connexions…) : contenu scrollable sur iPhone */
   .setup-box{max-height:calc(100dvh - 28px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   /* modale crédits (Recharger des crédits) : scrollable + packs sur 2 lignes propres */
@@ -20333,7 +20340,8 @@ function edBandDrag(ov,track,e,mode){
   #edMain>.row{flex-direction:column !important;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #edMain>.row>.col{flex:0 0 auto !important;width:100%}
   #edPreviewZone{min-height:46vh}
-  #edMain>.row>.scroll-y{width:100% !important;flex:0 0 auto !important;border-left:none !important;border-top:1px solid var(--border);overflow:visible !important;max-height:none}
+  #edMain>.row>.scroll-y{width:100% !important;flex:0 0 auto !important;border-left:none !important;border-top:1px solid var(--border);overflow:visible !important;max-height:none;padding-bottom:0 !important}
+  #edEmpty{padding-bottom:0 !important}
 }
 </style>
 <div id="mNav"></div>
