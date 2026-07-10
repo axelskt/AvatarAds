@@ -5220,6 +5220,8 @@ function enterApp(profile){
   currentMember = profile;
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
+  // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier)
+  if(window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
@@ -5422,6 +5424,7 @@ function checkSetupNeeded(){
 function loginGuest(){
   guestMode = true;
   document.getElementById('loginOverlay').style.display = 'none';
+  if(window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
   document.getElementById('guestBanner').style.display = 'flex';
   document.getElementById('memberBar').style.display = 'flex';
   document.getElementById('memberName').textContent = '🎯 Mode Essai';
@@ -20288,7 +20291,7 @@ function edBandDrag(ov,track,e,mode){
   /* état vide compact (design proto) à la place du grand explicatif */
   #expResultPlaceholder>*{display:none !important}
   #expResultPlaceholder::before{content:'✦';display:block;text-align:center;font-size:28px;color:var(--accent-2);padding-top:34px;text-shadow:0 0 18px var(--accent-glow)}
-  #expResultPlaceholder::after{content:'Ta prochaine vidéo virale apparaîtra ici';display:block;text-align:center;color:var(--text-3);font-family:var(--mono);font-size:12px;padding:12px 20px 34px}
+  #expResultPlaceholder::after{content:'Aucune vidéo, commence à générer !';display:block;text-align:center;color:var(--text-3);font-family:var(--mono);font-size:12px;padding:12px 20px 34px}
   /* Cartoon : aperçu au-dessus, formulaire en dessous (colonne) */
   #v-cartoon{flex-direction:column !important}
   #v-cartoon>div:first-child{flex:0 0 auto !important;width:100% !important;border-right:none !important;order:2}
