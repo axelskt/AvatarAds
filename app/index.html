@@ -1132,6 +1132,21 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="flex:1">🎬 Audio MP4</button>
             </div>
 
+            <!-- ══ TOGGLE silences voix IA (ElevenLabs) — tout en haut pour ne pas le confondre avec le nettoyeur manuel ══ -->
+            <div class="fld" id="genTtsSilenceFld" style="margin:0 0 14px">
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Supprimer les silences — voix IA</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix ElevenLabs (clone/preset) · voix plus punchy</div>
+                  </div>
+                </div>
+                <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
+              </label>
+              <div class="faint mono" style="margin-top:6px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Les boutons « ▶ Écouter » des voix jouent un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
+            </div>
+
             <div id="voice-el-sections">
 
             <!-- CLONE TA VOIX -->
@@ -1294,21 +1309,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
 
               </div>
-            </div>
-
-            <!-- ══ TOGGLE silences voix IA (ElevenLabs) ══ -->
-            <div class="fld" id="genTtsSilenceFld" style="margin-top:18px">
-              <label style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
-                  <div>
-                    <div style="font-size:12px;font-weight:700">Supprimer les silences — voix IA</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix ElevenLabs (clone/preset) · voix plus punchy</div>
-                  </div>
-                </div>
-                <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
-              </label>
-              <div class="faint mono" style="margin-top:6px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Les boutons « ▶ Écouter » des voix jouent un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
             </div>
 
             <!-- ══ SILENCE REMOVAL ══ -->
