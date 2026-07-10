@@ -15934,19 +15934,16 @@ function initExpress(){
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
     _aaSliderFill(ds);
   }
-  // Qualité — 1080p : sélectionnable par tous (paywall Pro+ au clic sur Générer), grisé tant que la durée < 8 s (limite Veo)
+  // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
   const qr = document.getElementById('expQualRow');
   if(qr){
-    const _plan=(currentMember?.plan||'free').toLowerCase();
-    const _canHD=['pro','elite','developer'].includes(_plan);
     const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p dispo dès 8 s (y compris durées longues Élite)
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      const lockPlan = q.v==='1080p' && !_canHD;
       const grayDur  = q.v==='1080p' && !_dur8;
-      const note = lockPlan ? '🔒 PRO' : (grayDur ? 'dès 8 s' : q.note);
+      const note = grayDur ? 'dès 8 s' : q.note;
       const extra = grayDur ? 'opacity:.38;cursor:not-allowed;' : '';
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${grayDur?'1080p disponible uniquement à partir de 8 s (limite Google Veo)':(lockPlan?'1080p réservé au plan Pro et +':'')}" style="flex:1;padding:13px 12px;text-align:center;${extra}">
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${grayDur?'1080p disponible uniquement à partir de 8 s (limite Google Veo)':''}" style="flex:1;padding:13px 12px;text-align:center;${extra}">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
