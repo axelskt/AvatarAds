@@ -8499,6 +8499,9 @@ function updateSteps(){
   var _ttl=document.getElementById('genStepTitle');
   if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+step+'/5';
   if(_ttl) _ttl.textContent=_stepTitles[step-1]||'';
+  // Mobile : petite marge sous le bouton uniquement à l'étape 1 (Produit)
+  var _gf=document.getElementById('genFooter');
+  if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
   if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
@@ -15931,7 +15934,7 @@ function initExpress(){
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
     _aaSliderFill(ds);
   }
-  // Qualité — 1080p : réservé Pro+ (🔒 → paywall) et grisé tant que la durée < 8 s (limite Veo)
+  // Qualité — 1080p : sélectionnable par tous (paywall Pro+ au clic sur Générer), grisé tant que la durée < 8 s (limite Veo)
   const qr = document.getElementById('expQualRow');
   if(qr){
     const _plan=(currentMember?.plan||'free').toLowerCase();
@@ -15940,10 +15943,10 @@ function initExpress(){
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
       const lockPlan = q.v==='1080p' && !_canHD;
-      const grayDur  = q.v==='1080p' && _canHD && !_dur8;
+      const grayDur  = q.v==='1080p' && !_dur8;
       const note = lockPlan ? '🔒 PRO' : (grayDur ? 'dès 8 s' : q.note);
-      const extra = grayDur ? 'opacity:.38;cursor:not-allowed;' : (lockPlan ? 'opacity:.65;' : '');
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${grayDur?'1080p disponible uniquement en 8 s (limite Google Veo)':(lockPlan?'1080p réservé au plan Pro et +':'')}" style="flex:1;padding:13px 12px;text-align:center;${extra}">
+      const extra = grayDur ? 'opacity:.38;cursor:not-allowed;' : '';
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${grayDur?'1080p disponible uniquement à partir de 8 s (limite Google Veo)':(lockPlan?'1080p réservé au plan Pro et +':'')}" style="flex:1;padding:13px 12px;text-align:center;${extra}">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
@@ -15975,13 +15978,8 @@ function _expSetDur(v){
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
 function _expPickQual(v){
-  if(v==='1080p'){
-    // Réservé Pro et + → paywall
-    const plan=(currentMember?.plan||'free').toLowerCase();
-    if(!['pro','elite','developer'].includes(plan)){ toast('🔒 La 1080p est réservée au plan Pro et +'); openUpgradeModal(); return; }
-    // Grisé tant que la durée est sous 8 s (limite Google Veo)
-    if((parseInt(window._expDur)||4)<8){ toast('ℹ️ 1080p dispo à partir de 8 s — monte la durée'); return; }
-  }
+  // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer
+  if(v==='1080p' && (parseInt(window._expDur)||4)<8){ toast('ℹ️ 1080p dispo à partir de 8 s — monte la durée'); return; }
   window._expQuality=v; initExpress();
 }
 
@@ -16227,6 +16225,11 @@ async function expressCreate(){
   // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit
   if((parseInt(window._expDur)||4)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     toast('🔒 Les vidéos de +8 s sont réservées au plan Élite');
+    showPaywall(); return;
+  }
+  // 1080p = Pro et + → sélectionnable par tous, mais paywall au moment de générer
+  if(window._expQuality==='1080p' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+    toast('🔒 La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
   if(typeof _hedraRemaining==='function' && _hedraRemaining()<=0){ toast('⛔ Quota vidéos épuisé ce mois'); openUpgradeModal(); return; }
