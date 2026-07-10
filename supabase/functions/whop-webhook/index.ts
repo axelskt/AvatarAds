@@ -154,6 +154,8 @@ serve(async (req) => {
           credits_total:     sub.credits,
           whop_member_id:    data.id ?? null,
           whop_plan_id:      planId,
+          whop_manage_url:   data.manage_url ?? null,
+          whop_cancel_at_period_end: false,
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
         console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits)`)
@@ -204,6 +206,8 @@ serve(async (req) => {
         credits_remaining: 0,
         whop_member_id:    null,
         whop_plan_id:      null,
+        whop_manage_url:   null,
+        whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
       console.log(`⛔ Plan résilié pour ${email} → free`)
     }
@@ -222,6 +226,7 @@ serve(async (req) => {
         credits_remaining: sub.credits,  // remise à niveau chaque mois
         credits_total:     sub.credits,
         whop_plan_id:      planId,
+        whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
       console.log(`🔄 Renouvellement pour ${email}: ${sub.plan} (${sub.credits} crédits remis)`)
     }
