@@ -39,39 +39,64 @@ const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
   'plan_9OOdLpbiNYCKj': { imgCredits: 40 }, // Storm +40 images 14,99€
 }
 
-// ─── Vérifie la signature HMAC-SHA256 de Whop ───────────────────
-// Formats acceptés : "sha256=HEX", HEX brut, ou style Stripe "t=TS,v1=HEX" (HMAC de "TS.body")
-async function _hmacHex(payload: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw', enc.encode(WHOP_WEBHOOK_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  )
-  const mac = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
+// ─── Vérification de signature ───────────────────────────────────
+// Whop V1 = spec « Standard Webhooks » (Svix) :
+//   headers webhook-id / webhook-timestamp / webhook-signature ("v1,BASE64 …")
+//   signature = HMAC-SHA256 base64 de "id.timestamp.body", clé = base64-décodé du secret après "whsec_"
+// + repli sur les anciens formats hex ("sha256=HEX", "t=TS,v1=HEX")
+function _secretBytes(): Uint8Array {
+  if (WHOP_WEBHOOK_SECRET.startsWith('whsec_')) {
+    const raw = atob(WHOP_WEBHOOK_SECRET.slice(6))
+    return Uint8Array.from(raw, c => c.charCodeAt(0))
+  }
+  return new TextEncoder().encode(WHOP_WEBHOOK_SECRET)
 }
-async function verifySignature(body: string, sigHeader: string): Promise<boolean> {
+async function _hmac(payload: string): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', _secretBytes(), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
+  return new Uint8Array(mac)
+}
+const _b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
+const _hex = (u: Uint8Array) => Array.from(u).map(b => b.toString(16).padStart(2, '0')).join('')
+async function verifyWebhook(req: Request, body: string): Promise<boolean> {
   try {
-    if (sigHeader.includes('v1=')) {
-      const t  = (sigHeader.match(/t=([^,]+)/) ?? [])[1] ?? ''
-      const v1 = (sigHeader.match(/v1=([0-9a-f]+)/i) ?? [])[1] ?? ''
-      if (t && v1 && (await _hmacHex(`${t}.${body}`)) === v1.toLowerCase()) return true
+    const h = req.headers
+    // 1) Standard Webhooks (Whop V1 / Svix)
+    const id  = h.get('webhook-id') ?? h.get('svix-id') ?? ''
+    const ts  = h.get('webhook-timestamp') ?? h.get('svix-timestamp') ?? ''
+    const sig = h.get('webhook-signature') ?? h.get('svix-signature') ?? ''
+    if (id && ts && sig) {
+      const expected = _b64(await _hmac(`${id}.${ts}.${body}`))
+      for (const part of sig.split(' ')) {
+        const v = part.includes(',') ? part.split(',')[1] : part
+        if (v && v === expected) return true
+      }
     }
-    const plain = sigHeader.replace(/^sha256=/, '').trim().toLowerCase()
-    return (await _hmacHex(body)) === plain
+    // 2) Anciens formats hex
+    const legacy = h.get('whop-signature') ?? h.get('x-whop-signature') ?? ''
+    if (legacy) {
+      if (legacy.includes('v1=')) {
+        const t  = (legacy.match(/t=([^,]+)/) ?? [])[1] ?? ''
+        const v1 = (legacy.match(/v1=([0-9a-f]+)/i) ?? [])[1] ?? ''
+        if (t && v1 && _hex(await _hmac(`${t}.${body}`)) === v1.toLowerCase()) return true
+      }
+      const plain = legacy.replace(/^sha256=/, '').trim().toLowerCase()
+      if (_hex(await _hmac(body)) === plain) return true
+    }
+    // Diagnostic (noms de headers seulement, jamais les valeurs)
+    console.error('❌ Signature invalide · headers presents:', [...h.keys()].filter(k => /sig|whop|svix|webhook/i.test(k)).join(', ') || 'aucun header de signature')
+    return false
   } catch { return false }
 }
 
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
-  const body      = await req.text()
-  const sigHeader = req.headers.get('whop-signature') ?? req.headers.get('x-whop-signature') ?? ''
+  const body = await req.text()
 
   // Signature OBLIGATOIRE dès que le secret est configuré (sinon n'importe qui peut se créditer)
   if (WHOP_WEBHOOK_SECRET) {
-    if (!sigHeader || !(await verifySignature(body, sigHeader))) {
-      console.error('❌ Signature Whop absente ou invalide')
+    if (!(await verifyWebhook(req, body))) {
       return new Response('Unauthorized', { status: 401 })
     }
   }

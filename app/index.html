@@ -5693,7 +5693,12 @@ function _whopCheckout(url){
   mount.setAttribute('data-whop-checkout-locale', 'fr');
   mount.setAttribute('data-whop-checkout-skip-redirect', 'true');
   mount.setAttribute('data-whop-checkout-on-complete', '_whopEmbedComplete');
-  if(email) mount.setAttribute('data-whop-checkout-prefill-email', email);
+  if(email){
+    mount.setAttribute('data-whop-checkout-prefill-email', email);
+    // e-mail verrouillé = le paiement arrive toujours sur l'e-mail du compte connecté
+    // (sinon le webhook crédite un autre e-mail et le plan ne s'active jamais)
+    mount.setAttribute('data-whop-checkout-disable-email', 'true');
+  }
   wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
   // spinner masqué dès que le loader a monté son iframe
   try{
