@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
 <title>AvatarAds — Créateur de vidéos IA</title>
@@ -3053,7 +3053,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title">⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">5 s</span></div>
           <input id="expDurSlider" class="exp-slider" type="range" min="4" max="8" step="2" value="6" oninput="_expSetDur(this.value);_aaSliderFill(this)" style="width:100%">
-          <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none">🔒 Vidéos jusqu'à 29 s réservées au plan Élite</div>
+          <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none">🔒 +8 s (extensions de scène) réservé au plan Élite</div>
           <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
         </div>
 
@@ -4336,7 +4336,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✨</div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Spark · <span style="color:#4dabf7">+10 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">DALL-E 3 · 4K · 0,50€ / image</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,50€ / image</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4355,7 +4355,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:var(--orange)">+25 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">DALL-E 3 · 4K · 0,40€ / image</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,40€ / image</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4373,7 +4373,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🌩️</div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Storm · <span style="color:#a855f7">+40 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">DALL-E 3 · 4K · 0,375€ / image</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,375€ / image</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -15928,7 +15928,7 @@ function initExpress(){
     ds.min=4; ds.max=_da[_da.length-1]; ds.step=_long?1:2;
     ds.value = window._expDur||6;
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDur||6)+' s';
-    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=_long?'none':'block';
+    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : réservé Pro+ (🔒 → paywall) et grisé tant que la durée < 8 s (limite Veo)
@@ -15960,8 +15960,8 @@ function _expUpdateGenCaption(){
 }
 // Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
 function _expDurAllowed(){
-  const plan=(currentMember?.plan||'free').toLowerCase();
-  return ['elite','developer'].includes(plan) ? [4,6,8,15,22,29] : [4,6,8];
+  // Visibles pour tous — les durées >8 s (extensions de scène Élite) sont vérifiées au moment de générer
+  return [4,6,8,15,22,29];
 }
 function _expSetDur(v){
   const a=_expDurAllowed(); let d=parseInt(v)||6;
@@ -16224,6 +16224,11 @@ async function expressCreate(){
   const prompt = (document.getElementById('expPrompt')?.value || '').trim();
   if(!prompt && !window._expImgB64){ toast('⚠️ Décris ta vidéo (ou ajoute une image)'); return; }
   if(_gateFreeGenerate()) return;
+  // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit
+  if((parseInt(window._expDur)||6)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+    toast('🔒 Les vidéos de +8 s sont réservées au plan Élite');
+    showPaywall(); return;
+  }
   if(typeof _hedraRemaining==='function' && _hedraRemaining()<=0){ toast('⛔ Quota vidéos épuisé ce mois'); openUpgradeModal(); return; }
 
   const btn=document.getElementById('expGenBtn');
@@ -20321,6 +20326,12 @@ function edBandDrag(ov,track,e,mode){
   .credits-overlay>div{margin:10px 0 30px;padding:20px 14px 16px !important;max-width:100% !important}
   .credits-pack{flex-wrap:wrap;row-gap:12px}
   .credits-pack>div:last-child{flex:1 1 100%;justify-content:space-between}
+  /* modale upgrade+crédits : 1 colonne sur mobile (la carte plan passe au-dessus des packs) */
+  #upgradeModalGrid{grid-template-columns:1fr !important}
+  #upgradeModalLeft{padding:18px !important}
+  #upgradeModalTestRow{flex-wrap:wrap}
+  /* connexion : 16px mini sinon iOS Safari zoome au focus et le zoom persiste après login */
+  #auth-email,#auth-password,#signup-email,#signup-password{font-size:16px !important}
   /* Éditeur : première page fixe (plus de zone de glisser géante) */
   #edEmpty div[ondrop]{min-height:0 !important;border-style:solid !important;padding:26px 16px !important}
   /* Images IA : formulaire puis résultat, empilés */
