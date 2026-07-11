@@ -33,10 +33,10 @@ const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 7
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
 const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
-  // Packs FINAUX (validés 11/07) — Spark, Storm et Pack M supprimés
-  'plan_w0DMfzGzEdmYF': { credits: 28  },  // Flash    9,99€
-  'plan_rn0Lomy4QJy0U': { credits: 60  },  // Pack S  19,99€
-  'plan_EVUzCdQ1H1EdL': { credits: 180 },  // Pack L  49,99€
+  // Packs FINAUX (montants revus 11/07 après-midi) — Spark, Storm et Pack M supprimés
+  'plan_w0DMfzGzEdmYF': { credits: 40  },  // Flash    9,99€
+  'plan_rn0Lomy4QJy0U': { credits: 90  },  // Pack S  19,99€
+  'plan_EVUzCdQ1H1EdL': { credits: 250 },  // Pack L  49,99€
 }
 
 // ─── Vérification de signature ───────────────────────────────────
