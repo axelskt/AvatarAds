@@ -4262,100 +4262,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div id="upgradeModalRight">
 
         <!-- Tabs -->
-        <div style="display:flex;gap:6px;margin-bottom:18px;background:var(--bg3);border-radius:10px;padding:4px">
-          <button id="packTabBtnVideo" onclick="switchPackTab('video')" style="flex:1;padding:8px 12px;border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .18s;background:var(--bg2);color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.25)">🎬 Avatars vidéo</button>
-          <button id="packTabBtnImages" onclick="switchPackTab('images')" style="flex:1;padding:8px 12px;border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .18s;background:transparent;color:var(--text3)">🎨 Crédits images</button>
-        </div>
-
-        <!-- TAB: Avatars vidéo -->
         <div id="packTabVideo">
 
-          <!-- Pack S -->
-          <div class="credits-pack" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+          <!-- Flash · 9,99€ · +28 crédits -->
+          <div class="credits-pack" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:#4dabf7">+5 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">4,00€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack M -->
-          <div class="credits-pack popular" onclick="buyCredits('pack_m')" style="margin-bottom:10px">
-            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack M · <span style="color:var(--orange)">+10 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">3,50€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">34,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack L -->
-          <div class="credits-pack" onclick="buyCredits('pack_l')">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+20 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,50€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
-            </div>
-          </div>
-
-        </div><!-- /packTabVideo -->
-
-        <!-- TAB: Crédits images -->
-        <div id="packTabImages" style="display:none">
-
-          <!-- Pack Spark · 4,99€ · +10 images -->
-          <div class="credits-pack" onclick="buyImageCredits('img_s')" style="margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✨</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Spark · <span style="color:#4dabf7">+10 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,50€ / image</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">4,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack Flash · 9,99€ · +25 images -->
-          <div class="credits-pack popular" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
-            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:var(--orange)">+25 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,40€ / image</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+28 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 28 s d'avatar ou 28 images</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4367,18 +4282,37 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
-          <!-- Pack Storm · 14,99€ · +40 images -->
-          <div class="credits-pack" onclick="buyImageCredits('img_l')">
+          <!-- Pack S · 19,99€ · +60 crédits -->
+          <div class="credits-pack" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🌩️</div>
+              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Storm · <span style="color:#a855f7">+40 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,375€ / image</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+60 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 3 avatars de 20 s</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">14,99€</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
+                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+              </div>
+              <button class="btn-buy-pack">Acheter</button>
+            </div>
+          </div>
+
+          <!-- Pack L · 49,99€ · +180 crédits -->
+          <div class="credits-pack popular" onclick="buyCredits('pack_l')">
+            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+180 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 9 avatars de 20 s · 0,28€/crédit</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+              <div style="text-align:right">
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
                 <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
@@ -6236,9 +6170,8 @@ async function _composeClipWithAudio(clipId, audioBlob) {
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
-  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S  – +5  avatars – 19,99€
-  pack_m: 'https://whop.com/checkout/plan_8ZlMDLvTi5M05', // Pack M – +10 avatars – 34,99€
-  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +20 avatars – 49,99€
+  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S – +60 crédits – 19,99€
+  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +180 crédits – 49,99€
 };
 
 // Plans checkout Whop
@@ -6338,22 +6271,7 @@ const UPGRADE_PLANS = {
 };
 
 function switchPackTab(tab){
-  const isImg = tab === 'images';
-  document.getElementById('packTabVideo').style.display  = isImg ? 'none' : 'block';
-  document.getElementById('packTabImages').style.display = isImg ? 'block' : 'none';
-  // Tab buttons style
-  const btnV = document.getElementById('packTabBtnVideo');
-  const btnI = document.getElementById('packTabBtnImages');
-  if(btnV){
-    btnV.style.background = isImg ? 'transparent' : 'var(--bg2)';
-    btnV.style.color      = isImg ? 'var(--text3)' : 'var(--blue)';
-    btnV.style.boxShadow  = isImg ? 'none' : '0 1px 4px rgba(0,0,0,.25)';
-  }
-  if(btnI){
-    btnI.style.background = isImg ? 'var(--bg2)' : 'transparent';
-    btnI.style.color      = isImg ? 'var(--orange)' : 'var(--text3)';
-    btnI.style.boxShadow  = isImg ? '0 1px 4px rgba(0,0,0,.25)' : 'none';
-  }
+  // Monnaie unique : plus d'onglets vidéo/images — no-op conservé pour compatibilité
 }
 
 // Paywall plans UNIFIÉ — partout le même design (le nouveau plansSheet 3 cartes)
@@ -6438,11 +6356,9 @@ function buyCredits(pack){
 
 // ── Packs crédits images (Whop) ──
 const IMG_CREDIT_PACK_URLS = {
-  img_s: 'https://whop.com/checkout/plan_iTRFSpFkMkfJv', //  4,99€ → +10 images
-  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', //  9,99€ → +25 images
-  img_l: 'https://whop.com/checkout/plan_9OOdLpbiNYCKj', // 14,99€ → +40 images
+  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', // Flash – +28 crédits – 9,99€
 };
-const IMG_CREDIT_PACK_QTY = { img_s: 10, img_m: 25, img_l: 40 };
+const IMG_CREDIT_PACK_QTY = { img_m: 28 };
 
 function buyImageCredits(pack){
   const url = IMG_CREDIT_PACK_URLS[pack];
@@ -9455,6 +9371,17 @@ function syncVoiceTranscript(text){
 
 async function cloneVoice(){
   if(!voiceFile){ toast('⚠️ Upload un fichier de voix d\'abord'); return; }
+  // Clonage : tarif progressif 3 → 6 → 10 crédits (1er/2e/suivants), débité côté serveur
+  try{
+    const { data: cloneCost, error: ccErr } = await sb.rpc('charge_voice_clone');
+    if(ccErr){ toast('⚠️ Erreur crédits — réessaie'); return; }
+    if(cloneCost === -1){ toast('✗ Pas assez de crédits pour cloner ta voix'); showPaywall(); return; }
+    if(cloneCost > 0){
+      currentMember.credits_remaining = Math.max(0, (currentMember.credits_remaining||0) - cloneCost);
+      _updateQuotaDisplay();
+      toast('🎙️ Clonage de voix : ' + cloneCost + ' crédits');
+    }
+  }catch(e){}
   const btn = document.getElementById('cloneBtn');
   btn.textContent = 'Clonage en cours...'; btn.disabled = true;
   const status = document.getElementById('cloneStatus');
