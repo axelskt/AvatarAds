@@ -5731,6 +5731,9 @@ function _whopCheckout(url){
   mount.setAttribute('data-whop-checkout-locale', 'fr');
   mount.setAttribute('data-whop-checkout-skip-redirect', 'true');
   mount.setAttribute('data-whop-checkout-on-complete', '_whopEmbedComplete');
+  // Mémorise le moyen de paiement du 1er achat → les achats suivants (packs, upgrade) proposent
+  // la carte enregistrée / Apple Pay directement, sans tout re-saisir
+  mount.setAttribute('data-whop-checkout-setup-future-usage', 'off_session');
   if(email){
     mount.setAttribute('data-whop-checkout-prefill-email', email);
     // e-mail verrouillé = le paiement arrive toujours sur l'e-mail du compte connecté
