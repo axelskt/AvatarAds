@@ -5487,15 +5487,11 @@ async function cancelSubscription(){
   }
 }
 function changeSubscription(){
-  const plan = currentMember?.plan;
-  // Free/guest → ouvrir la fiche des plans directement
-  if(!plan || plan === 'free'){
-    showPlansSheet();
-    return;
-  }
-  // Payant → envoyer annuler d'abord sur Whop, puis revenir choisir
-  toast('⚠️ Annule ton plan actuel sur Whop, puis reviens choisir ton nouveau plan.');
-  setTimeout(() => { window.location.href = 'https://whop.com/orders/'; }, 1800);
+  // Le webhook annule automatiquement l'ancien abonnement quand le nouveau s'active
+  // → on peut acheter le nouveau plan directement, aucun risque de payer deux fois.
+  showPlansSheet();
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  if(plan !== 'free') toast('ℹ️ Choisis ton nouveau plan — l\'ancien sera annulé automatiquement, tu ne paieras pas deux fois');
 }
 
 // ── INIT AUTH (check session au démarrage) ──

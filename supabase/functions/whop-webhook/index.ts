@@ -128,7 +128,7 @@ serve(async (req) => {
   const findProfile = async () => {
     if (!email) return null
     const { data: p } = await sb.from('profiles')
-      .select('id, plan, credits_remaining, img_bonus_credits, whop_plan_id')
+      .select('id, plan, credits_remaining, img_bonus_credits, whop_plan_id, whop_member_id')
       .eq('email', email).maybeSingle()
     return p
   }
@@ -148,6 +148,26 @@ serve(async (req) => {
 
     if (sub) {
       if (profile) {
+        // ── UPGRADE/CHANGEMENT DE PLAN : annule l'ancien abonnement Whop pour ne JAMAIS facturer deux fois ──
+        const oldMemberId = profile.whop_member_id
+        const newMemberId = data.id ?? null
+        if (oldMemberId && newMemberId && oldMemberId !== newMemberId) {
+          const key = Deno.env.get('WHOP_API_KEY') ?? ''
+          if (key) {
+            try {
+              const rc = await fetch(`https://api.whop.com/api/v1/memberships/${oldMemberId}/cancel`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cancellation_mode: 'at_period_end' }),
+              })
+              console.log(rc.ok
+                ? `🔁 Ancien abonnement ${oldMemberId} annulé automatiquement (remplacé par ${newMemberId})`
+                : `⚠️ Échec annulation ancien abonnement ${oldMemberId}: ${rc.status} ${await rc.text().catch(()=> '')}`.slice(0, 300))
+            } catch (e) { console.error('⚠️ Annulation ancien abonnement:', e) }
+          } else {
+            console.error('⚠️ WHOP_API_KEY manquant — ancien abonnement NON annulé (risque de double facturation)')
+          }
+        }
         const { error } = await sb.from('profiles').update({
           plan:              sub.plan,
           credits_remaining: sub.credits,
@@ -220,6 +240,11 @@ serve(async (req) => {
     if (!sub) return new Response('OK', { status: 200 })
 
     const profile = await findProfile()
+    // Ignore le renouvellement d'un ANCIEN abonnement (après upgrade) → ne doit pas écraser le plan actif
+    if (profile && profile.whop_plan_id && profile.whop_plan_id !== planId) {
+      console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${email})`)
+      return new Response('OK', { status: 200 })
+    }
     if (profile) {
       await sb.from('profiles').update({
         plan:              sub.plan,
