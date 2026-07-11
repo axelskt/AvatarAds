@@ -27,13 +27,14 @@ async function unsubKey(userId: string): Promise<string> {
   return Array.from(mac).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 }
 
-function tpl(opts: { title: string; body: string; cta: string; ctaUrl: string; unsubUrl: string }): string {
+function tpl(opts: { title: string; body: string; cta: string; ctaUrl: string; unsubUrl: string; extra?: string }): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;padding:32px 20px">
     <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:22px">🎬 AvatarAds</div>
     <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
       <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">${opts.title}</div>
       <div style="font-size:15px;color:#44403c;line-height:1.65">${opts.body}</div>
+      ${opts.extra || ''}
       <a href="${opts.ctaUrl}" style="display:block;text-align:center;background:#FF6B35;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 20px;border-radius:12px;margin-top:24px">${opts.cta}</a>
     </div>
     <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px;line-height:1.6">
@@ -43,19 +44,37 @@ function tpl(opts: { title: string; body: string; cta: string; ctaUrl: string; u
   </div></body></html>`
 }
 
-type Stage = { kind: string; subject: string; title: string; body: (name: string) => string; cta: string; ctaUrl: string; minH: number; maxH: number }
+// ── Blocs réutilisables : galerie d'exemples générés + témoignages (avis de la LP) ──
+const ASSETS = 'https://avatarads.fr/assets/mail'
+const DEMO_IMAGES = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
+    <td width="33%" style="padding-right:5px"><a href="${APP_URL}"><img src="${ASSETS}/demo-cartoon.jpg" alt="Personnage cartoon 3D généré par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+    <td width="33%" style="padding:0 3px"><a href="${APP_URL}"><img src="${ASSETS}/demo-paris.jpg" alt="Personnages fruits à Paris générés par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${ASSETS}/demo-basket.jpg" alt="Scène de basket ultra-réaliste générée par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+  </tr></table>
+  <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">Générées avec AvatarAds — un prompt, quelques secondes ✨</div>`
+const quoteBlock = (q: string, who: string, tag: string) => `
+  <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:18px 20px;margin-top:22px">
+    <div style="color:#f59e0b;font-size:13px;letter-spacing:2px;margin-bottom:8px">★★★★★</div>
+    <div style="font-size:14px;color:#44403c;line-height:1.6;font-style:italic">« ${q} »</div>
+    <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
+  </div>`
+const QUOTE_LUCAS  = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.", 'Lucas M. · E-commerce', '+80k vues · 40 leads')
+const QUOTE_THOMAS = quoteBlock("Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.", 'Thomas D. · Agence SMMA', '−1500€/mois économisés')
+
+type Stage = { kind: string; subject: string; title: string; body: (name: string) => string; cta: string; ctaUrl: string; minH: number; maxH: number; extra?: string }
 const hi = (n: string) => n ? `${n}, ` : ''
 const DRIP: Stage[] = [
   { kind: 'drip_2h', minH: 2, maxH: 24,
     subject: 'Ta première vidéo t’attend 🎬',
     title: 'Ta première vidéo est à 2 minutes',
-    body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL },
+    body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus. Quelques exemples générés en un prompt :`,
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: DEMO_IMAGES },
   { kind: 'drip_24h', minH: 24, maxH: 72,
     subject: 'Les pubs IA qui tournent en ce moment 👀',
     title: 'Pendant que tu hésites, d’autres publient',
     body: n => `${hi(n)}les marques qui explosent sur TikTok publient 1 à 3 vidéos par jour. Avec AvatarAds, une vidéo se génère en quelques minutes : avatar lipsync, vidéos Express, images IA — tout est au même endroit.`,
-    cta: 'Voir ce que je peux créer →', ctaUrl: APP_URL },
+    cta: 'Voir ce que je peux créer →', ctaUrl: APP_URL, extra: QUOTE_LUCAS + DEMO_IMAGES },
   { kind: 'drip_3d', minH: 72, maxH: 120,
     subject: '🌞 +25 crédits offerts sur ton 1er mois',
     title: 'Ton bonus de bienvenue est encore là',
@@ -65,7 +84,7 @@ const DRIP: Stage[] = [
     subject: '1 € par jour pour ne plus jamais tourner de vidéo',
     title: 'Starter, c’est 1 € par jour',
     body: n => `${hi(n)}29,99 €/mois = 150 secondes de vidéo IA, des images et l’export sans watermark. Moins cher qu’un café par jour, et ta pub tourne pendant que tu dors.`,
-    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL },
+    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS },
   { kind: 'drip_7d', minH: 168, maxH: 336,
     subject: 'On garde ta place ? 💛',
     title: 'Dernier rappel, promis',
@@ -116,7 +135,7 @@ serve(async (req) => {
       if (!u.email || !(await claim(u.id, u.email, st.kind))) continue
       const unsubUrl = `${UNSUB_BASE}?u=${u.id}&k=${await unsubKey(u.id)}`
       const ok = await sendEmail(u.email, st.subject, tpl({
-        title: st.title, body: st.body(u.first_name || ''), cta: st.cta, ctaUrl: st.ctaUrl, unsubUrl,
+        title: st.title, body: st.body(u.first_name || ''), cta: st.cta, ctaUrl: st.ctaUrl, unsubUrl, extra: st.extra,
       }))
       if (ok) { sent++; report[st.kind] = (report[st.kind] || 0) + 1 }
       await new Promise(r => setTimeout(r, 600))
