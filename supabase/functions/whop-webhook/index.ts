@@ -36,7 +36,7 @@ const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 7
 const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
   // Packs FINAUX (montants revus 11/07 après-midi) — Spark, Storm et Pack M supprimés
   'plan_w0DMfzGzEdmYF': { credits: 40  },  // Flash    9,99€
-  'plan_rn0Lomy4QJy0U': { credits: 90  },  // Pack S  19,99€
+  'plan_xgsRkGzvSgUkf': { credits: 90  },  // Pack S  19,99€ (recréé 11/07 — l'ancien plan_rn0Lomy4QJy0U a été supprimé)
   'plan_EVUzCdQ1H1EdL': { credits: 250 },  // Pack L  49,99€
 }
 
