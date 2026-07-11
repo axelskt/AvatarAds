@@ -173,18 +173,18 @@ const CHECKOUT={
 function perDay(p){ return (parseFloat(String(p).replace(',','.'))/30).toFixed(2).replace('.',','); }
 var eliteSlider=0;
 const ELITE_TIERS=[
-  {avatars:30, videos:60,  images:50,  price:'89,99', annual:'66,67', checkoutId:'elite'},
-  {avatars:60, videos:120, images:100, price:'158,99',annual:'119,99',checkoutId:'elite60'},
-  {avatars:90, videos:180, images:150, price:'224,99',annual:'157,99',checkoutId:'elite90'},
+  {avatars:30, credits:1100, price:'89,99', annual:'66,67', checkoutId:'elite'},
+  {avatars:60, credits:2200, price:'158,99',annual:'119,99',checkoutId:'elite60'},
+  {avatars:90, credits:3300, price:'224,99',annual:'157,99',checkoutId:'elite90'},
 ];
 const PLANS=[
   { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
     price:'29,99', annual:'20,83', accent:'var(--text)',
-    av:5, vid:10, img:10, note:'sans engagement',
+    credits:150, equiv:'5 avatars lipsync de 20 s', extra:'images IA · vidéos Express', bonus:'+25 crédits offerts le 1er mois', note:'sans engagement',
     listHead:'INCLUS :', feats:[['✏️','Sous-titres animés'],['🎙️','Voix clonée ElevenLabs'],['✂️','Split-screen · gameplay'],['📤','Export vertical sans watermark']] },
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
     price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
-    av:15, vid:30, img:20, note:'soit 1,67€/jour',
+    credits:550, equiv:'15 avatars lipsync de 30 s', extra:'images Standard · vidéos Express', bonus:'+50 crédits offerts le 1er mois', note:'soit 1,67€/jour',
     listHead:'TOUT STARTER, PLUS :', feats:[['🎵','Whisper IA · sync voix avancée'],['✨','Effets VSL · export 1080p'],['✂️','Suppression silences avancée'],['🎨','Sous-titres styles cinématiques']] },
   { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux. Choisis ta puissance.',
     accent:'var(--violet)',
@@ -195,16 +195,16 @@ function _quotaBox(pl, tier){
   var violet = pl.id==='elite';
   var bd = violet ? 'rgba(154,124,255,.35)' : 'var(--border-2)';
   var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
-  var av  = tier ? tier.avatars : pl.av;
-  var vid = tier ? tier.videos  : pl.vid;
-  var img = tier ? tier.images  : pl.img;
+  var av    = tier ? tier.credits : pl.credits;
+  var equiv = tier ? (tier.avatars + ' avatars lipsync de 35 s') : pl.equiv;
+  var extra = tier ? 'Express Fast · images Max · +75 offerts le 1er mois' : pl.extra;
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline">'
-    +'<span style="color:'+(violet?'var(--violet)':'var(--accent-2)')+';font-size:17px">✦</span>'
+    +'<span style="color:'+(violet?'var(--violet)':'var(--accent-2)')+';font-size:17px">⚡</span>'
     +'<span'+(violet?' id="lpEliteAv"':'')+' class="display" style="font-size:27px;font-weight:800;color:'+(violet?'var(--violet)':'var(--text)')+'">'+av+'</span>'
-    +'<span style="font-weight:700;font-size:15px">AvatarIA / mois</span></div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)">= <span'+(violet?' id="lpEliteVid"':'')+'>'+vid+'</span></b> vidéos générées</div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:5px"><b style="color:var(--text)">~ <span'+(violet?' id="lpEliteImg"':'')+'>'+img+'</span></b> images IA · DALL·E 3</div>';
+    +'<span style="font-weight:700;font-size:15px">crédits / mois</span></div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px">≈ <b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>'+equiv+'</span></b></div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:5px">+ <span'+(violet?' id="lpEliteImg"':'')+'>'+extra+'</span></div>';
   if(violet){
     var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
     for(var t=0;t<ELITE_TIERS.length;t++){
@@ -214,7 +214,7 @@ function _quotaBox(pl, tier){
     h+='<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+idx+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;margin-top:12px;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
       +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>';
   } else {
-    h+='<div class="mono" style="margin-top:12px;border:1px solid var(--border);border-radius:9px;padding:7px 11px;font-size:11px;color:var(--text-3)">✓&nbsp; Quantité fixe / mois</div>';
+    h+='<div class="mono" style="margin-top:12px;border:1px solid var(--border);border-radius:9px;padding:7px 11px;font-size:11px;color:var(--text-3)">🌞&nbsp; '+(pl.bonus||'')+'</div>';
   }
   return h+'</div>';
 }
@@ -263,9 +263,9 @@ function setEliteSlider(idx){
   eliteSlider=idx;
   var tier=ELITE_TIERS[idx]; if(!tier) return;
   var pct=idx/(ELITE_TIERS.length-1)*100;
-  var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.avatars;
-  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=tier.videos;
-  var img=document.getElementById('lpEliteImg'); if(img) img.textContent=tier.images;
+  var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
+  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=tier.avatars+' avatars lipsync de 35 s';
+  var img=document.getElementById('lpEliteImg'); if(img) img.textContent='Express Fast · images Max · +75 offerts le 1er mois';
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
