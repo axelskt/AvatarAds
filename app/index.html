@@ -3927,435 +3927,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="flex:1;height:1px;background:var(--border)"></div>
       </div>
 
-      <!-- Tabs -->
-      <div style="display:flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:22px">
-        <button id="tab-login" data-tab="login" class="auth-tab" onclick="switchAuthTab('login')" style="flex:1;padding:8px 13px;border-radius:9px;border:none;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;box-shadow:0 1px 0 rgba(255,255,255,.05) inset">Connexion</button>
-        <button id="tab-signup" data-tab="signup" class="auth-tab" onclick="switchAuthTab('signup')" style="flex:1;padding:8px 13px;border-radius:9px;border:none;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s">Créer un compte</button>
-      </div>
-
-      <!-- LOGIN FORM -->
-      <div id="form-login">
-        <div style="margin-bottom:16px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
-          <input type="email" id="auth-email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
-        <div style="margin-bottom:22px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
-            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)">Mot de passe</div>
-            <span onclick="authResetPassword()" style="cursor:pointer;color:var(--accent-2);font-family:var(--mono);font-size:10px;letter-spacing:.1em">OUBLIÉ ?</span>
-          </div>
-          <div style="position:relative">
-            <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" class="pw-toggle" onclick="var i=document.getElementById('auth-password');var s=i.type==='password';i.type=s?'text':'password';this.textContent=s?'Cacher':'Voir'" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Voir</button>
-          </div>
-        </div>
-        <div id="auth-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
-        <button onclick="authLogin()" id="loginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-          Se connecter <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
-        </button>
-      </div>
-
-      <!-- SIGNUP FORM -->
-      <div id="form-signup" style="display:none">
-        <div style="margin-bottom:16px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Prénom</div>
-          <input type="text" id="signup-firstname" placeholder="Axel" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
-        <div style="margin-bottom:16px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
-          <input type="email" id="signup-email" placeholder="ton@email.com" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
-        <div style="margin-bottom:22px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Mot de passe</div>
-          <div style="position:relative">
-            <input type="password" id="signup-password" placeholder="8 caractères minimum" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" class="pw-toggle" onclick="var i=document.getElementById('signup-password');var s=i.type==='password';i.type=s?'text':'password';this.textContent=s?'Cacher':'Voir'" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Voir</button>
-          </div>
-        </div>
-        <div id="signup-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
-        <button onclick="authSignup()" id="signupBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-          Créer mon compte <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
-        </button>
-        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Plan gratuit · Sans carte bancaire</div>
-      </div>
-
-      </div><!-- /login-card -->
-
-      <p style="text-align:center;margin-top:22px;font-size:12px;color:var(--text-3);line-height:1.6">
-        En continuant, tu acceptes les <span style="text-decoration:underline;cursor:pointer">Conditions</span> et la <span style="text-decoration:underline;cursor:pointer">Confidentialité</span>.
-      </p>
-    </div>
-  </div>
-</div>
-
-<!-- SETUP MODAL -->
-<div class="setup-overlay" id="setupOverlay" style="display:none" onclick="if(event.target===this)closeSetup()">
-  <div class="setup-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div class="setup-logo" style="margin-bottom:0">
-        <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
-        <div>
-          <div class="display" style="font-size:21px;font-weight:700;letter-spacing:-.02em">AvatarAds — Connexions</div>
-          <div class="mono faint" style="font-size:11.5px;margin-top:2px">Configuration optionnelle</div>
-        </div>
-      </div>
-      <button onclick="closeSetup()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
-    </div>
-
-    <!-- Statut APIs intégrées -->
-    <div style="background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px">✓ Outils IA inclus dans ton abonnement</div>
-      <div style="font-size:11px;color:var(--green);opacity:.75">Script IA · ElevenLabs · Avatar IA — zéro configuration requise</div>
-    </div>
-
-    <!-- Hedra API Key (Plan BYOK) -->
-    <div class="setup-field" id="byok-section" style="display:none">
-      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Clé API Hedra <span style="color:var(--orange);font-size:9px;margin-left:4px;font-weight:700">PLAN BYOK</span></span>
-        <a href="https://hedra.com/settings/api" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
-      </div>
-      <div class="setup-input" style="position:relative">
-        <input type="password" id="inp-hedra-key" placeholder="hdk_xxxxxxxxxxxxxxxxxxxxxxxx" style="padding-right:70px">
-        <button onclick="toggleHedraKeyVisibility()" id="btn-show-key" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
-      </div>
-      <div class="setup-hint" id="byok-status" style="display:none;color:var(--green)">✓ Clé Hedra configurée — tu utilises ton propre compte Hedra</div>
-      <div class="setup-hint">Entre ta clé API Hedra pour utiliser tes propres crédits (Plan BYOK à 9,99€/mois).<br>Crée un compte sur <a href="https://hedra.com" target="_blank">hedra.com</a> et récupère ta clé dans Settings → API.</div>
-    </div>
-
-    <div class="setup-divider"></div>
-
-    <!-- Google AI API Key (Cartoon Avatar) -->
-    <div class="setup-field" id="google-ai-section">
-      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Clé API Google AI <span style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:700">ÉLITE · CARTOON</span></span>
-        <a href="https://aistudio.google.com/apikey" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
-      </div>
-      <div class="setup-input" style="position:relative">
-        <input type="password" id="inp-google-key" placeholder="AIza…">
-        <button onclick="document.getElementById('inp-google-key').type=document.getElementById('inp-google-key').type==='password'?'text':'password'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
-      </div>
-      <div class="setup-hint" style="color:var(--green)" id="google-key-status">✓ Clé Google AI configurée côté serveur — Imagen 4 + Veo 3.1 activés</div>
-      <div class="setup-hint">Clé gérée côté serveur Supabase. Ajoute <strong>GOOGLE_AI_KEY</strong> dans tes secrets Supabase pour activer la génération cartoon.</div>
-    </div>
-
-    <div class="setup-divider"></div>
-    <button class="btn-setup-save" onclick="saveKeys()">Enregistrer →</button>
-  </div>
-</div>
-
-<!-- MON COMPTE OVERLAY -->
-<div class="setup-overlay" id="accountOverlay" style="display:none" onclick="if(event.target===this)closeAccountSettings()">
-  <div class="setup-box" style="max-width:480px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div id="accountOverlayAvatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c0392b);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">A</div>
-        <div>
-          <div class="display" style="font-size:21px;font-weight:700;letter-spacing:-.02em">Mon compte</div>
-          <div id="accountOverlayEmail" class="mono faint" style="font-size:11.5px;margin-top:2px">—</div>
-        </div>
-      </div>
-      <button onclick="closeAccountSettings()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
-    </div>
-
-    <!-- ① Profil -->
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">① Profil</div>
-    <div class="setup-field" style="margin-bottom:10px">
-      <div class="setup-label">Prénom affiché</div>
-      <div class="setup-input"><input type="text" id="accountFirstName" placeholder="Ton prénom"></div>
-    </div>
-    <div class="setup-field" style="margin-bottom:16px">
-      <div class="setup-label">Numéro de téléphone <span style="color:var(--text3);font-size:9px;margin-left:4px">OPTIONNEL</span></div>
-      <div class="setup-input"><input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00"></div>
-    </div>
-    <button onclick="saveAccountProfile()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:20px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-      💾 Sauvegarder le profil
-    </button>
-
-    <div class="setup-divider"></div>
-
-    <!-- ② Email -->
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">② Adresse email de connexion</div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:12px">
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">EMAIL ACTUEL</div>
-      <div id="accountCurrentEmail" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
-    </div>
-    <div class="setup-field" style="margin-bottom:6px">
-      <div class="setup-label">Nouvel email</div>
-      <div class="setup-input"><input type="email" id="accountNewEmail" placeholder="nouveau@email.com"></div>
-    </div>
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.6">
-      Un lien de confirmation sera envoyé à la <strong style="color:var(--text2)">nouvelle adresse</strong>. L'ancien email reste actif jusqu'à confirmation.
-    </div>
-    <button onclick="saveAccountEmail()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#4dabf7';this.style.color='#4dabf7'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-      ✉️ Envoyer le lien de confirmation
-    </button>
-
-    <div class="setup-divider" style="margin-top:20px"></div>
-
-    <!-- ③ Mot de passe -->
-    <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text2)">Mot de passe</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Réinitialiser via un lien envoyé par email</div>
-      </div>
-      <button onclick="resetPassword();closeAccountSettings()" style="padding:8px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">Réinitialiser →</button>
-    </div>
-
-    <div class="setup-divider" style="margin-top:20px"></div>
-
-    <!-- ④ Abonnement & Déconnexion -->
-    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
-      <button onclick="changeSubscription();closeAccountSettings()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-        <span style="font-size:15px">📋</span> Changer mon abonnement
-      </button>
-      <button id="accountPanelCancelBtn" onclick="cancelSubscription()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:none;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
-        <span style="font-size:15px">⏸️</span> Annuler l'abonnement
-      </button>
-      <button onclick="authLogout()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,71,87,.2);border-radius:10px;color:#ff4757;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='rgba(255,71,87,.08)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,71,87,.2)'">
-        <span style="font-size:15px">🚪</span> Se déconnecter
-      </button>
-    </div>
-
-  </div>
-</div>
-
-<!-- MOBILE NAV -->
-<div id="mobileNav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 0;z-index:200;justify-content:space-around">
-  <div onclick="nav('generator',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--orange2);cursor:pointer;padding:4px 16px">
-    <span style="font-size:20px">✨</span>Générer
-  </div>
-  <div onclick="nav('library',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
-    <span style="font-size:20px">🎬</span>Biblio
-  </div>
-  <div onclick="openSetup()" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
-    <span style="font-size:20px">⚙️</span>Connexions
-  </div>
-</div>
-
-
-<!-- BUY CREDITS MODAL -->
-<div class="credits-overlay" id="creditsOverlay" onclick="if(event.target===this)closeBuyCredits()">
-  <div class="credits-box">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
-      <div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Recharger des minutes</div>
-        <div style="font-size:24px;font-weight:900;letter-spacing:-1px;line-height:1.1">Ajoute des minutes<br>à ton compte</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px">
-          <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span>
-          Solde actuel : <span id="creditsModalBalance" style="color:var(--text2);font-weight:600">—</span>
-        </div>
-      </div>
-      <button onclick="closeBuyCredits()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 12px;cursor:pointer;font-size:12px;flex-shrink:0;margin-left:16px;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕</button>
-    </div>
-
-    <!-- Pack S -->
-    <div class="credits-pack" onclick="buyCredits('pack_s')">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:#4dabf7">+5 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">4,00€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Pack M (populaire) -->
-    <div class="credits-pack popular" onclick="buyCredits('pack_m')" style="margin-top:14px">
-      <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack M · <span style="color:var(--orange)">+10 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">3,50€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">34,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Pack L -->
-    <div class="credits-pack" onclick="buyCredits('pack_l')" style="margin-top:10px">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+20 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,50€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:16px">
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--text3)">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 3v3c0 2.5 1.7 4.8 4 5.5C8.3 10.8 10 8.5 10 6V3L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-        Paiement sécurisé
-      </div>
-      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédité instantanément</div>
-      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Sans expiration</div>
-    </div>
-    <button class="btn-credits-close" onclick="closeBuyCredits()">Fermer</button>
-
-  </div>
-</div>
-
-<!-- UPGRADE + CREDITS MODAL (combined) -->
-<div class="credits-overlay" id="upgradeModal" onclick="if(event.target===this)closeUpgradeModal()">
-  <div id="upgradeModalBox" style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04);max-width:880px">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px">
-      <div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Compte & abonnement</div>
-        <div style="font-size:24px;font-weight:900;letter-spacing:-1px;line-height:1.1" id="upgradeModalTitle">Améliore ton plan ou recharge des minutes</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px">
-          <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span>
-          Solde actuel : <span id="upgradeModalBalance" style="color:var(--text2);font-weight:600">—</span>
-        </div>
-      </div>
-      <button onclick="closeUpgradeModal()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 12px;cursor:pointer;font-size:12px;flex-shrink:0;margin-left:16px;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕</button>
-    </div>
-
-    <!-- Body: 2 columns when upgrade available, else 1 column -->
-    <div id="upgradeModalGrid" style="display:grid;gap:20px">
-
-      <!-- LEFT: Plan upgrade card -->
-      <div id="upgradeModalLeft" style="display:none;background:var(--bg3);border:1px solid rgba(168,85,247,0.3);border-radius:16px;padding:24px;position:relative;overflow:hidden">
-        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(168,85,247,0.08) 0%,transparent 60%);pointer-events:none"></div>
-        <div style="position:relative">
-          <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;color:#c084fc" id="upgradePlanBadge">Passer en Pro</div>
-          <div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;line-height:1" id="upgradePlanPrice">49,99€</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:20px">/mois · sans engagement</div>
-          <div id="upgradePlanFeatures" style="display:flex;flex-direction:column;gap:9px;margin-bottom:24px">
-            <!-- Populated dynamically -->
-          </div>
-          <button id="upgradePlanBtn" onclick="goUpgradePlan()" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 6px 20px rgba(168,85,247,0.4);letter-spacing:-0.2px" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 28px rgba(168,85,247,0.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(168,85,247,0.4)'">
-            Choisir ce plan →
-          </button>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Paiement sécurisé via Whop</div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Credit packs (tabbed: vidéo / images) -->
-      <div id="upgradeModalRight">
-
-        <!-- Tabs -->
-        <div style="display:flex;gap:6px;margin-bottom:18px;background:var(--bg3);border-radius:10px;padding:4px">
-          <button id="packTabBtnVideo" onclick="switchPackTab('video')" style="flex:1;padding:8px 12px;border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .18s;background:var(--bg2);color:var(--blue);box-shadow:0 1px 4px rgba(0,0,0,.25)">🎬 Avatars vidéo</button>
-          <button id="packTabBtnImages" onclick="switchPackTab('images')" style="flex:1;padding:8px 12px;border-radius:7px;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;transition:all .18s;background:transparent;color:var(--text3)">🎨 Crédits images</button>
-        </div>
-
-        <!-- TAB: Avatars vidéo -->
+      <!-- PACKS DE CRÉDITS (monnaie unique) -->
         <div id="packTabVideo">
 
-          <!-- Pack S -->
-          <div class="credits-pack" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+          <!-- Flash · 9,99€ · +28 crédits -->
+          <div class="credits-pack" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:#4dabf7">+5 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">4,00€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack M -->
-          <div class="credits-pack popular" onclick="buyCredits('pack_m')" style="margin-bottom:10px">
-            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack M · <span style="color:var(--orange)">+10 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">3,50€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">34,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack L -->
-          <div class="credits-pack" onclick="buyCredits('pack_l')">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+20 avatars</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,50€ / avatar</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
-            </div>
-          </div>
-
-        </div><!-- /packTabVideo -->
-
-        <!-- TAB: Crédits images -->
-        <div id="packTabImages" style="display:none">
-
-          <!-- Pack Spark · 4,99€ · +10 images -->
-          <div class="credits-pack" onclick="buyImageCredits('img_s')" style="margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✨</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Spark · <span style="color:#4dabf7">+10 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,50€ / image</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-              <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">4,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-              </div>
-              <button class="btn-buy-pack">Acheter</button>
-            </div>
-          </div>
-
-          <!-- Pack Flash · 9,99€ · +25 images -->
-          <div class="credits-pack popular" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
-            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:var(--orange)">+25 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,40€ / image</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+28 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 28 s d'avatar ou 28 images</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4367,18 +3948,37 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
-          <!-- Pack Storm · 14,99€ · +40 images -->
-          <div class="credits-pack" onclick="buyImageCredits('img_l')">
+          <!-- Pack S · 19,99€ · +60 crédits -->
+          <div class="credits-pack" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🌩️</div>
+              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Storm · <span style="color:#a855f7">+40 images</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">0,375€ / image</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+60 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 3 avatars de 20 s</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">14,99€</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
+                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+              </div>
+              <button class="btn-buy-pack">Acheter</button>
+            </div>
+          </div>
+
+          <!-- Pack L · 49,99€ · +180 crédits -->
+          <div class="credits-pack popular" onclick="buyCredits('pack_l')">
+            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+180 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 9 avatars de 20 s · 0,28€/crédit</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+              <div style="text-align:right">
+                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
                 <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
@@ -6236,9 +5836,8 @@ async function _composeClipWithAudio(clipId, audioBlob) {
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
-  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S  – +5  avatars – 19,99€
-  pack_m: 'https://whop.com/checkout/plan_8ZlMDLvTi5M05', // Pack M – +10 avatars – 34,99€
-  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +20 avatars – 49,99€
+  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S – +60 crédits – 19,99€
+  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +180 crédits – 49,99€
 };
 
 // Plans checkout Whop
@@ -6338,22 +5937,7 @@ const UPGRADE_PLANS = {
 };
 
 function switchPackTab(tab){
-  const isImg = tab === 'images';
-  document.getElementById('packTabVideo').style.display  = isImg ? 'none' : 'block';
-  document.getElementById('packTabImages').style.display = isImg ? 'block' : 'none';
-  // Tab buttons style
-  const btnV = document.getElementById('packTabBtnVideo');
-  const btnI = document.getElementById('packTabBtnImages');
-  if(btnV){
-    btnV.style.background = isImg ? 'transparent' : 'var(--bg2)';
-    btnV.style.color      = isImg ? 'var(--text3)' : 'var(--blue)';
-    btnV.style.boxShadow  = isImg ? 'none' : '0 1px 4px rgba(0,0,0,.25)';
-  }
-  if(btnI){
-    btnI.style.background = isImg ? 'var(--bg2)' : 'transparent';
-    btnI.style.color      = isImg ? 'var(--orange)' : 'var(--text3)';
-    btnI.style.boxShadow  = isImg ? '0 1px 4px rgba(0,0,0,.25)' : 'none';
-  }
+  // Monnaie unique : plus d'onglets vidéo/images — no-op conservé pour compatibilité
 }
 
 // Paywall plans UNIFIÉ — partout le même design (le nouveau plansSheet 3 cartes)
@@ -6438,11 +6022,9 @@ function buyCredits(pack){
 
 // ── Packs crédits images (Whop) ──
 const IMG_CREDIT_PACK_URLS = {
-  img_s: 'https://whop.com/checkout/plan_iTRFSpFkMkfJv', //  4,99€ → +10 images
-  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', //  9,99€ → +25 images
-  img_l: 'https://whop.com/checkout/plan_9OOdLpbiNYCKj', // 14,99€ → +40 images
+  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', // Flash – +28 crédits – 9,99€
 };
-const IMG_CREDIT_PACK_QTY = { img_s: 10, img_m: 25, img_l: 40 };
+const IMG_CREDIT_PACK_QTY = { img_m: 28 };
 
 function buyImageCredits(pack){
   const url = IMG_CREDIT_PACK_URLS[pack];
@@ -9455,6 +9037,17 @@ function syncVoiceTranscript(text){
 
 async function cloneVoice(){
   if(!voiceFile){ toast('⚠️ Upload un fichier de voix d\'abord'); return; }
+  // Clonage : tarif progressif 3 → 6 → 10 crédits (1er/2e/suivants), débité côté serveur
+  try{
+    const { data: cloneCost, error: ccErr } = await sb.rpc('charge_voice_clone');
+    if(ccErr){ toast('⚠️ Erreur crédits — réessaie'); return; }
+    if(cloneCost === -1){ toast('✗ Pas assez de crédits pour cloner ta voix'); showPaywall(); return; }
+    if(cloneCost > 0){
+      currentMember.credits_remaining = Math.max(0, (currentMember.credits_remaining||0) - cloneCost);
+      _updateQuotaDisplay();
+      toast('🎙️ Clonage de voix : ' + cloneCost + ' crédits');
+    }
+  }catch(e){}
   const btn = document.getElementById('cloneBtn');
   btn.textContent = 'Clonage en cours...'; btn.disabled = true;
   const status = document.getElementById('cloneStatus');
