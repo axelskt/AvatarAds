@@ -4341,7 +4341,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div style="font-size:11px;font-family:var(--mono);color:#ff4757;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Confirmation</div>
       <div style="font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px">Annuler ton abonnement ?</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
-        ⚠️ Tes <b id="retCreditsCount" style="color:#ff4757">crédits</b> restants seront <b style="color:#ff4757">supprimés immédiatement</b> et ne pourront pas être récupérés.<br><br>
+        ⚠️ Tes <b id="retCreditsCount" style="color:#ff4757">crédits</b> du plan seront <b style="color:#ff4757">supprimés immédiatement</b> et ne pourront pas être récupérés.<span id="retKeptLine" style="display:none"><br>✓ Tes <b id="retKeptCount" style="color:#22c55e">crédits</b> achetés en pack restent sur ton compte.</span><br><br>
         Ton plan <b id="retPlanName">—</b> reste actif jusqu'à la fin de la période déjà payée, puis ton compte repassera en Free — tes vidéos et images restent accessibles.
       </div>
       <button onclick="closeRetention()" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">Garder mon abonnement</button>
@@ -4451,13 +4451,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box (hauteur fixe) -->
         <div style="height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">⚡ 150</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">⚡ 150</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;font-size:10.5px;font-family:var(--mono);font-weight:700;color:#22c55e;white-space:nowrap">+25 offerts le 1er mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">5 avatars</b> lipsync de 20 s</span>
               <span style="font-size:12.5px;color:var(--text-3)">+ images IA · vidéos Express</span>
             </div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">🌞 <b style="color:var(--text-2)">+25 crédits offerts</b>&nbsp;le 1er mois</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:18px">
           <div id="sheetOldStarter" style="display:none;font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">29,99€</div>
@@ -4484,13 +4483,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box (hauteur fixe) -->
         <div style="height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">⚡ 550</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">⚡ 550</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;font-size:10.5px;font-family:var(--mono);font-weight:700;color:#22c55e;white-space:nowrap">+50 offerts le 1er mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">15 avatars</b> lipsync de 30 s</span>
               <span style="font-size:12.5px;color:var(--text-3)">+ images Standard · vidéos Express</span>
             </div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">🌞 <b style="color:var(--text-2)">+50 crédits offerts</b>&nbsp;le 1er mois</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:9px;margin-top:18px">
           <div id="sheetOldPro" style="font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">64,99€</div>
@@ -4517,10 +4515,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box + slider (hauteur fixe, alignée) — design Claude (barre) -->
         <div style="height:158px;border:1px solid rgba(154,124,255,.3);border-radius:16px;padding:16px 18px;margin-top:6px;background:rgba(154,124,255,.06);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;font-size:10.5px;font-family:var(--mono);font-weight:700;color:#22c55e;white-space:nowrap">+75 offerts le 1er mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:12.5px;color:var(--text-3)">≈ <b id="sheetEliteVideos" style="color:var(--text-2)">30</b> avatars lipsync de 35 s</span>
-              <span style="font-size:12.5px;color:var(--text-3)">+ Express Fast · images Max · 🌞 +75 le 1er mois</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ Express Fast · images Max</span>
             </div>
           </div>
           <div>
@@ -5358,8 +5356,13 @@ function cancelSubscription(){
   if(offer) offer.style.display = currentMember.retention_bonus_used ? 'none' : 'block';
   const labels = { starter:'Starter', pro:'Pro', elite:'Élite' };
   const pn = document.getElementById('retPlanName'); if(pn) pn.textContent = labels[plan] || plan;
+  // Crédits du plan = supprimés à l'annulation ; crédits achetés en pack = conservés
+  const kept   = Math.min(currentMember.bought_credits || 0, creditsBalance());
+  const planCr = Math.max(0, creditsBalance() - kept);
   const rc = document.getElementById('retCreditsCount');
-  if(rc){ const b = creditsBalance(); rc.textContent = b + ' crédit' + (b > 1 ? 's' : ''); }
+  if(rc) rc.textContent = planCr + ' crédit' + (planCr > 1 ? 's' : '');
+  const kl = document.getElementById('retKeptLine'), kc = document.getElementById('retKeptCount');
+  if(kl){ if(kept > 0 && kc){ kc.textContent = kept + ' crédit' + (kept > 1 ? 's' : ''); kl.style.display = 'inline'; } else kl.style.display = 'none'; }
   _retShow(1);
   document.getElementById('retentionModal').style.display = 'flex';
 }
@@ -5406,11 +5409,16 @@ async function _retDoCancel(){
     const out = await res.json().catch(() => ({}));
     if(!res.ok){ toast('⚠️ ' + (out.error || 'Erreur — réessaie ou contacte le support')); return; }
     currentMember.whop_cancel_at_period_end = true;
-    currentMember.credits_remaining = 0;  // supprimés immédiatement côté serveur (whop-cancel)
+    // Seuls les crédits du plan sont supprimés côté serveur — les achetés en pack restent
+    const _kept = Math.min(currentMember.bought_credits || 0, currentMember.credits_remaining || 0);
+    currentMember.credits_remaining = _kept;
+    currentMember.bought_credits = _kept;
     _updateQuotaDisplay();
     _syncCancelBtn();
     closeRetention();
-    toast('✅ Abonnement annulé — tes crédits ont été supprimés, le plan reste actif jusqu\'à la fin de la période payée');
+    toast(_kept > 0
+      ? '✅ Abonnement annulé — crédits du plan supprimés, tes ' + _kept + ' crédits achetés sont conservés'
+      : '✅ Abonnement annulé — tes crédits du plan ont été supprimés');
   }catch(e){
     toast('⚠️ Erreur réseau — réessaie');
   }finally{
