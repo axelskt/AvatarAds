@@ -4177,13 +4177,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- Tabs -->
         <div id="packTabVideo">
 
-          <!-- Flash · 9,99€ · +28 crédits -->
+          <!-- Flash · 9,99€ · +40 crédits -->
           <div class="credits-pack" id="packCardFlash" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+28 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 28 s d'avatar ou 28 images</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+40 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 40 s d'avatar ou 40 images</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4195,13 +4195,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
-          <!-- Pack S · 19,99€ · +60 crédits -->
-          <div class="credits-pack" id="packCardS" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+          <!-- Pack S · 19,99€ · +90 crédits (le plus populaire) -->
+          <div class="credits-pack popular" id="packCardS" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ LE PLUS POPULAIRE</div>
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+60 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 3 avatars de 20 s</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+90 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 4 avatars de 20 s</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4213,14 +4214,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
-          <!-- Pack L · 49,99€ · +180 crédits -->
-          <div class="credits-pack popular" id="packCardL" onclick="buyCredits('pack_l')">
-            <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
+          <!-- Pack L · 49,99€ · +250 crédits -->
+          <div class="credits-pack" id="packCardL" onclick="buyCredits('pack_l')">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
               <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+180 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 9 avatars de 20 s · 0,28€/crédit</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+250 crédits</span></div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 12 avatars de 20 s · 0,20€/crédit</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -4279,18 +4279,26 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <b id="cmVideos" class="mono" style="font-size:19px">—</b>
       </div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8">
-        Avatar lipsync : <b style="color:var(--text2)">1 cr/s</b> (+0,5 si voix IA · import MP3 gratuit)<br>
-        Express : <b style="color:var(--text2)">1 cr/s</b> (3 en Élite)<br>
-        Image : <b style="color:var(--text2)">1</b> low · <b style="color:var(--text2)">3</b> Standard · <b style="color:var(--text2)">5</b> Max<br>
-        Réutiliser un avatar : <b style="color:var(--text2)">2</b> · Whisper/Nettoyage : <b style="color:var(--text2)">1</b> · Export montage : <b style="color:var(--text2)">2</b>
-      </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
       <button onclick="closeCreditsMenu();openCreditsModal(null,true)" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer">+ Recharger des crédits</button>
       <button onclick="closeCreditsMenu();showPlansSheet()" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Voir les plans →</button>
     </div>
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:12px">Quotas remis à zéro chaque mois · les images bonus n'expirent pas</div>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:8px">
+      <button onclick="const d=document.getElementById('cmBareme');const on=d.style.display==='none';d.style.display=on?'block':'none';document.getElementById('cmBaremeArrow').textContent=on?'▴':'▾'" style="width:100%;background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:10.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px">Comment sont calculés les crédits ? <span id="cmBaremeArrow">▾</span></button>
+      <div id="cmBareme" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:2.1;margin-top:8px">
+        🎬 Avatar lipsync — <b style="color:var(--text2)">1 crédit / seconde</b><br>
+        🗣 Voix IA (ElevenLabs) — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
+        ⚡ Express & Cartoon — <b style="color:var(--text2)">1 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite (Veo Fast)<br>
+        🖼 Image IA — <b style="color:var(--text2)">1</b> Rapide · <b style="color:var(--text2)">3</b> Standard · <b style="color:var(--text2)">5</b> Max<br>
+        ♻️ Réutiliser un avatar — <b style="color:var(--text2)">2 crédits</b><br>
+        📝 Transcription auto — <b style="color:var(--text2)">1 crédit</b><br>
+        🧹 Nettoyage audio — <b style="color:var(--text2)">1 crédit</b><br>
+        🎞 Export depuis l'éditeur — <b style="color:var(--text2)">2 crédits</b><br>
+        🎤 Clonage de voix — <b style="color:var(--text2)">3</b> le 1er · <b style="color:var(--text2)">6</b> le 2e · <b style="color:var(--text2)">10</b> ensuite
+      </div>
+    </div>
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Crédits du plan renouvelés chaque mois · les crédits de packs n'expirent pas</div>
   </div>
 </div>
 
@@ -6094,8 +6102,8 @@ async function _composeClipWithAudio(clipId, audioBlob) {
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
-  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S – +60 crédits – 19,99€
-  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +180 crédits – 49,99€
+  pack_s: 'https://whop.com/checkout/plan_rn0Lomy4QJy0U', // Pack S – +90 crédits – 19,99€
+  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +250 crédits – 49,99€
 };
 
 // Plans checkout Whop
@@ -6260,7 +6268,7 @@ function closeUpgradeModal(){
 
 // Surligne le pack le moins cher qui couvre le manque de crédits
 function _highlightPackFor(missing){
-  const covers = { packCardFlash: 28, packCardS: 60, packCardL: 180 };
+  const covers = { packCardFlash: 40, packCardS: 90, packCardL: 250 };
   const target = missing == null ? null
     : (missing <= covers.packCardFlash ? 'packCardFlash'
     :  missing <= covers.packCardS     ? 'packCardS' : 'packCardL');
@@ -6307,9 +6315,9 @@ function buyCredits(pack){
 
 // ── Packs crédits images (Whop) ──
 const IMG_CREDIT_PACK_URLS = {
-  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', // Flash – +28 crédits – 9,99€
+  img_m: 'https://whop.com/checkout/plan_w0DMfzGzEdmYF', // Flash – +40 crédits – 9,99€
 };
-const IMG_CREDIT_PACK_QTY = { img_m: 28 };
+const IMG_CREDIT_PACK_QTY = { img_m: 40 };
 
 function buyImageCredits(pack){
   const url = IMG_CREDIT_PACK_URLS[pack];
