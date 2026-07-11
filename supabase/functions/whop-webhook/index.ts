@@ -11,32 +11,35 @@ const WHOP_WEBHOOK_SECRET  = Deno.env.get('WHOP_WEBHOOK_SECRET') ?? ''  // Whop 
 // IDs synchronisés avec PLAN_CHECKOUT_URLS de app/index.html
 // ─────────────────────────────────────────────────────────────────
 const SUB_MAP: Record<string, { plan: string; credits: number }> = {
+  // CRÉDITS UNIFIÉS — validé le 11/07/2026 : avatar 1 cr/s · Express Lite 1 cr/s · Fast 3 cr/s · image 1/3/5
   // Mensuel
-  'plan_YKcdyPT6RRQSi': { plan: 'starter', credits: 300  },  // Starter  29,99€/mois
-  'plan_g4BVtDmk6hgjQ': { plan: 'pro',     credits: 600  },  // Pro      49,99€/mois
-  'plan_w8lh5zpEJFOQR': { plan: 'elite',   credits: 1500 },  // Élite30  89,99€/mois
-  'plan_pZmWh1dVdmIWT': { plan: 'elite',   credits: 3000 },  // Élite60 158,99€/mois
-  'plan_63PGeG3MesbJR': { plan: 'elite',   credits: 4500 },  // Élite90 224,99€/mois
-  // Annuel (crédits remis chaque mois via membership.renewed)
-  'plan_cNydK89X39PLE': { plan: 'starter', credits: 300  },  // Starter  249,99€/an
-  'plan_P7WIywSa6YrxT': { plan: 'pro',     credits: 600  },  // Pro      449,99€/an
-  'plan_OvRwm5CW3xcNh': { plan: 'elite',   credits: 1500 },  // Élite30  799,99€/an
-  'plan_uWTkJDl1GvxNR': { plan: 'elite',   credits: 3000 },  // Élite60 1439,88€/an
-  'plan_x2kDWR6ur2W5E': { plan: 'elite',   credits: 4500 },  // Élite90 1895,88€/an
+  'plan_YKcdyPT6RRQSi': { plan: 'starter', credits: 150  },  // Starter  29,99€/mois
+  'plan_g4BVtDmk6hgjQ': { plan: 'pro',     credits: 550  },  // Pro      49,99€/mois
+  'plan_w8lh5zpEJFOQR': { plan: 'elite',   credits: 1100 },  // Élite30  89,99€/mois
+  'plan_pZmWh1dVdmIWT': { plan: 'elite',   credits: 2200 },  // Élite60 158,99€/mois
+  'plan_63PGeG3MesbJR': { plan: 'elite',   credits: 3300 },  // Élite90 224,99€/mois
+  // Annuel
+  'plan_cNydK89X39PLE': { plan: 'starter', credits: 150  },
+  'plan_P7WIywSa6YrxT': { plan: 'pro',     credits: 550  },
+  'plan_OvRwm5CW3xcNh': { plan: 'elite',   credits: 1100 },
+  'plan_uWTkJDl1GvxNR': { plan: 'elite',   credits: 2200 },
+  'plan_x2kDWR6ur2W5E': { plan: 'elite',   credits: 3300 },
 }
+
+// 🌞 Promo de l'été : bonus offert UNE FOIS, au premier abonnement du compte
+const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 75 }
 
 // ─────────────────────────────────────────────────────────────────
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
 const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
-  // Packs avatars (60 s de crédit par avatar, même ratio que Starter)
-  'plan_rn0Lomy4QJy0U': { credits: 300  },  // Pack S  +5 avatars  19,99€
-  'plan_8ZlMDLvTi5M05': { credits: 600  },  // Pack M +10 avatars  34,99€
-  'plan_EVUzCdQ1H1EdL': { credits: 1200 },  // Pack L +20 avatars  49,99€
-  // Packs crédits images
-  'plan_iTRFSpFkMkfJv': { imgCredits: 10 }, // Spark +10 images  4,99€
-  'plan_w0DMfzGzEdmYF': { imgCredits: 25 }, // Flash +25 images  9,99€
-  'plan_9OOdLpbiNYCKj': { imgCredits: 40 }, // Storm +40 images 14,99€
+  // Packs one-shot : tout crédite la MÊME monnaie (packs images fusionnés dans les crédits)
+  'plan_rn0Lomy4QJy0U': { credits: 60  },  // Pack S  19,99€
+  'plan_8ZlMDLvTi5M05': { credits: 115 },  // Pack M  34,99€
+  'plan_EVUzCdQ1H1EdL': { credits: 180 },  // Pack L  49,99€
+  'plan_iTRFSpFkMkfJv': { credits: 12  },  // Spark    4,99€
+  'plan_w0DMfzGzEdmYF': { credits: 28  },  // Flash    9,99€
+  'plan_9OOdLpbiNYCKj': { credits: 45  },  // Storm   14,99€
 }
 
 // ─── Vérification de signature ───────────────────────────────────
@@ -128,7 +131,7 @@ serve(async (req) => {
   const findProfile = async () => {
     if (!email) return null
     const { data: p } = await sb.from('profiles')
-      .select('id, plan, credits_remaining, img_bonus_credits, whop_plan_id, whop_member_id')
+      .select('id, plan, credits_remaining, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
       .eq('email', email).maybeSingle()
     return p
   }
@@ -168,20 +171,23 @@ serve(async (req) => {
             console.error('⚠️ WHOP_API_KEY manquant — ancien abonnement NON annulé (risque de double facturation)')
           }
         }
+        // 🌞 Bonus premier abonnement (une seule fois par compte)
+        const bonus = profile.first_sub_bonus_used ? 0 : (FIRST_SUB_BONUS[sub.plan] ?? 0)
         const { error } = await sb.from('profiles').update({
           plan:              sub.plan,
-          credits_remaining: sub.credits,
+          credits_remaining: sub.credits + bonus,
           credits_total:     sub.credits,
           whop_member_id:    data.id ?? null,
           whop_plan_id:      planId,
           whop_manage_url:   data.manage_url ?? null,
           whop_cancel_at_period_end: false,
+          first_sub_bonus_used: true,
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
-        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits)`)
+        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''})`)
       } else {
         const { error } = await sb.from('pending_activations').upsert({
-          email, product: 'avatarads', plan: sub.plan, credits: sub.credits,
+          email, product: 'avatarads', plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0),
           whop_member_id: data.id ?? null, whop_plan_id: planId, paid_at: new Date().toISOString(),
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending_activations:', error); return new Response('DB error', { status: 500 }) }

@@ -4425,33 +4425,17 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button onclick="closeCreditsMenu()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:6px 11px;cursor:pointer;font-size:12px">✕</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 15px">
         <div style="display:flex;align-items:center;gap:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
-          <span style="font-size:13.5px;color:var(--text2)">Vidéos ce mois</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+          <span style="font-size:13.5px;color:var(--text2)">Crédits restants</span>
         </div>
-        <b id="cmVideos" class="mono" style="font-size:14px">—</b>
+        <b id="cmVideos" class="mono" style="font-size:19px">—</b>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          <span style="font-size:13.5px;color:var(--text2)">Images ce mois</span>
-        </div>
-        <b id="cmImages" class="mono" style="font-size:14px">—</b>
-      </div>
-      <div id="cmBonusRow" style="display:none;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:13px 15px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.9H22l-5.8 4.3 2.2 6.8L12 15.8 5.6 20l2.2-6.8L2 8.9h7.6z"/></svg>
-          <span style="font-size:13.5px;color:var(--text2)">Images bonus (packs)</span>
-        </div>
-        <b id="cmBonus" class="mono" style="font-size:14px;color:#22c55e">—</b>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-          <span style="font-size:13.5px;color:var(--text2)">Crédit avatar (durée)</span>
-        </div>
-        <b id="cmAvatarSecs" class="mono" style="font-size:14px">—</b>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8">
+        Avatar lipsync : <b style="color:var(--text2)">1 cr/s</b> · Express : <b style="color:var(--text2)">1 cr/s</b> (3 en Élite)<br>
+        Image : <b style="color:var(--text2)">1</b> low · <b style="color:var(--text2)">3</b> Standard · <b style="color:var(--text2)">5</b> Max<br>
+        Réutiliser un avatar : <b style="color:var(--text2)">2</b> · Whisper/Nettoyage : <b style="color:var(--text2)">1</b> · Export montage : <b style="color:var(--text2)">2</b>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
@@ -4610,13 +4594,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box (hauteur fixe) -->
         <div style="height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">✦ 5</span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">⚡ 150</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">= 10</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 10</b> images IA</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">5 avatars</b> lipsync de 20 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ images IA · vidéos Express</span>
             </div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
+          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">🌞 <b style="color:var(--text-2)">+25 crédits offerts</b>&nbsp;le 1er mois</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:18px">
           <div id="sheetOldStarter" style="display:none;font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">29,99€</div>
@@ -4643,13 +4627,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box (hauteur fixe) -->
         <div style="height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">✦ 15</span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800">⚡ 550</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">= 30</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b style="color:var(--text-2)">~ 20</b> images IA</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">15 avatars</b> lipsync de 30 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ images Standard · vidéos Express</span>
             </div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">✓ Quantité fixe / mois</div>
+          <div style="display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text-3)">🌞 <b style="color:var(--text-2)">+50 crédits offerts</b>&nbsp;le 1er mois</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:9px;margin-top:18px">
           <div id="sheetOldPro" style="font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">64,99€</div>
@@ -4676,10 +4660,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- quota box + slider (hauteur fixe, alignée) — design Claude (barre) -->
         <div style="height:158px;border:1px solid rgba(154,124,255,.3);border-radius:16px;padding:16px 18px;margin-top:6px;background:rgba(154,124,255,.06);display:flex;flex-direction:column;justify-content:space-between">
           <div>
-            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">30</span></span><span style="font-size:13.5px;font-weight:600">AvatarIA / mois</span></div>
+            <div style="display:flex;gap:8px;align-items:baseline"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)"><b id="sheetEliteVideos" style="color:var(--text-2)">60</b> vidéos générées</span>
-              <span style="font-size:12.5px;color:var(--text-3)"><b id="sheetEliteImages" style="color:var(--text-2)">50</b> images IA</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b id="sheetEliteVideos" style="color:var(--text-2)">30</b> avatars lipsync de 35 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ Express Fast · images Max · 🌞 +75 le 1er mois</span>
             </div>
           </div>
           <div>
@@ -5110,6 +5094,34 @@ const PLAN_QUOTAS = {
 
 function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 
+// ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
+// 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
+const CREDIT_COSTS = {
+  avatarPerSec: 1,        // Hedra Character-3 + voix
+  expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
+  expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
+  imgLow: 1, imgMedium: 3, imgHigh: 5,
+  reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2
+};
+function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
+function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
+// Débit unifié : vérifie le solde, débite côté serveur (RPC anti-triche), met l'UI à jour
+async function spendCreditsFor(amount, label){
+  if(typeof currentMember==='undefined' || !currentMember){ showPaywall(); return false; }
+  if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
+  amount = Math.max(1, Math.ceil(amount));
+  if(creditsBalance() < amount){
+    toast('✗ Il faut ' + amount + ' crédits — il t\'en reste ' + creditsBalance());
+    showPaywall(); return false;
+  }
+  const { data, error } = await sb.rpc('spend_credits', { p_secs: amount });
+  if(error){ console.warn('spend_credits:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
+  if(data === -1){ showPaywall(); return false; }
+  currentMember.credits_remaining = data;
+  _updateQuotaDisplay();
+  return true;
+}
+
 function _videosRemaining(){
   const plan  = (currentMember?.plan || 'free').toLowerCase();
   const quota = _getPlanQuota(plan);
@@ -5148,36 +5160,21 @@ async function _incrementVideosUsed(){
 }
 
 function _updateQuotaDisplay(){
-  const plan = (currentMember?.plan || 'free').toLowerCase();
-  const quota = _getPlanQuota(plan);
-  const remaining = _videosRemaining();
   const creditsEl = document.getElementById('memberCredits');
   const labelEl   = document.getElementById('memberCreditsLabel');
   const boxEl     = document.getElementById('memberQuotaBox');
-  // Plan gratuit : on masque le compteur 'X/X vidéos' (il ne génère pas — paywall à la génération)
+  const imgBox    = document.getElementById('memberImgQuotaBox');
+  if(imgBox) imgBox.style.display = 'none'; // compteur unique : les crédits couvrent tout
   if(typeof _isFreePlan==='function' && _isFreePlan()){ if(boxEl) boxEl.style.display='none'; return; }
   if(boxEl) boxEl.style.display='';
   if(!creditsEl) return;
-
-  if(plan === 'byok'){
-    creditsEl.textContent = '∞';
-    if(labelEl) labelEl.textContent = 'vidéos (BYOK)';
-    if(boxEl) boxEl.style.borderColor = 'var(--border)';
-  } else {
-    creditsEl.textContent = remaining + ' / ' + quota.videos;
-    if(labelEl) labelEl.textContent = 'vidéos ce mois';
-    // Colorier selon urgence
-    if(boxEl){
-      if(remaining === 0)      boxEl.style.borderColor = 'rgba(255,80,80,0.5)';
-      else if(remaining <= 2)  boxEl.style.borderColor = 'rgba(255,180,0,0.5)';
-      else                     boxEl.style.borderColor = 'var(--border)';
-    }
-    if(creditsEl){
-      if(remaining === 0)     creditsEl.style.color = '#ff5050';
-      else if(remaining <= 2) creditsEl.style.color = '#ffb400';
-      else                    creditsEl.style.color = 'var(--text2)';
-    }
-  }
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  if(plan === 'developer' || currentMember?.is_owner){ creditsEl.textContent='∞'; if(labelEl) labelEl.textContent='crédits'; return; }
+  const bal = creditsBalance();
+  creditsEl.textContent = bal;
+  if(labelEl) labelEl.textContent = 'crédit' + (bal>1?'s':'');
+  creditsEl.style.color = bal===0 ? '#ff5050' : (bal<=20 ? '#ffb400' : 'var(--text2)');
+  if(boxEl) boxEl.style.borderColor = bal===0 ? 'rgba(255,80,80,0.5)' : (bal<=20 ? 'rgba(255,180,0,0.5)' : 'var(--border)');
 }
 
 // ── MENU « MES CRÉDITS » (clic sur les compteurs de la topbar) ──
@@ -5186,16 +5183,8 @@ function openCreditsMenu(){
   const labels = { free:'Free', starter:'Starter', pro:'Pro', elite:'Élite', byok:'BYOK', developer:'Développeur' };
   const el = id => document.getElementById(id);
   if(el('cmPlan')) el('cmPlan').textContent = labels[plan] || plan;
-  const q = _getPlanQuota(plan);
-  if(el('cmVideos')) el('cmVideos').textContent = q.videos >= 999 ? '∞' : (_videosRemaining() + ' / ' + q.videos + ' restantes');
-  const imgLim = _imgMonthLimit();
-  if(el('cmImages')) el('cmImages').textContent = imgLim >= 9999 ? '∞' : (Math.max(0, imgLim - _imgMonthUsed()) + ' / ' + imgLim + ' restantes');
-  const bonus = _imgBonus();
-  const bonusRow = el('cmBonusRow');
-  if(bonusRow) bonusRow.style.display = bonus > 0 ? 'flex' : 'none';
-  if(el('cmBonus')) el('cmBonus').textContent = '+' + bonus;
-  const secs = ['elite','developer'].includes(plan) && currentMember?.is_owner ? '∞' : secsToDisplay(currentMember?.credits_remaining || 0);
-  if(el('cmAvatarSecs')) el('cmAvatarSecs').textContent = plan==='developer' ? '∞' : secs;
+  const inf = plan==='developer' || currentMember?.is_owner;
+  if(el('cmVideos')) el('cmVideos').textContent = inf ? '∞' : (creditsBalance() + ' crédit' + (creditsBalance()>1?'s':''));
   document.getElementById('creditsMenuModal').style.display = 'flex';
 }
 function closeCreditsMenu(){ document.getElementById('creditsMenuModal').style.display = 'none'; }
@@ -5413,26 +5402,8 @@ function enterApp(profile){
 
 // ── DEDUCT MINUTES ──
 async function decrementCredit(durationSecs){
-  if(!currentMember) return false;
-  // Compte developer/owner : pas de décrément de crédits
-  if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
-  const secs = durationSecs || 20;
-  const remaining = currentMember.credits_remaining || 0;
-  if(remaining < secs){
-    const needed = Math.ceil(secs/60);
-    toast('✗ Il te faut ' + needed + ' min — tu n\'en as plus assez !');
-    showPaywall(); return false;
-  }
-  // Décrément côté serveur (RPC SECURITY DEFINER : le solde est vérifié en base — anti-triche)
-  const { data: newBal, error } = await sb.rpc('spend_credits', { p_secs: secs });
-  if(error){ console.warn('spend_credits error:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
-  if(newBal === -1){
-    toast('✗ Solde insuffisant !');
-    showPaywall(); return false;
-  }
-  currentMember.credits_remaining = newBal;
-  document.getElementById('memberCredits').textContent = secsToDisplay(newBal);
-  return true;
+  // Avatar lipsync : 1 crédit / seconde générée (voix ElevenLabs incluse)
+  return spendCreditsFor((durationSecs || 20) * CREDIT_COSTS.avatarPerSec, 'avatar');
 }
 
 // ── LOGOUT ──
@@ -5738,9 +5709,9 @@ function sheetToggleBilling(){
 // Elite slider dans le plansSheet
 let _sheetEliteTier = 0; // 0=30av, 1=60av, 2=90av
 const SHEET_ELITE_TIERS = [
-  { avatars:30, videos:60,  images:50,  checkoutKey:'pro',     m:'89,99€',  a:'66,67€',  ms:'soit 3,00€/jour · sans engagement', as:'280€ économisés · soit 2,22€/jour', save:'280' },
-  { avatars:60, videos:120, images:100, checkoutKey:'elite60', m:'158,99€', a:'119,99€', ms:'soit 5,30€/jour · sans engagement', as:'468€ économisés · soit 4,00€/jour', save:'468' },
-  { avatars:90, videos:180, images:150, checkoutKey:'elite90', m:'224,99€', a:'157,99€', ms:'soit 7,50€/jour · sans engagement', as:'804€ économisés · soit 5,27€/jour', save:'804' },
+  { avatars:30, credits:1100, videos:60,  images:50,  checkoutKey:'pro',     m:'89,99€',  a:'66,67€',  ms:'soit 3,00€/jour · sans engagement', as:'280€ économisés · soit 2,22€/jour', save:'280' },
+  { avatars:60, credits:2200, videos:120, images:100, checkoutKey:'elite60', m:'158,99€', a:'119,99€', ms:'soit 5,30€/jour · sans engagement', as:'468€ économisés · soit 4,00€/jour', save:'468' },
+  { avatars:90, credits:3300, videos:180, images:150, checkoutKey:'elite90', m:'224,99€', a:'157,99€', ms:'soit 7,50€/jour · sans engagement', as:'804€ économisés · soit 5,27€/jour', save:'804' },
 ];
 function setSheetEliteTier(idx){
   _sheetEliteTier = idx;
@@ -5770,8 +5741,8 @@ function setSheetEliteTier(idx){
   if(saveEl)   saveEl.style.display = 'none';
   var oldElE = document.getElementById('sheetOldElite');
   if(oldElE){ oldElE.style.display = _sheetAnnual ? 'block' : 'none'; oldElE.textContent = tier.m; }
-  if(avEl)     avEl.textContent     = tier.avatars;
-  if(vidEl)    vidEl.textContent    = tier.videos;
+  if(avEl)     avEl.textContent     = tier.credits;   // crédits/mois du palier
+  if(vidEl)    vidEl.textContent    = tier.avatars;   // ≈ avatars lipsync
   if(imgEl)    imgEl.textContent    = tier.images;
   if(btnEl)    btnEl.setAttribute('onclick','sheetCheckout(\'elite\')');
 }
@@ -6391,7 +6362,7 @@ function openCreditsModal(mode, force){
     showPaywall(); return;
   }
   const plan = (currentMember?.plan) || 'free';
-  const bal  = ['elite','developer'].includes(plan) ? '∞ (Dev)' : secsToDisplay(currentMember?.credits_remaining || 0);
+  const bal  = ['developer'].includes(plan) ? '∞ (Dev)' : (creditsBalance() + ' crédits');
   document.getElementById('upgradeModalBalance').textContent = bal;
 
   const upg = UPGRADE_PLANS[plan]; // null for elite
@@ -6777,12 +6748,8 @@ function saveAffPayment(){
 function _imgMonthKey(){ const d=new Date(); return 'aa_img_'+d.getFullYear()+'_'+(d.getMonth()+1); }
 function _imgMonthLimit(){
   const p=(currentMember?.plan||'free').toLowerCase();
-  if(p==='developer') return 9999; // illimité
-  if(p==='elite')     return 100;
-  if(p==='pro')       return 50;
-  if(p==='starter')   return 20;
-  if(p==='byok')      return 10; // BYOK (membres formation) : Images IA sur ta clé Google, 10/mois
-  return 0; // free → pas d'accès
+  if(p==='free') return 0;   // free : pas d'images (paywall à la génération)
+  return 9999;               // payants : limité par les crédits, plus par un quota images
 }
 function _imgMonthUsed(){
   // Compteur serveur (synchronisé entre appareils, anti-triche) ; localStorage = repli invité
@@ -6791,32 +6758,11 @@ function _imgMonthUsed(){
 }
 function _imgBonus(){ return typeof window._imgBonusCreditsCache === 'number' ? Math.max(0, window._imgBonusCreditsCache) : 0; }
 function _imgMonthRemaining(){
-  const monthRem = Math.max(0, _imgMonthLimit() - _imgMonthUsed());
-  return monthRem + _imgBonus(); // bonus crédits persistent au-delà du reset mensuel
+  return creditsBalance(); // crédits unifiés
 }
 function _imgMonthIncrement(){
-  try{
-    const used = _imgMonthUsed();
-    const lim  = _imgMonthLimit();
-    if(used < lim){
-      // consomme d'abord le quota mensuel — incrément côté serveur (RPC anti-triche, sync multi-appareils)
-      if(currentMember){
-        currentMember.images_used = used + 1; // optimiste, corrigé par la réponse serveur
-        sb.rpc('use_image_quota').then(({ data }) => {
-          if(typeof data === 'number'){ currentMember.images_used = data; _updateImgQuotaLabel(); }
-        });
-      } else {
-        localStorage.setItem(_imgMonthKey(), String(used + 1));
-      }
-    } else {
-      // quota épuisé → consomme un crédit bonus, décrément côté serveur (RPC anti-triche)
-      window._imgBonusCreditsCache = Math.max(0, _imgBonus() - 1);
-      if(currentMember) sb.rpc('spend_img_bonus', { p_qty: 1 }).then(({ data }) => {
-        if(typeof data === 'number' && data >= 0) window._imgBonusCreditsCache = data;
-      });
-    }
-    _updateImgQuotaLabel();
-  }catch(e){}
+  // Obsolète : le débit passe par spendCreditsFor() au moment de la génération (crédits unifiés)
+  try{ _updateImgQuotaLabel(); }catch(e){}
 }
 
 function _updateImgQuotaLabel(){
@@ -6897,9 +6843,9 @@ const _IMG_REALISM_SUFFIX = '. Hyper-realistic natural human skin with visible p
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  if(['elite','developer'].includes(p)) return 'high';
-  if(['starter','byok','pro'].includes(p)) return 'medium';
-  return 'low'; // gratuit
+  if(['elite','developer'].includes(p)) return 'medium';
+  if(['pro','byok'].includes(p)) return 'medium';
+  return 'low'; // Starter (et free) : qualité low uniquement — la Standard est l'upsell vers Pro
 }
 // ── Sélecteur de qualité (low/medium/high), plafonné par plan (high = Élite) ──
 let _imgQuality = null; // null → défaut selon plan
@@ -6911,11 +6857,13 @@ const _IMG_QUALITIES = [
 const _IMG_Q_ORDER = { low:0, medium:1, high:2 };
 function _imgQualityCap(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  return ['elite','developer'].includes(p) ? 'high' : 'medium'; // high réservé Élite
+  if(['elite','developer'].includes(p)) return 'high';
+  if(['pro','byok'].includes(p)) return 'medium';
+  return 'low'; // Starter : low uniquement
 }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
-  let q = _imgQuality || 'medium'; // défaut = Standard (gpt-image-2 ~0,04$, bon rapport qualité/prix)
+  let q = _imgQuality || _imgQualityForPlan(); // défaut selon plan (Starter → low)
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
 }
@@ -7057,9 +7005,8 @@ const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, fra
 // Cœur commun des corrections 1-clic (img2img) : prompt back-end détaillé envoyé directement à gpt-image.
 async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
-  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
   if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
-  if(_imgMonthRemaining()<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()), 'image'))) return;
   const orig = btn ? btn.innerHTML : null;
   if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> '+(spinLabel||'Traitement…'); }
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
@@ -7776,13 +7723,10 @@ async function generateImage(){
   if(!prompt){ toast('⚠️ Écris une description d\'image d\'abord'); return; }
   // ── Paywall plan gratuit : prompt prêt → on débloque la génération via un plan ──
   if(_gateFreeGenerate()) return;
-  if(_imgMonthLimit()<=0){ toast('⛔ Images IA réservées aux plans Starter et +'); openUpgradeModal(); return; }
   const count = _imgSelectedCount || 1;
-  const remaining = _imgMonthRemaining();
-  if(remaining<=0){ toast('⛔ Plus de crédits images ce mois · Recharge ou passe au plan supérieur'); openUpgradeModal('images'); return; }
-  // Pas assez de crédits pour le count demandé → on plafonne
-  const actualCount = Math.min(count, remaining);
-  if(actualCount < count){ toast('⚠️ Seulement ' + remaining + ' crédit'+(remaining>1?'s':'')+' — génération de '+actualCount+' image'+(actualCount>1?'s':'')); }
+  const actualCount = count;
+  // Débit crédits : low 1 · Standard 3 · Max 5, multiplié par le nombre d'images
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))) return;
 
   const btn = document.getElementById('imgGenBtn');
   const baseLabel = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer ' + (count>1? count+' images' : 'l\'image');
@@ -8626,7 +8570,7 @@ function _isFreePlan(){
 }
 // ── Paywall : le plan gratuit est bloqué DÈS LA GÉNÉRATION (la vidéo n'est pas produite sans abonnement) ──
 // false = comportement strict (paywall dès la génération). true = AB test (génération libre, paywall à l'export) — DÉSACTIVÉ.
-const AB_PAYWALL_AT_EXPORT = true; // free : tout est utilisable, paywall uniquement à l'export / actions à crédits API
+const AB_PAYWALL_AT_EXPORT = false; // free : 0 crédit — exploration libre, paywall au clic sur Générer (décision du 11/07/2026)
 
 // Appelé en tête de chaque action de GÉNÉRATION : ouvre le paywall et bloque si gratuit
 function _gateFreeGenerate(){
@@ -8708,7 +8652,9 @@ function _updateReuseBar(){
   } catch(e){}
 }
 
-function reuseLastVideo(){
+async function reuseLastVideo(){
+  // Réutiliser un avatar déjà généré : 2 crédits (aucun coût API, valeur d'usage)
+  if(!(await spendCreditsFor(CREDIT_COSTS.reuseAvatar, 'reuse'))) return;
   try {
     const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
     if(!cache || !cache.url){ toast('⚠️ Aucune vidéo en cache'); return; }
@@ -9380,6 +9326,7 @@ async function whisperTranscribe(){
     toast('⚠️ Whisper IA disponible avec les plans Pro, Élite et BYOK');
     return;
   }
+  if(!(await spendCreditsFor(CREDIT_COSTS.whisper, 'whisper'))) return;
 
   // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync)
   let audioSrc = mp4AudioFile || (window._bypassHedraOn && window._bypassHedraFile) || null;
@@ -10783,6 +10730,7 @@ function _updateSilenceSourceLabel(){
 }
 
 async function analyzeSilences(){
+  if(!(await spendCreditsFor(CREDIT_COSTS.audioClean, 'silences'))) return;
   if(currentMember && !['pro','elite','byok','developer'].includes(currentMember.plan)){
     openUpgradeModal(); return;
   }
@@ -16547,7 +16495,13 @@ async function expressCreate(){
     toast('🔒 La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
-  if(typeof _hedraRemaining==='function' && _hedraRemaining()<=0){ toast('⛔ Quota vidéos épuisé ce mois'); openUpgradeModal(); return; }
+  // ── Débit crédits à la durée réelle : Veo Lite 1 cr/s (Starter/Pro) · Veo Fast 3 cr/s (Élite) ──
+  {
+    const _isEliteCr = ['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+    const _durCr = parseInt(window._expDur)||6;
+    const _rate = _isEliteCr ? CREDIT_COSTS.expressFastPerSec : CREDIT_COSTS.expressLitePerSec;
+    if(!(await spendCreditsFor(_durCr * _rate, 'express'))) return;
+  }
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -18091,10 +18045,8 @@ async function cartoonGenImage(btn){
   if(!prompt){ toast('⚠️ Décris ton personnage d\'abord'); return; }
   if(_cartoonGate()) return;
 
-  // Check image credits (uses same monthly quota as Images IA)
-  if(_imgMonthRemaining() <= 0){
-    toast('⛔ Plus de crédits image — va dans Images IA pour en acheter'); openUpgradeModal('images'); return;
-  }
+  // Débit crédits image (même barème que le module Images IA)
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()), 'cartoon-image'))) return;
 
   const styleExtra = CARTOON_STYLE_PROMPTS[window._cartoonStyle] || CARTOON_STYLE_PROMPTS.pixar;
   const fullPrompt = `${prompt}, ${styleExtra}, no text, no watermark, 9:16 vertical format`;
@@ -18165,7 +18117,11 @@ async function cartoonGenImage(btn){
 async function cartoonGenVideo(btn){
   if(_cartoonGate()) return;
   if(!window._cartoonImgB64){ toast('⚠️ Génère d\'abord le personnage'); return; }
-  if(_hedraRemaining() <= 0){ toast('⛔ Quota avatars épuisé ce mois'); openUpgradeModal(); return; }
+  // Débit crédits : vidéo cartoon ~8 s — Veo Lite 1 cr/s (Starter/Pro) · Fast 3 cr/s (Élite)
+  {
+    const _isEliteCr = ['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+    if(!(await spendCreditsFor(8 * (_isEliteCr ? CREDIT_COSTS.expressFastPerSec : CREDIT_COSTS.expressLitePerSec), 'cartoon'))) return;
+  }
 
   let animPrompt = document.getElementById('cartoonAnimPrompt').value.trim() ||
     'The character walks toward the camera with enthusiasm, friendly expression, smooth Pixar-style animation';
@@ -18637,6 +18593,7 @@ function _acDrawWaveform(data, sr, keepSegs, totalLen){
 }
 
 async function _acAnalyze(){
+  if(!(await spendCreditsFor(CREDIT_COSTS.audioClean, 'audioclean'))) return;
   if(!_acAudioBlob){ toast('⚠️ Charge un fichier audio d\'abord'); return; }
   const btn   = document.getElementById('acAnalyzeBtn');
   const tipEl = document.getElementById('acTip');
@@ -20236,6 +20193,7 @@ async function edExport(){
   if(!_ed) return;
   // ── Paywall plan gratuit : montage prêt → on débloque l'export via un plan ──
   if(_gateFreeExport()) return;
+  if(!(await spendCreditsFor(CREDIT_COSTS.editorExport, 'export'))) return;
   const status=document.getElementById('edExportStatus'); status.style.display='block'; status.textContent='Préparation…';
   const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='⏳ Export…';
   edPause();
