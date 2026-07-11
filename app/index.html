@@ -4133,94 +4133,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 </div>
 
 
-<!-- BUY CREDITS MODAL -->
-<div class="credits-overlay" id="creditsOverlay" onclick="if(event.target===this)closeBuyCredits()">
-  <div class="credits-box">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
-      <div>
-        <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Recharger des minutes</div>
-        <div style="font-size:24px;font-weight:900;letter-spacing:-1px;line-height:1.1">Ajoute des minutes<br>à ton compte</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px">
-          <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span>
-          Solde actuel : <span id="creditsModalBalance" style="color:var(--text2);font-weight:600">—</span>
-        </div>
-      </div>
-      <button onclick="closeBuyCredits()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 12px;cursor:pointer;font-size:12px;flex-shrink:0;margin-left:16px;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕</button>
-    </div>
-
-    <!-- Pack S -->
-    <div class="credits-pack" onclick="buyCredits('pack_s')">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:#4dabf7">+5 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">4,00€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Pack M (populaire) -->
-    <div class="credits-pack popular" onclick="buyCredits('pack_m')" style="margin-top:14px">
-      <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack M · <span style="color:var(--orange)">+10 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">3,50€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">34,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Pack L -->
-    <div class="credits-pack" onclick="buyCredits('pack_l')" style="margin-top:10px">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+20 avatars</span></div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">2,50€ / avatar</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
-        <div style="text-align:right">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
-        </div>
-        <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:16px">
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--text3)">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L2 3v3c0 2.5 1.7 4.8 4 5.5C8.3 10.8 10 8.5 10 6V3L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-        Paiement sécurisé
-      </div>
-      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Crédité instantanément</div>
-      <div style="width:3px;height:3px;background:var(--border2);border-radius:50%"></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Sans expiration</div>
-    </div>
-    <button class="btn-credits-close" onclick="closeBuyCredits()">Fermer</button>
-
-  </div>
-</div>
-
 <!-- UPGRADE + CREDITS MODAL (combined) -->
 <div class="credits-overlay" id="upgradeModal" onclick="if(event.target===this)closeUpgradeModal()">
   <div id="upgradeModalBox" style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04);max-width:880px">
@@ -4234,6 +4146,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green)"></span>
           Solde actuel : <span id="upgradeModalBalance" style="color:var(--text2);font-weight:600">—</span>
         </div>
+        <div id="upgradeModalMissing" style="display:none;margin-top:10px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.3);border-radius:9px;padding:8px 12px;font-size:12.5px;color:#ff8a95;font-weight:600"></div>
       </div>
       <button onclick="closeUpgradeModal()" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);padding:7px 12px;cursor:pointer;font-size:12px;flex-shrink:0;margin-left:16px;transition:all .15s" onmouseover="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">✕</button>
     </div>
@@ -4265,7 +4178,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="packTabVideo">
 
           <!-- Flash · 9,99€ · +28 crédits -->
-          <div class="credits-pack" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
+          <div class="credits-pack" id="packCardFlash" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚡</div>
               <div>
@@ -4283,7 +4196,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- Pack S · 19,99€ · +60 crédits -->
-          <div class="credits-pack" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+          <div class="credits-pack" id="packCardS" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔥</div>
               <div>
@@ -4301,7 +4214,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- Pack L · 49,99€ · +180 crédits -->
-          <div class="credits-pack popular" onclick="buyCredits('pack_l')">
+          <div class="credits-pack popular" id="packCardL" onclick="buyCredits('pack_l')">
             <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ MEILLEUR RAPPORT</div>
             <div style="display:flex;align-items:center;gap:14px">
               <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💎</div>
@@ -5048,14 +4961,22 @@ async function spendCreditsFor(amount, label){
   amount = Math.max(1, Math.ceil(amount));
   if(creditsBalance() < amount){
     toast('✗ Il faut ' + amount + ' crédits — il t\'en reste ' + creditsBalance());
-    showPaywall(); return false;
+    _insufficientCredits(amount - creditsBalance());
+    return false;
   }
   const { data, error } = await sb.rpc('spend_credits', { p_secs: amount });
   if(error){ console.warn('spend_credits:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
-  if(data === -1){ showPaywall(); return false; }
+  if(data === -1){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
   currentMember.credits_remaining = data;
   _updateQuotaDisplay();
   return true;
+}
+
+// Solde insuffisant : free → paywall plans ; abonné → upsell contextuel (upgrade + packs)
+function _insufficientCredits(missing){
+  const plan = (typeof currentMember !== 'undefined' && currentMember && (currentMember.plan || '').toLowerCase()) || 'free';
+  if(plan === 'free'){ showPaywall(); return; }
+  openCreditsModal(null, true, missing);
 }
 
 function _videosRemaining(){
@@ -6253,22 +6174,22 @@ const UPGRADE_PLANS = {
     label: 'Passer en Pro', badge: 'PRO',
     price: '49,99€',
     features: [
-      { icon: '🎬', text: '<strong>15 vidéos</strong> / mois incluses' },
-      { icon: '⏱', text: 'Vidéos jusqu\'à <strong>30 secondes</strong>' },
-      { icon: '🤖', text: 'Génération IA illimitée' },
-      { icon: '📱', text: 'Toutes les publications sociales' },
-      { icon: '🔮', text: 'Avatar lipsync inclus' },
+      { icon: '⚡', text: '<strong>550 crédits</strong> / mois — au lieu de 150' },
+      { icon: '🖼', text: 'Images IA qualité <strong>Standard</strong>' },
+      { icon: '📺', text: 'Export <strong>1080p</strong>' },
+      { icon: '🎙', text: 'Transcription automatique incluse' },
+      { icon: '🔮', text: 'Tout Starter inclus' },
     ],
   },
   pro: {
     label: 'Passer en Elite', badge: 'ELITE',
     price: '89,99€',
     features: [
-      { icon: '🎬', text: '<strong>30 vidéos</strong> / mois incluses' },
-      { icon: '⏱', text: 'Vidéos jusqu\'à <strong>40 secondes</strong>' },
-      { icon: '4️⃣', text: 'Export <strong>4K</strong> inclus' },
-      { icon: '🤖', text: 'Meilleure qualité avatar' },
-      { icon: '👑', text: 'Accès prioritaire aux nouvelles fonctions' },
+      { icon: '⚡', text: '<strong>1100 crédits</strong> / mois — le double de Pro' },
+      { icon: '🚀', text: 'Express en <strong>Veo Fast</strong> (qualité max)' },
+      { icon: '⏱', text: 'Vidéos Express longues (15 à 29 s)' },
+      { icon: '🖼', text: 'Images IA qualité <strong>Max</strong>' },
+      { icon: '📈', text: 'Paliers ×2 / ×3 jusqu\'à 3300 crédits / mois' },
     ],
   },
 };
@@ -6280,13 +6201,24 @@ function switchPackTab(tab){
 // Paywall plans UNIFIÉ — partout le même design (le nouveau plansSheet 3 cartes)
 function openUpgradeModal(mode){ showPaywall(); }
 // Modal d'achat de crédits (packs) — gardée pour les boutons crédits explicites
-function openCreditsModal(mode, force){
+// missing (optionnel) : nombre de crédits manquants → bandeau "il te manque X" + pack conseillé
+function openCreditsModal(mode, force, missing){
   if(!force && (!currentMember || currentMember.plan === 'free')){
     showPaywall(); return;
   }
   const plan = (currentMember?.plan) || 'free';
   const bal  = ['developer'].includes(plan) ? '∞ (Dev)' : (creditsBalance() + ' crédits');
   document.getElementById('upgradeModalBalance').textContent = bal;
+
+  const missEl = document.getElementById('upgradeModalMissing');
+  const miss = (typeof missing === 'number' && missing > 0) ? Math.ceil(missing) : null;
+  if(missEl){
+    if(miss){
+      missEl.innerHTML = 'Il te manque <b>' + miss + ' crédit' + (miss > 1 ? 's' : '') + '</b> pour lancer cette génération.';
+      missEl.style.display = 'block';
+    } else missEl.style.display = 'none';
+  }
+  _highlightPackFor(miss);
 
   const upg = UPGRADE_PLANS[plan]; // null for elite
   const leftCol  = document.getElementById('upgradeModalLeft');
@@ -6307,13 +6239,14 @@ function openCreditsModal(mode, force){
     grid.style.gridTemplateColumns = '1fr 1fr';
     document.getElementById('upgradeModalTitle').textContent = 'Améliore ton plan ou recharge';
   } else {
-    // Elite — credits only + boutons test pour prévisualiser
+    // Elite — credits only
     leftCol.style.display = 'none';
     grid.style.gridTemplateColumns = '1fr';
     document.getElementById('upgradeModalTitle').textContent = 'Recharger des crédits';
-    const testRow = document.getElementById('upgradeModalTestRow');
-    if(testRow) testRow.style.display = 'flex';
   }
+  // Boutons "prévisualiser en tant que" : réservés au compte dev/owner
+  const testRow = document.getElementById('upgradeModalTestRow');
+  if(testRow) testRow.style.display = (!upg && (plan === 'developer' || currentMember?.is_owner)) ? 'flex' : 'none';
 
   // Ouvrir sur le bon tab
   switchPackTab(mode === 'images' ? 'images' : 'video');
@@ -6323,6 +6256,21 @@ function openCreditsModal(mode, force){
 
 function closeUpgradeModal(){
   document.getElementById('upgradeModal').style.display = 'none';
+}
+
+// Surligne le pack le moins cher qui couvre le manque de crédits
+function _highlightPackFor(missing){
+  const covers = { packCardFlash: 28, packCardS: 60, packCardL: 180 };
+  const target = missing == null ? null
+    : (missing <= covers.packCardFlash ? 'packCardFlash'
+    :  missing <= covers.packCardS     ? 'packCardS' : 'packCardL');
+  for(const id of Object.keys(covers)){
+    const el = document.getElementById(id);
+    if(!el) continue;
+    const on = id === target;
+    el.style.borderColor = on ? 'var(--accent-2)' : '';
+    el.style.boxShadow   = on ? '0 0 0 1px var(--accent-2), 0 8px 24px rgba(255,107,53,0.18)' : '';
+  }
 }
 
 function previewUpgradeAs(fakePlan){
