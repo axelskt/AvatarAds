@@ -43,8 +43,10 @@ serve(async (req) => {
   const key = Deno.env.get('WHOP_API_KEY') ?? ''
   if (!key) { console.error('WHOP_API_KEY manquant'); return json({ error: 'Configuration incomplète — contacte le support' }, 500) }
 
-  // Annulation en fin de période : l'accès et les crédits restent jusqu'à la date déjà payée,
+  // Annulation en fin de période : l'accès au plan reste jusqu'à la date déjà payée,
   // puis Whop enverra membership.deactivated → le webhook repasse le compte en free.
+  // Les CRÉDITS, eux, sont supprimés immédiatement (mécanique de rétention — annoncé
+  // explicitement dans la modale de confirmation avant le clic).
   const r = await fetch(`https://api.whop.com/api/v1/memberships/${profile.whop_member_id}/cancel`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -57,7 +59,7 @@ serve(async (req) => {
   }
   const mem = await r.json().catch(() => ({} as any))
 
-  await svc.from('profiles').update({ whop_cancel_at_period_end: true }).eq('id', user.id)
+  await svc.from('profiles').update({ whop_cancel_at_period_end: true, credits_remaining: 0 }).eq('id', user.id)
   try {
     await svc.from('cancellation_feedback').insert({
       user_id: user.id, email: user.email, plan: profile.plan,
