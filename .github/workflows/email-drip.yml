@@ -1,0 +1,21 @@
+name: Email drip (relances Resend)
+
+# Déclenche la fonction email-drip toutes les heures.
+# La fonction est idempotente (journal email_log unique par user+type) :
+# des exécutions supplémentaires n'envoient jamais de doublon.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  drip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher email-drip
+        run: |
+          curl -sf -X POST "https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/email-drip" \
+            -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'

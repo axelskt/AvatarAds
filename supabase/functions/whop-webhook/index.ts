@@ -5,6 +5,7 @@ import { crypto } from 'https://deno.land/std@0.168.0/crypto/mod.ts'
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const WHOP_WEBHOOK_SECRET  = Deno.env.get('WHOP_WEBHOOK_SECRET') ?? ''  // Whop Dashboard → Developer → Webhooks
+const RESEND_API_KEY       = Deno.env.get('RESEND_API_KEY') ?? ''       // e-mail de bienvenue — no-op si absent
 
 // ─────────────────────────────────────────────────────────────────
 // ABONNEMENTS (mensuel + annuel) → fixe le plan + remet les crédits
@@ -89,6 +90,39 @@ async function verifyWebhook(req: Request, body: string): Promise<boolean> {
   } catch { return false }
 }
 
+// ── E-mail de bienvenue (Resend) — envoyé UNE fois par compte (dédup email_log) ──
+const PLAN_LABEL: Record<string, string> = { starter: 'Starter', pro: 'Pro', elite: 'Élite' }
+async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string; firstName?: string; plan: string; credits: number; pending?: boolean }) {
+  if (!RESEND_API_KEY) return
+  try {
+    if (opts.userId) {
+      const { error } = await sb.from('email_log').insert({ user_id: opts.userId, email: opts.email, kind: 'welcome' })
+      if (error) return // déjà envoyé (ex. upgrade de plan)
+    }
+    const label = PLAN_LABEL[opts.plan] ?? opts.plan
+    const name = opts.firstName ? `${opts.firstName}, ` : ''
+    const body = opts.pending
+      ? `${name}ton paiement est bien enregistré ✅<br><br>Il ne reste qu'une étape : <b>crée ton compte sur avatarads.fr avec cette adresse e-mail</b> — ton plan ${label} et tes crédits s'activeront automatiquement à la connexion.`
+      : `${name}bienvenue dans AvatarAds 🎉<br><br>Ton plan <b>${label}</b> est actif avec <b>${opts.credits} crédits</b> ce mois-ci (1 crédit = 1 seconde de vidéo).<br><br>Pour ta première vidéo :<br>1️⃣ Décris ton produit dans le Générateur<br>2️⃣ Choisis un avatar et une voix<br>3️⃣ Clique sur Générer — l'IA fait le reste 🎬<br><br>Une question ? Réponds simplement à cet e-mail.`
+    const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+      <div style="max-width:520px;margin:0 auto;padding:32px 20px">
+        <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:22px">🎬 AvatarAds</div>
+        <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
+          <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">${opts.pending ? 'Ton plan t’attend !' : 'Bienvenue à bord 🚀'}</div>
+          <div style="font-size:15px;color:#44403c;line-height:1.65">${body}</div>
+          <a href="https://avatarads.fr/app/" style="display:block;text-align:center;background:#FF6B35;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 20px;border-radius:12px;margin-top:24px">${opts.pending ? 'Créer mon compte →' : 'Créer ma première vidéo →'}</a>
+        </div>
+        <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px">AvatarAds · avatarads.fr</div>
+      </div></body></html>`
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'AvatarAds <bonjour@avatarads.fr>', to: [opts.email], subject: opts.pending ? 'Ton plan AvatarAds t’attend — une dernière étape' : `Bienvenue sur AvatarAds 🎉 Ton plan ${label} est actif`, html }),
+    })
+    console.log(r.ok ? `📧 Bienvenue envoyé à ${opts.email}` : `⚠️ Resend ${r.status} pour ${opts.email}`)
+  } catch (e) { console.error('⚠️ welcome email:', e) }
+}
+
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
@@ -128,7 +162,7 @@ serve(async (req) => {
   const findProfile = async () => {
     if (!email) return null
     const { data: p } = await sb.from('profiles')
-      .select('id, plan, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
+      .select('id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
       .eq('email', email).maybeSingle()
     return p
   }
@@ -186,6 +220,7 @@ serve(async (req) => {
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
         console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
+        await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep })
       } else {
         const { error } = await sb.from('pending_activations').upsert({
           email, product: 'avatarads', plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0),
@@ -193,6 +228,7 @@ serve(async (req) => {
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending_activations:', error); return new Response('DB error', { status: 500 }) }
         console.log(`⏳ Activation en attente pour ${email}: ${sub.plan}`)
+        await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0), pending: true })
       }
     } else if (pack) {
       if (profile) {
