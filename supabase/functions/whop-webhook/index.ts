@@ -110,6 +110,7 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
         <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
           <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">${opts.pending ? 'Ton plan t’attend !' : 'Bienvenue à bord 🚀'}</div>
           <div style="font-size:15px;color:#44403c;line-height:1.65">${body}</div>
+          <img src="https://avatarads.fr/assets/mail/avatars-podium.jpg" alt="Les avatars IA d'AvatarAds" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px">
           <a href="https://avatarads.fr/app/" style="display:block;text-align:center;background:#FF6B35;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 20px;border-radius:12px;margin-top:24px">${opts.pending ? 'Créer mon compte →' : 'Créer ma première vidéo →'}</a>
         </div>
         <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px">AvatarAds · avatarads.fr</div>
