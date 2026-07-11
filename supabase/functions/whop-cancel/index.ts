@@ -36,6 +36,10 @@ serve(async (req) => {
   if (!profile.whop_member_id) return json({ error: "Aucun abonnement Whop lié à ce compte — contacte le support" }, 400)
   if (profile.whop_cancel_at_period_end) return json({ ok: true, already: true })
 
+  // Raison du départ (flow de rétention) — stockée pour analyse
+  let reason = '', detail = ''
+  try { const b = await req.json(); reason = String(b?.reason ?? '').slice(0, 60); detail = String(b?.detail ?? '').slice(0, 500) } catch (_) {}
+
   const key = Deno.env.get('WHOP_API_KEY') ?? ''
   if (!key) { console.error('WHOP_API_KEY manquant'); return json({ error: 'Configuration incomplète — contacte le support' }, 500) }
 
@@ -54,6 +58,12 @@ serve(async (req) => {
   const mem = await r.json().catch(() => ({} as any))
 
   await svc.from('profiles').update({ whop_cancel_at_period_end: true }).eq('id', user.id)
-  console.log(`⏸️ Annulation programmée pour ${user.email} (membership ${profile.whop_member_id})`)
+  try {
+    await svc.from('cancellation_feedback').insert({
+      user_id: user.id, email: user.email, plan: profile.plan,
+      reason: reason || null, detail: detail || null, outcome: 'cancelled',
+    })
+  } catch (_) {}
+  console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · raison: ${reason || '—'}`)
   return json({ ok: true, renewal_period_end: mem?.renewal_period_end ?? null })
 })
