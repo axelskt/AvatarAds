@@ -180,11 +180,11 @@ const ELITE_TIERS=[
 const PLANS=[
   { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
     price:'29,99', annual:'20,83', accent:'var(--text)',
-    credits:150, equiv:'5 vidéos de 30 s', extra:'images IA · vidéos Express', bonus:'+25', note:'sans engagement',
+    credits:150, equiv:'15 vidéos de 10 s ou 5 de 30 s', extra:'images Standard · vidéos Express', bonus:'+25', note:'sans engagement',
     listHead:'INCLUS :', feats:[['✏️','Sous-titres animés'],['🎙️','Voix clonée ElevenLabs'],['✂️','Split-screen · gameplay'],['📤','Export vertical sans watermark']] },
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
     price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
-    credits:550, equiv:'18 vidéos de 30 s', extra:'images Standard · vidéos Express', bonus:'+50', note:'soit 1,67€/jour',
+    credits:550, equiv:'55 vidéos de 10 s ou 18 de 30 s', extra:'images Premium · vidéos Express', bonus:'+50', note:'soit 1,67€/jour',
     listHead:'TOUT STARTER, PLUS :', feats:[['🎵','Whisper IA · sync voix avancée'],['✨','Effets VSL · export 1080p'],['✂️','Suppression silences avancée'],['🎨','Sous-titres styles cinématiques']] },
   { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux. Choisis ta puissance.',
     accent:'var(--violet)',
@@ -196,8 +196,8 @@ function _quotaBox(pl, tier){
   var bd = violet ? 'rgba(154,124,255,.35)' : 'var(--border-2)';
   var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
   var av    = tier ? tier.credits : pl.credits;
-  var equiv = tier ? (Math.floor(tier.credits/30) + ' vidéos de 30 s') : pl.equiv;
-  var extra = tier ? 'Express Fast · images Max' : pl.extra;
+  var equiv = tier ? (Math.floor(tier.credits/10) + ' vidéos de 10 s ou ' + Math.floor(tier.credits/30) + ' de 30 s') : pl.equiv;
+  var extra = tier ? 'Express Fast · images 4K' : pl.extra;
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
@@ -265,8 +265,8 @@ function setEliteSlider(idx){
   var tier=ELITE_TIERS[idx]; if(!tier) return;
   var pct=idx/(ELITE_TIERS.length-1)*100;
   var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
-  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=Math.floor(tier.credits/30)+' vidéos de 30 s';
-  var img=document.getElementById('lpEliteImg'); if(img) img.textContent='Express Fast · images Max';
+  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=Math.floor(tier.credits/10)+' vidéos de 10 s ou '+Math.floor(tier.credits/30)+' de 30 s';
+  var img=document.getElementById('lpEliteImg'); if(img) img.textContent='Express Fast · images 4K';
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';

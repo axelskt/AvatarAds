@@ -4290,7 +4290,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         🎬 Avatar lipsync — <b style="color:var(--text2)">1 crédit / seconde</b><br>
         🗣 Voix IA (ElevenLabs) — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
         ⚡ Express & Cartoon — <b style="color:var(--text2)">1 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite (Veo Fast)<br>
-        🖼 Image IA — <b style="color:var(--text2)">1</b> Rapide · <b style="color:var(--text2)">3</b> Standard · <b style="color:var(--text2)">5</b> Max<br>
+        🖼 Image IA — <b style="color:var(--text2)">1</b> Standard · <b style="color:var(--text2)">3</b> Premium · <b style="color:var(--text2)">5</b> 4K<br>
         ♻️ Réutiliser un avatar — <b style="color:var(--text2)">2 crédits</b><br>
         📝 Transcription auto — <b style="color:var(--text2)">1 crédit</b><br>
         🧹 Nettoyage audio — <b style="color:var(--text2)">1 crédit</b><br>
@@ -4453,8 +4453,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">⚡ 150</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+25</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">5 vidéos</b> de 30 s</span>
-              <span style="font-size:12.5px;color:var(--text-3)">+ images IA · vidéos Express</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">15 vidéos</b> de 10 s ou 5 de 30 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ images Standard · vidéos Express</span>
             </div>
           </div>
         </div>
@@ -4485,8 +4485,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">⚡ 550</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+50</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">18 vidéos</b> de 30 s</span>
-              <span style="font-size:12.5px;color:var(--text-3)">+ images Standard · vidéos Express</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b style="color:var(--text-2)">55 vidéos</b> de 10 s ou 18 de 30 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ images Premium · vidéos Express</span>
             </div>
           </div>
         </div>
@@ -4517,8 +4517,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800;color:var(--violet)">✦ <span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+75</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
-              <span style="font-size:12.5px;color:var(--text-3)">≈ <b id="sheetEliteVideos" style="color:var(--text-2)">36</b> vidéos de 30 s</span>
-              <span style="font-size:12.5px;color:var(--text-3)">+ Express Fast · images Max</span>
+              <span style="font-size:12.5px;color:var(--text-3)">≈ <b id="sheetEliteVideos" style="color:var(--text-2)">110</b> vidéos de 10 s ou <span id="sheetEliteVideos30">36</span> de 30 s</span>
+              <span style="font-size:12.5px;color:var(--text-3)">+ Express Fast · images 4K</span>
             </div>
           </div>
           <div>
@@ -5620,7 +5620,9 @@ function setSheetEliteTier(idx){
   var oldElE = document.getElementById('sheetOldElite');
   if(oldElE){ oldElE.style.display = _sheetAnnual ? 'block' : 'none'; oldElE.textContent = tier.m; }
   if(avEl)     avEl.textContent     = tier.credits;   // crédits/mois du palier
-  if(vidEl)    vidEl.textContent    = Math.floor(tier.credits/30);   // ≈ vidéos de 30 s (crédits ÷ 30)
+  if(vidEl)    vidEl.textContent    = Math.floor(tier.credits/10);   // ≈ vidéos de 10 s (crédits ÷ 10)
+  var vid30El  = document.getElementById('sheetEliteVideos30');
+  if(vid30El)  vid30El.textContent  = Math.floor(tier.credits/30);   // ≈ vidéos de 30 s
   if(imgEl)    imgEl.textContent    = tier.images;
   if(btnEl)    btnEl.setAttribute('onclick','sheetCheckout(\'elite\')');
 }
@@ -6196,7 +6198,7 @@ const UPGRADE_PLANS = {
     price: '49,99€',
     features: [
       { icon: '⚡', text: '<strong>550 crédits</strong> / mois — au lieu de 150' },
-      { icon: '🖼', text: 'Images IA qualité <strong>Standard</strong>' },
+      { icon: '🖼', text: 'Images IA qualité <strong>Premium</strong>' },
       { icon: '📺', text: 'Export <strong>1080p</strong>' },
       { icon: '🎙', text: 'Transcription automatique incluse' },
       { icon: '🔮', text: 'Tout Starter inclus' },
@@ -6209,7 +6211,7 @@ const UPGRADE_PLANS = {
       { icon: '⚡', text: '<strong>1100 crédits</strong> / mois — le double de Pro' },
       { icon: '🚀', text: 'Express en <strong>Veo Fast</strong> (qualité max)' },
       { icon: '⏱', text: 'Vidéos Express longues (15 à 29 s)' },
-      { icon: '🖼', text: 'Images IA qualité <strong>Max</strong>' },
+      { icon: '🖼', text: 'Images IA qualité <strong>4K</strong>' },
       { icon: '📈', text: 'Paliers ×2 / ×3 jusqu\'à 3300 crédits / mois' },
     ],
   },
@@ -6740,9 +6742,9 @@ function _imgQualityForPlan(){
 // ── Sélecteur de qualité (low/medium/high), plafonné par plan (high = Élite) ──
 let _imgQuality = null; // null → défaut selon plan
 const _IMG_QUALITIES = [
-  { id:'low',    label:'Rapide',   sub:'éco' },
-  { id:'medium', label:'Standard', sub:'équilibré' },
-  { id:'high',   label:'Max',      sub:'détail' },
+  { id:'low',    label:'Standard', sub:'éco' },
+  { id:'medium', label:'Premium',  sub:'équilibré' },
+  { id:'high',   label:'4K',       sub:'détail' },
 ];
 const _IMG_Q_ORDER = { low:0, medium:1, high:2 };
 function _imgQualityCap(){
@@ -6978,7 +6980,7 @@ function _imgSetMode(m){
 function _imgUpdateIdleMeta(){
   const el=document.getElementById('imgIdleMeta'); if(!el) return;
   const fmt=(_IMG_FORMATS.find(f=>f.id===_imgSelectedFormatId)||{sub:'1:1'}).sub;
-  const qLabel={low:'Rapide',medium:'Standard',high:'Max'}[_imgEffectiveQuality()]||'Standard';
+  const qLabel={low:'Standard',medium:'Premium',high:'4K'}[_imgEffectiveQuality()]||'Standard';
   const n=_imgSelectedCount||1;
   el.textContent = _imgMode==='correct' ? (fmt+' · correction · qualité '+qLabel) : (fmt+' · '+n+' image'+(n>1?'s':'')+' · qualité '+qLabel);
 }
