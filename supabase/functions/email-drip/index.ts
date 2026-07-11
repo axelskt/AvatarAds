@@ -59,6 +59,8 @@ const quoteBlock = (q: string, who: string, tag: string) => `
     <div style="font-size:14px;color:#44403c;line-height:1.6;font-style:italic">« ${q} »</div>
     <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
   </div>`
+const HERO_SOUSTITRES = `
+  <a href="${APP_URL}"><img src="${ASSETS}/demo-soustitres.jpg" alt="Styles de sous-titres AvatarAds sur une vidéo TikTok" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
 const QUOTE_LUCAS  = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.", 'Lucas M. · E-commerce', '+80k vues · 40 leads')
 const QUOTE_THOMAS = quoteBlock("Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.", 'Thomas D. · Agence SMMA', '−1500€/mois économisés')
 
@@ -68,8 +70,8 @@ const DRIP: Stage[] = [
   { kind: 'drip_2h', minH: 2, maxH: 24,
     subject: 'Ta première vidéo t’attend 🎬',
     title: 'Ta première vidéo est à 2 minutes',
-    body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus. Quelques exemples générés en un prompt :`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: DEMO_IMAGES },
+    body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus.`,
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES },
   { kind: 'drip_24h', minH: 24, maxH: 72,
     subject: 'Les pubs IA qui tournent en ce moment 👀',
     title: 'Pendant que tu hésites, d’autres publient',
