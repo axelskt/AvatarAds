@@ -4433,7 +4433,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <b id="cmVideos" class="mono" style="font-size:19px">—</b>
       </div>
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:1.8">
-        Avatar lipsync : <b style="color:var(--text2)">1 cr/s</b> · Express : <b style="color:var(--text2)">1 cr/s</b> (3 en Élite)<br>
+        Avatar lipsync : <b style="color:var(--text2)">1 cr/s</b> (+0,5 si voix IA · import MP3 gratuit)<br>
+        Express : <b style="color:var(--text2)">1 cr/s</b> (3 en Élite)<br>
         Image : <b style="color:var(--text2)">1</b> low · <b style="color:var(--text2)">3</b> Standard · <b style="color:var(--text2)">5</b> Max<br>
         Réutiliser un avatar : <b style="color:var(--text2)">2</b> · Whisper/Nettoyage : <b style="color:var(--text2)">1</b> · Export montage : <b style="color:var(--text2)">2</b>
       </div>
@@ -5097,7 +5098,8 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 // ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
 // 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
 const CREDIT_COSTS = {
-  avatarPerSec: 1,        // Hedra Character-3 + voix
+  avatarPerSec: 1,        // lipsync Hedra Character-3 (import MP3 : la voix est gratuite)
+  voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
   expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
   expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
@@ -12455,10 +12457,12 @@ async function startGeneration(){
     } catch(e){ console.warn('Plan revalidation failed:', e); }
   }
 
-  // ── Vérification minutes ──
+  // ── Débit crédits : lipsync 1 cr/s + 0,5 cr/s si voix ElevenLabs (import MP3/vidéo : voix gratuite) ──
   if(currentMember && !guestMode){
     const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
-    const ok = await decrementCredit(durSecs);
+    const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
+    const _rate = CREDIT_COSTS.avatarPerSec + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
+    const ok = await spendCreditsFor(durSecs * _rate, 'avatar');
     if(!ok) return;
   }
 
