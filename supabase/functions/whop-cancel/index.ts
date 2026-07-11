@@ -29,7 +29,7 @@ serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   const { data: profile } = await svc.from('profiles')
-    .select('plan, whop_member_id, whop_cancel_at_period_end')
+    .select('plan, whop_member_id, whop_cancel_at_period_end, credits_remaining, bought_credits')
     .eq('id', user.id).maybeSingle()
 
   if (!profile) return json({ error: 'Profil introuvable' }, 404)
@@ -45,8 +45,8 @@ serve(async (req) => {
 
   // Annulation en fin de période : l'accès au plan reste jusqu'à la date déjà payée,
   // puis Whop enverra membership.deactivated → le webhook repasse le compte en free.
-  // Les CRÉDITS, eux, sont supprimés immédiatement (mécanique de rétention — annoncé
-  // explicitement dans la modale de confirmation avant le clic).
+  // Les crédits DU PLAN sont supprimés immédiatement (mécanique de rétention — annoncée
+  // explicitement dans la modale avant le clic) ; les crédits ACHETÉS en pack sont conservés.
   const r = await fetch(`https://api.whop.com/api/v1/memberships/${profile.whop_member_id}/cancel`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -59,13 +59,19 @@ serve(async (req) => {
   }
   const mem = await r.json().catch(() => ({} as any))
 
-  await svc.from('profiles').update({ whop_cancel_at_period_end: true, credits_remaining: 0 }).eq('id', user.id)
+  // Crédits achetés en pack encore disponibles (les crédits du plan sont consommés en premier)
+  const kept = Math.min(profile.bought_credits || 0, profile.credits_remaining || 0)
+  await svc.from('profiles').update({
+    whop_cancel_at_period_end: true,
+    credits_remaining: kept,
+    bought_credits: kept,
+  }).eq('id', user.id)
   try {
     await svc.from('cancellation_feedback').insert({
       user_id: user.id, email: user.email, plan: profile.plan,
       reason: reason || null, detail: detail || null, outcome: 'cancelled',
     })
   } catch (_) {}
-  console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · raison: ${reason || '—'}`)
-  return json({ ok: true, renewal_period_end: mem?.renewal_period_end ?? null })
+  console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · crédits du plan supprimés${kept ? ` · ${kept} achetés conservés` : ''} · raison: ${reason || '—'}`)
+  return json({ ok: true, kept, renewal_period_end: mem?.renewal_period_end ?? null })
 })

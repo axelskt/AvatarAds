@@ -128,10 +128,12 @@ serve(async (req) => {
   const findProfile = async () => {
     if (!email) return null
     const { data: p } = await sb.from('profiles')
-      .select('id, plan, credits_remaining, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
+      .select('id, plan, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
       .eq('email', email).maybeSingle()
     return p
   }
+  // Crédits ACHETÉS en pack encore disponibles (les crédits du plan sont consommés en premier)
+  const boughtLeft = (p: any) => Math.min(p?.bought_credits || 0, p?.credits_remaining || 0)
 
   // ─── membership.went_valid → abonnement actif OU pack acheté ──
   if (isActivate) {
@@ -170,9 +172,11 @@ serve(async (req) => {
         }
         // 🌞 Bonus premier abonnement (une seule fois par compte)
         const bonus = profile.first_sub_bonus_used ? 0 : (FIRST_SUB_BONUS[sub.plan] ?? 0)
+        const keep = boughtLeft(profile) // les crédits achetés en pack survivent au changement de plan
         const { error } = await sb.from('profiles').update({
           plan:              sub.plan,
-          credits_remaining: sub.credits + bonus,
+          credits_remaining: sub.credits + bonus + keep,
+          bought_credits:    keep,
           credits_total:     sub.credits,
           whop_member_id:    data.id ?? null,
           whop_plan_id:      planId,
@@ -181,7 +185,7 @@ serve(async (req) => {
           first_sub_bonus_used: true,
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
-        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''})`)
+        console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
       } else {
         const { error } = await sb.from('pending_activations').upsert({
           email, product: 'avatarads', plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0),
@@ -194,6 +198,7 @@ serve(async (req) => {
       if (profile) {
         const { error } = await sb.from('profiles').update({
           credits_remaining: (profile.credits_remaining || 0) + (pack.credits || 0),
+          bought_credits:    boughtLeft(profile) + (pack.credits || 0), // tracés à part : préservés à l'annulation
           img_bonus_credits: (profile.img_bonus_credits || 0) + (pack.imgCredits || 0),
         }).eq('id', profile.id)
         if (error) { console.error('❌ Crédit pack:', error); return new Response('DB error', { status: 500 }) }
@@ -224,15 +229,17 @@ serve(async (req) => {
     // Downgrade uniquement si c'est BIEN l'abonnement actif du profil
     // (évite qu'un ancien abonnement expiré après upgrade ne casse le nouveau plan)
     if (profile && (!profile.whop_plan_id || profile.whop_plan_id === planId)) {
+      const keep = boughtLeft(profile) // les crédits achetés restent parqués (réutilisables au prochain abonnement)
       await sb.from('profiles').update({
         plan:              'free',
-        credits_remaining: 0,
+        credits_remaining: keep,
+        bought_credits:    keep,
         whop_member_id:    null,
         whop_plan_id:      null,
         whop_manage_url:   null,
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
-      console.log(`⛔ Plan résilié pour ${email} → free`)
+      console.log(`⛔ Plan résilié pour ${email} → free${keep ? ` (${keep} crédits achetés conservés)` : ''}`)
     }
   }
 
@@ -249,14 +256,16 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
     if (profile) {
+      const keep = boughtLeft(profile) // les crédits achetés n'expirent pas au renouvellement
       await sb.from('profiles').update({
         plan:              sub.plan,
-        credits_remaining: sub.credits,  // remise à niveau chaque mois
+        credits_remaining: sub.credits + keep,  // remise à niveau chaque mois + report des crédits achetés
+        bought_credits:    keep,
         credits_total:     sub.credits,
         whop_plan_id:      planId,
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
-      console.log(`🔄 Renouvellement pour ${email}: ${sub.plan} (${sub.credits} crédits remis)`)
+      console.log(`🔄 Renouvellement pour ${email}: ${sub.plan} (${sub.credits} crédits remis${keep ? ` +${keep} achetés reportés` : ''})`)
     }
   }
 
