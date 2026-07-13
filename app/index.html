@@ -4102,7 +4102,35 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <div class="setup-divider" style="margin-top:20px"></div>
 
-    <!-- ④ Abonnement & Déconnexion -->
+    <!-- ④ Claude (MCP) -->
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">④ Connecter Claude <span style="color:var(--orange2)">NOUVEAU</span></div>
+    <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:10px">
+      Génère tes images et vidéos AvatarAds directement depuis <strong style="color:var(--text2)">Claude</strong> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
+    </div>
+    <div id="mcpKeyStatus" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:var(--text3)">Chargement…</div>
+    <div id="mcpKeyResult" style="display:none;margin-bottom:10px">
+      <div style="display:flex;gap:8px">
+        <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:10.5px">
+        <button onclick="mcpKeyCopy()" style="padding:9px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap">📋 Copier</button>
+      </div>
+      <div style="font-size:10px;font-family:var(--mono);color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button id="mcpKeyCreateBtn" onclick="mcpKeyCreate()" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">🔑 Générer ma clé</button>
+      <button id="mcpKeyRevokeBtn" onclick="mcpKeyRevoke()" style="display:none;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Révoquer</button>
+    </div>
+    <details style="margin-bottom:4px">
+      <summary style="font-size:11px;font-family:var(--mono);color:var(--text3);cursor:pointer;list-style:none">▸ Comment connecter à Claude ?</summary>
+      <div style="font-size:11.5px;color:var(--text3);line-height:1.7;margin-top:8px;padding-left:2px">
+        <strong style="color:var(--text2)">claude.ai</strong> : Paramètres → Connecteurs → « Ajouter un connecteur personnalisé » → colle l'URL ci-dessus.<br>
+        <strong style="color:var(--text2)">Claude Code</strong> : <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:10.5px">claude mcp add --transport http avatarads &lt;URL&gt;</code><br>
+        Ensuite demande simplement à Claude : <em>« Génère-moi une image de… »</em> ou <em>« Fais-moi une vidéo de… »</em>.
+      </div>
+    </details>
+
+    <div class="setup-divider" style="margin-top:20px"></div>
+
+    <!-- ⑤ Abonnement & Déconnexion -->
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
       <button onclick="changeSubscription();closeAccountSettings()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
         <span style="font-size:15px">📋</span> Changer mon abonnement
@@ -6497,8 +6525,74 @@ function openAccountSettings(){
     if(newEmailInp) newEmailInp.value = '';
   }
   _syncCancelBtn();
+  mcpKeyRefresh();
 }
 function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
+
+// ── Clé MCP « Connecter Claude » (#73) ──
+const MCP_KEY_FN = SUPABASE_URL + '/functions/v1/mcp/key';
+async function _mcpKeyCall(action){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return null;
+  try{
+    const res = await fetch(MCP_KEY_FN, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+session.access_token, 'Content-Type':'application/json' },
+      body: JSON.stringify({ action })
+    });
+    return await res.json();
+  }catch(e){ return null; }
+}
+async function mcpKeyRefresh(){
+  const st = document.getElementById('mcpKeyStatus');
+  const revokeBtn = document.getElementById('mcpKeyRevokeBtn');
+  const createBtn = document.getElementById('mcpKeyCreateBtn');
+  if(!st) return;
+  const res = await _mcpKeyCall('status');
+  if(!res){ st.textContent = '⚠️ Impossible de vérifier la clé — réessaie.'; return; }
+  if(res.exists){
+    const d = new Date(res.created_at).toLocaleDateString('fr-FR');
+    st.innerHTML = '🟢 <strong style="color:var(--text2)">Clé active</strong> — créée le '+d
+      + (res.last_used_at ? ' · dernière utilisation le '+new Date(res.last_used_at).toLocaleDateString('fr-FR') : ' · jamais utilisée');
+    if(revokeBtn) revokeBtn.style.display = 'block';
+    if(createBtn) createBtn.textContent = '🔄 Regénérer la clé';
+  } else {
+    st.textContent = 'Aucune clé pour le moment.';
+    if(revokeBtn) revokeBtn.style.display = 'none';
+    if(createBtn) createBtn.textContent = '🔑 Générer ma clé';
+  }
+}
+async function mcpKeyCreate(){
+  const btn = document.getElementById('mcpKeyCreateBtn');
+  if(btn && btn.textContent.includes('Regénérer')){
+    if(!confirm('Regénérer la clé ? L\'ancienne sera immédiatement révoquée — il faudra mettre à jour l\'URL dans Claude.')) return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Génération…'; }
+  const res = await _mcpKeyCall('create');
+  if(btn) btn.disabled = false;
+  if(!res || !res.ok){ toast('⚠️ Erreur — réessaie'); mcpKeyRefresh(); return; }
+  const box = document.getElementById('mcpKeyResult');
+  const inp = document.getElementById('mcpKeyUrl');
+  if(inp) inp.value = res.url;
+  if(box) box.style.display = 'block';
+  mcpKeyRefresh();
+  toast('🔑 Clé créée — copie l\'URL !');
+}
+function mcpKeyCopy(){
+  const inp = document.getElementById('mcpKeyUrl');
+  if(!inp || !inp.value) return;
+  navigator.clipboard.writeText(inp.value).then(()=>toast('📋 URL copiée !'))
+    .catch(()=>{ inp.select(); document.execCommand('copy'); toast('📋 URL copiée !'); });
+}
+async function mcpKeyRevoke(){
+  if(!confirm('Révoquer la clé ? Claude ne pourra plus accéder à ton compte AvatarAds.')) return;
+  const res = await _mcpKeyCall('revoke');
+  if(!res || !res.ok){ toast('⚠️ Erreur — réessaie'); return; }
+  const box = document.getElementById('mcpKeyResult');
+  if(box) box.style.display = 'none';
+  mcpKeyRefresh();
+  toast('🔒 Clé révoquée');
+}
 
 // Bouton « Annuler l'abonnement » : visible seulement pour les plans payants liés à Whop
 function _syncCancelBtn(){
