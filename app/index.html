@@ -3843,8 +3843,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   #login-title{font-size:26px !important;text-align:center}
   #login-sub{text-align:center;font-size:14.5px !important;margin-top:7px !important}
   .login-title-m{display:inline}
-  .pw-toggle{display:block !important}
-  .login-card #auth-password,.login-card #signup-password{padding-right:64px !important}
 }
 </style>
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:600;display:grid;grid-template-columns:1.05fr .95fr;background:var(--bg)">
@@ -3933,50 +3931,51 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <button id="tab-signup" data-tab="signup" class="auth-tab" onclick="switchAuthTab('signup')" style="flex:1;padding:8px 13px;border-radius:9px;border:none;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s">Créer un compte</button>
       </div>
 
-      <!-- LOGIN FORM -->
+      <!-- LOGIN FORM (étape 1 : email → code) -->
       <div id="form-login">
-        <div style="margin-bottom:16px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
-          <input type="email" id="auth-email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
         <div style="margin-bottom:22px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
-            <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)">Mot de passe</div>
-            <span onclick="authResetPassword()" style="cursor:pointer;color:var(--accent-2);font-family:var(--mono);font-size:10px;letter-spacing:.1em">OUBLIÉ ?</span>
-          </div>
-          <div style="position:relative">
-            <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" class="pw-toggle" onclick="var i=document.getElementById('auth-password');var s=i.type==='password';i.type=s?'text':'password';this.textContent=s?'Cacher':'Voir'" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Voir</button>
-          </div>
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
+          <input type="email" id="auth-email" placeholder="ton@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')authSendCode('login')" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
         </div>
         <div id="auth-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
-        <button onclick="authLogin()" id="loginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-          Se connecter <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
+        <button onclick="authSendCode('login')" id="loginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          Recevoir mon code <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
         </button>
+        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Pas de mot de passe — un code à 6 chiffres arrive par e-mail</div>
       </div>
 
-      <!-- SIGNUP FORM -->
+      <!-- SIGNUP FORM (étape 1 : prénom + email → code) -->
       <div id="form-signup" style="display:none">
         <div style="margin-bottom:16px">
           <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Prénom</div>
-          <input type="text" id="signup-firstname" placeholder="Axel" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
-        <div style="margin-bottom:16px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
-          <input type="email" id="signup-email" placeholder="ton@email.com" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+          <input type="text" id="signup-firstname" placeholder="Axel" autocomplete="given-name" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
         </div>
         <div style="margin-bottom:22px">
-          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Mot de passe</div>
-          <div style="position:relative">
-            <input type="password" id="signup-password" placeholder="8 caractères minimum" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" class="pw-toggle" onclick="var i=document.getElementById('signup-password');var s=i.type==='password';i.type=s?'text':'password';this.textContent=s?'Cacher':'Voir'" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Voir</button>
-          </div>
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
+          <input type="email" id="signup-email" placeholder="ton@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')authSendCode('signup')" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
         </div>
         <div id="signup-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
-        <button onclick="authSignup()" id="signupBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+        <button onclick="authSendCode('signup')" id="signupBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
           Créer mon compte <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
         </button>
-        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Plan gratuit · Sans carte bancaire</div>
+        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Plan gratuit · Sans carte bancaire · Sans mot de passe</div>
+      </div>
+
+      <!-- OTP FORM (étape 2 : saisie du code reçu par e-mail) -->
+      <div id="form-otp" style="display:none">
+        <div style="margin-bottom:22px">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Code à 6 chiffres</div>
+          <input type="text" id="otp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);if(this.value.length===6)authVerifyCode()" onkeydown="if(event.key==='Enter')authVerifyCode()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.38em;text-align:center;padding:14px 0 14px 8px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+        <div id="otp-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
+        <button onclick="authVerifyCode()" id="otpBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          Vérifier le code <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
+        </button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+          <span onclick="authOtpBack()" style="cursor:pointer;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.08em">← CHANGER D'EMAIL</span>
+          <span id="otpResend" onclick="authResendCode()" style="cursor:pointer;color:var(--accent-2);font-family:var(--mono);font-size:11px;letter-spacing:.08em">RENVOYER LE CODE</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:16px">🔒 Tu resteras connecté 14 jours sur cet appareil</div>
       </div>
 
       </div><!-- /login-card -->
@@ -5058,6 +5057,7 @@ function switchAuthTab(tab){
   const isLogin = tab === 'login';
   document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
   document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
+  document.getElementById('form-otp').style.display    = 'none';
   document.querySelectorAll('.auth-tab').forEach(t => {
     const active = t.dataset.tab === tab;
     t.style.background = active ? 'var(--surface-2)' : 'transparent';
@@ -5085,77 +5085,143 @@ async function authGoogle(){
   if(error) toast('⚠️ Erreur Google : ' + error.message);
 }
 
-// ── LOGIN ──
-async function authLogin(){
-  const email = document.getElementById('auth-email').value.trim();
-  const pwd   = document.getElementById('auth-password').value;
-  const errEl = document.getElementById('auth-error');
-  const btn   = document.getElementById('loginBtn');
-  if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
-  btn.textContent='Connexion...'; btn.disabled=true; errEl.style.display='none';
-  // Message de patience après 4s (cold start Supabase)
-  const slowTimer = setTimeout(() => {
-    if(btn.disabled) btn.textContent='Connexion… (première connexion, patiente 🕐)';
-  }, 4000);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
-  clearTimeout(slowTimer);
-  if(error){
-    const _authErr = {
-      'Invalid login credentials':   'Email ou mot de passe incorrect.',
-      'Email not confirmed':          '📧 Confirme ton email avant de te connecter. Vérifie ta boîte mail.',
-      'User not found':               'Aucun compte trouvé avec cet email.',
-      'Too many requests':            'Trop de tentatives. Réessaie dans quelques minutes.',
-      'Invalid email':                'Adresse email invalide.',
-      'Password should be at least 6 characters': 'Mot de passe trop court (6 caractères min).',
-    };
-    errEl.textContent = _authErr[error.message] || error.message;
-    errEl.style.display='block'; btn.textContent='Se connecter →'; btn.disabled=false; return;
+// ── AUTH PAR CODE E-MAIL (OTP à 6 chiffres, sans mot de passe) ──
+// Étape 1 : authSendCode() → la fonction auth-otp envoie un code par e-mail (Resend).
+// Étape 2 : authVerifyCode() → auth-otp valide le code, crée le compte si besoin,
+//           et retourne un token_hash échangé contre une vraie session Supabase.
+const AUTH_OTP_FN = SUPABASE_URL + '/functions/v1/auth-otp';
+let _otpCtx = null;          // { email, mode, firstName } pendant l'étape code
+let _otpResendTimer = null;
+
+const _OTP_ERRORS = {
+  network:           'Connexion impossible. Vérifie ton réseau et réessaie.',
+  invalid_email:     'Adresse email invalide.',
+  no_account:        'Aucun compte avec cet email. Passe sur « Créer un compte » — c\'est gratuit.',
+  cooldown:          'Un code vient de partir — vérifie ta boîte mail (et les spams).',
+  too_many_codes:    'Trop de demandes de code. Réessaie dans une heure.',
+  wrong_code:        'Code incorrect.',
+  expired:           'Code expiré ou déjà utilisé. Clique sur « Renvoyer le code ».',
+  too_many_attempts: 'Trop d\'essais avec ce code. Demande un nouveau code.',
+  email_unavailable: 'Envoi d\'e-mails momentanément indisponible. Réessaie dans quelques minutes.',
+  send_failed:       'L\'e-mail n\'a pas pu partir. Vérifie l\'adresse et réessaie.',
+  server_error:      'Erreur serveur. Réessaie dans un instant.',
+};
+
+async function _otpCall(payload){
+  try{
+    const r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+    return await r.json();
+  }catch(e){ return { error:'network' }; }
+}
+
+async function authSendCode(mode){
+  const isLogin   = mode !== 'signup';
+  const errEl     = document.getElementById(isLogin ? 'auth-error' : 'signup-error');
+  const btn       = document.getElementById(isLogin ? 'loginBtn' : 'signupBtn');
+  const firstName = isLogin ? '' : document.getElementById('signup-firstname').value.trim();
+  const email     = document.getElementById(isLogin ? 'auth-email' : 'signup-email').value.trim();
+  errEl.style.display='none';
+  if(!isLogin && !firstName){ errEl.textContent='Entre ton prénom.'; errEl.style.display='block'; return; }
+  if(!email || !/^\S+@\S+\.\S+$/.test(email)){ errEl.textContent='Entre une adresse email valide.'; errEl.style.display='block'; return; }
+  const oldLabel = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Envoi du code…';
+  const res = await _otpCall({ action:'send', mode: isLogin ? 'login' : 'signup', email, firstName });
+  btn.disabled = false; btn.innerHTML = oldLabel;
+  if(res.error){
+    errEl.textContent = _OTP_ERRORS[res.error] || 'Erreur. Réessaie.';
+    errEl.style.display='block'; return;
   }
-  btn.textContent='Chargement du profil…';
+  _otpCtx = { email, mode: isLogin ? 'login' : 'signup', firstName };
+  _showOtpStep(!isLogin && res.existing);
+}
+
+function _showOtpStep(existingAccount){
+  document.getElementById('form-login').style.display  = 'none';
+  document.getElementById('form-signup').style.display = 'none';
+  document.getElementById('form-otp').style.display    = 'block';
+  const title = document.getElementById('login-title');
+  const sub   = document.getElementById('login-sub');
+  if(title) title.innerHTML = 'Vérifie tes e-mails 📬';
+  if(sub) sub.textContent = existingAccount
+    ? 'Un compte existe déjà avec cet email — entre le code reçu pour te connecter.'
+    : 'Code envoyé à ' + _otpCtx.email + ' — regarde aussi les spams.';
+  const inp = document.getElementById('otp-code');
+  inp.value = '';
+  document.getElementById('otp-error').style.display='none';
+  const btn = document.getElementById('otpBtn');
+  btn.disabled = false;
+  setTimeout(function(){ inp.focus(); }, 80);
+  _startResendCooldown(60);
+}
+
+function _startResendCooldown(secs){
+  const el = document.getElementById('otpResend');
+  let s = secs;
+  clearInterval(_otpResendTimer);
+  const tick = function(){
+    if(s <= 0){ clearInterval(_otpResendTimer); el.textContent='RENVOYER LE CODE'; el.style.opacity='1'; el.style.pointerEvents='auto'; return; }
+    el.textContent = 'RENVOYER LE CODE (' + s + 'S)'; el.style.opacity='.45'; el.style.pointerEvents='none'; s--;
+  };
+  tick();
+  _otpResendTimer = setInterval(tick, 1000);
+}
+
+async function authResendCode(){
+  if(!_otpCtx) return;
+  const errEl = document.getElementById('otp-error');
+  errEl.style.display='none';
+  const res = await _otpCall({ action:'send', mode:_otpCtx.mode, email:_otpCtx.email, firstName:_otpCtx.firstName });
+  if(res.error){
+    errEl.textContent = _OTP_ERRORS[res.error] || 'Erreur. Réessaie.';
+    errEl.style.display='block';
+    if(res.error === 'cooldown' && res.wait) _startResendCooldown(res.wait);
+    return;
+  }
+  toast('📧 Nouveau code envoyé !');
+  _startResendCooldown(60);
+}
+
+async function authVerifyCode(){
+  const btn   = document.getElementById('otpBtn');
+  if(btn.disabled || !_otpCtx) return; // évite le double déclenchement oninput + Enter
+  const code  = document.getElementById('otp-code').value.trim();
+  const errEl = document.getElementById('otp-error');
+  if(!/^\d{6}$/.test(code)){ errEl.textContent='Entre le code à 6 chiffres reçu par e-mail.'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  const oldLabel = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Vérification…';
+  const res = await _otpCall({ action:'verify', email:_otpCtx.email, code, firstName:_otpCtx.firstName });
+  if(res.error){
+    btn.disabled = false; btn.innerHTML = oldLabel;
+    let msg = _OTP_ERRORS[res.error] || 'Erreur. Réessaie.';
+    if(res.error === 'wrong_code' && res.remaining) msg += ' Encore ' + res.remaining + ' essai' + (res.remaining > 1 ? 's' : '') + '.';
+    errEl.textContent = msg; errEl.style.display='block';
+    document.getElementById('otp-code').select();
+    return;
+  }
+  btn.textContent = 'Connexion…';
+  const { data, error } = await sb.auth.verifyOtp({ type:'magiclink', token_hash: res.token_hash });
+  if(error || !data || !data.user){
+    btn.disabled = false; btn.innerHTML = oldLabel;
+    errEl.textContent = 'Erreur de connexion' + (error ? ' : ' + error.message : '') + '. Demande un nouveau code.';
+    errEl.style.display='block'; return;
+  }
+  // « Rester connecté 14 jours » : on date la session
+  localStorage.setItem('aa_login_at', String(Date.now()));
+  // Nouveau compte : prénom + parrainage (le trigger crée le profil sans ces infos)
+  try{
+    if(_otpCtx.firstName) await sb.from('profiles').update({ first_name: _otpCtx.firstName }).eq('id', data.user.id);
+    const ref = localStorage.getItem('aa_ref');
+    if(res.created && ref) await sb.from('profiles').update({ referred_by: ref }).eq('id', data.user.id);
+  }catch(e){}
+  btn.textContent = 'Chargement du profil…';
   await loadProfile(data.user);
 }
 
-// ── RESET PASSWORD ──
-async function authResetPassword(){
-  const email = document.getElementById('auth-email').value.trim();
-  const errEl = document.getElementById('auth-error');
-  if(!email){
-    errEl.textContent = 'Entre ton adresse email pour recevoir le lien de réinitialisation.';
-    errEl.style.display = 'block'; return;
-  }
-  errEl.style.display = 'none';
-  const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
-  });
-  if(error){
-    errEl.textContent = error.message; errEl.style.display = 'block';
-  } else {
-    errEl.style.cssText = 'display:block;background:rgba(0,217,126,0.08);border-color:rgba(0,217,126,0.3);color:#00d97e';
-    errEl.textContent = '📧 Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.';
-  }
-}
-
-// ── SIGNUP ──
-async function authSignup(){
-  const firstName = document.getElementById('signup-firstname').value.trim();
-  const email     = document.getElementById('signup-email').value.trim();
-  const pwd       = document.getElementById('signup-password').value;
-  const errEl     = document.getElementById('signup-error');
-  const btn       = document.getElementById('signupBtn');
-  if(!firstName){ errEl.textContent='Entre ton prénom.'; errEl.style.display='block'; return; }
-  if(!email || !pwd){ errEl.textContent='Remplis tous les champs.'; errEl.style.display='block'; return; }
-  if(pwd.length < 6){ errEl.textContent='Mot de passe trop court (6 caractères min).'; errEl.style.display='block'; return; }
-  btn.textContent='Création...'; btn.disabled=true; errEl.style.display='none';
-  const { data, error } = await sb.auth.signUp({ email, password: pwd });
-  if(error){
-    errEl.textContent = error.message; errEl.style.display='block';
-    btn.textContent='Créer mon compte →'; btn.disabled=false; return;
-  }
-  // Profil créé automatiquement par le trigger — on ajoute le prénom ensuite
-  if(data.user){
-    await sb.from('profiles').update({ first_name: firstName }).eq('id', data.user.id);
-  }
-  await loadProfile(data.user);
+function authOtpBack(){
+  clearInterval(_otpResendTimer);
+  document.getElementById('form-otp').style.display='none';
+  switchAuthTab(_otpCtx && _otpCtx.mode === 'signup' ? 'signup' : 'login');
 }
 
 // ── LOAD PROFILE ──
@@ -5272,6 +5338,7 @@ async function decrementCredit(durationSecs){
 
 // ── LOGOUT ──
 async function authLogout(){
+  localStorage.removeItem('aa_login_at');
   await sb.auth.signOut();
   window.location.href = 'https://avatarads.fr';
 }
@@ -5435,13 +5502,21 @@ function changeSubscription(){
 
 // ── INIT AUTH (check session au démarrage) ──
 async function initAuth(){
+  // « Rester connecté 14 jours » : au-delà, reconnexion obligatoire
+  const born = parseInt(localStorage.getItem('aa_login_at') || '0', 10);
+  if(born && Date.now() - born > 14 * 86400000){
+    localStorage.removeItem('aa_login_at');
+    await sb.auth.signOut();
+  }
   const { data: { session } } = await sb.auth.getSession();
   if(session && session.user){
+    if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
     await loadProfile(session.user);
   }
-  // Écouter les changements de session
+  // Écouter les changements de session (retour OAuth Google inclus)
   sb.auth.onAuthStateChange(async (_event, session) => {
     if(session && session.user && !currentMember){
+      if(!localStorage.getItem('aa_login_at')) localStorage.setItem('aa_login_at', String(Date.now()));
       await loadProfile(session.user);
     }
   });
@@ -20512,7 +20587,8 @@ function edBandDrag(ov,track,e,mode){
   #upgradeModalLeft{padding:18px !important}
   #upgradeModalTestRow{flex-wrap:wrap}
   /* connexion : 16px mini sinon iOS Safari zoome au focus et le zoom persiste après login */
-  #auth-email,#auth-password,#signup-email,#signup-password{font-size:16px !important}
+  #auth-email,#signup-email,#signup-firstname{font-size:16px !important}
+  #otp-code{font-size:24px !important}
   /* Éditeur : première page fixe (plus de zone de glisser géante) */
   #edEmpty div[ondrop]{min-height:0 !important;border-style:solid !important;padding:26px 16px !important}
   /* Images IA : formulaire puis résultat, empilés */
