@@ -8,7 +8,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 //   POST { action:'verify', email, code, firstName? }
 //     → vérifie le code, crée le compte si besoin, retourne un token_hash
 //       que le client échange contre une session via sb.auth.verifyOtp().
-// Anti-abus : cooldown 60 s / e-mail, 6 codes/h par e-mail, 30/h par IP,
+// Anti-abus : cooldown 30 s / e-mail, 6 codes/h par e-mail, 30/h par IP,
 // 5 essais max par code, code haché (HMAC service key) — jamais stocké en clair.
 
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
@@ -17,7 +17,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const FROM           = 'AvatarAds <bonjour@avatarads.fr>'
 
 const CODE_TTL_MIN     = 10   // validité d'un code
-const COOLDOWN_S       = 60   // délai mini entre deux envois pour un même e-mail
+const COOLDOWN_S       = 30   // délai mini entre deux envois pour un même e-mail
 const MAX_PER_EMAIL_H  = 6    // codes par e-mail et par heure
 const MAX_PER_IP_H     = 30   // codes par IP et par heure
 const MAX_ATTEMPTS     = 5    // essais de vérification par code
@@ -54,12 +54,20 @@ function otpEmail(code: string): string {
 }
 
 async function sendCodeEmail(email: string, code: string): Promise<boolean> {
-  const r = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: [email], subject: `${code} — ton code AvatarAds`, html: otpEmail(code) }),
-  })
-  return r.ok
+  // 2 tentatives : absorbe les micro-pannes Resend sans bloquer la connexion
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: FROM, to: [email], subject: `${code} — ton code AvatarAds`, html: otpEmail(code) }),
+      })
+      if (r.ok) return true
+      if (r.status === 422) return false // adresse invalide : inutile de retenter
+    } catch (_e) { /* réseau : on retente */ }
+    if (attempt === 0) await new Promise(res => setTimeout(res, 800))
+  }
+  return false
 }
 
 serve(async (req) => {

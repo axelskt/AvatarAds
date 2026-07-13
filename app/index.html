@@ -5153,7 +5153,7 @@ function _showOtpStep(existingAccount){
   btn.innerHTML = window._otpBtnLabel;
   btn.disabled = false;
   setTimeout(function(){ inp.focus(); }, 80);
-  _startResendCooldown(60);
+  _startResendCooldown(30);
 }
 
 function _startResendCooldown(secs){
@@ -5180,7 +5180,7 @@ async function authResendCode(){
     return;
   }
   toast('📧 Nouveau code envoyé !');
-  _startResendCooldown(60);
+  _startResendCooldown(30);
 }
 
 async function authVerifyCode(){
