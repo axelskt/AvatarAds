@@ -101,19 +101,19 @@ serve(async (req) => {
       if ((count ?? 0) >= MAX_PER_IP_H) return json(429, { error: 'too_many_codes' })
     }
 
-    // Un seul code actif à la fois : on invalide les précédents
-    await sb.from('otp_codes').delete().eq('email', email).is('used_at', null)
-
+    // NB : on ne supprime pas les anciens codes ici — verify ne lit que le plus
+    // récent (les précédents sont donc invalidés de fait) et les garder permet
+    // aux compteurs horaires par e-mail / IP de rester exacts.
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000))
-    const { error: insErr } = await sb.from('otp_codes').insert({
+    const { data: ins, error: insErr } = await sb.from('otp_codes').insert({
       email, code_hash: await hashCode(email, code), ip,
       expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
-    })
-    if (insErr) return json(500, { error: 'server_error' })
+    }).select('id').single()
+    if (insErr || !ins) return json(500, { error: 'server_error' })
 
     const sent = await sendCodeEmail(email, code)
     if (!sent) {
-      await sb.from('otp_codes').delete().eq('email', email).is('used_at', null)
+      await sb.from('otp_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
     }
     return json(200, { ok: true, existing: !!prof })
@@ -145,7 +145,7 @@ serve(async (req) => {
     // Ménage : purge les codes de plus de 24 h
     await sb.from('otp_codes').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
 
-    // Compte inexistant → création (le trigger crée le profil free 40 crédits)
+    // Compte inexistant → création (le trigger handle_new_user crée le profil free)
     const { data: prof } = await sb.from('profiles').select('id').eq('email', email).maybeSingle()
     let created = false
     if (!prof) {
