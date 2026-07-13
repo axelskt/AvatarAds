@@ -38,14 +38,15 @@ async function hashCode(email: string, code: string): Promise<string> {
 }
 
 function otpEmail(code: string): string {
-  const digits = code.split('').join('&#8202;&#8202;') // fines espaces entre chiffres
+  // Pas d'espaces entre les chiffres (Gmail mobile casse la ligne dessus) —
+  // l'aération vient du letter-spacing + nowrap pour garder le code sur une ligne.
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;padding:32px 20px">
     <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:22px">🎬 AvatarAds</div>
     <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
       <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">Ton code de connexion</div>
       <div style="font-size:15px;color:#44403c;line-height:1.65">Entre ce code sur AvatarAds pour continuer :</div>
-      <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:22px;margin-top:20px;text-align:center;font-size:34px;font-weight:800;letter-spacing:6px;color:#111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${digits}</div>
+      <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:20px 8px;margin-top:20px;text-align:center;white-space:nowrap;font-size:30px;font-weight:800;letter-spacing:8px;color:#111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${code}</div>
       <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'es pas à l'origine de cette demande, ignore simplement cet e-mail.</div>
     </div>
     <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px;line-height:1.6">AvatarAds · avatarads.fr</div>
