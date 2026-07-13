@@ -5,7 +5,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 // Protocole MCP « Streamable HTTP » (JSON-RPC sur POST, réponses JSON, sans état).
 // Compatible connecteurs personnalisés claude.ai et `claude mcp add --transport http`.
 //
-//   POST /mcp/key            (JWT utilisateur)  → gérer sa clé : status / create / revoke
+//   POST /mcp/key            (JWT utilisateur)  → gérer sa clé : status / create / revoke / set_confirm
 //   POST /mcp/aa_<clé>       (clé personnelle)  → endpoint MCP (initialize, tools/list, tools/call)
 //
 // La clé est dans l'URL (pattern Zapier) : c'est la seule forme que les connecteurs
@@ -51,6 +51,30 @@ function b64ToBytes(b64: string): Uint8Array {
   const out = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
   return out
+}
+
+// Tâche de fond garantie jusqu'au flush : sans ça, l'isolate edge peut être tué
+// avant qu'une écriture « fire-and-forget » (ex. last_used_at, rattrapage) ne parte.
+function bg(task: Promise<unknown>) {
+  const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
+  if (ru?.waitUntil) ru.waitUntil(task.catch(() => {}))
+  else task.catch(() => {})
+}
+
+// Anti-SSRF : refuse les hôtes internes / link-local / metadata pour une URL fournie par l'utilisateur.
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (h === 'localhost' || h.endsWith('.localhost') || h === 'metadata.google.internal') return true
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (m) {
+    const a = +m[1], b = +m[2]
+    if (a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224) return true
+  }
+  if (h.includes(':')) { // IPv6 littéral
+    if (h === '::1' || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80') || h.startsWith('::ffff:')) return true
+  }
+  return false
 }
 
 async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, contentType: string): Promise<string> {
@@ -203,44 +227,130 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   const size = sizeMap[format]
   const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
 
+  const userId = String(profile.id)
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
   const gate = await preSpendGate(profile, ctx, args, cost, `image ${quality} (${format})`, 'generate_image')
   if (gate) return gate
 
-  let lastErr = 'Erreur génération'
-  for (const model of GPT_IMG_MODELS) {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (data.error) {
-      lastErr = data.error.message || 'Erreur génération'
-      if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue // modèle indispo → suivant
-      return toolErr('Génération refusée : ' + lastErr)
-    }
-    const b64 = data.data?.[0]?.b64_json
-    if (!b64) { lastErr = 'Aucune image retournée'; continue }
+  // Débit AVANT génération (comme la vidéo) : jamais d'image livrée sans débit réel.
+  // Si la génération échoue ensuite, le finally rembourse.
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
-    const url = await uploadMedia(String(profile.id), b64ToBytes(b64), 'png', 'image/png')
-    const bal = await spendCredits(String(profile.id), cost)
-    // Trace la dépense (sert au plafond quotidien et au suivi d'usage)
-    await svc.from('mcp_jobs').insert({ user_id: String(profile.id), kind: 'image', status: 'done', credits_cost: cost, result_url: url })
-    const balTxt = isUnlimited(profile) ? '∞' : (bal === null || bal === -1 ? '(voir get_account)' : String(bal))
-    const content: Array<Record<string, unknown>> = []
-    if (b64.length < 4_000_000) content.push({ type: 'image', data: b64, mimeType: 'image/png' })
-    content.push({ type: 'text', text: `✅ Image générée !\nURL : ${url}\n−${cost} crédits · solde : ${balTxt}` })
-    return { content }
+  let delivered = false
+  try {
+    let lastErr = 'Erreur génération'
+    for (const model of GPT_IMG_MODELS) {
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.error) {
+        lastErr = data.error.message || 'Erreur génération'
+        if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue // modèle indispo → suivant
+        return toolErr('Génération refusée : ' + lastErr) // finally rembourse
+      }
+      const b64 = data.data?.[0]?.b64_json
+      if (!b64) { lastErr = 'Aucune image retournée'; continue }
+
+      const url = await uploadMedia(userId, b64ToBytes(b64), 'png', 'image/png')
+      // Trace la dépense (plafond quotidien + suivi d'usage) — seulement après succès
+      await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'done', credits_cost: cost, result_url: url })
+      delivered = true
+      const balTxt = isUnlimited(profile) ? '∞' : String(bal)
+      const content: Array<Record<string, unknown>> = []
+      if (b64.length < 4_000_000) content.push({ type: 'image', data: b64, mimeType: 'image/png' })
+      content.push({ type: 'text', text: `✅ Image générée !\nURL : ${url}\n−${cost} crédits · solde : ${balTxt}` })
+      return { content }
+    }
+    return toolErr('Génération échouée : ' + lastErr) // finally rembourse
+  } finally {
+    if (!delivered) await refundCredits(userId, cost)
   }
-  return toolErr('Génération échouée : ' + lastErr)
 }
 
 async function veoFetch(path: string, init?: RequestInit): Promise<Response> {
   const sep = path.includes('?') ? '&' : '?'
   return await fetch(`https://generativelanguage.googleapis.com${path}${sep}key=${GOOGLE_AI_KEY}`, init)
+}
+
+// ── Helpers vidéo (partagés par check_video et le rattrapage des jobs bloqués) ──
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractVideo(data: Record<string, any>): { b64: string | null; uri: string | null } {
+  const resp = data?.response || {}
+  const b64 = resp?.predictions?.[0]?.bytesBase64Encoded
+    || resp?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null
+  const uri = b64 ? null : (resp?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+    || resp?.predictions?.[0]?.videoUri || resp?.predictions?.[0]?.video?.uri || null)
+  return { b64, uri }
+}
+
+async function fetchVideoBytes(b64: string | null, uri: string | null): Promise<Uint8Array | null> {
+  if (b64) return b64ToBytes(b64)
+  if (uri) {
+    const sep = String(uri).includes('?') ? '&' : '?'
+    const dl = await fetch(`${uri}${sep}key=${GOOGLE_AI_KEY}`).catch(() => null)
+    if (dl && dl.ok) return new Uint8Array(await dl.arrayBuffer())
+  }
+  return null
+}
+
+// Échec d'un job : marque failed + rembourse. Le remboursement est IDEMPOTENT — le
+// filtre .eq('refunded', false) garantit qu'un seul appel concurrent rembourse (jamais 2×).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function failAndRefund(userId: string, job: Record<string, any>, reason: string): Promise<void> {
+  const { data: claimed } = await svc.from('mcp_jobs')
+    .update({ status: 'failed', error: reason, refunded: true, updated_at: new Date().toISOString() })
+    .eq('id', job.id).eq('refunded', false).select('id')
+  if (claimed && claimed.length) await refundCredits(userId, job.credits_cost)
+}
+
+// Livraison d'une vidéo terminée : claim atomique running→done pour éviter un double upload
+// si deux check_video concurrents aboutissent en même temps. Retourne l'URL finale.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uint8Array): Promise<string | null> {
+  const { data: claimed } = await svc.from('mcp_jobs')
+    .update({ status: 'done', updated_at: new Date().toISOString() })
+    .eq('id', job.id).eq('status', 'running').select('id')
+  if (!claimed || !claimed.length) {
+    // déjà settlé par un appel concurrent → renvoie l'URL stockée si disponible
+    const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
+    return fresh?.result_url ?? null
+  }
+  const url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4')
+  await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
+  return url
+}
+
+// Rattrapage : rembourse (ou livre) les jobs vidéo bloqués en 'running' depuis > 20 min —
+// même si le client n'a jamais rappelé check_video. Évite les débits sans contrepartie
+// (Veo dépasse rarement 3 min ; au-delà de 20 min on considère le job perdu). Lancé en
+// arrière-plan à chaque appel MCP de l'utilisateur.
+async function reconcileStaleJobs(userId: string): Promise<void> {
+  const staleIso = new Date(Date.now() - 20 * 60_000).toISOString()
+  const { data: stale } = await svc.from('mcp_jobs').select('*')
+    .eq('user_id', userId).eq('status', 'running').lt('created_at', staleIso).limit(5)
+  for (const job of stale || []) {
+    if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let d: Record<string, any> | null = null
+    try {
+      const r = await veoFetch(`/v1beta/${job.op_name}`, { method: 'GET' })
+      if (r.ok) d = await r.json().catch(() => null)
+    } catch { /* poll KO : on rembourse par sécurité ci-dessous */ }
+    if (d?.done && !d.error) {
+      const { b64, uri } = extractVideo(d)
+      const bytes = await fetchVideoBytes(b64, uri)
+      if (bytes) { await deliverVideo(userId, job, bytes); continue }
+    }
+    // failed / vidéo introuvable / poll KO / toujours 'running' après 20 min → remboursement
+    await failAndRefund(userId, job, d?.error?.message || 'timeout')
+  }
 }
 
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
@@ -262,7 +372,10 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   let image: { bytesBase64Encoded: string; mimeType: string } | null = null
   if (args.image_url) {
     const u = String(args.image_url)
-    if (!/^https?:\/\//i.test(u)) return toolErr('image_url doit être une URL http(s) publique.')
+    let parsed: URL | null = null
+    try { parsed = new URL(u) } catch { /* invalide */ }
+    if (!parsed || !/^https?:$/.test(parsed.protocol)) return toolErr('image_url doit être une URL http(s) publique.')
+    if (isBlockedHost(parsed.hostname)) return toolErr('image_url doit pointer vers une image publique (adresse interne refusée).')
     const r = await fetch(u).catch(() => null)
     if (!r || !r.ok) return toolErr("Impossible de télécharger l'image de départ (image_url).")
     const ct = (r.headers.get('content-type') || '').split(';')[0]
@@ -325,7 +438,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   if (job.status === 'done') return toolText(`✅ Vidéo prête !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
-  // Poll Google jusqu'à ~45 s dans cet appel, puis on rend la main à Claude
+  // Poll Google jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
   let done: Record<string, unknown> | null = null
   let opErr = ''
   for (let i = 0; i < 9; i++) {
@@ -340,33 +453,22 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
     }
   }
   if (opErr) {
-    if (!job.refunded) await refundCredits(userId, job.credits_cost)
-    await svc.from('mcp_jobs').update({ status: 'failed', error: opErr, refunded: true, updated_at: new Date().toISOString() }).eq('id', jobId)
+    await failAndRefund(userId, job, opErr) // idempotent : rembourse une seule fois
     return toolErr(`Génération échouée : ${opErr}. Les ${job.credits_cost} crédits ont été remboursés.`)
   }
   if (!done) return toolText('⏳ Toujours en cours — rappelle check_video dans ~30 secondes.')
 
   // Vidéo terminée : base64 direct ou URI à télécharger (mêmes chemins de réponse que l'app)
-  const resp = (done as Record<string, any>).response || {}
-  const b64 = resp?.predictions?.[0]?.bytesBase64Encoded
-    || resp?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null
-  const uri = b64 ? null : (resp?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
-    || resp?.predictions?.[0]?.videoUri || resp?.predictions?.[0]?.video?.uri || null)
-  let bytes: Uint8Array | null = null
-  if (b64) bytes = b64ToBytes(b64)
-  else if (uri) {
-    const sep = String(uri).includes('?') ? '&' : '?'
-    const dl = await fetch(`${uri}${sep}key=${GOOGLE_AI_KEY}`).catch(() => null)
-    if (dl && dl.ok) bytes = new Uint8Array(await dl.arrayBuffer())
-  }
+  const { b64, uri } = extractVideo(done)
+  const bytes = await fetchVideoBytes(b64, uri)
   if (!bytes) {
-    if (!job.refunded) await refundCredits(userId, job.credits_cost)
-    await svc.from('mcp_jobs').update({ status: 'failed', error: 'video_missing', refunded: true, updated_at: new Date().toISOString() }).eq('id', jobId)
+    await failAndRefund(userId, job, 'video_missing')
     return toolErr('Vidéo terminée mais introuvable dans la réponse — crédits remboursés, relance generate_video.')
   }
-  const url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4')
-  await svc.from('mcp_jobs').update({ status: 'done', result_url: url, updated_at: new Date().toISOString() }).eq('id', jobId)
-  return toolText(`✅ Vidéo prête !\nURL : ${url}`)
+  const url = await deliverVideo(userId, job, bytes) // claim atomique : pas de double upload
+  return url
+    ? toolText(`✅ Vidéo prête !\nURL : ${url}`)
+    : toolText('⏳ Presque prête — rappelle check_video dans quelques secondes.')
 }
 
 async function runListMedia(profile: Record<string, unknown>): Promise<ToolContent> {
@@ -475,7 +577,7 @@ serve(async (req) => {
   if (!keyRow) {
     return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds invalide ou révoquée — génère-en une nouvelle dans Mon compte sur ' + APP_URL } })
   }
-  svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id).then(() => {})
+  bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
 
   const { data: profile } = await svc.from('profiles').select(
     'id, email, first_name, plan, credits_remaining, is_owner',
@@ -507,8 +609,8 @@ serve(async (req) => {
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'AvatarAds', version: '1.0.0' },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) : génère des images (generate_image) et des vidéos IA (generate_video puis check_video) avec les crédits du compte connecté. get_account donne le solde.",
+        serverInfo: { name: 'AvatarAds', version: '1.2.0' },
+        instructions: "Serveur MCP AvatarAds (avatarads.fr) : génère des images (generate_image) et des vidéos IA (generate_video puis check_video) avec les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
       })
     }
     if (method === 'ping') return rpcResult(id, {})
@@ -521,6 +623,8 @@ serve(async (req) => {
       if (!planAllowed) {
         return rpcResult(id, toolErr(`L'accès via Claude est réservé aux plans Pro et Élite. Ton plan actuel : ${profile.plan || 'free'}. Passe au plan supérieur sur ${APP_URL}`))
       }
+      // Rattrapage en arrière-plan des vidéos bloquées (débits sans contrepartie) — n'ajoute pas de latence
+      if (!isUnlimited(profile)) bg(reconcileStaleJobs(String(profile.id)))
       let out: ToolContent
       if (name === 'get_account') out = await runGetAccount(profile)
       else if (name === 'generate_image') out = await runGenerateImage(profile, args, ctx)
