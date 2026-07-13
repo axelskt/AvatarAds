@@ -25,6 +25,9 @@ const IMG_COST        = { standard: 3, high: 5 }
 const VIDEO_COST_SEC  = 1 // Veo 3.1 Lite = tarif Express Lite
 const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
+// Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
+const ALLOWED_PLANS   = ['pro', 'elite']
+const DAILY_CAPS: Record<string, number> = { pro: 100, elite: 200 }
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -68,6 +71,39 @@ async function refundCredits(userId: string, n: number): Promise<void> {
   await svc.rpc('mcp_refund_credits', { p_user: userId, p_secs: n })
 }
 
+// Crédits dépensés via MCP sur les dernières 24 h (jobs vidéo + images, hors remboursés)
+async function mcpSpentToday(userId: string): Promise<number> {
+  const dayAgo = new Date(Date.now() - 86_400_000).toISOString()
+  const { data } = await svc.from('mcp_jobs').select('credits_cost, refunded')
+    .eq('user_id', userId).gte('created_at', dayAgo)
+  return (data || []).filter((j) => !j.refunded).reduce((s, j) => s + (j.credits_cost || 0), 0)
+}
+
+// Contexte d'exécution des outils (clé + plan)
+type ToolCtx = { requireConfirm: boolean; dailyCap: number | null }
+
+// Devis / plafond communs aux deux générateurs. Retourne null si on peut débiter.
+async function preSpendGate(
+  profile: Record<string, unknown>, ctx: ToolCtx, args: Record<string, unknown>,
+  cost: number, label: string, toolName: string,
+): Promise<ToolContent | null> {
+  if (ctx.requireConfirm && args.confirm !== true) {
+    const bal = Number(profile.credits_remaining) || 0
+    const balTxt = isUnlimited(profile) ? '∞' : `${bal} → ${bal - cost} après génération`
+    return toolText(
+      `🧾 Devis — ${label}
+Coût : ${cost} crédits · solde : ${balTxt}
+Montre ce devis à l'utilisateur et attends son accord explicite, puis rappelle ${toolName} avec les mêmes paramètres + confirm: true. Ne confirme JAMAIS à sa place.`)
+  }
+  if (ctx.dailyCap !== null && !isUnlimited(profile)) {
+    const spent = await mcpSpentToday(String(profile.id))
+    if (spent + cost > ctx.dailyCap) {
+      return toolErr(`Plafond quotidien via Claude atteint : ${spent}/${ctx.dailyCap} crédits sur 24 h (cette génération en demande ${cost}). Réessaie plus tard ou génère directement sur ${APP_URL}`)
+    }
+  }
+  return null
+}
+
 // ── Réponses JSON-RPC / contenus d'outils ──
 const rpcResult = (id: unknown, result: unknown) => json(200, { jsonrpc: '2.0', id, result })
 const rpcError = (id: unknown, code: number, message: string) =>
@@ -93,6 +129,7 @@ function toolDefs(isOwner: boolean) {
           prompt: { type: 'string', description: "Description détaillée de l'image (sujet, style, lumière, cadrage…). Français ou anglais." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
           quality: { type: 'string', enum: ['standard', 'high'], description: `standard (défaut, ${IMG_COST.standard} crédits) ou high (${IMG_COST.high} crédits, plus détaillée)` },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
       },
@@ -107,6 +144,7 @@ function toolDefs(isOwner: boolean) {
           duration_seconds: { type: 'integer', minimum: 4, maximum: 10, description: 'Durée en secondes, 4 à 10 (défaut 8).' },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique d'une image de départ (optionnel) — ex. une image générée avec generate_image." },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
       },
@@ -154,19 +192,22 @@ Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
-async function runGenerateImage(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+async function runGenerateImage(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!OPENAI_API_KEY) return toolErr('Génération indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
   if (prompt.length > 4000) return toolErr('Prompt trop long (4000 caractères max).')
   const quality = args.quality === 'high' ? 'high' : 'standard'
+  const format = ['portrait', 'square', 'landscape'].includes(String(args.format)) ? String(args.format) : 'portrait'
   const sizeMap: Record<string, string> = { portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' }
-  const size = sizeMap[String(args.format || 'portrait')] || '1024x1536'
+  const size = sizeMap[format]
   const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
+  const gate = await preSpendGate(profile, ctx, args, cost, `image ${quality} (${format})`, 'generate_image')
+  if (gate) return gate
 
   let lastErr = 'Erreur génération'
   for (const model of GPT_IMG_MODELS) {
@@ -186,6 +227,8 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
 
     const url = await uploadMedia(String(profile.id), b64ToBytes(b64), 'png', 'image/png')
     const bal = await spendCredits(String(profile.id), cost)
+    // Trace la dépense (sert au plafond quotidien et au suivi d'usage)
+    await svc.from('mcp_jobs').insert({ user_id: String(profile.id), kind: 'image', status: 'done', credits_cost: cost, result_url: url })
     const balTxt = isUnlimited(profile) ? '∞' : (bal === null || bal === -1 ? '(voir get_account)' : String(bal))
     const content: Array<Record<string, unknown>> = []
     if (b64.length < 4_000_000) content.push({ type: 'image', data: b64, mimeType: 'image/png' })
@@ -200,7 +243,7 @@ async function veoFetch(path: string, init?: RequestInit): Promise<Response> {
   return await fetch(`https://generativelanguage.googleapis.com${path}${sep}key=${GOOGLE_AI_KEY}`, init)
 }
 
-async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
@@ -208,6 +251,12 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
   const cost = duration * VIDEO_COST_SEC
   const userId = String(profile.id)
+
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${VIDEO_COST_SEC}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url ? ', avec image de départ' : ''})`, 'generate_video')
+  if (gate) return gate
 
   // Image de départ optionnelle
   let image: { bytesBase64Encoded: string; mimeType: string } | null = null
@@ -363,16 +412,23 @@ async function handleKeyManagement(req: Request): Promise<Response> {
   const { data: { user }, error } = await userClient.auth.getUser()
   if (error || !user) return json(401, { error: 'unauthorized' })
 
-  let body: Record<string, string>
+  let body: Record<string, unknown>
   try { body = await req.json() } catch { return json(400, { error: 'bad_request' }) }
 
+  const { data: prof } = await svc.from('profiles').select('plan, is_owner').eq('id', user.id).maybeSingle()
+  const planAllowed = !!prof && (isUnlimited(prof) || ALLOWED_PLANS.includes(String(prof.plan || '').toLowerCase()))
+
   if (body.action === 'status') {
-    const { data } = await svc.from('mcp_keys').select('created_at, last_used_at')
+    const { data } = await svc.from('mcp_keys').select('created_at, last_used_at, require_confirm')
       .eq('user_id', user.id).is('revoked_at', null)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    return json(200, { exists: !!data, created_at: data?.created_at ?? null, last_used_at: data?.last_used_at ?? null })
+    return json(200, {
+      exists: !!data, created_at: data?.created_at ?? null, last_used_at: data?.last_used_at ?? null,
+      require_confirm: data?.require_confirm ?? true, plan_allowed: planAllowed,
+    })
   }
   if (body.action === 'create') {
+    if (!planAllowed) return json(403, { error: 'plan_required' }) // réservé Pro/Élite
     const raw = new Uint8Array(24)
     crypto.getRandomValues(raw)
     const key = 'aa_' + Array.from(raw).map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -383,6 +439,11 @@ async function handleKeyManagement(req: Request): Promise<Response> {
   }
   if (body.action === 'revoke') {
     await svc.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null)
+    return json(200, { ok: true })
+  }
+  if (body.action === 'set_confirm') {
+    await svc.from('mcp_keys').update({ require_confirm: body.value !== false && body.value !== 'false' })
+      .eq('user_id', user.id).is('revoked_at', null)
     return json(200, { ok: true })
   }
   return json(400, { error: 'bad_request' })
@@ -409,7 +470,7 @@ serve(async (req) => {
   if (!key || !key.startsWith('aa_')) {
     return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds manquante — génère-la dans Mon compte sur ' + APP_URL } })
   }
-  const { data: keyRow } = await svc.from('mcp_keys').select('id, user_id')
+  const { data: keyRow } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
     .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
   if (!keyRow) {
     return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds invalide ou révoquée — génère-en une nouvelle dans Mon compte sur ' + APP_URL } })
@@ -420,6 +481,14 @@ serve(async (req) => {
     'id, email, first_name, plan, credits_remaining, is_owner',
   ).eq('id', keyRow.user_id).maybeSingle()
   if (!profile) return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Compte introuvable.' } })
+
+  // Accès réservé Pro/Élite (clé créée puis plan rétrogradé → on bloque à l'usage aussi)
+  const planKey = String(profile.plan || '').toLowerCase()
+  const planAllowed = isUnlimited(profile) || ALLOWED_PLANS.includes(planKey)
+  const ctx: ToolCtx = {
+    requireConfirm: keyRow.require_confirm !== false,
+    dailyCap: isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
+  }
 
   let msg: Record<string, unknown>
   try { msg = await req.json() } catch { return rpcError(null, -32700, 'Parse error') }
@@ -449,10 +518,13 @@ serve(async (req) => {
     if (method === 'tools/call') {
       const name = String(params.name || '')
       const args = (params.arguments || {}) as Record<string, unknown>
+      if (!planAllowed) {
+        return rpcResult(id, toolErr(`L'accès via Claude est réservé aux plans Pro et Élite. Ton plan actuel : ${profile.plan || 'free'}. Passe au plan supérieur sur ${APP_URL}`))
+      }
       let out: ToolContent
       if (name === 'get_account') out = await runGetAccount(profile)
-      else if (name === 'generate_image') out = await runGenerateImage(profile, args)
-      else if (name === 'generate_video') out = await runGenerateVideo(profile, args)
+      else if (name === 'generate_image') out = await runGenerateImage(profile, args, ctx)
+      else if (name === 'generate_video') out = await runGenerateVideo(profile, args, ctx)
       else if (name === 'check_video') out = await runCheckVideo(profile, args)
       else if (name === 'list_media') out = await runListMedia(profile)
       else if (name === 'admin_find_user') out = await runAdminFindUser(profile, args)
