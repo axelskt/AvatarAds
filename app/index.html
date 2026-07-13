@@ -5149,6 +5149,8 @@ function _showOtpStep(existingAccount){
   inp.value = '';
   document.getElementById('otp-error').style.display='none';
   const btn = document.getElementById('otpBtn');
+  if(!window._otpBtnLabel) window._otpBtnLabel = btn.innerHTML;
+  btn.innerHTML = window._otpBtnLabel;
   btn.disabled = false;
   setTimeout(function(){ inp.focus(); }, 80);
   _startResendCooldown(60);
