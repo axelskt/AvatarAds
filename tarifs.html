@@ -181,15 +181,15 @@ const PLANS=[
   { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
     price:'29,99', annual:'20,83', accent:'var(--text)',
     credits:150, equiv:'150 secondes de vidéo', extra:'Images/Vidéo Standard', bonus:'+25', note:'sans engagement',
-    listHead:'INCLUS :', feats:[['✏️','Sous-titres animés'],['🎙️','Voix clonée ElevenLabs'],['✂️','Split-screen · gameplay'],['📤','Export vertical sans watermark']] },
+    listHead:'INCLUS :', feats:['Avatar IA lip-sync','Générateur d\'images IA','Prompt → vidéo virale','Sous-titres animés','Éditeur de vidéo'] },
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
     price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
     credits:550, equiv:'550 secondes de vidéo', extra:'Images/Vidéo Premium', bonus:'+50', note:'soit 1,67€/jour',
-    listHead:'TOUT STARTER, PLUS :', feats:[['🎵','Whisper IA · sync voix avancée'],['✨','Effets VSL · export 1080p'],['✂️','Suppression silences avancée'],['🎨','Sous-titres styles cinématiques']] },
+    listHead:'TOUT STARTER, PLUS :', feats:['AvatarAds × Claude','Suppression des silences avancée','Qualité Premium images & vidéos','Sous-titres synchronisés à l\'audio','Voice Design ElevenLabs'] },
   { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux. Choisis ta puissance.',
     accent:'var(--violet)',
     note:'paiement mensuel · sans engagement',
-    listHead:'TOUT PRO, PLUS :', feats:[['🏆','Export 4K · modèle Élite exclusif'],['📚','Bibliothèque clips illimitée'],['⚡','Support prioritaire + early access'],['📦','Clips presets Starter + Pro + Élite']] },
+    listHead:'TOUT PRO, PLUS :', feats:['Génération vidéo prioritaire','Export vidéo + image 4K','Bibliothèque de clips illimitée','Coût par crédit le plus bas','Support prioritaire + accès anticipé'] },
 ];
 function _quotaBox(pl, tier){
   var violet = pl.id==='elite';
@@ -241,7 +241,7 @@ function renderPricing(){
     // Liste features
     var feats='<div class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--text-3);margin:22px 0 12px">'+pl.listHead+'</div><div class="col" style="gap:11px">';
     for(var k=0;k<pl.feats.length;k++){
-      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;font-size:14px;line-height:1.4">'+pl.feats[k][0]+'</span><span style="line-height:1.45">'+pl.feats[k][1]+'</span></div>';
+      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;color:var(--green);font-size:14px;line-height:1.45;font-weight:800">✓</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
     }
     feats+='</div>';
     html+='<div class="card" style="padding:26px 24px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+'">'
