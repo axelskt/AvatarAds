@@ -4492,7 +4492,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--text-2)">STARTER</div>
         <div style="font-size:14px;color:var(--text-3);margin-top:8px;min-height:42px;line-height:1.4">Pour démarrer sans se ruiner.</div>
         <!-- quota box (hauteur fixe) -->
-        <div style="height:172px;overflow:hidden;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
+        <div class="credBox" style="min-height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">150</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+25</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
@@ -4525,7 +4525,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--orange)">PRO</div>
         <div style="font-size:14px;color:var(--text-3);margin-top:8px;min-height:42px;line-height:1.4">Pour les créateurs qui veulent scaler.</div>
         <!-- quota box (hauteur fixe) -->
-        <div style="height:172px;overflow:hidden;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
+        <div class="credBox" style="min-height:158px;border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-top:6px;background:var(--panel-1);display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800">550</span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+50</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
@@ -4558,7 +4558,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--violet)">ELITE ✦</div>
         <div style="font-size:14px;color:var(--text-3);margin-top:8px;min-height:42px;line-height:1.4">Le maximum pour les plus ambitieux.</div>
         <!-- quota box + slider (hauteur fixe, alignée) — design Claude (barre) -->
-        <div style="height:172px;overflow:hidden;border:1px solid rgba(154,124,255,.3);border-radius:16px;padding:16px 18px;margin-top:6px;background:rgba(154,124,255,.06);display:flex;flex-direction:column;justify-content:space-between">
+        <div class="credBox" style="min-height:158px;border:1px solid rgba(154,124,255,.3);border-radius:16px;padding:16px 18px;margin-top:6px;background:rgba(154,124,255,.06);display:flex;flex-direction:column;justify-content:space-between">
           <div>
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800;color:var(--violet)"><span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+75</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
@@ -5613,6 +5613,23 @@ function closePaywall(){ closePlansSheet(); }
 
 // ── PLANS SHEET ──
 let _sheetAnnual = false;
+// Égalise la hauteur des 3 boîtes « crédits » du sheet à la plus grande, en mesurant le
+// rendu réel → fiable dans TOUS les navigateurs (Safari étire une hauteur CSS fixe quand
+// le contenu, ex. le slider Élite, dépasse ; ici on ne dépend d'aucune hauteur magique).
+// Garantit l'alignement des prix et des boutons « Choisir » quel que soit le navigateur.
+function _equalizeCredBoxes(){
+  const boxes = [...document.querySelectorAll('#plansSheet .credBox')];
+  if(boxes.length < 2) return;
+  boxes.forEach(b => { b.style.minHeight = ''; });          // reset avant mesure
+  // lire offsetHeight force un reflow synchrone → mesure fiable, sans dépendre de rAF
+  let max = 0;
+  boxes.forEach(b => { max = Math.max(max, b.offsetHeight); });
+  boxes.forEach(b => { b.style.minHeight = max + 'px'; });   // toutes à la plus grande
+}
+window.addEventListener('resize', () => {
+  const ps = document.getElementById('plansSheet');
+  if(ps && ps.style.display === 'block') _equalizeCredBoxes();
+});
 function showPlansSheet(){
   // Reset toggle to monthly on open
   _sheetAnnual = false;
@@ -5642,6 +5659,7 @@ function showPlansSheet(){
   _syncSheetPlanButtons();
   document.getElementById('plansSheet').style.display = 'block';
   document.body.style.overflow = 'hidden';
+  _equalizeCredBoxes(); // aligne prix/boutons : égalise les 3 boîtes crédits (fiable Safari)
   // Préchauffe les checkouts en fond → le clic sur un plan ouvre le paiement INSTANTANÉMENT
   try{ const mm=PLAN_CHECKOUT_URLS.monthly; _whopPrewarm(mm.free); _whopPrewarm(mm.starter); _whopPrewarm(mm.pro); }catch(e){}
 }
