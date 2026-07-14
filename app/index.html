@@ -6319,22 +6319,22 @@ const UPGRADE_PLANS = {
     label: 'Passer en Pro', badge: 'PRO',
     price: '49,99€',
     features: [
-      { icon: '⚡', text: '<strong>550 crédits</strong> / mois — au lieu de 150' },
-      { icon: '🖼', text: 'Images IA qualité <strong>Premium</strong>' },
-      { icon: '📺', text: 'Export <strong>1080p</strong>' },
-      { icon: '🎙', text: 'Transcription automatique incluse' },
-      { icon: '🔮', text: 'Tout Starter inclus' },
+      { icon: '✓', text: '<strong>AvatarAds × Claude</strong> — génère en parlant à Claude' },
+      { icon: '✓', text: '<strong>550 crédits</strong> / mois — au lieu de 150' },
+      { icon: '✓', text: 'Qualité <strong>Premium</strong> images & vidéos' },
+      { icon: '✓', text: 'Suppression des silences avancée' },
+      { icon: '✓', text: 'Voice Design ElevenLabs' },
     ],
   },
   pro: {
     label: 'Passer en Elite', badge: 'ELITE',
     price: '89,99€',
     features: [
-      { icon: '⚡', text: '<strong>1100 crédits</strong> / mois — le double de Pro' },
-      { icon: '🚀', text: 'Express en <strong>Veo Fast</strong> (qualité max)' },
-      { icon: '⏱', text: 'Vidéos Express longues (15 à 29 s)' },
-      { icon: '🖼', text: 'Images IA qualité <strong>4K</strong>' },
-      { icon: '📈', text: 'Paliers ×2 / ×3 jusqu\'à 3300 crédits / mois' },
+      { icon: '✓', text: '<strong>1100 crédits</strong> / mois — le double de Pro' },
+      { icon: '✓', text: 'Génération vidéo <strong>prioritaire</strong>' },
+      { icon: '✓', text: 'Export vidéo + image <strong>4K</strong>' },
+      { icon: '✓', text: '<strong>Coût par crédit le plus bas</strong>' },
+      { icon: '✓', text: 'Support prioritaire + accès anticipé' },
     ],
   },
 };
@@ -6376,7 +6376,7 @@ function openCreditsModal(mode, force, missing){
     const feat = document.getElementById('upgradePlanFeatures');
     feat.innerHTML = upg.features.map(f =>
       `<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)">
-        <span style="font-size:14px;flex-shrink:0">${f.icon}</span>
+        <span style="font-size:14px;flex-shrink:0;color:#22c55e;font-weight:800">${f.icon}</span>
         <span>${f.text}</span>
       </div>`
     ).join('');
