@@ -126,7 +126,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="row" style="justify-content:center;gap:22px;margin-top:40px;flex-wrap:wrap">
     <span class="faint mono" style="font-size:12px">✓ Paiement sécurisé Whop</span>
     <span class="faint mono" style="font-size:12px">↻ Annulation à tout moment</span>
-    <span class="faint mono" style="font-size:12px">🔒 Sans carte pour l'essai</span>
   </div>
   <div class="card" style="max-width:1180px;margin:40px auto 0;padding:26px 30px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
     <div style="max-width:680px">
@@ -185,8 +184,8 @@ const PLANS=[
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
     price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
     credits:550, equiv:'550 secondes de vidéo', extra:'Images/Vidéo Premium', bonus:'+50', note:'soit 1,67€/jour',
-    listHead:'TOUT STARTER, PLUS :', feats:['AvatarAds × Claude','Suppression des silences avancée','Qualité Premium images & vidéos','Sous-titres synchronisés à l\'audio','Voice Design ElevenLabs'] },
-  { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux. Choisis ta puissance.',
+    listHead:'TOUT STARTER, PLUS :', feats:['AvatarAds × Claude<span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">EXCLU</span>','Suppression des silences avancée','Qualité Premium images & vidéos','Sous-titres synchronisés à l\'audio','Voice Design ElevenLabs'] },
+  { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux.',
     accent:'var(--violet)',
     note:'paiement mensuel · sans engagement',
     listHead:'TOUT PRO, PLUS :', feats:['Génération vidéo prioritaire','Export vidéo + image 4K','Bibliothèque de clips illimitée','Coût par crédit le plus bas','Support prioritaire + accès anticipé'] },
@@ -241,7 +240,7 @@ function renderPricing(){
     // Liste features
     var feats='<div class="mono" style="font-size:10.5px;letter-spacing:.14em;color:var(--text-3);margin:22px 0 12px">'+pl.listHead+'</div><div class="col" style="gap:11px">';
     for(var k=0;k<pl.feats.length;k++){
-      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;color:var(--green);font-size:14px;line-height:1.45;font-weight:800">✓</span><span style="line-height:1.45">'+pl.feats[k]+'</span></div>';
+      feats+='<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="flex:0 0 auto;color:var(--green);font-size:14px;line-height:1.45;font-weight:800">✓</span><span style="line-height:1.45;flex:1">'+pl.feats[k]+'</span></div>';
     }
     feats+='</div>';
     html+='<div class="card" style="padding:26px 24px;position:relative;overflow:visible;border-color:'+borderColor+';background:'+bg+';box-shadow:'+shadow+'">'
