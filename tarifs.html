@@ -200,7 +200,6 @@ function _quotaBox(pl, tier){
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
-    +'<span style="color:'+(violet?'var(--violet)':'var(--accent-2)')+';font-size:17px">⚡</span>'
     +'<span'+(violet?' id="lpEliteAv"':'')+' class="display" style="font-size:27px;font-weight:800;color:'+(violet?'var(--violet)':'var(--text)')+'">'+av+'</span>'
     +'<span style="font-weight:700;font-size:15px">crédits / mois</span>'
     +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">offerts</span></span>':'')
