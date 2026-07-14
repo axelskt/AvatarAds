@@ -5618,13 +5618,15 @@ let _sheetAnnual = false;
 // le contenu, ex. le slider Élite, dépasse ; ici on ne dépend d'aucune hauteur magique).
 // Garantit l'alignement des prix et des boutons « Choisir » quel que soit le navigateur.
 function _equalizeCredBoxes(){
-  const boxes = [...document.querySelectorAll('#plansSheet .credBox')];
+  const ps = document.getElementById('plansSheet');
+  if(!ps || ps.style.display === 'none') return;            // seulement quand le sheet est visible
+  const boxes = [...ps.querySelectorAll('.credBox')];
   if(boxes.length < 2) return;
   boxes.forEach(b => { b.style.minHeight = ''; });          // reset avant mesure
   // lire offsetHeight force un reflow synchrone → mesure fiable, sans dépendre de rAF
   let max = 0;
   boxes.forEach(b => { max = Math.max(max, b.offsetHeight); });
-  boxes.forEach(b => { b.style.minHeight = max + 'px'; });   // toutes à la plus grande
+  if(max > 0) boxes.forEach(b => { b.style.minHeight = max + 'px'; }); // toutes à la plus grande
 }
 window.addEventListener('resize', () => {
   const ps = document.getElementById('plansSheet');
@@ -5659,7 +5661,12 @@ function showPlansSheet(){
   _syncSheetPlanButtons();
   document.getElementById('plansSheet').style.display = 'block';
   document.body.style.overflow = 'hidden';
-  _equalizeCredBoxes(); // aligne prix/boutons : égalise les 3 boîtes crédits (fiable Safari)
+  // Aligne prix/boutons : égalise les 3 boîtes crédits. Re-mesure après le chargement des
+  // polices (sinon Safari mesure au mauvais moment) + filets pour le layout tardif.
+  _equalizeCredBoxes();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(_equalizeCredBoxes);
+  setTimeout(_equalizeCredBoxes, 200);
+  setTimeout(_equalizeCredBoxes, 700);
   // Préchauffe les checkouts en fond → le clic sur un plan ouvre le paiement INSTANTANÉMENT
   try{ const mm=PLAN_CHECKOUT_URLS.monthly; _whopPrewarm(mm.free); _whopPrewarm(mm.starter); _whopPrewarm(mm.pro); }catch(e){}
 }
