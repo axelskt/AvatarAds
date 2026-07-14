@@ -214,6 +214,9 @@ function _quotaBox(pl, tier){
     }
     h+='<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+idx+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;margin-top:12px;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
       +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>';
+  } else {
+    // Réserve invisible = même hauteur que le slider d'Élite → les 3 boîtes crédits ont la même hauteur (prix/boutons alignés, tous navigateurs)
+    h+='<div aria-hidden="true" style="visibility:hidden;pointer-events:none"><input type="range" class="elite-range" style="width:100%;margin-top:12px" tabindex="-1"><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-family:var(--mono);font-size:11px">30</span><span style="font-family:var(--mono);font-size:11px">60</span><span style="font-family:var(--mono);font-size:11px">90</span></div></div>';
   }
   return h+'</div>';
 }
