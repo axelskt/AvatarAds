@@ -201,9 +201,11 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .hero-left form>div:first-child svg{width:15px;height:15px}
   .hero-left #lpPrompt{font-size:13px !important;padding:0 8px !important}
   .hero-left form button[type=submit]{padding:13px 20px !important;font-size:15.5px !important}
-  .hero-left .trust-row{flex-direction:column;justify-content:center !important;margin-top:20px !important;gap:10px !important}
+  .hero-left .trust-row{flex-direction:row !important;flex-wrap:nowrap !important;justify-content:space-between !important;align-items:center;width:100%;margin-top:18px !important;gap:8px !important}
+  .hero-left .trust-row .pill{padding:6px 10px !important;font-size:11px !important;gap:5px !important}
+  .hero-left .trust-row>div:last-child{font-size:11px !important;text-align:right}
   /* Hero showcase — vraie variante mobile (proto k=.72) */
-  .hero2-show{height:443px !important;width:100%;max-width:360px;margin:34px auto 8px !important;padding-top:40px;animation:none !important}
+  .hero2-show{height:443px !important;width:100%;max-width:360px;margin:8px auto 8px !important;padding-top:40px;animation:none !important}
   .hp-glow{width:380px !important;height:380px !important}
   .hp-left{left:2% !important;top:96px !important;width:121px !important;height:242px !important}
   .hp-right{right:2% !important;top:109px !important;width:121px !important;height:242px !important}
@@ -721,7 +723,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 /* ══════════ Mobile : placeholder court de la PromptBar ══════════ */
 (function(){
   var inp=document.getElementById('lpPrompt');
-  if(inp && window.innerWidth<=760) inp.placeholder='Décris ta vidéo…';
+  if(inp && window.innerWidth<=760) inp.placeholder='Décris ta vidéo à générer…';
 })();
 
 /* ══════════ Slider avant/après Images IA (mobile) ══════════ */
