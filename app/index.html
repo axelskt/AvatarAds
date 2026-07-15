@@ -923,38 +923,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- STEP 2 -->
           <div id="fs-2" style="display:none">
 
-            <!-- ── CLIP PICKER compact (gameplay) — visible seulement si Split Screen ON ── -->
-            <div id="clipPickerSection" style="margin-bottom:16px;display:none">
-              <!-- Aucun clip sélectionné -->
-              <div id="clipNoSelRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
-                <div style="flex:1">
-                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Clip gameplay</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — fond vidéo animé</div>
-                </div>
-                <span id="clipDurLabel" style="font-size:9px;font-family:var(--mono);color:var(--text3)"></span>
-                <button onclick="openClipPickerModal()" style="padding:5px 11px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Choisir</button>
-              </div>
-              <!-- Clip sélectionné -->
-              <div id="clipSelectedBadge" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
-                <span id="clipSelEmo" style="font-size:18px">🎬</span>
-                <div style="flex:1;min-width:0">
-                  <span id="clipSelectedLabel" style="font-size:12px;font-weight:700;color:var(--orange2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"></span>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire</div>
-                </div>
-                <button onclick="openClipPickerModal()" style="padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">Changer</button>
-                <button onclick="clearSelectedClip()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
-              </div>
-              <!-- Grid caché — requis pour renderClipGrid() -->
-              <div id="clipGrid" style="display:none"></div>
-            </div>
-
-            <div id="clipOrAvatarDivider" style="display:none;align-items:center;gap:10px;margin-bottom:12px">
-              <div style="flex:1;height:1px;background:var(--border)"></div>
-              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">ou ajoute un avatar</span>
-              <div style="flex:1;height:1px;background:var(--border)"></div>
-            </div>
-
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
             <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
               <div style="display:flex;align-items:center;gap:10px">
@@ -970,6 +938,28 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- Panneau split (étape Avatar) : bouton inverser quand le split est actif -->
             <div id="splitPanelStep2" style="display:none;margin-bottom:16px;padding:12px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <!-- ── CLIP PICKER (gameplay) — juste au-dessus du bouton Inverser ── -->
+              <div id="clipPickerSection" style="margin-bottom:12px">
+                <div id="clipNoSelRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg4);border:1.5px dashed var(--border2);border-radius:10px">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:600;color:var(--text3)">Clip gameplay</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — fond vidéo animé</div>
+                  </div>
+                  <span id="clipDurLabel" style="font-size:9px;font-family:var(--mono);color:var(--text3)"></span>
+                  <button onclick="openClipPickerModal()" style="padding:5px 11px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Choisir</button>
+                </div>
+                <div id="clipSelectedBadge" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
+                  <span id="clipSelEmo" style="font-size:18px">🎬</span>
+                  <div style="flex:1;min-width:0">
+                    <span id="clipSelectedLabel" style="font-size:12px;font-weight:700;color:var(--orange2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"></span>
+                    <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire</div>
+                  </div>
+                  <button onclick="openClipPickerModal()" style="padding:4px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer">Changer</button>
+                  <button onclick="clearSelectedClip()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 4px">✕</button>
+                </div>
+                <div id="clipGrid" style="display:none"></div>
+              </div>
               <button onclick="swapSplit()" style="width:100%;padding:10px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser clip ⇄ Avatar</button>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:7px">Échange la position du clip et de l'avatar (haut / bas)</div>
             </div>
@@ -1311,22 +1301,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- ══ DÉBRUITAGE (#69) — option combinée à « Supprimer les silences » ══ -->
-            <div class="fld" style="margin-top:18px">
-              <div onclick="_genToggleDenoise()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg>
-                  <div>
-                    <div style="font-size:12px;font-weight:700">Supprimer les bruits de fond</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Inclus avec la suppression des silences · sans crédit en plus</div>
-                  </div>
-                </div>
-                <div id="genDenoiseSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
-                  <div id="genDenoiseThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
-                </div>
-              </div>
-            </div>
-
             <!-- ══ SILENCE REMOVAL ══ -->
             <div class="fld" style="margin-top:18px">
               <div onclick="toggleSilenceTool()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -1360,6 +1334,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <input type="hidden" id="silenceMinDurSlider" value="400">
                 <input type="hidden" id="silencePaddingSlider" value="80">
 
+                <!-- ══ DÉBRUITAGE (#69) — option, appliquée par le bouton ci-dessous ══ -->
+                <div onclick="_genToggleDenoise()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;margin-bottom:12px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg>
+                    <div>
+                      <div style="font-size:12px;font-weight:700">Supprimer les bruits de fond</div>
+                      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Inclus avec la suppression des silences · sans crédit en plus</div>
+                    </div>
+                  </div>
+                  <div id="genDenoiseSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                    <div id="genDenoiseThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+                  </div>
+                </div>
                 <!-- ONE button -->
                 <button id="silenceAnalyzeBtn" onclick="analyzeSilences()" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px var(--orange-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Supprimer les silences automatiquement</span></button>
 
@@ -1788,20 +1775,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- MODÈLE IA AVATAR -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>Modèle IA Avatar</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div style="display:grid;grid-template-columns:1fr;gap:6px">
                 <button onclick="pickModel('character3',this)" id="modelBtn-character3" class="model-btn on" style="padding:9px 6px;background:var(--orange-dim);border:1.5px solid rgba(255,107,53,0.5);border-radius:9px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
                   <div style="font-weight:700;font-size:11px">Character 3</div>
                   <div style="font-size:9px;margin-top:2px;opacity:.8">Hedra · ✅ Défaut</div>
                 </button>
-                <button onclick="pickModel('kling',this)" id="modelBtn-kling" class="model-btn" style="padding:9px 6px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700;font-size:11px">Kling Standard</div>
-                  <div style="font-size:9px;margin-top:2px;opacity:.8">Kling AI · 🧪 Test</div>
-                </button>
               </div>
             </div>
 
-            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 (en bas) -->
-            <div class="fld" style="margin-bottom:8px">
+            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 (en bas) — masqué si un gameplay est déjà uploadé -->
+            <div class="fld" id="clipSectionS4" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>Clip Gameplay</div>
               <!-- Aucun clip -->
               <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
@@ -9081,6 +9064,12 @@ function updateSteps(){
   document.getElementById('resultArea').style.display='none';
   document.getElementById('genProgArea').style.display='none';
   _updateReuseBar();
+  if(typeof _syncClipSectionS4==='function') _syncClipSectionS4();
+}
+// #clipS4 · masque le sélecteur « Clip Gameplay » (étape Style) si un gameplay est déjà uploadé
+function _syncClipSectionS4(){
+  const sec = document.getElementById('clipSectionS4');
+  if(sec) sec.style.display = (typeof gameplayFile !== 'undefined' && gameplayFile) ? 'none' : '';
 }
 
 function goToStep(n){
@@ -9953,6 +9942,7 @@ function removeAvatar(){
 }
 function removeGameplay(){
   gameplayFile = null;
+  if(typeof _syncClipSectionS4==='function') _syncClipSectionS4(); // #clipS4 · plus de gameplay → réaffiche le sélecteur de clip en Style
   const lbl3 = document.getElementById('gpStep3FileLabel');
   if(lbl3) lbl3.textContent = '';
   const gpDropContent = document.getElementById('gameplayDropContent');
@@ -10718,6 +10708,7 @@ function handleGameplayFile(file){
   // Reset crop à 0 (centré) pour le nouveau gameplay
   cfg.gpCropX = 0; cfg.gpCropY = 0;
   gameplayFile = file;
+  if(typeof _syncClipSectionS4==='function') _syncClipSectionS4(); // #clipS4 · gameplay uploadé → masque le sélecteur de clip en Style
   _idbSave('gameplay', file); // persistance entre rechargements
   document.getElementById('gameplayFileName').textContent = file.name;
   document.getElementById('gameplayDropContent').style.display = 'none';
@@ -13928,21 +13919,12 @@ setInterval(() => {
     _saveSession();
 }, 15000);
 
-function resetAll(){
-  step=1; updateSteps();
-  results={script:'',audioBlob:null,hedraUrl:''};
-  // Vider le preview vidéo phone
-  const bpv = document.getElementById('bypassPreviewVid');
-  if(bpv){ bpv.pause(); bpv.src=''; bpv.style.display='none'; }
-  whisperWordTimestamps = [];
-  _wordGroups = null;
-  silenceKeepSegs = [];
+async function resetAll(){
+  // Réinitialisation TOTALE : on efface tout l'état persisté puis on recharge la page
+  // → repart 100% à zéro (script, avatar, voix, clip, gameplay, split, options, sous-titres, preview…)
   try { localStorage.removeItem('avatarads_session'); localStorage.removeItem('avatarads_tapSync'); } catch(e){}
-  _idbDelete('mp4audio'); _idbDelete('gameplay'); // nettoie les fichiers persistés
-  document.getElementById('previewArea').style.display='flex';
-  document.getElementById('genProgArea').style.display='none';
-  document.getElementById('resultArea').style.display='none';
-  document.getElementById('mainBtn').onclick=handleMainBtn;
+  try { await _idbDelete('mp4audio'); await _idbDelete('gameplay'); } catch(e){}
+  location.reload();
 }
 
 // ── AUDIO ──
