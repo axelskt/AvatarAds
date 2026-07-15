@@ -5027,6 +5027,44 @@ function _loadLibrary(){
 }
 _loadLibrary();
 
+// ── Sauvegarde automatique dans la Bibliothèque (audio + vidéo) — nettoyage audio / enregistreur / Express ──
+async function _libAutoSaveAudio(file, name, durLabel, emo){
+  try{
+    const idbKey = 'lib_audio_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    await _idbSave(idbKey, file);
+    library.unshift({
+      type:'audio', emo: emo||'🎧', name: name||'Audio',
+      tags: ['audio'].concat(durLabel ? [durLabel] : []),
+      status:'done', style:'AUDIO',
+      bg:'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))',
+      script:'', hedraUrl:'', idbKey,
+      date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+    });
+    _saveLibrary();
+    const lv = document.getElementById('v-library');
+    if(lv && lv.classList.contains('on') && typeof renderLibrary==='function') renderLibrary();
+    toast('✅ « ' + (name||'Audio') + ' » ajouté à la Bibliothèque');
+  }catch(e){ console.warn('libAutoSaveAudio:', e); }
+}
+async function _libAutoSaveVideo(blob, name, tags, emo, style){
+  try{
+    const hedraIdbKey = 'lib_video_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    await _idbSave(hedraIdbKey, new File([blob], (name||'video') + '.mp4', { type:'video/mp4' }));
+    library.unshift({
+      type:'video-simple', emo: emo||'⚡', name: name||'Vidéo',
+      tags: (tags && tags.length) ? tags : ['vidéo','9:16'],
+      status:'done', style: style||'EXPRESS',
+      bg: (typeof randBg==='function' ? randBg() : 'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))'),
+      script:'', hedraUrl:'', hedraIdbKey,
+      date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+    });
+    _saveLibrary();
+    const lv = document.getElementById('v-library');
+    if(lv && lv.classList.contains('on') && typeof renderLibrary==='function') renderLibrary();
+    toast('✅ « ' + (name||'Vidéo') + ' » ajoutée à la Bibliothèque');
+  }catch(e){ console.warn('libAutoSaveVideo:', e); }
+}
+
 // Member session
 let currentMember = null; // {id, email, plan, credits_remaining, is_owner, videos_used, quota_reset_date}
 
@@ -8343,6 +8381,12 @@ async function recOnStop(){
   document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
   document.getElementById('recTimeline').style.display='none'; // single segment = no timeline yet
   toast('✅ Enregistrement prêt');
+  // Sauvegarde auto dans la Bibliothèque
+  try{
+    const _wav = _recToWav(recAudioBuffer);
+    const _nm  = (typeof _recNextAudioName==='function') ? _recNextAudioName() : ('Enregistrement ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+    _libAutoSaveAudio(new File([_wav], _nm + '.wav', { type:'audio/wav' }), _nm, _recFmt(recAudioBuffer.duration), '🎙️');
+  }catch(e){ console.warn('rec autosave:', e); }
 }
 
 // ── Import fichier audio/vidéo dans l'enregistreur ──
@@ -17966,6 +18010,11 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
   const url=URL.createObjectURL(finalBlob);
   const sizeMb=(finalBlob.size/1024/1024).toFixed(1);
   toast('✓ Express '+qCfg.label+' prête ('+sizeMb+' Mo) — téléchargement…');
+  // Sauvegarde auto dans la Bibliothèque
+  try{
+    const _nm = 'Express ' + qCfg.label + ' ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    _libAutoSaveVideo(finalBlob, _nm, ['Express', qCfg.label], '⚡', 'EXPRESS');
+  }catch(e){ console.warn('express autosave:', e); }
   if(compFill) compFill.style.width='100%'; if(compPct) compPct.textContent='100%';
   const a=document.createElement('a');
   a.href=url; a.download='avatarads-express-'+qCfg.label+'.mp4';
@@ -18878,6 +18927,9 @@ async function _acToggleDenoise(){
     _acDenoiseOn = true; _acSetDenoiseSwitch(true);
     if(prog) prog.style.display = 'none';
     _acRenderDenoiseResult(file, cleaned);
+    // Sauvegarde auto dans la Bibliothèque
+    { const _nm = 'Audio débruité ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      _libAutoSaveAudio(new File([cleaned], _nm + '.wav', { type:'audio/wav' }), _nm, '', '🎧'); }
     toast('✓ Bruits de fond supprimés');
   } catch(e){
     console.error('denoise error:', e);
@@ -19082,6 +19134,11 @@ async function _acAnalyze(){
     if(tipEl) tipEl.style.display = 'none';
     if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
     toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
+    // Sauvegarde auto dans la Bibliothèque
+    if(_acCleanBlob){
+      const _nm = 'Audio nettoyé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      _libAutoSaveAudio(new File([_acCleanBlob], _nm + '.wav', { type:'audio/wav' }), _nm, cleanS + 's', '🪄');
+    }
 
   } catch(e){
     console.error('_acAnalyze:', e);
