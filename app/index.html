@@ -3767,6 +3767,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="edAddSfxAtPlayhead('magic')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">✨ Magie</button>
                   <button onclick="edAddSfxAtPlayhead('click')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🖱 Click</button>
                   <button onclick="edAddSfxAtPlayhead('buzz')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#f87171">🚫 Erreur</button>
+                  <button onclick="edAddSfxAtPlayhead('flash')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(226,232,240,.5);background:rgba(226,232,240,.12);color:#e2e8f0">📸 Flash</button>
+                  <button onclick="edAddSfxAtPlayhead('snap')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fbbf24">🫰 Clac</button>
                 </div>
                 <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
               </div>
@@ -20392,6 +20394,8 @@ function _edNoise(ac,dur){ const len=Math.floor(ac.sampleRate*dur); const buf=ac
 function _edTone(ac,g,type,f0,f1,t,dur,peak){ const o=ac.createOscillator(); o.type=type; o.frequency.setValueAtTime(f0,t); if(f1) o.frequency.exponentialRampToValueAtTime(f1,t+dur); const e=ac.createGain(); e.gain.setValueAtTime(0.0001,t); e.gain.exponentialRampToValueAtTime(peak,t+0.012); e.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(e); e.connect(g); try{o.start(t);o.stop(t+dur+0.02);}catch(err){} }
 function _edBlip(ac, outs, type, when){
   const t=when||ac.currentTime; const g=ac.createGain(); outs.forEach(n=>{try{g.connect(n);}catch(e){}});
+  // #93 · petit transitoire de bruit filtré à l'attaque → rend les percussions plus réalistes (« claque » du réel)
+  const _tick=(peak,freq,dur)=>{ dur=dur||0.02; const s=_edNoise(ac,dur); const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=freq||2000; const eg=ac.createGain(); eg.gain.setValueAtTime(peak,t); eg.gain.exponentialRampToValueAtTime(0.0001,t+dur); s.connect(hp); hp.connect(eg); eg.connect(g); try{s.start(t);s.stop(t+dur+0.01);}catch(e){} };
   switch(type){
     case 'whoosh': {
       const src=_edNoise(ac,0.3); const bp=ac.createBiquadFilter(); bp.type='bandpass';
@@ -20399,8 +20403,9 @@ function _edBlip(ac, outs, type, when){
       g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
       src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.32);}catch(e){} break;
     }
-    case 'ding': { _edTone(ac,g,'triangle',880,null,t,0.4,0.35); break; }
+    case 'ding': { _edTone(ac,g,'triangle',880,null,t,0.4,0.32); _edTone(ac,g,'sine',2640,null,t,0.16,0.1); break; } // #93 partiel inharmonique = plus « cloche »
     case 'boom': {
+      _tick(0.3,700,0.025); // #93 attaque
       const src=_edNoise(ac,0.5); const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(220,t);
       g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.6,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
       src.connect(lp); lp.connect(g); try{src.start(t);src.stop(t+0.52);}catch(e){}
@@ -20418,10 +20423,22 @@ function _edBlip(ac, outs, type, when){
     case 'success': { _edTone(ac,g,'triangle',523,null,t,0.12,0.3); _edTone(ac,g,'triangle',659,null,t+0.1,0.12,0.3); _edTone(ac,g,'triangle',784,null,t+0.2,0.22,0.32); break; }
     case 'magic': { for(let k=0;k<5;k++){ _edTone(ac,g,'sine',1200+k*400+Math.random()*200,2800+k*300,t+k*0.04,0.18,0.16); } break; }
     case 'hit': {
+      _tick(0.4,1500,0.018); // #93 attaque sèche
       const src=_edNoise(ac,0.12); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
       src.connect(g); try{src.start(t);src.stop(t+0.14);}catch(e){} _edTone(ac,g,'sine',180,60,t,0.12,0.4); break;
     }
+    case 'flash': { // #80 · déclencheur appareil photo : deux clics mécaniques rapprochés
+      [0,0.055].forEach((off,i)=>{ const s=_edNoise(ac,0.05); const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=i?1100:2600; const eg=ac.createGain(); eg.gain.setValueAtTime(0.0001,t+off); eg.gain.exponentialRampToValueAtTime(i?0.5:0.32,t+off+0.002); eg.gain.exponentialRampToValueAtTime(0.0001,t+off+0.045); s.connect(hp); hp.connect(eg); eg.connect(g); try{s.start(t+off);s.stop(t+off+0.06);}catch(e){} });
+      break;
+    }
+    case 'snap': { // #80 · clac de doigts : transitoire large-bande + résonance ~2 kHz + petit corps grave
+      const src=_edNoise(ac,0.06); const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2000; bp.Q.value=1.6;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.55,t+0.001); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+      src.connect(bp); bp.connect(g); try{src.start(t);src.stop(t+0.07);}catch(e){}
+      _edTone(ac,g,'sine',240,90,t,0.05,0.16); break;
+    }
     default: { // pop / gloup
+      _tick(0.12,3200,0.01); // #93 micro-attaque « plop »
       const o=ac.createOscillator(); o.type='sine';
       o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(720,t+0.07); o.frequency.exponentialRampToValueAtTime(240,t+0.16);
       g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
@@ -20431,7 +20448,7 @@ function _edBlip(ac, outs, type, when){
 }
 function _edSfxAc(){ if(!_ed) return null; if(_ed.audio&&_ed.audio.ac) return _ed.audio.ac; if(!_ed._sfxAc){ try{ const AC=window.AudioContext||window.webkitAudioContext; _ed._sfxAc=new AC(); }catch(e){ _ed._sfxAc=null; } } return _ed._sfxAc; }
 function edPlaySfxPreview(type){ const ac=_edSfxAc(); if(!ac) return; if(ac.state==='suspended'){ try{ac.resume();}catch(e){} } _edBlip(ac,[ac.destination],type); }
-const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding', boom:'Boom', click:'Click', riser:'Riser', coin:'Coin', buzz:'Erreur', success:'Succès', magic:'Magie', hit:'Impact' };
+const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding', boom:'Boom', click:'Click', riser:'Riser', coin:'Coin', buzz:'Erreur', success:'Succès', magic:'Magie', hit:'Impact', flash:'Flash', snap:'Clac' };
 function edAddSfx(type,t){ if(!_ed) return; if(!_ed.sfx) _ed.sfx=[]; _ed.sfx.push({ id:'sfx'+Date.now()+Math.random().toString(36).slice(2,6), type, t:Math.max(0,t||0), len:0.6, label:_SFX_LABEL[type]||'Son' }); edRenderSfxTrack(); }
 function edAddSfxAtPlayhead(type){ if(!_ed) return; edSnap(); edAddSfx(type, edGlobalNow()); edPlaySfxPreview(type); toast('🔊 Son ajouté au curseur'); }
 function edRemoveSfx(id){ if(!_ed||!_ed.sfx) return; edSnap(); _ed.sfx=_ed.sfx.filter(s=>s.id!==id); edRenderSfxTrack(); toast('🗑 Son retiré'); }
