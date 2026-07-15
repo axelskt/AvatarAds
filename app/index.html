@@ -1888,9 +1888,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <span id="hookText" style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:0.5px #000;text-shadow:1px 1px 3px rgba(0,0,0,.9);line-height:1.3;display:inline-block"></span>
               </div>
 
-              <!-- SUBTITLES -->
-              <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:75%;width:90%">
-                <div id="subsContent" style="pointer-events:auto;cursor:grab;touch-action:none;display:inline-block" title="Glisse pour déplacer les sous-titres"><span style="font-family:Impact,sans-serif;font-size:18px;color:#FFE500;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">PASSE</span><span style="font-family:Impact,sans-serif;font-size:18px;color:#ffffff;-webkit-text-stroke:1px #000;text-shadow:2px 2px 4px rgba(0,0,0,.9);margin:0 2px">À</span></div>
+              <!-- SUBTITLES · masqués par défaut, révélés à l'arrivée sur l'étape Style (aucun placeholder « PASSE À L'ACTION ») -->
+              <div id="subsOverlay" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;padding:0 8px;z-index:50;pointer-events:none;top:75%;width:90%;visibility:hidden">
+                <div id="subsContent" style="pointer-events:auto;cursor:grab;touch-action:none;display:inline-block" title="Glisse pour déplacer les sous-titres"></div>
               </div>
 
               <!-- ── TIKTOK ── -->
@@ -5698,6 +5698,12 @@ async function initAuth(){
     if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
     await loadProfile(session.user);
   }
+  // Filet de sécurité : si aucune session valide n'a ouvert l'app (session absente/expirée, ou profil non chargé),
+  // on ré-affiche le login (au cas où on l'aurait masqué optimistiquement au boot pour éviter le flash).
+  if(!currentMember){
+    const ov = document.getElementById('loginOverlay');
+    if(ov) ov.style.display = 'grid';
+  }
   // Écouter les changements de session (retour OAuth Google inclus)
   sb.auth.onAuthStateChange(async (_event, session) => {
     if(session && session.user && !currentMember){
@@ -9032,6 +9038,9 @@ function updateSteps(){
   // Mobile : petite marge sous le bouton uniquement à l'étape 1 (Produit)
   var _gf=document.getElementById('genFooter');
   if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
+  // Sous-titres : auto-activés à l'arrivée sur Style (4) et restent visibles si on revient en arrière
+  if(step>=4){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  else if(typeof _syncSubsPreviewVisibility==='function'){ _syncSubsPreviewVisibility(); }
   if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
@@ -9992,26 +10001,61 @@ function updateVoicePresetLabel(name){
 
 // ── SUBTITLES TOGGLE ──
 let subtitlesEnabled = true;
+window._reachedStyle = window._reachedStyle || false; // vrai dès que l'user a atteint l'étape Style (4)
 function toggleSubtitles(){
   subtitlesEnabled = !subtitlesEnabled;
+  _syncSubtitleToggleUI();
+}
+// Met à jour le switch + le label des sous-titres selon subtitlesEnabled, puis la visibilité preview
+function _syncSubtitleToggleUI(){
   const sw    = document.getElementById('subtitlesSwitch');
   const thumb = document.getElementById('subtitlesThumb');
   const lbl   = document.getElementById('subtitlesToggleLabel');
   const row   = document.getElementById('subtitlesToggleRow');
-  const overlay = document.getElementById('subsOverlay');
-  if(subtitlesEnabled){
-    sw.style.background = 'var(--orange)';
-    thumb.style.left = '21px';
-    lbl.textContent = 'Activés — style ' + _subStyleLabel(selSubStyle);
-    row.style.borderColor = 'rgba(255,107,53,0.3)';
-    if(overlay) overlay.style.visibility = 'visible';
-  } else {
-    sw.style.background = 'var(--bg5)';
-    thumb.style.left = '3px';
-    lbl.textContent = 'Désactivés';
-    row.style.borderColor = 'var(--border)';
-    if(overlay) overlay.style.visibility = 'hidden';
+  if(sw){
+    if(subtitlesEnabled){
+      sw.style.background = 'var(--orange)';
+      if(thumb) thumb.style.left = '21px';
+      if(lbl)   lbl.textContent = 'Activés — style ' + _subStyleLabel(selSubStyle);
+      if(row)   row.style.borderColor = 'rgba(255,107,53,0.3)';
+    } else {
+      sw.style.background = 'var(--bg5)';
+      if(thumb) thumb.style.left = '3px';
+      if(lbl)   lbl.textContent = 'Désactivés';
+      if(row)   row.style.borderColor = 'var(--border)';
+    }
   }
+  _syncSubsPreviewVisibility();
+}
+// Les sous-titres n'apparaissent dans la preview qu'une fois l'étape Style atteinte (et s'ils sont activés)
+function _syncSubsPreviewVisibility(){
+  const overlay = document.getElementById('subsOverlay');
+  if(!overlay) return;
+  if(typeof step !== 'undefined' && step >= 4) window._reachedStyle = true;
+  overlay.style.visibility = (window._reachedStyle && subtitlesEnabled) ? 'visible' : 'hidden';
+}
+// Appelé à l'arrivée sur l'étape Style : auto-active les sous-titres (1ère fois) + peuple la preview depuis le vrai script
+function _enterStyleStep(){
+  const firstTime = !window._reachedStyle;
+  window._reachedStyle = true;
+  if(firstTime && !subtitlesEnabled) subtitlesEnabled = true; // auto-activation à la 1ère arrivée sur Style
+  _syncSubtitleToggleUI();
+  if(typeof updateSubPreview === 'function') updateSubPreview();
+  _syncSubsPreviewVisibility();
+}
+// Mots réels du script pour la preview des sous-titres — aucun placeholder « PASSE À L'ACTION »
+function _previewSubWords(){
+  if(typeof _wordGroups !== 'undefined' && _wordGroups && _wordGroups.length) return _wordGroups.flat().filter(Boolean);
+  const chips = [];
+  document.querySelectorAll('#wordEditor span.word-chip').forEach(c => { const t = c.textContent.trim(); if(t) chips.push(t); });
+  if(chips.length) return chips;
+  const fs = document.getElementById('f-script');
+  const ti = document.getElementById('transcriptInput');
+  const vt = document.getElementById('voiceTranscriptTA');
+  const src = (fs && fs.value.trim()) || (ti && ti.value.trim()) || (vt && vt.value.trim())
+            || (typeof pendingTranscript !== 'undefined' && pendingTranscript) || '';
+  if(src) return src.trim().split(/[\s\n]+/).filter(Boolean).map(w => w.toUpperCase().replace(/[.,!?;:"«»]/g, ''));
+  return [];
 }
 
 function handleAvatarFile(file){
@@ -10817,7 +10861,7 @@ function updateSubPreview(){
   const wpg    = cfg.subWpg || 2;
   const lineH  = cfg.subLineH || 1.0;
   const sc     = lineH > 1.0 ? `display:inline-block;transform:scaleY(${lineH.toFixed(2)});transform-origin:center bottom;` : '';
-  const words  = ['PASSE','À','L\'ACTION','MAINTENANT','RÉSULTATS','GARANTIS'];
+  const words  = _previewSubWords(); // mots réels du script (vide si aucun → preview propre)
   const shown  = words.slice(0, Math.min(wpg, words.length));
   const c1     = subColors.c1 || '#FFE500';
   const c2     = subColors.c2 || '#ffffff';
@@ -13797,28 +13841,26 @@ function _syncUIFromState(){
       }
     }
 
-    // 5. Subtitles toggle — directly set DOM to match subtitlesEnabled
+    // 5. Subtitles toggle — sync switch/label + visibilité gérée par _reachedStyle
     {
       const sw      = document.getElementById('subtitlesSwitch');
       const thumb   = document.getElementById('subtitlesThumb');
       const lbl     = document.getElementById('subtitlesToggleLabel');
       const row     = document.getElementById('subtitlesToggleRow');
-      const overlay = document.getElementById('subsOverlay');
       if(sw){
         if(subtitlesEnabled){
           sw.style.background = 'var(--orange)';
           if(thumb) thumb.style.left = '21px';
           if(lbl)   lbl.textContent = 'Activés — style ' + (typeof _subStyleLabel==='function' ? _subStyleLabel(selSubStyle) : (selSubStyle || 'Hormozi'));
           if(row)   row.style.borderColor = 'rgba(255,107,53,0.3)';
-          if(overlay) overlay.style.visibility = 'visible';
         } else {
           sw.style.background = 'var(--bg5)';
           if(thumb) thumb.style.left = '3px';
           if(lbl)   lbl.textContent = 'Désactivés';
           if(row)   row.style.borderColor = 'var(--border)';
-          if(overlay) overlay.style.visibility = 'hidden';
         }
       }
+      if(typeof _syncSubsPreviewVisibility==='function') _syncSubsPreviewVisibility();
     }
 
     // 6. Split toggle — directly set DOM to match splitEnabled
@@ -16311,8 +16353,17 @@ async function uploadToYoutube(){
 }
 
 // ── INIT ──
-// 1. Toujours montrer le login en premier (Supabase vérifiera la session)
-document.getElementById('loginOverlay').style.display = 'grid';
+// 1. Login d'abord — SAUF si une session Supabase est déjà en cache (évite le flash « déconnexion → reconnexion » au reload / reset total)
+(function(){
+  var cached = false;
+  try {
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(k && /^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)){ cached = true; break; }
+    }
+  } catch(e){}
+  document.getElementById('loginOverlay').style.display = cached ? 'none' : 'grid';
+})();
 document.getElementById('setupOverlay').style.display = 'none';
 
 // 2. Vérifier session Supabase existante
