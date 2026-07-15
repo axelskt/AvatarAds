@@ -11799,8 +11799,7 @@ function applyMp4Transcript(text){
 
 function handleMp4AudioFile(file){
   if(!file) return;
-  // #69 · nouveau fichier chargé par l'user → réinitialise le toggle débruitage (pas nos reloads internes)
-  if(typeof _genDenoiseResetOnNewFile === 'function') _genDenoiseResetOnNewFile();
+  // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
 
   // ── Reset de l'ancienne source (évite que l'ancien audio reste) ──
   const el = document.getElementById('mp4AudioEl');
@@ -18847,7 +18846,7 @@ function _acHandleFile(file){
   document.getElementById('acSourceLabel').textContent   = '📂 ' + file.name;
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
-  if(typeof _acDenoiseReset === 'function') _acDenoiseReset(); // #69 · reset toggle débruitage sur nouveau fichier
+  // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
   document.getElementById('acTip').style.display = 'none';
   // Sync file into the generator's silence tool
   if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(file);
