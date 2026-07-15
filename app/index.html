@@ -13719,6 +13719,11 @@ async function _idbDelete(key){
 }
 // Restaure les fichiers sauvegardés en IndexedDB au chargement
 async function _restoreFilesFromIDB(){
+  if(sessionStorage.getItem('aa_full_reset')){ // reset total : ne rien restaurer + purger IDB
+    try { sessionStorage.removeItem('aa_full_reset'); } catch(e){}
+    try { await _idbDelete('mp4audio'); await _idbDelete('gameplay'); } catch(e){}
+    return;
+  }
   try {
     const [audioEntry, gpEntry] = await Promise.all([_idbLoad('mp4audio'), _idbLoad('gameplay')]);
     if(audioEntry){
@@ -13739,6 +13744,7 @@ async function _restoreFilesFromIDB(){
 }
 
 function _saveSession(){
+  if(window._resetting) return; // reset total en cours → ne pas ré-écrire la session
   try {
     const state = _buildSessionState();
     localStorage.setItem('avatarads_session', JSON.stringify(state));
@@ -13864,6 +13870,7 @@ function _syncUIFromState(){
 }
 
 function _restoreSession(){
+  if(sessionStorage.getItem('aa_full_reset')) return; // reset total en cours → ne rien restaurer
   try {
     const saved = JSON.parse(localStorage.getItem('avatarads_session') || 'null');
     if(!saved || saved.v !== 3) return;
@@ -13922,13 +13929,20 @@ setInterval(() => {
     _saveSession();
 }, 15000);
 
-async function resetAll(){
-  // Réinitialisation TOTALE : on efface tout l'état persisté puis on recharge la page
-  // → repart 100% à zéro (script, avatar, voix, clip, gameplay, split, options, sous-titres, preview…)
-  try { localStorage.removeItem('avatarads_session'); localStorage.removeItem('avatarads_tapSync'); } catch(e){}
-  try { await _idbDelete('mp4audio'); await _idbDelete('gameplay'); } catch(e){}
-  location.reload();
+function resetAll(){
+  // Réinitialisation TOTALE : efface TOUT l'état de brouillon puis recharge → repart 100% à zéro
+  // (script, hook, cta, avatar, voix, clip, gameplay, split, options, sous-titres, preview…)
+  // On GARDE : bibliothèque, images générées, avatars/sous-titres presets, voix clonées, réglages compte.
+  window._resetting = true;                         // neutralise les sauvegardes auto pendant le reset
+  try { clearTimeout(_saveStateTimer); } catch(e){}
+  try { sessionStorage.setItem('aa_full_reset','1'); } catch(e){} // au reboot : ne rien restaurer + purger IDB
+  ['avatarads_session','avatarads_tapSync','avatarads_lastHedra','aa_gen_state','aa_bypass_resume']
+    .forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
+  try { _idbDelete('mp4audio'); _idbDelete('gameplay'); } catch(e){} // fire-and-forget (ne bloque jamais)
+  setTimeout(() => location.reload(), 150);          // reload GARANTI, jamais bloqué par IndexedDB
 }
+// Filet de sécurité : le flag de reset total ne doit jamais persister au-delà du boot (sinon un futur brouillon ne serait pas restauré)
+setTimeout(function(){ try{ sessionStorage.removeItem('aa_full_reset'); }catch(e){} }, 2500);
 
 // ── AUDIO ──
 let audioPlaying=false;
@@ -15902,6 +15916,7 @@ async function pickLibVideo(idx){
 // ── GENERATOR STATE PERSISTENCE ──
 let _saveStateTimer = null;
 function _saveGeneratorState(){
+  if(window._resetting) return; // reset total en cours → ne pas ré-écrire l'état
   clearTimeout(_saveStateTimer);
   _saveStateTimer = setTimeout(() => {
     try {
