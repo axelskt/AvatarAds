@@ -1171,18 +1171,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <input type="file" id="voiceFileIn" accept="audio/*,video/*" style="display:none" onchange="handleVoiceFile(this.files[0])">
 
-              <!-- #69 · Débruitage opt-in de l'extrait importé -->
-              <div id="voiceDenoiseWrap" style="display:none;margin-top:10px">
-                <button id="voiceDenoiseBtn" onclick="_genDenoiseVoice()" style="width:100%;padding:11px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s">
-                  🎧 Supprimer les bruits de fond <span style="opacity:.55;font-weight:600;font-size:11px">· 1 crédit</span>
-                </button>
-                <div id="voiceDenoiseProg" style="display:none;margin-top:7px;height:5px;border-radius:3px;background:var(--bg4);overflow:hidden"><div id="voiceDenoiseBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .2s"></div></div>
-                <div id="voiceDenoiseDone" style="display:none;margin-top:8px;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;background:rgba(40,199,149,.1);border:1px solid rgba(40,199,149,.3);border-radius:9px">
-                  <span style="font-size:12px;font-weight:700;color:var(--green)">✓ Bruits de fond supprimés</span>
-                  <button onclick="_genDenoiseRevert()" style="background:none;border:none;color:var(--text-3);font-size:11.5px;font-family:var(--font);font-weight:600;cursor:pointer;text-decoration:underline">↩️ Revenir à l'original</button>
-                </div>
-              </div>
-
               <!-- TRANSCRIPT depuis l'audio -->
               <div id="voiceTranscriptWrap" style="display:none;margin-top:12px">
                 <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">📝 Transcript de l'audio — colle ou tape le texte dit dans la vidéo</div>
@@ -1321,6 +1309,23 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
 
               </div>
+            </div>
+
+            <!-- ══ DÉBRUITAGE (#69) — toggle : ON = nettoie · OFF = revient à l'original ══ -->
+            <div class="fld" style="margin-top:18px">
+              <div onclick="_genToggleDenoise()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">Supprimer les bruits de fond <span style="opacity:.5;font-weight:600;font-size:10px">· 1 crédit</span></div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Clics clavier, souffle, écho… débruite ta voix</div>
+                  </div>
+                </div>
+                <div id="genDenoiseSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="genDenoiseThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+                </div>
+              </div>
+              <div id="genDenoiseProg" style="display:none;margin-top:8px;height:5px;border-radius:3px;background:var(--bg4);overflow:hidden"><div id="genDenoiseBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .2s"></div></div>
             </div>
 
             <!-- ══ SILENCE REMOVAL ══ -->
@@ -3017,12 +3022,20 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             🪄 Supprimer les silences automatiquement
           </button>
 
-          <!-- ══ DÉBRUITAGE (#69) — RNNoise client-side, 1 crédit ══ -->
-          <button id="acDenoiseBtn" class="btn" onclick="_acDenoise()" disabled style="width:100%;margin-top:10px;padding:14px;background:var(--surface);border:1px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-weight:800;cursor:pointer;opacity:.5;transition:opacity .15s">
-            🎧 Supprimer les bruits de fond <span style="opacity:.55;font-weight:600;font-size:12px">· 1 crédit</span>
-          </button>
+          <!-- ══ DÉBRUITAGE (#69) — toggle : ON = nettoie · OFF = revient à l'original ══ -->
+          <div onclick="_acToggleDenoise()" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;margin-top:10px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:11px">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg>
+              <div>
+                <div style="font-size:13.5px;font-weight:700">Supprimer les bruits de fond <span style="opacity:.5;font-weight:600;font-size:11px">· 1 crédit</span></div>
+                <div style="font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:1px">Clics clavier, souffle, écho… débruite ta voix</div>
+              </div>
+            </div>
+            <div id="acDenoiseSwitch" style="width:40px;height:23px;background:var(--bg4);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+              <div id="acDenoiseThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+            </div>
+          </div>
           <div id="acDenoiseProg" style="display:none;margin-top:10px;height:6px;border-radius:4px;background:var(--bg4);overflow:hidden"><div id="acDenoiseProgBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .2s"></div></div>
-          <div id="acDenoiseProgLbl" style="display:none;margin-top:5px;font-family:var(--mono);font-size:11px;color:var(--text-3);text-align:center"></div>
           <div id="acDenoiseResult"></div>
 
           <!-- Waveform avec segments supprimés -->
@@ -9525,59 +9538,57 @@ function handleVoiceFile(file){
   const presetSection = document.getElementById('voice-preset-section');
   if(presetSection) presetSection.classList.add('dimmed');
   if(cloneSection) cloneSection.classList.remove('dimmed');
-  // #69 · reset + affiche le débruitage opt-in
-  _genVoiceOrig = null;
-  const dw = document.getElementById('voiceDenoiseWrap');
-  if(dw){
-    dw.style.display = 'block';
-    const b = document.getElementById('voiceDenoiseBtn');
-    b.style.display = 'flex'; b.disabled = false; b.style.opacity = '1';
-    document.getElementById('voiceDenoiseProg').style.display = 'none';
-    document.getElementById('voiceDenoiseDone').style.display = 'none';
-  }
 }
-// #69 · Débruitage opt-in de l'extrait voix importé (Générateur)
-let _genVoiceOrig = null;
-async function _genDenoiseVoice(){
-  const file = voiceFile;
-  if(!file){ return; }
+// #69 · Débruitage — toggle pill (onglet Audio MP4). ON = nettoie · OFF = revient à l'original.
+let _genDenoiseOn = false, _genDenoiseOrigFile = null, _genDenoiseReloading = false;
+function _genSetDenoiseSwitch(on){
+  const s = document.getElementById('genDenoiseSwitch'), t = document.getElementById('genDenoiseThumb');
+  if(!s || !t) return;
+  s.style.background = on ? 'var(--accent)' : 'var(--bg5)';
+  t.style.left = on ? '19px' : '3px';
+  t.style.opacity = on ? '1' : '.4';
+}
+// Réinitialise le toggle quand un NOUVEAU fichier est chargé par l'utilisateur (pas nos reloads internes)
+function _genDenoiseResetOnNewFile(){
+  if(_genDenoiseReloading) return;
+  _genDenoiseOn = false; _genDenoiseOrigFile = null; _genSetDenoiseSwitch(false);
+  const prog = document.getElementById('genDenoiseProg'); if(prog) prog.style.display = 'none';
+}
+async function _genToggleDenoise(){
+  // OFF → revient à l'original
+  if(_genDenoiseOn){
+    _genDenoiseOn = false; _genSetDenoiseSwitch(false);
+    if(_genDenoiseOrigFile && typeof handleMp4AudioFile === 'function'){
+      _genDenoiseReloading = true; handleMp4AudioFile(_genDenoiseOrigFile); _genDenoiseReloading = false;
+    }
+    _genDenoiseOrigFile = null;
+    toast('↩️ Voix originale restaurée');
+    return;
+  }
+  // ON → débruite la source Audio MP4
+  const src = (typeof mp4AudioFile !== 'undefined' && mp4AudioFile) || window._voiceFileRef || voiceFile;
+  if(!src){ toast('⚠️ Importe d\'abord un audio (MP4 · MP3 · WAV…)'); return; }
   if(_isFreePlan()){ showPlansSheet(); return; }
   if(!(currentMember && currentMember.is_owner) && creditsBalance() < CREDIT_COSTS.denoise){
     _insufficientCredits(CREDIT_COSTS.denoise - creditsBalance()); return;
   }
-  const btn = document.getElementById('voiceDenoiseBtn');
-  const prog= document.getElementById('voiceDenoiseProg');
-  const bar = document.getElementById('voiceDenoiseBar');
-  btn.style.display = 'none';
-  prog.style.display = 'block'; bar.style.width = '0%';
+  const prog = document.getElementById('genDenoiseProg'), bar = document.getElementById('genDenoiseBar');
+  if(prog){ prog.style.display = 'block'; bar.style.width = '0%'; }
   try {
-    const cleaned = await denoiseAudioFile(file, (p)=>{ bar.style.width = Math.round(p*100) + '%'; });
-    if(!(await spendCreditsFor(CREDIT_COSTS.denoise, 'denoise'))){
-      prog.style.display='none'; btn.style.display='flex'; return;
+    const cleaned = await denoiseAudioFile(src, (p)=>{ if(bar) bar.style.width = Math.round(p*100) + '%'; });
+    if(!(await spendCreditsFor(CREDIT_COSTS.denoise, 'denoise'))){ if(prog) prog.style.display = 'none'; return; }
+    _genDenoiseOrigFile = src;
+    if(typeof handleMp4AudioFile === 'function'){
+      _genDenoiseReloading = true; handleMp4AudioFile(cleaned); _genDenoiseReloading = false;
     }
-    _genVoiceOrig = file;
-    voiceFile = cleaned; window._voiceFileRef = cleaned;
-    document.getElementById('voiceFileName').textContent = cleaned.name;
-    if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(cleaned);
-    prog.style.display = 'none';
-    document.getElementById('voiceDenoiseDone').style.display = 'flex';
+    _genDenoiseOn = true; _genSetDenoiseSwitch(true);
+    if(prog) prog.style.display = 'none';
     toast('✓ Bruits de fond supprimés');
   } catch(e){
-    console.error('voice denoise error:', e);
-    prog.style.display = 'none'; btn.style.display = 'flex';
+    console.error('gen denoise error:', e);
+    if(prog) prog.style.display = 'none';
     toast('⚠️ Débruitage impossible — format audio non lisible ?');
   }
-}
-function _genDenoiseRevert(){
-  if(_genVoiceOrig){
-    voiceFile = _genVoiceOrig; window._voiceFileRef = _genVoiceOrig;
-    document.getElementById('voiceFileName').textContent = _genVoiceOrig.name;
-    if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_genVoiceOrig);
-  }
-  document.getElementById('voiceDenoiseDone').style.display = 'none';
-  const btn = document.getElementById('voiceDenoiseBtn');
-  btn.style.display = 'flex'; btn.disabled = false; btn.style.opacity = '1';
-  toast('↩️ Original restauré');
 }
 function autoGenSubtitles(){
   const panel = document.getElementById('transcriptPanel');
@@ -11773,6 +11784,8 @@ function applyMp4Transcript(text){
 
 function handleMp4AudioFile(file){
   if(!file) return;
+  // #69 · nouveau fichier chargé par l'user → réinitialise le toggle débruitage (pas nos reloads internes)
+  if(typeof _genDenoiseResetOnNewFile === 'function') _genDenoiseResetOnNewFile();
 
   // ── Reset de l'ancienne source (évite que l'ancien audio reste) ──
   const el = document.getElementById('mp4AudioEl');
@@ -18814,48 +18827,62 @@ function _acHandleFile(file){
   document.getElementById('acSourceLabel').textContent   = '📂 ' + file.name;
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
-  const dbtn = document.getElementById('acDenoiseBtn');
-  if(dbtn){ dbtn.disabled = false; dbtn.style.opacity = '1'; }
-  const dres = document.getElementById('acDenoiseResult'); if(dres) dres.innerHTML = '';
+  if(typeof _acDenoiseReset === 'function') _acDenoiseReset(); // #69 · reset toggle débruitage sur nouveau fichier
   document.getElementById('acTip').style.display = 'none';
   // Sync file into the generator's silence tool
   if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(file);
 }
 
-// ── #69 · Débruitage dans le module Nettoyage audio ──
-let _acDenoiseOrig = null, _acDenoiseClean = null;
-async function _acDenoise(){
+// ── #69 · Débruitage dans le module Nettoyage audio — toggle : ON = nettoie · OFF = revient à l'original ──
+let _acDenoiseOn = false, _acDenoiseOrig = null, _acDenoiseClean = null;
+function _acSetDenoiseSwitch(on){
+  const s = document.getElementById('acDenoiseSwitch'), t = document.getElementById('acDenoiseThumb');
+  if(!s || !t) return;
+  s.style.background = on ? 'var(--accent)' : 'var(--bg4)';
+  t.style.left = on ? '20px' : '3px';
+  t.style.opacity = on ? '1' : '.4';
+}
+function _acDenoiseReset(){
+  _acDenoiseOn = false; _acDenoiseOrig = null; _acDenoiseClean = null;
+  _acSetDenoiseSwitch(false);
+  const r = document.getElementById('acDenoiseResult'); if(r) r.innerHTML = '';
+  const p = document.getElementById('acDenoiseProg'); if(p) p.style.display = 'none';
+}
+async function _acToggleDenoise(){
+  // OFF → revient à l'original
+  if(_acDenoiseOn){
+    _acDenoiseOn = false; _acSetDenoiseSwitch(false);
+    if(_acDenoiseOrig){
+      _acAudioBlob = _acDenoiseOrig;
+      if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_acDenoiseOrig);
+    }
+    const r = document.getElementById('acDenoiseResult'); if(r) r.innerHTML = '';
+    toast('↩️ Audio original restauré');
+    return;
+  }
+  // ON → débruite (débit après succès, jamais sur échec)
   const file = _acAudioBlob;
   if(!file){ toast('⚠️ Charge un fichier audio d\'abord'); return; }
-  // Free → paywall « à l'action » (le débit réel se fait après succès, jamais sur échec)
   if(_isFreePlan()){ showPlansSheet(); return; }
   if(!(currentMember && currentMember.is_owner) && creditsBalance() < CREDIT_COSTS.denoise){
     _insufficientCredits(CREDIT_COSTS.denoise - creditsBalance()); return;
   }
-  const btn  = document.getElementById('acDenoiseBtn');
-  const prog = document.getElementById('acDenoiseProg');
-  const bar  = document.getElementById('acDenoiseProgBar');
-  const lbl  = document.getElementById('acDenoiseProgLbl');
-  btn.disabled = true; btn.style.opacity = '.6';
-  prog.style.display = 'block'; lbl.style.display = 'block';
-  bar.style.width = '0%'; lbl.textContent = '🎧 Débruitage en cours…';
+  const prog = document.getElementById('acDenoiseProg'), bar = document.getElementById('acDenoiseProgBar');
+  if(prog){ prog.style.display = 'block'; bar.style.width = '0%'; }
   try {
-    const cleaned = await denoiseAudioFile(file, (p)=>{
-      bar.style.width = Math.round(p*100) + '%';
-      lbl.textContent = '🎧 Débruitage en cours… ' + Math.round(p*100) + '%';
-    });
-    // Succès → débit du crédit (client-side : aucun coût si échec)
-    if(!(await spendCreditsFor(CREDIT_COSTS.denoise, 'denoise'))) return;
+    const cleaned = await denoiseAudioFile(file, (p)=>{ if(bar) bar.style.width = Math.round(p*100) + '%'; });
+    if(!(await spendCreditsFor(CREDIT_COSTS.denoise, 'denoise'))){ if(prog) prog.style.display = 'none'; return; }
     _acDenoiseOrig = file; _acDenoiseClean = cleaned;
     _acAudioBlob = cleaned; // le nettoyé devient la source active
+    if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(cleaned);
+    _acDenoiseOn = true; _acSetDenoiseSwitch(true);
+    if(prog) prog.style.display = 'none';
     _acRenderDenoiseResult(file, cleaned);
     toast('✓ Bruits de fond supprimés');
   } catch(e){
     console.error('denoise error:', e);
+    if(prog) prog.style.display = 'none';
     toast('⚠️ Débruitage impossible — format audio non lisible ?');
-  } finally {
-    prog.style.display = 'none'; lbl.style.display = 'none';
-    btn.disabled = false; btn.style.opacity = '1';
   }
 }
 function _acRenderDenoiseResult(orig, cleaned){
@@ -18872,8 +18899,7 @@ function _acRenderDenoiseResult(orig, cleaned){
     + '<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">'
     +   '<button onclick="_acDenoiseUseInGenerator()" class="btn" style="flex:1;min-width:170px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-weight:800;cursor:pointer">Utiliser dans le générateur</button>'
     +   '<a href="'+cleanUrl+'" download="'+cleaned.name+'" class="btn" style="flex:0 0 auto;padding:12px 18px;text-align:center;background:var(--surface);border:1px solid var(--border-2);border-radius:10px;color:var(--text);font-family:var(--font);font-weight:700;text-decoration:none">⬇️ Télécharger</a>'
-    +   '<button onclick="_acDenoiseRevert()" style="flex:0 0 auto;padding:12px 16px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--text-3);font-family:var(--font);font-weight:600;cursor:pointer">↩️ Revenir à l\'original</button>'
-    + '</div></div>';
+    + '</div><div style="margin-top:9px;font-size:11px;font-family:var(--mono);color:var(--text-3)">↩️ Repasse le bouton sur OFF pour revenir à l\'original.</div></div>';
 }
 function _acDenoiseUseInGenerator(){
   if(_acDenoiseClean && typeof handleVoiceFile === 'function'){
@@ -18881,14 +18907,6 @@ function _acDenoiseUseInGenerator(){
     if(typeof nav === 'function') nav('generator');
     toast('✓ Audio nettoyé envoyé au générateur');
   }
-}
-function _acDenoiseRevert(){
-  if(_acDenoiseOrig){
-    _acAudioBlob = _acDenoiseOrig;
-    if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_acDenoiseOrig);
-  }
-  const w = document.getElementById('acDenoiseResult'); if(w) w.innerHTML = '';
-  toast('↩️ Original restauré');
 }
 
 
