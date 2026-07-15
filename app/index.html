@@ -19954,7 +19954,9 @@ function edDeleteLeft(){
 function edDeleteRight(){
   if(!_ed) return; const t=_ed.video.currentTime;
   if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('⚠️ Place le curseur dans le clip'); return; }
-  edSnap(); _ed.trimB=t; edSyncToClip(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
+  edSnap(); _ed.trimB=t; edSyncToClip();
+  // #58 · rester sur le point de coupe (le curseur), ne PAS sauter au début du clip
+  try{_ed.video.currentTime=Math.max(_ed.trimA, _ed.trimB-0.05);}catch(e){}
   edRefreshTimeline(); edRenderClips(); toast('✂️ Après le curseur supprimé');
 }
 
