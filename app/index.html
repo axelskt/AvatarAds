@@ -4129,7 +4129,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <!-- ④ Claude (MCP) -->
     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">④ Connecter Claude <span style="background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:5px;padding:1px 6px;font-size:9px">BÊTA</span> <span style="color:var(--orange2);font-size:9px;margin-left:4px">PRO · ÉLITE</span></div>
     <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:10px">
-      Génère tes images et vidéos AvatarAds directement depuis <strong style="color:var(--text2)">Claude</strong> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
+      Génère tes images et vidéos AvatarAds directement depuis <strong style="color:var(--text2)">Claude</strong> (claude.ai ou Claude Code), avec tes crédits.
     </div>
     <div id="mcpKeyStatus" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:var(--text3)">Chargement…</div>
     <label id="mcpConfirmRow" style="display:none;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11.5px;color:var(--text3)">
@@ -4147,26 +4147,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button id="mcpKeyCreateBtn" onclick="mcpKeyCreate()" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">🔑 Générer ma clé</button>
       <button id="mcpKeyRevokeBtn" onclick="mcpKeyRevoke()" style="display:none;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Révoquer</button>
     </div>
-    <details style="margin-bottom:4px">
-      <summary style="font-size:11px;font-family:var(--mono);color:var(--text3);cursor:pointer;list-style:none">▸ TUTO — connecter Claude en 3 étapes</summary>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:5px">ÉTAPE 1 — GÉNÈRE TA CLÉ</div>
-          <div style="font-size:11.5px;color:var(--text3);line-height:1.65">Clique sur <strong style="color:var(--text2)">🔑 Générer ma clé</strong> ci-dessus, puis <strong style="color:var(--text2)">copie l'URL</strong>. Elle n'est affichée qu'une seule fois — c'est ta clé personnelle, ne la partage jamais.</div>
-        </div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:5px">ÉTAPE 2 — AJOUTE-LA DANS CLAUDE</div>
-          <div style="font-size:11.5px;color:var(--text3);line-height:1.65">
-            Sur <strong style="color:var(--text2)">claude.ai</strong> : ouvre <strong style="color:var(--text2)">Paramètres → Connecteurs</strong> → « Ajouter un connecteur personnalisé » → nom <em>AvatarAds</em> → colle l'URL → Ajouter.<br>
-            Sur <strong style="color:var(--text2)">Claude Code</strong> : <code style="background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:10px">claude mcp add --transport http avatarads &lt;URL&gt;</code>
-          </div>
-        </div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:5px">ÉTAPE 3 — DEMANDE, CLAUDE GÉNÈRE</div>
-          <div style="font-size:11.5px;color:var(--text3);line-height:1.65">Écris simplement : <em style="color:var(--text2)">« Génère-moi une image d'un yéti bleu qui tient mon produit »</em> ou <em style="color:var(--text2)">« Fais-moi une vidéo de 8 secondes de… »</em>. Claude t'annonce le coût en crédits et attend ton OK avant de générer.</div>
-        </div>
-      </div>
-    </details>
+    <button onclick="openMcpTuto()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(255,107,53,.05));border:1px solid var(--accent-line);border-radius:10px;color:var(--accent-2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:4px" onmouseover="this.style.borderColor='var(--orange2)'" onmouseout="this.style.borderColor='var(--accent-line)'">
+      📖 Voir le tuto — connecter ta clé à Claude
+    </button>
 
     <div class="setup-divider" style="margin-top:20px"></div>
 
@@ -6808,6 +6791,53 @@ function mcpKeyCopy(){
   navigator.clipboard.writeText(inp.value).then(()=>toast('📋 URL copiée !'))
     .catch(()=>{ inp.select(); document.execCommand('copy'); toast('📋 URL copiée !'); });
 }
+
+// ── Tuto « Connecter Claude » : modale à étapes avec screenshots (assets/tuto-mcp/etape-N.png) ──
+const MCP_TUTO_STEPS = [
+  { img:'../assets/tuto-mcp/etape-1.png', t:'Génère ta clé personnelle',
+    d:`Juste au-dessus, clique <strong style="color:var(--text2)">🔑 Générer ma clé</strong> puis <strong style="color:var(--text2)">📋 Copier</strong>. L'URL n'est affichée qu'une seule fois — c'est ta clé personnelle, ne la partage jamais.` },
+  { img:'../assets/tuto-mcp/etape-2.png', t:'Ouvre les Connecteurs de Claude',
+    d:`Sur <strong style="color:var(--text2)">claude.ai</strong>, clique sur tes initiales (en bas à gauche) → <strong style="color:var(--text2)">Paramètres</strong> → onglet <strong style="color:var(--text2)">Connecteurs</strong>. Raccourci direct : <a href="https://claude.ai/settings/connectors" target="_blank" style="color:var(--orange2)">claude.ai/settings/connectors</a>.` },
+  { img:'../assets/tuto-mcp/etape-3.png', t:'Ajoute un connecteur personnalisé',
+    d:`Tout en bas de la page, clique <strong style="color:var(--text2)">« Ajouter un connecteur personnalisé »</strong>. Nom : <em style="color:var(--text2)">AvatarAds</em> · URL : colle l'URL copiée à l'étape 1 → <strong style="color:var(--text2)">Ajouter</strong>.` },
+  { img:'../assets/tuto-mcp/etape-4.png', t:'Active-le dans ta conversation',
+    d:`Dans une nouvelle conversation, clique l'icône <strong style="color:var(--text2)">réglages / connecteurs</strong> sous la zone de texte et vérifie qu'<em style="color:var(--text2)">AvatarAds</em> est bien activé.` },
+  { img:'../assets/tuto-mcp/etape-5.png', t:'Demande, Claude génère',
+    d:`Écris simplement : <em style="color:var(--text2)">« Génère-moi une image d'un yéti bleu qui tient mon produit »</em> ou <em style="color:var(--text2)">« Fais-moi une vidéo de 8 secondes de… »</em>. Claude t'annonce le coût en crédits et attend ton OK.` },
+];
+function openMcpTuto(){
+  let m = document.getElementById('mcpTutoModal');
+  if(m){ m.style.display='flex'; return; }
+  m = document.createElement('div');
+  m.id = 'mcpTutoModal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px';
+  m.addEventListener('click', e => { if(e.target === m) closeMcpTuto(); });
+  const steps = MCP_TUTO_STEPS.map((s,i)=>`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <img src="${s.img}" alt="Étape ${i+1}" loading="lazy" style="width:100%;display:block;border-bottom:1px solid var(--border)"
+        onerror="this.outerHTML='<div style=&quot;padding:22px;text-align:center;font:600 10px var(--mono);color:var(--text3);letter-spacing:1px;border-bottom:1px dashed var(--border2);background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 10px,transparent 10px 20px)&quot;>📸 CAPTURE À VENIR</div>'">
+      <div style="padding:13px 15px">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:5px">ÉTAPE ${i+1} — ${s.t.toUpperCase()}</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.65">${s.d}</div>
+      </div>
+    </div>`).join('');
+  m.innerHTML = `
+    <div style="width:min(560px,94vw);max-height:88vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:17px;font-weight:800;letter-spacing:-.3px">Connecter Claude à AvatarAds</div>
+        <button onclick="closeMcpTuto()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1">✕</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:14px">5 étapes, ~2 minutes. Ta clé reste personnelle et révocable à tout moment.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">${steps}</div>
+      <div style="margin-top:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;margin-bottom:5px">💻 CLAUDE CODE (TERMINAL)</div>
+        <code style="display:block;background:var(--bg4);padding:7px 9px;border-radius:6px;font-size:10.5px;color:var(--text2);overflow-x:auto;white-space:nowrap">claude mcp add --transport http avatarads &lt;ton-URL&gt;</code>
+      </div>
+      <button onclick="closeMcpTuto()" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer">C'est bon, j'ai connecté ✓</button>
+    </div>`;
+  document.body.appendChild(m);
+}
+function closeMcpTuto(){ const m=document.getElementById('mcpTutoModal'); if(m) m.style.display='none'; }
 async function mcpKeyRevoke(){
   if(!confirm('Révoquer la clé ? Claude ne pourra plus accéder à ton compte AvatarAds.')) return;
   const res = await _mcpKeyCall('revoke');
