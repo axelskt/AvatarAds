@@ -3724,6 +3724,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- TOOLS -->
               <div class="card" style="padding:16px;margin-bottom:14px">
                 <div class="label" style="margin-bottom:10px">🧰 Outils</div>
+                <button onclick="openEdAiModal()" id="edAiBtn" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;border:1px solid rgba(255,143,94,.6);box-shadow:0 4px 18px rgba(255,107,53,.25)" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">🎼 Montage IA <span style="font-weight:600;font-size:11px;opacity:.75">· zooms, b-roll, SFX, sous-titres auto</span></button>
                 <button onclick="edAddText()" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:var(--bg3);color:var(--text);font-weight:700;border:1px solid var(--border2)" onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-2px;margin-right:5px"><path d="M5 5h14M12 5v14"/></svg>Ajouter un texte</button>
                 <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;padding:13px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Ajouter une image</button>
                 <div onclick="document.getElementById('edImportIn').click()"
@@ -5046,7 +5047,8 @@ const CREDIT_COSTS = {
   expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
   expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
-  reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1
+  reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
+  montageIA: 2            // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -20122,6 +20124,7 @@ function edDrawLoop(){
   const _gt=edGlobalNow();
   const _zr=_edZoomSrc(_cr,_gt); // #70 · zoom punch-in (preview)
   try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH); ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); }catch(e){}
+  _edDrawSubsAIPreview(_gt); // 🎼 sous-titres Montage IA (canvas superposé, au-dessus du b-roll)
   for(const o of _ed.overlays){ if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; } }
   if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
   _ed._gtPrev=_gt;
@@ -20751,7 +20754,8 @@ function edStateCopy(){
     clips:_ed.clips.map(c=>({...c})),
     overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }),
     sfx:(_ed.sfx||[]).map(s=>({...s})),
-    zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom };
+    zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom,
+    subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, words:_ed.subsAI.words.map(w=>({...w})) } : null };
 }
 function edSnap(){ if(!_ed) return; _ed._redo=[]; _ed._hist=_ed._hist||[]; _ed._hist.push(edStateCopy()); if(_ed._hist.length>40) _ed._hist.shift(); }
 function edRestoreState(st){
@@ -20764,6 +20768,7 @@ function edRestoreState(st){
   _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; n._editing=false; n._cropMode=false; return n; });
   _ed.sfx=(st.sfx||[]).map(s=>({...s}));
   _ed.zooms=(st.zooms||[]).map(z=>({...z})); _ed.selZoom=st.selZoom||null;
+  _ed.subsAI=st.subsAI ? { enabled:st.subsAI.enabled, style:st.subsAI.style, words:(st.subsAI.words||[]).map(w=>({...w})) } : null;
   _ed.sel=null;
   _ed.overlays.forEach(o=>edBuildOverlayEl(o));
   edResizeCanvas(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
@@ -20771,6 +20776,281 @@ function edRestoreState(st){
 }
 function edUndo(){ if(!_ed||!_ed._hist||!_ed._hist.length){ toast('Rien à annuler'); return; } (_ed._redo=_ed._redo||[]).push(edStateCopy()); edRestoreState(_ed._hist.pop()); toast('↶ Annulé'); }
 function edRedo(){ if(!_ed||!_ed._redo||!_ed._redo.length){ toast('Rien à refaire'); return; } (_ed._hist=_ed._hist||[]).push(edStateCopy()); edRestoreState(_ed._redo.pop()); toast('↷ Refait'); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   🎼 MONTAGE IA (#108 · chef d'orchestre) — l'audio dirige le montage.
+   Extrait l'audio de la timeline → edge function orchestrate (Scribe +
+   Claude) → applique le plan : zooms punch, b-roll placé, SFX, hook,
+   sous-titres Punch mot-à-mot (dessinés au canvas, preview + export).
+   ══════════════════════════════════════════════════════════════════════ */
+const ORCHESTRATE_FN = SUPABASE_URL + '/functions/v1/orchestrate';
+let _edAi = { files: [], busy: false };
+
+function openEdAiModal(){
+  if(!_ed || !_ed.clips || !_ed.clips.length){ toast('⚠️ Charge d\'abord une vidéo dans l\'éditeur'); return; }
+  let m = document.getElementById('edAiModal');
+  if(m){ m.style.display='flex'; _edAiRenderFiles(); return; }
+  m = document.createElement('div');
+  m.id = 'edAiModal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px';
+  m.addEventListener('click', e => { if(e.target === m && !_edAi.busy) closeEdAiModal(); });
+  m.innerHTML = `
+    <div style="width:min(520px,94vw);max-height:88vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:17px;font-weight:800;letter-spacing:-.3px">🎼 Montage IA</div>
+        <button onclick="closeEdAiModal()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.65;margin-bottom:16px">
+        L'IA écoute ta vidéo et pose <b style="color:var(--text)">zooms punch, images b-roll, bruitages, hook et sous-titres</b> pile au bon moment — synchronisés sur chaque mot. Tu ajustes ensuite ce que tu veux, tout reste modifiable.
+      </div>
+
+      <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">SCRIPT EXACT <span style="color:var(--text3)">· OPTIONNEL, SOUS-TITRES PARFAITS</span></div>
+      <textarea id="edAiScript" rows="3" placeholder="Colle ici le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:16px"></textarea>
+
+      <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES B-ROLL <span style="color:var(--text3)">· OPTIONNEL, L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
+      <input type="file" id="edAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);this.value=''">
+      <div onclick="document.getElementById('edAiImgIn').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--orange2)'"
+           ondragleave="this.style.borderColor='var(--border)'"
+           ondrop="event.preventDefault();this.style.borderColor='var(--border)';edAiAddFiles(event.dataTransfer.files)"
+           style="border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:9px">
+        🖼️ Ajoute jusqu'à 8 images (produit, preuve, avant/après…)
+      </div>
+      <div id="edAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-bottom:16px"></div>
+
+      <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text);cursor:pointer;margin-bottom:18px">
+        <input type="checkbox" id="edAiSubs" checked style="accent-color:var(--orange2);width:15px;height:15px">
+        Sous-titres mot-à-mot (style Punch) <span style="color:var(--text3);font-size:11px">— décoche si ta vidéo a déjà des sous-titres</span>
+      </label>
+
+      <button id="edAiGo" onclick="edAiGenerate()" class="btn" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14px;border:none;border-radius:11px;cursor:pointer">✨ Générer le montage — ${CREDIT_COSTS.montageIA} crédits</button>
+      <div id="edAiStatus" style="display:none;margin-top:12px;font-size:12px;font-family:var(--mono);color:var(--text3);text-align:center"></div>
+    </div>`;
+  document.body.appendChild(m);
+  _edAiRenderFiles();
+}
+function closeEdAiModal(){ const m=document.getElementById('edAiModal'); if(m) m.style.display='none'; }
+
+function edAiAddFiles(list){
+  for(const f of Array.from(list||[])){
+    if(!f.type.startsWith('image/')) continue;
+    if(_edAi.files.length >= 8){ toast('⚠️ 8 images maximum'); break; }
+    _edAi.files.push({ id:'ast'+Date.now()+Math.random().toString(36).slice(2,6), file:f, url:URL.createObjectURL(f) });
+  }
+  _edAiRenderFiles();
+}
+function edAiRemoveFile(id){ _edAi.files=_edAi.files.filter(a=>a.id!==id); _edAiRenderFiles(); }
+function _edAiRenderFiles(){
+  const wrap=document.getElementById('edAiFiles'); if(!wrap) return;
+  if(!_edAi.files.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='grid';
+  wrap.innerHTML=_edAi.files.map(a=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border2)">
+      <img src="${a.url}" style="width:100%;height:100%;object-fit:cover;display:block">
+      <button onclick="edAiRemoveFile('${a.id}')" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.72);border:none;color:#ff8a8a;font-size:11px;cursor:pointer;line-height:1;padding:0">✕</button>
+    </div>`).join('');
+}
+
+// miniature JPEG ≤ 512px pour la vision Claude (l'image pleine taille reste locale)
+function _edAiThumb(file){
+  return new Promise((resolve)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const s=Math.min(1, 512/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(img.width*s)); cv.height=Math.max(1,Math.round(img.height*s));
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(url);
+      cv.toBlob(b=>resolve(b), 'image/jpeg', 0.8);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
+    img.src=url;
+  });
+}
+
+// ── Audio de la timeline → WAV 16 kHz mono + mapping temps-audio → temps-timeline ──
+// La timeline « source » (gt) inclut les passages supprimés (sautés à la lecture) ;
+// l'audio envoyé à l'IA les exclut. On garde donc une table de conversion.
+async function edExtractTimelineAudio(onStatus){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const chunks=[]; const map=[]; let kept=0;
+  for(let idx=0; idx<_ed.clips.length; idx++){
+    const c=_ed.clips[idx];
+    if(onStatus) onStatus('🎧 Extraction audio… clip '+(idx+1)+'/'+_ed.clips.length);
+    let ab;
+    if(c.file && c.file.arrayBuffer) ab = await c.file.arrayBuffer();
+    else ab = await (await fetch(c.url)).arrayBuffer();
+    let mono;
+    try {
+      const ac=new AC(); let decoded;
+      try { decoded = await ac.decodeAudioData(ab.slice(0)); } finally { try{ac.close();}catch(_){} }
+      const len=Math.max(1, Math.ceil(decoded.duration*16000));
+      const off=new OfflineAudioContext(1, len, 16000);
+      const src=off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start();
+      mono=(await off.startRendering()).getChannelData(0);
+    } catch(_){
+      // clip sans piste audio (gameplay muet…) → silence, la voix vient des autres clips
+      mono=new Float32Array(Math.max(1, Math.ceil((c.dur||((c.trimB||0)-(c.trimA||0))||1)*16000)));
+    }
+    // plages gardées = [trimA, trimB] moins les passages supprimés
+    const dels=(c.deletes||[]).map(d=>({a:Math.max(c.trimA,d.a),b:Math.min(c.trimB,d.b)})).filter(d=>d.b>d.a).sort((x,y)=>x.a-y.a);
+    const gStart=edClipGlobalStart(idx);
+    let cur=c.trimA;
+    const ranges=[];
+    for(const d of dels){ if(d.a>cur) ranges.push([cur,d.a]); cur=Math.max(cur,d.b); }
+    if(c.trimB>cur) ranges.push([cur,c.trimB]);
+    for(const [a,b] of ranges){
+      const s0=Math.max(0,Math.floor(a*16000)), s1=Math.min(mono.length,Math.ceil(b*16000));
+      if(s1<=s0) continue;
+      chunks.push(mono.slice(s0,s1));
+      map.push({ k0:kept, len:(s1-s0)/16000, src0:gStart+(a-c.trimA) });
+      kept += (s1-s0)/16000;
+    }
+  }
+  const total=chunks.reduce((s,c)=>s+c.length,0);
+  const pcm=new Float32Array(total); let o=0;
+  for(const ch of chunks){ pcm.set(ch,o); o+=ch.length; }
+  let peak=0; for(let i=0;i<pcm.length;i+=50){ const v=Math.abs(pcm[i]); if(v>peak) peak=v; }
+  if(peak < 0.004) throw new Error('Ta vidéo ne contient pas de voix audible — le Montage IA se synchronise sur l\'audio');
+  // encode WAV 16-bit mono 16 kHz
+  const buf=new ArrayBuffer(44+pcm.length*2); const dv=new DataView(buf);
+  const wstr=(p,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(p+i,s.charCodeAt(i)); };
+  wstr(0,'RIFF'); dv.setUint32(4,36+pcm.length*2,true); wstr(8,'WAVE'); wstr(12,'fmt ');
+  dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+  dv.setUint32(24,16000,true); dv.setUint32(28,32000,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+  wstr(36,'data'); dv.setUint32(40,pcm.length*2,true);
+  for(let i=0;i<pcm.length;i++){ const s=Math.max(-1,Math.min(1,pcm[i])); dv.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true); }
+  const toSource=(t)=>{
+    if(!map.length) return t;
+    for(const e of map){ if(t < e.k0 + e.len || e===map[map.length-1]) return Math.min(edTotalDur(), e.src0 + Math.max(0, Math.min(e.len, t - e.k0))); }
+    return edTotalDur();
+  };
+  return { blob:new Blob([buf],{type:'audio/wav'}), duration:kept, toSource };
+}
+
+async function edAiGenerate(){
+  if(_edAi.busy || !_ed || !_ed.clips || !_ed.clips.length) return;
+  const btn=document.getElementById('edAiGo'), st=document.getElementById('edAiStatus');
+  const setStatus=(t)=>{ if(st){ st.style.display='block'; st.textContent=t; } };
+  if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
+  _edAi.busy=true; if(btn){ btn.disabled=true; btn.style.opacity='.6'; btn.textContent='⏳ Montage en cours…'; }
+  try {
+    const { blob, duration, toSource } = await edExtractTimelineAudio(setStatus);
+    if(duration < 1) throw new Error('Timeline trop courte');
+    setStatus('🖼️ Préparation des images…');
+    const fd=new FormData();
+    fd.append('audio', blob, 'timeline.wav');
+    fd.append('duration', String(duration));
+    const script=(document.getElementById('edAiScript')?.value||'').trim();
+    if(script) fd.append('script', script);
+    fd.append('options', JSON.stringify({ lang:'fr' }));
+    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:'image' }))));
+    for(const a of _edAi.files){
+      const th=await _edAiThumb(a.file);
+      if(th) fd.append('asset_'+a.id, th, 'thumb.jpg');
+    }
+    setStatus('🎼 L\'IA écoute ta vidéo et compose le montage… (~30 s)');
+    const res=await fetch(ORCHESTRATE_FN, { method:'POST', headers: await getAuthHeader(), body: fd });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || !data.ok) throw new Error(data.error || ('Erreur '+res.status));
+    edAiApply(data.plan, toSource);
+    closeEdAiModal();
+  } catch(e){
+    console.error('montage IA:', e);
+    toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120));
+    setStatus('');
+    if(st) st.style.display='none';
+  } finally {
+    _edAi.busy=false;
+    if(btn){ btn.disabled=false; btn.style.opacity=''; btn.textContent='✨ Générer le montage — '+CREDIT_COSTS.montageIA+' crédits'; }
+  }
+}
+
+// applique le plan sur la timeline (tout reste éditable, Cmd+Z pour annuler)
+function edAiApply(plan, toSource){
+  if(!_ed || !plan) return;
+  edSnap();
+  const r2=(n)=>Math.round(n*100)/100;
+  const remap=(t)=>r2(Math.max(0, Math.min(edTotalDur(), toSource(Number(t)||0))));
+  let nZoom=0, nBroll=0, nSfx=0;
+
+  if(!_ed.zooms) _ed.zooms=[];
+  for(const z of (plan.zooms||[])){
+    _ed.zooms.push({ id:'zm'+Date.now()+Math.random().toString(36).slice(2,5), t:remap(z.t), dur:Math.max(.4,Math.min(3,z.dur||1)), scale:Math.max(1.1,Math.min(2,z.scale||1.25)), cx:z.cx??0.5, cy:z.cy??0.35 });
+    nZoom++;
+  }
+
+  if(!_ed.sfx) _ed.sfx=[];
+  for(const s of (plan.sfx||[])){
+    if(!_SFX_LABEL[s.kind]) continue;
+    _ed.sfx.push({ id:'sfx'+Date.now()+Math.random().toString(36).slice(2,6), type:s.kind, t:remap(s.t), len:0.6, label:_SFX_LABEL[s.kind] });
+    nSfx++;
+  }
+
+  for(const b of (plan.broll||[])){
+    const asset=_edAi.files.find(a=>a.id===b.assetId);
+    if(!asset) continue;
+    const start=remap(b.start), end=Math.max(start+0.5, remap(b.end));
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.max(_ed.dispW/img.width, _ed.dispH/img.height);
+      const w=img.width*scale, h=img.height*scale;
+      const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', img, url:asset.url, x:(_ed.dispW-w)/2, y:(_ed.dispH-h)/2, w, h, crop:{t:0,r:0,b:0,l:0}, start, end };
+      _ed.overlays.push(ov); edBuildOverlayEl(ov); edRenderLayers(); edRenderOvTrack();
+    };
+    img.src=asset.url;
+    nBroll++;
+  }
+
+  if(plan.hook && plan.hook.text){
+    const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,7), type:'text', text:plan.hook.text, x:_ed.dispW*0.07, y:_ed.dispH*0.15, w:_ed.dispW*0.86, h:50, size:30, color:'#ffffff', bgColor:'rgba(255,107,53,.94)', font:'var(--display)', style:'box', bold:true, start:remap(plan.hook.start), end:Math.max(remap(plan.hook.start)+0.8, remap(plan.hook.end)) };
+    _ed.overlays.push(ov); edBuildOverlayEl(ov); edRenderLayers();
+  }
+
+  const wantSubs=document.getElementById('edAiSubs') ? document.getElementById('edAiSubs').checked : true;
+  const caps=(plan.captions||[]).map(c=>({ text:String(c.text||''), start:remap(c.start), end:Math.max(remap(c.start)+0.1, remap(c.end)), accent:!!c.accent })).filter(c=>c.text);
+  _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', words:caps } : null;
+
+  edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
+  toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+' — ⌘Z pour annuler');
+}
+
+// ── Sous-titres Punch mot-à-mot dessinés au canvas (preview ET export) ──
+// Preview : canvas superposé au-dessus des overlays DOM (le b-roll ne les cache pas)
+function _edDrawSubsAIPreview(gt){
+  const stage=document.getElementById('edStage'); if(!stage||!_ed) return;
+  let cv=document.getElementById('edSubsAICv');
+  const active=_ed.subsAI && _ed.subsAI.enabled && _ed.subsAI.words && _ed.subsAI.words.length;
+  if(!active){ if(cv) cv.remove(); return; }
+  if(!cv){
+    cv=document.createElement('canvas'); cv.id='edSubsAICv';
+    cv.style.cssText='position:absolute;left:0;top:0;pointer-events:none;z-index:40';
+    stage.appendChild(cv);
+  }
+  if(cv.width!==_ed.dispW || cv.height!==_ed.dispH){
+    cv.width=_ed.dispW; cv.height=_ed.dispH;
+    cv.style.width=_ed.dispW+'px'; cv.style.height=_ed.dispH+'px';
+  }
+  const c=cv.getContext('2d');
+  c.clearRect(0,0,cv.width,cv.height);
+  _edDrawSubsAI(c, gt, cv.width, cv.height);
+}
+function _edDrawSubsAI(ctx, gt, W, H){
+  const sa=_ed && _ed.subsAI;
+  if(!sa || !sa.enabled || !sa.words || !sa.words.length) return;
+  let w=null;
+  for(let i=0;i<sa.words.length;i++){ const c=sa.words[i]; if(gt>=c.start && gt<c.end){ w=c; break; } if(c.start>gt) break; }
+  if(!w) return;
+  const size=Math.round(H*0.055);
+  ctx.save();
+  ctx.font='900 '+size+'px "Arial Black","Arial",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.lineJoin='round'; ctx.lineWidth=Math.max(2, size*0.22); ctx.strokeStyle='rgba(0,0,0,.92)';
+  const x=W/2, y=H*0.72; // safe zone : au-dessus de l'UI TikTok/Reels
+  ctx.strokeText(w.text, x, y);
+  ctx.fillStyle=w.accent ? '#FF6B35' : '#ffffff';
+  ctx.fillText(w.text, x, y);
+  ctx.restore();
+}
 
 function edRenderLayers(){
   const wrap=document.getElementById('edLayers'); const empty=document.getElementById('edLayersEmpty'); if(!wrap||!_ed) return;
@@ -20911,6 +21191,7 @@ async function edExport(){
           cx.restore();
         }
       }
+      _edDrawSubsAI(cx, gTime, expW, expH); // 🎼 sous-titres Montage IA (export)
     }
 
     // Segments : chaque clip avec SON trim (clip principal + clips ajoutés), dans l'ordre
