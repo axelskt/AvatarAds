@@ -1,0 +1,31 @@
+{
+  "id": "express-ui",
+  "image": "assets/express-ui.png",
+  "panel": { "width": 1560, "height": 878 },
+  "targets": {
+    "express": {
+      "label": "Express dans le menu",
+      "rect": { "left": 4, "top": 286, "width": 192, "height": 46 },
+      "zoom": 2.2,
+      "keywords": ["express"]
+    },
+    "images": {
+      "label": "Carte « Ajoute tes images »",
+      "rect": { "left": 498, "top": 668, "width": 178, "height": 132 },
+      "zoom": 2.0,
+      "keywords": ["importe", "image", "images", "photo", "photos"]
+    },
+    "prompt": {
+      "label": "Champ prompt",
+      "rect": { "left": 684, "top": 658, "width": 858, "height": 142 },
+      "zoom": 1.6,
+      "keywords": ["prompt", "tape", "ecris", "idee", "texte"]
+    },
+    "cta": {
+      "label": "Bouton Générer la vidéo",
+      "rect": { "left": 1312, "top": 798, "width": 230, "height": 64 },
+      "zoom": 2.2,
+      "keywords": ["generer", "genere", "generes", "clique", "lance"]
+    }
+  }
+}

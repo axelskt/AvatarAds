@@ -1,0 +1,270 @@
+{
+  "version": "0.1",
+  "generator": "orchestrate.mjs v0 (heuristique locale — en prod : Claude via edge function)",
+  "format": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 11.7
+  },
+  "scene": "scene-maps/express.json",
+  "audio": {
+    "narration": {
+      "src": "assets/vo/narration.wav",
+      "start": 0,
+      "duration": 11.104
+    }
+  },
+  "style": {
+    "anticipation": 0.15,
+    "moveDuration": 0.5,
+    "tailSeconds": 0.6
+  },
+  "segments": [
+    {
+      "id": "hook",
+      "role": "hook",
+      "camera": "wide",
+      "target": null,
+      "start": 0,
+      "end": 2.84,
+      "speechStart": 0,
+      "speechEnd": 2.84
+    },
+    {
+      "id": "express",
+      "role": "step",
+      "camera": "target",
+      "target": "express",
+      "start": 2.84,
+      "end": 4.82,
+      "speechStart": 2.84,
+      "speechEnd": 4.2
+    },
+    {
+      "id": "image",
+      "role": "step",
+      "camera": "target",
+      "target": "images",
+      "start": 4.82,
+      "end": 6.12,
+      "speechStart": 4.82,
+      "speechEnd": 6.12
+    },
+    {
+      "id": "prompt",
+      "role": "step",
+      "camera": "target",
+      "target": "prompt",
+      "start": 6.12,
+      "end": 7.26,
+      "speechStart": 6.12,
+      "speechEnd": 7.26
+    },
+    {
+      "id": "cta",
+      "role": "step",
+      "camera": "target",
+      "target": "cta",
+      "start": 7.26,
+      "end": 9.04,
+      "speechStart": 7.26,
+      "speechEnd": 9.04,
+      "emphasis": "pulse"
+    },
+    {
+      "id": "outro",
+      "role": "outro",
+      "camera": "wide",
+      "target": null,
+      "start": 9.04,
+      "end": 11.7,
+      "speechStart": 9.04,
+      "speechEnd": 10.96
+    }
+  ],
+  "captions": [
+    {
+      "text": "TU",
+      "start": 0,
+      "end": 0.14,
+      "accent": false
+    },
+    {
+      "text": "VEUX",
+      "start": 0.34,
+      "end": 0.48,
+      "accent": false
+    },
+    {
+      "text": "UNE",
+      "start": 0.48,
+      "end": 0.62,
+      "accent": false
+    },
+    {
+      "text": "VIDÉO",
+      "start": 0.62,
+      "end": 1.01,
+      "accent": false
+    },
+    {
+      "text": "VIRALE",
+      "start": 1.01,
+      "end": 1.41,
+      "accent": false
+    },
+    {
+      "text": "EN",
+      "start": 1.41,
+      "end": 1.55,
+      "accent": false
+    },
+    {
+      "text": "TRENTE",
+      "start": 1.55,
+      "end": 1.97,
+      "accent": false
+    },
+    {
+      "text": "SECONDES",
+      "start": 1.97,
+      "end": 2.84,
+      "accent": false
+    },
+    {
+      "text": "VA",
+      "start": 2.84,
+      "end": 3.19,
+      "accent": false
+    },
+    {
+      "text": "SUR",
+      "start": 3.19,
+      "end": 3.36,
+      "accent": false
+    },
+    {
+      "text": "EXPRESS",
+      "start": 3.62,
+      "end": 4.2,
+      "accent": true
+    },
+    {
+      "text": "IMPORTE",
+      "start": 4.82,
+      "end": 5.35,
+      "accent": true
+    },
+    {
+      "text": "TON",
+      "start": 5.35,
+      "end": 5.92,
+      "accent": false
+    },
+    {
+      "text": "IMAGE",
+      "start": 5.92,
+      "end": 6.12,
+      "accent": true
+    },
+    {
+      "text": "TAPE",
+      "start": 6.12,
+      "end": 6.53,
+      "accent": true
+    },
+    {
+      "text": "TON",
+      "start": 6.59,
+      "end": 6.87,
+      "accent": false
+    },
+    {
+      "text": "PROMPT",
+      "start": 7.08,
+      "end": 7.26,
+      "accent": true
+    },
+    {
+      "text": "ET",
+      "start": 7.26,
+      "end": 7.71,
+      "accent": false
+    },
+    {
+      "text": "CLIQUE",
+      "start": 7.71,
+      "end": 7.99,
+      "accent": true
+    },
+    {
+      "text": "SUR",
+      "start": 8.18,
+      "end": 8.34,
+      "accent": false
+    },
+    {
+      "text": "GÉNÉRER",
+      "start": 8.34,
+      "end": 9.04,
+      "accent": true
+    },
+    {
+      "text": "AVATARADS",
+      "start": 9.04,
+      "end": 9.73,
+      "accent": false
+    },
+    {
+      "text": "FAIT",
+      "start": 9.73,
+      "end": 10.08,
+      "accent": false
+    },
+    {
+      "text": "LE",
+      "start": 10.08,
+      "end": 10.25,
+      "accent": false
+    },
+    {
+      "text": "RESTE",
+      "start": 10.25,
+      "end": 10.96,
+      "accent": false
+    }
+  ],
+  "sfx": [
+    {
+      "kind": "whoosh",
+      "at": 2.69
+    },
+    {
+      "kind": "whoosh",
+      "at": 4.67
+    },
+    {
+      "kind": "whoosh",
+      "at": 5.97
+    },
+    {
+      "kind": "whoosh",
+      "at": 7.11
+    },
+    {
+      "kind": "click",
+      "at": 8.59
+    },
+    {
+      "kind": "whoosh",
+      "at": 8.89
+    }
+  ],
+  "diagnostics": {
+    "scriptWords": 25,
+    "transcriptWords": 27,
+    "matched": 24,
+    "interpolated": 1
+  }
+}
