@@ -651,7 +651,7 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
       ai_model_id: HEDRA_MODEL_ID,
       audio_id: audioId,
       generated_video_inputs: {
-        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, static background, no camera movement, background objects completely still, no scene motion',
+        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
         aspect_ratio: aspect,
         character_orientation: 'video',
         resolution: '720p',
