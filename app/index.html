@@ -9676,6 +9676,12 @@ async function whisperTranscribe(){
     fd.append('language', 'fr');
     fd.append('response_format', 'verbose_json');
     fd.append('timestamp_granularities[]', 'word');
+    fd.append('temperature', '0'); // déterministe = calage plus stable
+    // Biais de reconnaissance : on donne le script attendu à Whisper → il colle aux mots exacts → meilleur calage sous-titres
+    try {
+      const _sc = (document.getElementById('f-script')?.value || (typeof pendingTranscript!=='undefined'&&pendingTranscript) || (window.results && results.script) || '').trim();
+      if(_sc) fd.append('prompt', _sc.slice(0, 880));
+    } catch(e){}
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
       method: 'POST',
       headers: await getAuthHeader(),
