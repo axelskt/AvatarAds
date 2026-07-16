@@ -142,7 +142,7 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success',
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents'],
+  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music'],
   properties: {
     sections: {
       type: 'array',
@@ -202,6 +202,17 @@ const PLAN_SCHEMA = {
       ],
     },
     accents: { type: 'array', items: { type: 'string' } },
+    music: {
+      anyOf: [
+        {
+          type: 'object',
+          additionalProperties: false,
+          required: ['mood'],
+          properties: { mood: { type: 'string', enum: ['intense', 'dynamique', 'chill'] } },
+        },
+        { type: 'null' },
+      ],
+    },
   },
 }
 
@@ -212,6 +223,7 @@ type Plan = {
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
+  music: { mood: string } | null
 }
 
 // ---------- appel Claude (Messages API, sortie structurée + vision) ----------
@@ -245,6 +257,8 @@ SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur 
 HOOK TEXTE : si les 3 premieres secondes contiennent une accroche forte, un texte MAJUSCULES de 5 mots max qui la resume (start 0, end <= 3). Sinon null.
 
 ACCENTS : 5 a 12 mots EXACTS du transcript (les plus percutants : chiffres, benefices, verbes d'action) qui seront colores en orange dans les sous-titres.
+
+MUSIQUE : choisis l'ambiance de la musique de fond selon le ton du script — "intense" (vente agressive, hype, urgence), "dynamique" (astuce, tuto rythme, presentation produit), "chill" (storytelling, lifestyle, calme). Mets null UNIQUEMENT si l'audio semble deja contenir de la musique.
 
 Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le schema JSON impose.`
 
@@ -346,7 +360,9 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
   }
 
   const accents = (plan.accents || []).map((a) => String(a)).filter(Boolean).slice(0, 14)
-  return { sections, zooms, broll: cleanBroll, sfx, hook, accents }
+  const music = (plan.music && ['intense', 'dynamique', 'chill'].includes(String(plan.music.mood)))
+    ? { mood: String(plan.music.mood) } : null
+  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------

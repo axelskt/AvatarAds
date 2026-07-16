@@ -1142,7 +1142,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
               </label>
-              <div class="faint mono" style="margin-top:6px;font-size:9.5px;line-height:1.5;color:var(--text3)">ℹ️ Les boutons « ▶ Écouter » des voix jouent un échantillon générique — le rendu final aura les silences réellement supprimés.</div>
             </div>
 
             <div id="voice-el-sections">
@@ -1352,8 +1351,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                       <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Inclus avec la suppression des silences · sans crédit en plus</div>
                     </div>
                   </div>
-                  <div id="genDenoiseSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
-                    <div id="genDenoiseThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+                  <div id="genDenoiseSwitch" style="width:38px;height:22px;background:var(--accent);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                    <div id="genDenoiseThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:19px;transition:all .25s;opacity:1"></div>
                   </div>
                 </div>
                 <!-- ONE button -->
@@ -3010,8 +3009,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div style="font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:1px">Inclus avec la suppression des silences · sans crédit en plus</div>
               </div>
             </div>
-            <div id="acDenoiseSwitch" style="width:40px;height:23px;background:var(--bg4);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-              <div id="acDenoiseThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+            <div id="acDenoiseSwitch" style="width:40px;height:23px;background:var(--accent);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+              <div id="acDenoiseThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:20px;transition:all .25s;opacity:1"></div>
             </div>
           </div>
 
@@ -9665,7 +9664,7 @@ function handleVoiceFile(file){
   if(cloneSection) cloneSection.classList.remove('dimmed');
 }
 // #69 · Débruitage — OPTION passive (onglet Audio MP4), appliquée avec « Supprimer les silences ».
-let _genDenoiseEnabled = false;
+let _genDenoiseEnabled = true; // activé par défaut (inclus avec la suppression des silences)
 function _genSetDenoiseSwitch(on){
   const s = document.getElementById('genDenoiseSwitch'), t = document.getElementById('genDenoiseThumb');
   if(!s || !t) return;
@@ -9674,7 +9673,7 @@ function _genSetDenoiseSwitch(on){
   t.style.opacity = on ? '1' : '.4';
 }
 // Réinitialise le toggle quand un nouveau fichier audio est chargé
-function _genDenoiseResetOnNewFile(){ _genDenoiseEnabled = false; _genSetDenoiseSwitch(false); }
+function _genDenoiseResetOnNewFile(){ _genDenoiseEnabled = true; _genSetDenoiseSwitch(true); }
 function _genToggleDenoise(){
   _genDenoiseEnabled = !_genDenoiseEnabled;
   _genSetDenoiseSwitch(_genDenoiseEnabled);
@@ -19049,7 +19048,7 @@ function _acHandleFile(file){
 }
 
 // ── #69 · Débruitage (module Nettoyage audio) — OPTION passive, appliquée avec « Supprimer les silences » ──
-let _acDenoiseEnabled = false;
+let _acDenoiseEnabled = true; // activé par défaut (inclus avec la suppression des silences)
 function _acSetDenoiseSwitch(on){
   const s = document.getElementById('acDenoiseSwitch'), t = document.getElementById('acDenoiseThumb');
   if(!s || !t) return;
@@ -19057,7 +19056,7 @@ function _acSetDenoiseSwitch(on){
   t.style.left = on ? '20px' : '3px';
   t.style.opacity = on ? '1' : '.4';
 }
-function _acDenoiseReset(){ _acDenoiseEnabled = false; _acSetDenoiseSwitch(false); }
+function _acDenoiseReset(){ _acDenoiseEnabled = true; _acSetDenoiseSwitch(true); }
 function _acToggleDenoise(){
   _acDenoiseEnabled = !_acDenoiseEnabled;
   _acSetDenoiseSwitch(_acDenoiseEnabled);
@@ -20822,9 +20821,13 @@ function openEdAiModal(){
       </div>
       <div id="edAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-bottom:16px"></div>
 
-      <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text);cursor:pointer;margin-bottom:18px">
+      <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text);cursor:pointer;margin-bottom:10px">
         <input type="checkbox" id="edAiSubs" checked style="accent-color:var(--orange2);width:15px;height:15px">
         Sous-titres mot-à-mot (style Punch) <span style="color:var(--text3);font-size:11px">— décoche si ta vidéo a déjà des sous-titres</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text);cursor:pointer;margin-bottom:18px">
+        <input type="checkbox" id="edAiMusic" checked style="accent-color:var(--orange2);width:15px;height:15px">
+        Musique de fond <span style="color:var(--text3);font-size:11px">— l'IA choisit l'ambiance, volume baissé sous la voix</span>
       </label>
 
       <button id="edAiGo" onclick="edAiGenerate()" class="btn" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14px;border:none;border-radius:11px;cursor:pointer">✨ Générer le montage — ${CREDIT_COSTS.montageIA} crédits</button>
@@ -21014,8 +21017,20 @@ function edAiApply(plan, toSource){
   const caps=(plan.captions||[]).map(c=>({ text:String(c.text||''), start:remap(c.start), end:Math.max(remap(c.start)+0.1, remap(c.end)), accent:!!c.accent })).filter(c=>c.text);
   _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', words:caps } : null;
 
+  // 🎵 musique de fond choisie par l'IA (volume ducké sous la voix)
+  const wantMusic=document.getElementById('edAiMusic') ? document.getElementById('edAiMusic').checked : true;
+  let musicTxt='';
+  if(wantMusic && plan.music && plan.music.mood){
+    const MOOD_TRACKS={ intense:['../assets/music/music-2.mp3','Intense'], dynamique:['../assets/music/music-1.mp3','Dynamique'], chill:['../assets/music/music-3.mp3','Chill'] };
+    const mt=MOOD_TRACKS[plan.music.mood];
+    if(mt){
+      musicTxt=' · musique '+plan.music.mood;
+      (async ()=>{ try{ await edAddMusicPreset(mt[0], mt[1]); edSetMusicVol(16); const sl=document.querySelector('input[oninput*="edSetMusicVol"]'); if(sl){ sl.value=16; const lbl=document.getElementById('edMusicVolLbl'); if(lbl) lbl.textContent='16%'; } }catch(_){} })();
+    }
+  }
+
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
-  toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+' — ⌘Z pour annuler');
+  toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
 }
 
 // ── Sous-titres Punch mot-à-mot dessinés au canvas (preview ET export) ──
