@@ -4066,95 +4066,88 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   </div>
 </div>
 
-<!-- MON COMPTE OVERLAY -->
-<div class="setup-overlay" id="accountOverlay" style="display:none" onclick="if(event.target===this)closeAccountSettings()">
-  <div class="setup-box" style="max-width:480px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+<!-- MON COMPTE OVERLAY — design 1:1 (maquette AccountModal, AvatarAds-4) -->
+<div class="setup-overlay" id="accountOverlay" style="display:none;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);padding:24px" onclick="if(event.target===this)closeAccountSettings()">
+  <div class="card" style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+
+    <!-- header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:12px">
-        <div id="accountOverlayAvatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c0392b);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">A</div>
-        <div>
-          <div class="display" style="font-size:21px;font-weight:700;letter-spacing:-.02em">Mon compte</div>
-          <div id="accountOverlayEmail" class="mono faint" style="font-size:11.5px;margin-top:2px">—</div>
+        <div id="accountOverlayAvatar" style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:grid;place-items:center;font-weight:800;color:#1A0A02;font-size:18px;flex:0 0 auto">A</div>
+        <div style="display:flex;flex-direction:column;line-height:1.25">
+          <span class="display" style="font-size:19px;font-weight:700">Mon compte</span>
+          <span id="accountOverlayEmail" class="mono" style="font-size:11.5px;color:var(--text-3)">—</span>
         </div>
       </div>
-      <button onclick="closeAccountSettings()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
+      <button class="btn-quiet" onclick="closeAccountSettings()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
     </div>
 
     <!-- ① Profil -->
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">① Profil</div>
-    <div class="setup-field" style="margin-bottom:10px">
+    <div class="eyebrow" style="margin-bottom:14px">① Profil</div>
+    <div style="margin-bottom:14px">
       <div class="setup-label">Prénom affiché</div>
-      <div class="setup-input"><input type="text" id="accountFirstName" placeholder="Ton prénom"></div>
+      <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom">
     </div>
-    <div class="setup-field" style="margin-bottom:16px">
-      <div class="setup-label">Numéro de téléphone <span style="color:var(--text3);font-size:9px;margin-left:4px">OPTIONNEL</span></div>
-      <div class="setup-input"><input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00"></div>
+    <div style="margin-bottom:16px">
+      <div class="setup-label">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+      <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
     </div>
-    <button onclick="saveAccountProfile()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:20px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-      💾 Sauvegarder le profil
-    </button>
+    <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:22px">💾 Sauvegarder le profil</button>
 
-    <div class="setup-divider"></div>
+    <div style="height:1px;background:var(--border);margin-bottom:22px"></div>
 
     <!-- ② Email -->
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">② Adresse email de connexion</div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:12px">
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:3px">EMAIL ACTUEL</div>
-      <div id="accountCurrentEmail" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
+    <div class="eyebrow" style="margin-bottom:14px">② Adresse email de connexion</div>
+    <div style="margin-bottom:14px">
+      <div class="setup-label">Email actuel</div>
+      <div id="accountCurrentEmail" class="field" style="font-weight:600">—</div>
     </div>
-    <div class="setup-field" style="margin-bottom:6px">
+    <div style="margin-bottom:8px">
       <div class="setup-label">Nouvel email</div>
-      <div class="setup-input"><input type="email" id="accountNewEmail" placeholder="nouveau@email.com"></div>
+      <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com">
     </div>
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px;line-height:1.6">
-      Un lien de confirmation sera envoyé à la <strong style="color:var(--text2)">nouvelle adresse</strong>. L'ancien email reste actif jusqu'à confirmation.
+    <p style="font-size:12px;color:var(--text-3);margin:0 0 16px;line-height:1.5">Un lien de confirmation sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à confirmation.</p>
+    <button class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;margin-bottom:22px">✉️ Envoyer le lien de confirmation</button>
+
+    <div style="height:1px;background:var(--border);margin-bottom:22px"></div>
+
+    <!-- ④ Connecter Claude -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <span class="eyebrow">④ Connecter Claude</span>
+      <span class="tag-beta">BÊTA</span>
+      <span class="mono" style="font-size:10px;letter-spacing:.08em;color:var(--text-3)">PRO · ÉLITE</span>
     </div>
-    <button onclick="saveAccountEmail()" style="width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#4dabf7';this.style.color='#4dabf7'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-      ✉️ Envoyer le lien de confirmation
-    </button>
-
-    <div class="setup-divider" style="margin-top:20px"></div>
-
-    <!-- (Mot de passe retiré : la connexion est 100 % par code e-mail OTP, il n'y a plus de mot de passe) -->
-
-    <!-- ④ Claude (MCP) -->
-    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">④ Connecter Claude <span style="background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:5px;padding:1px 6px;font-size:9px">BÊTA</span> <span style="color:var(--orange2);font-size:9px;margin-left:4px">PRO · ÉLITE</span></div>
-    <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:10px">
-      Génère tes images et vidéos AvatarAds directement depuis <strong style="color:var(--text2)">Claude</strong> (claude.ai ou Claude Code), avec tes crédits.
-    </div>
-    <div id="mcpKeyStatus" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:var(--text3)">Chargement…</div>
-    <label id="mcpConfirmRow" style="display:none;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11.5px;color:var(--text3)">
-      <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked)" style="accent-color:var(--orange2);width:15px;height:15px;flex:0 0 auto">
-      <span>Claude doit demander <strong style="color:var(--text2)">confirmation avant chaque génération</strong>, avec le coût en crédits (recommandé)</span>
-    </label>
-    <div id="mcpKeyResult" style="display:none;margin-bottom:10px">
+    <p style="font-size:12.5px;color:var(--text-3);line-height:1.55;margin:0 0 16px">
+      Génère tes images et vidéos AvatarAds directement depuis <b style="color:var(--text-2)">Claude</b> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
+    </p>
+    <div id="mcpKeyStatus" class="card" style="padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-3)">Chargement…</div>
+    <div id="mcpKeyResult" style="display:none;margin-bottom:16px">
       <div style="display:flex;gap:8px">
-        <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:10.5px">
-        <button onclick="mcpKeyCopy()" style="padding:9px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap">📋 Copier</button>
+        <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="field mono" style="flex:1;min-width:0;font-size:10.5px;padding:10px 12px">
+        <button class="btn btn-ghost btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;white-space:nowrap">📋 Copier</button>
       </div>
-      <div style="font-size:10px;font-family:var(--mono);color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
+      <div class="mono" style="font-size:10px;color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button id="mcpKeyCreateBtn" onclick="mcpKeyCreate()" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">🔑 Générer ma clé</button>
-      <button id="mcpKeyRevokeBtn" onclick="mcpKeyRevoke()" style="display:none;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,.4)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Révoquer</button>
+    <label id="mcpConfirmRow" style="display:none;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;width:100%;text-align:left">
+      <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
+      <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;margin-top:1px;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
+        <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </span>
+      <span style="font-size:12.5px;line-height:1.5;color:var(--text-3)">Claude doit demander <b style="color:var(--text-2)">confirmation avant chaque génération</b>, avec le coût en crédits (recommandé)</span>
+    </label>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <button id="mcpKeyCreateBtn" class="btn btn-ghost" onclick="mcpKeyCreate()" style="flex:1">🔑 Générer ma clé</button>
+      <button id="mcpKeyRevokeBtn" class="btn btn-ghost" onclick="mcpKeyRevoke()" style="display:none;flex:0 0 auto;color:#FF6B6B;border-color:rgba(255,70,70,.25)">Révoquer</button>
     </div>
-    <button onclick="openMcpTuto()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(255,107,53,.05));border:1px solid var(--accent-line);border-radius:10px;color:var(--accent-2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;margin-bottom:4px" onmouseover="this.style.borderColor='var(--orange2)'" onmouseout="this.style.borderColor='var(--accent-line)'">
-      📖 Voir le tuto — connecter ta clé à Claude
-    </button>
+    <button class="btn btn-primary" onclick="openMcpTuto()" style="width:100%">📖 Voir le tuto — connecter ta clé à Claude</button>
 
-    <div class="setup-divider" style="margin-top:20px"></div>
+    <div style="height:1px;background:var(--border);margin:22px 0"></div>
 
-    <!-- ⑤ Abonnement & Déconnexion -->
-    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
-      <button onclick="changeSubscription();closeAccountSettings()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-        <span style="font-size:15px">📋</span> Changer mon abonnement
-      </button>
-      <button id="accountPanelCancelBtn" onclick="cancelSubscription()" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:none;align-items:center;gap:10px" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
-        <span style="font-size:15px">⏸️</span> Annuler l'abonnement
-      </button>
-      <button onclick="authLogout()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,71,87,.2);border-radius:10px;color:#ff4757;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='rgba(255,71,87,.08)';this.style.borderColor='rgba(255,71,87,.4)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,71,87,.2)'">
-        <span style="font-size:15px">🚪</span> Se déconnecter
-      </button>
+    <!-- Abonnement & Déconnexion -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-ghost" onclick="changeSubscription();closeAccountSettings()" style="width:100%;justify-content:flex-start">🗂 Changer mon abonnement</button>
+      <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start">⏸ Annuler l'abonnement</button>
+      <button class="btn" onclick="authLogout()" style="width:100%;justify-content:flex-start;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B">⎋ Se déconnecter</button>
     </div>
 
   </div>
@@ -6722,6 +6715,20 @@ async function _mcpKeyCall(action, extra){
     return await res.json();
   }catch(e){ return null; }
 }
+// Case à cocher custom (design AccountModal) : peint l'état visuel de la case 22px
+function _mcpConfirmPaint(on){
+  const box = document.getElementById('mcpConfirmBox');
+  const check = document.getElementById('mcpConfirmCheck');
+  if(!box) return;
+  box.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
+  box.style.borderColor = on ? 'var(--accent)' : 'var(--border-2)';
+  if(check) check.style.display = on ? 'block' : 'none';
+}
+// Carte d'état de la clé : verte quand active (design), neutre sinon
+function _mcpKeyCardPaint(st, active){
+  st.style.borderColor = active ? 'rgba(40,199,149,.3)' : 'var(--border)';
+  st.style.background  = active ? 'rgba(40,199,149,.07)' : 'var(--surface)';
+}
 async function mcpKeyRefresh(){
   const st = document.getElementById('mcpKeyStatus');
   const revokeBtn = document.getElementById('mcpKeyRevokeBtn');
@@ -6729,25 +6736,29 @@ async function mcpKeyRefresh(){
   const confirmRow = document.getElementById('mcpConfirmRow');
   if(!st) return;
   const res = await _mcpKeyCall('status');
-  if(!res){ st.textContent = '⚠️ Impossible de vérifier la clé — réessaie.'; return; }
+  if(!res){ st.textContent = '⚠️ Impossible de vérifier la clé — réessaie.'; _mcpKeyCardPaint(st, false); return; }
   window._mcpPlanAllowed = res.plan_allowed !== false;
   if(!window._mcpPlanAllowed){
+    _mcpKeyCardPaint(st, false);
     st.innerHTML = '🔒 Réservé aux plans <strong style="color:var(--text2)">Pro</strong> et <strong style="color:var(--text2)">Élite</strong>.';
     if(createBtn) createBtn.textContent = '⚡ Passer au plan Pro';
-    if(revokeBtn) revokeBtn.style.display = res.exists ? 'block' : 'none';
+    if(revokeBtn) revokeBtn.style.display = res.exists ? '' : 'none';
     if(confirmRow) confirmRow.style.display = 'none';
     return;
   }
   if(confirmRow) confirmRow.style.display = 'flex';
   const chk = document.getElementById('mcpConfirmChk');
-  if(chk) chk.checked = res.require_confirm !== false;
+  if(chk){ chk.checked = res.require_confirm !== false; _mcpConfirmPaint(chk.checked); }
   if(res.exists){
     const d = new Date(res.created_at).toLocaleDateString('fr-FR');
-    st.innerHTML = '🟢 <strong style="color:var(--text2)">Clé active</strong> — créée le '+d
-      + (res.last_used_at ? ' · dernière utilisation le '+new Date(res.last_used_at).toLocaleDateString('fr-FR') : ' · jamais utilisée');
-    if(revokeBtn) revokeBtn.style.display = 'block';
-    if(createBtn) createBtn.textContent = '🔄 Regénérer la clé';
+    _mcpKeyCardPaint(st, true);
+    st.innerHTML = '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(40,199,149,.7);margin-right:9px;vertical-align:1px"></span>'
+      + '<strong style="color:var(--text)">Clé active</strong> <span style="color:var(--text-3)">— créée le '+d
+      + (res.last_used_at ? ' · dernière utilisation le '+new Date(res.last_used_at).toLocaleDateString('fr-FR') : ' · jamais utilisée') + '</span>';
+    if(revokeBtn) revokeBtn.style.display = '';
+    if(createBtn) createBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Régénérer la clé';
   } else {
+    _mcpKeyCardPaint(st, false);
     st.textContent = 'Aucune clé pour le moment.';
     if(revokeBtn) revokeBtn.style.display = 'none';
     if(createBtn) createBtn.textContent = '🔑 Générer ma clé';
@@ -6761,7 +6772,7 @@ async function mcpConfirmToggle(on){
 async function mcpKeyCreate(){
   if(window._mcpPlanAllowed === false){ closeAccountSettings(); showPaywall(); return; }
   const btn = document.getElementById('mcpKeyCreateBtn');
-  if(btn && btn.textContent.includes('Regénérer')){
+  if(btn && /R[ée]g[ée]n[ée]rer/.test(btn.textContent)){
     if(!confirm('Regénérer la clé ? L\'ancienne sera immédiatement révoquée — il faudra mettre à jour l\'URL dans Claude.')) return;
   }
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Génération…'; }
@@ -6841,7 +6852,7 @@ function _syncCancelBtn(){
   if(!b) return;
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const paid = !['free','byok','developer'].includes(plan) && !!currentMember?.whop_member_id;
-  b.style.display = paid ? 'flex' : 'none';
+  b.style.display = paid ? '' : 'none'; // '' → inline-flex de la classe .btn
   if(currentMember?.whop_cancel_at_period_end){
     b.innerHTML = '<span style="font-size:15px">⏸️</span> Annulation programmée — actif jusqu\'à la fin de la période';
     b.style.opacity = '.6'; b.style.pointerEvents = 'none';
