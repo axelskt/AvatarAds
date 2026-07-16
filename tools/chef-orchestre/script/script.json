@@ -1,0 +1,11 @@
+{
+  "lang": "fr",
+  "lines": [
+    { "id": "hook",    "role": "hook",  "text": "Tu veux une vidéo virale en trente secondes ?" },
+    { "id": "express", "role": "step",  "text": "Va sur Express." },
+    { "id": "image",   "role": "step",  "text": "Importe ton image." },
+    { "id": "prompt",  "role": "step",  "text": "Tape ton prompt." },
+    { "id": "cta",     "role": "step",  "text": "Et clique sur Générer.", "emphasis": "pulse" },
+    { "id": "outro",   "role": "outro", "text": "AvatarAds fait le reste." }
+  ]
+}
