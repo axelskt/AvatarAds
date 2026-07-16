@@ -1893,7 +1893,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
 
               <!-- HOOK TEXT (top overlay) -->
-              <div id="hookOverlay" style="display:none;position:absolute;top:28px;left:0;right:0;text-align:center;padding:0 12px;z-index:52;pointer-events:none">
+              <div id="hookOverlay" style="display:none;position:absolute;top:13%;left:0;right:0;text-align:center;padding:0 12px;z-index:52;pointer-events:none"><!-- safe zone : sous l'horloge + onglets TikTok -->
                 <span id="hookText" style="font-family:Impact,sans-serif;font-size:11px;color:#fff;-webkit-text-stroke:0.5px #000;text-shadow:1px 1px 3px rgba(0,0,0,.9);line-height:1.3;display:inline-block"></span>
               </div>
 
@@ -10891,6 +10891,30 @@ function selectFormatGroup(group){
   if(group === 'youtube') setPlatformPreview('youtube');
 }
 
+// ── SAFE ZONE (UI TikTok/Reels/Shorts) ──
+// Fractions de la hauteur/largeur vidéo réservées par l'UI des plateformes :
+// haut = statut + onglets « Pour toi », bas = caption + musique + nav, droite = rail like/comment/share
+const SAFE_ZONE = { top:13, bottom:78, left:8, right:84 }; // en % (positions de CENTRE autorisées)
+
+// Guides visuels de la safe zone dans le preview téléphone (affichés pendant le drag)
+function _safeZoneGuides(show){
+  const phone = document.getElementById('phoneMockup');
+  if(!phone) return;
+  let g = document.getElementById('safeZoneGuides');
+  if(!g){
+    g = document.createElement('div');
+    g.id = 'safeZoneGuides';
+    g.style.cssText = 'position:absolute;inset:0;z-index:60;pointer-events:none;display:none';
+    g.innerHTML =
+      `<div style="position:absolute;left:0;right:0;top:0;height:${SAFE_ZONE.top}%;background:rgba(255,71,87,.16);border-bottom:1.5px dashed rgba(255,71,87,.85)"></div>`+
+      `<div style="position:absolute;left:0;right:0;bottom:0;height:${100-SAFE_ZONE.bottom}%;background:rgba(255,71,87,.16);border-top:1.5px dashed rgba(255,71,87,.85)"></div>`+
+      `<div style="position:absolute;right:0;top:${SAFE_ZONE.top}%;bottom:${100-SAFE_ZONE.bottom}%;width:${100-SAFE_ZONE.right-4}%;background:rgba(255,71,87,.13);border-left:1.5px dashed rgba(255,71,87,.6)"></div>`+
+      `<div style="position:absolute;left:50%;top:${SAFE_ZONE.top}%;transform:translate(-50%,-125%);font:700 10px var(--mono);color:#ff8a94;letter-spacing:1px;white-space:nowrap">SAFE ZONE</div>`;
+    phone.appendChild(g);
+  }
+  g.style.display = show ? 'block' : 'none';
+}
+
 // ── SUBTITLE PREVIEW ──
 // Glisser-déposer des sous-titres directement dans le preview
 function _initSubDrag(){
@@ -10899,14 +10923,16 @@ function _initSubDrag(){
   if(!content || !overlay || content._dragInit) return;
   content._dragInit = true;
   let dragging = false;
-  content.addEventListener('pointerdown', e => { dragging = true; content.style.cursor='grabbing'; try{content.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
+  content.addEventListener('pointerdown', e => { dragging = true; content.style.cursor='grabbing'; _safeZoneGuides(true); try{content.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
   const move = e => {
     if(!dragging) return;
     const host = overlay.offsetParent || overlay.parentElement; if(!host) return;
     const r = host.getBoundingClientRect(); if(!r.width||!r.height) return;
     let xp = Math.round(((e.clientX - r.left)/r.width)*100);
     let yp = Math.round(((e.clientY - r.top)/r.height)*100);
-    xp = Math.max(2, Math.min(98, xp)); yp = Math.max(2, Math.min(98, yp));
+    // Clamp à la safe zone : jamais sous l'UI TikTok/Reels (haut, bas, rail droit)
+    xp = Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right, xp));
+    yp = Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, yp));
     cfg.subPosX = xp; cfg.subPos = yp;
     overlay.style.left = xp+'%'; overlay.style.top = yp+'%';
     const sx=document.getElementById('subPosX'), sxv=document.getElementById('subPosXVal');
@@ -10915,7 +10941,7 @@ function _initSubDrag(){
     if(sy) sy.value=yp; if(syv) syv.textContent=yp+'%';
   };
   window.addEventListener('pointermove', move);
-  window.addEventListener('pointerup', ()=>{ if(dragging){ dragging=false; content.style.cursor='grab'; } });
+  window.addEventListener('pointerup', ()=>{ if(dragging){ dragging=false; content.style.cursor='grab'; _safeZoneGuides(false); } });
 }
 function updateSubPreview(){
   _initSubDrag();
@@ -10969,11 +10995,11 @@ function updateSubPreview(){
     if(animClass){ void el.offsetWidth; el.className = animClass; }
   }
 
-  // Position + size of subtitle overlay
+  // Position + size of subtitle overlay (clampée à la safe zone TikTok/Reels)
   const overlay = document.getElementById('subsOverlay');
   if(overlay){
-    const posY = cfg.subPos !== undefined ? cfg.subPos : 75;
-    const posX = cfg.subPosX !== undefined ? cfg.subPosX : 50;
+    const posY = Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos  !== undefined ? cfg.subPos  : 75));
+    const posX = Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX !== undefined ? cfg.subPosX : 50));
     overlay.style.top       = posY + '%';
     overlay.style.left      = posX + '%';
     const sx = cfg.subScaleX || 1.0;
@@ -14989,8 +15015,9 @@ function _cvHook(ctx, W, H){
   ctx.font = `900 ${sz}px Impact,sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, Math.round(sz/16));
-  ctx.strokeStyle = '#000'; ctx.strokeText(text, W/2, Math.round(28 * H/852));
-  ctx.fillStyle = '#fff';   ctx.fillText(text,   W/2, Math.round(28 * H/852));
+  const hy = Math.round(H * (SAFE_ZONE.top/100)); // safe zone : sous l'horloge + onglets TikTok (miroir du DOM top:13%)
+  ctx.strokeStyle = '#000'; ctx.strokeText(text, W/2, hy);
+  ctx.fillStyle = '#fff';   ctx.fillText(text,   W/2, hy);
   ctx.restore();
 }
 
@@ -15014,8 +15041,9 @@ function _splitSubLines(widths, maxW){
 function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   if(!shown?.length) return;
   const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
-  const posY     = Math.round(H * ((cfg.subPos||75) / 100));
-  const posX     = Math.round(W * ((cfg.subPosX||50) / 100));
+  // Position clampée à la SAFE ZONE (UI TikTok/Reels : haut, bas, rail droit)
+  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos ||75)) / 100));
+  const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX||50)) / 100));
   const scaleX   = cfg.subScaleX || 1.0;
   const c1       = subColors.c1 || '#FFE500';
   const c2       = subColors.c2 || '#ffffff';
@@ -15024,7 +15052,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   const gap      = Math.round(sz * 0.22);
   const ANIM_DUR = 0.25;
   const t        = Math.min(1, animElapsed / ANIM_DUR);
-  const maxLineW = W * 0.88; // jamais plus de 88% de la largeur canvas
+  const maxLineW = W * 0.80; // ≤80% de large → ne passe jamais sous le rail TikTok à droite
   const lineH    = Math.round(sz * 1.38); // interligne entre les lignes wrappées
 
   // ── Animation ──
@@ -15067,7 +15095,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       const lineY = startY + li * lineH;
       const lineW = lineIdxs.reduce((a, i) => a + wordWidths[i], 0);
       let x = posX - lineW / 2;
-      x = Math.max(W * 0.05, Math.min(W * 0.95 - lineW, x));
+      x = Math.max(W * 0.05, Math.min(W * 0.88 - lineW, x)); // safe zone : rail droit TikTok
       lineIdxs.forEach(i => {
         ctx.font = font;
         // ombre portée (halo noir)
@@ -15123,7 +15151,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       const lineY = startY + li * lineH;
       const lineW = lineIdxs.reduce((a,i)=>a+widths[i]+gapK,0) - gapK;
       let x = posX - lineW/2;
-      x = Math.max(W*0.04, Math.min(W*0.96 - lineW, x));
+      x = Math.max(W*0.04, Math.min(W*0.88 - lineW, x)); // safe zone : rail droit TikTok
 
       lineIdxs.forEach(i=>{
         const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
@@ -15166,7 +15194,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       const lineY = startY + li * lineH;
       const lineW = lineIdxs.reduce((a,i)=>a+widths[i]+gapK,0) - gapK;
       let x = posX - lineW/2;
-      x = Math.max(W*0.04, Math.min(W*0.96 - lineW, x));
+      x = Math.max(W*0.04, Math.min(W*0.88 - lineW, x)); // safe zone : rail droit TikTok
 
       lineIdxs.forEach(i=>{
         // Un SEUL mot surligné à la fois (le mot actif)
@@ -15213,7 +15241,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       const lineW = lineIdxs.reduce((a,i)=>a+widths[i],0);
       let x = posX - lineW/2;
       // Clamp x pour ne jamais dépasser les bords
-      x = Math.max(W*0.05, Math.min(W*0.95 - lineW, x));
+      x = Math.max(W*0.05, Math.min(W*0.88 - lineW, x)); // safe zone : rail droit TikTok
 
       lineIdxs.forEach(i=>{
         const active = i===activeIdx;
