@@ -4115,16 +4115,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <div class="setup-divider" style="margin-top:20px"></div>
 
-    <!-- ③ Mot de passe -->
-    <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text2)">Mot de passe</div>
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Réinitialiser via un lien envoyé par email</div>
-      </div>
-      <button onclick="resetPassword();closeAccountSettings()" style="padding:8px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">Réinitialiser →</button>
-    </div>
-
-    <div class="setup-divider" style="margin-top:20px"></div>
+    <!-- (Mot de passe retiré : la connexion est 100 % par code e-mail OTP, il n'y a plus de mot de passe) -->
 
     <!-- ④ Claude (MCP) -->
     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px">④ Connecter Claude <span style="background:rgba(245,158,11,.14);color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:5px;padding:1px 6px;font-size:9px">BÊTA</span> <span style="color:var(--orange2);font-size:9px;margin-left:4px">PRO · ÉLITE</span></div>
@@ -6829,10 +6820,6 @@ function openMcpTuto(){
       </div>
       <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:14px">5 étapes, ~2 minutes. Ta clé reste personnelle et révocable à tout moment.</div>
       <div style="display:flex;flex-direction:column;gap:10px">${steps}</div>
-      <div style="margin-top:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px">
-        <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;margin-bottom:5px">💻 CLAUDE CODE (TERMINAL)</div>
-        <code style="display:block;background:var(--bg4);padding:7px 9px;border-radius:6px;font-size:10.5px;color:var(--text2);overflow-x:auto;white-space:nowrap">claude mcp add --transport http avatarads &lt;ton-URL&gt;</code>
-      </div>
       <button onclick="closeMcpTuto()" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer">C'est bon, j'ai connecté ✓</button>
     </div>`;
   document.body.appendChild(m);
