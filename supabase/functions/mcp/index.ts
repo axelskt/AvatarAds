@@ -19,10 +19,26 @@ const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY       = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
 const GOOGLE_AI_KEY  = Deno.env.get('GOOGLE_AI_KEY') ?? ''
+const HEDRA_API_KEY  = Deno.env.get('HEDRA_API_KEY') ?? ''
+const ELEVEN_API_KEY = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 
 const APP_URL         = 'https://avatarads.fr/app/'
 const IMG_COST        = { standard: 3, high: 5 }
 const VIDEO_COST_SEC  = 1 // Veo 3.1 Lite = tarif Express Lite
+// ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
+const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
+const HEDRA_MODEL_ID  = 'd1dd37a3-e39a-4854-a298-6510289f9cf2' // Hedra Character 3 (même modèle que l'app)
+const AVATAR_COST_SEC = 1.5 // 1 cr/s lipsync + 0,5 cr/s voix ElevenLabs (barème app)
+const AVATAR_MAX_SEC  = 60
+const CHARS_PER_SEC   = 14  // débit de parole FR moyen pour estimer la durée depuis le script
+// Voix presets (mêmes IDs ElevenLabs que l'app)
+const MCP_VOICES: Record<string, string> = {
+  homme: 'onwK4e9ZLuTAKqWW03F9',  // Daniel — posé, confiant
+  femme: 'XB0fDUnXU5powFXDhCwa',  // Charlotte — chaleureuse, naturelle
+}
+// Nettoyage audio (Voice Isolator ElevenLabs) : ~1 crédit / minute d'audio
+const CLEAN_COST_PER_MIN = 1
+const CLEAN_MAX_BYTES    = 15_000_000 // ~15 min de MP3 128 kbps
 const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
@@ -183,6 +199,43 @@ function toolDefs(isOwner: boolean) {
       },
     },
     {
+      name: 'generate_avatar_video',
+      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) : voix IA ElevenLabs + lipsync Hedra Character-3 à partir d'un script et optionnellement d'une photo d'avatar. Coût : ${AVATAR_COST_SEC} crédit/seconde (durée estimée depuis le script, max ${AVATAR_MAX_SEC} s), débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes). La vidéo sort SANS sous-titres : pour les sous-titres et effets, ouvrir la vidéo dans l'app.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          script: { type: 'string', description: `Le texte que l'avatar va dire (français ou anglais). ~${CHARS_PER_SEC} caractères ≈ 1 seconde de vidéo.` },
+          avatar_image_url: { type: 'string', description: "URL publique de la photo de l'avatar (optionnel) — ex. une image générée avec generate_image. Sans photo, Hedra invente une personne réaliste." },
+          voice: { type: 'string', enum: ['homme', 'femme'], description: 'Voix preset : homme (Daniel, posé) ou femme (Charlotte, chaleureuse). Défaut : homme.' },
+          voice_id: { type: 'string', description: "ID de voix ElevenLabs précis (optionnel, prioritaire sur voice) — ex. une voix clonée du compte." },
+          aspect_ratio: { type: 'string', enum: ['9:16', '1:1'], description: '9:16 vertical (défaut) ou 1:1 carré.' },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
+        },
+        required: ['script'],
+      },
+    },
+    {
+      name: 'check_avatar_video',
+      description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
+      inputSchema: {
+        type: 'object',
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_avatar_video.' } },
+        required: ['job_id'],
+      },
+    },
+    {
+      name: 'clean_audio',
+      description: `Nettoie un fichier audio (le Nettoyage audio AvatarAds) : supprime bruit de fond, clics et parasites en isolant la voix (ElevenLabs Voice Isolator). Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          audio_url: { type: 'string', description: 'URL publique du fichier audio à nettoyer (MP3, WAV, M4A… — 15 Mo max).' },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
+        },
+        required: ['audio_url'],
+      },
+    },
+    {
       name: 'list_media',
       description: 'Liste les derniers médias (images et vidéos) générés via Claude sur ce compte, avec leurs URLs publiques.',
       inputSchema: { type: 'object', properties: {} },
@@ -212,7 +265,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo ${VIDEO_COST_SEC} crédit/s (4 à 10 s).
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo IA ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · vidéo avatar parlant ${AVATAR_COST_SEC} crédit/s (max ${AVATAR_MAX_SEC} s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -337,6 +390,25 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     .eq('user_id', userId).eq('status', 'running').lt('created_at', staleIso).limit(5)
   for (const job of stale || []) {
     if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
+
+    // ── Jobs avatar (Hedra) : op_name = ID de génération Hedra ──
+    if (job.kind === 'avatar') {
+      try {
+        const r = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d: Record<string, any> = r.ok ? await r.json().catch(() => ({})) : {}
+        const status = String(d.status || d.state || '').toLowerCase()
+        if (['complete', 'completed', 'succeeded'].includes(status)) {
+          const vu = d.url || d.download_url || d.video_url || d.streaming_url || ''
+          const vRes = vu ? await fetch(vu).catch(() => null) : null
+          if (vRes && vRes.ok) { await deliverVideo(userId, job, new Uint8Array(await vRes.arrayBuffer())); continue }
+        }
+      } catch { /* poll KO : remboursement ci-dessous */ }
+      await failAndRefund(userId, job, 'timeout')
+      continue
+    }
+
+    // ── Jobs Veo ──
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let d: Record<string, any> | null = null
     try {
@@ -433,8 +505,9 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const jobId = String(args.job_id || '').trim()
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
   const userId = String(profile.id)
-  const { data: job } = await svc.from('mcp_jobs').select('*').eq('id', jobId).eq('user_id', userId).maybeSingle()
-  if (!job) return toolErr('Job introuvable sur ce compte.')
+  const { data: job } = await svc.from('mcp_jobs').select('*')
+    .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
+  if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
   if (job.status === 'done') return toolText(`✅ Vidéo prête !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
@@ -469,6 +542,233 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   return url
     ? toolText(`✅ Vidéo prête !\nURL : ${url}`)
     : toolText('⏳ Presque prête — rappelle check_video dans quelques secondes.')
+}
+
+// ── Générateur avatar parlant (ElevenLabs → Hedra) ──
+async function hedraFetch(path: string, init?: RequestInit): Promise<Response> {
+  return await fetch(`${HEDRA_BASE}${path}`, {
+    ...init,
+    headers: { 'X-API-Key': HEDRA_API_KEY, ...(init?.headers || {}) },
+  })
+}
+
+// Télécharge un fichier fourni par l'utilisateur (SSRF + taille + type vérifiés).
+// Retourne les octets ou un message d'erreur (string).
+async function fetchUserFile(rawUrl: string, maxBytes: number, ctRegex: RegExp, label: string):
+  Promise<{ bytes: Uint8Array; contentType: string } | string> {
+  let parsed: URL | null = null
+  try { parsed = new URL(rawUrl) } catch { /* invalide */ }
+  if (!parsed || !/^https?:$/.test(parsed.protocol)) return `${label} doit être une URL http(s) publique.`
+  if (isBlockedHost(parsed.hostname)) return `${label} doit pointer vers un fichier public (adresse interne refusée).`
+  const r = await fetch(rawUrl).catch(() => null)
+  if (!r || !r.ok) return `Impossible de télécharger ${label}.`
+  const ct = (r.headers.get('content-type') || '').split(';')[0].trim()
+  if (!ctRegex.test(ct)) return `${label} : type de fichier non supporté (${ct || 'inconnu'}).`
+  const bytes = new Uint8Array(await r.arrayBuffer())
+  if (bytes.length > maxBytes) return `${label} : fichier trop lourd (${Math.round(maxBytes / 1_000_000)} Mo max).`
+  return { bytes, contentType: ct }
+}
+
+// Crée un asset Hedra puis uploade le fichier. Retourne l'ID d'asset ou null.
+async function hedraUploadAsset(type: 'audio' | 'image', name: string, bytes: Uint8Array, contentType: string): Promise<string | null> {
+  const create = await hedraFetch('/assets', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, name }),
+  })
+  if (!create.ok) return null
+  const asset = await create.json().catch(() => ({}))
+  if (!asset.id) return null
+  const fd = new FormData()
+  fd.append('file', new Blob([bytes as unknown as BlobPart], { type: contentType }), name)
+  const up = await hedraFetch(`/assets/${asset.id}/upload`, { method: 'POST', body: fd })
+  return up.ok ? String(asset.id) : null
+}
+
+async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
+  if (!HEDRA_API_KEY || !ELEVEN_API_KEY) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
+  const script = String(args.script || '').trim()
+  if (!script) return toolErr('Le paramètre "script" est requis.')
+  const maxChars = AVATAR_MAX_SEC * CHARS_PER_SEC
+  if (script.length > maxChars) {
+    return toolErr(`Script trop long (${script.length} caractères) : maximum ~${maxChars} caractères (≈ ${AVATAR_MAX_SEC} s de vidéo). Raccourcis le script.`)
+  }
+  const estSec = Math.min(AVATAR_MAX_SEC, Math.max(3, Math.ceil(script.length / CHARS_PER_SEC)))
+  const cost = Math.ceil(estSec * AVATAR_COST_SEC)
+  const aspect = args.aspect_ratio === '1:1' ? '1:1' : '9:16'
+  const voiceId = String(args.voice_id || '').trim() || MCP_VOICES[String(args.voice || 'homme')] || MCP_VOICES.homme
+  const userId = String(profile.id)
+
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${estSec} s × ${AVATAR_COST_SEC}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost,
+    `vidéo avatar parlant ~${estSec} s (${aspect}${args.avatar_image_url ? ', avec photo' : ''}, voix ${args.voice_id ? 'personnalisée' : (args.voice || 'homme')})`,
+    'generate_avatar_video')
+  if (gate) return gate
+
+  // Photo d'avatar optionnelle — téléchargée AVANT le débit
+  let imgFile: { bytes: Uint8Array; contentType: string } | null = null
+  if (args.avatar_image_url) {
+    const got = await fetchUserFile(String(args.avatar_image_url), 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_image_url)")
+    if (typeof got === 'string') return toolErr(got)
+    imgFile = got
+  }
+
+  // Débit au lancement (remboursé si échec avant la création du job)
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
+
+  let launched = false
+  try {
+    // 1) Voix ElevenLabs (mêmes réglages que l'app)
+    const tts = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': ELEVEN_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: script, model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+      }),
+    })
+    if (!tts.ok) {
+      const err = await tts.text().catch(() => '')
+      return toolErr(`Voix échouée (ElevenLabs ${tts.status})${/voice/i.test(err) ? ' — voice_id introuvable ?' : ''} — crédits remboursés.`)
+    }
+    const audioBytes = new Uint8Array(await tts.arrayBuffer())
+
+    // 2) Assets Hedra (audio obligatoire, image optionnelle)
+    const audioId = await hedraUploadAsset('audio', 'voice.mp3', audioBytes, 'audio/mpeg')
+    if (!audioId) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
+    let imageId: string | null = null
+    if (imgFile) {
+      imageId = await hedraUploadAsset('image', 'avatar.jpg', imgFile.bytes, imgFile.contentType)
+      if (!imageId) return toolErr("Upload de la photo d'avatar vers Hedra échoué — crédits remboursés, réessaie.")
+    }
+
+    // 3) Lancer la génération (même payload que l'app)
+    const genBody: Record<string, unknown> = {
+      type: 'video',
+      ai_model_id: HEDRA_MODEL_ID,
+      audio_id: audioId,
+      generated_video_inputs: {
+        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, static background, no camera movement, background objects completely still, no scene motion',
+        aspect_ratio: aspect,
+        character_orientation: 'video',
+        resolution: '720p',
+      },
+    }
+    if (imageId) genBody.start_keyframe_id = imageId
+    const genRes = await hedraFetch('/generations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(genBody),
+    })
+    if (!genRes.ok) {
+      const err = await genRes.text().catch(() => '')
+      return toolErr(`Lancement Hedra échoué (${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
+    }
+    const gen = await genRes.json().catch(() => ({}))
+    if (!gen.id) return toolErr('Hedra n\'a pas retourné d\'ID de génération — crédits remboursés.')
+
+    const { data: job, error } = await svc.from('mcp_jobs')
+      .insert({ user_id: userId, kind: 'avatar', op_name: String(gen.id), credits_cost: cost }).select('id').single()
+    if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
+    launched = true
+    return toolText(
+      `🎬 Vidéo avatar lancée ! (~${estSec} s, ${aspect}, −${cost} crédits)
+job_id : ${job.id}
+Appelle check_avatar_video avec ce job_id dans environ 1 minute (la génération prend 2 à 5 minutes).
+💡 La vidéo sort sans sous-titres : pour sous-titres, effets et montage, ouvre-la dans ${APP_URL}`)
+  } finally {
+    if (!launched) await refundCredits(userId, cost)
+  }
+}
+
+async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  const jobId = String(args.job_id || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
+  const userId = String(profile.id)
+  const { data: job } = await svc.from('mcp_jobs').select('*')
+    .eq('id', jobId).eq('user_id', userId).eq('kind', 'avatar').maybeSingle()
+  if (!job) return toolErr('Job avatar introuvable sur ce compte.')
+  if (job.status === 'done') return toolText(`✅ Vidéo avatar prête !\nURL : ${job.result_url}`)
+  if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+
+  // Poll Hedra jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
+  let videoUrl = ''
+  let lastProgress = 0
+  let hedraErr = ''
+  for (let i = 0; i < 9; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 5000))
+    const res = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
+    if (!res.ok) continue
+    const d = await res.json().catch(() => ({}))
+    const status = String(d.status || d.state || '').toLowerCase()
+    lastProgress = Math.round((d.progress || 0) * 100)
+    if (['queued', 'processing', 'finalizing', 'pending'].includes(status) || !status) continue
+    if (['complete', 'completed', 'succeeded'].includes(status)) {
+      videoUrl = d.url || d.download_url || d.video_url || d.streaming_url || ''
+      break
+    }
+    hedraErr = d.error || d.error_message || `statut ${status}`
+    break
+  }
+  if (hedraErr) {
+    await failAndRefund(userId, job, String(hedraErr))
+    return toolErr(`Génération échouée : ${hedraErr}. Les ${job.credits_cost} crédits ont été remboursés.`)
+  }
+  if (!videoUrl) return toolText(`⏳ Toujours en cours${lastProgress ? ` (${lastProgress} %)` : ''} — rappelle check_avatar_video dans ~30 secondes.`)
+
+  // Ré-héberge le MP4 (l'URL Hedra expire) puis livre — claim atomique anti-doublon
+  const vRes = await fetch(videoUrl).catch(() => null)
+  if (!vRes || !vRes.ok) return toolText('⏳ Vidéo prête mais téléchargement en cours — rappelle check_avatar_video dans quelques secondes.')
+  const bytes = new Uint8Array(await vRes.arrayBuffer())
+  const url = await deliverVideo(userId, job, bytes)
+  return url
+    ? toolText(`✅ Vidéo avatar prête !\nURL : ${url}\n💡 Pour ajouter sous-titres et effets : ${APP_URL}`)
+    : toolText('⏳ Presque prête — rappelle check_avatar_video dans quelques secondes.')
+}
+
+// ── Nettoyage audio (ElevenLabs Voice Isolator) ──
+async function runCleanAudio(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
+  if (!ELEVEN_API_KEY) return toolErr('Nettoyage audio indisponible (configuration serveur incomplète).')
+  const audioUrl = String(args.audio_url || '').trim()
+  if (!audioUrl) return toolErr('Le paramètre "audio_url" est requis.')
+  const got = await fetchUserFile(audioUrl, CLEAN_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "le fichier audio (audio_url)")
+  if (typeof got === 'string') return toolErr(got)
+
+  // Durée estimée sur la taille (~960 Ko/min en MP3 128 kbps) → coût en crédits
+  const estMin = Math.max(1, Math.ceil(got.bytes.length / 960_000))
+  const cost = estMin * CLEAN_COST_PER_MIN
+  const userId = String(profile.id)
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédit${cost > 1 ? 's' : ''} (~${estMin} min d'audio), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost, `nettoyage audio ~${estMin} min`, 'clean_audio')
+  if (gate) return gate
+
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédit${cost > 1 ? 's' : ''}. Recharge sur ${APP_URL}`)
+
+  let delivered = false
+  try {
+    const fd = new FormData()
+    fd.append('audio', new Blob([got.bytes as unknown as BlobPart], { type: got.contentType }), 'input.mp3')
+    const iso = await fetch('https://api.elevenlabs.io/v1/audio-isolation', {
+      method: 'POST', headers: { 'xi-api-key': ELEVEN_API_KEY }, body: fd,
+    })
+    if (!iso.ok) {
+      const err = await iso.text().catch(() => '')
+      return toolErr(`Nettoyage échoué (ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
+    }
+    const cleaned = new Uint8Array(await iso.arrayBuffer())
+    const url = await uploadMedia(userId, cleaned, 'mp3', 'audio/mpeg')
+    await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
+    delivered = true
+    const balTxt = isUnlimited(profile) ? '∞' : String(bal)
+    return toolText(`✅ Audio nettoyé (voix isolée, bruit supprimé) !\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
+  } finally {
+    if (!delivered) await refundCredits(userId, cost)
+  }
 }
 
 async function runListMedia(profile: Record<string, unknown>): Promise<ToolContent> {
@@ -609,8 +909,8 @@ serve(async (req) => {
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'AvatarAds', version: '1.2.0' },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) : génère des images (generate_image) et des vidéos IA (generate_video puis check_video) avec les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
+        serverInfo: { name: 'AvatarAds', version: '1.3.0' },
+        instructions: "Serveur MCP AvatarAds (avatarads.fr) : génère des images (generate_image), des vidéos IA (generate_video puis check_video), des vidéos AVATAR PARLANT voix+lipsync (generate_avatar_video puis check_avatar_video) et nettoie l'audio (clean_audio) avec les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
       })
     }
     if (method === 'ping') return rpcResult(id, {})
@@ -630,6 +930,9 @@ serve(async (req) => {
       else if (name === 'generate_image') out = await runGenerateImage(profile, args, ctx)
       else if (name === 'generate_video') out = await runGenerateVideo(profile, args, ctx)
       else if (name === 'check_video') out = await runCheckVideo(profile, args)
+      else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)
+      else if (name === 'check_avatar_video') out = await runCheckAvatarVideo(profile, args)
+      else if (name === 'clean_audio') out = await runCleanAudio(profile, args, ctx)
       else if (name === 'list_media') out = await runListMedia(profile)
       else if (name === 'admin_find_user') out = await runAdminFindUser(profile, args)
       else return rpcError(id, -32602, `Outil inconnu : ${name}`)
