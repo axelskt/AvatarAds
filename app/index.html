@@ -1570,8 +1570,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;background:#FF2D2D;padding:1px 9px;border-radius:7px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-iman" onclick="pickSub(this,'iman')">
-                  <div class="sub-name">Iman</div>
-                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#fff;font-weight:900;letter-spacing:1.5px">PASSE ACTION</span></div>
+                  <div class="sub-name">Punch 👊</div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:24px;color:#fff;font-weight:900;text-transform:uppercase;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 2px 0 #000,0 -2px 0 #000">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-tiktok" onclick="pickSub(this,'tiktok')">
                   <div class="sub-name">TikTok Pills</div>
@@ -1582,8 +1582,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="sub-preview"><span style="font-family:Impact,sans-serif;font-size:20px;color:#00FF87;text-shadow:0 0 10px #00FF87">PASSE</span><span style="font-family:Impact,sans-serif;font-size:20px;color:#BF5FFF;text-shadow:0 0 10px #BF5FFF;margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-podcast" onclick="pickSub(this,'podcast')">
-                  <div class="sub-name">Karaoke Rouge</div>
-                  <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;background:#FF2D2D;padding:1px 9px;border-radius:7px">MATURITÉ</span></div>
+                  <div class="sub-name">Podcast</div>
+                  <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:#fff;font-weight:900">PASSE</span><span style="font-family:'Arial Black',sans-serif;font-size:20px;color:rgba(255,255,255,.4);margin-left:6px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-badis" onclick="pickSub(this,'badis')">
                   <div class="sub-name">White</div>
@@ -9215,10 +9215,10 @@ function _subStyleLabel(s){ return SUB_STYLE_LABELS[s] || (s ? s.charAt(0).toUpp
 const SUB_STYLE_COLORS = {
   hormozi:{c1:'#FFE500',c2:'#ffffff'},
   mrbeast:{c1:'#FF2D2D',c2:'#ffffff'},   // box rouge (mot actif)
-  iman:{c1:'#ffffff',c2:'rgba(255,255,255,0.35)'},
+  iman:{c1:'#ffffff',c2:'#ffffff'},   // « Punch » : un mot à la fois, énorme, blanc contour noir
   tiktok:{c1:'#FF2D55',c2:'#FFE500'},
   neon:{c1:'#00FF87',c2:'#BF5FFF'},
-  podcast:{c1:'#FF2D2D',c2:'#ffffff'},   // Karaoke Rouge (ex-Podcast) : box rouge balayée
+  podcast:{c1:'#ffffff',c2:'rgba(255,255,255,0.4)'},
   badis:{c1:'#ffffff',c2:'#ffffff'},
   karaoke:{c1:'#5FD0EC',c2:'#ffffff'},
 };
@@ -9559,7 +9559,7 @@ function applyColorPreset(name){
     hormozi:{c1:'#FFE500',c2:'#ffffff'},
     badis:{c1:'#FFE500',c2:'#ffffff'},
     mrbeast:{c1:'#FF2D2D',c2:'#ffffff'},
-    iman:{c1:'#ffffff',c2:'rgba(255,255,255,0.35)'},
+    iman:{c1:'#ffffff',c2:'#ffffff'},   // « Punch » : un mot à la fois, énorme, blanc contour noir
     neon:{c1:'#00FF87',c2:'#BF5FFF'},
     fire:{c1:'#FF6B35',c2:'#FFE500'},
     purple:{c1:'#BF5FFF',c2:'#00FF87'},
@@ -10545,12 +10545,11 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
     const active = getActive(i);
     if(style==='tiktok') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${active?'#fff':'#000'};background:${active?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;font-weight:900">${w}</span>`;
     else if(style==='neon') html+=`<span style="${base}font-family:Impact,sans-serif;font-size:${sz}px;color:${active?c1:c2};text-shadow:${active?glow1:glow2};margin:0 2px">${w}</span>`;
-    else if(style==='iman') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`;
-    else if(style==='podcast'){
-      // Karaoke Rouge (ex-Podcast) : même rendu que Karaoke, box c1 (rouge par défaut)
-      const kFill = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
-      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${kFill?`background:${c1};color:${_subTextOn(c1)};padding:1px 7px`:`color:${c2};text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`;
+    else if(style==='iman'){
+      // « Punch » : UN seul mot à la fois, énorme, blanc, gros contour noir — les autres mots ne s'affichent pas
+      if(active) html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*1.35)}px;color:${c1};font-weight:900;text-transform:uppercase;letter-spacing:.02em;text-shadow:${_outline(Math.max(2,Math.round(sz*0.1)))}">${w}</span>`;
     }
+    else if(style==='podcast') html+=`<span style="${base}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${active?c1:c2};font-weight:900;margin:0 3px">${w}</span>`;
     else if(style==='mrbeast'){
       // MrBeast : box pleine (couleur c1) sur le mot actif — distinct du Karaoké (bleu)
       const box = active;
@@ -10966,9 +10965,8 @@ function updateSubPreview(){
     mrbeast: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${i===0?`background:${c1};color:${_subTextOn(c1)};padding:1px 7px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:${c2};text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`
     ).join(''),
-    iman: () => shown.map((w,i) =>
-      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;letter-spacing:${Math.round(sz*.05)}px;margin:0 2px">${w}</span>`
-    ).join(''),
+    iman: () => shown.length ?
+      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*1.35)}px;color:${c1};font-weight:900;text-transform:uppercase;letter-spacing:.02em;text-shadow:${_outline(Math.max(2,Math.round(sz*0.1)))}">${shown[0]}</span>` : '',
     tiktok: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${Math.round(sz*.85)}px;color:${i===0?'#fff':'#000'};background:${i===0?c1:c2};padding:2px 6px;border-radius:4px;margin:2px;font-weight:900">${w}</span>`
     ).join(''),
@@ -10976,7 +10974,7 @@ function updateSubPreview(){
       `<span style="${sc2}font-family:Impact,sans-serif;font-size:${sz}px;color:${i===0?c1:c2};text-shadow:${i===0?glow1:glow2};margin:0 2px">${w}</span>`
     ).join(''),
     podcast: () => shown.map((w,i) =>
-      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${i===0?`background:${c1};color:${_subTextOn(c1)};padding:1px 7px`:`color:${c2};text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`
+      `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
     ).join(''),
     badis: () => shown.map((w) =>
       `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:${c1};text-shadow:${_outline(Math.max(2,Math.round(sz*0.09)))};margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`
@@ -15180,8 +15178,8 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         x += pw + gapK;
       });
     });
-  } else if(style === 'karaoke' || style === 'podcast'){
-    // ── Karaoke (cyan) / Karaoke Rouge (ex-Podcast) : mot actif dans une box c1, autres en c2 outline ──
+  } else if(style === 'karaoke'){
+    // ── Karaoke : mot actif dans une box c1 (cyan par défaut), autres en c2 outline ──
     ctx.font = `800 ${sz}px 'Bricolage Grotesque',sans-serif`;
     const pad  = Math.round(sz * 0.12);
     const gapK = Math.round(sz * 0.10);
@@ -15223,6 +15221,23 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
         x += pw + gapK;
       });
     });
+  } else if(style === 'iman'){
+    // ── « Punch » : UN seul mot à la fois, énorme, blanc, gros contour noir ──
+    const word = (shown[(activeIdx!==undefined && activeIdx!==null) ? activeIdx : 0] || '').toUpperCase();
+    if(word){
+      let psz = Math.round(sz * 1.35);
+      ctx.font = `900 ${psz}px 'Arial Black',Arial,sans-serif`;
+      // auto-réduction si le mot déborde de la safe zone
+      while(psz > 24 && ctx.measureText(word).width > maxLineW){ psz -= 4; ctx.font = `900 ${psz}px 'Arial Black',Arial,sans-serif`; }
+      ctx.textAlign = 'center';
+      ctx.lineWidth = Math.max(4, Math.round(psz * 0.12));
+      ctx.strokeStyle = '#000';
+      ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = Math.round(psz*0.16); ctx.shadowOffsetY = Math.round(psz*0.05);
+      ctx.strokeText(word, posX, posY);
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.fillStyle = c1;
+      ctx.fillText(word, posX, posY);
+    }
   } else {
     let font;
     if(style==='hormozi') font=`900 ${sz}px Impact,sans-serif`;
