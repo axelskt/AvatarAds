@@ -354,6 +354,9 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* RIGHT PREVIEW */
 .gen-right{width:490px;flex:0 0 auto;background:var(--bg-grad);border-left:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow-y:auto;padding:26px 24px 30px}
+/* Génération / Résultat : plein écran centré, sans colonne de gauche ni bord */
+#v-generator.gen-generating .gen-left{display:none}
+#v-generator.gen-generating .gen-right{width:100%;flex:1 1 auto;border-left:none;padding-top:48px}
 .gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,53,0.07) 0%,transparent 55%);pointer-events:none}
 .gen-right::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.5}
 .preview-area{display:flex;flex-direction:column;align-items:center;gap:16px}
@@ -8989,6 +8992,8 @@ async function reuseLastVideo(){
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
 function _showResultArea(){
   _stopGenTimer();
+  document.getElementById('v-generator').classList.add('gen-generating'); // résultat plein écran centré, sans colonne de gauche
+  document.getElementById('previewArea').style.display = 'none';
   document.getElementById('genProgArea').style.display = 'none';
   document.getElementById('resultArea').style.display = 'block';
   document.getElementById('reuseBar').style.display = 'none';
@@ -9071,7 +9076,9 @@ function updateSteps(){
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
-  // Masquer la zone résultat si on revient dans le form
+  // Masquer la zone résultat si on revient dans le form + restaurer le layout 2 colonnes
+  document.getElementById('v-generator').classList.remove('gen-generating');
+  document.getElementById('previewArea').style.display='flex';
   document.getElementById('resultArea').style.display='none';
   document.getElementById('genProgArea').style.display='none';
   _updateReuseBar();
@@ -9454,11 +9461,35 @@ function saveSubPreset(){ openSubPresetSave(); } // alias legacy
     document.addEventListener('DOMContentLoaded', ()=>{
       const inp = document.getElementById('bizNameInput');
       if(inp) inp.value = saved;
-      // Pré-charger Dancing Script pour que le canvas soit prêt dès le premier rendu
-      document.fonts.load("700 48px 'Dancing Script'").catch(()=>{});
     });
   }
 })();
+
+// ── Préchargement des polices utilisées par le canvas (sous-titres, hook…) ──
+// Sur <canvas>, une police pas encore chargée est silencieusement remplacée par
+// une police système (Arial/Helvetica). Résultat : la vidéo exportée affichait
+// un karaoké avec une AUTRE police que la carte/preview DOM (qui, elle, se
+// re-render toute seule quand la police arrive). On garantit donc que toutes les
+// polices canvas sont chargées AVANT tout rendu canvas.
+let _canvasFontsPromise = null;
+function ensureCanvasFonts(){
+  if(_canvasFontsPromise) return _canvasFontsPromise;
+  const jobs = [];
+  if(document.fonts && document.fonts.load){
+    // Bricolage Grotesque = police des sous-titres (karaoke, MrBeast, White…)
+    jobs.push(document.fonts.load("800 48px 'Bricolage Grotesque'"));
+    jobs.push(document.fonts.load("900 48px 'Bricolage Grotesque'"));
+    // Dancing Script (signature/style manuscrit)
+    jobs.push(document.fonts.load("700 48px 'Dancing Script'"));
+  }
+  _canvasFontsPromise = Promise.all(jobs.map(p => p && p.catch ? p.catch(()=>{}) : p))
+    .then(() => (document.fonts && document.fonts.ready) ? document.fonts.ready : null)
+    .catch(()=>{});
+  return _canvasFontsPromise;
+}
+// Chauffe le cache dès le chargement (inconditionnel)
+if(document.readyState !== 'loading') ensureCanvasFonts();
+else document.addEventListener('DOMContentLoaded', ensureCanvasFonts);
 
 function loadSubPreset(){
   // Migration : si ancien format (objet unique) → convertit en tableau nommé
@@ -12851,6 +12882,7 @@ async function startGeneration(){
   }
 
   step=5; updateSteps();
+  document.getElementById('v-generator').classList.add('gen-generating'); // plein écran centré, sans colonne de gauche
   document.getElementById('previewArea').style.display='none';
   document.getElementById('genProgArea').style.display='flex';
   document.getElementById('resultArea').style.display='none';
@@ -14189,6 +14221,7 @@ function _fallbackDownloadHedra(){
 
 async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   if(!results.hedraUrl){ return; }
+  await ensureCanvasFonts(); // polices sous-titres prêtes AVANT le rendu canvas (sinon fallback Arial baké dans la vidéo)
   const setStage = (label, pct) => {
     const stageLbl = document.getElementById('composeProgressStage');
     if(stageLbl) stageLbl.textContent = label;
@@ -17100,6 +17133,7 @@ function _expSubsModalRender(){
 }
 async function _expBurnSubs(){
   if(window._expSubsBusy) return;
+  await ensureCanvasFonts(); // polices sous-titres prêtes AVANT le rendu canvas
   // On repart toujours de la vidéo SANS sous-titres (permet de changer de style et re-générer)
   const raw = window._expVidBlobRaw || window._expVidBlob;
   if(!raw){ toast('⚠️ Aucune vidéo'); return; }
@@ -17870,6 +17904,7 @@ async function expressCompose(){
 }
 
 async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
+  await ensureCanvasFonts(); // polices sous-titres prêtes AVANT le rendu canvas
   // ── 1. Charger vidéo principale ──
   setStage('Chargement vidéo…', 3);
   let mainObjUrl;
