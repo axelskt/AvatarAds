@@ -4068,10 +4068,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
 <!-- MON COMPTE OVERLAY — design 1:1 (maquette AccountModal, AvatarAds-4) -->
 <div class="setup-overlay" id="accountOverlay" style="display:none;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);padding:24px" onclick="if(event.target===this)closeAccountSettings()">
-  <div class="card" style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+  <div class="card" style="width:100%;max-width:460px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;padding:26px 24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
 
     <!-- header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:26px">
       <div style="display:flex;align-items:center;gap:12px">
         <div id="accountOverlayAvatar" style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:grid;place-items:center;font-weight:800;color:#1A0A02;font-size:18px;flex:0 0 auto">A</div>
         <div style="display:flex;flex-direction:column;line-height:1.25">
@@ -4083,44 +4083,44 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     </div>
 
     <!-- ① Profil -->
-    <div class="eyebrow" style="margin-bottom:14px">① Profil</div>
-    <div style="margin-bottom:14px">
-      <div class="setup-label">Prénom affiché</div>
+    <div class="eyebrow" style="margin-bottom:16px">① Profil</div>
+    <div style="margin-bottom:16px">
+      <div class="setup-label" style="margin-bottom:8px">Prénom affiché</div>
       <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom">
     </div>
-    <div style="margin-bottom:16px">
-      <div class="setup-label">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+    <div style="margin-bottom:18px">
+      <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
     </div>
-    <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:22px">💾 Sauvegarder le profil</button>
+    <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
 
-    <div style="height:1px;background:var(--border);margin-bottom:22px"></div>
+    <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
     <!-- ② Email -->
-    <div class="eyebrow" style="margin-bottom:14px">② Adresse email de connexion</div>
-    <div style="margin-bottom:14px">
-      <div class="setup-label">Email actuel</div>
+    <div class="eyebrow" style="margin-bottom:16px">② Adresse email de connexion</div>
+    <div style="margin-bottom:16px">
+      <div class="setup-label" style="margin-bottom:8px">Email actuel</div>
       <div id="accountCurrentEmail" class="field" style="font-weight:600">—</div>
     </div>
-    <div style="margin-bottom:8px">
-      <div class="setup-label">Nouvel email</div>
+    <div style="margin-bottom:10px">
+      <div class="setup-label" style="margin-bottom:8px">Nouvel email</div>
       <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com">
     </div>
-    <p style="font-size:12px;color:var(--text-3);margin:0 0 16px;line-height:1.5">Un lien de confirmation sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à confirmation.</p>
-    <button class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;margin-bottom:22px">✉️ Envoyer le lien de confirmation</button>
+    <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un lien de confirmation sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à confirmation.</p>
+    <button class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;margin-bottom:26px">✉️ Envoyer le lien de confirmation</button>
 
-    <div style="height:1px;background:var(--border);margin-bottom:22px"></div>
+    <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
     <!-- ④ Connecter Claude -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <span class="eyebrow">④ Connecter Claude</span>
       <span class="tag-beta">BÊTA</span>
       <span class="mono" style="font-size:10px;letter-spacing:.08em;color:var(--text-3)">PRO · ÉLITE</span>
     </div>
-    <p style="font-size:12.5px;color:var(--text-3);line-height:1.55;margin:0 0 16px">
+    <p style="font-size:12.5px;color:var(--text-3);line-height:1.6;margin:0 0 18px">
       Génère tes images et vidéos AvatarAds directement depuis <b style="color:var(--text-2)">Claude</b> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
     </p>
-    <div id="mcpKeyStatus" class="card" style="padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-3)">Chargement…</div>
+    <div id="mcpKeyStatus" class="card" style="padding:13px 15px;margin-bottom:18px;font-size:13px;color:var(--text-3)">Chargement…</div>
     <div id="mcpKeyResult" style="display:none;margin-bottom:16px">
       <div style="display:flex;gap:8px">
         <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="field mono" style="flex:1;min-width:0;font-size:10.5px;padding:10px 12px">
@@ -4128,25 +4128,25 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
       <div class="mono" style="font-size:10px;color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
     </div>
-    <label id="mcpConfirmRow" style="display:none;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;width:100%;text-align:left">
+    <label id="mcpConfirmRow" style="display:none;align-items:flex-start;gap:10px;margin-bottom:18px;cursor:pointer;width:100%;text-align:left">
       <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
       <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;margin-top:1px;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
         <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
       </span>
       <span style="font-size:12.5px;line-height:1.5;color:var(--text-3)">Claude doit demander <b style="color:var(--text-2)">confirmation avant chaque génération</b>, avec le coût en crédits (recommandé)</span>
     </label>
-    <div style="display:flex;gap:10px;margin-bottom:14px">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
       <button id="mcpKeyCreateBtn" class="btn btn-ghost" onclick="mcpKeyCreate()" style="flex:1">🔑 Générer ma clé</button>
       <button id="mcpKeyRevokeBtn" class="btn btn-ghost" onclick="mcpKeyRevoke()" style="display:none;flex:0 0 auto;color:#FF6B6B;border-color:rgba(255,70,70,.25)">Révoquer</button>
     </div>
     <button class="btn btn-primary" onclick="openMcpTuto()" style="width:100%">📖 Voir le tuto — connecter ta clé à Claude</button>
 
-    <div style="height:1px;background:var(--border);margin:22px 0"></div>
+    <div style="height:1px;background:var(--border);margin:26px 0"></div>
 
     <!-- Abonnement & Déconnexion -->
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-ghost" onclick="changeSubscription();closeAccountSettings()" style="width:100%;justify-content:flex-start">🗂 Changer mon abonnement</button>
-      <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start">⏸ Annuler l'abonnement</button>
+      <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start;white-space:normal;text-align:left;line-height:1.4">⏸ Annuler l'abonnement</button>
       <button class="btn" onclick="authLogout()" style="width:100%;justify-content:flex-start;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B">⎋ Se déconnecter</button>
     </div>
 
