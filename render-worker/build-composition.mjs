@@ -36,10 +36,14 @@ export function buildComposition(plan, opts = {}) {
   for (const s of [...slides].sort((a, b) => a.start - b.start)) {
     const st = r2(s.start), en = r2(Math.max(s.end, s.start + 0.6))
     const last = periods[periods.length - 1]
-    if (last && st - last.end <= 0.8) last.end = Math.max(last.end, en)
-    else periods.push({ start: st, end: en })
+    if (last && st - last.end <= 0.8) { last.end = Math.max(last.end, en); last.members.push(s) }
+    else periods.push({ start: st, end: en, members: [s] })
   }
   const inSplit = (t) => periods.some((p) => t >= p.start && t < p.end)
+
+  // cadrage vidéo pendant les slides : plein cadre (tall) ou bande cinéma 16:9 (wide)
+  const WIDE_H = Math.round(W * 9 / 16)
+  const WIDE_TOP = Math.round((VIDEO_H - WIDE_H) / 2)
 
   // ── b-roll : images plein écran (cover), Ken Burns léger — passages full uniquement ──
   const brolls = (plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b, i) => ({
@@ -85,6 +89,7 @@ export function buildComposition(plan, opts = {}) {
   // ── slides motion design (zone haute pendant les périodes split) ──────────
   const slideDefs = slides.map((s, i) => ({
     id: 's' + i,
+    wide: !!s.wide,
     // une card = une punchline ; si le plan y met plusieurs items, on bascule en flow
     type: (s.type === 'card' && s.items.length > 1) ? 'flow' : s.type,
     title: String(s.title || ''),
@@ -131,15 +136,28 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip slide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
 
   // ── timeline GSAP ─────────────────────────────────────────────────────────
-  // transitions full <-> split : la zone vidéo glisse, la zone slides apparaît
+  // transitions full <-> split : la zone vidéo glisse, la zone slides apparaît ;
+  // le cadrage interne (#videoFit) alterne plein cadre / bande 16:9 selon chaque slide
+  const fitTall = `{ top: 0, height: ${VIDEO_H}, duration: ${TR}, ease: 'power3.inOut' }`
+  const fitWide = `{ top: ${WIDE_TOP}, height: ${WIDE_H}, duration: ${TR}, ease: 'power3.inOut' }`
   const layoutJs = periods.map((p) => {
     const tIn = r2(Math.max(0, p.start - TR))
     const tOut = r2(Math.min(D - 0.05, p.end - 0.02))
-    return `
+    let js = `
       tl.to('#videozone', { top: ${SLIDE_H}, height: ${VIDEO_H}, duration: ${TR}, ease: 'power3.inOut' }, ${tIn});
-      tl.to('#slidezone', { autoAlpha: 1, duration: ${r2(TR * 0.85)}, ease: 'power2.out' }, ${tIn});
+      tl.to('#videoFit', ${p.members[0].wide ? fitWide : fitTall}, ${tIn});
+      tl.to('#slidezone', { autoAlpha: 1, duration: ${r2(TR * 0.85)}, ease: 'power2.out' }, ${tIn});`
+    for (let i = 1; i < p.members.length; i++) {
+      if (!!p.members[i].wide !== !!p.members[i - 1].wide) {
+        js += `
+      tl.to('#videoFit', ${p.members[i].wide ? fitWide : fitTall}, ${r2(Math.max(tIn + TR, p.members[i].start - 0.22))});`
+      }
+    }
+    js += `
       tl.to('#videozone', { top: 0, height: ${H}, duration: ${TR}, ease: 'power3.inOut' }, ${tOut});
+      tl.to('#videoFit', { top: 0, height: ${H}, duration: ${TR}, ease: 'power3.inOut' }, ${tOut});
       tl.to('#slidezone', { autoAlpha: 0, duration: ${r2(TR * 0.8)}, ease: 'power1.in' }, ${tOut});`
+    return js
   }).join('')
 
   const zoomJs = (plan.zooms || []).map((z) => {
@@ -283,7 +301,8 @@ export function buildComposition(plan, opts = {}) {
       .clip { position: absolute; }
 
       /* zone vidéo : plein écran par défaut, animée vers la moitié basse pendant les slides */
-      #videozone { left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; z-index: 2; }
+      #videozone { left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; z-index: 2; background: #000; }
+      #videoFit { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; }
       #zoomInner { position: absolute; inset: 0; will-change: transform; }
       #base { width: 100%; height: 100%; object-fit: cover; object-position: 50% ${objPos}%; display: block; }
 
@@ -318,8 +337,10 @@ ${slideCss}
     <div id="root" data-composition-id="montage" data-start="0" data-duration="${D}" data-width="${W}" data-height="${H}">
 ${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-duration="${D}" data-track-index="1"></div>
 ` : ''}      <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
-        <div id="zoomInner">
-          <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
+        <div id="videoFit">
+          <div id="zoomInner">
+            <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
+          </div>
         </div>
       </div>
 ${brollHtml}
