@@ -232,6 +232,7 @@ async function claudePlan(
   words: Word[],
   assets: { id: string; name: string; kind: string; thumb?: { media: string; b64: string } }[],
   lang: string,
+  frames: { t: number; media: string; b64: string }[],
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -241,8 +242,17 @@ async function claudePlan(
     .join(' ')
 
   const system = `Tu es le chef d'orchestre d'AvatarAds : un monteur video expert en formats viraux TikTok/Reels/Shorts (style Hormozi, 1600.agency, Captions.ai).
-On te donne la transcription mot-a-mot (timestamps en secondes) d'une video verticale face camera, sa duree, et eventuellement des images fournies par l'utilisateur (b-roll).
-Tu produis un PLAN DE MONTAGE au format JSON demande. Regles :
+On te donne des IMAGES DE LA VIDEO a differents timestamps, la transcription mot-a-mot (timestamps en secondes), sa duree, et eventuellement des images fournies par l'utilisateur (b-roll).
+
+ETAPE 1 - ANALYSE (obligatoire, avant tout) : etudie les images de la video. Qu'est-ce qu'on VOIT reellement (personne face camera ? ou est son visage dans le cadre ? gameplay ? produit ? ambiance, lumiere, rythme visuel) ? Croise avec le script : de quoi parle la video, sur quel ton ?
+
+ETAPE 2 - PLAN : construis le PLAN DE MONTAGE au format JSON demande, adapte a CE contenu precis :
+- Les zooms se centrent sur le sujet REELLEMENT visible dans les images (deduis cx/cy de la position du visage ou du point d'interet observe, pas d'une valeur par defaut).
+- Le b-roll ne recouvre jamais un moment visuellement fort de la video.
+- La musique colle a l'ambiance VISUELLE observee autant qu'au ton du script.
+- Si le visuel ne montre pas de visage, reduis les zooms (1 ou 2 max) et privilegie hook, sous-titres et musique.
+
+Regles :
 
 SECTIONS : decoupe narrative complete de 0 a la duree totale (hook / benefice / preuve / cta / outro selon ce qui est dit). Bornes alignees sur les phrases.
 
@@ -263,9 +273,13 @@ MUSIQUE : choisis l'ambiance de la musique de fond selon le ton du script — "i
 Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le schema JSON impose.`
 
   const content: unknown[] = []
+  for (const f of frames) {
+    content.push({ type: 'text', text: `Image de la video a t=${f.t.toFixed(1)}s :` })
+    content.push({ type: 'image', source: { type: 'base64', media_type: f.media, data: f.b64 } })
+  }
   for (const a of assets) {
     if (!a.thumb) continue
-    content.push({ type: 'text', text: `Image utilisateur assetId="${a.id}" (${a.name}) :` })
+    content.push({ type: 'text', text: `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :` })
     content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } })
   }
   content.push({
@@ -424,6 +438,19 @@ serve(async (req: Request) => {
       assets.push({ ...meta, thumb })
     }
 
+    // frames de la vidéo (analyse visuelle avant le plan)
+    let frameTimes: number[] = []
+    try { frameTimes = JSON.parse(String(form.get('frame_times') || '[]')) } catch (_) { /* aucune */ }
+    const frames: { t: number; media: string; b64: string }[] = []
+    for (let i = 0; i < Math.min(12, frameTimes.length); i++) {
+      const f = form.get('frame_' + i)
+      if (!(f instanceof File) || !f.size || f.size > 300 * 1024) continue
+      const buf = new Uint8Array(await f.arrayBuffer())
+      let bin = ''
+      for (let j = 0; j < buf.length; j += 0x8000) bin += String.fromCharCode(...buf.subarray(j, j + 0x8000))
+      frames.push({ t: Number(frameTimes[i]) || 0, media: f.type || 'image/jpeg', b64: btoa(bin) })
+    }
+
     // 1. transcription word-level
     const scribe = await transcribe(audio, lang)
     if (!scribe.words.length) return json({ error: 'Aucune parole detectee dans l\'audio' }, 422)
@@ -431,8 +458,8 @@ serve(async (req: Request) => {
     // 2. alignement forcé si script fourni (texte exact + timing réel)
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
-    // 3. Claude → plan (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang)
+    // 3. Claude → analyse visuelle + plan (JSON strict garanti par le schéma)
+    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames)
 
     // 4. bornes/cohérence côté serveur
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id))

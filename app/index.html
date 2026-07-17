@@ -1509,19 +1509,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
                 <button id="removeGameplayBtn" onclick="removeGameplay()" style="display:none;width:100%;margin-top:6px;padding:8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer gameplay</button>
 
-                <!-- TOGGLE AUDIO GAMEPLAY -->
-                <div id="gpAudioRow" onclick="toggleGameplayAudio()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s">
-                  <div style="display:flex;align-items:center;gap:9px">
-                    <span style="font-size:16px">🎤</span>
-                    <div>
-                      <div style="font-size:12px;font-weight:700">Utiliser l'audio du gameplay pour le lipsync</div>
-                      <div style="font-size:9px;font-family:var(--mono);color:var(--text3)">La voix de ta vidéo anime la bouche de l'avatar — sans ElevenLabs</div>
-                    </div>
-                  </div>
-                  <div id="gpAudioSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
-                    <div id="gpAudioThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s"></div>
-                  </div>
-                </div>
 
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
@@ -1765,6 +1752,27 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
+            <!-- 🎼 Toggle Montage IA (au-dessus de la qualité d'export) -->
+            <div id="genMontageToggleWrap" style="margin-bottom:14px">
+              <div onclick="_genToggleMontageIA()" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <span style="font-size:16px;flex-shrink:0">🎼</span>
+                  <div style="min-width:0">
+                    <div style="font-size:12.5px;font-weight:700">Montage IA après la génération <span style="font-weight:600;font-size:10.5px;font-family:var(--mono);color:var(--orange2)">+2 crédits</span></div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zooms, b-roll, musique &amp; sous-titres posés automatiquement, synchronisés sur ta voix</div>
+                  </div>
+                </div>
+                <div id="genMontageSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="genMontageThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+                </div>
+              </div>
+              <div id="genMontageImgs" style="display:none;margin-top:8px">
+                <input type="file" id="genAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
+                <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images b-roll (optionnel) — l'IA les place au meilleur moment</div>
+                <div id="genAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:7px"></div>
+              </div>
+            </div>
+
             <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Qualité d'export MP4</div>
@@ -1829,26 +1837,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <div class="gen-footer" id="genFooter">
-          <!-- 🎼 Toggle Montage IA (visible à l'étape 4, au-dessus de « Générer la vidéo ») -->
-          <div id="genMontageToggleWrap" style="display:none;max-width:840px;margin:0 auto 10px;width:100%;box-sizing:border-box">
-            <div onclick="_genToggleMontageIA()" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
-              <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                <span style="font-size:16px;flex-shrink:0">🎼</span>
-                <div style="min-width:0">
-                  <div style="font-size:12.5px;font-weight:700">Montage IA après la génération <span style="font-weight:600;font-size:10.5px;font-family:var(--mono);color:var(--orange2)">+2 crédits</span></div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zooms, b-roll, musique &amp; sous-titres posés automatiquement, synchronisés sur ta voix</div>
-                </div>
-              </div>
-              <div id="genMontageSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
-                <div id="genMontageThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
-              </div>
-            </div>
-            <div id="genMontageImgs" style="display:none;margin-top:8px">
-              <input type="file" id="genAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
-              <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images b-roll (optionnel) — l'IA les place au meilleur moment</div>
-              <div id="genAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:7px"></div>
-            </div>
-          </div>
           <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;gap:10px;align-items:center">
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
             <span id="footerStepLbl" class="mono" style="font-size:12px;color:var(--text-3);white-space:nowrap;padding:0 6px">Étape 1 / 5</span>
@@ -9139,8 +9127,6 @@ function updateSteps(){
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
-  // 🎼 toggle Montage IA visible uniquement à l'étape 4 (au-dessus de « Générer la vidéo »)
-  const _mtw=document.getElementById('genMontageToggleWrap'); if(_mtw) _mtw.style.display = step===4 ? 'block' : 'none';
   // Masquer la zone résultat si on revient dans le form + restaurer le layout 2 colonnes
   document.getElementById('v-generator').classList.remove('gen-generating');
   document.getElementById('previewArea').style.display='flex';
@@ -9152,11 +9138,13 @@ function updateSteps(){
 }
 // #clipS4 · masque le sélecteur « Clip Gameplay » (étape Style) si un gameplay est déjà uploadé
 function _syncClipSectionS4(){
+  // 🛡 la section Clip Gameplay n'apparaît que si le Split Screen est activé (et sans gameplay déjà chargé)
+  const splitOn = (typeof splitEnabled !== 'undefined' && splitEnabled);
   const sec = document.getElementById('clipSectionS4');
-  if(sec) sec.style.display = (typeof gameplayFile !== 'undefined' && gameplayFile) ? 'none' : '';
+  if(sec) sec.style.display = (splitOn && !(typeof gameplayFile !== 'undefined' && gameplayFile)) ? '' : 'none';
   // ⚡ bouton « Générer directement » visible uniquement quand le Split Screen est activé
   const qb = document.getElementById('genSplitQuickBtn');
-  if(qb) qb.style.display = (typeof splitEnabled !== 'undefined' && splitEnabled) ? 'block' : 'none';
+  if(qb) qb.style.display = splitOn ? 'block' : 'none';
 }
 // #silenceGp · l'outil silences affiche « Gameplay déjà chargé » si un gameplay existe déjà (au lieu de la dropzone vide)
 function _syncSilenceGpDropzone(){
@@ -20969,6 +20957,48 @@ async function edExtractTimelineAudio(onStatus){
   return { blob:new Blob([buf],{type:'audio/wav'}), duration:kept, toSource };
 }
 
+// 8 images de la timeline (mêmes plages gardées que l'audio) → l'IA ANALYSE la vidéo avant de faire le plan
+async function _edAiExtractFrames(count){
+  count = count || 8;
+  const frames = [];
+  const ranges = []; let kept = 0;
+  for(let idx=0; idx<_ed.clips.length; idx++){
+    const c=_ed.clips[idx];
+    const dels=(c.deletes||[]).map(d=>({a:Math.max(c.trimA,d.a),b:Math.min(c.trimB,d.b)})).filter(d=>d.b>d.a).sort((x,y)=>x.a-y.a);
+    let cur=c.trimA; const rs=[];
+    for(const d of dels){ if(d.a>cur) rs.push([cur,d.a]); cur=Math.max(cur,d.b); }
+    if(c.trimB>cur) rs.push([cur,c.trimB]);
+    for(const [a,b] of rs){ ranges.push({idx, a, b, k0:kept}); kept += (b-a); }
+  }
+  if(!kept) return frames;
+  // un <video> de capture par clip (ne touche pas la lecture en cours)
+  const vids={};
+  const getVid=async (idx)=>{
+    if(vids[idx]) return vids[idx];
+    const tv=document.createElement('video'); tv.src=_ed.clips[idx].url; tv.muted=true; tv.playsInline=true; tv.preload='auto';
+    await new Promise((res)=>{ tv.onloadedmetadata=res; tv.onerror=res; setTimeout(res,2500); });
+    vids[idx]=tv; return tv;
+  };
+  const cv=document.createElement('canvas'); const cx2=cv.getContext('2d');
+  for(let i=0;i<count;i++){
+    const kt = kept*(i+0.5)/count;
+    const r = ranges.find(rr=>kt < rr.k0 + (rr.b-rr.a)) || ranges[ranges.length-1];
+    const local = r.a + Math.min(r.b-r.a, Math.max(0, kt - r.k0));
+    try{
+      const tv=await getVid(r.idx);
+      await new Promise((res)=>{ const on=()=>{tv.removeEventListener('seeked',on);res();}; tv.addEventListener('seeked',on); try{tv.currentTime=local;}catch(_){res();} setTimeout(res,1200); });
+      const vw=tv.videoWidth||720, vh=tv.videoHeight||1280;
+      const s=Math.min(1, 384/Math.max(vw,vh));
+      cv.width=Math.max(2,Math.round(vw*s)); cv.height=Math.max(2,Math.round(vh*s));
+      cx2.drawImage(tv,0,0,cv.width,cv.height);
+      const blob=await new Promise(r3=>cv.toBlob(r3,'image/jpeg',0.72));
+      if(blob) frames.push({ t: Math.round(kt*100)/100, blob });
+    }catch(_){}
+  }
+  Object.values(vids).forEach(tv=>{ try{ tv.src=''; }catch(_){} });
+  return frames;
+}
+
 async function edAiGenerate(){
   if(_edAi.busy || !_ed || !_ed.clips || !_ed.clips.length) return;
   const btn=document.getElementById('edAiGo'), st=document.getElementById('edAiStatus');
@@ -20978,10 +21008,14 @@ async function edAiGenerate(){
   try {
     const { blob, duration, toSource } = await edExtractTimelineAudio(setStatus);
     if(duration < 1) throw new Error('Timeline trop courte');
+    setStatus('🎞️ Analyse des images de ta vidéo…');
+    const vFrames = await _edAiExtractFrames(8);
     setStatus('🖼️ Préparation des images…');
     const fd=new FormData();
     fd.append('audio', blob, 'timeline.wav');
     fd.append('duration', String(duration));
+    vFrames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
+    fd.append('frame_times', JSON.stringify(vFrames.map(f=>f.t)));
     const script=(document.getElementById('edAiScript')?.value||'').trim();
     if(script) fd.append('script', script);
     fd.append('options', JSON.stringify({ lang:'fr' }));
