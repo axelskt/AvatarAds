@@ -20810,7 +20810,16 @@ function edRedo(){ if(!_ed||!_ed._redo||!_ed._redo.length){ toast('Rien à refai
    sous-titres Punch mot-à-mot (dessinés au canvas, preview + export).
    ══════════════════════════════════════════════════════════════════════ */
 const ORCHESTRATE_FN = SUPABASE_URL + '/functions/v1/orchestrate';
-let _edAi = { files: [], busy: false };
+let _edAi = { files: [], busy: false, style: 'dynamic' };
+
+// sélecteur de style du Montage IA : dynamique (plein écran) vs slides motion (split-screen)
+function edAiSetStyle(s){
+  _edAi.style = (s === 'slides') ? 'slides' : 'dynamic';
+  const dyn = document.getElementById('edAiStyleDyn'), sld = document.getElementById('edAiStyleSld'), br = document.getElementById('edAiBrollBlock');
+  const set = (el, on) => { if(!el) return; el.style.border = on ? '1.5px solid var(--orange2)' : '1.5px solid var(--border)'; el.style.background = on ? 'rgba(255,107,53,.08)' : ''; };
+  set(dyn, _edAi.style === 'dynamic'); set(sld, _edAi.style === 'slides');
+  if(br) br.style.display = _edAi.style === 'slides' ? 'none' : '';
+}
 
 function openEdAiModal(){
   if(!_ed || !_ed.clips || !_ed.clips.length){ toast('⚠️ Charge d\'abord une vidéo dans l\'éditeur'); return; }
@@ -20830,9 +20839,22 @@ function openEdAiModal(){
         L'IA écoute ta vidéo et pose <b style="color:var(--text)">zooms punch, images b-roll, bruitages, hook et sous-titres</b> pile au bon moment — synchronisés sur chaque mot. Tu ajustes ensuite ce que tu veux, tout reste modifiable.
       </div>
 
+      <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">STYLE DE MONTAGE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div id="edAiStyleDyn" onclick="edAiSetStyle('dynamic')" style="border:1.5px solid var(--orange2);background:rgba(255,107,53,.08);border-radius:10px;padding:10px 11px;cursor:pointer">
+          <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">🎬 Dynamique</div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Plein écran : zooms punch, b-roll, bruitages</div>
+        </div>
+        <div id="edAiStyleSld" onclick="edAiSetStyle('slides')" style="border:1.5px solid var(--border);border-radius:10px;padding:10px 11px;cursor:pointer">
+          <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">📊 Slides motion</div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Split-screen : visuels animés qui illustrent chaque phrase</div>
+        </div>
+      </div>
+
       <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">SCRIPT EXACT <span style="color:var(--text3)">· OPTIONNEL, SOUS-TITRES PARFAITS</span></div>
       <textarea id="edAiScript" rows="3" placeholder="Colle ici le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:16px"></textarea>
 
+      <div id="edAiBrollBlock">
       <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES B-ROLL <span style="color:var(--text3)">· OPTIONNEL, L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
       <input type="file" id="edAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);this.value=''">
       <div onclick="document.getElementById('edAiImgIn').click()"
@@ -20843,6 +20865,7 @@ function openEdAiModal(){
         🖼️ Ajoute jusqu'à 8 images (produit, preuve, avant/après…)
       </div>
       <div id="edAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-bottom:16px"></div>
+      </div>
 
       <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text);cursor:pointer;margin-bottom:10px">
         <input type="checkbox" id="edAiSubs" checked style="accent-color:var(--orange2);width:15px;height:15px">
@@ -21018,7 +21041,7 @@ async function edAiGenerate(){
     fd.append('frame_times', JSON.stringify(vFrames.map(f=>f.t)));
     const script=(document.getElementById('edAiScript')?.value||'').trim();
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr' }));
+    fd.append('options', JSON.stringify({ lang:'fr', style:_edAi.style }));
     fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:'image' }))));
     for(const a of _edAi.files){
       const th=await _edAiThumb(a.file);
@@ -21098,8 +21121,15 @@ function edAiApply(plan, toSource){
     }
   }
 
+  // 📊 style Slides : le plan split-screen est conservé pour le rendu final (export serveur)
+  _ed.aiSlides = (plan.slides && plan.slides.length) ? plan.slides : null;
+
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
-  toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
+  if(_ed.aiSlides){
+    toast('📊 Plan Slides prêt : '+_ed.aiSlides.length+' slides · '+caps.length+' sous-titres · '+nSfx+' SFX'+musicTxt+' — le rendu split-screen se fait à l\'export final');
+  } else {
+    toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
+  }
 }
 
 // ── Depuis le Générateur (étape 5) : ouvre la vidéo avatar dans l'Éditeur, prête à monter ──
