@@ -5,68 +5,64 @@
       "role": "hook",
       "start": 0,
       "end": 3.96,
-      "label": "Accroche recommencer de zero"
+      "label": "Recommencer de zéro"
     },
     {
       "role": "benefice",
       "start": 3.96,
       "end": 9.86,
-      "label": "IA LBDD business rentable"
+      "label": "L'IA & le business en ligne"
     },
     {
       "role": "preuve",
       "start": 9.86,
       "end": 17.64,
-      "label": "Avantages du business"
+      "label": "Pourquoi c'est le meilleur"
     },
     {
       "role": "cta",
       "start": 17.64,
       "end": 20.76,
-      "label": "Ecris PLAN en commentaire"
+      "label": "Écris PLAN en commentaire"
     }
   ],
   "zooms": [
     {
       "t": 1.3,
       "dur": 0.9,
-      "scale": 1.28,
+      "scale": 1.25,
       "cx": 0.55,
-      "cy": 0.72
+      "cy": 0.62
     },
     {
       "t": 18.12,
       "dur": 1,
-      "scale": 1.3,
+      "scale": 1.28,
       "cx": 0.55,
-      "cy": 0.72
+      "cy": 0.62
     }
   ],
   "broll": [],
   "sfx": [
     {
       "kind": "whoosh",
-      "t": 3.96
-    },
-    {
-      "kind": "click",
-      "t": 6.4
-    },
-    {
-      "kind": "ding",
-      "t": 8.38
-    },
-    {
-      "kind": "whoosh",
-      "t": 9.86
+      "t": 4.06
     },
     {
       "kind": "pop",
-      "t": 11.54
+      "t": 6.4
+    },
+    {
+      "kind": "pop",
+      "t": 8.38
     },
     {
       "kind": "click",
-      "t": 14.54
+      "t": 11.54
+    },
+    {
+      "kind": "ding",
+      "t": 15.08
     },
     {
       "kind": "success",
@@ -75,56 +71,54 @@
   ],
   "hook": null,
   "accents": [
-    "dix",
-    "mille",
-    "euros",
+    "zéro",
     "rentable",
     "2026",
     "bénéfices",
-    "résultats",
     "rapides",
-    "plan"
+    "plan",
+    "maintenant"
   ],
   "music": {
     "mood": "dynamique"
   },
   "slides": [
     {
-      "type": "flow",
+      "type": "card",
       "start": 4.1,
-      "end": 9.4,
-      "title": "MON PLAN",
+      "end": 9,
+      "title": "LE PLUS RENTABLE",
       "items": [
         {
-          "text": "IA & LBDD",
+          "text": "L'IA & LE LBD",
           "t": 4.22
         },
         {
-          "text": "BUSINESS RENTABLE",
+          "text": "BUSINESS EN LIGNE",
           "t": 6.4
         },
         {
-          "text": "LANCER EN 2026",
+          "text": "À LANCER EN 2026",
           "t": 8.38
         }
       ]
     },
     {
       "type": "checklist",
-      "start": 9.9,
-      "end": 17.5,
+      "start": 9.98,
+      "end": 17.6,
       "title": "POURQUOI",
       "items": [
         {
           "text": "PEU DE CAPITAL",
-          "t": 9.98
+          "t": 10.2
         },
         {
           "text": "PAS D'ÂGE REQUIS",
           "t": 11.54
         },
         {
-          "text": "100% BÉNÉFICE",
+          "text": "100% DE BÉNÉFICE",
           "t": 12.42
         },
         {
@@ -133,7 +127,7 @@
         },
         {
           "text": "+10K€/MOIS",
-          "t": 14.54
+          "t": 15.08
         },
         {
           "text": "RÉSULTATS RAPIDES",
@@ -143,500 +137,10 @@
     }
   ],
   "face": {
-    "cy": 0.72
+    "cy": 0.62
   },
-  "captions": [
-    {
-      "text": "SI",
-      "start": 0.14,
-      "end": 0.28,
-      "accent": false
-    },
-    {
-      "text": "JE",
-      "start": 0.28,
-      "end": 0.42,
-      "accent": false
-    },
-    {
-      "text": "DEVAIS",
-      "start": 0.42,
-      "end": 0.56,
-      "accent": false
-    },
-    {
-      "text": "RECOMMENCER",
-      "start": 0.56,
-      "end": 1.02,
-      "accent": false
-    },
-    {
-      "text": "DE",
-      "start": 1.04,
-      "end": 1.18,
-      "accent": false
-    },
-    {
-      "text": "ZÉRO",
-      "start": 1.3,
-      "end": 1.5,
-      "accent": false
-    },
-    {
-      "text": "ET",
-      "start": 1.66,
-      "end": 1.8,
-      "accent": false
-    },
-    {
-      "text": "FAIRE",
-      "start": 1.8,
-      "end": 2.02,
-      "accent": false
-    },
-    {
-      "text": "DIX",
-      "start": 2.06,
-      "end": 2.2,
-      "accent": true
-    },
-    {
-      "text": "MILLE",
-      "start": 2.24,
-      "end": 2.38,
-      "accent": true
-    },
-    {
-      "text": "EUROS",
-      "start": 2.38,
-      "end": 2.52,
-      "accent": true
-    },
-    {
-      "text": "PAR",
-      "start": 2.54,
-      "end": 2.68,
-      "accent": false
-    },
-    {
-      "text": "MOIS",
-      "start": 2.72,
-      "end": 2.86,
-      "accent": false
-    },
-    {
-      "text": "VOICI",
-      "start": 3,
-      "end": 3.36,
-      "accent": false
-    },
-    {
-      "text": "CE",
-      "start": 3.42,
-      "end": 3.56,
-      "accent": false
-    },
-    {
-      "text": "QUE",
-      "start": 3.56,
-      "end": 3.7,
-      "accent": false
-    },
-    {
-      "text": "JE",
-      "start": 3.7,
-      "end": 3.84,
-      "accent": false
-    },
-    {
-      "text": "FERAIS",
-      "start": 3.84,
-      "end": 3.98,
-      "accent": false
-    },
-    {
-      "text": "JE",
-      "start": 4.06,
-      "end": 4.2,
-      "accent": false
-    },
-    {
-      "text": "ME",
-      "start": 4.2,
-      "end": 4.34,
-      "accent": false
-    },
-    {
-      "text": "LANCERAIS",
-      "start": 4.34,
-      "end": 4.54,
-      "accent": false
-    },
-    {
-      "text": "DIRECTEMENT",
-      "start": 4.6,
-      "end": 5.08,
-      "accent": false
-    },
-    {
-      "text": "DANS",
-      "start": 5.1,
-      "end": 5.24,
-      "accent": false
-    },
-    {
-      "text": "LIA",
-      "start": 5.24,
-      "end": 5.64,
-      "accent": false
-    },
-    {
-      "text": "ET",
-      "start": 5.68,
-      "end": 5.82,
-      "accent": false
-    },
-    {
-      "text": "LE",
-      "start": 5.82,
-      "end": 5.96,
-      "accent": false
-    },
-    {
-      "text": "BD",
-      "start": 5.96,
-      "end": 6.24,
-      "accent": false
-    },
-    {
-      "text": "LE",
-      "start": 6.3,
-      "end": 6.44,
-      "accent": false
-    },
-    {
-      "text": "BUSINESS",
-      "start": 6.44,
-      "end": 6.66,
-      "accent": false
-    },
-    {
-      "text": "EN",
-      "start": 6.72,
-      "end": 6.86,
-      "accent": false
-    },
-    {
-      "text": "LIGNE",
-      "start": 6.86,
-      "end": 7,
-      "accent": false
-    },
-    {
-      "text": "LE",
-      "start": 7,
-      "end": 7.14,
-      "accent": false
-    },
-    {
-      "text": "PLUS",
-      "start": 7.14,
-      "end": 7.3,
-      "accent": false
-    },
-    {
-      "text": "RENTABLE",
-      "start": 7.36,
-      "end": 7.74,
-      "accent": true
-    },
-    {
-      "text": "À",
-      "start": 7.78,
-      "end": 7.92,
-      "accent": false
-    },
-    {
-      "text": "LANCER",
-      "start": 7.92,
-      "end": 8.06,
-      "accent": false
-    },
-    {
-      "text": "EN",
-      "start": 8.08,
-      "end": 8.22,
-      "accent": false
-    },
-    {
-      "text": "2026",
-      "start": 8.38,
-      "end": 9,
-      "accent": true
-    },
-    {
-      "text": "ET",
-      "start": 9.12,
-      "end": 9.26,
-      "accent": false
-    },
-    {
-      "text": "VOICI",
-      "start": 9.26,
-      "end": 9.5,
-      "accent": false
-    },
-    {
-      "text": "POURQUOI",
-      "start": 9.54,
-      "end": 9.86,
-      "accent": false
-    },
-    {
-      "text": "PEU",
-      "start": 9.98,
-      "end": 10.12,
-      "accent": false
-    },
-    {
-      "text": "DE",
-      "start": 10.12,
-      "end": 10.26,
-      "accent": false
-    },
-    {
-      "text": "CAPITAL",
-      "start": 10.26,
-      "end": 10.56,
-      "accent": false
-    },
-    {
-      "text": "DE",
-      "start": 10.6,
-      "end": 10.74,
-      "accent": false
-    },
-    {
-      "text": "DÉPART",
-      "start": 10.74,
-      "end": 10.98,
-      "accent": false
-    },
-    {
-      "text": "NÉCESSAIRE",
-      "start": 11.04,
-      "end": 11.44,
-      "accent": false
-    },
-    {
-      "text": "PAS",
-      "start": 11.54,
-      "end": 11.68,
-      "accent": false
-    },
-    {
-      "text": "DÂGE",
-      "start": 11.68,
-      "end": 11.9,
-      "accent": false
-    },
-    {
-      "text": "REQUIS",
-      "start": 11.96,
-      "end": 12.26,
-      "accent": false
-    },
-    {
-      "text": "CENT",
-      "start": 12.42,
-      "end": 12.56,
-      "accent": false
-    },
-    {
-      "text": "POUR",
-      "start": 12.6,
-      "end": 12.74,
-      "accent": false
-    },
-    {
-      "text": "CENT",
-      "start": 12.74,
-      "end": 12.88,
-      "accent": false
-    },
-    {
-      "text": "DE",
-      "start": 12.88,
-      "end": 13.02,
-      "accent": false
-    },
-    {
-      "text": "BÉNÉFICES",
-      "start": 13.02,
-      "end": 13.4,
-      "accent": true
-    },
-    {
-      "text": "QUELQUES",
-      "start": 13.54,
-      "end": 13.84,
-      "accent": false
-    },
-    {
-      "text": "HEURES",
-      "start": 13.88,
-      "end": 14.04,
-      "accent": false
-    },
-    {
-      "text": "PAR",
-      "start": 14.08,
-      "end": 14.22,
-      "accent": false
-    },
-    {
-      "text": "JOUR",
-      "start": 14.32,
-      "end": 14.46,
-      "accent": false
-    },
-    {
-      "text": "POTENTIEL",
-      "start": 14.54,
-      "end": 14.94,
-      "accent": false
-    },
-    {
-      "text": "À",
-      "start": 15.04,
-      "end": 15.18,
-      "accent": false
-    },
-    {
-      "text": "PLUS",
-      "start": 15.18,
-      "end": 15.32,
-      "accent": false
-    },
-    {
-      "text": "DIX",
-      "start": 15.34,
-      "end": 15.48,
-      "accent": true
-    },
-    {
-      "text": "MILLE",
-      "start": 15.54,
-      "end": 15.68,
-      "accent": true
-    },
-    {
-      "text": "EUROS",
-      "start": 15.68,
-      "end": 15.82,
-      "accent": true
-    },
-    {
-      "text": "PAR",
-      "start": 15.86,
-      "end": 16,
-      "accent": false
-    },
-    {
-      "text": "MOIS",
-      "start": 16.06,
-      "end": 16.2,
-      "accent": false
-    },
-    {
-      "text": "ET",
-      "start": 16.32,
-      "end": 16.46,
-      "accent": false
-    },
-    {
-      "text": "DES",
-      "start": 16.46,
-      "end": 16.6,
-      "accent": false
-    },
-    {
-      "text": "RÉSULTATS",
-      "start": 16.6,
-      "end": 17.04,
-      "accent": true
-    },
-    {
-      "text": "RAPIDES",
-      "start": 17.1,
-      "end": 17.64,
-      "accent": true
-    },
-    {
-      "text": "ÉCRIS",
-      "start": 17.7,
-      "end": 18.06,
-      "accent": false
-    },
-    {
-      "text": "PLAN",
-      "start": 18.12,
-      "end": 18.46,
-      "accent": true
-    },
-    {
-      "text": "EN",
-      "start": 18.5,
-      "end": 18.64,
-      "accent": false
-    },
-    {
-      "text": "COMMENTAIRE",
-      "start": 18.66,
-      "end": 19.16,
-      "accent": false
-    },
-    {
-      "text": "POUR",
-      "start": 19.2,
-      "end": 19.34,
-      "accent": false
-    },
-    {
-      "text": "PRENDRE",
-      "start": 19.36,
-      "end": 19.54,
-      "accent": false
-    },
-    {
-      "text": "TA",
-      "start": 19.58,
-      "end": 19.72,
-      "accent": false
-    },
-    {
-      "text": "VIE",
-      "start": 19.72,
-      "end": 19.86,
-      "accent": false
-    },
-    {
-      "text": "EN",
-      "start": 19.86,
-      "end": 20,
-      "accent": false
-    },
-    {
-      "text": "MAIN",
-      "start": 20,
-      "end": 20.14,
-      "accent": false
-    },
-    {
-      "text": "MAINTENANT",
-      "start": 20.22,
-      "end": 20.58,
-      "accent": false
-    }
-  ]
+  "detected": {
+    "subtitles": true
+  },
+  "captions": []
 }
