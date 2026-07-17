@@ -2244,6 +2244,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button id="composeBtn" onclick="composeVideo(this)" style="flex:1.7;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">⬇ Télécharger</button>
                 <button onclick="nav('library')" style="flex:1;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</button>
               </div>
+              <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);border:1px solid rgba(255,143,94,.6);border-radius:12px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.25);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">🎼 Montage IA <span style="font-weight:600;font-size:12px;opacity:.78">— zooms, b-roll, musique &amp; sous-titres posés automatiquement</span></button>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -20087,8 +20088,8 @@ function edSelectClip(idx){
   _ed.trimA=c.trimA; _ed.trimB=c.trimB; _ed.deletes=c.deletes; _ed.delPending=null;
   edResizeCanvas();
   try{ _ed.video.currentTime=_ed.trimA; }catch(e){}
-  edRefreshTimeline(); edRenderClips(); edRenderOvTrack(); edUpdateTime();
-  toast(idx===0?'⭐ Clip principal — édite le trim/texte':'🎞 Clip '+(idx+1)+' — édite son trim');
+  edRefreshTimeline(); edRenderClips(); edRenderClipsTrack(); edRenderOvTrack(); edUpdateTime();
+  toast(idx===0?'⭐ Clip principal sélectionné':'🎞 Clip '+(idx+1)+' sélectionné — Suppr pour le retirer');
 }
 // avance au clip suivant pendant la lecture (sans pause/toast, garde la musique)
 function edAdvanceClip(idx){
@@ -20261,7 +20262,7 @@ function edBindTimeline(){
 function edKeyHandler(e){
   const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
   const t=(e.target.tagName||'').toLowerCase(); if(t==='input'||t==='textarea'||e.target.isContentEditable) return;
-  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.sel){ e.preventDefault(); edDeleteContext(); } }
+  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.sel || _ed.selZoom || (_ed.clips&&_ed.clips.length>1)){ e.preventDefault(); edDeleteContext(); } }
   else if(e.key===' '||e.code==='Space'){ e.preventDefault(); edTogglePlay(); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
     const dir=e.key==='ArrowRight'?1:-1; const step=e.shiftKey?1:0.2; const tot=edTotalDur()||1;
@@ -20492,8 +20493,8 @@ function edRenderClipsTrack(){
     seg.style.cssText='flex:'+len.toFixed(3)+' 1 0;min-width:0;height:100%;border-radius:6px;cursor:pointer;position:relative;overflow:hidden;background:'+(active?'var(--accent-soft)':'var(--bg4)')+';border:1px solid '+(active?'var(--accent)':'var(--border2)')+'';
     const strip=document.createElement('div'); strip.style.cssText='position:absolute;inset:0;display:flex'; seg.appendChild(strip);
     const lab=document.createElement('div'); lab.style.cssText='position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;font-family:var(--mono);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.95);pointer-events:none;z-index:2'; lab.textContent=(idx===0?'⭐':'🎞')+' '+(idx+1); seg.appendChild(lab);
-    seg.title='Clip '+(idx+1)+' ('+edFmt(len)+') — clique pour l\'éditer';
-    seg.onclick=()=>edSelectClip(idx);
+    seg.title='Clip '+(idx+1)+' ('+edFmt(len)+') — clique pour le sélectionner, Suppr pour le retirer';
+    seg.onclick=(e)=>{ e.stopPropagation(); edSelectClip(idx); };
     tr.appendChild(seg);
     _edFillStrip(strip, c);
   });
@@ -20747,8 +20748,10 @@ function edSplitClip(){
 function edDeleteContext(){
   if(!_ed) return;
   if(_ed.sel){ edSnap(); edDeleteSelected(); return; }
+  if(_ed.selZoom){ edRemoveZoom(_ed.selZoom); return; }
   if(_ed.activeIdx>0){ edRemoveClip(_ed.activeIdx); return; }
-  toast('ℹ️ Sélectionne un texte/image ou un clip ajouté à supprimer');
+  if(_ed.clips && _ed.clips.length>1){ toast('⭐ Le clip principal ne peut pas être supprimé — clique un autre clip (🎞) puis Suppr'); return; }
+  toast('ℹ️ Sélectionne un texte/image, un zoom ou un clip ajouté à supprimer');
 }
 
 /* ---------- undo / redo (snapshots, refs préservées) ---------- */
@@ -21031,6 +21034,30 @@ function edAiApply(plan, toSource){
 
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
   toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
+}
+
+// ── Depuis le Générateur (étape 5) : ouvre la vidéo avatar dans l'Éditeur, prête à monter ──
+// Le script exact du Générateur est pré-rempli → sous-titres parfaits via l'alignement forcé.
+async function genOpenMontageIA(){
+  if(!results.hedraUrl){ toast('⚠️ Génère d\'abord ta vidéo avatar'); return; }
+  toast('🎼 Ouverture dans l\'Éditeur…');
+  try{
+    const r = await fetch(results.hedraUrl);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const b = await r.blob();
+    const script = (results.script || '').trim();
+    nav('studio');
+    edLoadFile(new File([b], 'avatar-generation.mp4', { type: b.type || 'video/mp4' }));
+    const t0 = Date.now();
+    (function waitReady(){
+      if(_ed && _ed.clips && _ed.clips.length){
+        openEdAiModal();
+        const ta = document.getElementById('edAiScript');
+        if(ta && script) ta.value = script;
+        toast('🎼 Ajoute tes images b-roll si tu veux, puis « Générer le montage »');
+      } else if(Date.now() - t0 < 10000) setTimeout(waitReady, 300);
+    })();
+  }catch(e){ console.error('genOpenMontageIA:', e); toast('⚠️ Impossible de charger la vidéo — réessaie'); }
 }
 
 // ── Sous-titres Punch mot-à-mot dessinés au canvas (preview ET export) ──
@@ -21348,7 +21375,7 @@ function edAddClips(files){
     const url=URL.createObjectURL(f);
     const vid=document.createElement('video');
     vid.src=url; vid.playsInline=true; vid.preload='auto'; vid.muted=false;
-    vid.onloadedmetadata=()=>{ const d=vid.duration||0; _ed.clips.push({ file:f, url, video:vid, dur:d, vw:vid.videoWidth||720, vh:vid.videoHeight||1280, trimA:0, trimB:d, deletes:[] }); edAddSfx('whoosh', edClipGlobalStart(_ed.clips.length-1)); edRenderClips(); edRenderOvTrack(); };
+    vid.onloadedmetadata=()=>{ const d=vid.duration||0; _ed.clips.push({ file:f, url, video:vid, dur:d, vw:vid.videoWidth||720, vh:vid.videoHeight||1280, trimA:0, trimB:d, deletes:[] }); edAddSfx('whoosh', edClipGlobalStart(_ed.clips.length-1)); edRenderClips(); edRenderClipsTrack(); edRefreshTimeline(); edRenderOvTrack(); };
   });
   if(added) toast('🎞 '+added+' clip'+(added>1?'s':'')+' ajouté'+(added>1?'s':'')+' à la suite');
 }
