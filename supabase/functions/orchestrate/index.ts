@@ -110,14 +110,14 @@ function alignScript(script: string, tWords: Word[], duration: number): Word[] {
 }
 
 // ---------- transcription ElevenLabs Scribe ----------
-async function transcribe(audio: File, lang: string | null): Promise<{ text: string; words: Word[] }> {
+async function transcribe(audio: File, lang: string | null): Promise<{ text: string; words: Word[]; hasMusic: boolean }> {
   const elKey = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
   if (!elKey) throw new Error('ELEVENLABS_API_KEY manquante')
   const fd = new FormData()
   fd.append('file', audio, audio.name || 'audio.wav')
   fd.append('model_id', 'scribe_v1')
   fd.append('timestamps_granularity', 'word')
-  fd.append('tag_audio_events', 'false')
+  fd.append('tag_audio_events', 'true')
   fd.append('diarize', 'false')
   if (lang) fd.append('language_code', lang)
   const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
@@ -135,7 +135,10 @@ async function transcribe(audio: File, lang: string | null): Promise<{ text: str
       end: Number(w.end) || 0,
     }))
     .filter((w: Word) => w.text.length > 0)
-  return { text: String(data.text || ''), words }
+  // musique de fond déjà présente ? (events Scribe type audio_event, ex: "(music)")
+  const hasMusic = (data.words || []).some((w: { type?: string; text?: string }) =>
+    w.type === 'audio_event' && /music|musique/i.test(String(w.text || '')))
+  return { text: String(data.text || ''), words, hasMusic }
 }
 
 // ---------- schéma JSON strict du plan (sortie Claude garantie valide) ----------
@@ -143,7 +146,7 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success',
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face'],
+  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected'],
   properties: {
     sections: {
       type: 'array',
@@ -225,6 +228,12 @@ const PLAN_SCHEMA = {
         { type: 'null' },
       ],
     },
+    detected: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['subtitles'],
+      properties: { subtitles: { type: 'boolean' } },
+    },
     slides: {
       type: 'array',
       items: {
@@ -261,6 +270,7 @@ type Plan = {
   music: { mood: string } | null
   slides: { type: string; start: number; end: number; title: string; items: { text: string; t: number }[] }[]
   face: { cy: number } | null
+  detected: { subtitles: boolean }
 }
 
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
@@ -295,6 +305,7 @@ async function claudePlan(
   lang: string,
   frames: { t: number; media: string; b64: string }[],
   siteContext: string,
+  musicAlready: boolean,
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -308,17 +319,19 @@ ALTERNANCE FULL ECRAN / SPLIT (le coeur du format) : la video alterne deux cadre
 FULL ECRAN = la personne plein cadre (zooms punch, b-roll, hook). SPLIT = pendant chaque slide, la video glisse dans la moitie basse de l'ecran et la slide motion design occupe la moitie haute (fond sombre) pour illustrer ce qui est dit.
 - Les ~3 premieres secondes (l'accroche) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur la FIN de la phrase d'accroche. Zoom punch bienvenu sur le mot fort.
 - Les ~3 dernieres secondes (CTA / chute) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur le DEBUT de la phrase de CTA.
-- Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card), 2.5 a 6s par slide. Entre deux slides, reviens en full ecran 2 a 4s avec un zoom punch sur un mot fort. Jamais plus de 5s sans changement de cadre ou evenement visuel.
+- Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card) : une slide dure le temps de sa ou ses phrases (2 a 6s). Entre deux slides, reviens en full ecran 1.5 a 4s avec un zoom punch sur un mot fort.
 - SLIDES : title court MAJUSCULES ("" si inutile) ; items[].text 2 a 5 mots MAJUSCULES percutants ; CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript (il apparait PILE quand c'est dit), t dans [start, end] de sa slide, items en ordre chronologique.
 - ZOOMS et B-ROLL : UNIQUEMENT pendant les passages full ecran, JAMAIS pendant une slide (garde 0.5s de marge autour des slides).
 - SFX : whoosh a chaque changement de cadre (entree ET sortie de slide), pop/click sur les items de slide marquants.
 - Si un CONTEXTE PRODUIT (site web) est fourni, les slides refletent les VRAIES fonctionnalites, offres et chiffres du produit — pas d'invention.`
 
   const system = `Tu es le chef d'orchestre d'AvatarAds : un monteur video expert en formats viraux TikTok/Reels/Shorts (style Hormozi, 1600.agency, Captions.ai).
+OBJECTIF ABSOLU : un montage COHERENT avec ce qui est dit et montre, une qualite premium, et le maximum de retention (contenu viral).
 On te donne des IMAGES DE LA VIDEO a differents timestamps, la transcription mot-a-mot (timestamps en secondes), sa duree, et eventuellement des images fournies par l'utilisateur (b-roll).
 
 ETAPE 1 - ANALYSE (obligatoire, avant tout) : etudie les images de la video. Qu'est-ce qu'on VOIT reellement (personne face camera ? ou est son visage dans le cadre ? gameplay ? produit ? ambiance, lumiere, rythme visuel) ? Croise avec le script : de quoi parle la video, sur quel ton ?
 - Renseigne face.cy = position verticale du CENTRE du visage dans le cadre (0=haut, 1=bas), moyenne sur les images ; null si aucun visage. Le rendu s'en sert pour cadrer la personne pendant les slides.
+- Renseigne detected.subtitles = true si des SOUS-TITRES mot-a-mot sont DEJA incrustes dans la video (les mots qui changent en bas/milieu, pas un simple titre) — dans ce cas on n'en rajoutera pas par-dessus.
 - Si les images montrent du TEXTE deja incruste dans la video (video deja montee) : mets hook=null (pas de doublon). Les SLIDES restent OBLIGATOIRES : pendant une slide, le cadrage se resserre sur le visage et le texte incruste disparait — genere l'alternance normalement.
 
 ETAPE 2 - PLAN : construis le PLAN DE MONTAGE au format JSON demande, adapte a CE contenu precis :
@@ -332,7 +345,7 @@ Regles :
 
 SECTIONS : decoupe narrative complete de 0 a la duree totale (hook / benefice / preuve / cta / outro selon ce qui est dit). Bornes alignees sur les phrases.
 
-RYTHME : un evenement visuel (zoom, b-roll in/out) toutes les 3 a 5 secondes MAXIMUM. Jamais plus de 5s sans changement. Jamais deux evenements a moins de 0.8s l'un de l'autre.
+RYTHME ADAPTATIF : decoupe D'ABORD le transcript en phrases — TOUTES les bornes (sections, slides, entrees/sorties de cadre) tombent sur des fins de phrase ou des respirations, jamais en plein milieu d'une idee. Le tempo depend de la duree et du debit : video courte (<20s) ou debit rapide = un evenement visuel (changement de cadre, zoom, b-roll, item de slide) toutes les 2 a 3.5s ; video plus longue et posee = toutes les 3 a 5s. Jamais plus de 5s sans changement. Jamais deux evenements a moins de 0.8s l'un de l'autre.
 
 ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, declenches PILE sur un mot fort (le timestamp du mot). cx/cy = point de zoom relatif (0-1) deduit des images de la video (la ou est reellement le visage). Pas de zoom pendant un b-roll.
 
@@ -370,7 +383,7 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
 
 Transcription (mot[debut-fin]) :
 ${transcriptCompact}
-
+${musicAlready ? '\nATTENTION : une musique de fond a ete detectee dans l\'audio -> music = null obligatoirement.' : ''}
 Analyse d'abord la video, puis genere le plan de montage.`,
   })
 
@@ -494,8 +507,9 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
   }
 
   const face = (plan.face && typeof plan.face.cy === 'number') ? { cy: r2(clamp(plan.face.cy, 0.1, 0.9)) } : null
+  const detected = { subtitles: !!(plan.detected && plan.detected.subtitles) }
 
-  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face }
+  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face, detected }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
@@ -582,17 +596,18 @@ serve(async (req: Request) => {
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
     // 3. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext)
+    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic)
 
     // 4. bornes/cohérence côté serveur
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id))
+    if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
-    // 5. sous-titres mot-à-mot
-    const captions = buildCaptions(words, plan.accents, duration)
+    // 5. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
+    const captions = plan.detected.subtitles ? [] : buildCaptions(words, plan.accents, duration)
 
     return json({
       ok: true,
-      version: '0.7',
+      version: '0.8',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },

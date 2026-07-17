@@ -85,7 +85,8 @@ export function buildComposition(plan, opts = {}) {
   // ── slides motion design (zone haute pendant les périodes split) ──────────
   const slideDefs = slides.map((s, i) => ({
     id: 's' + i,
-    type: s.type,
+    // une card = une punchline ; si le plan y met plusieurs items, on bascule en flow
+    type: (s.type === 'card' && s.items.length > 1) ? 'flow' : s.type,
     title: String(s.title || ''),
     start: r2(s.start),
     dur: r2(Math.max(0.6, s.end - s.start)),
