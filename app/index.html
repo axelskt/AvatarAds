@@ -1807,6 +1807,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
+            <!-- ⚡ Split Screen actif : génération directe sans chercher le bouton du footer -->
+            <button id="genSplitQuickBtn" onclick="startGeneration()" style="display:none;width:100%;margin-bottom:8px;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.3);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">⚡ Générer la vidéo directement</button>
 
           </div>
 
@@ -1827,6 +1829,26 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <div class="gen-footer" id="genFooter">
+          <!-- 🎼 Toggle Montage IA (visible à l'étape 4, au-dessus de « Générer la vidéo ») -->
+          <div id="genMontageToggleWrap" style="display:none;max-width:840px;margin:0 auto 10px;width:100%;box-sizing:border-box">
+            <div onclick="_genToggleMontageIA()" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="font-size:16px;flex-shrink:0">🎼</span>
+                <div style="min-width:0">
+                  <div style="font-size:12.5px;font-weight:700">Montage IA après la génération <span style="font-weight:600;font-size:10.5px;font-family:var(--mono);color:var(--orange2)">+2 crédits</span></div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zooms, b-roll, musique &amp; sous-titres posés automatiquement, synchronisés sur ta voix</div>
+                </div>
+              </div>
+              <div id="genMontageSwitch" style="width:38px;height:22px;background:var(--bg5);border-radius:11px;position:relative;transition:all .25s;flex-shrink:0">
+                <div id="genMontageThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
+              </div>
+            </div>
+            <div id="genMontageImgs" style="display:none;margin-top:8px">
+              <input type="file" id="genAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
+              <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images b-roll (optionnel) — l'IA les place au meilleur moment</div>
+              <div id="genAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:7px"></div>
+            </div>
+          </div>
           <div id="footerBtns" style="max-width:840px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;gap:10px;align-items:center">
             <button class="btn-back" id="backBtn" style="display:none" onclick="prevStep()">← Retour</button>
             <span id="footerStepLbl" class="mono" style="font-size:12px;color:var(--text-3);white-space:nowrap;padding:0 6px">Étape 1 / 5</span>
@@ -9052,6 +9074,7 @@ function _showResultArea(){
       _set(_vid && isFinite(_vid.duration) ? _vid.duration : 0);
       if(_vid){ _vid.addEventListener('loadedmetadata', ()=>_set(_vid.duration), {once:true}); }
     }
+    _genOnVideoReady(); // 🎼 toggle Montage IA : enchaîne le montage automatiquement
     // Afficher la vidéo générée dans le preview phone
     const bpv = document.getElementById('bypassPreviewVid');
     if(bpv && bpv.src !== results.hedraUrl){
@@ -9116,6 +9139,8 @@ function updateSteps(){
   btn.onclick=handleMainBtn;
   if(step<4) btn.textContent='Continuer →';
   else btn.textContent='🚀 Générer la vidéo';
+  // 🎼 toggle Montage IA visible uniquement à l'étape 4 (au-dessus de « Générer la vidéo »)
+  const _mtw=document.getElementById('genMontageToggleWrap'); if(_mtw) _mtw.style.display = step===4 ? 'block' : 'none';
   // Masquer la zone résultat si on revient dans le form + restaurer le layout 2 colonnes
   document.getElementById('v-generator').classList.remove('gen-generating');
   document.getElementById('previewArea').style.display='flex';
@@ -9129,6 +9154,9 @@ function updateSteps(){
 function _syncClipSectionS4(){
   const sec = document.getElementById('clipSectionS4');
   if(sec) sec.style.display = (typeof gameplayFile !== 'undefined' && gameplayFile) ? 'none' : '';
+  // ⚡ bouton « Générer directement » visible uniquement quand le Split Screen est activé
+  const qb = document.getElementById('genSplitQuickBtn');
+  if(qb) qb.style.display = (typeof splitEnabled !== 'undefined' && splitEnabled) ? 'block' : 'none';
 }
 // #silenceGp · l'outil silences affiche « Gameplay déjà chargé » si un gameplay existe déjà (au lieu de la dropzone vide)
 function _syncSilenceGpDropzone(){
@@ -12922,6 +12950,7 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
 
 // ── GENERATION PIPELINE ──
 async function startGeneration(){
+  _genMontageFired = false; // 🎼 nouvelle génération → le toggle Montage IA peut se re-déclencher
   const script = document.getElementById('f-script').value.trim();
   const _hookTxt = (document.getElementById('f-hook')?.value||'').trim();
   const _ctaTxt  = (document.getElementById('f-cta')?.value||'').trim();
@@ -13658,6 +13687,7 @@ function loadHedraVideoFromUrl(){
   document.getElementById('hedraVideo').src=results.hedraUrl;
   updateGuestWatermarks();
   toast('✓ Vidéo chargée !');
+  _genOnVideoReady();
 }
 function loadHedraLocalFile(file){
   if(!file) return;
@@ -13669,6 +13699,7 @@ function loadHedraLocalFile(file){
   document.getElementById('hedraVideo').src = url;
   updateGuestWatermarks();
   toast('✓ Vidéo importée depuis ton fichier !');
+  _genOnVideoReady();
 }
 function quickLaunchHedra(){
   downloadGeneratedAudio();
@@ -13698,6 +13729,7 @@ async function retryHedraAuto(btn){
       document.getElementById('hedraVideo').src = url;
       updateGuestWatermarks();
       toast('✓ Vidéo avatar générée automatiquement !');
+      _genOnVideoReady();
     } else {
       toast('⚠️ Génération auto échouée — utilise les 3 étapes manuelles ou vérifie ta clé Hedra');
     }
@@ -21038,7 +21070,8 @@ function edAiApply(plan, toSource){
 
 // ── Depuis le Générateur (étape 5) : ouvre la vidéo avatar dans l'Éditeur, prête à monter ──
 // Le script exact du Générateur est pré-rempli → sous-titres parfaits via l'alignement forcé.
-async function genOpenMontageIA(){
+// auto=true (toggle Montage IA activé) : lance la génération du montage directement.
+async function genOpenMontageIA(auto){
   if(!results.hedraUrl){ toast('⚠️ Génère d\'abord ta vidéo avatar'); return; }
   toast('🎼 Ouverture dans l\'Éditeur…');
   try{
@@ -21054,10 +21087,45 @@ async function genOpenMontageIA(){
         openEdAiModal();
         const ta = document.getElementById('edAiScript');
         if(ta && script) ta.value = script;
-        toast('🎼 Ajoute tes images b-roll si tu veux, puis « Générer le montage »');
+        if(auto){ setTimeout(()=>edAiGenerate(), 300); }
+        else toast('🎼 Ajoute tes images b-roll si tu veux, puis « Générer le montage »');
       } else if(Date.now() - t0 < 10000) setTimeout(waitReady, 300);
     })();
   }catch(e){ console.error('genOpenMontageIA:', e); toast('⚠️ Impossible de charger la vidéo — réessaie'); }
+}
+
+// ── 🎼 Toggle « Montage IA après la génération » (étape 4 du Générateur) ──
+let _genMontageIA = false;
+let _genMontageFired = false; // un seul déclenchement automatique par génération
+function _genToggleMontageIA(){
+  _genMontageIA = !_genMontageIA;
+  const s=document.getElementById('genMontageSwitch'), t=document.getElementById('genMontageThumb');
+  if(s && t){
+    s.style.background=_genMontageIA?'var(--accent)':'var(--bg5)';
+    t.style.left=_genMontageIA?'19px':'3px';
+    t.style.opacity=_genMontageIA?'1':'.4';
+  }
+  const imgs=document.getElementById('genMontageImgs');
+  if(imgs) imgs.style.display=_genMontageIA?'block':'none';
+  if(_genMontageIA){ toast('🎼 Ta vidéo sera montée automatiquement après la génération'); _genAiRenderFiles(); }
+}
+// Vignettes des images b-roll du Générateur (même liste que le modal de l'Éditeur : _edAi.files)
+function _genAiRenderFiles(){
+  const wrap=document.getElementById('genAiFiles'); if(!wrap) return;
+  if(!_edAi.files.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='grid';
+  wrap.innerHTML=_edAi.files.map(a=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;border:1px solid var(--border2)">
+      <img src="${a.url}" style="width:100%;height:100%;object-fit:cover;display:block">
+      <button onclick="edAiRemoveFile('${a.id}');_genAiRenderFiles()" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.72);border:none;color:#ff8a8a;font-size:10px;cursor:pointer;line-height:1;padding:0">✕</button>
+    </div>`).join('');
+}
+// Appelé quand la vidéo avatar est prête : enchaîne le montage si le toggle est ON
+function _genOnVideoReady(){
+  if(!_genMontageIA || _genMontageFired || !results.hedraUrl) return;
+  _genMontageFired = true;
+  toast('🎼 Vidéo prête — montage IA en cours…');
+  setTimeout(()=>genOpenMontageIA(true), 700);
 }
 
 // ── Sous-titres Punch mot-à-mot dessinés au canvas (preview ET export) ──
