@@ -21114,11 +21114,12 @@ function edAiApply(plan, toSource){
   const wantMusic=true; // l'IA met music=null si l'audio contient déjà une musique de fond
   let musicTxt='';
   if(wantMusic && plan.music && plan.music.mood){
-    const MOOD_TRACKS={ intense:['../assets/music/music-2.mp3','Intense'], dynamique:['../assets/music/music-1.mp3','Dynamique'], chill:['../assets/music/music-3.mp3','Chill'] };
+    // volume par piste calibré sur sa loudness — la voix reste toujours clairement au-dessus
+    const MOOD_TRACKS={ intense:['../assets/music/music-2.mp3','Intense',9], dynamique:['../assets/music/music-1.mp3','Dynamique',13], chill:['../assets/music/music-3.mp3','Chill',15] };
     const mt=MOOD_TRACKS[plan.music.mood];
     if(mt){
       musicTxt=' · musique '+plan.music.mood;
-      (async ()=>{ try{ await edAddMusicPreset(mt[0], mt[1]); edSetMusicVol(16); const sl=document.querySelector('input[oninput*="edSetMusicVol"]'); if(sl){ sl.value=16; const lbl=document.getElementById('edMusicVolLbl'); if(lbl) lbl.textContent='16%'; } }catch(_){} })();
+      (async ()=>{ try{ await edAddMusicPreset(mt[0], mt[1]); edSetMusicVol(mt[2]); const sl=document.querySelector('input[oninput*="edSetMusicVol"]'); if(sl){ sl.value=mt[2]; const lbl=document.getElementById('edMusicVolLbl'); if(lbl) lbl.textContent=mt[2]+'%'; } }catch(_){} })();
     }
   }
 

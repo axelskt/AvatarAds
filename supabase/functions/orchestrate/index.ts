@@ -239,12 +239,13 @@ const PLAN_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['type', 'start', 'end', 'title', 'items'],
+        required: ['type', 'start', 'end', 'title', 'wide', 'items'],
         properties: {
           type: { type: 'string', enum: ['flow', 'checklist', 'compare', 'stat', 'card'] },
           start: { type: 'number' },
           end: { type: 'number' },
           title: { type: 'string' },
+          wide: { type: 'boolean' },
           items: {
             type: 'array',
             items: {
@@ -268,7 +269,7 @@ type Plan = {
   hook: { text: string; start: number; end: number } | null
   accents: string[]
   music: { mood: string } | null
-  slides: { type: string; start: number; end: number; title: string; items: { text: string; t: number }[] }[]
+  slides: { type: string; start: number; end: number; title: string; wide: boolean; items: { text: string; t: number }[] }[]
   face: { cy: number } | null
   detected: { subtitles: boolean }
 }
@@ -321,6 +322,7 @@ FULL ECRAN = la personne plein cadre (zooms punch, b-roll, hook). SPLIT = pendan
 - Les ~3 dernieres secondes (CTA / chute) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur le DEBUT de la phrase de CTA.
 - Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card) : une slide dure le temps de sa ou ses phrases (2 a 6s). Entre deux slides, reviens en full ecran 1.5 a 4s avec un zoom punch sur un mot fort.
 - SLIDES : title court MAJUSCULES ("" si inutile) ; items[].text 2 a 5 mots MAJUSCULES percutants ; CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript (il apparait PILE quand c'est dit), t dans [start, end] de sa slide, items en ordre chronologique.
+- CADRAGE VIDEO PENDANT LES SLIDES : chaque slide porte wide. wide=false => la video remplit la moitie basse (9:16 croppe). wide=true => la video devient une bande CINEMA 16:9 centree dans la moitie basse (bandes noires, look premium). ALTERNE les deux d'une slide a l'autre pour varier le format (jamais deux slides consecutives avec le meme wide si possible).
 - ZOOMS et B-ROLL : UNIQUEMENT pendant les passages full ecran, JAMAIS pendant une slide (garde 0.5s de marge autour des slides).
 - SFX : whoosh a chaque changement de cadre (entree ET sortie de slide), pop/click sur les items de slide marquants.
 - Si un CONTEXTE PRODUIT (site web) est fourni, les slides refletent les VRAIES fonctionnalites, offres et chiffres du produit — pas d'invention.`
@@ -436,6 +438,7 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
       start: r2(clamp(s.start, slideMin, D)),
       end: r2(clamp(s.end, 0, slideMax)),
       title: String(s.title || '').toUpperCase().slice(0, 40),
+      wide: !!s.wide,
       items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
         .map((it) => ({ text: String(it.text || '').toUpperCase().slice(0, 60), t: r2(clamp(it.t, 0, D)) }))
         .filter((it) => it.text.trim()),
@@ -607,7 +610,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '0.8',
+      version: '0.9',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },

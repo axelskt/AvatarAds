@@ -23,7 +23,24 @@ import { buildComposition } from './build-composition.mjs'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
 const MUSIC_BY_MOOD = { intense: 'music-2.mp3', dynamique: 'music-1.mp3', chill: 'music-3.mp3' }
-const MUSIC_VOL = 0.16
+// volume par mood calibré sur la loudness mesurée de chaque piste (music-2 ≈ -5 LUFS,
+// music-1 ≈ -9.5, music-3 ≈ -11) → la voix reste TOUJOURS clairement au-dessus
+const MUSIC_VOL_BY_MOOD = { intense: 0.09, dynamique: 0.13, chill: 0.15 }
+const MUSIC_VOL_EXTRA = 0.12 // titres ajoutés (assets/music/<mood>-N.mp3) : normalise-les à ~-14 LUFS
+
+// banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
+// entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
+function pickMusic(mood, seed) {
+  const dir = join(HERE, 'assets', 'music')
+  let pool = []
+  try { pool = readdirSync(dir).filter((f) => f.startsWith(mood + '-') && f.endsWith('.mp3')) } catch (_) { /* dossier absent */ }
+  if (pool.length) {
+    const f = pool[Math.abs(Math.floor(seed * 100)) % pool.length]
+    return { file: join(dir, f), vol: MUSIC_VOL_EXTRA }
+  }
+  const base = MUSIC_BY_MOOD[mood]
+  return base ? { file: join(dir, base), vol: MUSIC_VOL_BY_MOOD[mood] || 0.12 } : null
+}
 const SFX_VOL = 0.85
 
 const args = process.argv.slice(2)
@@ -84,10 +101,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     mixIns.push('[voice]')
 
     const mood = plan.music && plan.music.mood
-    const musicFile = mood && MUSIC_BY_MOOD[mood] ? join(HERE, 'assets', 'music', MUSIC_BY_MOOD[mood]) : null
-    if (musicFile && existsSync(musicFile)) {
-      inputs.push('-stream_loop', '-1', '-i', musicFile)
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},volume=${MUSIC_VOL},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[mus]`)
+    const pick = mood ? pickMusic(mood, plan.duration || 1) : null
+    if (pick && existsSync(pick.file)) {
+      inputs.push('-stream_loop', '-1', '-i', pick.file)
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},volume=${pick.vol},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[mus]`)
       mixIns.push('[mus]')
       idx++
     }
