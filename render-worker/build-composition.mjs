@@ -1,11 +1,12 @@
-// build-composition.mjs — plan de montage v0.2/v0.4 → composition HyperFrames (visuel uniquement)
+// build-composition.mjs — plan de montage v0.2/v0.6 → composition HyperFrames (visuel uniquement)
 // L'audio (voix + SFX + musique duckée) est mixé par ffmpeg dans worker.mjs.
 //
-// Deux styles :
-//  - plein écran (défaut) : vidéo cover + zooms punch + b-roll + hook + sous-titres Punch
-//  - slides (plan.slides non vide) : split-screen — slides motion design en haut (fond
-//    sombre, accents jaunes, éléments qui apparaissent PILE sur le mot prononcé),
-//    vidéo de la personne en bas, hook à cheval sur la jonction, sous-titres sur la vidéo.
+// Format ALTERNÉ (le chef d'orchestre décide) :
+//  - passages FULL ÉCRAN : la personne plein cadre — zooms punch, b-roll, hook badge jaune
+//  - passages SPLIT : la vidéo glisse dans la moitié basse, une slide motion design
+//    (flow / checklist / compare / stat / card) occupe la moitié haute ; chaque élément
+//    apparaît PILE sur le mot prononcé
+// La zone vidéo est animée entre les deux états (transition 0.34s) à chaque frontière.
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -20,12 +21,27 @@ export function buildComposition(plan, opts = {}) {
   const assetFiles = opts.assetFiles || {} // { assetId: 'media/img1.jpg' }
 
   const slides = (plan.slides || []).filter((s) => Array.isArray(s.items) && s.items.length)
-  const split = slides.length > 0
-  const SLIDE_H = Math.round(H * 0.45)          // zone slides (haut)
-  const VIDEO_TOP = split ? SLIDE_H : 0         // zone vidéo (bas)
-  const VIDEO_H = H - VIDEO_TOP
+  const SLIDE_H = Math.round(H * 0.45)
+  const VIDEO_H = H - SLIDE_H
+  const TR = 0.34 // durée de la transition full <-> split
 
-  // ── b-roll : images plein écran (cover) avec Ken Burns léger (style plein écran) ──
+  // cadrage vertical en split : centre du visage estimé par l'analyse (fallback : cy médian des zooms)
+  const zoomCys = (plan.zooms || []).map((z) => z.cy).filter((v) => typeof v === 'number').sort((a, b) => a - b)
+  const faceCy = (plan.face && typeof plan.face.cy === 'number') ? plan.face.cy
+    : (zoomCys.length ? zoomCys[Math.floor(zoomCys.length / 2)] : 0.3)
+  const objPos = Math.round(Math.min(0.9, Math.max(0.1, faceCy)) * 100)
+
+  // périodes split = slides fusionnées (gap <= 0.8s : on reste en split entre deux slides)
+  const periods = []
+  for (const s of [...slides].sort((a, b) => a.start - b.start)) {
+    const st = r2(s.start), en = r2(Math.max(s.end, s.start + 0.6))
+    const last = periods[periods.length - 1]
+    if (last && st - last.end <= 0.8) last.end = Math.max(last.end, en)
+    else periods.push({ start: st, end: en })
+  }
+  const inSplit = (t) => periods.some((p) => t >= p.start && t < p.end)
+
+  // ── b-roll : images plein écran (cover), Ken Burns léger — passages full uniquement ──
   const brolls = (plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b, i) => ({
     id: 'broll' + i,
     src: assetFiles[b.assetId],
@@ -33,13 +49,18 @@ export function buildComposition(plan, opts = {}) {
     dur: r2(Math.max(0.4, b.end - b.start)),
   }))
 
-  // ── sous-titres : un mot à la fois, style Punch (accents orange) ──
+  // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
+  const subSize = Math.round(H * 0.052)
+  const subStroke = Math.max(4, Math.round(subSize * 0.16))
+  const capTopFull = Math.round(H * 0.72) - Math.round(subSize * 0.75)
+  const capTopSplit = SLIDE_H + Math.round(VIDEO_H * 0.62) - Math.round(subSize * 0.75)
   const caps = (plan.captions || []).map((c, i) => ({
     id: 'cap' + i,
     text: String(c.text || '').toUpperCase(),
     start: r2(c.start),
     dur: r2(Math.max(0.1, c.end - c.start)),
     accent: !!c.accent,
+    top: inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull,
   })).filter((c) => c.text)
 
   const hook = plan.hook && plan.hook.text ? {
@@ -47,10 +68,6 @@ export function buildComposition(plan, opts = {}) {
     start: r2(plan.hook.start || 0),
     dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
   } : null
-
-  const subSize = Math.round(VIDEO_H * (split ? 0.062 : 0.055))
-  const subStroke = Math.max(4, Math.round(subSize * 0.16))
-  const capTop = VIDEO_TOP + Math.round(VIDEO_H * (split ? 0.64 : 0.72)) - Math.round(subSize * 0.75)
 
   const brollHtml = brolls.map((b) => `
       <div class="clip broll" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
@@ -63,9 +80,9 @@ export function buildComposition(plan, opts = {}) {
       </div>` : ''
 
   const capsHtml = caps.map((c) => `
-      <div class="clip cap${c.accent ? ' accent' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}">${esc(c.text)}</div>`).join('')
+      <div class="clip cap${c.accent ? ' accent' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
 
-  // ── slides motion design (style split) ────────────────────────────────────
+  // ── slides motion design (zone haute pendant les périodes split) ──────────
   const slideDefs = slides.map((s, i) => ({
     id: 's' + i,
     type: s.type,
@@ -113,6 +130,17 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip slide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
 
   // ── timeline GSAP ─────────────────────────────────────────────────────────
+  // transitions full <-> split : la zone vidéo glisse, la zone slides apparaît
+  const layoutJs = periods.map((p) => {
+    const tIn = r2(Math.max(0, p.start - TR))
+    const tOut = r2(Math.min(D - 0.05, p.end - 0.02))
+    return `
+      tl.to('#videozone', { top: ${SLIDE_H}, height: ${VIDEO_H}, duration: ${TR}, ease: 'power3.inOut' }, ${tIn});
+      tl.to('#slidezone', { autoAlpha: 1, duration: ${r2(TR * 0.85)}, ease: 'power2.out' }, ${tIn});
+      tl.to('#videozone', { top: 0, height: ${H}, duration: ${TR}, ease: 'power3.inOut' }, ${tOut});
+      tl.to('#slidezone', { autoAlpha: 0, duration: ${r2(TR * 0.8)}, ease: 'power1.in' }, ${tOut});`
+  }).join('')
+
   const zoomJs = (plan.zooms || []).map((z) => {
     const t = r2(z.t), dur = r2(Math.max(0.4, z.dur || 1))
     const cx = r2((z.cx ?? 0.5) * 100), cy = r2((z.cy ?? 0.35) * 100)
@@ -187,36 +215,16 @@ export function buildComposition(plan, opts = {}) {
     return js
   }).join('')
 
-  // ── styles conditionnels ──────────────────────────────────────────────────
-  const videoZoneCss = split ? `
-      #videozone { left: 0; top: ${VIDEO_TOP}px; width: ${W}px; height: ${VIDEO_H}px; overflow: hidden; }
-      #base { object-position: 50% 22%; }
+  const fz = (k) => Math.round(SLIDE_H * k) // tailles relatives à la zone slides
+  const slideCss = slides.length ? `
       #slidezone {
         left: 0; top: 0; width: ${W}px; height: ${SLIDE_H}px; background: #0d0d0f;
         background-image: radial-gradient(rgba(255,255,255,.045) 1.5px, transparent 1.5px);
         background-size: ${Math.round(W * 0.026)}px ${Math.round(W * 0.026)}px;
+        will-change: opacity; z-index: 1;
       }
-      #slidezone::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: ${ACCENT}; }` : `
-      #videozone { left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; }`
+      #slidezone::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: ${ACCENT}; }
 
-  const hookCss = split ? `
-      #hook { left: 6%; right: 6%; top: ${SLIDE_H - Math.round(H * 0.026)}px; display: flex; justify-content: center; z-index: 7; }
-      .hook-box {
-        background: ${ACCENT}; color: #111; text-align: center;
-        font: 900 ${Math.round(H * 0.026)}px/1.2 "Arial Black", Arial, sans-serif;
-        letter-spacing: .5px; padding: ${Math.round(H * 0.009)}px ${Math.round(H * 0.015)}px;
-        border-radius: ${Math.round(H * 0.006)}px; box-shadow: 0 10px 34px rgba(0,0,0,.45);
-      }` : `
-      #hook { left: 6%; right: 6%; top: 14.5%; display: flex; justify-content: center; }
-      .hook-box {
-        background: rgba(255,107,53,.95); color: #fff; text-align: center;
-        font: 800 ${Math.round(H * 0.028)}px/1.25 "Arial Black", Arial, sans-serif;
-        letter-spacing: .3px; padding: ${Math.round(H * 0.011)}px ${Math.round(H * 0.016)}px;
-        border-radius: ${Math.round(H * 0.011)}px; box-shadow: 0 10px 34px rgba(0,0,0,.35);
-      }`
-
-  const fz = (k) => Math.round(SLIDE_H * k) // tailles relatives à la zone slides
-  const slideCss = split ? `
       .slide { left: 4%; right: 4%; top: 0; height: ${SLIDE_H}px; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: ${fz(0.03)}px; will-change: transform, opacity; z-index: 3;
         font-family: "Arial Black", Arial, sans-serif; padding-top: ${fz(0.06)}px; }
@@ -270,20 +278,29 @@ export function buildComposition(plan, opts = {}) {
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: ${W}px; height: ${H}px; overflow: hidden; background: #000; }
+      html, body { width: ${W}px; height: ${H}px; overflow: hidden; background: #0d0d0f; }
       .clip { position: absolute; }
 
+      /* zone vidéo : plein écran par défaut, animée vers la moitié basse pendant les slides */
+      #videozone { left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; z-index: 2; }
       #zoomInner { position: absolute; inset: 0; will-change: transform; }
-      #base { width: 100%; height: 100%; object-fit: cover; display: block; }
-${videoZoneCss}
+      #base { width: 100%; height: 100%; object-fit: cover; object-position: 50% ${objPos}%; display: block; }
 
-      .broll { inset: 0; overflow: hidden; }
+      .broll { inset: 0; overflow: hidden; z-index: 4; }
       .broll img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
-${hookCss}
+
+      /* Hook : badge jaune en haut, passages full écran (safe zone) */
+      #hook { left: 6%; right: 6%; top: 13.5%; display: flex; justify-content: center; z-index: 7; }
+      .hook-box {
+        background: ${ACCENT}; color: #111; text-align: center;
+        font: 900 ${Math.round(H * 0.027)}px/1.25 "Arial Black", Arial, sans-serif;
+        letter-spacing: .5px; padding: ${Math.round(H * 0.01)}px ${Math.round(H * 0.016)}px;
+        border-radius: ${Math.round(H * 0.007)}px; box-shadow: 0 10px 34px rgba(0,0,0,.45);
+      }
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
-        left: 4%; right: 4%; top: ${capTop}px;
+        left: 4%; right: 4%;
         text-align: center; color: #fff;
         font: 900 ${subSize}px/1.1 "Arial Black", Arial, sans-serif;
         letter-spacing: 1px; will-change: transform; z-index: 6;
@@ -298,7 +315,7 @@ ${slideCss}
   </head>
   <body>
     <div id="root" data-composition-id="montage" data-start="0" data-duration="${D}" data-width="${W}" data-height="${H}">
-${split ? `      <div id="slidezone" class="clip" data-start="0" data-duration="${D}" data-track-index="1"></div>
+${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-duration="${D}" data-track-index="1"></div>
 ` : ''}      <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
         <div id="zoomInner">
           <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
@@ -314,6 +331,8 @@ ${capsHtml}
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
+${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
+` : ''}${layoutJs}
 ${zoomJs}
 ${brollJs}
 ${slidesJs}

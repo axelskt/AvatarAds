@@ -3779,8 +3779,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div class="row" style="justify-content:space-between;margin:0 0 5px"><span class="faint mono" style="font-size:10.5px">🎙 Voix vidéo</span><span id="edVoiceVolLbl" class="mono" style="font-size:10.5px;color:var(--accent-2)">100%</span></div>
                 <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'" style="width:100%;accent-color:var(--accent)">
-                <div class="label" style="margin:14px 0 9px;font-size:10px">Bruitages — ajoutés au curseur</div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                <div class="label" onclick="const b=document.getElementById('edSfxBank'),c=document.getElementById('edSfxChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edSfxChev">▸</span> Bruitages — ajoutés au curseur</div>
+                <div id="edSfxBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px">
                   <button onclick="edAddSfxAtPlayhead('pop')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(20,184,166,.5);background:rgba(20,184,166,.12);color:#2dd4bf">🫧 Gloup</button>
                   <button onclick="edAddSfxAtPlayhead('whoosh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">🌀 Transition</button>
                   <button onclick="edAddSfxAtPlayhead('ding')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🔔 Ding</button>
@@ -3796,12 +3796,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="edAddSfxAtPlayhead('snap')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fbbf24">🫰 Clac</button>
                 </div>
                 <div class="label" style="margin:14px 0 8px;font-size:10px">Zoom punch-in — au curseur</div>
-                <button onclick="edAddZoomAtPlayhead()" style="width:100%;padding:9px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(154,124,255,.55);background:rgba(154,124,255,.14);color:#c9b8ff;margin-bottom:9px">🔎 Ajouter un zoom au curseur</button>
-                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:3px"><span class="faint mono" style="font-size:10px">Durée</span><span id="edZoomDurLbl" class="mono" style="font-size:10px;color:var(--accent-2)">1.2s</span></div>
-                <input type="range" id="edZoomDur" min="4" max="30" value="12" oninput="edSetZoomDur(+this.value)" style="width:100%;accent-color:#9a7cff;margin-bottom:8px">
-                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:3px"><span class="faint mono" style="font-size:10px">Intensité</span><span id="edZoomIntLbl" class="mono" style="font-size:10px;color:var(--accent-2)">×1.40</span></div>
-                <input type="range" id="edZoomInt" min="110" max="200" value="140" oninput="edSetZoomInt(+this.value)" style="width:100%;accent-color:#9a7cff">
-                <div class="faint mono" style="font-size:9px;margin-top:7px;line-height:1.5">Sélectionne le bloc zoom sur la timeline → clique l'aperçu pour placer le point précis. Tire les bords du bloc = durée.</div>
+                <button onclick="edAddZoomAtPlayhead()" style="width:100%;padding:9px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(154,124,255,.55);background:rgba(154,124,255,.14);color:#c9b8ff">🔎 Ajouter un zoom au curseur</button>
+                <div class="faint mono" style="font-size:9px;margin-top:7px;line-height:1.5">Tout se règle sur le bloc dans la timeline : tire les bords = durée · − / + = intensité · clique l'aperçu = point de zoom.</div>
                 <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
               </div>
 
@@ -20719,6 +20715,14 @@ function edRenderZoomTrack(){
     const hL=document.createElement('span'); hL.dataset.h='l'; hL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(180,160,255,.55);border-radius:5px 0 0 5px;z-index:2';
     const hR=document.createElement('span'); hR.dataset.h='r'; hR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(180,160,255,.55);border-radius:0 5px 5px 0;z-index:2';
     const x=document.createElement('span'); x.textContent='✕'; x.dataset.x='1'; x.style.cssText='cursor:pointer;color:#ff8a8a;margin-left:auto;padding:0 3px;z-index:3'; x.onclick=(e)=>{e.stopPropagation();edRemoveZoom(z.id);};
+    if(sel){
+      // intensité directement sur le bloc sélectionné (− / +), plus de slider latéral
+      const mkBtn=(txt,delta)=>{ const b=document.createElement('span'); b.textContent=txt; b.dataset.x='1';
+        b.style.cssText='cursor:pointer;color:#e4dcff;padding:0 4px;z-index:3;font-size:12px;font-weight:900';
+        b.onclick=(e)=>{ e.stopPropagation(); edSnap(); z.scale=Math.max(1.1,Math.min(2,+((z.scale||1.4)+delta).toFixed(2))); _ed._zoomDefScale=z.scale; edRenderZoomTrack(); };
+        return b; };
+      chip.appendChild(mkBtn('−',-0.05)); chip.appendChild(mkBtn('+',+0.05));
+    }
     chip.appendChild(hL); chip.appendChild(x); chip.appendChild(hR);
     let moved=false;
     chip.addEventListener('pointerdown',e=>{
@@ -20810,16 +20814,7 @@ function edRedo(){ if(!_ed||!_ed._redo||!_ed._redo.length){ toast('Rien à refai
    sous-titres Punch mot-à-mot (dessinés au canvas, preview + export).
    ══════════════════════════════════════════════════════════════════════ */
 const ORCHESTRATE_FN = SUPABASE_URL + '/functions/v1/orchestrate';
-let _edAi = { files: [], busy: false, style: 'dynamic' };
-
-// sélecteur de style du Montage IA : dynamique (plein écran) vs slides motion (split-screen)
-function edAiSetStyle(s){
-  _edAi.style = (s === 'slides') ? 'slides' : 'dynamic';
-  const dyn = document.getElementById('edAiStyleDyn'), sld = document.getElementById('edAiStyleSld'), br = document.getElementById('edAiBrollBlock');
-  const set = (el, on) => { if(!el) return; el.style.border = on ? '1.5px solid var(--orange2)' : '1.5px solid var(--border)'; el.style.background = on ? 'rgba(255,107,53,.08)' : ''; };
-  set(dyn, _edAi.style === 'dynamic'); set(sld, _edAi.style === 'slides');
-  if(br) br.style.display = _edAi.style === 'slides' ? 'none' : '';
-}
+let _edAi = { files: [], busy: false };
 
 function openEdAiModal(){
   if(!_ed || !_ed.clips || !_ed.clips.length){ toast('⚠️ Charge d\'abord une vidéo dans l\'éditeur'); return; }
@@ -20839,20 +20834,11 @@ function openEdAiModal(){
         L'IA écoute ta vidéo et pose <b style="color:var(--text)">zooms punch, images b-roll, bruitages, hook et sous-titres</b> pile au bon moment — synchronisés sur chaque mot. Tu ajustes ensuite ce que tu veux, tout reste modifiable.
       </div>
 
-      <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">STYLE DE MONTAGE</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-        <div id="edAiStyleDyn" onclick="edAiSetStyle('dynamic')" style="border:1.5px solid var(--orange2);background:rgba(255,107,53,.08);border-radius:10px;padding:10px 11px;cursor:pointer">
-          <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">🎬 Dynamique</div>
-          <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Plein écran : zooms punch, b-roll, bruitages</div>
-        </div>
-        <div id="edAiStyleSld" onclick="edAiSetStyle('slides')" style="border:1.5px solid var(--border);border-radius:10px;padding:10px 11px;cursor:pointer">
-          <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">📊 Slides motion</div>
-          <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Split-screen : visuels animés qui illustrent chaque phrase</div>
-        </div>
-      </div>
-
       <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">SCRIPT EXACT <span style="color:var(--text3)">· OPTIONNEL, SOUS-TITRES PARFAITS</span></div>
       <textarea id="edAiScript" rows="3" placeholder="Colle ici le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:16px"></textarea>
+
+      <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SITE WEB <span style="color:var(--text3)">· OPTIONNEL, L'IA S'EN INSPIRE POUR LES VISUELS</span></div>
+      <input type="url" id="edAiSite" placeholder="https://ton-site.com — l'IA lit ton site pour illustrer ce que tu proposes" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;font-family:var(--font);margin-bottom:16px">
 
       <div id="edAiBrollBlock">
       <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES B-ROLL <span style="color:var(--text3)">· OPTIONNEL, L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
@@ -21041,7 +21027,9 @@ async function edAiGenerate(){
     fd.append('frame_times', JSON.stringify(vFrames.map(f=>f.t)));
     const script=(document.getElementById('edAiScript')?.value||'').trim();
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr', style:_edAi.style }));
+    fd.append('options', JSON.stringify({ lang:'fr' }));
+    const site=(document.getElementById('edAiSite')?.value||'').trim();
+    if(site) fd.append('website', site);
     fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:'image' }))));
     for(const a of _edAi.files){
       const th=await _edAiThumb(a.file);
@@ -21121,15 +21109,11 @@ function edAiApply(plan, toSource){
     }
   }
 
-  // 📊 style Slides : le plan split-screen est conservé pour le rendu final (export serveur)
+  // 📊 slides split-screen du plan : conservées pour le rendu final (export serveur)
   _ed.aiSlides = (plan.slides && plan.slides.length) ? plan.slides : null;
 
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
-  if(_ed.aiSlides){
-    toast('📊 Plan Slides prêt : '+_ed.aiSlides.length+' slides · '+caps.length+' sous-titres · '+nSfx+' SFX'+musicTxt+' — le rendu split-screen se fait à l\'export final');
-  } else {
-    toast('✨ Montage IA appliqué : '+nZoom+' zooms · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
-  }
+  toast('✨ Montage IA appliqué : '+nZoom+' zooms'+(_ed.aiSlides?' · '+_ed.aiSlides.length+' slides (visibles au rendu final)':'')+' · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
 }
 
 // ── Depuis le Générateur (étape 5) : ouvre la vidéo avatar dans l'Éditeur, prête à monter ──
