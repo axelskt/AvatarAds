@@ -15,6 +15,7 @@
 //   assets    : (optionnel) JSON [{ id, name, kind }] des images b-roll
 //   asset_<id>: (optionnel) miniature JPEG de chaque asset (≤ 400 Ko)
 //   options   : (optionnel) JSON { lang }
+//   website   : (optionnel) URL du site de l'utilisateur → contexte produit pour les slides
 //
 // Sortie : { ok, plan, transcript, model, usage }
 
@@ -142,7 +143,7 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success',
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides'],
+  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face'],
   properties: {
     sections: {
       type: 'array',
@@ -213,6 +214,17 @@ const PLAN_SCHEMA = {
         { type: 'null' },
       ],
     },
+    face: {
+      anyOf: [
+        {
+          type: 'object',
+          additionalProperties: false,
+          required: ['cy'],
+          properties: { cy: { type: 'number' } },
+        },
+        { type: 'null' },
+      ],
+    },
     slides: {
       type: 'array',
       items: {
@@ -248,6 +260,31 @@ type Plan = {
   accents: string[]
   music: { mood: string } | null
   slides: { type: string; start: number; end: number; title: string; items: { text: string; t: number }[] }[]
+  face: { cy: number } | null
+}
+
+// ---------- contexte site web (optionnel) : titre + description + texte brut ----------
+async function fetchSiteContext(url: string): Promise<string> {
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url)
+    if (!/^https?:$/.test(u.protocol)) return ''
+    const host = u.hostname.toLowerCase()
+    if (host === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(host) || host.endsWith('.local') || host.endsWith('.internal')) return ''
+    const ctrl = new AbortController()
+    const to = setTimeout(() => ctrl.abort(), 6000)
+    const res = await fetch(u.href, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AvatarAds/1.0)' } })
+    clearTimeout(to)
+    if (!res.ok || !(res.headers.get('content-type') || '').includes('text/html')) return ''
+    const html = (await res.text()).slice(0, 400_000)
+    const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').replace(/\s+/g, ' ').trim()
+    const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)?.[1] || '').trim()
+    const body = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ').replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim()
+    return [title && 'TITRE: ' + title, desc && 'DESCRIPTION: ' + desc, body && 'CONTENU: ' + body]
+      .filter(Boolean).join('\n').slice(0, 2400)
+  } catch (_) { return '' }
 }
 
 // ---------- appel Claude (Messages API, sortie structurée + vision) ----------
@@ -257,7 +294,7 @@ async function claudePlan(
   assets: { id: string; name: string; kind: string; thumb?: { media: string; b64: string } }[],
   lang: string,
   frames: { t: number; media: string; b64: string }[],
-  style: string,
+  siteContext: string,
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -266,21 +303,23 @@ async function claudePlan(
     .map((w) => `${w.text}[${w.start.toFixed(2)}-${w.end.toFixed(2)}]`)
     .join(' ')
 
-  const styleBlock = style === 'slides'
-    ? `
-STYLE DEMANDE : SLIDES MOTION DESIGN (split-screen). Au rendu final, la video de la personne occupe la moitie BASSE de l'ecran ; la moitie HAUTE (fond sombre) affiche des SLIDES animees qui ILLUSTRENT ce qui est dit, idee par idee.
-- Genere des slides sur QUASI TOUTE la duree : premiere slide avant 1s, jamais plus de 1.5s de trou entre deux slides, 2 a 6s par slide, sans chevauchement.
-- Types disponibles : "flow" (processus/etapes reliees par des fleches, ex: OUTIL -> ACTION -> RESULTAT ; 2 a 4 items), "checklist" (points valides un a un ; 2 a 5 items), "compare" (2 cartes opposees : items[0]=cote positif/vert, items[1]=cote negatif/rouge ; exactement 2 items), "stat" (chiffre ou valeur marquante en tres grand : items[0]=la valeur, title=le libelle), "card" (mot ou phrase choc en encart surligne : items[0]=le texte).
-- CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript : l'element apparait PILE quand la personne le dit. t entre start et end de sa slide, items en ordre chronologique. Choisis le type qui epouse la STRUCTURE de la phrase (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card).
-- title : titre court en MAJUSCULES ("" si inutile). items[].text : 2 a 5 mots, MAJUSCULES, percutants.
-- Dans ce style : broll = [] (les slides remplacent le b-roll), zooms = [] (la video est reduite). hook et sous-titres restent actifs. Mets un sfx whoosh a chaque nouvelle slide et pop/click sur les items marquants (1 SFX par 1.5s max).`
-    : `
-STYLE DEMANDE : MONTAGE PLEIN ECRAN dynamique (zooms + b-roll). slides = [] obligatoirement.`
+  const styleBlock = `
+ALTERNANCE FULL ECRAN / SPLIT (le coeur du format) : la video alterne deux cadres.
+FULL ECRAN = la personne plein cadre (zooms punch, b-roll, hook). SPLIT = pendant chaque slide, la video glisse dans la moitie basse de l'ecran et la slide motion design occupe la moitie haute (fond sombre) pour illustrer ce qui est dit.
+- Les ~3 premieres secondes (l'accroche) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur la FIN de la phrase d'accroche. Zoom punch bienvenu sur le mot fort.
+- Les ~3 dernieres secondes (CTA / chute) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur le DEBUT de la phrase de CTA.
+- Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card), 2.5 a 6s par slide. Entre deux slides, reviens en full ecran 2 a 4s avec un zoom punch sur un mot fort. Jamais plus de 5s sans changement de cadre ou evenement visuel.
+- SLIDES : title court MAJUSCULES ("" si inutile) ; items[].text 2 a 5 mots MAJUSCULES percutants ; CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript (il apparait PILE quand c'est dit), t dans [start, end] de sa slide, items en ordre chronologique.
+- ZOOMS et B-ROLL : UNIQUEMENT pendant les passages full ecran, JAMAIS pendant une slide (garde 0.5s de marge autour des slides).
+- SFX : whoosh a chaque changement de cadre (entree ET sortie de slide), pop/click sur les items de slide marquants.
+- Si un CONTEXTE PRODUIT (site web) est fourni, les slides refletent les VRAIES fonctionnalites, offres et chiffres du produit — pas d'invention.`
 
   const system = `Tu es le chef d'orchestre d'AvatarAds : un monteur video expert en formats viraux TikTok/Reels/Shorts (style Hormozi, 1600.agency, Captions.ai).
 On te donne des IMAGES DE LA VIDEO a differents timestamps, la transcription mot-a-mot (timestamps en secondes), sa duree, et eventuellement des images fournies par l'utilisateur (b-roll).
 
 ETAPE 1 - ANALYSE (obligatoire, avant tout) : etudie les images de la video. Qu'est-ce qu'on VOIT reellement (personne face camera ? ou est son visage dans le cadre ? gameplay ? produit ? ambiance, lumiere, rythme visuel) ? Croise avec le script : de quoi parle la video, sur quel ton ?
+- Renseigne face.cy = position verticale du CENTRE du visage dans le cadre (0=haut, 1=bas), moyenne sur les images ; null si aucun visage. Le rendu s'en sert pour cadrer la personne pendant les slides.
+- Si les images montrent du TEXTE deja incruste dans la video (video deja montee) : mets hook=null (pas de doublon). Les SLIDES restent OBLIGATOIRES : pendant une slide, le cadrage se resserre sur le visage et le texte incruste disparait — genere l'alternance normalement.
 
 ETAPE 2 - PLAN : construis le PLAN DE MONTAGE au format JSON demande, adapte a CE contenu precis :
 - Les zooms se centrent sur le sujet REELLEMENT visible dans les images (deduis cx/cy de la position du visage ou du point d'interet observe, pas d'une valeur par defaut).
@@ -295,7 +334,7 @@ SECTIONS : decoupe narrative complete de 0 a la duree totale (hook / benefice / 
 
 RYTHME : un evenement visuel (zoom, b-roll in/out) toutes les 3 a 5 secondes MAXIMUM. Jamais plus de 5s sans changement. Jamais deux evenements a moins de 0.8s l'un de l'autre.
 
-ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, declenches PILE sur un mot fort (le timestamp du mot). cx/cy = point de zoom relatif (0-1) : visage face camera => cx 0.5, cy 0.32. Pas de zoom pendant un b-roll.
+ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, declenches PILE sur un mot fort (le timestamp du mot). cx/cy = point de zoom relatif (0-1) deduit des images de la video (la ou est reellement le visage). Pas de zoom pendant un b-roll.
 
 B-ROLL (images utilisateur, plein ecran par-dessus la video) : place CHAQUE image au moment ou son CONTENU correspond a ce qui est dit (regarde les images !). Duree 1.5 a 3.5s. Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
 
@@ -319,6 +358,12 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
     content.push({ type: 'text', text: `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :` })
     content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } })
   }
+  if (siteContext) {
+    content.push({
+      type: 'text',
+      text: `CONTEXTE PRODUIT (extrait du site web de l'utilisateur — sers-t'en pour des slides precises : vraies fonctionnalites, vrais chiffres, vrai vocabulaire) :\n${siteContext}`,
+    })
+  }
   content.push({
     type: 'text',
     text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur a placer : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
@@ -326,7 +371,7 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
 Transcription (mot[debut-fin]) :
 ${transcriptCompact}
 
-Genere le plan de montage.`,
+Analyse d'abord la video, puis genere le plan de montage.`,
   })
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -368,11 +413,39 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
     .filter((s) => s.end > s.start)
     .sort((a, b) => a.start - b.start)
 
+  // slides d'abord : hook (~debut) et CTA (~fin) restent en full ecran
+  const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card']
+  const slideMin = Math.min(2, r2(D * 0.2))
+  const slideMax = Math.max(slideMin + 1, r2(D - 2))
+  const slides = (plan.slides || [])
+    .map((s) => ({
+      type: String(s.type || ''),
+      start: r2(clamp(s.start, slideMin, D)),
+      end: r2(clamp(s.end, 0, slideMax)),
+      title: String(s.title || '').toUpperCase().slice(0, 40),
+      items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
+        .map((it) => ({ text: String(it.text || '').toUpperCase().slice(0, 60), t: r2(clamp(it.t, 0, D)) }))
+        .filter((it) => it.text.trim()),
+    }))
+    .filter((s) => SLIDE_TYPES.includes(s.type) && s.items.length > 0 && s.end > s.start + 0.5)
+    .sort((a, b) => a.start - b.start)
+    .slice(0, 20)
+  for (let i = 1; i < slides.length; i++) {
+    if (slides[i].start < slides[i - 1].end) slides[i - 1].end = r2(Math.max(slides[i - 1].start + 0.5, slides[i].start))
+  }
+  for (const s of slides) {
+    for (const it of s.items) it.t = r2(clamp(it.t, s.start, Math.max(s.start, s.end - 0.2)))
+    s.items.sort((a, b) => a.t - b.t)
+  }
+  const inSlide = (t: number, margin = 0.5) => slides.some((s) => t >= s.start - margin && t <= s.end + margin)
+
   const broll = (plan.broll || [])
     .filter((b) => assetIds.includes(b.assetId))
     .map((b) => ({ assetId: b.assetId, start: r2(clamp(b.start, 1.5, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
     .map((b) => ({ ...b, end: r2(clamp(b.end, b.start + 1.0, b.start + 4.0)) }))
     .filter((b) => b.end > b.start && b.end <= D)
+    // jamais pendant une slide (la zone haute est occupee)
+    .filter((b) => !slides.some((s) => b.start < s.end + 0.3 && b.end > s.start - 0.3))
     .sort((a, b) => a.start - b.start)
   // pas de chevauchement entre b-rolls
   for (let i = 1; i < broll.length; i++) {
@@ -389,7 +462,7 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
       cx: r2(clamp(z.cx, 0.15, 0.85)),
       cy: r2(clamp(z.cy, 0.15, 0.85)),
     }))
-    .filter((z) => !inBroll(z.t))
+    .filter((z) => !inBroll(z.t) && !inSlide(z.t))
     .sort((a, b) => a.t - b.t)
     .filter((z, i, arr) => i === 0 || z.t - arr[i - 1].t >= 0.8)
 
@@ -414,35 +487,15 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
   const music = (plan.music && ['intense', 'dynamique', 'chill'].includes(String(plan.music.mood)))
     ? { mood: String(plan.music.mood) } : null
 
-  const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card']
-  const slides = (plan.slides || [])
-    .map((s) => ({
-      type: String(s.type || ''),
-      start: r2(clamp(s.start, 0, D)),
-      end: r2(clamp(s.end, 0, D)),
-      title: String(s.title || '').toUpperCase().slice(0, 40),
-      items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
-        .map((it) => ({ text: String(it.text || '').toUpperCase().slice(0, 60), t: r2(clamp(it.t, 0, D)) }))
-        .filter((it) => it.text.trim()),
-    }))
-    .filter((s) => SLIDE_TYPES.includes(s.type) && s.items.length > 0 && s.end > s.start + 0.5)
-    .sort((a, b) => a.start - b.start)
-    .slice(0, 20)
-  for (let i = 1; i < slides.length; i++) {
-    if (slides[i].start < slides[i - 1].end) slides[i - 1].end = r2(Math.max(slides[i - 1].start + 0.5, slides[i].start))
-  }
-  for (const s of slides) {
-    for (const it of s.items) it.t = r2(clamp(it.t, s.start, Math.max(s.start, s.end - 0.2)))
-    s.items.sort((a, b) => a.t - b.t)
-  }
-
   // anti-doublon : si la 1re slide est une card qui reprend le hook, on retire le hook
   if (hook && slides.length && slides[0].type === 'card' && slides[0].start < 1.5) {
     const a = norm(hook.text), b = norm(slides[0].items[0]?.text || '')
     if (a && b && (a.includes(b) || b.includes(a) || sim(a, b) >= 0.55)) hook = null
   }
 
-  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides }
+  const face = (plan.face && typeof plan.face.cy === 'number') ? { cy: r2(clamp(plan.face.cy, 0.1, 0.9)) } : null
+
+  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
@@ -481,10 +534,10 @@ serve(async (req: Request) => {
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
-    let options: { lang?: string; style?: string } = {}
+    let options: { lang?: string } = {}
     try { options = JSON.parse(String(form.get('options') || '{}')) } catch (_) { /* défauts */ }
     const lang = (options.lang || 'fr').slice(0, 5)
-    const style = options.style === 'slides' ? 'slides' : 'dynamic'
+    const website = String(form.get('website') || '').trim().slice(0, 300)
 
     // assets b-roll : méta + miniatures
     let assetsMeta: { id: string; name: string; kind: string }[] = []
@@ -518,16 +571,18 @@ serve(async (req: Request) => {
       frames.push({ t: Number(frameTimes[i]) || 0, media: f.type || 'image/jpeg', b64: btoa(bin) })
     }
 
-    // 1. transcription word-level
-    const scribe = await transcribe(audio, lang)
+    // 1. transcription word-level + contexte site (en parallèle)
+    const [scribe, siteContext] = await Promise.all([
+      transcribe(audio, lang),
+      website ? fetchSiteContext(website) : Promise.resolve(''),
+    ])
     if (!scribe.words.length) return json({ error: 'Aucune parole detectee dans l\'audio' }, 422)
 
     // 2. alignement forcé si script fourni (texte exact + timing réel)
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
-    // 3. Claude → analyse visuelle + plan (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, style)
-    if (style === 'slides') { rawPlan.broll = []; rawPlan.zooms = [] } else rawPlan.slides = []
+    // 3. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
+    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext)
 
     // 4. bornes/cohérence côté serveur
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id))
@@ -537,7 +592,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '0.4',
+      version: '0.7',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
