@@ -1,0 +1,4 @@
+node_modules/
+test/final*.mp4
+test/f*.png
+.env
