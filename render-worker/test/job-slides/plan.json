@@ -1,0 +1,267 @@
+{
+  "duration": 11.1,
+  "sections": [
+    {
+      "role": "hook",
+      "start": 0,
+      "end": 3.18,
+      "label": "Accroche video virale"
+    },
+    {
+      "role": "benefice",
+      "start": 3.18,
+      "end": 9.22,
+      "label": "Etapes de creation"
+    },
+    {
+      "role": "cta",
+      "start": 9.22,
+      "end": 11.1,
+      "label": "AvatarAds fait le reste"
+    }
+  ],
+  "zooms": [],
+  "broll": [],
+  "sfx": [
+    {
+      "kind": "whoosh",
+      "t": 0.34
+    },
+    {
+      "kind": "whoosh",
+      "t": 3.18
+    },
+    {
+      "kind": "pop",
+      "t": 4.92
+    },
+    {
+      "kind": "pop",
+      "t": 6.44
+    },
+    {
+      "kind": "click",
+      "t": 7.82
+    },
+    {
+      "kind": "whoosh",
+      "t": 9.28
+    }
+  ],
+  "hook": null,
+  "accents": [
+    "virale",
+    "trente",
+    "secondes",
+    "Express",
+    "image",
+    "prompt",
+    "Générer",
+    "reste"
+  ],
+  "music": {
+    "mood": "dynamique"
+  },
+  "slides": [
+    {
+      "type": "card",
+      "start": 0.34,
+      "end": 3.1,
+      "title": "",
+      "items": [
+        {
+          "text": "VIDÉO VIRALE EN 30S",
+          "t": 1.28
+        }
+      ]
+    },
+    {
+      "type": "checklist",
+      "start": 3.18,
+      "end": 9.22,
+      "title": "3 ÉTAPES SIMPLES",
+      "items": [
+        {
+          "text": "VA SUR EXPRESS",
+          "t": 3.18
+        },
+        {
+          "text": "IMPORTE TON IMAGE",
+          "t": 4.92
+        },
+        {
+          "text": "TAPE TON PROMPT",
+          "t": 6.44
+        },
+        {
+          "text": "CLIQUE GÉNÉRER",
+          "t": 7.82
+        }
+      ]
+    },
+    {
+      "type": "card",
+      "start": 9.28,
+      "end": 11.1,
+      "title": "",
+      "items": [
+        {
+          "text": "AVATARADS FAIT LE RESTE",
+          "t": 9.28
+        }
+      ]
+    }
+  ],
+  "captions": [
+    {
+      "text": "TU",
+      "start": 0.34,
+      "end": 0.48,
+      "accent": false
+    },
+    {
+      "text": "VEUX",
+      "start": 0.5,
+      "end": 0.68,
+      "accent": false
+    },
+    {
+      "text": "UNE",
+      "start": 0.7,
+      "end": 0.84,
+      "accent": false
+    },
+    {
+      "text": "VIDÉO",
+      "start": 0.84,
+      "end": 1.16,
+      "accent": false
+    },
+    {
+      "text": "VIRALE",
+      "start": 1.28,
+      "end": 1.58,
+      "accent": true
+    },
+    {
+      "text": "EN",
+      "start": 1.62,
+      "end": 1.76,
+      "accent": false
+    },
+    {
+      "text": "TRENTE",
+      "start": 1.78,
+      "end": 2,
+      "accent": true
+    },
+    {
+      "text": "SECONDES",
+      "start": 2.02,
+      "end": 2.52,
+      "accent": true
+    },
+    {
+      "text": "VA",
+      "start": 3.18,
+      "end": 3.32,
+      "accent": false
+    },
+    {
+      "text": "SUR",
+      "start": 3.36,
+      "end": 3.5,
+      "accent": false
+    },
+    {
+      "text": "EXPRESS",
+      "start": 3.52,
+      "end": 4.4,
+      "accent": true
+    },
+    {
+      "text": "IMPORTE",
+      "start": 4.92,
+      "end": 5.32,
+      "accent": false
+    },
+    {
+      "text": "TON",
+      "start": 5.36,
+      "end": 5.5,
+      "accent": false
+    },
+    {
+      "text": "IMAGE",
+      "start": 5.52,
+      "end": 5.96,
+      "accent": true
+    },
+    {
+      "text": "TAPE",
+      "start": 6.44,
+      "end": 6.64,
+      "accent": false
+    },
+    {
+      "text": "TON",
+      "start": 6.68,
+      "end": 6.84,
+      "accent": false
+    },
+    {
+      "text": "PROMPT",
+      "start": 6.88,
+      "end": 7.18,
+      "accent": true
+    },
+    {
+      "text": "ET",
+      "start": 7.66,
+      "end": 7.8,
+      "accent": false
+    },
+    {
+      "text": "CLIQUE",
+      "start": 7.82,
+      "end": 8.04,
+      "accent": false
+    },
+    {
+      "text": "SUR",
+      "start": 8.08,
+      "end": 8.22,
+      "accent": false
+    },
+    {
+      "text": "GÉNÉRER",
+      "start": 8.26,
+      "end": 9.22,
+      "accent": true
+    },
+    {
+      "text": "AVATARADS",
+      "start": 9.28,
+      "end": 9.86,
+      "accent": false
+    },
+    {
+      "text": "FAIT",
+      "start": 9.9,
+      "end": 10.04,
+      "accent": false
+    },
+    {
+      "text": "LE",
+      "start": 10.04,
+      "end": 10.18,
+      "accent": false
+    },
+    {
+      "text": "RESTE",
+      "start": 10.18,
+      "end": 10.54,
+      "accent": true
+    }
+  ]
+}

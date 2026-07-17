@@ -1,10 +1,17 @@
-// build-composition.mjs — plan de montage v0.2 → composition HyperFrames (visuel uniquement)
-// L'audio (voix + SFX + musique duckée) est mixé par ffmpeg dans worker.mjs : la
-// composition rend la vidéo de base MUTED + zooms punch + b-roll + hook + sous-titres
-// Punch mot-à-mot, à l'identique du rendu de l'Éditeur de l'app.
+// build-composition.mjs — plan de montage v0.2/v0.4 → composition HyperFrames (visuel uniquement)
+// L'audio (voix + SFX + musique duckée) est mixé par ffmpeg dans worker.mjs.
+//
+// Deux styles :
+//  - plein écran (défaut) : vidéo cover + zooms punch + b-roll + hook + sous-titres Punch
+//  - slides (plan.slides non vide) : split-screen — slides motion design en haut (fond
+//    sombre, accents jaunes, éléments qui apparaissent PILE sur le mot prononcé),
+//    vidéo de la personne en bas, hook à cheval sur la jonction, sous-titres sur la vidéo.
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
+const ACCENT = '#FFD400'   // jaune viral (flèches, checks, surlignés)
+const OK = '#22c55e'
+const KO = '#ef4444'
 
 export function buildComposition(plan, opts = {}) {
   const W = opts.width || 1080
@@ -12,7 +19,13 @@ export function buildComposition(plan, opts = {}) {
   const D = r2(Math.max(1, plan.duration))
   const assetFiles = opts.assetFiles || {} // { assetId: 'media/img1.jpg' }
 
-  // ── b-roll : images plein écran (cover) avec Ken Burns léger ──
+  const slides = (plan.slides || []).filter((s) => Array.isArray(s.items) && s.items.length)
+  const split = slides.length > 0
+  const SLIDE_H = Math.round(H * 0.45)          // zone slides (haut)
+  const VIDEO_TOP = split ? SLIDE_H : 0         // zone vidéo (bas)
+  const VIDEO_H = H - VIDEO_TOP
+
+  // ── b-roll : images plein écran (cover) avec Ken Burns léger (style plein écran) ──
   const brolls = (plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b, i) => ({
     id: 'broll' + i,
     src: assetFiles[b.assetId],
@@ -35,8 +48,9 @@ export function buildComposition(plan, opts = {}) {
     dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
   } : null
 
-  const subSize = Math.round(H * 0.055)
+  const subSize = Math.round(VIDEO_H * (split ? 0.062 : 0.055))
   const subStroke = Math.max(4, Math.round(subSize * 0.16))
+  const capTop = VIDEO_TOP + Math.round(VIDEO_H * (split ? 0.64 : 0.72)) - Math.round(subSize * 0.75)
 
   const brollHtml = brolls.map((b) => `
       <div class="clip broll" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
@@ -51,7 +65,54 @@ export function buildComposition(plan, opts = {}) {
   const capsHtml = caps.map((c) => `
       <div class="clip cap${c.accent ? ' accent' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}">${esc(c.text)}</div>`).join('')
 
-  // ── timeline GSAP : zooms punch (scale, transform-only → lint-safe) + pops ──
+  // ── slides motion design (style split) ────────────────────────────────────
+  const slideDefs = slides.map((s, i) => ({
+    id: 's' + i,
+    type: s.type,
+    title: String(s.title || ''),
+    start: r2(s.start),
+    dur: r2(Math.max(0.6, s.end - s.start)),
+    items: s.items.map((it, j) => ({ id: `s${i}i${j}`, text: String(it.text || ''), t: r2(it.t) })),
+  }))
+
+  const slideBody = (s) => {
+    const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
+    if (s.type === 'flow') {
+      return `${title}<div class="sl-flow">${s.items.map((it, j) => `${j > 0 ? `
+        <svg class="fl-arrow" id="${it.id}a" viewBox="0 0 64 28"><path d="M2 14 H48 M38 4 L50 14 L38 24" stroke="${ACCENT}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
+        <div class="fl-step" id="${it.id}">${esc(it.text)}</div>`).join('')}</div>`
+    }
+    if (s.type === 'checklist') {
+      return `${title}<div class="sl-list">${s.items.map((it) => `
+        <div class="ck-row" id="${it.id}">
+          <div class="ck-box"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6.5" stroke="${ACCENT}" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ck-txt">${esc(it.text)}</div>
+        </div>`).join('')}</div>`
+    }
+    if (s.type === 'compare') {
+      const a = s.items[0], b = s.items[1] || { id: s.id + 'ib', text: '' }
+      return `${title}<div class="sl-cmp">
+        <div class="cmp-card ok" id="${a.id}"><div class="cmp-badge ok">✓</div><div class="cmp-lbl ok">${esc(a.text)}</div></div>
+        <div class="cmp-card ko" id="${b.id}"><div class="cmp-badge ko">✕</div><div class="cmp-lbl ko">${esc(b.text)}</div></div>
+      </div>`
+    }
+    if (s.type === 'stat') {
+      const v = s.items[0]
+      return `<div class="sl-stat">
+        <div class="st-ticks">${'<span></span>'.repeat(5)}</div>
+        <div class="st-val" id="${v.id}">${esc(v.text)}</div>
+        ${s.title ? `<div class="st-lbl">${esc(s.title)}</div>` : ''}
+      </div>`
+    }
+    // card : punchline surlignée
+    const c = s.items[0]
+    return `${title}<div class="sl-cardwrap"><div class="sl-card" id="${c.id}">${esc(c.text)}</div></div>`
+  }
+
+  const slidesHtml = slideDefs.map((s) => `
+      <div class="clip slide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
+
+  // ── timeline GSAP ─────────────────────────────────────────────────────────
   const zoomJs = (plan.zooms || []).map((z) => {
     const t = r2(z.t), dur = r2(Math.max(0.4, z.dur || 1))
     const cx = r2((z.cx ?? 0.5) * 100), cy = r2((z.cy ?? 0.35) * 100)
@@ -76,6 +137,131 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
   ).join('')
 
+  const slidesJs = slideDefs.map((s) => {
+    const end = r2(s.start + s.dur)
+    let js = `
+      tl.fromTo('#${s.id}', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${s.start});
+      tl.to('#${s.id}', { autoAlpha: 0, y: -14, duration: 0.16, ease: 'power1.in' }, ${r2(Math.max(s.start, end - 0.18))});`
+    if (s.type === 'flow') {
+      s.items.forEach((it, j) => {
+        const t = r2(Math.max(it.t, s.start + 0.08))
+        if (j > 0) js += `
+      tl.fromTo('#${it.id}a', { scaleX: 0, autoAlpha: 0, transformOrigin: '0% 50%' }, { scaleX: 1, autoAlpha: 1, duration: 0.18, ease: 'power2.out' }, ${r2(Math.max(s.start + 0.05, t - 0.14))});`
+        js += `
+      tl.fromTo('#${it.id}', { autoAlpha: 0, y: 14, scale: 0.92 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.26, ease: 'back.out(1.8)' }, ${t});`
+      })
+    } else if (s.type === 'checklist') {
+      s.items.forEach((it) => {
+        const t = r2(Math.max(it.t, s.start + 0.08))
+        js += `
+      tl.fromTo('#${it.id}', { autoAlpha: 0, x: -22 }, { autoAlpha: 1, x: 0, duration: 0.22, ease: 'power2.out' }, ${t});
+      tl.fromTo('#${it.id} .ck-box svg', { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.24, ease: 'back.out(2.6)' }, ${r2(t + 0.08)});`
+      })
+    } else if (s.type === 'compare') {
+      s.items.slice(0, 2).forEach((it) => {
+        const t = r2(Math.max(it.t, s.start + 0.08))
+        js += `
+      tl.fromTo('#${it.id}', { autoAlpha: 0, y: 20, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.28, ease: 'back.out(1.6)' }, ${t});`
+      })
+    } else if (s.type === 'stat') {
+      const v = s.items[0]
+      const t = r2(Math.max(v.t, s.start + 0.08))
+      js += `
+      tl.fromTo('#${s.id} .st-ticks span', { autoAlpha: 0, scaleX: 0 }, { autoAlpha: 1, scaleX: 1, duration: 0.14, stagger: 0.05, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(Math.max(s.start + 0.05, t - 0.2))});
+      tl.fromTo('#${v.id}', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2)' }, ${t});`
+      if (/^\d{1,6}$/.test(v.text.trim())) {
+        js += `
+      (function(){ var o = { v: 0 }, el = document.querySelector('#${v.id}'), N = ${parseInt(v.text.trim(), 10)};
+      tl.to(o, { v: N, duration: 0.6, ease: 'power2.out', onUpdate: function(){ el.textContent = Math.round(o.v); } }, ${t}); })();`
+      }
+      if (s.title) js += `
+      tl.fromTo('#${s.id} .st-lbl', { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${r2(t + 0.14)});`
+    } else { // card
+      const c = s.items[0]
+      const t = r2(Math.max(c.t, s.start + 0.08))
+      js += `
+      tl.fromTo('#${c.id}', { scale: 0.75, autoAlpha: 0, rotation: -4 }, { scale: 1, autoAlpha: 1, rotation: -1.5, duration: 0.3, ease: 'back.out(2.2)' }, ${t});`
+    }
+    if (s.title) js += `
+      tl.fromTo('#${s.id} .sl-title', { autoAlpha: 0 }, { autoAlpha: 0.6, duration: 0.2, ease: 'power1.out' }, ${r2(s.start + 0.05)});`
+    return js
+  }).join('')
+
+  // ── styles conditionnels ──────────────────────────────────────────────────
+  const videoZoneCss = split ? `
+      #videozone { left: 0; top: ${VIDEO_TOP}px; width: ${W}px; height: ${VIDEO_H}px; overflow: hidden; }
+      #base { object-position: 50% 22%; }
+      #slidezone {
+        left: 0; top: 0; width: ${W}px; height: ${SLIDE_H}px; background: #0d0d0f;
+        background-image: radial-gradient(rgba(255,255,255,.045) 1.5px, transparent 1.5px);
+        background-size: ${Math.round(W * 0.026)}px ${Math.round(W * 0.026)}px;
+      }
+      #slidezone::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: ${ACCENT}; }` : `
+      #videozone { left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; }`
+
+  const hookCss = split ? `
+      #hook { left: 6%; right: 6%; top: ${SLIDE_H - Math.round(H * 0.026)}px; display: flex; justify-content: center; z-index: 7; }
+      .hook-box {
+        background: ${ACCENT}; color: #111; text-align: center;
+        font: 900 ${Math.round(H * 0.026)}px/1.2 "Arial Black", Arial, sans-serif;
+        letter-spacing: .5px; padding: ${Math.round(H * 0.009)}px ${Math.round(H * 0.015)}px;
+        border-radius: ${Math.round(H * 0.006)}px; box-shadow: 0 10px 34px rgba(0,0,0,.45);
+      }` : `
+      #hook { left: 6%; right: 6%; top: 14.5%; display: flex; justify-content: center; }
+      .hook-box {
+        background: rgba(255,107,53,.95); color: #fff; text-align: center;
+        font: 800 ${Math.round(H * 0.028)}px/1.25 "Arial Black", Arial, sans-serif;
+        letter-spacing: .3px; padding: ${Math.round(H * 0.011)}px ${Math.round(H * 0.016)}px;
+        border-radius: ${Math.round(H * 0.011)}px; box-shadow: 0 10px 34px rgba(0,0,0,.35);
+      }`
+
+  const fz = (k) => Math.round(SLIDE_H * k) // tailles relatives à la zone slides
+  const slideCss = split ? `
+      .slide { left: 4%; right: 4%; top: 0; height: ${SLIDE_H}px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: ${fz(0.03)}px; will-change: transform, opacity; z-index: 3;
+        font-family: "Arial Black", Arial, sans-serif; padding-top: ${fz(0.06)}px; }
+      .sl-title { position: absolute; top: ${fz(0.055)}px; left: 0; right: 0; text-align: center;
+        font-weight: 700; font-size: ${fz(0.038)}px; color: rgba(255,255,255,.6); letter-spacing: 4px; }
+
+      .sl-flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: ${fz(0.022)}px; max-width: 100%; }
+      .fl-step { background: #1a1a1f; border: 1px solid rgba(255,255,255,.09); color: #fff; text-align: center;
+        font-weight: 900; font-size: ${fz(0.042)}px; line-height: 1.2; letter-spacing: .5px;
+        padding: ${fz(0.032)}px ${fz(0.036)}px; border-radius: ${fz(0.028)}px; max-width: ${Math.round(W * 0.26)}px;
+        box-shadow: 0 12px 30px rgba(0,0,0,.4); will-change: transform, opacity; }
+      .fl-arrow { width: ${fz(0.085)}px; height: auto; flex: 0 0 auto; will-change: transform, opacity; }
+
+      .sl-list { display: flex; flex-direction: column; gap: ${fz(0.038)}px; align-items: flex-start; }
+      .ck-row { display: flex; align-items: center; gap: ${fz(0.032)}px; will-change: transform, opacity; }
+      .ck-box { width: ${fz(0.085)}px; height: ${fz(0.085)}px; background: #1a1a1f; border: 1px solid rgba(255,255,255,.1);
+        border-radius: ${fz(0.02)}px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+      .ck-box svg { width: 62%; height: 62%; will-change: transform; }
+      .ck-txt { color: #fff; font-weight: 900; font-size: ${fz(0.052)}px; letter-spacing: .5px; }
+
+      .sl-cmp { display: flex; gap: ${fz(0.035)}px; width: 100%; justify-content: center; }
+      .cmp-card { width: 42%; border-radius: ${fz(0.03)}px; padding: ${fz(0.045)}px ${fz(0.03)}px;
+        display: flex; flex-direction: column; align-items: center; gap: ${fz(0.03)}px; will-change: transform, opacity; }
+      .cmp-card.ok { background: rgba(34,197,94,.07); border: 2px solid ${OK}; }
+      .cmp-card.ko { background: rgba(239,68,68,.06); border: 2px solid ${KO}; }
+      .cmp-badge { width: ${fz(0.1)}px; height: ${fz(0.1)}px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-weight: 900; font-size: ${fz(0.05)}px; }
+      .cmp-badge.ok { background: ${OK}; color: #04170a; }
+      .cmp-badge.ko { background: rgba(239,68,68,.16); color: ${KO}; }
+      .cmp-lbl { font-weight: 900; font-size: ${fz(0.04)}px; text-align: center; letter-spacing: .5px; line-height: 1.25; }
+      .cmp-lbl.ok { color: ${OK}; } .cmp-lbl.ko { color: ${KO}; }
+
+      .sl-stat { display: flex; flex-direction: column; align-items: center; gap: ${fz(0.02)}px; }
+      .st-ticks { display: flex; gap: ${fz(0.016)}px; }
+      .st-ticks span { width: ${fz(0.06)}px; height: ${fz(0.014)}px; background: ${ACCENT}; border-radius: 99px;
+        display: block; will-change: transform, opacity; }
+      .st-val { color: #fff; font-weight: 900; font-size: ${fz(0.3)}px; line-height: 1; will-change: transform, opacity;
+        text-shadow: 0 14px 44px rgba(0,0,0,.5); }
+      .st-lbl { color: ${ACCENT}; font-weight: 900; font-size: ${fz(0.05)}px; letter-spacing: 3px; will-change: transform, opacity; }
+
+      .sl-cardwrap { display: flex; align-items: center; justify-content: center; }
+      .sl-card { background: ${ACCENT}; color: #111; font-weight: 900; font-size: ${fz(0.062)}px; line-height: 1.2;
+        text-align: center; padding: ${fz(0.035)}px ${fz(0.05)}px; border-radius: ${fz(0.018)}px;
+        box-shadow: 0 16px 44px rgba(0,0,0,.5); max-width: 88%; will-change: transform, opacity; }` : ''
+
   return `<!doctype html>
 <html lang="fr">
   <head>
@@ -87,25 +273,17 @@ export function buildComposition(plan, opts = {}) {
       html, body { width: ${W}px; height: ${H}px; overflow: hidden; background: #000; }
       .clip { position: absolute; }
 
-      #stage { inset: 0; overflow: hidden; }
       #zoomInner { position: absolute; inset: 0; will-change: transform; }
       #base { width: 100%; height: 100%; object-fit: cover; display: block; }
+${videoZoneCss}
 
       .broll { inset: 0; overflow: hidden; }
       .broll img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
-
-      /* Hook : bandeau orange en haut (safe zone : sous les 13% du haut) */
-      #hook { left: 6%; right: 6%; top: 14.5%; display: flex; justify-content: center; }
-      .hook-box {
-        background: rgba(255,107,53,.95); color: #fff; text-align: center;
-        font: 800 ${Math.round(H * 0.028)}px/1.25 "Arial Black", Arial, sans-serif;
-        letter-spacing: .3px; padding: ${Math.round(H * 0.011)}px ${Math.round(H * 0.016)}px;
-        border-radius: ${Math.round(H * 0.011)}px; box-shadow: 0 10px 34px rgba(0,0,0,.35);
-      }
+${hookCss}
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
-        left: 4%; right: 4%; top: ${Math.round(H * 0.72) - Math.round(subSize * 0.75)}px;
+        left: 4%; right: 4%; top: ${capTop}px;
         text-align: center; color: #fff;
         font: 900 ${subSize}px/1.1 "Arial Black", Arial, sans-serif;
         letter-spacing: 1px; will-change: transform; z-index: 6;
@@ -115,16 +293,19 @@ export function buildComposition(plan, opts = {}) {
         -webkit-text-stroke: ${subStroke * 2}px rgba(0,0,0,.92); z-index: -1;
       }
       .cap.accent { color: #FF6B35; }
+${slideCss}
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="montage" data-start="0" data-duration="${D}" data-width="${W}" data-height="${H}">
-      <div id="stage" class="clip" data-start="0" data-duration="${D}" data-track-index="1">
+${split ? `      <div id="slidezone" class="clip" data-start="0" data-duration="${D}" data-track-index="1"></div>
+` : ''}      <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
         <div id="zoomInner">
-          <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="1" muted playsinline></video>
+          <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
         </div>
       </div>
 ${brollHtml}
+${slidesHtml}
 ${hookHtml}
 ${capsHtml}
     </div>
@@ -135,6 +316,7 @@ ${capsHtml}
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${zoomJs}
 ${brollJs}
+${slidesJs}
 ${hookJs}
 ${capsJs}
       tl.set({}, {}, ${D}); // borne la durée de la timeline
