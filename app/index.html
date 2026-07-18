@@ -1466,22 +1466,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- FORMAT -->
-            <div class="fld" style="margin-bottom:18px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Format</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div id="fmt-vertical" onclick="selectFormatGroup('short')" style="border:2px solid var(--orange);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--orange-dim);transition:all .15s">
-                  <div style="font-size:20px;margin-bottom:4px">📱</div>
-                  <div style="font-size:11px;font-weight:700">TikTok / Reels</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">9:16 · Shorts · Reels</div>
-                </div>
-                <div id="fmt-square" onclick="selectFormatGroup('post')" style="border:2px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="font-size:20px;margin-bottom:4px">📸</div>
-                  <div style="font-size:11px;font-weight:700">Publication</div>
-                  <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:2px">Insta · Meta · LinkedIn</div>
-                </div>
-              </div>
-            </div>
+            <!-- FORMAT : sélecteur retiré (toujours 9:16 TikTok/Reels — cfg.format défaut 'portrait') -->
 
             <!-- SPLIT SCREEN -->
             <div class="fld" style="margin-bottom:18px">
@@ -1503,7 +1488,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   ondragleave="ev=>{this.classList.remove('av-drag')}"
                   ondrop="ev=>{ev.preventDefault();this.classList.remove('av-drag');handleGameplayFile(ev.dataTransfer.files[0])}"
                   style="border:2px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--bg4)">
-                  <div id="gameplayDropContent"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg><div style="font-size:12px;font-weight:600;margin-top:6px">Gameplay · Satisfying · Mindmap</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div></div>
+                  <div id="gameplayDropContent"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg><div style="font-size:12px;font-weight:600;margin-top:6px">Importe ta vidéo gameplay</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div></div>
                   <div id="gameplayFileInfo" style="display:none"><div style="font-size:22px">✅</div><div id="gameplayFileName" style="font-size:12px;font-weight:600;margin-top:4px"></div></div>
                 </div>
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
@@ -1580,7 +1565,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#0A2540;background:#5FD0EC;padding:1px 9px;border-radius:7px">MATURITÉ</span></div>
                 </div>
               </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">💡 Style = forme · Les couleurs ci-dessous s'appliquent à n'importe quel style</div>
             </div>
 
             <!-- RÉGLAGES AVANCÉS (repliable, fermé par défaut) -->
@@ -1758,13 +1742,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="qualityBtnsStep4">
                 <button onclick="setQuality(720,this)" class="qual-btn on" data-q="720" style="padding:9px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
                   <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Recommandé</div>
-                  <div style="font-weight:700">720p</div><div style="font-size:9px;margin-top:1px">✨ Standard</div>
+                  <div style="font-weight:700;padding:4px 0">720p</div>
                 </button>
                 <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:9px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">⭐ Pro+</div>
+                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">+2 cr</div>
                 </button>
               </div>
-              <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:5px">720p upscale net · 1080p qualité max (Pro / Élite)</div>
             </div>
 
             <!-- MODÈLE IA AVATAR : sélecteur retiré — Character 3 (Hedra) est le seul modèle, utilisé par défaut -->
@@ -4048,7 +4031,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <button onclick="authSendCode('login')" id="loginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
           Recevoir mon code <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
         </button>
-        <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Pas de mot de passe — un code à 6 chiffres arrive par e-mail</div>
         <button onclick="authTogglePwd(true)" style="width:100%;margin-top:14px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .18s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-3)'">Je préfère entrer mon mot de passe</button>
       </div>
 
@@ -5153,7 +5135,8 @@ const CREDIT_COSTS = {
   expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
-  montageIA: 2            // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
+  montageIA: 2,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
+  export1080: 2           // 📐 export 1080p du Générateur (720p gratuit)
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -9256,11 +9239,8 @@ function _showResultArea(){
 }
 
 function updateSteps(){
-  // Étape Voix : Clone/Preset par défaut (le mode Audio MP4 ne reste actif que si un fichier est chargé)
-  if(step===3 && typeof selectVoiceMode==='function' && typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled
-     && !window._bypassHedraOn && !window.mp4AudioFile && !(typeof mp4AudioFile!=='undefined' && mp4AudioFile)){
-    selectVoiceMode('clone');
-  }
+  // Étape Voix : le choix « Audio MP4 » RESTE sélectionné même sans fichier (fix : il « disparaissait »
+  // à chaque retour sur l'étape) — la garde fichier est faite à la génération, pas ici
   // En-tête refonte : eyebrow + titre display par étape
   var _stepTitles=['Décris ton produit','Choisis ton avatar','Donne-lui une voix','Peaufine le style','Lance la génération'];
   var _eyb=document.getElementById('genStepEyebrow');
@@ -11499,6 +11479,8 @@ function toggleMp4AudioOption(force){
     if(btnC) btnC.classList.add('on');
     if(btnM) btnM.classList.remove('on');
   }
+  // le choix survit au refresh (le fichier est déjà en IDB via handleMp4AudioFile)
+  try{ localStorage.setItem('aa_mp4audio_on', mp4AudioEnabled ? '1' : '0'); }catch(_){}
 }
 
 function selectVoiceMode(mode){
@@ -12385,6 +12367,20 @@ function clearMp4AudioFile(){
   toast('🗑️ Fichier audio supprimé');
 }
 
+// 🔁 fix « Audio MP4 disparaît » : le fichier importé est en IDB (handleMp4AudioFile) —
+// au chargement on le restaure, et si le mode était actif on re-sélectionne Audio MP4.
+// setTimeout(0) : _idbOpen dépend de `let _idbReady` déclaré plus bas (TDZ pendant le parsing)
+setTimeout(async function _restoreMp4Audio(){
+  try{
+    const rec = await _idbLoad('mp4audio');
+    if(!rec || !rec.blob) return;
+    const f = (rec.blob instanceof File) ? rec.blob : new File([rec.blob], rec.name || 'audio.mp3', { type: rec.type || 'audio/mpeg' });
+    handleMp4AudioFile(f);
+    window.mp4AudioFile = f;
+    if(localStorage.getItem('aa_mp4audio_on') === '1') toggleMp4AudioOption(true);
+  }catch(e){ console.warn('restore mp4audio:', e); }
+}, 0);
+
 async function _mp4DrawWaveform(file){
   try {
     const canvas = document.getElementById('mp4WaveCanvas');
@@ -13269,6 +13265,11 @@ async function startGeneration(){
   // Script requis uniquement pour la voix ElevenLabs — avec un audio MP4 (ou vidéo existante), pas besoin de texte
   const _extAudio = !!window._bypassHedraOn || (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled) || !!window.mp4AudioFile;
   if(!_extAudio && !script && !_hookTxt && !_ctaTxt){ toast('⚠️ Écris au moins une phrase (hook, script ou CTA) — ou ajoute un audio MP4 à l\'étape Voix'); return; }
+  // mode Audio MP4 actif mais aucun fichier importé → on renvoie à l'étape Voix (le choix reste sélectionné)
+  if(!window._bypassHedraOn && (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled) && !mp4AudioFile && !window.mp4AudioFile){
+    toast('⚠️ Mode Audio MP4 : importe ton fichier à l\'étape Voix (ou repasse en Clone/Preset)');
+    step=3; updateSteps(); return;
+  }
   // ── Paywall plan gratuit : tout est prêt → on débloque la génération via un plan ──
   if(_gateFreeGenerate()) return;
   // Reset bypass — uniquement la sauvegarde de session, PAS le bypass actif (chargé depuis bibliothèque)
@@ -13298,6 +13299,10 @@ async function startGeneration(){
     if(_rate > 0){
       const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
       if(!ok) return;
+    }
+    // 📐 export 1080p facturé (720p gratuit)
+    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
+      if(!(await spendCreditsFor(CREDIT_COSTS.export1080, 'export 1080p'))) return;
     }
   }
 
@@ -14547,6 +14552,7 @@ function setQuality(q, btn){
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const can1080 = ['pro','elite','developer'].includes(plan);
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
+  if(q === 1080 && _composeQuality !== 1080) toast('📐 1080p : +' + CREDIT_COSTS.export1080 + ' crédits à la génération (720p gratuit)');
   _composeQuality = q;
   // Sync tous les boutons qual-btn par data-q
   document.querySelectorAll('.qual-btn').forEach(b=>{
