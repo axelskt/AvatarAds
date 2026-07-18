@@ -12,7 +12,7 @@
 //   audio     : fichier audio (wav/mp3/m4a, ≤ 20 Mo) — la voix de la vidéo
 //   duration  : durée de la timeline en secondes
 //   script    : (optionnel) texte exact du script → sous-titres parfaits
-//   assets    : (optionnel) JSON [{ id, name, kind }] des images b-roll
+//   assets    : (optionnel) JSON [{ id, name, kind:'image'|'video' }] des b-roll (#111 : les clips video JOUENT dans la carte)
 //   asset_<id>: (optionnel) miniature JPEG de chaque asset (≤ 400 Ko)
 //   options   : (optionnel) JSON { lang }
 //   website   : (optionnel) URL du site de l'utilisateur → contexte produit pour les slides
@@ -339,6 +339,7 @@ ETAPE 1 - ANALYSE (obligatoire, avant tout) : etudie les images de la video. Qu'
 ETAPE 2 - PLAN : construis le PLAN DE MONTAGE au format JSON demande, adapte a CE contenu precis :
 - Les zooms se centrent sur le sujet REELLEMENT visible dans les images (deduis cx/cy de la position du visage ou du point d'interet observe, pas d'une valeur par defaut).
 - Le b-roll ne recouvre jamais un moment visuellement fort de la video.
+- B-roll : un asset kind=video est un CLIP qui sera JOUE dans la carte flottante (pas une image figee) — place-le sur le passage qu'il illustre le mieux et donne-lui une fenetre un peu plus longue (2.5 a 4s) ; une image se contente de 1.5 a 2.5s.
 - La musique colle a l'ambiance VISUELLE observee autant qu'au ton du script.
 - Si le visuel ne montre pas de visage, reduis les zooms (1 ou 2 max) et privilegie hook, sous-titres et musique.
 ${styleBlock}
@@ -370,7 +371,10 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
   }
   for (const a of assets) {
     if (!a.thumb) continue
-    content.push({ type: 'text', text: `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :` })
+    const label = a.kind === 'video'
+      ? `Clip VIDEO utilisateur (b-roll ANIME - il sera JOUE dans la carte) assetId="${a.id}" (${a.name}) - voici sa premiere image :`
+      : `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :`
+    content.push({ type: 'text', text: label })
     content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } })
   }
   if (siteContext) {
@@ -560,7 +564,7 @@ serve(async (req: Request) => {
     let assetsMeta: { id: string; name: string; kind: string }[] = []
     try { assetsMeta = JSON.parse(String(form.get('assets') || '[]')) } catch (_) { /* aucun */ }
     assetsMeta = (Array.isArray(assetsMeta) ? assetsMeta : []).slice(0, MAX_ASSETS)
-      .map((a) => ({ id: String(a.id || '').slice(0, 40), name: String(a.name || 'image').slice(0, 80), kind: 'image' }))
+      .map((a) => ({ id: String(a.id || '').slice(0, 40), name: String(a.name || 'image').slice(0, 80), kind: a.kind === 'video' ? 'video' : 'image' }))
       .filter((a) => a.id)
     const assets = []
     for (const meta of assetsMeta) {

@@ -1767,8 +1767,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
               </div>
               <div id="genMontageImgs" style="display:none;margin-top:8px">
-                <input type="file" id="genAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
-                <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images b-roll (optionnel) — l'IA les place au meilleur moment</div>
+                <input type="file" id="genAiImgIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
+                <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images / clips b-roll (optionnel) — l'IA les place au meilleur moment</div>
                 <div id="genAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:7px"></div>
               </div>
             </div>
@@ -20420,7 +20420,12 @@ function edDrawLoop(){
   const _zr=_edZoomSrc(_cr,_gt); // #70 · zoom punch-in (preview)
   try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH); ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); }catch(e){}
   _edDrawSubsAIPreview(_gt); // 🎼 sous-titres Montage IA (canvas superposé, au-dessus du b-roll)
-  for(const o of _ed.overlays){ if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; } }
+  const _fa=_edFlashAlpha(_gt); // #111 · flash de transition de section (preview)
+  if(_fa>0.01){ try{ ctx.fillStyle='rgba(255,255,255,'+_fa.toFixed(3)+')'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH); }catch(e){} }
+  for(const o of _ed.overlays){
+    if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; }
+    if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
+  }
   if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
   _ed._gtPrev=_gt;
   if(_ed.playing){
@@ -20603,7 +20608,10 @@ function edBuildOverlayEl(ov){
   const el=document.createElement('div'); el.className='ed-ov'; el.dataset.id=ov.id;
   el.style.cssText='position:absolute;cursor:move;box-sizing:border-box;left:'+ov.x+'px;top:'+ov.y+'px;';
   if(ov.type==='text'){ el.style.width=ov.w+'px'; el.innerHTML='<div class="ed-ov-txt"></div>'; }
-  else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px'; const im=document.createElement('img'); im.src=ov.url; im.style.cssText='width:100%;height:100%;display:block;object-fit:fill;pointer-events:none'; el.appendChild(im); }
+  else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
+    // #111 · b-roll vidéo : le MÊME élément <video> sert au preview (DOM) et à l'export (drawImage)
+    const im=ov.vid||document.createElement('img'); if(!ov.vid) im.src=ov.url;
+    im.style.cssText='width:100%;height:100%;display:block;object-fit:fill;pointer-events:none'; el.appendChild(im); }
   stage.appendChild(el); ov._el=el;
 
   const mk=(name,css,cur)=>{ const h=document.createElement('div'); h.className='ed-ov-rh'; h.dataset.h=name; h.style.cssText='position:absolute;width:15px;height:15px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:6;display:none;cursor:'+cur+';'+css; el.appendChild(h); };
@@ -20680,7 +20688,7 @@ function edStyleOverlay(ov){
     t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
   } else {
     el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
-    const im=el.querySelector('img'); const c=ov.crop||{t:0,r:0,b:0,l:0};
+    const im=el.querySelector('img,video'); const c=ov.crop||{t:0,r:0,b:0,l:0};
     if(im) im.style.clipPath='inset('+c.t+'% '+c.r+'% '+c.b+'% '+c.l+'%)';
   }
   const onSel=_ed.sel===ov.id;
@@ -21118,13 +21126,13 @@ function openEdAiModal(){
 
       <div id="edAiBrollBlock">
       <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES B-ROLL <span style="color:var(--text3)">· OPTIONNEL, L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
-      <input type="file" id="edAiImgIn" accept="image/*" multiple style="display:none" onchange="edAiAddFiles(this.files);this.value=''">
+      <input type="file" id="edAiImgIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);this.value=''">
       <div onclick="document.getElementById('edAiImgIn').click()"
            ondragover="event.preventDefault();this.style.borderColor='var(--orange2)'"
            ondragleave="this.style.borderColor='var(--border)'"
            ondrop="event.preventDefault();this.style.borderColor='var(--border)';edAiAddFiles(event.dataTransfer.files)"
            style="border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:9px">
-        🖼️ Ajoute jusqu'à 8 images (produit, preuve, avant/après…)
+        🖼️ Ajoute jusqu'à 8 images ou clips vidéo (produit, preuve, avant/après…)
       </div>
       <div id="edAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-bottom:16px"></div>
       </div>
@@ -21176,6 +21184,7 @@ function _edAiRenderFiles(){
   wrap.innerHTML=_edAi.files.map(a=>`
     <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border2)">
       <img src="${a.url}" style="width:100%;height:100%;object-fit:cover;display:block">
+      ${a.isVideo?'<span style="position:absolute;left:3px;bottom:3px;font-size:10px;background:rgba(0,0,0,.72);border-radius:5px;padding:1px 4px">🎬</span>':''}
       <button onclick="edAiRemoveFile('${a.id}')" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.72);border:none;color:#ff8a8a;font-size:11px;cursor:pointer;line-height:1;padding:0">✕</button>
     </div>`).join('');
 }
@@ -21320,7 +21329,7 @@ async function edAiGenerate(){
     fd.append('options', JSON.stringify({ lang:'fr' }));
     const site=((document.getElementById('edAiSite')?.value||'').trim()) || (localStorage.getItem('aa_user_site')||'');
     if(site){ fd.append('website', site); try{ localStorage.setItem('aa_user_site', site); }catch(_){} }
-    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:'image' }))));
+    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
     for(const a of _edAi.files){
       let th=null;
       if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } // frame du clip
@@ -21343,6 +21352,41 @@ async function edAiGenerate(){
     _edAi.busy=false;
     if(btn){ btn.disabled=false; btn.style.opacity=''; btn.textContent='✨ Générer le montage — '+CREDIT_COSTS.montageIA+' crédits'; }
   }
+}
+
+// #111 · <video> muet d'un b-roll clip : affiché dans la carte (preview) ET dessiné à l'export
+function _edOvVideo(asset){
+  const v=document.createElement('video');
+  v.muted=true; v.playsInline=true; v.preload='auto';
+  v.src=asset._ovUrl || (asset._ovUrl=URL.createObjectURL(asset.file));
+  try{ v.load(); }catch(_){}
+  return v;
+}
+// #111 · cale le clip b-roll sur le temps global : joue pendant sa fenêtre (boucle si
+// la carte dure plus que le clip), seek à l'arrêt, remis à zéro hors fenêtre
+function _edSyncOvVid(o, gt, playing){
+  const v=o.vid; if(!v) return;
+  const on = gt>=(o.start||0)-0.05 && gt<=((o.end==null?1e9:o.end)+0.05);
+  if(!on){ if(!v.paused){ try{ v.pause(); }catch(_){} } if(v.currentTime>0.01){ try{ v.currentTime=0; }catch(_){} } return; }
+  const dur=v.duration, raw=Math.max(0, gt-(o.start||0));
+  const lt=(isFinite(dur)&&dur>0.3) ? raw%dur : raw;
+  if(playing){
+    if(v.paused){ try{ v.currentTime=lt; }catch(_){} v.play().catch(()=>{}); }
+    else if(Math.abs(v.currentTime-lt)>0.4){ try{ v.currentTime=lt; }catch(_){} }
+  } else {
+    if(!v.paused){ try{ v.pause(); }catch(_){} }
+    if(Math.abs(v.currentTime-lt)>0.08){ try{ v.currentTime=lt; }catch(_){} }
+  }
+}
+// #111 · opacité du flash blanc de transition au temps gt (montée 0.09s, retombée 0.2s)
+function _edFlashAlpha(gt){
+  let a=0;
+  for(const t of ((_ed&&_ed.aiFlash)||[])){
+    const d=gt-(t-0.04);
+    if(d>=0&&d<0.09) a=Math.max(a,0.55*(d/0.09));
+    else if(d>=0.09&&d<0.29) a=Math.max(a,0.55*(1-(d-0.09)/0.2));
+  }
+  return a;
 }
 
 // applique le plan sur la timeline (tout reste éditable, Cmd+Z pour annuler)
@@ -21368,7 +21412,7 @@ function edAiApply(plan, toSource){
 
   for(const b of (plan.broll||[])){
     const asset=_edAi.files.find(a=>a.id===b.assetId);
-    if(!asset) continue;
+    if(!asset || !asset.url) continue;
     const start=remap(b.start), end=Math.max(start+0.5, remap(b.end));
     const img=new Image();
     img.onload=()=>{
@@ -21376,11 +21420,18 @@ function edAiApply(plan, toSource){
       const scale=Math.min((_ed.dispW*0.78)/img.width, (_ed.dispH*0.5)/img.height);
       const w=img.width*scale, h=img.height*scale;
       const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', img, url:asset.url, x:(_ed.dispW-w)/2, y:(_ed.dispH-h)/2, w, h, crop:{t:0,r:0,b:0,l:0}, start, end };
+      if(asset.isVideo) ov.vid=_edOvVideo(asset); // #111 · b-roll vidéo : le clip JOUE dans la carte
       _ed.overlays.push(ov); edBuildOverlayEl(ov); edRenderLayers(); edRenderOvTrack();
     };
     img.src=asset.url;
     nBroll++;
   }
+
+  // #111 · transitions de sections : flash lumineux bref aux frontières internes
+  // (hors frontières de slides — le morph split est déjà la transition à ces endroits)
+  const slideEdges=(plan.slides||[]).flatMap(s=>[remap(s.start),remap(s.end)]);
+  _ed.aiFlash=(plan.sections||[]).slice(1).map(s=>remap(s.start))
+    .filter(t=>t>0.5 && t<edTotalDur()-0.5 && !slideEdges.some(e=>Math.abs(e-t)<0.5));
 
   if(plan.hook && plan.hook.text){
     const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,7), type:'text', text:plan.hook.text, x:_ed.dispW*0.07, y:_ed.dispH*0.15, w:_ed.dispW*0.86, h:50, size:30, color:'#ffffff', bgColor:'rgba(255,107,53,.94)', font:'var(--display)', style:'box', bold:true, start:remap(plan.hook.start), end:Math.max(remap(plan.hook.start)+0.8, remap(plan.hook.end)) };
@@ -21441,9 +21492,17 @@ async function edServerExport(){
     const assets=[];
     for(const b of (_ed.aiPlanRaw.broll||[])){
       const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
-      const p = user.id + '/as-' + a.id + '.jpg';
-      const { error: aErr } = await sb.storage.from('render-media').upload(p, a.file, { upsert: true });
-      if(!aErr) assets.push({ id: a.id, path: p });
+      if(assets.some(x=>x.id===a.id)) continue; // un même asset peut servir à plusieurs b-roll
+      // #111 · clip vidéo → on envoie le MP4 (il JOUE dans la carte au rendu serveur) ;
+      // trop lourd (>60 Mo) → frame extraite en secours pour ne pas bloquer le rendu
+      let up=a.file, ext='jpg', kind='image', ctype='image/jpeg';
+      if(a.isVideo){
+        if((a.file.size||0) <= 60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; }
+        else { try{ up=await (await fetch(a.url)).blob(); }catch(_){ continue; } }
+      }
+      const p = user.id + '/as-' + a.id + '.' + ext;
+      const { error: aErr } = await sb.storage.from('render-media').upload(p, up, { upsert: true, contentType: ctype });
+      if(!aErr) assets.push({ id: a.id, path: p, kind });
     }
     setSt('🎬 Rendu en cours sur le serveur… (1 à 3 min)');
     const r = await fetch(RENDERJOB_FN, { method:'POST', headers: { ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan:_ed.aiPlanRaw, input_video: inPath, assets }) });
@@ -21660,6 +21719,7 @@ async function edExport(){
   edPause();
   const v=_ed.video;
   if(!MediaRecorder.isTypeSupported('video/mp4')){ status.textContent="\u26A0\uFE0F Export MP4 non supporte par ce navigateur \u2014 utilise Safari."; toast('\u26A0\uFE0F Export MP4 non supporte ici (utilise Safari)'); btn.disabled=false; btn.textContent=lbl; return; }
+  _ed.exporting=true; // #111 - pendant l'export, renderFrame pilote les clips b-roll (pas edDrawLoop)
   try{
     const ar=edFormatAR();
     const expH=_edQuality, expW=Math.round(expH*ar/2)*2;
@@ -21694,9 +21754,12 @@ async function edExport(){
       for(const ov of _ed.overlays){
         if(ov.start!=null && (gTime<ov.start||gTime>ov.end)) continue;
         if(ov.type==='image'){
-          const c=ov.crop||{t:0,r:0,b:0,l:0}; const iw=ov.img.naturalWidth, ih=ov.img.naturalHeight;
+          if(ov.vid) _edSyncOvVid(ov, gTime, true); // #111 · export : le clip b-roll tourne en vrai
+          const srcEl=(ov.vid && ov.vid.readyState>=2)?ov.vid:ov.img;
+          const c=ov.crop||{t:0,r:0,b:0,l:0};
+          const iw=(srcEl.videoWidth||srcEl.naturalWidth)||1, ih=(srcEl.videoHeight||srcEl.naturalHeight)||1;
           const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
-          try{ cx.drawImage(ov.img, sx,sy,sw,sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
+          try{ cx.drawImage(srcEl, sx,sy,sw,sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
         } else {
           const fs=ov.size*f; cx.save();
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
@@ -21716,6 +21779,8 @@ async function edExport(){
         }
       }
       _edDrawSubsAI(cx, gTime, expW, expH); // 🎼 sous-titres Montage IA (export)
+      const fa=_edFlashAlpha(gTime); // #111 · flash de transition de section (export)
+      if(fa>0.01){ cx.fillStyle='rgba(255,255,255,'+fa.toFixed(3)+')'; cx.fillRect(0,0,expW,expH); }
     }
 
     // Segments : chaque clip avec SON trim (clip principal + clips ajoutés), dans l'ordre
@@ -21767,7 +21832,8 @@ async function edExport(){
   }finally{
     try{ v.pause(); }catch(e){} try{ _ed&&_ed.music&&_ed.music.pause(); }catch(e){}
     try{ ((_ed&&_ed.clips)||[]).forEach(c=>{try{c.video.pause();}catch(_){}}); }catch(e){}
-    _ed && (_ed.playing=false);
+    try{ ((_ed&&_ed.overlays)||[]).forEach(o=>{ if(o.vid){ try{o.vid.pause();}catch(_){}} }); }catch(e){}
+    _ed && (_ed.playing=false, _ed.exporting=false);
     btn.disabled=false; btn.textContent=lbl;
   }
 }

@@ -45,13 +45,21 @@ export function buildComposition(plan, opts = {}) {
   const WIDE_H = Math.round(W * 9 / 16)
   const WIDE_TOP = Math.round((VIDEO_H - WIDE_H) / 2)
 
-  // ── b-roll : images plein écran (cover), Ken Burns léger — passages full uniquement ──
+  // ── b-roll : carte flottante — image fixe, ou clip vidéo qui JOUE (#111) ──
   const brolls = (plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b, i) => ({
     id: 'broll' + i,
     src: assetFiles[b.assetId],
+    isVid: /\.(mp4|mov|webm|m4v)$/i.test(assetFiles[b.assetId]),
     start: r2(b.start),
     dur: r2(Math.max(0.4, b.end - b.start)),
   }))
+
+  // ── transitions entre sections (#111) : flash lumineux bref sur les frontières
+  // internes — sauf celles déjà marquées par une entrée/sortie de split (le morph
+  // de la zone vidéo est la transition à ces endroits-là) ──
+  const secBounds = [...new Set((plan.sections || []).slice(1).map((s) => r2(s.start)))]
+    .filter((t) => t > 0.5 && t < D - 0.5)
+    .filter((t) => !periods.some((p) => Math.abs(t - p.start) < 0.5 || Math.abs(t - p.end) < 0.5))
 
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
   const subSize = Math.round(H * 0.052)
@@ -73,9 +81,13 @@ export function buildComposition(plan, opts = {}) {
     dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
   } : null
 
+  // clip vidéo b-roll : classe "clip" + data-start/duration → le moteur le seek
+  // frame par frame (il joue depuis son début pendant sa fenêtre, comme #base)
   const brollHtml = brolls.map((b) => `
       <div class="clip broll" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
-        <div class="broll-card"><img src="${esc(b.src)}" alt="" /></div>
+        <div class="broll-card">${b.isVid
+          ? `<video id="${b.id}v" class="clip" src="${esc(b.src)}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3" muted playsinline></video>`
+          : `<img src="${esc(b.src)}" alt="" />`}</div>
       </div>`).join('')
 
   const hookHtml = hook ? `
@@ -181,6 +193,10 @@ export function buildComposition(plan, opts = {}) {
 
   const hookJs = hook ? `
       tl.fromTo('#hook .hook-box', { scale: 1.25, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.2)' }, ${r2(hook.start + 0.05)});` : ''
+
+  const flashJs = secBounds.map((t) => `
+      tl.fromTo('#flash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.04))});
+      tl.to('#flash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`).join('')
 
   const capsJs = caps.map((c) => `
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
@@ -316,8 +332,14 @@ export function buildComposition(plan, opts = {}) {
         overflow: hidden; border: 1.5px solid rgba(255,255,255,.14);
         box-shadow: 0 30px 80px rgba(0,0,0,.65), 0 6px 22px rgba(0,0,0,.4);
         will-change: transform, opacity; }
-      .broll-card img { max-width: 100%; max-height: ${Math.round(H * 0.56)}px; display: block;
-        object-fit: contain; will-change: transform; }
+      .broll-card img, .broll-card video { max-width: 100%; max-height: ${Math.round(H * 0.56)}px;
+        display: block; object-fit: contain; will-change: transform; }
+      /* le <video> b-roll porte la classe "clip" (sync moteur) mais doit rester
+         dans le flux de la carte, pas en absolu comme les autres clips */
+      .broll-card video { position: relative; }
+
+      /* transition de section : flash lumineux plein écran (au-dessus de tout) */
+      #flash { inset: 0; z-index: 9; background: #fff; pointer-events: none; }
 
       /* Hook : badge jaune en haut, passages full écran (safe zone) */
       #hook { left: 6%; right: 6%; top: 13.5%; display: flex; justify-content: center; z-index: 7; }
@@ -357,19 +379,22 @@ ${brollHtml}
 ${slidesHtml}
 ${hookHtml}
 ${capsHtml}
-    </div>
+${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+` : ''}    </div>
 
     <script>
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
+` : ''}${secBounds.length ? `      tl.set('#flash', { autoAlpha: 0 }, 0);
 ` : ''}${layoutJs}
 ${zoomJs}
 ${brollJs}
 ${slidesJs}
 ${hookJs}
 ${capsJs}
+${flashJs}
       tl.set({}, {}, ${D}); // borne la durée de la timeline
       window.__timelines['montage'] = tl;
     </script>
