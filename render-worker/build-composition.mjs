@@ -75,7 +75,7 @@ export function buildComposition(plan, opts = {}) {
 
   const brollHtml = brolls.map((b) => `
       <div class="clip broll" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
-        <img src="${esc(b.src)}" alt="" />
+        <div class="broll-card"><img src="${esc(b.src)}" alt="" /></div>
       </div>`).join('')
 
   const hookHtml = hook ? `
@@ -172,9 +172,11 @@ export function buildComposition(plan, opts = {}) {
   }).join('')
 
   const brollJs = brolls.map((b) => `
-      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16, ease: 'power1.out' }, ${b.start});
-      tl.fromTo('#${b.id} img', { scale: 1.07 }, { scale: 1.0, duration: ${b.dur}, ease: 'none' }, ${b.start});
-      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.14, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.14)});`
+      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18, ease: 'power1.out' }, ${b.start});
+      tl.fromTo('#${b.id} .broll-card', { scale: 0.82, rotation: -4, y: 26, autoAlpha: 0 },
+        { scale: 1, rotation: -1.5, y: 0, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.7)' }, ${b.start});
+      tl.to('#${b.id} .broll-card', { scale: 1.04, duration: ${r2(Math.max(0.3, b.dur - 0.34))}, ease: 'none' }, ${r2(b.start + 0.34)});
+      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.16, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.16)});`
   ).join('')
 
   const hookJs = hook ? `
@@ -306,8 +308,16 @@ export function buildComposition(plan, opts = {}) {
       #zoomInner { position: absolute; inset: 0; will-change: transform; }
       #base { width: 100%; height: 100%; object-fit: cover; object-position: 50% ${objPos}%; display: block; }
 
-      .broll { inset: 0; overflow: hidden; z-index: 4; }
-      .broll img { width: 100%; height: 100%; object-fit: cover; display: block; will-change: transform; }
+      /* b-roll « carte flottante » : la vidéo reste visible derrière, assombrie ;
+         l'image pop dans une carte arrondie avec ombre (look viral moderne) */
+      .broll { inset: 0; z-index: 4; background: rgba(8,8,10,.55); display: flex;
+        align-items: center; justify-content: center; }
+      .broll-card { max-width: 82%; max-height: 56%; border-radius: ${Math.round(H * 0.018)}px;
+        overflow: hidden; border: 1.5px solid rgba(255,255,255,.14);
+        box-shadow: 0 30px 80px rgba(0,0,0,.65), 0 6px 22px rgba(0,0,0,.4);
+        will-change: transform, opacity; }
+      .broll-card img { max-width: 100%; max-height: ${Math.round(H * 0.56)}px; display: block;
+        object-fit: contain; will-change: transform; }
 
       /* Hook : badge jaune en haut, passages full écran (safe zone) */
       #hook { left: 6%; right: 6%; top: 13.5%; display: flex; justify-content: center; z-index: 7; }
