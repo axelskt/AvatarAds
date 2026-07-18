@@ -54,16 +54,25 @@ export function buildComposition(plan, opts = {}) {
     dur: r2(Math.max(0.4, b.end - b.start)),
   }))
 
-  // ── #119 lipsync segmenté : scènes AVATAR générées séparément (2 à 5 selon le chef
+  // ── #119 lipsync segmenté : scènes AVATAR générées séparément (1 à 6 selon le chef
   // d'orchestre) et assemblées ici — l'avatar ne s'affiche QUE sur ses fenêtres, le
   // reste du temps c'est le gameplay (#base). opts.avatarClips = { 'av0':'media/av0.mp4' }.
+  // format 'portrait' = plein écran (hors slides) ; 'paysage' = moitié basse PENDANT
+  // une slide (bande cinéma sous la slide — le clip suit le cadrage #videoFit).
   // Sans avatarSegments/avatarClips → comportement inchangé (base = vidéo continue). ──
   const avatarClips = opts.avatarClips || {}
   const avatarSegs = (plan.avatarSegments || [])
-    .map((s, i) => ({ id: 'av' + i, src: avatarClips['av' + i] || avatarClips[i] || null, start: r2(s.start), end: r2(Math.max(s.end, s.start + 0.3)) }))
+    .map((s, i) => ({ id: 'av' + i, src: avatarClips['av' + i] || avatarClips[i] || null,
+      format: s.format === 'paysage' ? 'paysage' : 'portrait',
+      start: r2(s.start), end: r2(Math.max(s.end, s.start + 0.3)) }))
     .filter((s) => s.src)
     .sort((a, b) => a.start - b.start)
     .map((s) => ({ ...s, dur: r2(Math.max(0.3, s.end - s.start)) }))
+
+  // une scène paysage sous une slide → cadrage bande cinéma 16:9 forcé (letterbox propre)
+  for (const s of slides) {
+    if (avatarSegs.some((a) => a.format === 'paysage' && a.start < s.end && a.end > s.start)) s.wide = true
+  }
 
   // ── transitions entre sections (#111) : flash lumineux bref sur les frontières
   // internes — sauf celles déjà marquées par une entrée/sortie de split (le morph
