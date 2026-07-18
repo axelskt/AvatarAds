@@ -3290,8 +3290,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="view" id="v-montage">
       <div style="max-width:660px;margin:0 auto;padding:26px 18px 60px">
         <div style="text-align:center;margin-bottom:26px">
-          <div style="font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px">🪄 Ta vidéo virale de A à Z</div>
-          <div style="font-size:13px;color:var(--text3);line-height:1.65;max-width:480px;margin:0 auto">Script → voix → gameplay → montage automatique (zooms, slides, sous-titres, musique, bruitages). <b style="color:var(--text)">L'IA réalise, tu publies.</b></div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-.4px">Montage IA</div>
         </div>
 
         <div class="card" style="padding:20px;margin-bottom:14px">
@@ -3308,10 +3307,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <div id="mtGameplayBlock">
-            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SCRIPT <span style="color:var(--text3)">· LU PAR ELEVENLABS (0,5 CR/S) — OU IMPORTE TON MP3</span></div>
-            <textarea id="mtScript" rows="4" placeholder="Colle ton script ici — l'IA le lit, cale le gameplay dessus et fait le montage complet" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:9px"></textarea>
-            <button onclick="document.getElementById('mtMp3In').click()" class="btn btn-ghost btn-sm" style="width:100%;padding:9px;margin-bottom:14px">📁 Ou importer un MP3 / une voix off <span id="mtMp3Name" style="color:var(--orange2);font-weight:700"></span></button>
+            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON AUDIO <span style="color:var(--text3)">· MP3 / VOIX OFF — C'EST LUI QUI PORTE LA VIDÉO</span></div>
+            <div onclick="document.getElementById('mtMp3In').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:14px">🎙 <span id="mtMp3Name">Clique pour importer ton audio</span></div>
             <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
+            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SCRIPT <span style="color:var(--text3)">· OPTIONNEL — SOUS-TITRES PARFAITS</span></div>
+            <textarea id="mtScript" rows="3" placeholder="Colle le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:14px"></textarea>
           </div>
 
           <div id="mtVideoBlock" style="display:none">
@@ -3328,8 +3328,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div onclick="document.getElementById('mtMediaIn').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">🖼️ Ajoute jusqu'à 8 images ou clips (produit, preuve, avant/après…) <span id="mtMediaCount" style="color:var(--orange2);font-weight:700"></span></div>
         </div>
 
-        <button onclick="montageGo()" class="btn btn-lg" style="width:100%;padding:15px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14.5px;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 22px rgba(255,107,53,.3)">✨ Créer ma vidéo</button>
-        <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.6">Montage IA : 2 crédits · voix ElevenLabs : 0,5 cr/s (MP3 importé : gratuit) · 0 crédit de lipsync<br>L'IA détecte toute seule sous-titres et musique déjà présents.</div>
+        <button onclick="montageGo()" class="btn btn-lg" style="width:100%;padding:15px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14.5px;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 22px rgba(255,107,53,.3)">✨ Créer ma vidéo — 2 crédits</button>
       </div>
     </div>
 
@@ -9341,7 +9340,7 @@ function mtSetSrc(src){
 }
 function mtSetMp3(f){
   if(!f) return; _mt.mp3 = f;
-  const n = document.getElementById('mtMp3Name'); if(n) n.textContent = '· ' + f.name;
+  const n = document.getElementById('mtMp3Name'); if(n) n.textContent = f.name + ' ✓';
   toast('🎙 Audio chargé — il portera la vidéo');
 }
 function mtSetVideo(f){
@@ -9369,16 +9368,17 @@ async function montageGo(){
     return;
   }
 
-  // gameplay + voix : le Générateur orchestré de bout en bout (split ON + Montage IA auto)
+  // gameplay + audio : un MP3 de base OBLIGATOIRE (vraie voix ou TTS externe — résultat maîtrisé),
+  // le Générateur est orchestré de bout en bout (split ON + Montage IA auto)
+  if(!_mt.mp3){ toast('⚠️ Importe d\'abord ton audio — c\'est lui qui porte la vidéo'); return; }
   const script = (document.getElementById('mtScript')?.value || '').trim();
-  if(!script && !_mt.mp3){ toast('⚠️ Colle ton script ou importe un MP3'); return; }
   window._mtChoice = true; // vidéo prête → proposer Éditeur ou MP4 direct
   const fs = document.getElementById('f-script');
   if(fs && script) fs.value = script;
   nav('generator');
   if(typeof splitEnabled !== 'undefined' && !splitEnabled && typeof toggleSplit === 'function') toggleSplit();
   if(typeof _genMontageIA !== 'undefined' && !_genMontageIA && typeof _genToggleMontageIA === 'function') _genToggleMontageIA();
-  genGameplayOnly(_mt.mp3 ? 'mp3' : 'el', _mt.mp3 || undefined);
+  genGameplayOnly('mp3', _mt.mp3);
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
 function _mtShowChoice(){
