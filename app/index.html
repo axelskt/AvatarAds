@@ -3321,7 +3321,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SITE WEB <span style="color:var(--text3)">· OPTIONNEL — L'IA S'EN INSPIRE POUR LES VISUELS</span></div>
-          <input type="url" id="mtSite" placeholder="https://ton-site.com" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;font-family:var(--font)">
+          <input type="url" id="mtSite" placeholder="https://ton-site.com" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;font-family:var(--font);margin-bottom:14px">
+
+          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES / VIDÉOS MP4 <span style="color:var(--text3)">· OPTIONNEL — L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
+          <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
+          <div onclick="document.getElementById('mtMediaIn').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">🖼️ Ajoute jusqu'à 8 images ou clips (produit, preuve, avant/après…) <span id="mtMediaCount" style="color:var(--orange2);font-weight:700"></span></div>
         </div>
 
         <button onclick="montageGo()" class="btn btn-lg" style="width:100%;padding:15px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14.5px;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 22px rgba(255,107,53,.3)">✨ Créer ma vidéo</button>
@@ -9368,12 +9372,26 @@ async function montageGo(){
   // gameplay + voix : le Générateur orchestré de bout en bout (split ON + Montage IA auto)
   const script = (document.getElementById('mtScript')?.value || '').trim();
   if(!script && !_mt.mp3){ toast('⚠️ Colle ton script ou importe un MP3'); return; }
+  window._mtChoice = true; // vidéo prête → proposer Éditeur ou MP4 direct
   const fs = document.getElementById('f-script');
   if(fs && script) fs.value = script;
   nav('generator');
   if(typeof splitEnabled !== 'undefined' && !splitEnabled && typeof toggleSplit === 'function') toggleSplit();
   if(typeof _genMontageIA !== 'undefined' && !_genMontageIA && typeof _genToggleMontageIA === 'function') _genToggleMontageIA();
   genGameplayOnly(_mt.mp3 ? 'mp3' : 'el', _mt.mp3 || undefined);
+}
+// ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
+function _mtShowChoice(){
+  let m=document.getElementById('mtChoiceModal'); if(m) m.remove();
+  m=document.createElement('div'); m.id='mtChoiceModal';
+  m.style.cssText='position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px';
+  m.innerHTML='<div style="width:min(420px,94vw);background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px;text-align:center">'
+    +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">🎉 Ta vidéo est prête !</div>'
+    +'<div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:16px">L\'IA lance maintenant le montage complet (zooms, slides, sous-titres, musique). Tu préfères :</div>'
+    +'<button onclick="document.getElementById(\'mtChoiceModal\').remove();genOpenMontageIA(true)" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13.5px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px">🎬 Ajuster dans l\'Éditeur</button>'
+    +'<button onclick="window._mtAutoExport=true;document.getElementById(\'mtChoiceModal\').remove();genOpenMontageIA(true)" style="width:100%;padding:13px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13.5px;cursor:pointer;font-family:var(--font)">⬇️ MP4 final directement</button>'
+    +'</div>';
+  document.body.appendChild(m);
 }
 // #silenceGp · l'outil silences affiche « Gameplay déjà chargé » si un gameplay existe déjà (au lieu de la dropzone vide)
 function _syncSilenceGpDropzone(){
@@ -21123,11 +21141,32 @@ function closeEdAiModal(){ const m=document.getElementById('edAiModal'); if(m) m
 
 function edAiAddFiles(list){
   for(const f of Array.from(list||[])){
-    if(!f.type.startsWith('image/')) continue;
-    if(_edAi.files.length >= 8){ toast('⚠️ 8 images maximum'); break; }
-    _edAi.files.push({ id:'ast'+Date.now()+Math.random().toString(36).slice(2,6), file:f, url:URL.createObjectURL(f) });
+    const isImg=f.type.startsWith('image/'), isVid=f.type.startsWith('video/');
+    if(!isImg && !isVid) continue;
+    if(_edAi.files.length >= 8){ toast('⚠️ 8 fichiers maximum'); break; }
+    const item={ id:'ast'+Date.now()+Math.random().toString(36).slice(2,6), file:f, url:isImg?URL.createObjectURL(f):'', isVideo:isVid };
+    _edAi.files.push(item);
+    if(isVid) _edAiVideoPoster(item); // 1re image du clip → vignette + placement IA + b-roll
   }
   _edAiRenderFiles();
+}
+// extrait une frame du clip vidéo : sert de vignette, de miniature envoyée à l'IA et de b-roll
+function _edAiVideoPoster(item){
+  const src=URL.createObjectURL(item.file);
+  const v=document.createElement('video'); v.muted=true; v.preload='auto'; v.playsInline=true; v.src=src;
+  v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.5,(v.duration||1)/3); }catch(e){} };
+  v.onseeked=()=>{ try{
+    const s=Math.min(1, 720/(v.videoWidth||720));
+    const c=document.createElement('canvas');
+    c.width=Math.round((v.videoWidth||720)*s); c.height=Math.round((v.videoHeight||1280)*s);
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    item.url=c.toDataURL('image/jpeg',0.85);
+    _edAiRenderFiles(); if(typeof _mtRenderMedia==='function') _mtRenderMedia();
+  }catch(e){ console.warn('poster vidéo:', e); } finally{ URL.revokeObjectURL(src); } };
+}
+function _mtRenderMedia(){
+  const n=document.getElementById('mtMediaCount');
+  if(n) n.textContent = _edAi.files.length ? ('· '+_edAi.files.length+' fichier'+(_edAi.files.length>1?'s':'')+' ✓') : '';
 }
 function edAiRemoveFile(id){ _edAi.files=_edAi.files.filter(a=>a.id!==id); _edAiRenderFiles(); }
 function _edAiRenderFiles(){
@@ -21283,7 +21322,9 @@ async function edAiGenerate(){
     if(site){ fd.append('website', site); try{ localStorage.setItem('aa_user_site', site); }catch(_){} }
     fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:'image' }))));
     for(const a of _edAi.files){
-      const th=await _edAiThumb(a.file);
+      let th=null;
+      if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } // frame du clip
+      else th=await _edAiThumb(a.file);
       if(th) fd.append('asset_'+a.id, th, 'thumb.jpg');
     }
     setStatus('🎼 L\'IA écoute ta vidéo et compose le montage… (~30 s)');
@@ -21367,6 +21408,12 @@ function edAiApply(plan, toSource){
 
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
   const seb=document.getElementById('edSrvExportBtn'); if(seb) seb.style.display='flex';
+  // ⬇️ flux « MP4 final directement » : le montage est appliqué → export automatique
+  if(window._mtAutoExport){
+    window._mtAutoExport=false;
+    toast('⬇️ Montage appliqué — export du MP4 en cours…');
+    setTimeout(()=>{ try{ edExport(); }catch(e){ console.error('auto-export:', e); toast('⚠️ Export auto impossible — clique « Exporter MP4 »'); } }, 900);
+  }
   toast('✨ Montage IA appliqué : '+nZoom+' zooms'+(_ed.aiSlides?' · '+_ed.aiSlides.length+' slides (visibles au rendu final)':'')+' · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
 }
 
@@ -21433,6 +21480,8 @@ function _edPollRenderJob(jobId, btn, setSt){
 // Le script exact du Générateur est pré-rempli → sous-titres parfaits via l'alignement forcé.
 // auto=true (toggle Montage IA activé) : lance la génération du montage directement.
 async function genOpenMontageIA(auto){
+  // flux du module Montage IA : la vidéo est prête → 2 choix (Éditeur ou MP4 direct)
+  if(auto && window._mtChoice){ window._mtChoice=false; _mtShowChoice(); return; }
   if(!results.hedraUrl){ toast('⚠️ Génère d\'abord ta vidéo avatar'); return; }
   toast('🎼 Ouverture dans l\'Éditeur…');
   try{
