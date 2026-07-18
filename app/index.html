@@ -3308,6 +3308,20 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;padding:4px 9px;background:var(--bg4);border:1px solid rgba(255,71,87,.3);border-radius:7px;color:var(--red);font-size:10px;cursor:pointer;flex-shrink:0">✕</button>
             </div>
             <input type="file" id="mtAvatarIn" accept="image/*" style="display:none" onchange="mtSetAvatar(this.files[0]);this.value=''">
+            <!-- #119 · modèle lipsync des scènes avatar (visible quand un avatar est choisi) -->
+            <div id="mtModelWrap" style="display:none;margin:-4px 0 14px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                <div id="mtModelC3" onclick="mtSetLipModel('character3')" style="border:1.5px solid var(--orange2);background:rgba(255,107,53,.08);border-radius:10px;padding:9px 10px;cursor:pointer;text-align:center;transition:all .15s">
+                  <div style="font-size:12px;font-weight:800">⚡ Character-3</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">le plus économe · 1 cr/s</div>
+                </div>
+                <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" style="border:1.5px solid var(--border);border-radius:10px;padding:9px 10px;cursor:pointer;text-align:center;transition:all .15s">
+                  <div style="font-size:12px;font-weight:800">💎 OmniHuman 1.5</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">meilleure qualité · 5 cr/s</div>
+                </div>
+              </div>
+              <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5">L'IA ne génère l'avatar que sur les scènes clés — le reste est habillé automatiquement (1 cr/s). Estimation sur le bouton.</div>
+            </div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SCRIPT <span style="color:var(--text3)">· OPTIONNEL — SOUS-TITRES PARFAITS</span></div>
             <textarea id="mtScript" rows="3" placeholder="Colle le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:14px"></textarea>
           </div>
@@ -5136,7 +5150,9 @@ const CREDIT_COSTS = {
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
   montageIA: 2,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
-  export1080: 2           // 📐 export 1080p du Générateur (720p gratuit)
+  export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
+  omniPerSec: 5,          // 💎 OmniHuman 1.5 (scènes avatar du Montage IA segmenté, #119)
+  hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -9325,7 +9341,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3' };
 function initMontage(){
   const s = document.getElementById('mtSite');
   if(s && !s.value){ try{ s.value = localStorage.getItem('aa_user_site') || ''; }catch(_){} }
@@ -9362,7 +9378,8 @@ function mtSetAvatar(f){
   if(th){ th.src=_mt._avUrl; th.style.display='block'; }
   if(nm) nm.textContent = f.name + ' ✓ — il parlera ta voix off';
   if(cl) cl.style.display='block';
-  _mtUpdateCost();
+  const mw=document.getElementById('mtModelWrap'); if(mw) mw.style.display='block';
+  mtSetLipModel(_mt.lipModel);
   toast('🧑 Avatar chargé — lipsync sur ton audio');
 }
 function mtClearAvatar(){
@@ -9371,16 +9388,33 @@ function mtClearAvatar(){
   if(th) th.style.display='none';
   if(nm) nm.textContent = '🧑 Ajoute une photo d\'avatar — sinon la vidéo reste 100% gameplay (0 cr de lipsync)';
   if(cl) cl.style.display='none';
+  const mw=document.getElementById('mtModelWrap'); if(mw) mw.style.display='none';
   _mtUpdateCost();
 }
-// coût affiché sur le bouton : 2 cr de montage (+ lipsync 1 cr/s si avatar)
+// #119 · modèle des scènes avatar : Character-3 (économe) ou OmniHuman 1.5 (qualité max)
+function mtSetLipModel(m){
+  _mt.lipModel = (m==='omnihuman') ? 'omnihuman' : 'character3';
+  const on='1.5px solid var(--orange2)', off='1.5px solid var(--border)';
+  const bgOn='rgba(255,107,53,.08)';
+  const c3=document.getElementById('mtModelC3'), om=document.getElementById('mtModelOmni');
+  if(c3){ c3.style.border=_mt.lipModel==='character3'?on:off; c3.style.background=_mt.lipModel==='character3'?bgOn:''; }
+  if(om){ om.style.border=_mt.lipModel==='omnihuman'?on:off; om.style.background=_mt.lipModel==='omnihuman'?bgOn:''; }
+  _mtUpdateCost();
+}
+// estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
+// que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
 function _mtUpdateCost(){
   const b=document.getElementById('mtGoBtn'); if(!b) return;
-  if(_mt.avatar){
-    const est=_mt.mp3Dur ? ' ~'+Math.ceil(_mt.mp3Dur)+' cr' : ' 1 cr/s';
-    b.textContent = '✨ Créer ma vidéo — 2 cr + lipsync'+est;
+  if(!_mt.avatar){ b.textContent = '✨ Créer ma vidéo — 2 crédits'; return; }
+  const omni=_mt.lipModel==='omnihuman';
+  const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
+  const lbl=omni?'OmniHuman':'Character-3';
+  if(_mt.mp3Dur){
+    const avSec=Math.min(8, Math.max(2, Math.round(_mt.mp3Dur*0.3)));
+    const est=Math.ceil(CREDIT_COSTS.montageIA + avSec*rate + Math.max(0,_mt.mp3Dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
+    b.textContent = '✨ Créer ma vidéo — ~'+est+' cr · '+lbl;
   } else {
-    b.textContent = '✨ Créer ma vidéo — 2 crédits';
+    b.textContent = '✨ Créer ma vidéo — 2 cr + scènes '+lbl+' ('+rate+' cr/s)';
   }
 }
 function mtSetVideo(f){
@@ -9411,6 +9445,11 @@ async function montageGo(){
   // gameplay + audio : un MP3 de base OBLIGATOIRE (vraie voix ou TTS externe — résultat maîtrisé),
   // le Générateur est orchestré de bout en bout (split ON + Montage IA auto)
   if(!_mt.mp3){ toast('⚠️ Importe d\'abord ton audio — c\'est lui qui porte la vidéo'); return; }
+  // 💎 OmniHuman = réservé au rendu segmenté (lot 2 #119) — on bloque AVANT toute navigation
+  if(_mt.avatar && _mt.lipModel==='omnihuman'){
+    toast('💎 OmniHuman arrive avec le rendu par scènes (très bientôt) — sélectionne Character-3 pour générer maintenant');
+    return;
+  }
   const script = (document.getElementById('mtScript')?.value || '').trim();
   window._mtChoice = true; // vidéo prête → proposer Éditeur ou MP4 direct
   const fs = document.getElementById('f-script');
@@ -9420,6 +9459,7 @@ async function montageGo(){
   if(typeof _genMontageIA !== 'undefined' && !_genMontageIA && typeof _genToggleMontageIA === 'function') _genToggleMontageIA();
 
   if(_mt.avatar){
+    window._mtLipModel = _mt.lipModel; // consommé par le rendu segmenté (lot 2)
     // 🧑 avatar choisi → pipeline complet : lipsync Hedra sur le MP3 (1 cr/s) + split gameplay + Montage IA.
     // Même chemin que le Générateur « avatar + Importer un MP3 » — la voix est gratuite, le lipsync est facturé.
     try{
@@ -13650,6 +13690,7 @@ async function _stripSilencesFromBlob(blob){
 const HEDRA_MODELS = {
   elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
   default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
+  omnihuman: '5efced1a-0ca0-4255-87d2-070146842ad9', // OmniHuman 1.5 I2V — qualité max (#107, via Montage IA segmenté)
   // hedraOmnia:   'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — 15 cr/s (Elite futur)
   // hedraAvatar:  '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — 7 cr/s
   // character3:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s
