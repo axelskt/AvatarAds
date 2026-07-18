@@ -9442,40 +9442,318 @@ async function montageGo(){
     return;
   }
 
-  // gameplay + audio : un MP3 de base OBLIGATOIRE (vraie voix ou TTS externe — résultat maîtrisé),
-  // le Générateur est orchestré de bout en bout (split ON + Montage IA auto)
+  // gameplay + audio : un MP3 de base OBLIGATOIRE (vraie voix ou TTS externe — résultat maîtrisé)
   if(!_mt.mp3){ toast('⚠️ Importe d\'abord ton audio — c\'est lui qui porte la vidéo'); return; }
-  // 💎 OmniHuman = réservé au rendu segmenté (lot 2 #119) — on bloque AVANT toute navigation
-  if(_mt.avatar && _mt.lipModel==='omnihuman'){
-    toast('💎 OmniHuman arrive avec le rendu par scènes (très bientôt) — sélectionne Character-3 pour générer maintenant');
-    return;
-  }
   const script = (document.getElementById('mtScript')?.value || '').trim();
+
+  // 🧑 avatar choisi → LIPSYNC SEGMENTÉ (#119 lot 2) : le chef d'orchestre découpe l'audio,
+  // l'avatar (Character-3 ou OmniHuman) ne parle QUE sur les scènes clés (le reste = gameplay
+  // habillé) → coût ÷2. Le rendu final (base + scènes + habillage) est assemblé par le serveur.
+  if(_mt.avatar){
+    window._mtLipModel = _mt.lipModel;
+    return _mtSegmentedGenerate();
+  }
+
+  // 🎮 pas d'avatar → 100 % gameplay + voix : pipeline Générateur classique (split + Montage IA auto)
   window._mtChoice = true; // vidéo prête → proposer Éditeur ou MP4 direct
   const fs = document.getElementById('f-script');
   if(fs && script) fs.value = script;
   nav('generator');
   if(typeof splitEnabled !== 'undefined' && !splitEnabled && typeof toggleSplit === 'function') toggleSplit();
   if(typeof _genMontageIA !== 'undefined' && !_genMontageIA && typeof _genToggleMontageIA === 'function') _genToggleMontageIA();
-
-  if(_mt.avatar){
-    window._mtLipModel = _mt.lipModel; // consommé par le rendu segmenté (lot 2)
-    // 🧑 avatar choisi → pipeline complet : lipsync Hedra sur le MP3 (1 cr/s) + split gameplay + Montage IA.
-    // Même chemin que le Générateur « avatar + Importer un MP3 » — la voix est gratuite, le lipsync est facturé.
-    try{
-      selAvatar = { emo:'🧑', name:(_mt.avatar.name||'Mon avatar'), desc:'Montage IA',
-        localFile:_mt.avatar, localUrl:(_mt._avUrl || (_mt._avUrl=URL.createObjectURL(_mt.avatar))) };
-    }catch(_){}
-    const fa=document.getElementById('f-avatarimg'); if(fa) fa.value='';
-    try{ handleMp4AudioFile(_mt.mp3); }catch(e){ console.warn('handleMp4AudioFile:', e); }
-    mp4AudioFile=_mt.mp3; window.mp4AudioFile=_mt.mp3;
-    mp4AudioEnabled=true; window.mp4AudioEnabled=true;
-    window._bypassHedraOn=false;
-    toast('🧑 Avatar + ton audio — lipsync puis montage…');
-    startGeneration();
-    return;
-  }
   genGameplayOnly('mp3', _mt.mp3);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  #119 LOT 2 · MONTAGE IA — LIPSYNC SEGMENTÉ (rendu serveur)
+//  Le chef d'orchestre (orchestrate) découpe l'audio en `avatarSegments`. On ne
+//  génère l'avatar (Hedra Character-3 économe, ou OmniHuman 1.5 qualité max) QUE
+//  sur ces fenêtres. La base = gameplay bouclé + la voix ; les scènes avatar sont
+//  des overlays (portrait plein écran hors slides / paysage 16:9 sous une slide).
+//  Le render-worker assemble base + scènes (ordre = avatarSegments) + habillage.
+// ════════════════════════════════════════════════════════════════════════════
+
+// overlay de progression dédié au flux segmenté (pct<0 → ferme)
+function _mtProg(pct, label){
+  let o=document.getElementById('mtProgOv');
+  if(pct<0){ if(o) o.remove(); return; }
+  if(!o){
+    o=document.createElement('div'); o.id='mtProgOv';
+    o.style.cssText='position:fixed;inset:0;z-index:9700;background:rgba(8,4,2,.88);backdrop-filter:blur(7px);display:grid;place-items:center;padding:20px';
+    o.innerHTML='<div style="width:min(400px,94vw);text-align:center">'
+      +'<div style="font-size:30px;margin-bottom:12px">🎼</div>'
+      +'<div id="mtProgLbl" style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;line-height:1.5">Préparation…</div>'
+      +'<div style="height:8px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden"><div id="mtProgBar" style="height:100%;width:0%;background:linear-gradient(90deg,#FF6B35,#ff8f5e);transition:width .5s"></div></div>'
+      +'<div id="mtProgPct" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:8px">0%</div>'
+      +'<div style="font-size:10.5px;color:var(--text3);margin-top:14px;line-height:1.55">Garde cette page ouverte — la génération des scènes peut prendre quelques minutes.</div></div>';
+    document.body.appendChild(o);
+  }
+  const b=document.getElementById('mtProgBar'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct');
+  if(b) b.style.width=Math.round(pct)+'%';
+  if(l && label) l.textContent=label;
+  if(p) p.textContent=Math.round(pct)+'%';
+}
+
+// extrait [st,en] d'un fichier audio → WAV blob (envoyé à Hedra + orchestrate)
+async function _mtAudioSliceWav(file, st, en){
+  const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const dec=await ac.decodeAudioData(await file.arrayBuffer());
+  try{ await ac.close(); }catch(_){}
+  const sr=dec.sampleRate, nCh=dec.numberOfChannels;
+  const a=Math.max(0, st==null?0:st), b=Math.min(dec.duration, en==null?dec.duration:en);
+  const len=Math.max(1, Math.round((b-a)*sr));
+  const off=new OfflineAudioContext(nCh, len, sr);
+  const src=off.createBufferSource(); src.buffer=dec; src.connect(off.destination);
+  src.start(0, a, b-a);
+  return _audioBufferToWavBlob(await off.startRendering());
+}
+
+// orientation d'une image → 'portrait' | 'paysage' | 'square'
+function _mtImgOrient(file){
+  return new Promise((res)=>{
+    const u=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ URL.revokeObjectURL(u); const r=im.naturalWidth/im.naturalHeight; res(r<0.92?'portrait':(r>1.08?'paysage':'square')); };
+    im.onerror=()=>{ URL.revokeObjectURL(u); res('portrait'); };
+    im.src=u;
+  });
+}
+
+// #119 · la photo de l'avatar dans le format voulu. Si l'original ne convient pas,
+// on RÉGÉNÈRE la MÊME personne dans l'autre cadrage via gpt-image /edits (img2img,
+// PAS d'outpainting — qualité > économie). L'original reste intact. Résultat mis en cache.
+async function _mtAvatarInFormat(target){
+  const want = target==='paysage' ? 'paysage' : 'portrait';
+  if(want==='portrait' && _mt._avF_portrait) return _mt._avF_portrait;
+  if(want==='paysage'  && _mt._avF_paysage)  return _mt._avF_paysage;
+  const orient = await _mtImgOrient(_mt.avatar);
+  // l'original convient déjà (portrait/carré pour 9:16 ; paysage pour 16:9) → on le garde tel quel
+  const okAsIs = (want==='portrait') ? (orient!=='paysage') : (orient==='paysage');
+  if(okAsIs){ if(want==='portrait') _mt._avF_portrait=_mt.avatar; else _mt._avF_paysage=_mt.avatar; return _mt.avatar; }
+  // sinon régénération img2img dans le nouveau format
+  let token=''; try{ token=(await sb.auth.getSession()).data.session?.access_token || ''; }catch(_){}
+  const size   = want==='paysage' ? '1536x1024' : '1024x1536';
+  const framing= want==='paysage' ? 'horizontal 16:9 landscape' : 'vertical 9:16 portrait';
+  const prompt = 'Recompose this exact same person into a '+framing+' photo. Keep the identical face, hair, skin tone, expression, clothing, lighting and background style — do NOT change the person or the outfit. Photorealistic, natural framing, head and shoulders well centered, high quality, sharp.';
+  for(const model of _GPT_IMG_MODELS){
+    try{
+      const fd=new FormData();
+      fd.append('model', model);
+      fd.append('image', _mt.avatar, _mt.avatar.name||'avatar.png');
+      fd.append('prompt', prompt);
+      fd.append('n','1'); fd.append('size', size);
+      fd.append('quality','high'); fd.append('moderation','low');
+      const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd });
+      const d=await r.json();
+      if(d.error){ if(/model|not found|does not exist|unsupported/i.test(d.error.message||'')) continue; throw new Error(d.error.message); }
+      const it=d.data?.[0];
+      let blob=null;
+      if(it?.b64_json) blob=await (await fetch('data:image/png;base64,'+it.b64_json)).blob();
+      else if(it?.url)  blob=await (await fetch(it.url)).blob();
+      if(blob){ const f=new File([blob], 'avatar-'+want+'.png', {type:'image/png'});
+        if(want==='portrait') _mt._avF_portrait=f; else _mt._avF_paysage=f;
+        return f; }
+    }catch(e){ console.warn('régénération format '+want+':', e); }
+  }
+  // échec de régénération → on renvoie l'original (le renderer cover-crop centre le visage)
+  return _mt.avatar;
+}
+
+// génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
+async function _mtHedraScene(imageFile, audioWav, format, modelId){
+  const PROXY=SUPABASE_URL+'/functions/v1/hedra-proxy';
+  const authHdr=await getAuthHeader();
+  const byok=window._userHedraKey ? {'x-user-hedra-key':window._userHedraKey}:{};
+  const H={...authHdr,...byok};
+  const hPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const hUp  =(p,fd)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{...H},body:fd});
+  const hGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  // 1) asset audio
+  const ca=await hPost('/assets',{type:'audio',name:'seg.wav'}); if(!ca.ok) throw new Error('Hedra audio '+ca.status);
+  const aId=(await ca.json()).id; const afd=new FormData(); afd.append('file', audioWav,'seg.wav');
+  const au=await hUp('/assets/'+aId+'/upload', afd); if(!au.ok) throw new Error('Hedra upload audio '+au.status);
+  // 2) asset image (photo au bon format)
+  const ci=await hPost('/assets',{type:'image',name:'face.png'}); if(!ci.ok) throw new Error('Hedra image '+ci.status);
+  const iId=(await ci.json()).id; const ifd=new FormData(); ifd.append('file', imageFile, imageFile.name||'face.png');
+  const iu=await hUp('/assets/'+iId+'/upload', ifd); if(!iu.ok) throw new Error('Hedra upload image '+iu.status);
+  // 3) génération (aspect_ratio par format)
+  const ar = format==='paysage' ? '16:9' : '9:16';
+  const g=await hPost('/generations',{ type:'video', ai_model_id:modelId, audio_id:aId, start_keyframe_id:iId,
+    generated_video_inputs:{ text_prompt:'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects still', aspect_ratio:ar, character_orientation:'video', resolution:'720p' } });
+  if(!g.ok){ const t=await g.text(); throw new Error('Hedra génération '+g.status+' '+t.slice(0,80)); }
+  const gId=(await g.json()).id; if(!gId) throw new Error('Hedra : pas d\'id de génération');
+  // 4) polling (jusqu'à 6 min)
+  for(let i=0;i<72;i++){
+    await wait(5000);
+    const pr=await hGet('/generations/'+gId+'/status'); if(!pr.ok) continue;
+    const pd=await pr.json(); const s=(pd.status||pd.state||'').toLowerCase();
+    if(['queued','processing','finalizing'].includes(s)) continue;
+    if(['complete','completed','succeeded'].includes(s)){
+      const url=pd.url||pd.download_url||pd.video_url||pd.streaming_url||'';
+      if(url) return await (await fetch(url)).blob();
+      throw new Error('Hedra : URL de scène introuvable');
+    }
+    if(['failed','error','cancelled'].includes(s)) throw new Error('Scène Hedra échouée'+(pd.error_message?' : '+String(pd.error_message).slice(0,60):''));
+  }
+  throw new Error('Timeout Hedra sur une scène (>6 min)');
+}
+
+// base gameplay 9:16 bouclée à la durée de l'audio + la voix en piste audio → Blob mp4
+// (le render-worker prend la voix depuis la piste audio de cette base)
+async function _mtBuildBase(mp3File, durationSec){
+  const clipId=(typeof _selectedClipId!=='undefined' && _selectedClipId) || 'minecraft_parkour';
+  const url=_clipUrl(clipId) || _clipUrl('minecraft_parkour');
+  const ff=await _loadFfmpeg(); const fetchFile=ff._fetchFile;
+  await ff.writeFile('gp.mp4', await fetchFile(url));
+  await ff.writeFile('voice.mp3', await fetchFile(mp3File));
+  const D=Math.max(3, Math.ceil(durationSec)+1); // marge → le worker n'a jamais à tronquer
+  await ff.exec(['-stream_loop','-1','-i','gp.mp4','-i','voice.mp3',
+    '-t', String(D),
+    '-vf', "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
+    '-map','0:v:0','-map','1:a:0',
+    '-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p',
+    '-c:a','aac','-b:a','160k','base.mp4']);
+  const data=await ff.readFile('base.mp4');
+  return new Blob([data.buffer], {type:'video/mp4'});
+}
+
+// quelques frames de la base gameplay → vision du chef d'orchestre (placement zooms/b-roll)
+async function _mtFramesFromVideo(blob, n){
+  return new Promise((resolve)=>{
+    const v=document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto';
+    v.src=URL.createObjectURL(blob); const out=[];
+    v.onloadedmetadata=async ()=>{
+      const D=v.duration||1, cv=document.createElement('canvas');
+      const seek=(t)=>new Promise(r=>{ v.onseeked=()=>r(); v.currentTime=Math.min(D-0.05, t); });
+      for(let i=0;i<n;i++){
+        const t=D*(i+0.5)/n;
+        try{ await seek(t);
+          cv.width=Math.min(512, v.videoWidth||512); cv.height=Math.round(cv.width*((v.videoHeight||910)/(v.videoWidth||512)));
+          cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+          const b=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.72));
+          if(b) out.push({ t:Math.round(t*10)/10, blob:b });
+        }catch(_){}
+      }
+      URL.revokeObjectURL(v.src); resolve(out);
+    };
+    v.onerror=()=>{ try{ URL.revokeObjectURL(v.src); }catch(_){} resolve([]); };
+  });
+}
+
+// pipeline complet du module (avatar) : orchestrate → N scènes Hedra → render-job
+async function _mtSegmentedGenerate(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ toast('⚠️ Reconnecte-toi puis réessaie'); return; }
+  if(!_mt.mp3 || !_mt.avatar){ toast('⚠️ Importe ton audio et une photo d\'avatar'); return; }
+  const omni = _mt.lipModel==='omnihuman';
+  const rate = omni ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec;
+  const modelId = omni ? HEDRA_MODELS.omnihuman : HEDRA_MODELS.default;
+  const modelLbl = omni ? 'OmniHuman' : 'Character-3';
+
+  // 1) chef d'orchestre (transcription + plan) débité d'avance
+  if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
+  _mtProg(4, 'Préparation de ton audio…');
+  try{
+    // durée réelle de l'audio
+    let dur=_mt.mp3Dur;
+    if(!dur){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const d=await ac.decodeAudioData(await _mt.mp3.arrayBuffer()); dur=d.duration; await ac.close(); }catch(_){ dur=20; } }
+
+    // 2) base gameplay (bouclée) + voix
+    _mtProg(10, 'Montage du gameplay de fond…');
+    const baseBlob=await _mtBuildBase(_mt.mp3, dur);
+
+    // 3) orchestrate : audio + frames base + script + site + médias b-roll
+    _mtProg(22, 'Le chef d\'orchestre écoute ta vidéo… (~30 s)');
+    const wav=await _mtAudioSliceWav(_mt.mp3, 0, dur);
+    const frames=await _mtFramesFromVideo(baseBlob, 6);
+    const fd=new FormData();
+    fd.append('audio', wav, 'timeline.wav');
+    fd.append('duration', String(Math.round(dur*100)/100));
+    frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
+    fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
+    const script=(document.getElementById('mtScript')?.value||'').trim();
+    if(script) fd.append('script', script);
+    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true }));
+    const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
+    if(site) fd.append('website', site);
+    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
+    for(const a of _edAi.files){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
+    const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
+    const od=await or.json().catch(()=>({}));
+    if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
+    const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    let segs=Array.isArray(plan.avatarSegments) ? plan.avatarSegments.slice() : [];
+    // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
+    if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
+    plan.avatarSegments=segs;
+
+    // 4) coût réel : avSec × tarif modèle + reste × hyperframes (1 cr/s) — débité avant Hedra
+    const avSec=segs.reduce((s,a)=>s+Math.max(0,(a.end||0)-(a.start||0)),0);
+    const scenesCost=Math.ceil(avSec*rate + Math.max(0, dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
+    if(!(await spendCreditsFor(scenesCost, 'scènes avatar '+modelLbl))){ _mtProg(-1); return; }
+
+    // 5) génère chaque scène avatar (photo régénérée au bon format si besoin)
+    const clipBlobs=[];
+    for(let i=0;i<segs.length;i++){
+      const s=segs[i]; const fmt = s.format==='paysage' ? 'paysage' : 'portrait';
+      _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
+      const img=await _mtAvatarInFormat(fmt);
+      const segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end);
+      clipBlobs.push(await _mtHedraScene(img, segWav, fmt, modelId));
+    }
+
+    // 6) upload base + scènes (ordre = avatarSegments) + b-roll → render-media
+    _mtProg(88, 'Envoi au serveur de rendu…');
+    const ts=Date.now();
+    const inPath=user.id+'/in-'+ts+'.mp4';
+    { const u=await sb.storage.from('render-media').upload(inPath, baseBlob, { contentType:'video/mp4', upsert:true }); if(u.error) throw new Error('upload base : '+u.error.message); }
+    const avatar_clips=[];
+    for(let i=0;i<clipBlobs.length;i++){
+      const p=user.id+'/av'+ts+'-'+i+'.mp4';
+      const u=await sb.storage.from('render-media').upload(p, clipBlobs[i], { contentType:'video/mp4', upsert:true });
+      if(u.error) throw new Error('upload scène '+(i+1)+' : '+u.error.message);
+      avatar_clips.push(p);
+    }
+    const assets=[];
+    for(const b of (plan.broll||[])){
+      const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
+      if(assets.some(x=>x.id===a.id)) continue;
+      let up=a.file, ext='jpg', kind='image', ctype='image/jpeg';
+      if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ up=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
+      const p=user.id+'/as-'+a.id+'.'+ext;
+      const e=await sb.storage.from('render-media').upload(p, up, { upsert:true, contentType:ctype });
+      if(!e.error) assets.push({ id:a.id, path:p, kind });
+    }
+
+    // 7) render-job → poll → download
+    _mtProg(92, 'Rendu final sur le serveur… (1 à 3 min)');
+    const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan, input_video:inPath, assets, avatar_clips }) });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
+    _mtPollSegmented(d.job_id);
+  }catch(e){
+    console.error('montage segmenté:', e);
+    _mtProg(-1);
+    toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120));
+  }
+}
+function _mtPollSegmented(jobId){
+  let n=0;
+  const iv=setInterval(async ()=>{
+    if(++n>180){ clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
+    try{
+      const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
+      const d=await r.json().catch(()=>({}));
+      if(d.status==='done' && d.url){
+        clearInterval(iv); _mtProg(100,'Terminé !'); setTimeout(()=>_mtProg(-1), 800);
+        toast('✅ Ta vidéo montée est prête — téléchargement lancé !');
+        const a=document.createElement('a'); a.href=d.url; a.download='montage-ia.mp4'; document.body.appendChild(a); a.click(); a.remove();
+      } else if(d.status==='failed'){
+        clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
+      } else {
+        _mtProg(Math.min(99, 92+n*0.35), 'Rendu final sur le serveur…');
+      }
+    }catch(_){ /* réseau : on retentera au prochain tick */ }
+  }, 5000);
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
 function _mtShowChoice(){
