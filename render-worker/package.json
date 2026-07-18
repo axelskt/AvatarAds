@@ -4,11 +4,13 @@
   "type": "module",
   "description": "Renderer serveur AvatarAds : plan de montage + video -> MP4 final (HyperFrames + ffmpeg)",
   "scripts": {
-    "start": "node worker.mjs",
+    "start": "node --env-file=.env worker.mjs",
     "test:local": "node worker.mjs --local test/job --output test/final.mp4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.110.7"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }
