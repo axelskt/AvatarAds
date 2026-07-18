@@ -54,6 +54,17 @@ export function buildComposition(plan, opts = {}) {
     dur: r2(Math.max(0.4, b.end - b.start)),
   }))
 
+  // ── #119 lipsync segmenté : scènes AVATAR générées séparément (2 à 5 selon le chef
+  // d'orchestre) et assemblées ici — l'avatar ne s'affiche QUE sur ses fenêtres, le
+  // reste du temps c'est le gameplay (#base). opts.avatarClips = { 'av0':'media/av0.mp4' }.
+  // Sans avatarSegments/avatarClips → comportement inchangé (base = vidéo continue). ──
+  const avatarClips = opts.avatarClips || {}
+  const avatarSegs = (plan.avatarSegments || [])
+    .map((s, i) => ({ id: 'av' + i, src: avatarClips['av' + i] || avatarClips[i] || null, start: r2(s.start), end: r2(Math.max(s.end, s.start + 0.3)) }))
+    .filter((s) => s.src)
+    .sort((a, b) => a.start - b.start)
+    .map((s) => ({ ...s, dur: r2(Math.max(0.3, s.end - s.start)) }))
+
   // ── transitions entre sections (#111) : flash lumineux bref sur les frontières
   // internes — sauf celles déjà marquées par une entrée/sortie de split (le morph
   // de la zone vidéo est la transition à ces endroits-là) ──
@@ -198,6 +209,12 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#flash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.04))});
       tl.to('#flash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`).join('')
 
+  // #119 · scènes avatar : visibles (au-dessus du gameplay) seulement sur leur fenêtre,
+  // fondu court aux bornes (les coupures entre scènes tombent hors slides → invisibles)
+  const avatarJs = avatarSegs.map((a) => `
+      tl.fromTo('#${a.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${a.start});
+      tl.to('#${a.id}', { autoAlpha: 0, duration: 0.12, ease: 'power1.in' }, ${r2(a.start + a.dur - 0.12)});`).join('')
+
   const capsJs = caps.map((c) => `
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
   ).join('')
@@ -323,6 +340,9 @@ export function buildComposition(plan, opts = {}) {
       #videoFit { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; overflow: hidden; }
       #zoomInner { position: absolute; inset: 0; will-change: transform; }
       #base { width: 100%; height: 100%; object-fit: cover; object-position: 50% ${objPos}%; display: block; }
+      /* #119 · scène avatar : recouvre le gameplay pendant sa fenêtre (même cadrage, suit le zoom) */
+      .avatar-seg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+        object-position: 50% ${objPos}%; display: block; will-change: opacity; }
 
       /* b-roll « carte flottante » : la vidéo reste visible derrière, assombrie ;
          l'image pop dans une carte arrondie avec ombre (look viral moderne) */
@@ -372,6 +392,7 @@ ${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-du
         <div id="videoFit">
           <div id="zoomInner">
             <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
+${avatarSegs.map((a) => `            <video id="${a.id}" class="clip avatar-seg" src="${esc(a.src)}" data-start="${a.start}" data-duration="${a.dur}" data-track-index="9" muted playsinline></video>`).join('\n')}
           </div>
         </div>
       </div>
@@ -388,13 +409,15 @@ ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-dur
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
 ` : ''}${secBounds.length ? `      tl.set('#flash', { autoAlpha: 0 }, 0);
-` : ''}${layoutJs}
+` : ''}${avatarSegs.map((a) => `      tl.set('#${a.id}', { autoAlpha: 0 }, 0);`).join('\n')}
+${layoutJs}
 ${zoomJs}
 ${brollJs}
 ${slidesJs}
 ${hookJs}
 ${capsJs}
 ${flashJs}
+${avatarJs}
       tl.set({}, {}, ${D}); // borne la durée de la timeline
       window.__timelines['montage'] = tl;
     </script>
