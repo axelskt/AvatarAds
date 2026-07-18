@@ -7,8 +7,8 @@
 // spendCreditsFor AVANT l'appel (pattern des autres proxys).
 //
 // POST JSON :
-//   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path,kind}] } -> { ok, job_id }
-//   (kind: 'image' | 'video' — #111, les b-roll peuvent etre des clips qui jouent)
+//   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path,kind}], avatar_clips?:['<uid>/av0.mp4',…] } -> { ok, job_id }
+//   (kind: 'image' | 'video' — #111 ; avatar_clips = scenes lipsync #119, ordre = plan.avatarSegments)
 //   { action:'status', job_id } -> { ok, status, url?, error? }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -54,13 +54,18 @@ serve(async (req: Request) => {
         }))
         .filter((a: { id: string; path: string }) => a.id && a.path.startsWith(user.id + '/'))
 
+      // #119 lipsync segmenté : clips avatar (ordre = plan.avatarSegments), chemins <uid>/…
+      const avatar_clips = (Array.isArray(body.avatar_clips) ? body.avatar_clips : []).slice(0, 8)
+        .map((p: string) => String(p || ''))
+        .filter((p: string) => p.startsWith(user.id + '/'))
+
       // garde-fou : pas plus de 2 jobs en attente/rendu par utilisateur
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).in('status', ['queued', 'rendering'])
       if ((count ?? 0) >= 2) return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
 
       const { data, error } = await service.from('render_jobs')
-        .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets })
+        .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
       if (error) return json({ error: error.message }, 500)
       return json({ ok: true, job_id: data.id })

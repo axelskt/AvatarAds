@@ -2,7 +2,7 @@
 // L'audio de la vidéo dirige le montage : transcription mot-à-mot (ElevenLabs
 // Scribe) + alignement forcé sur le script exact (si fourni) → Claude analyse
 // le transcript + les images utilisateur (vision) → émet un PLAN DE MONTAGE
-// JSON strict (sections, zooms punch, b-roll placé, SFX, hook, sous-titres).
+// JSON strict (sections, zooms punch, b-roll placé, SFX, hook, sous-titres, scènes avatar).
 //
 // Auth : JWT utilisateur (verify_jwt au gateway). Les crédits sont débités
 // côté client AVANT l'appel via spendCreditsFor (RPC anti-triche), comme pour
@@ -146,7 +146,7 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success',
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected'],
+  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments'],
   properties: {
     sections: {
       type: 'array',
@@ -234,6 +234,15 @@ const PLAN_SCHEMA = {
       required: ['subtitles'],
       properties: { subtitles: { type: 'boolean' } },
     },
+    avatarSegments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['start', 'end', 'reason'],
+        properties: { start: { type: 'number' }, end: { type: 'number' }, reason: { type: 'string' } },
+      },
+    },
     slides: {
       type: 'array',
       items: {
@@ -272,6 +281,7 @@ type Plan = {
   slides: { type: string; start: number; end: number; title: string; wide: boolean; items: { text: string; t: number }[] }[]
   face: { cy: number } | null
   detected: { subtitles: boolean }
+  avatarSegments: { start: number; end: number; reason?: string }[]
 }
 
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
@@ -355,6 +365,8 @@ ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, d
 B-ROLL (images utilisateur, plein ecran par-dessus la video) : place CHAQUE image au moment ou son CONTENU correspond a ce qui est dit (regarde les images !). Duree 1.5 a 3.5s. Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
 
 SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur les enumerations, riser avant le CTA, success/ding sur une preuve ou un resultat. Maximum 1 SFX par 1.5s. Les timestamps tombent sur les evenements qu'ils soulignent.
+
+SCENES AVATAR (lipsync segmente, economie) : dans avatarSegments, liste les fenetres PLEIN ECRAN ou l'on VOIT la personne parler face camera. Le lipsync ne sera genere QUE sur ces fenetres (le reste = gameplay/slides), donc choisis les moments ou voir le visage a le plus d'impact. 2 a 5 scenes selon la dynamique du script : le HOOK (debut) et le CTA (fin) sont TOUJOURS des scenes avatar ; ajoute 1 a 3 temps forts en plein ecran entre les slides. JAMAIS pendant une slide (la, c'est le gameplay qui occupe le bas). Bornes calees sur des fins de phrase. Si le montage n'a pas d'avatar (gameplay/voix off seule), avatarSegments = [].
 
 HOOK TEXTE : si les 3 premieres secondes contiennent une accroche forte, un texte MAJUSCULES de 5 mots max qui la resume (start 0, end <= 3). Sinon null.
 
@@ -516,7 +528,19 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
   const face = (plan.face && typeof plan.face.cy === 'number') ? { cy: r2(clamp(plan.face.cy, 0.1, 0.9)) } : null
   const detected = { subtitles: !!(plan.detected && plan.detected.subtitles) }
 
-  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face, detected }
+  // #119 scenes avatar : fenetres plein ecran (JAMAIS pendant une slide), fusionnees
+  const avatarSegments: { start: number; end: number }[] = []
+  for (const a of (plan.avatarSegments || [])
+    .map((a) => ({ start: r2(clamp(a.start, 0, D)), end: r2(clamp(a.end, 0, D)) }))
+    .filter((a) => a.end > a.start + 0.4)
+    .filter((a) => !slides.some((s) => a.start < s.end && a.end > s.start))
+    .sort((a, b) => a.start - b.start)) {
+    const last = avatarSegments[avatarSegments.length - 1]
+    if (last && a.start <= last.end + 0.1) last.end = Math.max(last.end, a.end)
+    else avatarSegments.push({ ...a })
+  }
+
+  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face, detected, avatarSegments }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
@@ -614,7 +638,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '0.9',
+      version: '1.0',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },

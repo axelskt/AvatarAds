@@ -97,7 +97,24 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles }))
+    // #119 · scènes avatar (lipsync segmenté) : clips av0.mp4, av1.mp4… dans jobDir/avatar,
+    // ordonnés comme plan.avatarSegments → normalisés + passés au renderer (opts.avatarClips)
+    const avatarClips = {}
+    const avatarDir = join(jobDir, 'avatar')
+    if (existsSync(avatarDir)) {
+      for (const f of readdirSync(avatarDir).filter((f) => /\.(mp4|mov|webm|m4v)$/i.test(f)).sort()) {
+        const id = f.replace(/\.[^.]+$/, '') // 'av0', 'av1'…
+        try {
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(avatarDir, f),
+            '-vf', "scale='min(1080,iw)':-2,fps=30", '-an',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-g', '30',
+            '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
+          avatarClips[id] = 'media/' + id + '.mp4'
+        } catch (e) { console.warn('scène avatar ignorée (illisible):', f, e.message) }
+      }
+    }
+
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
@@ -111,13 +128,18 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     if (!existsSync(visual)) throw new Error('rendu visuel échoué (visual.mp4 absent)')
 
     // ── 3. mix audio ffmpeg : voix + SFX (adelay) + musique duckée en boucle ──
+    // voix = piste audio de base.mp4 ; #119 en lipsync segmenté le gameplay peut être
+    // muet → on saute la voix (le mix continue avec SFX/musique) plutôt que de planter
+    const baseHasAudio = !!ffprobe(basePath, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
     const inputs = ['-i', visual, '-i', basePath]
     const filters = []
     const mixIns = []
     let idx = 2
 
-    filters.push(`[1:a]apad=whole_dur=${plan.duration}[voice]`)
-    mixIns.push('[voice]')
+    if (baseHasAudio) {
+      filters.push(`[1:a]apad=whole_dur=${plan.duration}[voice]`)
+      mixIns.push('[voice]')
+    }
 
     const mood = plan.music && plan.music.mood
     const pick = mood ? pickMusic(mood, plan.duration || 1) : null
@@ -138,16 +160,23 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       idx++
     }
 
-    filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0[aout]`)
-    console.log(`▶ mix audio (${mixIns.length} pistes)…`)
-    execFileSync('ffmpeg', [
-      '-v', 'error', '-y', ...inputs,
-      '-filter_complex', filters.join(';'),
-      '-map', '0:v', '-map', '[aout]',
-      '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
-      '-t', String(plan.duration),
-      outPath,
-    ], { stdio: 'inherit' })
+    if (!mixIns.length) {
+      // aucune piste audio (base muet + ni musique ni SFX) → vidéo seule
+      console.log('▶ aucun audio à mixer → vidéo seule')
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual, '-map', '0:v',
+        '-c:v', 'copy', '-an', '-t', String(plan.duration), outPath], { stdio: 'inherit' })
+    } else {
+      filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0[aout]`)
+      console.log(`▶ mix audio (${mixIns.length} pistes)…`)
+      execFileSync('ffmpeg', [
+        '-v', 'error', '-y', ...inputs,
+        '-filter_complex', filters.join(';'),
+        '-map', '0:v', '-map', '[aout]',
+        '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
+        '-t', String(plan.duration),
+        outPath,
+      ], { stdio: 'inherit' })
+    }
 
     const outDur = parseFloat(ffprobe(outPath, 'format=duration')) || 0
     console.log(`✅ ${outPath} — ${outDur.toFixed(1)}s, rendu total ${((Date.now() - t0) / 1000).toFixed(0)}s`)
@@ -193,6 +222,12 @@ async function pollLoop() {
           // extension du chemin (as-x.jpg / as-x.mp4) — les b-roll peuvent être des clips
           const ext = (String(a.path).match(/\.(\w{2,4})$/) || [])[1] || 'jpg'
           await dl(a.path, join(jobDir, 'assets', a.id + '.' + ext))
+        }
+        // #119 · scènes avatar : téléchargées comme av0.mp4, av1.mp4… (ordre = plan.avatarSegments)
+        const avClips = job.avatar_clips || []
+        if (avClips.length) {
+          mkdirSync(join(jobDir, 'avatar'), { recursive: true })
+          for (let i = 0; i < avClips.length; i++) await dl(avClips[i], join(jobDir, 'avatar', 'av' + i + '.mp4'))
         }
 
         const out = join(jobDir, 'final.mp4')
