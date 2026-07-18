@@ -9781,32 +9781,35 @@ function _mtVideoDone(){
     +'<button onclick="_mtProg(-1)" style="width:100%;padding:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font)">✏️ Ajuster dans l\'Éditeur</button>'
     +'</div>';
 }
-// montage prêt (flux « Ma vidéo ») : un clic user lance le rendu. Safari bloque la lecture
-// vidéo hors d'un geste → sans ce clic l'export reste figé. Le clic « bénit » la lecture.
-function _mtVideoReadyToRender(){
-  _mtProg(50, ''); const o=document.getElementById('mtProgOv'); if(!o) return;
-  o.innerHTML='<div style="width:min(400px,94vw);text-align:center">'
-    +'<div style="font-size:30px;margin-bottom:10px">🎬</div>'
-    +'<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:6px">Ton montage est prêt</div>'
-    +'<div style="font-size:12px;color:var(--text3);line-height:1.55;margin-bottom:18px">Clique pour générer ton MP4 — le rendu dure environ la durée de ta vidéo.</div>'
-    +'<button id="mtRenderBtn" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px">🎬 Générer le MP4</button>'
-    +'<button onclick="_mtProg(-1)" style="width:100%;padding:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font)">✏️ Ouvrir dans l\'Éditeur</button>'
-    +'</div>';
-  const rb=document.getElementById('mtRenderBtn'); if(rb) rb.onclick=_mtRunClientExport;
-}
-async function _mtRunClientExport(){
-  const b=document.getElementById('mtRenderBtn'); if(b){ b.disabled=true; b.style.opacity='.6'; b.textContent='🎬 Rendu en cours…'; }
-  // « bénir » la lecture DANS le geste user → play() autorisé ensuite dans edExport (sinon figé)
+// rendu SERVEUR du flux « Ma vidéo » : upload de la vidéo + plan → render-job → worker → MP4
+// PROPRE (pas de MediaRecorder navigateur = pas de désync/freeze ; split-screen/slides complet).
+async function _mtServerRender(){
   try{
-    const vids=[(_ed&&_ed.video), ...(((_ed&&_ed.clips)||[]).map(c=>c.video)), ...(((_ed&&_ed.overlays)||[]).map(o=>o.vid))].filter(Boolean);
-    vids.forEach(v=>{ try{ const p=v.play(); if(p&&p.then) p.then(()=>{ try{ v.pause(); }catch(_){} }).catch(()=>{}); }catch(_){} });
-  }catch(_){}
-  _mtProg(3, 'Rendu du MP4 monté…');
-  const st=document.getElementById('edExportStatus');
-  const mirror=setInterval(()=>{ const m=(st&&st.textContent||'').match(/(\d+)%/); if(m) _mtProg(Math.min(99, parseInt(m[1])), 'Rendu du MP4 monté… '+m[1]+'%'); }, 400);
-  try{ await edExport(); _mtVideoDone(); }
-  catch(e){ console.error('client export:', e); _mtProg(-1); toast('⚠️ Rendu impossible : '+String(e.message||e).slice(0,100)); }
-  finally{ clearInterval(mirror); }
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user){ _mtProg(-1); toast('⚠️ Reconnecte-toi puis réessaie'); return; }
+    if(!_ed || !_ed.clips || !_ed.clips.length || !_ed.aiPlanRaw){ _mtProg(-1); toast('⚠️ Montage introuvable — relance'); return; }
+    if(!(await spendCreditsFor(CREDIT_COSTS.montageRender, 'rendu final serveur'))){ _mtProg(-1); return; }
+    _mtProg(58, 'Envoi de ta vidéo au serveur…');
+    const inPath=user.id+'/in-'+Date.now()+'.mp4';
+    const f=_ed.clips[0].file;
+    const up=await sb.storage.from('render-media').upload(inPath, f, { contentType: f.type||'video/mp4' });
+    if(up.error) throw new Error('upload : '+up.error.message);
+    const assets=[];
+    for(const b of (_ed.aiPlanRaw.broll||[])){
+      const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
+      if(assets.some(x=>x.id===a.id)) continue;
+      let upf=a.file, ext='jpg', kind='image', ctype='image/jpeg';
+      if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ upf=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
+      const p=user.id+'/as-'+a.id+'.'+ext;
+      const e=await sb.storage.from('render-media').upload(p, upf, { upsert:true, contentType:ctype });
+      if(!e.error) assets.push({ id:a.id, path:p, kind });
+    }
+    _mtProg(66, 'Rendu final sur le serveur… (1 à 3 min)');
+    const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan:_ed.aiPlanRaw, input_video:inPath, assets }) });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
+    _mtPollSegmented(d.job_id); // même poll/download que le flux segmenté
+  }catch(e){ console.error('rendu serveur module:', e); _mtProg(-1); toast('⚠️ Rendu serveur : '+String(e.message||e).slice(0,110)); }
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
 function _mtShowChoice(){
@@ -21921,10 +21924,9 @@ function edAiApply(plan, toSource){
     window._mtAutoExport=false;
     const videoFlow=!!window._mtVideoFlow; window._mtVideoFlow=false;
     if(videoFlow){
-      // Safari EXIGE un geste user pour lire une vidéo → l'export auto (déclenché ~30 s après
-      // le clic) restait figé à 0 %. On propose un bouton : le clic débloque la lecture puis
-      // lance le rendu avec une vraie progression.
-      _mtVideoReadyToRender();
+      // rendu SERVEUR (worker) : propre, sans désync ni freeze, montage complet (split/slides).
+      // Aucune lecture vidéo dans le navigateur → plus de bug d'autoplay/geste Safari.
+      _mtServerRender();
     } else {
       toast('⬇️ Montage appliqué — export du MP4 en cours…');
       setTimeout(()=>{ try{ edExport(); }catch(e){ console.error('auto-export:', e); toast('⚠️ Export auto impossible — clique « Exporter MP4 »'); } }, 900);
