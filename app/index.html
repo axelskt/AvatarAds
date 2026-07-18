@@ -3279,67 +3279,139 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
          ══════════════════════════════════════════════════════ -->
     <!-- ══ 🪄 MONTAGE IA — ta vidéo virale de A à Z (module chef d'orchestre) ══ -->
     <div class="view" id="v-montage">
-      <div style="max-width:660px;margin:0 auto;padding:26px 18px 60px">
-        <div style="text-align:center;margin-bottom:26px">
-          <div style="font-size:24px;font-weight:800;letter-spacing:-.4px">Montage IA</div>
-        </div>
+      <!-- ============ MONTAGE IA — refonte design 1:1 (maquette Claude Design) ============ -->
+      <style>
+        #v-montage .mt-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px}
+        #v-montage .mt-src{padding:14px 16px;border-radius:14px;display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:.15s;width:100%;font-family:var(--font);color:var(--text)}
+        #v-montage .mt-src.on{border:2px solid var(--accent);background:var(--accent-soft)}
+        #v-montage .mt-src .mt-src-i{color:var(--text-2);display:flex}
+        #v-montage .mt-src.on .mt-src-i{color:var(--accent-2)}
+        #v-montage .mt-drop{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:20px 18px;border-radius:14px;cursor:pointer;align-items:center;justify-content:center;border:1px dashed var(--border-2);background:var(--panel-1);transition:.16s;font-family:var(--font);color:var(--text);position:relative}
+        #v-montage .mt-drop:hover{border-color:var(--accent);background:rgba(255,90,31,.06)}
+        #v-montage .mt-drop.filled,#v-montage .mt-drop.filled:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+        #v-montage .mt-drop-row{display:flex;align-items:center;gap:10px;color:var(--text-2)}
+        #v-montage .mt-drop.filled .mt-drop-row{color:var(--accent-2)}
+        #v-montage .mt-drop-lbl{font-size:14px;font-weight:600}
+        #v-montage .mt-drop-sub{font-size:11.5px;text-align:center;line-height:1.4;color:var(--text-3)}
+        #v-montage .mt-modelcard{border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:11px 12px;cursor:pointer;text-align:center;transition:.15s}
+        #v-montage .mt-modelcard.on{border:2px solid var(--accent);background:var(--accent-soft)}
+        #v-montage .mt-thumb{width:58px;height:58px;border-radius:11px;position:relative;flex:0 0 auto;overflow:hidden;border:1px solid var(--border-2)}
+        #v-montage .field{width:100%;box-sizing:border-box}
+        @media(max-width:760px){
+          #mtScroll{padding:16px 14px 28px !important}
+          #v-montage .card{padding:16px !important}
+          #mtHeadTitle{font-size:26px !important}
+          #mtBottomGrid{grid-template-columns:1fr !important}
+          #v-montage .mt-src{padding:12px 13px}
+        }
+        @keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
+      </style>
+      <div class="scroll-y" id="mtScroll" style="flex:1;padding:24px 40px 32px">
+        <div style="max-width:760px;margin:0 auto">
 
-        <div class="card" style="padding:20px;margin-bottom:14px">
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:9px">1 · TA SOURCE</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-            <div id="mtSrcGame" onclick="mtSetSrc('gameplay')" style="border:1.5px solid var(--orange2);background:rgba(255,107,53,.08);border-radius:10px;padding:11px 12px;cursor:pointer">
-              <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">🎮 Gameplay + voix</div>
-              <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Ta voix (ou ElevenLabs) sur un clip gameplay</div>
+          <!-- ===== FORM ===== -->
+          <div id="mtForm">
+            <!-- header -->
+            <div class="center" style="margin-bottom:16px">
+              <div style="display:flex;justify-content:center;margin-bottom:8px">
+                <span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:11px;padding:5px 11px">✦ NOUVEAU</span>
+              </div>
+              <h1 id="mtHeadTitle" class="display" style="font-size:32px;font-weight:800;letter-spacing:-.01em">Montage IA</h1>
+              <p class="muted" style="margin-top:6px;font-size:14.5px;max-width:460px;margin-inline:auto;line-height:1.45">Ton audio ou ta vidéo entre, une vidéo prête à devenir virale sort.</p>
             </div>
-            <div id="mtSrcVideo" onclick="mtSetSrc('mavideo')" style="border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;cursor:pointer">
-              <div style="font-size:12.5px;font-weight:800;margin-bottom:3px">📼 Ma vidéo</div>
-              <div style="font-size:10.5px;color:var(--text3);line-height:1.45">Importe ta vidéo, l'IA la monte</div>
-            </div>
-          </div>
 
-          <div id="mtGameplayBlock">
-            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON AUDIO <span style="color:var(--text3)">· MP3 / VOIX OFF — C'EST LUI QUI PORTE LA VIDÉO</span></div>
-            <div onclick="document.getElementById('mtMp3In').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:14px">🎙 <span id="mtMp3Name">Clique pour importer ton audio</span></div>
-            <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
-            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON AVATAR <span style="color:var(--text3)">· OPTIONNEL — IL PARLE TA VOIX OFF EN LIPSYNC</span></div>
-            <div onclick="document.getElementById('mtAvatarIn').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:12px;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px">
-              <img id="mtAvatarThumb" style="display:none;width:42px;height:42px;border-radius:9px;object-fit:cover;flex-shrink:0" alt="">
-              <span id="mtAvatarName">🧑 Ajoute une photo d'avatar — sinon la vidéo reste 100% gameplay (0 cr de lipsync)</span>
-              <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;padding:4px 9px;background:var(--bg4);border:1px solid rgba(255,71,87,.3);border-radius:7px;color:var(--red);font-size:10px;cursor:pointer;flex-shrink:0">✕</button>
-            </div>
-            <input type="file" id="mtAvatarIn" accept="image/*" style="display:none" onchange="mtSetAvatar(this.files[0]);this.value=''">
-            <!-- #119 · modèle lipsync des scènes avatar (visible quand un avatar est choisi) -->
-            <div id="mtModelWrap" style="display:none;margin:-4px 0 14px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-                <div id="mtModelC3" onclick="mtSetLipModel('character3')" style="border:1.5px solid var(--orange2);background:rgba(255,107,53,.08);border-radius:10px;padding:9px 10px;cursor:pointer;text-align:center;transition:all .15s">
-                  <div style="font-size:12px;font-weight:800">⚡ Character-3</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">le plus économe · 1 cr/s</div>
+            <div class="card" style="padding:24px">
+              <!-- 1 · SOURCE -->
+              <div class="mt-eyebrow">1 · Ta source</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+                <button id="mtSrcGame" onclick="mtSetSrc('gameplay')" class="mt-src on">
+                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></span><span style="font-weight:700;font-size:15px">Gameplay + voix</span></div>
+                  <span class="faint" style="font-size:12px;line-height:1.35">Ta voix (ou ElevenLabs) sur un clip gameplay hypnotique</span>
+                </button>
+                <button id="mtSrcVideo" onclick="mtSetSrc('mavideo')" class="mt-src">
+                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span style="font-weight:700;font-size:15px">Ma vidéo</span></div>
+                  <span class="faint" style="font-size:12px;line-height:1.35">Importe ta vidéo, l'IA la monte façon créateur pro</span>
+                </button>
+              </div>
+
+              <!-- gameplay -->
+              <div id="mtGameplayBlock">
+                <div class="mt-eyebrow">2 · Ton audio — la voix qui porte la vidéo</div>
+                <div style="margin-bottom:18px">
+                  <div class="mt-drop" id="mtAudioDrop" onclick="document.getElementById('mtMp3In').click()">
+                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><span class="mt-drop-lbl" id="mtMp3Name">Importe ta voix off</span></div>
+                    <span class="mt-drop-sub" id="mtAudioSub">MP3 · WAV · M4A — l'IA en extrait les sous-titres</span>
+                  </div>
+                  <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
                 </div>
-                <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" style="border:1.5px solid var(--border);border-radius:10px;padding:9px 10px;cursor:pointer;text-align:center;transition:all .15s">
-                  <div style="font-size:12px;font-weight:800">💎 OmniHuman 1.5</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">meilleure qualité · 5 cr/s</div>
+
+                <div class="mt-eyebrow">3 · Ton avatar · optionnel — il parle en lipsync</div>
+                <div style="margin-bottom:18px">
+                  <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
+                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="mt-drop-lbl" id="mtAvatarName">Ajoute une photo d'avatar</span></div>
+                    <span class="mt-drop-sub" id="mtAvatarSub">Sinon 100% gameplay · 0 crédit lipsync</span>
+                    <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;cursor:pointer;line-height:1;display:none;align-items:center;justify-content:center">✕</button>
+                  </div>
+                  <input type="file" id="mtAvatarIn" accept="image/*" style="display:none" onchange="mtSetAvatar(this.files[0]);this.value=''">
+                </div>
+
+                <!-- #119 · modèle lipsync (visible quand un avatar est choisi) -->
+                <div id="mtModelWrap" style="display:none;margin-bottom:18px">
+                  <div class="mt-eyebrow">Modèle lipsync</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div id="mtModelC3" onclick="mtSetLipModel('character3')" class="mt-modelcard on">
+                      <div style="font-size:13px;font-weight:700">⚡ Character-3</div>
+                      <div class="mono" style="font-size:10px;color:var(--text-3);margin-top:3px">le plus économe · 1 cr/s</div>
+                    </div>
+                    <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" class="mt-modelcard">
+                      <div style="font-size:13px;font-weight:700">💎 OmniHuman 1.5</div>
+                      <div class="mono" style="font-size:10px;color:var(--text-3);margin-top:3px">meilleure qualité · 5 cr/s</div>
+                    </div>
+                  </div>
+                  <p class="faint" style="font-size:11px;margin-top:7px;line-height:1.45">L'avatar n'est généré que sur les scènes clés — le reste est habillé automatiquement (1 cr/s).</p>
                 </div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5">L'IA ne génère l'avatar que sur les scènes clés — le reste est habillé automatiquement (1 cr/s). Estimation sur le bouton.</div>
+
+              <!-- ma vidéo -->
+              <div id="mtVideoBlock" style="display:none">
+                <div class="mt-eyebrow">2 · Ta vidéo — avatar, face cam, n'importe quelle vidéo parlée</div>
+                <div style="margin-bottom:18px">
+                  <div class="mt-drop" id="mtVideoDrop" onclick="document.getElementById('mtVideoIn').click()" style="padding:30px 18px">
+                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span class="mt-drop-lbl" id="mtVideoName">Importe ta vidéo</span></div>
+                    <span class="mt-drop-sub" id="mtVideoSub">MP4 · MOV · WebM</span>
+                  </div>
+                  <input type="file" id="mtVideoIn" accept="video/*" style="display:none" onchange="mtSetVideo(this.files[0]);this.value=''">
+                </div>
+              </div>
+
+              <!-- site + visuels -->
+              <div id="mtBottomGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                <div>
+                  <div class="mt-eyebrow">Ton site · optionnel</div>
+                  <div style="position:relative">
+                    <span class="faint" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span>
+                    <input class="field" id="mtSite" style="padding-left:40px" placeholder="https://ton-site.com">
+                  </div>
+                  <p class="faint" style="font-size:11px;margin-top:7px">L'IA s'en inspire pour les visuels.</p>
+                </div>
+                <div>
+                  <div class="mt-eyebrow">Tes visuels · optionnel</div>
+                  <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+                  <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
+                  <p class="faint" style="font-size:11px;margin-top:7px">Jusqu'à 8 images/clips, placés au meilleur moment.</p>
+                </div>
+              </div>
             </div>
-            <!-- #119 · plus de champ script : la voix off EST le script → l'IA la transcrit (Scribe) et en déduit tout le montage -->
+
+            <!-- CTA -->
+            <button id="mtGoBtn" onclick="montageGo()" class="btn btn-primary" style="width:100%;margin-top:16px;padding:17px;font-weight:800;font-size:17px;border-radius:16px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+              <span id="mtGoLbl">Créer ma vidéo — 2 crédits</span>
+            </button>
+            <p class="center faint mono" style="font-size:11px;margin-top:10px">Rendu ~30 s · format 9:16 prêt à poster</p>
           </div>
 
-          <div id="mtVideoBlock" style="display:none">
-            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TA VIDÉO <span style="color:var(--text3)">· AVATAR, FACE CAM, N'IMPORTE QUELLE VIDÉO PARLÉE</span></div>
-            <div onclick="document.getElementById('mtVideoIn').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3);margin-bottom:14px">🎥 <span id="mtVideoName">Clique pour importer ta vidéo</span></div>
-            <input type="file" id="mtVideoIn" accept="video/*" style="display:none" onchange="mtSetVideo(this.files[0]);this.value=''">
-          </div>
-
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SITE WEB <span style="color:var(--text3)">· OPTIONNEL — L'IA S'EN INSPIRE POUR LES VISUELS</span></div>
-          <input type="url" id="mtSite" placeholder="https://ton-site.com" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;font-family:var(--font);margin-bottom:14px">
-
-          <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TES IMAGES / VIDÉOS MP4 <span style="color:var(--text3)">· OPTIONNEL — L'IA LES PLACE AU MEILLEUR MOMENT</span></div>
-          <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
-          <div onclick="document.getElementById('mtMediaIn').click()" style="border:1.5px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">🖼️ Ajoute jusqu'à 8 images ou clips (produit, preuve, avant/après…) <span id="mtMediaCount" style="color:var(--orange2);font-weight:700"></span></div>
         </div>
-
-        <button id="mtGoBtn" onclick="montageGo()" class="btn btn-lg" style="width:100%;padding:15px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:14.5px;border:none;border-radius:12px;cursor:pointer;box-shadow:0 6px 22px rgba(255,107,53,.3)">✨ Créer ma vidéo — 2 crédits</button>
       </div>
     </div>
 
@@ -4876,7 +4948,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-18b-mavideo-serveur'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-18c-montage-redesign'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9347,20 +9419,30 @@ let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, li
 function initMontage(){
   const s = document.getElementById('mtSite');
   if(s && !s.value){ try{ s.value = localStorage.getItem('aa_user_site') || ''; }catch(_){} }
+  try{ _mtRenderMedia(); _mtUpdateCost(); }catch(_){}
 }
 function mtSetSrc(src){
   _mt.src = (src === 'mavideo') ? 'mavideo' : 'gameplay';
   const g = document.getElementById('mtSrcGame'), v = document.getElementById('mtSrcVideo');
-  const set = (el, on) => { if(!el) return; el.style.border = on ? '1.5px solid var(--orange2)' : '1.5px solid var(--border)'; el.style.background = on ? 'rgba(255,107,53,.08)' : ''; };
-  set(g, _mt.src === 'gameplay'); set(v, _mt.src === 'mavideo');
+  if(g) g.classList.toggle('on', _mt.src==='gameplay');
+  if(v) v.classList.toggle('on', _mt.src==='mavideo');
   const gb = document.getElementById('mtGameplayBlock'), vb = document.getElementById('mtVideoBlock');
   if(gb) gb.style.display = _mt.src === 'gameplay' ? '' : 'none';
   if(vb) vb.style.display = _mt.src === 'mavideo' ? '' : 'none';
+  _mtUpdateCost();
+}
+// icône ✓ de l'état « rempli » d'une dropzone (design maquette)
+const _MT_CHECK='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+function _mtDropFill(dropId, lblId, subId, label){
+  const drop=document.getElementById(dropId); if(!drop) return;
+  drop.classList.add('filled');
+  const ico=drop.querySelector('.mt-drop-ico'); if(ico) ico.innerHTML=_MT_CHECK;
+  const lbl=document.getElementById(lblId); if(lbl) lbl.textContent=label;
+  const sub=document.getElementById(subId); if(sub) sub.style.display='none';
 }
 function mtSetMp3(f){
   if(!f) return; _mt.mp3 = f; _mt.mp3Dur = 0;
-  const n = document.getElementById('mtMp3Name'); if(n) n.textContent = f.name + ' ✓';
-  // durée de l'audio → estimation du coût lipsync si un avatar est choisi
+  _mtDropFill('mtAudioDrop', 'mtMp3Name', 'mtAudioSub', f.name);
   try{
     const u=URL.createObjectURL(f), a=new Audio();
     a.onloadedmetadata=()=>{ _mt.mp3Dur=isFinite(a.duration)?a.duration:0; URL.revokeObjectURL(u); _mtUpdateCost(); };
@@ -9376,53 +9458,55 @@ function mtSetAvatar(f){
   _mt.avatar = f;
   if(_mt._avUrl){ try{ URL.revokeObjectURL(_mt._avUrl); }catch(_){} }
   _mt._avUrl = URL.createObjectURL(f);
-  const th=document.getElementById('mtAvatarThumb'), nm=document.getElementById('mtAvatarName'), cl=document.getElementById('mtAvatarClear');
-  if(th){ th.src=_mt._avUrl; th.style.display='block'; }
-  if(nm) nm.textContent = f.name + ' ✓ — il parlera ta voix off';
-  if(cl) cl.style.display='block';
+  const drop=document.getElementById('mtAvatarDrop'); if(drop) drop.classList.add('filled');
+  const ico=document.querySelector('#mtAvatarDrop .mt-drop-ico');
+  if(ico) ico.innerHTML='<img src="'+_mt._avUrl+'" style="width:22px;height:22px;border-radius:6px;object-fit:cover;display:block">';
+  const nm=document.getElementById('mtAvatarName'); if(nm) nm.textContent = f.name;
+  const sub=document.getElementById('mtAvatarSub'); if(sub) sub.style.display='none';
+  const cl=document.getElementById('mtAvatarClear'); if(cl) cl.style.display='flex';
   const mw=document.getElementById('mtModelWrap'); if(mw) mw.style.display='block';
   mtSetLipModel(_mt.lipModel);
   toast('🧑 Avatar chargé — lipsync sur ton audio');
 }
 function mtClearAvatar(){
   _mt.avatar = null;
-  const th=document.getElementById('mtAvatarThumb'), nm=document.getElementById('mtAvatarName'), cl=document.getElementById('mtAvatarClear');
-  if(th) th.style.display='none';
-  if(nm) nm.textContent = '🧑 Ajoute une photo d\'avatar — sinon la vidéo reste 100% gameplay (0 cr de lipsync)';
-  if(cl) cl.style.display='none';
+  const drop=document.getElementById('mtAvatarDrop'); if(drop) drop.classList.remove('filled');
+  const ico=document.querySelector('#mtAvatarDrop .mt-drop-ico');
+  if(ico) ico.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>';
+  const nm=document.getElementById('mtAvatarName'); if(nm) nm.textContent = 'Ajoute une photo d\'avatar';
+  const sub=document.getElementById('mtAvatarSub'); if(sub) sub.style.display='';
+  const cl=document.getElementById('mtAvatarClear'); if(cl) cl.style.display='none';
   const mw=document.getElementById('mtModelWrap'); if(mw) mw.style.display='none';
   _mtUpdateCost();
 }
 // #119 · modèle des scènes avatar : Character-3 (économe) ou OmniHuman 1.5 (qualité max)
 function mtSetLipModel(m){
   _mt.lipModel = (m==='omnihuman') ? 'omnihuman' : 'character3';
-  const on='1.5px solid var(--orange2)', off='1.5px solid var(--border)';
-  const bgOn='rgba(255,107,53,.08)';
   const c3=document.getElementById('mtModelC3'), om=document.getElementById('mtModelOmni');
-  if(c3){ c3.style.border=_mt.lipModel==='character3'?on:off; c3.style.background=_mt.lipModel==='character3'?bgOn:''; }
-  if(om){ om.style.border=_mt.lipModel==='omnihuman'?on:off; om.style.background=_mt.lipModel==='omnihuman'?bgOn:''; }
+  if(c3) c3.classList.toggle('on', _mt.lipModel==='character3');
+  if(om) om.classList.toggle('on', _mt.lipModel==='omnihuman');
   _mtUpdateCost();
 }
 // estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
 // que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
 function _mtUpdateCost(){
-  const b=document.getElementById('mtGoBtn'); if(!b) return;
-  if(!_mt.avatar){ b.textContent = '✨ Créer ma vidéo — 2 crédits'; return; }
+  const b=document.getElementById('mtGoLbl'); if(!b) return;
+  if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — 2 crédits'; return; }
   const omni=_mt.lipModel==='omnihuman';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
   const lbl=omni?'OmniHuman':'Character-3';
   if(_mt.mp3Dur){
     const avSec=Math.min(8, Math.max(2, Math.round(_mt.mp3Dur*0.3)));
     const est=Math.ceil(CREDIT_COSTS.montageIA + avSec*rate + Math.max(0,_mt.mp3Dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
-    b.textContent = '✨ Créer ma vidéo — ~'+est+' cr · '+lbl;
+    b.textContent = 'Créer ma vidéo — ~'+est+' cr · '+lbl;
   } else {
-    b.textContent = '✨ Créer ma vidéo — 2 cr + scènes '+lbl+' ('+rate+' cr/s)';
+    b.textContent = 'Créer ma vidéo — 2 cr + scènes '+lbl+' ('+rate+' cr/s)';
   }
 }
 function mtSetVideo(f){
   if(!f || !f.type.startsWith('video/')){ toast('⚠️ Choisis un fichier vidéo'); return; }
   _mt.video = f;
-  const n = document.getElementById('mtVideoName'); if(n) n.textContent = f.name + ' ✓';
+  _mtDropFill('mtVideoDrop', 'mtVideoName', 'mtVideoSub', f.name);
 }
 async function montageGo(){
   // le site est mémorisé une bonne fois — edAiGenerate/orchestrate le récupèrent tout seuls
@@ -9466,24 +9550,41 @@ async function montageGo(){
 // ════════════════════════════════════════════════════════════════════════════
 
 // overlay de progression dédié au flux segmenté (pct<0 → ferme)
+// écran de génération (design maquette MzRunning) : baguette pulsée, 5 étapes, barre + %
+const _MT_STAGES=['Analyse de ta source','Découpe des temps forts','Génération des sous-titres','Placement du b-roll & effets','Montage & rendu final'];
+function _mtAbortRun(){ window._mtAborted=true; if(window._mtPollIv){ clearInterval(window._mtPollIv); window._mtPollIv=null; } _mtProg(-1); toast('Montage annulé'); }
 function _mtProg(pct, label){
   let o=document.getElementById('mtProgOv');
   if(pct<0){ if(o) o.remove(); return; }
   if(!o){
     o=document.createElement('div'); o.id='mtProgOv';
-    o.style.cssText='position:fixed;inset:0;z-index:9700;background:rgba(8,4,2,.88);backdrop-filter:blur(7px);display:grid;place-items:center;padding:20px';
-    o.innerHTML='<div style="width:min(400px,94vw);text-align:center">'
-      +'<div style="font-size:30px;margin-bottom:12px">🎼</div>'
-      +'<div id="mtProgLbl" style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;line-height:1.5">Préparation…</div>'
-      +'<div style="height:8px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden"><div id="mtProgBar" style="height:100%;width:0%;background:linear-gradient(90deg,#FF6B35,#ff8f5e);transition:width .5s"></div></div>'
-      +'<div id="mtProgPct" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:8px">0%</div>'
-      +'<div style="font-size:10.5px;color:var(--text3);margin-top:14px;line-height:1.55">Garde cette page ouverte — la génération des scènes peut prendre quelques minutes.</div></div>';
+    o.style.cssText='position:fixed;inset:0;z-index:9700;background:var(--bg);display:grid;place-items:center;padding:24px;font-family:var(--font)';
+    o.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:460px">'
+      +'<div style="width:78px;height:78px;border-radius:24px;display:grid;place-items:center;margin-bottom:26px;position:relative;background:radial-gradient(120px 90px at 50% 20%, rgba(255,90,31,.4), transparent), var(--surface);border:1px solid var(--accent-line)">'
+        +'<span style="color:var(--accent-2);display:flex"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg></span>'
+        +'<div style="position:absolute;inset:-6px;border-radius:30px;border:1px solid var(--accent-line);opacity:.5;animation:mtRise 1.4s ease-in-out infinite alternate"></div></div>'
+      +'<div class="display" style="font-size:22px;font-weight:800;color:var(--text)">L\'IA monte ta vidéo…</div>'
+      +'<p id="mtProgLbl" class="muted mono" style="font-size:13px;margin-top:8px">'+_MT_STAGES[0]+'</p>'
+      +'<div style="width:100%;max-width:420px;height:8px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:26px"><div id="mtProgBar" style="height:100%;width:0%;border-radius:8px;transition:width .3s;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 0 16px var(--accent-glow)"></div></div>'
+      +'<div class="display" style="font-size:34px;font-weight:800;color:var(--accent-2);margin-top:14px"><span id="mtProgPct">0</span><span style="font-size:16px">%</span></div>'
+      +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:24px;width:100%;max-width:420px;text-align:left"></div>'
+      +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:340px;line-height:1.5">Garde cette page ouverte — le montage peut prendre quelques minutes.</p>'
+      +'<button class="btn-quiet btn-sm" style="margin-top:14px" onclick="_mtAbortRun()">Annuler</button></div>';
     document.body.appendChild(o);
   }
-  const b=document.getElementById('mtProgBar'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct');
+  const stage=Math.min(_MT_STAGES.length-1, Math.floor(pct/100*_MT_STAGES.length));
+  const b=document.getElementById('mtProgBar'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct'), st=document.getElementById('mtProgSteps');
   if(b) b.style.width=Math.round(pct)+'%';
-  if(l && label) l.textContent=label;
-  if(p) p.textContent=Math.round(pct)+'%';
+  if(p) p.textContent=Math.round(pct);
+  if(l) l.textContent = label || _MT_STAGES[stage];
+  if(st) st.innerHTML=_MT_STAGES.map((s,i)=>{
+    const ico = i<stage
+      ? '<span style="color:var(--accent-2);display:flex"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
+      : i===stage
+      ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--accent-2);animation:mtRise .8s infinite alternate"></span>'
+      : '<span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--text-3)"></span>';
+    return '<div style="display:flex;align-items:center;gap:10px;font-size:13px;opacity:'+(i<=stage?1:.4)+'"><span style="display:flex;width:15px;justify-content:center;flex:0 0 auto">'+ico+'</span><span style="color:'+(i<=stage?'var(--text)':'var(--text-3)')+'">'+s+'</span></div>';
+  }).join('');
 }
 
 // extrait [st,en] d'un fichier audio → WAV blob (envoyé à Hedra + orchestrate)
@@ -9730,7 +9831,9 @@ async function _mtSegmentedGenerate(){
 }
 function _mtPollSegmented(jobId, onDone){
   let n=0;
+  window._mtAborted=false;
   const iv=setInterval(async ()=>{
+    if(window._mtAborted){ clearInterval(iv); return; }
     if(++n>180){ clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
     try{
       const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
@@ -21661,8 +21764,20 @@ function _edAiVideoPoster(item){
   }catch(e){ console.warn('poster vidéo:', e); } finally{ URL.revokeObjectURL(src); } };
 }
 function _mtRenderMedia(){
-  const n=document.getElementById('mtMediaCount');
-  if(n) n.textContent = _edAi.files.length ? ('· '+_edAi.files.length+' fichier'+(_edAi.files.length>1?'s':'')+' ✓') : '';
+  const wrap=document.getElementById('mtThumbs'); if(!wrap) return;
+  const files=_edAi.files||[];
+  let html=files.map(a=>
+    '<div class="mt-thumb" style="background:var(--surface-2)">'
+    +(a.url?'<img src="'+a.url+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
+    +'<button onclick="edAiRemoveFile(\''+a.id+'\');_mtRenderMedia()" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:10px;cursor:pointer;border:none;display:grid;place-items:center;line-height:1;padding:0">✕</button>'
+    +'</div>'
+  ).join('');
+  if(files.length<8){
+    html+='<button onclick="document.getElementById(\'mtMediaIn\').click()" class="mt-thumb" style="display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;border-style:dashed;background:var(--panel-1);color:var(--text-3);cursor:pointer">'
+      +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>'
+      +'<span class="mono" style="font-size:8px">'+files.length+'/8</span></button>';
+  }
+  wrap.innerHTML=html;
 }
 function edAiRemoveFile(id){ _edAi.files=_edAi.files.filter(a=>a.id!==id); _edAiRenderFiles(); }
 function _edAiRenderFiles(){
