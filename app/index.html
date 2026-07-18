@@ -1817,6 +1817,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- ⚡ Split Screen actif : génération directe sans chercher le bouton du footer -->
             <button id="genSplitQuickBtn" onclick="startGeneration()" style="display:none;width:100%;margin-bottom:8px;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.3);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">⚡ Générer la vidéo directement</button>
+            <div id="genGameplayOnlyWrap" style="display:none;margin-bottom:8px;padding:11px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:11px">
+              <div style="font-size:12px;font-weight:800;margin-bottom:3px">🎮 Vidéo gameplay seule <span style="font-weight:600;font-size:10.5px;color:var(--text3)">— sans avatar, 0 crédit de lipsync</span></div>
+              <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-bottom:9px">Ta voix off porte le clip gameplay (+ sous-titres). Idéal avec le Montage IA.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                <button onclick="genGameplayOnly('el')" class="btn btn-ghost btn-sm" style="width:100%;padding:9px 6px;font-size:11.5px">🎙 Voix ElevenLabs</button>
+                <button onclick="document.getElementById('genGpOnlyMp3').click()" class="btn btn-ghost btn-sm" style="width:100%;padding:9px 6px;font-size:11.5px">📁 Importer un MP3</button>
+              </div>
+              <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
+            </div>
 
           </div>
 
@@ -3836,6 +3845,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div class="card" style="padding:16px">
                 <div class="label" style="margin-bottom:10px">🎞 Export</div>
                 <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>Exporter MP4</button>
+                <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px">🎬 Rendu final serveur (split + slides) — 2 crédits</button>
+                <div id="edSrvExportStatus" style="display:none;margin-top:7px;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5"></div>
                 <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
                 <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
                 <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
@@ -3977,6 +3988,23 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           Recevoir mon code <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
         </button>
         <div style="font-size:12.5px;color:var(--text-3);text-align:center;margin-top:10px">Pas de mot de passe — un code à 6 chiffres arrive par e-mail</div>
+        <button onclick="authTogglePwd(true)" style="width:100%;margin-top:14px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .18s" onmouseover="this.style.borderColor='var(--border2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-3)'">Je préfère entrer mon mot de passe</button>
+      </div>
+
+      <!-- LOGIN FORM (variante mot de passe — pour ceux qui en ont défini un dans Mon compte) -->
+      <div id="form-login-pwd" style="display:none">
+        <div style="margin-bottom:16px">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Email</div>
+          <input type="email" id="auth-email-pwd" placeholder="ton@email.com" autocomplete="email" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none">
+        </div>
+        <div style="margin-bottom:22px">
+          <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Mot de passe</div>
+          <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')authPwdLogin()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:15px;padding:14px 16px;outline:none">
+        </div>
+        <div id="auth-pwd-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
+        <button onclick="authPwdLogin()" id="pwdLoginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">Se connecter</button>
+        <button onclick="authTogglePwd(false)" style="width:100%;margin-top:14px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer">← Recevoir un code par e-mail</button>
+        <div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:10px;line-height:1.5">Pas encore de mot de passe ? Connecte-toi par code, puis définis-le dans Mon compte.</div>
       </div>
 
       <!-- SIGNUP FORM (étape 1 : prénom + email → code) -->
@@ -4102,6 +4130,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div style="margin-bottom:18px">
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
+      <div class="label" style="margin:14px 0 7px">Mot de passe <span style="font-weight:400;color:var(--text3);font-size:10.5px">· optionnel — pour te connecter sans code e-mail</span></div>
+      <div style="display:flex;gap:8px">
+        <input class="field" type="password" id="accountPassword" placeholder="8 caractères minimum" autocomplete="new-password" style="flex:1">
+        <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Définir</button>
+      </div>
     </div>
     <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
 
@@ -5052,6 +5085,7 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 // ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
 // 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
 const CREDIT_COSTS = {
+  montageRender: 2,       // 🎬 rendu final serveur du Montage IA (MP4 monté par le worker)
   avatarPerSec: 1,        // lipsync Hedra Character-3 (import MP3 : la voix est gratuite)
   voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
   expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
@@ -5293,6 +5327,50 @@ async function _otpCall(payload){
     const r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
     return await r.json();
   }catch(e){ return { error:'network' }; }
+}
+
+// ── Connexion par mot de passe (optionnelle, façon Disney+) : chemin discret sous l'OTP ──
+function authTogglePwd(showPwd){
+  const otp=document.getElementById('form-login'), pwd=document.getElementById('form-login-pwd');
+  if(otp) otp.style.display = showPwd ? 'none' : '';
+  if(pwd) pwd.style.display = showPwd ? '' : 'none';
+  if(showPwd){
+    const em=document.getElementById('auth-email')?.value||'';
+    const emp=document.getElementById('auth-email-pwd');
+    if(emp && em) emp.value=em;
+  }
+}
+async function authPwdLogin(){
+  const email=(document.getElementById('auth-email-pwd')?.value||'').trim().toLowerCase();
+  const password=document.getElementById('auth-password')?.value||'';
+  const err=document.getElementById('auth-pwd-error');
+  const showErr=(m)=>{ if(err){ err.style.display='block'; err.textContent=m; } };
+  if(!email || !password){ showErr('Entre ton e-mail et ton mot de passe'); return; }
+  const btn=document.getElementById('pwdLoginBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Connexion…'; }
+  try{
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){
+      showErr(/invalid/i.test(error.message)
+        ? 'E-mail ou mot de passe incorrect — si tu n\'as jamais défini de mot de passe, connecte-toi par code'
+        : error.message);
+      return;
+    }
+    location.reload(); // la session est persistée → le boot recharge le compte connecté
+  }catch(e){ showErr('Erreur réseau — réessaie'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Se connecter'; } }
+}
+// Mon compte : définir/changer le mot de passe (active la connexion sans code)
+async function accountSetPassword(){
+  const inp=document.getElementById('accountPassword');
+  const pwd=(inp?.value||'');
+  if(pwd.length < 8){ toast('⚠️ 8 caractères minimum'); return; }
+  try{
+    const { error } = await sb.auth.updateUser({ password: pwd });
+    if(error){ toast('⚠️ '+error.message); return; }
+    if(inp) inp.value='';
+    toast('🔐 Mot de passe enregistré — tu peux maintenant te connecter avec');
+  }catch(e){ toast('⚠️ Erreur réseau — réessaie'); }
 }
 
 async function authSendCode(mode){
@@ -6864,14 +6942,44 @@ function _syncCancelBtn(){
   if(!b) return;
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const paid = !['free','byok','developer'].includes(plan) && !!currentMember?.whop_member_id;
-  b.style.display = paid ? '' : 'none'; // '' → inline-flex de la classe .btn
-  if(currentMember?.whop_cancel_at_period_end){
-    b.innerHTML = '<span style="font-size:15px">⏸️</span> Annulation programmée — actif jusqu\'à la fin de la période';
-    b.style.opacity = '.6'; b.style.pointerEvents = 'none';
+  let card = document.getElementById('accountReactivateCard');
+  if(currentMember?.whop_cancel_at_period_end && paid){
+    // 🔁 façon Disney+ : « Tu as changé d'avis ? » + redémarrage en 1 clic
+    b.style.display = 'none';
+    if(!card){
+      card = document.createElement('div'); card.id = 'accountReactivateCard';
+      card.style.cssText = 'width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-top:4px';
+      card.innerHTML = '<div style="font-size:13px;font-weight:800;margin-bottom:4px">Tu as changé d\'avis ?</div>'
+        + '<div style="font-size:11.5px;color:var(--text3);line-height:1.55;margin-bottom:10px">Ton abonnement s\'arrête à la fin de la période déjà payée. Redémarre-le en un clic pour continuer sans interruption — tes crédits mensuels reviennent au prochain renouvellement.</div>'
+        + '<button id="accountReactivateBtn" onclick="reactivateSubscription()" class="btn" style="width:100%;justify-content:center;background:var(--text);color:var(--bg);font-weight:800;padding:11px">→ Redémarrer mon abonnement</button>';
+      b.parentNode.insertBefore(card, b.nextSibling);
+    }
+    card.style.display = 'block';
   } else {
+    if(card) card.style.display = 'none';
+    b.style.display = paid ? '' : 'none'; // '' → inline-flex de la classe .btn
     b.innerHTML = '<span style="font-size:15px">⏸️</span> Annuler l\'abonnement';
     b.style.opacity = ''; b.style.pointerEvents = '';
   }
+}
+// 🔁 Redémarrage de l'abonnement en 1 clic (uncancel Whop)
+async function reactivateSubscription(){
+  const btn = document.getElementById('accountReactivateBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Réactivation…'; }
+  try{
+    const session = (await sb.auth.getSession()).data.session;
+    const res = await fetch(SUPABASE_URL + '/functions/v1/whop-uncancel', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || ''), 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    const out = await res.json().catch(() => ({}));
+    if(!res.ok || out.error){ toast('⚠️ ' + (out.error || 'Erreur — réessaie ou contacte le support')); return; }
+    currentMember.whop_cancel_at_period_end = false;
+    _syncCancelBtn();
+    toast('🎉 Abonnement redémarré — ton plan continue sans interruption !');
+  }catch(e){ toast('⚠️ Erreur réseau — réessaie'); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '→ Redémarrer mon abonnement'; } }
 }
 
 async function saveAccountProfile(){
@@ -9138,9 +9246,34 @@ function _syncClipSectionS4(){
   const splitOn = (typeof splitEnabled !== 'undefined' && splitEnabled);
   const sec = document.getElementById('clipSectionS4');
   if(sec) sec.style.display = (splitOn && !(typeof gameplayFile !== 'undefined' && gameplayFile)) ? '' : 'none';
-  // ⚡ bouton « Générer directement » visible uniquement quand le Split Screen est activé
+  // ⚡ bouton « Générer directement » + 🎮 « Vidéo gameplay seule » : uniquement quand le Split Screen est activé
   const qb = document.getElementById('genSplitQuickBtn');
   if(qb) qb.style.display = splitOn ? 'block' : 'none';
+  const gw = document.getElementById('genGameplayOnlyWrap');
+  if(gw) gw.style.display = splitOn ? 'block' : 'none';
+}
+
+// ── 🎮 Vidéo gameplay seule (split ON, sans avatar) : la voix (ElevenLabs ou MP3 importé)
+// porte le clip gameplay — 0 crédit de lipsync, le pipeline passe en « Audio sur gameplay » ──
+async function genGameplayOnly(source, file){
+  if(source === 'mp3'){
+    if(!file){ toast('⚠️ Choisis un fichier audio'); return; }
+    try{ handleMp4AudioFile(file); }catch(e){ console.warn('handleMp4AudioFile:', e); }
+    mp4AudioFile = file; window.mp4AudioFile = file;
+    mp4AudioEnabled = true; window.mp4AudioEnabled = true;
+  } else {
+    const sc=(document.getElementById('f-script')?.value||'').trim();
+    const hk=(document.getElementById('f-hook')?.value||'').trim();
+    if(!sc && !hk){ toast('⚠️ Écris d\'abord ton script à l\'étape Produit — la voix ElevenLabs le lira'); return; }
+    mp4AudioEnabled = false; window.mp4AudioEnabled = false;
+    mp4AudioFile = null; window.mp4AudioFile = null;
+  }
+  // aucun avatar sélectionné → startGeneration passe en mode « 🎙️ Audio sur gameplay »
+  try{ selAvatar = {}; }catch(_){}
+  const ai=document.getElementById('f-avatarimg'); if(ai) ai.value='';
+  window._bypassHedraOn = false;
+  toast(source==='mp3' ? '🎮 Gameplay + ton audio — génération…' : '🎮 Gameplay + voix ElevenLabs — génération…');
+  startGeneration();
 }
 // #silenceGp · l'outil silences affiche « Gameplay déjà chargé » si un gameplay existe déjà (au lieu de la dropzone vide)
 function _syncSilenceGpDropzone(){
@@ -12960,13 +13093,17 @@ async function startGeneration(){
     } catch(e){ console.warn('Plan revalidation failed:', e); }
   }
 
-  // ── Débit crédits : lipsync 1 cr/s + 0,5 cr/s si voix ElevenLabs (import MP3/vidéo : voix gratuite) ──
+  // ── Débit crédits : lipsync 1 cr/s UNIQUEMENT si un avatar est sélectionné (mode
+  // « audio sur gameplay » = 0 cr de lipsync) + 0,5 cr/s si voix ElevenLabs ──
   if(currentMember && !guestMode){
     const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
     const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
-    const _rate = CREDIT_COSTS.avatarPerSec + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
-    const ok = await spendCreditsFor(durSecs * _rate, 'avatar');
-    if(!ok) return;
+    const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
+    const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
+    if(_rate > 0){
+      const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
+      if(!ok) return;
+    }
   }
 
   step=5; updateSteps();
@@ -20834,6 +20971,7 @@ function edRedo(){ if(!_ed||!_ed._redo||!_ed._redo.length){ toast('Rien à refai
    sous-titres Punch mot-à-mot (dessinés au canvas, preview + export).
    ══════════════════════════════════════════════════════════════════════ */
 const ORCHESTRATE_FN = SUPABASE_URL + '/functions/v1/orchestrate';
+const RENDERJOB_FN = SUPABASE_URL + '/functions/v1/render-job';
 let _edAi = { files: [], busy: false };
 
 function openEdAiModal(){
@@ -21052,6 +21190,7 @@ async function edAiGenerate(){
     const res=await fetch(ORCHESTRATE_FN, { method:'POST', headers: await getAuthHeader(), body: fd });
     const data=await res.json().catch(()=>({}));
     if(!res.ok || !data.ok) throw new Error(data.error || ('Erreur '+res.status));
+    _ed.aiPlanRaw = { duration, ...data.plan }; // plan brut complet → rendu final serveur
     edAiApply(data.plan, toSource);
     closeEdAiModal();
   } catch(e){
@@ -21127,7 +21266,67 @@ function edAiApply(plan, toSource){
   _ed.aiSlides = (plan.slides && plan.slides.length) ? plan.slides : null;
 
   edRefreshTimeline(); edRenderTracks(); edRenderOvTrack(); edRenderLayers();
+  const seb=document.getElementById('edSrvExportBtn'); if(seb) seb.style.display='flex';
   toast('✨ Montage IA appliqué : '+nZoom+' zooms'+(_ed.aiSlides?' · '+_ed.aiSlides.length+' slides (visibles au rendu final)':'')+' · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
+}
+
+// ── 🎬 Rendu final serveur (#113) : la vidéo + le plan partent au render-worker,
+// qui rend le split-screen/slides/mix audio et dépose le MP4 dans render-media ──
+async function edServerExport(){
+  if(!_ed || !_ed.clips || !_ed.clips.length){ toast('⚠️ Charge d\'abord une vidéo'); return; }
+  if(!_ed.aiPlanRaw){ toast('⚠️ Lance d\'abord un Montage IA — le rendu serveur suit son plan'); return; }
+  if(_ed.clips.length > 1 || (_ed.clips[0].deletes||[]).length){
+    toast('⚠️ Rendu serveur : dispo sur la vidéo d\'origine sans coupes (la timeline coupée arrive bientôt)'); return;
+  }
+  if(!(await spendCreditsFor(CREDIT_COSTS.montageRender, 'rendu final serveur'))) return;
+  const btn=document.getElementById('edSrvExportBtn'), st=document.getElementById('edSrvExportStatus');
+  const setSt=(t)=>{ if(st){ st.style.display=t?'block':'none'; st.textContent=t; } };
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+  try{
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) throw new Error('Reconnecte-toi puis réessaie');
+    setSt('⬆️ Envoi de ta vidéo…');
+    const inPath = user.id + '/in-' + Date.now() + '.mp4';
+    const f = _ed.clips[0].file;
+    const { error: upErr } = await sb.storage.from('render-media').upload(inPath, f, { contentType: f.type || 'video/mp4' });
+    if(upErr) throw new Error('upload : ' + upErr.message);
+    const assets=[];
+    for(const b of (_ed.aiPlanRaw.broll||[])){
+      const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
+      const p = user.id + '/as-' + a.id + '.jpg';
+      const { error: aErr } = await sb.storage.from('render-media').upload(p, a.file, { upsert: true });
+      if(!aErr) assets.push({ id: a.id, path: p });
+    }
+    setSt('🎬 Rendu en cours sur le serveur… (1 à 3 min)');
+    const r = await fetch(RENDERJOB_FN, { method:'POST', headers: { ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan:_ed.aiPlanRaw, input_video: inPath, assets }) });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('Erreur '+r.status));
+    _edPollRenderJob(d.job_id, btn, setSt);
+  }catch(e){
+    console.error('edServerExport:', e);
+    toast('⚠️ Rendu serveur : ' + String(e.message||e).slice(0,110));
+    setSt(''); if(btn){ btn.disabled=false; btn.style.opacity=''; }
+  }
+}
+function _edPollRenderJob(jobId, btn, setSt){
+  let n=0;
+  const iv=setInterval(async ()=>{
+    if(++n > 180){ clearInterval(iv); setSt('⚠️ Rendu trop long — réessaie plus tard'); if(btn){ btn.disabled=false; btn.style.opacity=''; } return; }
+    try{
+      const r=await fetch(RENDERJOB_FN, { method:'POST', headers: { ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
+      const d=await r.json().catch(()=>({}));
+      if(d.status==='done' && d.url){
+        clearInterval(iv); setSt('');
+        if(btn){ btn.disabled=false; btn.style.opacity=''; }
+        toast('✅ Vidéo finale prête — téléchargement lancé !');
+        const a=document.createElement('a'); a.href=d.url; a.download='montage-final.mp4'; document.body.appendChild(a); a.click(); a.remove();
+      } else if(d.status==='failed'){
+        clearInterval(iv); setSt('');
+        if(btn){ btn.disabled=false; btn.style.opacity=''; }
+        toast('⚠️ Rendu échoué : ' + String(d.error||'réessaie').slice(0,110));
+      }
+    }catch(_){ /* réseau : on retentera au prochain tick */ }
+  }, 5000);
 }
 
 // ── Depuis le Générateur (étape 5) : ouvre la vidéo avatar dans l'Éditeur, prête à monter ──
