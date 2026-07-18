@@ -9728,7 +9728,7 @@ async function _mtSegmentedGenerate(){
     toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120));
   }
 }
-function _mtPollSegmented(jobId){
+function _mtPollSegmented(jobId, onDone){
   let n=0;
   const iv=setInterval(async ()=>{
     if(++n>180){ clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
@@ -9736,9 +9736,12 @@ function _mtPollSegmented(jobId){
       const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
       const d=await r.json().catch(()=>({}));
       if(d.status==='done' && d.url){
-        clearInterval(iv); _mtProg(100,'Terminé !'); setTimeout(()=>_mtProg(-1), 800);
+        clearInterval(iv);
         toast('✅ Ta vidéo montée est prête — téléchargement lancé !');
         const a=document.createElement('a'); a.href=d.url; a.download='montage-ia.mp4'; document.body.appendChild(a); a.click(); a.remove();
+        // carte de fin (Terminé / Ajuster) au lieu de refermer sur l'Éditeur
+        if(typeof onDone==='function') onDone();
+        else { _mtProg(100,'Terminé !'); setTimeout(()=>_mtProg(-1), 800); }
       } else if(d.status==='failed'){
         clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
       } else {
@@ -9810,7 +9813,7 @@ async function _mtServerRender(){
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan:_ed.aiPlanRaw, input_video:inPath, assets }) });
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
-    _mtPollSegmented(d.job_id); // même poll/download que le flux segmenté
+    _mtPollSegmented(d.job_id, _mtVideoDone); // à la fin : carte de choix, pas de dépôt dans l'Éditeur
   }catch(e){ console.error('rendu serveur module:', e); _mtProg(-1); toast('⚠️ Rendu serveur : '+String(e.message||e).slice(0,110)); }
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
