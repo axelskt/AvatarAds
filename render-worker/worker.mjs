@@ -7,7 +7,7 @@
 //
 // Modes :
 //   node worker.mjs --local test/job --output out.mp4 [--draft]
-//       job/ = { base.mp4, plan.json, assets/<id>.jpg… }  (aucun réseau)
+//       job/ = { base.mp4, plan.json, assets/<id>.jpg|.mp4… }  (aucun réseau)
 //   node worker.mjs
 //       boucle : réclame les jobs 'queued' de la table render_jobs (Supabase),
 //       télécharge les entrées du storage, rend, uploade le MP4, marque done.
@@ -73,8 +73,27 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     if (existsSync(assetsDir)) {
       for (const f of readdirSync(assetsDir)) {
         const id = f.replace(/\.[^.]+$/, '')
-        copyFileSync(join(assetsDir, f), join(proj, 'media', f))
-        assetFiles[id] = 'media/' + f
+        const src = join(assetsDir, f)
+        if (/\.(mp4|mov|webm|m4v)$/i.test(f)) {
+          // b-roll VIDÉO (#111) : normalise en H.264 muet ≤1280px — décodage garanti
+          // dans le rendu headless (les .mov iPhone sont souvent en HEVC)
+          try {
+            execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src,
+              '-vf', "scale='min(1280,iw)':-2", '-an',
+              '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20',
+              '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
+            assetFiles[id] = 'media/' + id + '.mp4'
+          } catch (e) {
+            // clip illisible → première frame en JPEG, le rendu ne doit pas échouer
+            try {
+              execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-frames:v', '1', '-q:v', '3', join(proj, 'media', id + '.jpg')])
+              assetFiles[id] = 'media/' + id + '.jpg'
+            } catch (_) { console.warn('asset b-roll ignoré (illisible):', f) }
+          }
+        } else {
+          copyFileSync(src, join(proj, 'media', f))
+          assetFiles[id] = 'media/' + f
+        }
       }
     }
 
@@ -170,7 +189,11 @@ async function pollLoop() {
         await dl(job.input_video, join(jobDir, 'base.mp4'))
         writeFileSync(join(jobDir, 'plan.json'), JSON.stringify(job.plan))
         mkdirSync(join(jobDir, 'assets'), { recursive: true })
-        for (const a of job.assets || []) await dl(a.path, join(jobDir, 'assets', a.id + '.jpg'))
+        for (const a of job.assets || []) {
+          // extension du chemin (as-x.jpg / as-x.mp4) — les b-roll peuvent être des clips
+          const ext = (String(a.path).match(/\.(\w{2,4})$/) || [])[1] || 'jpg'
+          await dl(a.path, join(jobDir, 'assets', a.id + '.' + ext))
+        }
 
         const out = join(jobDir, 'final.mp4')
         await renderJob(jobDir, out)

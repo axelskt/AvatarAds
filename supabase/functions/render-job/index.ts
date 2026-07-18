@@ -7,7 +7,8 @@
 // spendCreditsFor AVANT l'appel (pattern des autres proxys).
 //
 // POST JSON :
-//   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path}] } -> { ok, job_id }
+//   { action:'create', plan:{...}, input_video:'<uid>/in-x.mp4', assets:[{id,path,kind}] } -> { ok, job_id }
+//   (kind: 'image' | 'video' — #111, les b-roll peuvent etre des clips qui jouent)
 //   { action:'status', job_id } -> { ok, status, url?, error? }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -46,7 +47,11 @@ serve(async (req: Request) => {
       const input = String(body.input_video || '')
       if (!input.startsWith(user.id + '/')) return json({ error: 'input_video invalide' }, 400)
       const assets = (Array.isArray(body.assets) ? body.assets : []).slice(0, 8)
-        .map((a: { id?: string; path?: string }) => ({ id: String(a.id || '').slice(0, 40), path: String(a.path || '') }))
+        .map((a: { id?: string; path?: string; kind?: string }) => ({
+          id: String(a.id || '').slice(0, 40),
+          path: String(a.path || ''),
+          kind: a.kind === 'video' ? 'video' : 'image',
+        }))
         .filter((a: { id: string; path: string }) => a.id && a.path.startsWith(user.id + '/'))
 
       // garde-fou : pas plus de 2 jobs en attente/rendu par utilisateur
