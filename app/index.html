@@ -3322,8 +3322,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5">L'IA ne génère l'avatar que sur les scènes clés — le reste est habillé automatiquement (1 cr/s). Estimation sur le bouton.</div>
             </div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:7px">TON SCRIPT <span style="color:var(--text3)">· OPTIONNEL — SOUS-TITRES PARFAITS</span></div>
-            <textarea id="mtScript" rows="3" placeholder="Colle le texte exact de ta voix off (sinon l'IA transcrit toute seule)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px 12px;font-size:12.5px;line-height:1.55;resize:vertical;font-family:var(--font);margin-bottom:14px"></textarea>
+            <!-- #119 · plus de champ script : la voix off EST le script → l'IA la transcrit (Scribe) et en déduit tout le montage -->
           </div>
 
           <div id="mtVideoBlock" style="display:none">
@@ -4876,6 +4875,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 <script>
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
+// marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
+const AA_BUILD = '2026-07-18-montage-serveur'; window.__AA_BUILD = AA_BUILD;
+try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Proxies Supabase — les clés API restent côté serveur (secrets Supabase)
