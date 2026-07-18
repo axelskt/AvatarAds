@@ -239,8 +239,12 @@ const PLAN_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['start', 'end', 'reason'],
-        properties: { start: { type: 'number' }, end: { type: 'number' }, reason: { type: 'string' } },
+        required: ['start', 'end', 'format', 'reason'],
+        properties: {
+          start: { type: 'number' }, end: { type: 'number' },
+          format: { type: 'string', enum: ['portrait', 'paysage'] },
+          reason: { type: 'string' },
+        },
       },
     },
     slides: {
@@ -281,7 +285,7 @@ type Plan = {
   slides: { type: string; start: number; end: number; title: string; wide: boolean; items: { text: string; t: number }[] }[]
   face: { cy: number } | null
   detected: { subtitles: boolean }
-  avatarSegments: { start: number; end: number; reason?: string }[]
+  avatarSegments: { start: number; end: number; format?: string; reason?: string }[]
 }
 
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
@@ -332,7 +336,7 @@ FULL ECRAN = la personne plein cadre (zooms punch, b-roll, hook). SPLIT = pendan
 - Les ~3 dernieres secondes (CTA / chute) : soit full ecran (scene avatar OU gameplay), soit une CARTE motion-design (slide type card) qui affiche l'action a faire — choisis selon le type de video (pas besoin de l'avatar a la fin si une carte fait le job). Cale la borne sur le DEBUT de la phrase de CTA.
 - Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card) : une slide dure le temps de sa ou ses phrases (2 a 6s). Entre deux slides, reviens en full ecran 1.5 a 4s avec un zoom punch sur un mot fort.
 - SLIDES : title court MAJUSCULES ("" si inutile) ; items[].text 2 a 5 mots MAJUSCULES percutants ; CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript (il apparait PILE quand c'est dit), t dans [start, end] de sa slide, items en ordre chronologique.
-- CADRAGE VIDEO PENDANT LES SLIDES : chaque slide porte wide. wide=false => la video remplit la moitie basse (9:16 croppe). wide=true => la video devient une bande CINEMA 16:9 centree dans la moitie basse (bandes noires, look premium). ALTERNE les deux d'une slide a l'autre pour varier le format (jamais deux slides consecutives avec le meme wide si possible).
+- CADRAGE VIDEO PENDANT LES SLIDES : chaque slide porte wide. wide=false => la video remplit la moitie basse (9:16 croppe). wide=true => la video devient une bande CINEMA 16:9 centree dans la moitie basse (bandes noires, look premium). ALTERNE les deux d'une slide a l'autre pour varier le format (jamais deux slides consecutives avec le meme wide si possible). Si une scene avatar paysage est sous la slide, wide sera force a true au rendu.
 - ZOOMS et B-ROLL : UNIQUEMENT pendant les passages full ecran, JAMAIS pendant une slide (garde 0.5s de marge autour des slides).
 - SFX : whoosh a chaque changement de cadre (entree ET sortie de slide), pop/click sur les items de slide marquants.
 - Si un CONTEXTE PRODUIT (site web) est fourni, les slides refletent les VRAIES fonctionnalites, offres et chiffres du produit — pas d'invention.`
@@ -366,7 +370,10 @@ B-ROLL (images utilisateur, plein ecran par-dessus la video) : place CHAQUE imag
 
 SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur les enumerations, riser avant le CTA, success/ding sur une preuve ou un resultat. Maximum 1 SFX par 1.5s. Les timestamps tombent sur les evenements qu'ils soulignent.
 
-SCENES AVATAR (lipsync segmente, economie MAXIMALE) : dans avatarSegments, liste les fenetres PLEIN ECRAN ou l'on VOIT la personne parler face camera. Le lipsync ne sera genere QUE sur ces fenetres (chaque seconde d'avatar coute cher), donc mets une scene avatar UNIQUEMENT quand voir le visage a un vrai impact. Nombre selon le TYPE de video : de 1 a 5 scenes. Le HOOK est presque toujours une scene avatar (le visage cree la confiance des la 1re seconde) — et PARFOIS une seule scene (le hook) suffit pour toute la video. Le CTA n'a PAS besoin d'etre une scene avatar : une carte motion-design (slide card) peut tres bien porter l'action a faire. N'ajoute des scenes avatar au milieu que si un temps fort le justifie vraiment. JAMAIS pendant une slide (la, c'est le gameplay qui occupe le bas). Bornes calees sur des fins de phrase. Si le montage est 100% gameplay/voix off (aucun visage), avatarSegments = [].
+SCENES AVATAR (lipsync segmente, economie MAXIMALE) : dans avatarSegments, liste les fenetres ou l'on VOIT la personne parler face camera. Le lipsync ne sera genere QUE sur ces fenetres (chaque seconde d'avatar coute cher), donc mets une scene avatar UNIQUEMENT quand voir le visage a un vrai impact. Chaque scene porte un format :
+- format "portrait" (9:16) = la personne PLEIN ECRAN, en dehors des slides. C'est le format du hook et des temps forts.
+- format "paysage" (16:9) = la personne dans la moitie basse PENDANT une slide (bande cinema sous la slide). Utilise-le quand le passage est incarne (la personne explique, temoigne) ; sinon laisse le gameplay sous la slide (aucune scene = hyperframes seul).
+ALTERNE selon l'AUDIO : le HOOK est presque toujours une scene portrait (le visage cree la confiance des la 1re seconde) — et PARFOIS une seule scene (le hook) suffit pour toute la video. Le CTA n'a PAS besoin d'etre une scene avatar : une carte motion-design (slide card) peut porter l'action. 1 a 6 scenes au total selon la dynamique. Une scene portrait ne chevauche JAMAIS une slide ; une scene paysage est TOUJOURS pendant une slide. Bornes calees sur des fins de phrase. Si le montage est 100% gameplay/voix off (aucun visage), avatarSegments = [].
 
 HOOK TEXTE : si les 3 premieres secondes contiennent une accroche forte, un texte MAJUSCULES de 5 mots max qui la resume (start 0, end <= 3). Sinon null.
 
@@ -528,15 +535,20 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
   const face = (plan.face && typeof plan.face.cy === 'number') ? { cy: r2(clamp(plan.face.cy, 0.1, 0.9)) } : null
   const detected = { subtitles: !!(plan.detected && plan.detected.subtitles) }
 
-  // #119 scenes avatar : fenetres plein ecran (JAMAIS pendant une slide), fusionnees
-  const avatarSegments: { start: number; end: number }[] = []
+  // #119 scenes avatar : portrait = plein ecran (hors slides), paysage = sous une slide.
+  // Un segment du mauvais cote est reclasse ; chevauchements fusionnes par format.
+  const inAnySlide = (a: { start: number; end: number }) => slides.some((s) => a.start < s.end && a.end > s.start)
+  const avatarSegments: { start: number; end: number; format: string }[] = []
   for (const a of (plan.avatarSegments || [])
-    .map((a) => ({ start: r2(clamp(a.start, 0, D)), end: r2(clamp(a.end, 0, D)) }))
+    .map((a) => ({
+      start: r2(clamp(a.start, 0, D)), end: r2(clamp(a.end, 0, D)),
+      format: a.format === 'paysage' ? 'paysage' : 'portrait',
+    }))
     .filter((a) => a.end > a.start + 0.4)
-    .filter((a) => !slides.some((s) => a.start < s.end && a.end > s.start))
+    .map((a) => ({ ...a, format: inAnySlide(a) ? 'paysage' : 'portrait' }))
     .sort((a, b) => a.start - b.start)) {
     const last = avatarSegments[avatarSegments.length - 1]
-    if (last && a.start <= last.end + 0.1) last.end = Math.max(last.end, a.end)
+    if (last && a.start <= last.end + 0.1 && last.format === a.format) last.end = Math.max(last.end, a.end)
     else avatarSegments.push({ ...a })
   }
 
@@ -638,7 +650,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '1.0',
+      version: '1.1',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
