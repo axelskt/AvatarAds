@@ -179,9 +179,9 @@ async function pollLoop() {
         const { error: upErr } = await sb.storage.from('render-media')
           .upload(outKey, readFileSync(out), { contentType: 'video/mp4', upsert: true })
         if (upErr) throw new Error('upload: ' + upErr.message)
-        const outputUrl = `${url}/storage/v1/object/public/render-media/${outKey}`
-        await sb.from('render_jobs').update({ status: 'done', output_url: outputUrl, updated_at: new Date().toISOString() }).eq('id', job.id)
-        console.log('✅ job', job.id, '→', outputUrl)
+        // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
+        await sb.from('render_jobs').update({ status: 'done', output_url: outKey, updated_at: new Date().toISOString() }).eq('id', job.id)
+        console.log('✅ job', job.id, '→', outKey)
       } catch (e) {
         console.error('✗ job', job.id, e.message)
         await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
