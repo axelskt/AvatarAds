@@ -9429,17 +9429,7 @@ async function montageGo(){
 
   if(_mt.src === 'mavideo'){
     if(!_mt.video){ toast('⚠️ Importe d\'abord ta vidéo'); return; }
-    toast('🪄 Ouverture dans l\'Éditeur — l\'IA analyse et monte ta vidéo…');
-    nav('studio');
-    edLoadFile(_mt.video);
-    const t0 = Date.now();
-    (function waitReady(){
-      if(_ed && _ed.clips && _ed.clips.length){
-        openEdAiModal();
-        setTimeout(()=>edAiGenerate(), 400);
-      } else if(Date.now() - t0 < 12000) setTimeout(waitReady, 300);
-    })();
-    return;
+    return _mtVideoGenerate(); // montage AUTO → MP4 direct (l'Éditeur reste optionnel)
   }
 
   // gameplay + audio : un MP3 de base OBLIGATOIRE (vraie voix ou TTS externe — résultat maîtrisé)
@@ -9754,6 +9744,42 @@ function _mtPollSegmented(jobId){
       }
     }catch(_){ /* réseau : on retentera au prochain tick */ }
   }, 5000);
+}
+// #119 · module « 📼 Ma vidéo » → montage AUTOMATIQUE + MP4 direct, SANS travailler dans
+// l'Éditeur. Il sert juste de moteur de rendu client (canvas hors-DOM) sous un overlay ;
+// il reste accessible en option « ajuster » à la fin. (Le split-screen/slides complet =
+// rendu serveur, quand le worker tourne — le rendu client fait zooms + b-roll + sous-titres
+// + SFX + musique, ce qui suffit pour un MP4 direct immédiat.)
+async function _mtVideoGenerate(){
+  const site=(document.getElementById('mtSite')?.value||'').trim();
+  try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
+  _mtProg(6, 'Ouverture de ta vidéo…');
+  nav('studio');
+  edLoadFile(_mt.video);
+  _edAi.presetScript = (document.getElementById('mtScript')?.value||'').trim(); // → sous-titres parfaits
+  if(site){ const es=document.getElementById('edAiSite'); if(es) es.value=site; }
+  const t0=Date.now();
+  (function waitReady(){
+    if(_ed && _ed.clips && _ed.clips.length){
+      _mtProg(14, 'L\'IA analyse et monte ta vidéo… (~30 s)');
+      window._mtVideoFlow = true;   // edAiApply enchaînera l'export auto + overlay
+      window._mtAutoExport = true;  // déclenche edExport() après l'application du plan
+      edAiGenerate();
+    } else if(Date.now()-t0 < 12000){ setTimeout(waitReady, 300); }
+    else { _mtProg(-1); toast('⚠️ Impossible de charger ta vidéo — réessaie'); }
+  })();
+}
+// carte de fin du flux « Ma vidéo » : MP4 téléchargé → terminer (retour module) ou ajuster
+function _mtVideoDone(){
+  _mtProg(100, 'Terminé !');
+  const o=document.getElementById('mtProgOv'); if(!o) return;
+  o.innerHTML='<div style="width:min(400px,94vw);text-align:center">'
+    +'<div style="font-size:34px;margin-bottom:10px">✅</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:6px">Ton MP4 monté est prêt</div>'
+    +'<div style="font-size:12px;color:var(--text3);line-height:1.55;margin-bottom:18px">Le téléchargement est lancé. Tu peux le peaufiner dans l\'Éditeur si tu veux.</div>'
+    +'<button onclick="_mtProg(-1);nav(\'montage\')" style="width:100%;padding:12px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px">✅ Terminé</button>'
+    +'<button onclick="_mtProg(-1)" style="width:100%;padding:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font)">✏️ Ajuster dans l\'Éditeur</button>'
+    +'</div>';
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
 function _mtShowChoice(){
@@ -21713,7 +21739,7 @@ async function edAiGenerate(){
   if(_edAi.busy || !_ed || !_ed.clips || !_ed.clips.length) return;
   const btn=document.getElementById('edAiGo'), st=document.getElementById('edAiStatus');
   const setStatus=(t)=>{ if(st){ st.style.display='block'; st.textContent=t; } };
-  if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
+  if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))){ if(window._mtVideoFlow){ window._mtVideoFlow=false; window._mtAutoExport=false; _mtProg(-1); } return; }
   _edAi.busy=true; if(btn){ btn.disabled=true; btn.style.opacity='.6'; btn.textContent='⏳ Montage en cours…'; }
   try {
     const { blob, duration, toSource } = await edExtractTimelineAudio(setStatus);
@@ -21750,6 +21776,7 @@ async function edAiGenerate(){
     toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120));
     setStatus('');
     if(st) st.style.display='none';
+    if(window._mtVideoFlow){ window._mtVideoFlow=false; window._mtAutoExport=false; _mtProg(-1); }
   } finally {
     _edAi.busy=false;
     if(btn){ btn.disabled=false; btn.style.opacity=''; btn.textContent='✨ Générer le montage — '+CREDIT_COSTS.montageIA+' crédits'; }
@@ -21865,8 +21892,17 @@ function edAiApply(plan, toSource){
   // ⬇️ flux « MP4 final directement » : le montage est appliqué → export automatique
   if(window._mtAutoExport){
     window._mtAutoExport=false;
-    toast('⬇️ Montage appliqué — export du MP4 en cours…');
-    setTimeout(()=>{ try{ edExport(); }catch(e){ console.error('auto-export:', e); toast('⚠️ Export auto impossible — clique « Exporter MP4 »'); } }, 900);
+    const videoFlow=!!window._mtVideoFlow; window._mtVideoFlow=false;
+    if(videoFlow) _mtProg(55, 'Rendu du MP4 monté… (garde la page ouverte)');
+    else toast('⬇️ Montage appliqué — export du MP4 en cours…');
+    setTimeout(async ()=>{
+      let mirror=null;
+      if(videoFlow){ const st=document.getElementById('edExportStatus');
+        mirror=setInterval(()=>{ const m=(st&&st.textContent||'').match(/(\d+)%/); if(m) _mtProg(Math.min(99, 55+Math.round(0.42*parseInt(m[1]))), 'Rendu du MP4 monté… '+m[1]+'%'); }, 500); }
+      try{ await edExport(); if(videoFlow) _mtVideoDone(); }
+      catch(e){ console.error('auto-export:', e); if(videoFlow) _mtProg(-1); toast('⚠️ Export auto impossible — clique « Exporter MP4 »'); }
+      finally{ if(mirror) clearInterval(mirror); }
+    }, 900);
   }
   toast('✨ Montage IA appliqué : '+nZoom+' zooms'+(_ed.aiSlides?' · '+_ed.aiSlides.length+' slides (visibles au rendu final)':'')+' · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
 }
