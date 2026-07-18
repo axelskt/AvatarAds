@@ -21372,7 +21372,8 @@ function edAiApply(plan, toSource){
     const start=remap(b.start), end=Math.max(start+0.5, remap(b.end));
     const img=new Image();
     img.onload=()=>{
-      const scale=Math.max(_ed.dispW/img.width, _ed.dispH/img.height);
+      // 🪄 carte flottante centrée (comme au rendu final) — plus de plein écran brut
+      const scale=Math.min((_ed.dispW*0.78)/img.width, (_ed.dispH*0.5)/img.height);
       const w=img.width*scale, h=img.height*scale;
       const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', img, url:asset.url, x:(_ed.dispW-w)/2, y:(_ed.dispH-h)/2, w, h, crop:{t:0,r:0,b:0,l:0}, start, end };
       _ed.overlays.push(ov); edBuildOverlayEl(ov); edRenderLayers(); edRenderOvTrack();
