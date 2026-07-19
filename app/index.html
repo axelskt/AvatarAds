@@ -5045,7 +5045,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19o-remboursement'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19p-credits-blindes'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5328,8 +5328,14 @@ const CREDIT_COSTS = {
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
 // Débit unifié : vérifie le solde, débite côté serveur (RPC anti-triche), met l'UI à jour
+// #122b · Verrou anti double-débit : le bouton n'est désactivé qu'APRÈS le débit,
+// or le débit est un aller-retour réseau (~200 ms). Un double-clic lançait donc
+// DEUX débits (et deux générations). Les débits successifs d'un même flux ne sont
+// pas concernés : ils sont séquentiels, jamais simultanés.
+let _spendLock = false;
 async function spendCreditsFor(amount, label){
   if(typeof currentMember==='undefined' || !currentMember){ showPaywall(); return false; }
+  if(_spendLock){ toast('⏳ Une génération est déjà en cours — patiente'); return false; }
   if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
   // Free → paywall direct dès qu'une action payante (API) se lance — #69/#40 « à l'action »
   if(_isFreePlan()){ showPlansSheet(); return false; }
@@ -5339,7 +5345,10 @@ async function spendCreditsFor(amount, label){
     _insufficientCredits(amount - creditsBalance());
     return false;
   }
-  const { data, error } = await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null });
+  _spendLock = true;
+  let data, error;
+  try { ({ data, error } = await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null })); }
+  finally { _spendLock = false; }
   if(error){ console.warn('spend_credits:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
   if(!data || data.ok !== true){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
   currentMember.credits_remaining = data.balance;
@@ -7864,6 +7873,7 @@ const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, fra
 async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()), 'image'))) return;
   const orig = btn ? btn.innerHTML : null;
   if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> '+(spinLabel||'Traitement…'); }
@@ -7887,7 +7897,7 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
     _imgRenderHistory();
     const rem=_imgMonthRemaining();
     toast('✨ Terminé · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
-  }catch(e){ toast('⚠️ '+(e.message||e)); }
+  }catch(e){ await creditsFlowRefund(); toast('⚠️ '+(e.message||e)); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
@@ -8584,6 +8594,7 @@ async function generateImage(){
   const count = _imgSelectedCount || 1;
   const actualCount = count;
   // Débit crédits : low 1 · Standard 3 · Max 5, multiplié par le nombre d'images
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))) return;
 
   const btn = document.getElementById('imgGenBtn');
@@ -9519,6 +9530,7 @@ function _updateReuseBar(){
 
 async function reuseLastVideo(){
   // Réutiliser un avatar déjà généré : 2 crédits (aucun coût API, valeur d'usage)
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.reuseAvatar, 'reuse'))) return;
   try {
     const cache = JSON.parse(localStorage.getItem('avatarads_lastHedra') || 'null');
@@ -9566,7 +9578,7 @@ async function reuseLastVideo(){
 
     const dateStr = cache.date ? ' · ' + cache.date : '';
     toast('♻️ Session complète restaurée' + dateStr + ' — 0 crédit consommé !');
-  } catch(e){ toast('⚠️ Erreur réutilisation : ' + e.message); }
+  } catch(e){ await creditsFlowRefund(); toast('⚠️ Erreur réutilisation : ' + e.message); }
 }
 
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
@@ -10959,6 +10971,7 @@ async function whisperTranscribe(){
     toast('⚠️ Whisper IA disponible avec les plans Pro, Élite et BYOK');
     return;
   }
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.whisper, 'whisper'))) return;
 
   // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync)
@@ -11030,6 +11043,7 @@ async function whisperTranscribe(){
       toast('⚠️ Aucun texte détecté par Whisper');
     }
   } catch(e){
+    await creditsFlowRefund();
     let raw = String(e.message || e);
     let msg = raw.slice(0, 200);
     // Détection des erreurs fréquentes
@@ -20065,6 +20079,7 @@ async function cartoonGenVideo(btn){
 
   } catch(e){
     clearInterval(progInt);
+    await creditsFlowRefund();
     console.error(_mLabel+' error:', e);
     toast('⚠️ Erreur '+_mLabel+' : ' + e.message);
     document.getElementById('cartoonVidProgress').style.display = 'none';
@@ -20422,6 +20437,7 @@ function _acDrawWaveform(data, sr, keepSegs, totalLen){
 async function _acAnalyze(){
   if(!_acAudioBlob){ toast('⚠️ Charge un fichier audio d\'abord'); return; }
   // 1 crédit fixe pour « Supprimer les silences » — le débruitage éventuel est inclus (0 crédit en plus)
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.audioClean, 'audioclean'))) return;
   const btn   = document.getElementById('acAnalyzeBtn');
   const tipEl = document.getElementById('acTip');
@@ -20532,6 +20548,7 @@ async function _acAnalyze(){
 
   } catch(e){
     console.error('_acAnalyze:', e);
+    await creditsFlowRefund();
     toast('⚠️ Erreur : ' + (e.message||e).slice(0,80));
     if(btn){ btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-3px;margin-right:7px\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>Supprimer les silences automatiquement</span>'; btn.disabled = false; }
   }
@@ -22498,6 +22515,7 @@ async function edServerExport(){
   if(_ed.clips.length > 1 || (_ed.clips[0].deletes||[]).length){
     toast('⚠️ Rendu serveur : dispo sur la vidéo d\'origine sans coupes (la timeline coupée arrive bientôt)'); return;
   }
+  creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.montageRender, 'rendu final serveur'))) return;
   const btn=document.getElementById('edSrvExportBtn'), st=document.getElementById('edSrvExportStatus');
   const setSt=(t)=>{ if(st){ st.style.display=t?'block':'none'; st.textContent=t; } };
@@ -22532,6 +22550,7 @@ async function edServerExport(){
     _edPollRenderJob(d.job_id, btn, setSt);
   }catch(e){
     console.error('edServerExport:', e);
+    await creditsFlowRefund();
     toast('⚠️ Rendu serveur : ' + String(e.message||e).slice(0,110));
     setSt(''); if(btn){ btn.disabled=false; btn.style.opacity=''; }
   }
