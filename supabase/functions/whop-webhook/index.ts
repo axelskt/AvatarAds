@@ -157,8 +157,23 @@ serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 
-  // DEBUG TEMPORAIRE : capture du payload brut pour caler le parsing sur le format réel Whop V1
-  try { await sb.from('webhook_events').insert({ body: event }) } catch (_) {}
+  // ── #123 · VERROU D'IDEMPOTENCE ──────────────────────────────────────────
+  // Whop (Svix) REJOUE un webhook tant qu'il n'a pas reçu de 2xx. L'achat d'un
+  // pack de crédits INCRÉMENTE le solde → un rejeu créditait DEUX FOIS pour un
+  // seul paiement. L'index unique sur webhook_events.event_id fait le verrou :
+  // si l'insertion échoue, l'événement a déjà été traité, on sort en 200.
+  const eventId = req.headers.get('webhook-id') ?? req.headers.get('svix-id') ?? null
+  if (eventId) {
+    const { error: dupErr } = await sb.from('webhook_events').insert({ event_id: eventId, body: event })
+    if (dupErr) {
+      console.log(`↩️ Webhook ${eventId} déjà traité — rejeu ignoré (${dupErr.code || 'conflit'})`)
+      return new Response('OK (déjà traité)', { status: 200 })
+    }
+  } else {
+    // pas d'identifiant fourni : on journalise seulement (on ne peut pas dédoublonner)
+    console.warn('⚠️ Webhook sans identifiant — impossible de détecter un rejeu')
+    try { await sb.from('webhook_events').insert({ body: event }) } catch (_) {}
+  }
 
   const findProfile = async () => {
     if (!email) return null
