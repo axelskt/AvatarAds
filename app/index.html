@@ -5008,7 +5008,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19j-erreurs-fr'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19k-annuler-plat'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9817,7 +9817,7 @@ function _mtProg(pct, label){
       +'<div class="display" style="font-size:34px;font-weight:800;color:var(--accent-2);margin-top:14px"><span id="mtProgPct">0</span><span style="font-size:16px">%</span></div>'
       +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:24px;width:100%;max-width:420px;text-align:left"></div>'
       +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:340px;line-height:1.5">Garde cette page ouverte — le montage peut prendre quelques minutes.</p>'
-      +'<button class="btn-quiet btn-sm" style="margin-top:14px" onclick="_mtAbortRun()">Annuler</button></div>';
+      +'<button class="btn-quiet btn-sm" style="margin-top:14px;background:none;border:none;box-shadow:none;-webkit-appearance:none;appearance:none;color:var(--text-2);font-family:var(--font);font-size:13.5px;cursor:pointer" onclick="_mtAbortRun()">Annuler</button></div>';
     document.body.appendChild(o);
   }
   const stage=Math.min(_MT_STAGES.length-1, Math.floor(pct/100*_MT_STAGES.length));
