@@ -351,15 +351,17 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   2. SPLIT (layout "split") = la video glisse dans la moitie basse, une slide motion design sombre occupe la moitie haute. Types : flow, checklist, compare, stat, card.
   3. PLEIN CADRE (layout "full") = la video DISPARAIT, une scene editoriale sur fond creme occupe tout l'ecran (gros titre noir + sur-titre) et les sous-titres passent dessus. C'est le rythme le plus fort visuellement : garde-le pour les moments cles (une demonstration, un chiffre, un avant/apres, une punchline). Types : nodes, loop, bars, kpi, timer, versus, punch.
   4. BANDEAU (layout "banner") = la personne reste plein ecran et une carte titre noire se pose en haut de l'image. Parfait pour poser le sujet au debut ou annoncer une partie.
-- DOSAGE sur toute la video : vise ~35 a 45% full ecran, ~25 a 35% split, ~20 a 30% plein cadre, plus 1 ou 2 bandeaux. JAMAIS deux scenes du meme rythme a la suite. JAMAIS plus de 5s dans le meme rythme.
-- TYPES PLEIN CADRE — choisis selon ce qui est DIT :
-    nodes  = une chaine de 2 a 4 etapes reliees ("de X a Y a Z"). items[].text = 1 a 3 mots.
-    loop   = un cycle de 3 ou 4 elements qui tourne en boucle ; center = le mot au centre (ex "AUTO").
-    bars   = 3 a 5 valeurs comparees ; chaque item porte value ("534K") et label ("VUES").
-    kpi    = UN chiffre marquant qui monte, avec courbe : value = le chiffre ("8750"), unit = ce qu'il mesure ("ABONNES GAGNES").
-    timer  = une duree qui s'effondre ("3 jours -> 3 minutes") : value = secondes affichees au chrono, unit = "CHRONO".
-    versus = 2 options opposees : item 0 = celle qu'on rejette, item 1 = celle qu'on garde ; chacun text (le nom), value (le prix/chiffre), label (l'unite, ex "PAR MOIS").
-    punch  = une phrase courte, enorme, seule a l'ecran (la punchline).
+- REGLE ABSOLUE — C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis JAMAIS un rythme ou un type pour "faire varier" ou pour remplir un quota. Tu pars de CE QUI EST DIT a cet instant et tu prends la scene qui l'illustre le mieux. Si aucune scene ne colle a la phrase, tu restes en FULL ECRAN — c'est un choix valable et frequent. Une video ou 3 scenes seulement sont justifiees vaut mille fois mieux qu'une video ou tu as case 8 scenes decoratives.
+- TOUT LE TEXTE AFFICHE VIENT DE SA BOUCHE : chaque title, item, value, label reprend SES mots (condenses en 2 a 5 mots), avec SON vocabulaire. Tu n'inventes RIEN : pas un chiffre qu'il n'a pas prononce, pas une etape qu'il n'a pas citee, pas un prix, pas une marque, pas une statistique. Si le chiffre n'est ni dit ni visible a l'image (ni dans le contexte produit fourni), le type kpi/bars/versus est INTERDIT — prends autre chose.
+- Consequence naturelle : comme un script alterne les idees (une enumeration, puis une preuve, puis une punchline), les rythmes alternent d'eux-memes. Verifie juste a la fin que tu n'as pas 2 scenes IDENTIQUES collees ni plus de 5s sans le moindre changement visuel : si ca arrive, c'est le signe qu'une des deux scenes n'etait pas justifiee — SUPPRIME-LA (repasse en full ecran) plutot que d'en inventer une autre.
+- TYPES PLEIN CADRE — le declencheur est ce qui est DIT, chacun a sa condition d'entree :
+    nodes  — SI il enonce un enchainement de 2 a 4 etapes ("tu fais X, puis Y, et t'obtiens Z"). items[].text = 1 a 3 mots, ses mots.
+    loop   — SI il decrit un cycle qui se repete tout seul ("et ca recommence", "en boucle", "tous les jours") ; center = le mot qui resume la boucle.
+    bars   — SI il cite 3 a 5 chiffres COMPARABLES a voix haute ; chaque item porte value (le chiffre EXACT qu'il dit) et label (ce qu'il compte).
+    kpi    — SI il assene UN chiffre marquant : value = ce chiffre EXACT, unit = ce qu'il mesure, avec ses mots.
+    timer  — SI il oppose deux durees ("avant ca me prenait 3 jours, la c'est 3 minutes") : value = les secondes du chrono, unit = "CHRONO".
+    versus — SI il oppose explicitement 2 options : item 0 = celle qu'il rejette, item 1 = celle qu'il garde ; text (le nom qu'IL emploie), value (le prix/chiffre s'il le dit, "" sinon), label (l'unite, ex "PAR MOIS").
+    punch  — SI c'est une punchline, une phrase choc qui se suffit : sa phrase, raccourcie, seule a l'ecran.
   Chaque scene plein cadre porte eyebrow (sur-titre court MAJUSCULES, ex "ETAPE 01", "RESULTAT") et title (2 a 4 mots MAJUSCULES ; utilise " / " pour forcer un retour a la ligne).
 - BANDEAU : eyebrow (sur-titre), title (la phrase, " / " pour couper la ligne), accent = LE mot du titre a colorer en orange (doit apparaitre tel quel dans title), sub = une ligne de preuve courte. Duree 2 a 3s.
 - Une scene PLEIN CADRE ne doit jamais tomber sur un segment avatar (la personne serait masquee pour rien).
@@ -475,7 +477,7 @@ Analyse d'abord la video, puis genere le plan de montage.`,
 const r2 = (n: number) => Math.round(n * 100) / 100
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
+export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = []): Plan {
   const D = duration
   const sections = (plan.sections || [])
     .map((s) => ({ ...s, start: r2(clamp(s.start, 0, D)), end: r2(clamp(s.end, 0, D)), label: String(s.label || '').slice(0, 60) }))
@@ -524,6 +526,32 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
     .filter((s) => s.layout !== 'full' || s.items.length > 0 || ['kpi', 'timer'].includes(s.type))
     .sort((a, b) => a.start - b.start)
     .slice(0, 24)
+  // ── GARDE-FOU ANTI-INVENTION ────────────────────────────────────────────────
+  // Une scene doit parler de ce que l'utilisateur dit A CE MOMENT-LA : au moins un
+  // mot significatif de la scene doit avoir ete REELLEMENT prononce dans sa fenetre
+  // (+/- 1.5 s). Sinon c'est du contenu invente ou mal cale -> on la jette (on revient
+  // en plein ecran, ce qui est toujours un choix valable).
+  const STOP = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'toute', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'faire', 'fait', 'etre', 'cest', 'quand', 'comme', 'alors'])
+  const keys = (s: string) => String(s || '').split(/\s+/).map(norm)
+    .filter((k) => (k.length >= 4 && !STOP.has(k)) || /^\d+$/.test(k))
+  const spokenAround = (a: number, b: number) => {
+    const set = new Set<string>()
+    for (const w of words) if (w.end > a - 1.5 && w.start < b + 1.5) { const k = norm(w.text); if (k.length > 2) set.add(k) }
+    return set
+  }
+  const echoesScript = (s: typeof slides[number]) => {
+    if (!words.length) return true
+    const mine = [s.title, s.value, s.unit, s.sub, s.center, ...s.items.flatMap((it) => [it.text, it.value, it.label])]
+      .flatMap(keys)
+    if (!mine.length) return true
+    const said = spokenAround(s.start, s.end)
+    return mine.some((k) => said.has(k)
+      || [...said].some((w) => (w.length >= 4 && k.length >= 4 && (w.includes(k) || k.includes(w))) || sim(w, k) >= 0.82))
+  }
+  const grounded = slides.filter(echoesScript)
+  slides.length = 0
+  slides.push(...grounded)
+
   // les scenes qui occupent le cadre (split + plein cadre) ne peuvent pas se chevaucher ;
   // les bandeaux vivent sur une couche a part (poses sur la video plein ecran)
   const visual = slides.filter((s) => s.layout !== 'banner')
@@ -711,7 +739,7 @@ serve(async (req: Request) => {
     const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic)
 
     // 4. bornes/cohérence côté serveur
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id))
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 5. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
