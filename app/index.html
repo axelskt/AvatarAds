@@ -1807,13 +1807,21 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div style="font-size:12px;font-weight:800">🎮 Clip gameplay seul <span style="font-weight:600;font-size:10.5px;color:var(--text3)">— sans avatar · 0 crédit de lipsync</span></div>
                   <span id="genGpOnlyChev" style="color:var(--text3);font-size:11px;flex-shrink:0">▾</span>
                 </div>
-                <div id="genGpOnlyBody" style="display:none;padding:0 12px 11px">
-                  <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-bottom:9px">Ta voix off porte le clip gameplay (+ sous-titres). Idéal avec le Montage IA.</div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-                    <button onclick="genGameplayOnly('el')" class="btn btn-ghost btn-sm" style="width:100%;padding:9px 6px;font-size:11.5px">🎙 Générer avec la voix ElevenLabs</button>
-                    <button onclick="document.getElementById('genGpOnlyMp3').click()" class="btn btn-ghost btn-sm" style="width:100%;padding:9px 6px;font-size:11.5px">📁 Importer un MP3 et générer</button>
-                  </div>
+                <div id="genGpOnlyBody" style="display:none;padding:0 12px 12px">
+                  <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-bottom:10px">Ta voix off porte le clip gameplay (+ sous-titres). Idéal avec le Montage IA.</div>
+                  <!-- A · réutiliser un clip gameplay de la bibliothèque -->
+                  <button onclick="openClipPickerModal()" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left">
+                    <span style="font-weight:800;font-size:12px">🎮 Clip gameplay</span>
+                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">Choisis un clip dans la bibliothèque</span>
+                  </button>
+                  <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:8px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
+                  <!-- B · générer un gameplay IA depuis un audio (importable ici si absent) -->
+                  <button onclick="_genGpFromAudio()" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left">
+                    <span style="font-weight:800;font-size:12px">✨ Génération d'un gameplay IA</span>
+                    <span id="genGpAudioSub" style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio</span>
+                  </button>
                   <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
+                  <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>
                 </div>
               </div>
             </div>
@@ -2981,8 +2989,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="card" style="padding:24px">
 
           <!-- Source info -->
-          <div id="acSourceInfo" class="field mono faint" style="margin-bottom:18px;font-size:12.5px;padding:12px 14px">
-            🎙️ Source : <span id="acSourceLabel">aucun fichier audio détecté — va dans le Générateur étape 3 pour charger ta voix</span>
+          <!-- affiché UNIQUEMENT quand un audio est chargé (sinon la dropzone juste en dessous suffit) -->
+          <div id="acSourceInfo" class="field mono faint" style="display:none;margin-bottom:18px;font-size:12.5px;padding:12px 14px">
+            🎙️ Source : <span id="acSourceLabel"></span>
           </div>
 
           <!-- Upload audio standalone -->
@@ -3344,7 +3353,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- gameplay -->
               <div id="mtGameplayBlock">
-                <div class="mt-eyebrow">2 · Ton audio — la voix qui porte la vidéo</div>
+                <div class="mt-eyebrow">2 · Ton audio</div>
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtAudioDrop" onclick="document.getElementById('mtMp3In').click()">
                     <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><span class="mt-drop-lbl" id="mtMp3Name">Importe ta voix off</span></div>
@@ -3353,7 +3362,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
                 </div>
 
-                <div class="mt-eyebrow">3 · Ton avatar · optionnel — il parle en lipsync</div>
+                <div class="mt-eyebrow">3 · Ton avatar · optionnel</div>
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
                     <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="mt-drop-lbl" id="mtAvatarName">Ajoute une photo d'avatar</span></div>
@@ -3385,7 +3394,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- ma vidéo -->
               <div id="mtVideoBlock" style="display:none">
-                <div class="mt-eyebrow">2 · Ta vidéo — avatar, face cam, n'importe quelle vidéo parlée</div>
+                <div class="mt-eyebrow">2 · Ta vidéo</div>
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtVideoDrop" onclick="document.getElementById('mtVideoIn').click()" style="padding:30px 18px">
                     <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span class="mt-drop-lbl" id="mtVideoName">Importe ta vidéo</span></div>
@@ -3401,9 +3410,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="mt-eyebrow">Ton site · optionnel</div>
                   <div style="position:relative">
                     <span class="faint" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span>
-                    <input class="field" id="mtSite" style="padding-left:40px" placeholder="https://ton-site.com">
+                    <input class="field" id="mtSite" style="padding-left:40px" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
                   </div>
-                  <p class="faint" style="font-size:11px;margin-top:7px">L'IA s'en inspire pour les visuels.</p>
                 </div>
                 <div>
                   <div class="mt-eyebrow">Tes visuels · optionnel</div>
@@ -4958,7 +4966,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19b-lipsync-perseconde'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19c-ux-nettoyage'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9399,6 +9407,21 @@ function _genGpOnlyToggle(){
   const open = b.style.display==='none';
   b.style.display = open ? 'block' : 'none';
   if(c) c.textContent = open ? '▴' : '▾';
+  if(open) _genGpSyncAudioSub();
+}
+// le sous-titre du bouton « gameplay IA » dit si un audio est déjà là (sinon on en importe un)
+function _genGpSyncAudioSub(){
+  const s=document.getElementById('genGpAudioSub'); if(!s) return;
+  const f=(typeof mp4AudioFile!=='undefined' && mp4AudioFile) || window.mp4AudioFile;
+  s.textContent = f ? ('audio prêt : '+String(f.name||'ton audio').slice(0,28)+' — clique pour générer')
+                    : 'à partir d\'un audio — clique pour l\'importer';
+}
+// 🎮 gameplay IA depuis un audio : si un audio est déjà chargé on génère directement,
+// sinon pas de blocage → on ouvre simplement l'import pour en choisir un
+function _genGpFromAudio(){
+  const f=(typeof mp4AudioFile!=='undefined' && mp4AudioFile) || window.mp4AudioFile;
+  if(f){ genGameplayOnly('mp3', f); return; }
+  const inp=document.getElementById('genGpOnlyMp3'); if(inp) inp.click();
 }
 
 // ── 🎮 Vidéo gameplay seule (split ON, sans avatar) : la voix (ElevenLabs ou MP3 importé)
@@ -9426,9 +9449,21 @@ async function genGameplayOnly(source, file){
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
 let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3' };
+// 💾 le site de l'user est mémorisé 14 jours → pré-rempli à son retour (gain de temps)
+const MT_SITE_TTL = 14*24*60*60*1000;
+function mtSaveSite(){
+  const v=(document.getElementById('mtSite')?.value||'').trim();
+  try{
+    if(v){ localStorage.setItem('aa_user_site', v); localStorage.setItem('aa_user_site_ts', String(Date.now())); }
+    else { localStorage.removeItem('aa_user_site_ts'); }
+  }catch(_){}
+}
 function initMontage(){
   const s = document.getElementById('mtSite');
-  if(s && !s.value){ try{ s.value = localStorage.getItem('aa_user_site') || ''; }catch(_){} }
+  if(s && !s.value){ try{
+    const ts = parseInt(localStorage.getItem('aa_user_site_ts')||'0', 10);
+    if(ts && (Date.now()-ts) < MT_SITE_TTL) s.value = localStorage.getItem('aa_user_site') || '';
+  }catch(_){} }
   try{ _mtRenderMedia(); _mtUpdateCost(); }catch(_){}
 }
 function mtSetSrc(src){
@@ -19904,6 +19939,7 @@ function initAudioCleanView(){
   const existingLbl = document.getElementById('silenceSourceLabel');
   if(existingLbl && existingLbl.textContent && !existingLbl.textContent.includes('aucun')){
     lbl.textContent = existingLbl.textContent;
+    const si=document.getElementById('acSourceInfo'); if(si) si.style.display='block';
     const analyzeBtn = document.getElementById('acAnalyzeBtn');
     if(analyzeBtn){ analyzeBtn.disabled = false; analyzeBtn.style.opacity = '1'; }
   }
@@ -19916,6 +19952,7 @@ function _acHandleFile(file){
   document.getElementById('acFileInfo').style.display    = 'block';
   document.getElementById('acFileName').textContent      = file.name;
   document.getElementById('acSourceLabel').textContent   = '📂 ' + file.name;
+  { const si=document.getElementById('acSourceInfo'); if(si) si.style.display='block'; } // visible seulement avec un fichier
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
   // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
