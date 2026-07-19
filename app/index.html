@@ -14233,6 +14233,7 @@ async function startGeneration(){
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
     const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
     if(_rate > 0){
+      creditsFlowBegin();  // #122 : remboursable si la génération échoue
       const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
       if(!ok) return;
     }
@@ -14382,6 +14383,10 @@ async function startGeneration(){
       } catch(e){ console.warn('Clean audio for Hedra failed, using original:', e); }
     }
     hedraUrl = await callHedra(hedraAudioBlob);
+    // callHedra renvoie '' quand la génération a échoué (il a déjà prévenu l'user) :
+    // les crédits de CE flux repartent chez lui plutôt que de disparaître. #122
+    if(!hedraUrl) await creditsFlowRefund('la génération de l\'avatar a échoué');
+    else creditsFlowDone();
     setStep('gp3','done');
 
   } else if(audioBlob && !_hasRealAvatar){
