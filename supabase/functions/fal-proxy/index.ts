@@ -26,7 +26,7 @@ const json = (body: unknown, status = 200) =>
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
 // noms de secret tolérés (au cas où la clé serait nommée autrement)
-const KEY_NAMES = ['FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET']
+const KEY_NAMES = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET']
 const readKey = () => {
   for (const n of KEY_NAMES) { const v = Deno.env.get(n); if (v) return { name: n, value: v } }
   return { name: '', value: '' }
@@ -44,7 +44,7 @@ serve(async (req: Request) => {
     return json({ ok: true, hasKey: !!falKey, found: keyName || null, checked: KEY_NAMES, keyLength: falKey ? falKey.length : 0 })
   }
 
-  if (!falKey) return json({ error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FAL_KEY)' }, 500)
+  if (!falKey) return json({ error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' }, 500)
 
   // ── session utilisateur obligatoire (comme hedra-proxy) ──
   const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
