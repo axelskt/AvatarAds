@@ -252,20 +252,32 @@ const PLAN_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['type', 'start', 'end', 'title', 'wide', 'items'],
+        required: ['type', 'layout', 'start', 'end', 'title', 'eyebrow', 'accent', 'sub', 'center', 'value', 'unit', 'wide', 'items'],
         properties: {
-          type: { type: 'string', enum: ['flow', 'checklist', 'compare', 'stat', 'card'] },
+          type: { type: 'string', enum: ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner'] },
+          layout: { type: 'string', enum: ['split', 'full', 'banner'] },
           start: { type: 'number' },
           end: { type: 'number' },
           title: { type: 'string' },
+          eyebrow: { type: 'string' },   // sur-titre des scenes plein cadre / bandeaux ("" sinon)
+          accent: { type: 'string' },    // bandeau : le mot du titre colore ("" sinon)
+          sub: { type: 'string' },       // bandeau : ligne de preuve ("" sinon)
+          center: { type: 'string' },    // loop : mot au centre ("" sinon)
+          value: { type: 'string' },     // kpi/timer : chiffre principal ("" sinon)
+          unit: { type: 'string' },      // kpi/timer : ce que mesure le chiffre ("" sinon)
           wide: { type: 'boolean' },
           items: {
             type: 'array',
             items: {
               type: 'object',
               additionalProperties: false,
-              required: ['text', 't'],
-              properties: { text: { type: 'string' }, t: { type: 'number' } },
+              required: ['text', 't', 'value', 'label'],
+              properties: {
+                text: { type: 'string' },
+                t: { type: 'number' },
+                value: { type: 'string' },  // bars/versus : le chiffre ("" sinon)
+                label: { type: 'string' },  // bars/versus : le libelle sous le chiffre ("" sinon)
+              },
             },
           },
         },
@@ -282,7 +294,11 @@ type Plan = {
   hook: { text: string; start: number; end: number } | null
   accents: string[]
   music: { mood: string } | null
-  slides: { type: string; start: number; end: number; title: string; wide: boolean; items: { text: string; t: number }[] }[]
+  slides: {
+    type: string; layout?: string; start: number; end: number; title: string; wide: boolean
+    eyebrow?: string; accent?: string; sub?: string; center?: string; value?: string; unit?: string
+    items: { text: string; t: number; value?: string; label?: string }[]
+  }[]
   face: { cy: number } | null
   detected: { subtitles: boolean }
   avatarSegments: { start: number; end: number; format?: string; reason?: string }[]
@@ -330,11 +346,26 @@ async function claudePlan(
     .join(' ')
 
   const styleBlock = `
-ALTERNANCE FULL ECRAN / SPLIT (le coeur du format) : la video alterne deux cadres.
-FULL ECRAN = la personne plein cadre (zooms punch, b-roll, hook). SPLIT = pendant chaque slide, la video glisse dans la moitie basse de l'ecran et la slide motion design occupe la moitie haute (fond sombre) pour illustrer ce qui est dit.
-- Les ~3 premieres secondes (l'accroche) : TOUJOURS full ecran, AUCUNE slide — cale la borne sur la FIN de la phrase d'accroche. Zoom punch bienvenu sur le mot fort.
+LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre du debut a la fin. Tu alternes QUATRE rythmes, et tu changes de rythme toutes les 2 a 5s.
+  1. FULL ECRAN (layout absent) = la personne plein cadre : zooms punch, b-roll, respiration.
+  2. SPLIT (layout "split") = la video glisse dans la moitie basse, une slide motion design sombre occupe la moitie haute. Types : flow, checklist, compare, stat, card.
+  3. PLEIN CADRE (layout "full") = la video DISPARAIT, une scene editoriale sur fond creme occupe tout l'ecran (gros titre noir + sur-titre) et les sous-titres passent dessus. C'est le rythme le plus fort visuellement : garde-le pour les moments cles (une demonstration, un chiffre, un avant/apres, une punchline). Types : nodes, loop, bars, kpi, timer, versus, punch.
+  4. BANDEAU (layout "banner") = la personne reste plein ecran et une carte titre noire se pose en haut de l'image. Parfait pour poser le sujet au debut ou annoncer une partie.
+- DOSAGE sur toute la video : vise ~35 a 45% full ecran, ~25 a 35% split, ~20 a 30% plein cadre, plus 1 ou 2 bandeaux. JAMAIS deux scenes du meme rythme a la suite. JAMAIS plus de 5s dans le meme rythme.
+- TYPES PLEIN CADRE — choisis selon ce qui est DIT :
+    nodes  = une chaine de 2 a 4 etapes reliees ("de X a Y a Z"). items[].text = 1 a 3 mots.
+    loop   = un cycle de 3 ou 4 elements qui tourne en boucle ; center = le mot au centre (ex "AUTO").
+    bars   = 3 a 5 valeurs comparees ; chaque item porte value ("534K") et label ("VUES").
+    kpi    = UN chiffre marquant qui monte, avec courbe : value = le chiffre ("8750"), unit = ce qu'il mesure ("ABONNES GAGNES").
+    timer  = une duree qui s'effondre ("3 jours -> 3 minutes") : value = secondes affichees au chrono, unit = "CHRONO".
+    versus = 2 options opposees : item 0 = celle qu'on rejette, item 1 = celle qu'on garde ; chacun text (le nom), value (le prix/chiffre), label (l'unite, ex "PAR MOIS").
+    punch  = une phrase courte, enorme, seule a l'ecran (la punchline).
+  Chaque scene plein cadre porte eyebrow (sur-titre court MAJUSCULES, ex "ETAPE 01", "RESULTAT") et title (2 a 4 mots MAJUSCULES ; utilise " / " pour forcer un retour a la ligne).
+- BANDEAU : eyebrow (sur-titre), title (la phrase, " / " pour couper la ligne), accent = LE mot du titre a colorer en orange (doit apparaitre tel quel dans title), sub = une ligne de preuve courte. Duree 2 a 3s.
+- Une scene PLEIN CADRE ne doit jamais tomber sur un segment avatar (la personne serait masquee pour rien).
+- Les ~3 premieres secondes (l'accroche) : TOUJOURS full ecran, AUCUNE slide split ni plein cadre — cale la borne sur la FIN de la phrase d'accroche. Un BANDEAU y est le bienvenu, et un zoom punch sur le mot fort.
 - Les ~3 dernieres secondes (CTA / chute) : soit full ecran (scene avatar OU gameplay), soit une CARTE motion-design (slide type card) qui affiche l'action a faire — choisis selon le type de video (pas besoin de l'avatar a la fin si une carte fait le job). Cale la borne sur le DEBUT de la phrase de CTA.
-- Entre les deux : ALTERNE les cadres. Passe en slide quand le contenu s'y prete (enumeration -> checklist, processus -> flow, opposition -> compare, chiffre -> stat, punchline -> card) : une slide dure le temps de sa ou ses phrases (2 a 6s). Entre deux slides, reviens en full ecran 1.5 a 4s avec un zoom punch sur un mot fort.
+- Entre les deux : ALTERNE les 4 rythmes. Le contenu decide du type (enumeration -> checklist, processus -> flow ou nodes, opposition -> compare ou versus, chiffre -> stat ou kpi ou bars, cycle -> loop, duree -> timer, punchline -> card ou punch) : une scene dure le temps de sa ou ses phrases (2 a 6s). Entre deux scenes, reviens en full ecran 1.5 a 4s avec un zoom punch sur un mot fort.
 - SLIDES : title court MAJUSCULES ("" si inutile) ; items[].text 2 a 5 mots MAJUSCULES percutants ; CHAQUE item porte t = timestamp EXACT du mot correspondant dans le transcript (il apparait PILE quand c'est dit), t dans [start, end] de sa slide, items en ordre chronologique.
 - CADRAGE VIDEO PENDANT LES SLIDES : chaque slide porte wide. wide=false => la video remplit la moitie basse (9:16 croppe). wide=true => la video devient une bande CINEMA 16:9 centree dans la moitie basse (bandes noires, look premium). ALTERNE les deux d'une slide a l'autre pour varier le format (jamais deux slides consecutives avec le meme wide si possible). Si une scene avatar paysage est sous la slide, wide sera force a true au rendu.
 - ZOOMS et B-ROLL : UNIQUEMENT pendant les passages full ecran, JAMAIS pendant une slide (garde 0.5s de marge autour des slides).
@@ -452,31 +483,64 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
     .sort((a, b) => a.start - b.start)
 
   // slides d'abord : hook (~debut) et CTA (~fin) restent en full ecran
-  const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card']
+  const SPLIT_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card']
+  const FULL_TYPES = ['nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch']
+  const SLIDE_TYPES = [...SPLIT_TYPES, ...FULL_TYPES, 'banner']
+  const txt = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
   const slideMin = Math.min(2, r2(D * 0.2))
   const slideMax = Math.max(slideMin + 1, r2(D - 2))
   const slides = (plan.slides || [])
-    .map((s) => ({
-      type: String(s.type || ''),
-      start: r2(clamp(s.start, slideMin, D)),
-      end: r2(clamp(s.end, 0, slideMax)),
-      title: String(s.title || '').toUpperCase().slice(0, 40),
-      wide: !!s.wide,
-      items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
-        .map((it) => ({ text: String(it.text || '').toUpperCase().slice(0, 60), t: r2(clamp(it.t, 0, D)) }))
-        .filter((it) => it.text.trim()),
-    }))
-    .filter((s) => SLIDE_TYPES.includes(s.type) && s.items.length > 0 && s.end > s.start + 0.5)
+    .map((s) => {
+      const type = String(s.type || '')
+      // le layout se deduit du type si l'IA l'a oublie (ou l'a mis en contradiction)
+      const layout = type === 'banner' ? 'banner' : FULL_TYPES.includes(type) ? 'full' : 'split'
+      return {
+        type,
+        layout,
+        // un bandeau peut se poser des la 1re seconde (la video reste visible dessous)
+        start: r2(clamp(s.start, layout === 'banner' ? 0.3 : slideMin, D)),
+        end: r2(clamp(s.end, 0, layout === 'banner' ? r2(D - 0.3) : slideMax)),
+        title: txt(s.title, 60).toUpperCase(),
+        eyebrow: txt(s.eyebrow, 34).toUpperCase(),
+        accent: txt(s.accent, 30).toUpperCase(),
+        sub: txt(s.sub, 70),
+        center: txt(s.center, 14).toUpperCase(),
+        value: txt(s.value, 12),
+        unit: txt(s.unit, 26).toUpperCase(),
+        wide: !!s.wide,
+        items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
+          .map((it) => ({
+            text: txt(it.text, 60).toUpperCase(),
+            t: r2(clamp(it.t, 0, D)),
+            value: txt(it.value, 12),
+            label: txt(it.label, 26).toUpperCase(),
+          }))
+          .filter((it) => it.text.trim()),
+      }
+    })
+    // un bandeau n'a pas d'items ; les autres en exigent au moins un
+    .filter((s) => SLIDE_TYPES.includes(s.type) && s.end > s.start + 0.5
+      && (s.layout === 'banner' ? !!s.title : s.items.length > 0))
+    .filter((s) => s.layout !== 'full' || s.items.length > 0 || ['kpi', 'timer'].includes(s.type))
     .sort((a, b) => a.start - b.start)
-    .slice(0, 20)
-  for (let i = 1; i < slides.length; i++) {
-    if (slides[i].start < slides[i - 1].end) slides[i - 1].end = r2(Math.max(slides[i - 1].start + 0.5, slides[i].start))
+    .slice(0, 24)
+  // les scenes qui occupent le cadre (split + plein cadre) ne peuvent pas se chevaucher ;
+  // les bandeaux vivent sur une couche a part (poses sur la video plein ecran)
+  const visual = slides.filter((s) => s.layout !== 'banner')
+  for (let i = 1; i < visual.length; i++) {
+    if (visual[i].start < visual[i - 1].end) visual[i - 1].end = r2(Math.max(visual[i - 1].start + 0.5, visual[i].start))
   }
   for (const s of slides) {
     for (const it of s.items) it.t = r2(clamp(it.t, s.start, Math.max(s.start, s.end - 0.2)))
     s.items.sort((a, b) => a.t - b.t)
   }
-  const inSlide = (t: number, margin = 0.5) => slides.some((s) => t >= s.start - margin && t <= s.end + margin)
+  // un bandeau n'a de sens que sur du plein ecran : on jette ceux qui tombent sur une autre scene
+  const cleanSlides = slides.filter((s) => s.layout !== 'banner'
+    || !visual.some((v) => s.start < v.end + 0.2 && s.end > v.start - 0.2))
+  slides.length = 0
+  slides.push(...cleanSlides.sort((a, b) => a.start - b.start))
+
+  const inSlide = (t: number, margin = 0.5) => slides.some((s) => s.layout !== 'banner' && t >= s.start - margin && t <= s.end + margin)
 
   const broll = (plan.broll || [])
     .filter((b) => assetIds.includes(b.assetId))
@@ -537,7 +601,11 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
 
   // #119 scenes avatar : portrait = plein ecran (hors slides), paysage = sous une slide.
   // Un segment du mauvais cote est reclasse ; chevauchements fusionnes par format.
-  const inAnySlide = (a: { start: number; end: number }) => slides.some((s) => a.start < s.end && a.end > s.start)
+  // "paysage" = sous une slide SPLIT uniquement (un bandeau laisse la video plein ecran)
+  const inSplitSlide = (a: { start: number; end: number }) => slides.some((s) => s.layout === 'split' && a.start < s.end && a.end > s.start)
+  // une scene PLEIN CADRE masque la video : inutile de payer un lipsync dessous
+  const hiddenByFull = (a: { start: number; end: number }) => slides.some((s) =>
+    s.layout === 'full' && a.start >= s.start - 0.15 && a.end <= s.end + 0.15)
   const avatarSegments: { start: number; end: number; format: string }[] = []
   for (const a of (plan.avatarSegments || [])
     .map((a) => ({
@@ -545,7 +613,8 @@ function validatePlan(plan: Plan, duration: number, assetIds: string[]): Plan {
       format: a.format === 'paysage' ? 'paysage' : 'portrait',
     }))
     .filter((a) => a.end > a.start + 0.4)
-    .map((a) => ({ ...a, format: inAnySlide(a) ? 'paysage' : 'portrait' }))
+    .filter((a) => !hiddenByFull(a))
+    .map((a) => ({ ...a, format: inSplitSlide(a) ? 'paysage' : 'portrait' }))
     .sort((a, b) => a.start - b.start)) {
     const last = avatarSegments[avatarSegments.length - 1]
     if (last && a.start <= last.end + 0.1 && last.format === a.format) last.end = Math.max(last.end, a.end)
