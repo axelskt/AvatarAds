@@ -16,6 +16,7 @@
 //   asset_<id>: (optionnel) miniature JPEG de chaque asset (≤ 400 Ko)
 //   options   : (optionnel) JSON { lang }
 //   website   : (optionnel) URL du site de l'utilisateur → contexte produit pour les slides
+//   brief     : (optionnel) ce que l'utilisateur veut mettre en avant (≠ script : c'est une INTENTION, pas le texte parlé)
 //
 // Sortie : { ok, plan, transcript, model, usage }
 
@@ -344,6 +345,7 @@ async function claudePlan(
   frames: { t: number; media: string; b64: string }[],
   siteContext: string,
   musicAlready: boolean,
+  brief: string,
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -444,6 +446,15 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
       text: `CONTEXTE PRODUIT (extrait du site web de l'utilisateur — sers-t'en pour des slides precises : vraies fonctionnalites, vrais chiffres, vrai vocabulaire) :\n${siteContext}`,
     })
   }
+  if (brief) {
+    content.push({
+      type: 'text',
+      text: `BRIEF DE L'UTILISATEUR (ce qu'il veut que la video mette en avant — c'est SON intention, elle prime sur ton interpretation) :
+${brief}
+
+Sers-t'en pour : choisir quoi illustrer en priorite, le ton, l'ordre des idees, et le CTA. Les mots du brief sont autorises a l'ecran meme s'ils ne sont pas prononces mot pour mot (c'est lui qui te les donne). Mais tu n'inventes toujours RIEN au-dela : ni chiffre, ni promesse, ni fonctionnalite qui ne soit ni dans le brief, ni dans l'audio, ni dans le contexte produit.`,
+    })
+  }
   content.push({
     type: 'text',
     text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur a placer : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
@@ -486,7 +497,7 @@ Analyse d'abord la video, puis genere le plan de montage.`,
 const r2 = (n: number) => Math.round(n * 100) / 100
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = []): Plan {
+export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = ''): Plan {
   const D = duration
   const sections = (plan.sections || [])
     .map((s) => ({ ...s, start: r2(clamp(s.start, 0, D)), end: r2(clamp(s.end, 0, D)), label: String(s.label || '').slice(0, 60) }))
@@ -561,14 +572,19 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     for (const w of words) if (w.end > a - 1.5 && w.start < b + 1.5) { const k = norm(w.text); if (k.length > 2) set.add(k) }
     return set
   }
+  // les mots du BRIEF sont autorises a l'ecran : c'est l'utilisateur lui-meme qui les fournit
+  const briefKeys = new Set(keys(brief))
   const echoesScript = (s: typeof slides[number]) => {
     if (!words.length) return true
     const mine = [s.title, s.value, s.unit, s.sub, s.center, ...s.items.flatMap((it) => [it.text, it.value, it.label])]
       .flatMap(keys)
     if (!mine.length) return true
     const said = spokenAround(s.start, s.end)
-    return mine.some((k) => said.has(k)
-      || [...said].some((w) => (w.length >= 4 && k.length >= 4 && (w.includes(k) || k.includes(w))) || sim(w, k) >= 0.82))
+    return mine.some((k) => briefKeys.has(k) || said.has(k)
+      // meme racine (pluriel/conjugaison) : 5 premieres lettres communes — PAS une simple
+      // inclusion, sinon "forfaits" matcherait "fait" et laisserait passer une invention
+      || [...said].some((w) => (w.length >= 5 && k.length >= 5
+        && (w.startsWith(k.slice(0, 5)) || k.startsWith(w.slice(0, 5)))) || sim(w, k) >= 0.82))
   }
   const grounded = slides.filter(echoesScript)
   slides.length = 0
@@ -714,6 +730,8 @@ serve(async (req: Request) => {
     try { options = JSON.parse(String(form.get('options') || '{}')) } catch (_) { /* défauts */ }
     const lang = (options.lang || 'fr').slice(0, 5)
     const website = String(form.get('website') || '').trim().slice(0, 300)
+    // brief = l'intention de l'utilisateur (≠ script, qui sert a l'alignement des sous-titres)
+    const brief = String(form.get('brief') || '').trim().slice(0, 700)
 
     // assets b-roll : méta + miniatures
     let assetsMeta: { id: string; name: string; kind: string }[] = []
@@ -758,10 +776,10 @@ serve(async (req: Request) => {
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
     // 3. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic)
+    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic, brief)
 
     // 4. bornes/cohérence côté serveur
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words)
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 5. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
@@ -769,7 +787,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '1.3',
+      version: '1.4',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
