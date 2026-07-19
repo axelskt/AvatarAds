@@ -968,6 +968,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div id="clipGrid" style="display:none"></div>
               </div>
+              <!-- ── OU : générer un gameplay IA à partir d'un audio (audio OBLIGATOIRE) ── -->
+              <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:10px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
+              <button onclick="_genGpFromAudio()" style="width:100%;padding:11px 12px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:12px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
+                <span style="font-size:12px;font-weight:800;color:var(--text)">✨ Génération d'un gameplay IA</span>
+                <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">à partir d'un audio — obligatoire</span>
+              </button>
               <button onclick="swapSplit()" style="width:100%;padding:10px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser clip ⇄ Avatar</button>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:7px">Échange la position du clip et de l'avatar (haut / bas)</div>
             </div>
@@ -4149,7 +4155,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <div id="auth-pwd-error" style="display:none;font-size:12px;color:var(--red);margin:10px 0;padding:10px 12px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:var(--r-sm)"></div>
         <button onclick="authPwdLogin()" id="pwdLoginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">Se connecter</button>
-        <button onclick="authTogglePwd(false)" style="width:100%;margin-top:14px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer">← Recevoir un code par e-mail</button>
+        <button onclick="authForgotPwd()" style="width:100%;margin-top:10px;padding:6px;background:transparent;border:none;color:var(--text-3);font-family:var(--font);font-size:12.5px;cursor:pointer;text-decoration:underline">Mot de passe oublié ?</button>
+        <button onclick="authTogglePwd(false)" style="width:100%;margin-top:10px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer">← Recevoir un code par e-mail</button>
         <div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:10px;line-height:1.5">Pas encore de mot de passe ? Connecte-toi par code, puis définis-le dans Mon compte.</div>
       </div>
 
@@ -4276,11 +4283,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div style="margin-bottom:18px">
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
-      <div class="label" style="margin:14px 0 7px">Mot de passe <span style="font-weight:400;color:var(--text3);font-size:10.5px">· optionnel — pour te connecter sans code e-mail</span></div>
+      <div class="label" style="margin:14px 0 7px">Mot de passe <span style="font-weight:400;color:var(--text3);font-size:10.5px">· définir ou changer — pour te connecter sans code e-mail</span></div>
       <div style="display:flex;gap:8px">
-        <input class="field" type="password" id="accountPassword" placeholder="8 caractères minimum" autocomplete="new-password" style="flex:1">
-        <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Définir</button>
+        <input class="field" type="password" id="accountPassword" placeholder="Nouveau mot de passe · 8 caractères min." autocomplete="new-password" style="flex:1">
+        <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Enregistrer</button>
       </div>
+      <div class="faint" style="font-size:10.5px;margin-top:6px">Déjà un mot de passe ? Saisis-en un nouveau ici pour le changer.</div>
     </div>
     <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
 
@@ -4966,7 +4974,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19d-audio-obligatoire'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19e-mdp-gameplay-s2'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5511,6 +5519,23 @@ async function authPwdLogin(){
     location.reload(); // la session est persistée → le boot recharge le compte connecté
   }catch(e){ showErr('Erreur réseau — réessaie'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Se connecter'; } }
+}
+// 🔑 Mot de passe oublié : envoie le lien de réinitialisation à l'e-mail saisi
+async function authForgotPwd(){
+  const email=(document.getElementById('auth-email-pwd')?.value||'').trim().toLowerCase();
+  const err=document.getElementById('auth-pwd-error');
+  const show=(m,ok)=>{ if(!err) return;
+    err.style.display='block'; err.textContent=m;
+    err.style.color   = ok ? 'var(--green)' : 'var(--red)';
+    err.style.background = ok ? 'rgba(40,199,149,.08)' : 'rgba(255,71,87,0.08)';
+    err.style.borderColor= ok ? 'rgba(40,199,149,.25)' : 'rgba(255,71,87,0.2)';
+  };
+  if(!email || !email.includes('@')){ show('Entre d\'abord ton e-mail ci-dessus'); return; }
+  try{
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app/' });
+    if(error){ show(error.message); return; }
+    show('📩 Lien de réinitialisation envoyé à '+email+' — vérifie ta boîte mail (et les spams).', true);
+  }catch(e){ show('Erreur réseau — réessaie'); }
 }
 // Mon compte : définir/changer le mot de passe (active la connexion sans code)
 async function accountSetPassword(){
