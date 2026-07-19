@@ -4288,7 +4288,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <input class="field" type="password" id="accountPassword" placeholder="Nouveau mot de passe · 8 caractères min." autocomplete="new-password" style="flex:1">
         <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Enregistrer</button>
       </div>
-      <div class="faint" style="font-size:10.5px;margin-top:6px">Déjà un mot de passe ? Saisis-en un nouveau ici pour le changer.</div>
+      <div class="faint" style="font-size:10.5px;margin-top:6px">Déjà un mot de passe ? Saisis-en un nouveau ici pour le changer. <button onclick="accountForgotPwd()" style="background:none;border:none;color:var(--accent-2);font-family:var(--font);font-size:10.5px;cursor:pointer;text-decoration:underline;padding:0">Mot de passe oublié ?</button></div>
     </div>
     <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
 
@@ -4974,7 +4974,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19f-mdp-oublie-resend'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19g-reset-mdp'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5539,11 +5539,19 @@ async function authForgotPwd(){
     const res = await _otpCall({ action:'send', mode:'login', email });
     if(res.error){ show(_OTP_ERRORS[res.error] || 'Erreur. Réessaie.'); return; }
     _otpCtx = { email, mode:'login', firstName:'' };
+    window._pwdResetFlow = true; // → après le code, on ouvre direct « nouveau mot de passe »
     const em=document.getElementById('auth-email'); if(em) em.value=email;
     authTogglePwd(false);   // referme l'écran mot de passe
     _showOtpStep(false);    // → saisie du code
-    toast('📩 Code envoyé — connecte-toi, puis change ton mot de passe dans Mon compte');
+    toast('📩 Code envoyé — entre-le, puis choisis ton nouveau mot de passe');
   }catch(e){ show('Erreur réseau — réessaie'); }
+}
+// Mon compte · « Mot de passe oublié ? » — ici tu es DÉJÀ connecté, donc pas besoin de
+// l'ancien : on saisit directement le nouveau (Supabase ne le réclame pas avec une session).
+function accountForgotPwd(){
+  const inp=document.getElementById('accountPassword');
+  if(inp){ try{ inp.scrollIntoView({block:'center'}); }catch(_){} inp.focus(); }
+  toast('🔑 Pas besoin de l\'ancien — saisis ton nouveau mot de passe ici, puis Enregistrer');
 }
 // Mon compte : définir/changer le mot de passe (active la connexion sans code)
 async function accountSetPassword(){
@@ -5662,6 +5670,19 @@ async function authVerifyCode(){
   }catch(e){}
   btn.textContent = 'Chargement du profil…';
   await loadProfile(data.user);
+  _finishPwdReset(); // venait de « Mot de passe oublié » → on enchaîne sur le nouveau mdp
+}
+// Réinitialisation : l'e-mail a servi à PROUVER que le compte est à toi ; on enchaîne
+// donc directement sur le choix du nouveau mot de passe (c'est ça, réinitialiser).
+function _finishPwdReset(){
+  if(!window._pwdResetFlow) return;
+  window._pwdResetFlow = false;
+  setTimeout(function(){
+    try{ openAccountSettings(); }catch(_){}
+    const inp=document.getElementById('accountPassword');
+    if(inp){ try{ inp.scrollIntoView({block:'center'}); }catch(_){} inp.focus(); }
+    toast('🔑 Choisis ton nouveau mot de passe, puis clique Enregistrer');
+  }, 700);
 }
 
 function authOtpBack(){
