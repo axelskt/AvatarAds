@@ -4157,7 +4157,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <button onclick="authPwdLogin()" id="pwdLoginBtn" style="width:100%;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">Se connecter</button>
         <button onclick="authForgotPwd()" style="width:100%;margin-top:10px;padding:6px;background:transparent;border:none;color:var(--text-3);font-family:var(--font);font-size:12.5px;cursor:pointer;text-decoration:underline">Mot de passe oublié ?</button>
         <button onclick="authTogglePwd(false)" style="width:100%;margin-top:10px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer">← Recevoir un code par e-mail</button>
-        <div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:10px;line-height:1.5">Pas encore de mot de passe ? Connecte-toi par code, puis définis-le dans Mon compte.</div>
+        <div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:10px">Pas de mot de passe ? Connecte-toi par code.</div>
       </div>
 
       <!-- SIGNUP FORM (étape 1 : prénom + email → code) -->
@@ -4974,7 +4974,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19e-mdp-gameplay-s2'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19f-mdp-oublie-resend'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5520,21 +5520,29 @@ async function authPwdLogin(){
   }catch(e){ showErr('Erreur réseau — réessaie'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Se connecter'; } }
 }
-// 🔑 Mot de passe oublié : envoie le lien de réinitialisation à l'e-mail saisi
+// 🔑 Mot de passe oublié → on envoie un CODE e-mail (edge auth-otp via Resend, le chemin
+// fiable) et PAS le mail de reset intégré Supabase, qui n'est pas branché sur Resend et
+// n'arrivait donc jamais. L'user se connecte avec le code, puis change son mot de passe
+// dans Mon compte (accountSetPassword).
 async function authForgotPwd(){
   const email=(document.getElementById('auth-email-pwd')?.value||'').trim().toLowerCase();
   const err=document.getElementById('auth-pwd-error');
   const show=(m,ok)=>{ if(!err) return;
     err.style.display='block'; err.textContent=m;
-    err.style.color   = ok ? 'var(--green)' : 'var(--red)';
+    err.style.color      = ok ? 'var(--green)' : 'var(--red)';
     err.style.background = ok ? 'rgba(40,199,149,.08)' : 'rgba(255,71,87,0.08)';
     err.style.borderColor= ok ? 'rgba(40,199,149,.25)' : 'rgba(255,71,87,0.2)';
   };
-  if(!email || !email.includes('@')){ show('Entre d\'abord ton e-mail ci-dessus'); return; }
+  if(!email || !/^\S+@\S+\.\S+$/.test(email)){ show('Entre d\'abord ton e-mail ci-dessus'); return; }
+  show('Envoi du code…', true);
   try{
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app/' });
-    if(error){ show(error.message); return; }
-    show('📩 Lien de réinitialisation envoyé à '+email+' — vérifie ta boîte mail (et les spams).', true);
+    const res = await _otpCall({ action:'send', mode:'login', email });
+    if(res.error){ show(_OTP_ERRORS[res.error] || 'Erreur. Réessaie.'); return; }
+    _otpCtx = { email, mode:'login', firstName:'' };
+    const em=document.getElementById('auth-email'); if(em) em.value=email;
+    authTogglePwd(false);   // referme l'écran mot de passe
+    _showOtpStep(false);    // → saisie du code
+    toast('📩 Code envoyé — connecte-toi, puis change ton mot de passe dans Mon compte');
   }catch(e){ show('Erreur réseau — réessaie'); }
 }
 // Mon compte : définir/changer le mot de passe (active la connexion sans code)
