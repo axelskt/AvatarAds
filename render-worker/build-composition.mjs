@@ -8,6 +8,8 @@
 //    apparaît PILE sur le mot prononcé
 // La zone vidéo est animée entre les deux états (transition 0.34s) à chaque frontière.
 
+import { scenePackCss, fullSlideHtml, fullSlideJs, bannerHtml, bannerJs, FULL_TYPES } from './scene-pack.mjs'
+
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
 const ACCENT = '#FFD400'   // jaune viral (flèches, checks, surlignés)
@@ -20,7 +22,21 @@ export function buildComposition(plan, opts = {}) {
   const D = r2(Math.max(1, plan.duration))
   const assetFiles = opts.assetFiles || {} // { assetId: 'media/img1.jpg' }
 
-  const slides = (plan.slides || []).filter((s) => Array.isArray(s.items) && s.items.length)
+  // 3 familles de scènes : SPLIT (slide sombre en haut + vidéo en bas), PLEIN CADRE
+  // (scène éditoriale crème, la vidéo disparaît) et BANDEAU (carte posée sur la vidéo).
+  const isFull = (s) => s.layout === 'full' || (!s.layout && FULL_TYPES.includes(s.type))
+  const isBanner = (s) => s.layout === 'banner' || s.type === 'banner'
+  const allSlides = (plan.slides || []).filter((s) => s && typeof s.start === 'number')
+  const withIds = (list, p) => list.map((s, i) => ({
+    ...s,
+    id: p + i,
+    dur: r2(Math.max(0.6, (s.end ?? s.start + 1.5) - s.start)),
+    start: r2(s.start),
+    items: (s.items || []).map((it, j) => ({ ...it, id: `${p}${i}i${j}`, text: String(it.text || ''), t: r2(it.t ?? s.start) })),
+  }))
+  const fullDefs = withIds(allSlides.filter(isFull), 'fs')
+  const bannerDefs = withIds(allSlides.filter(isBanner), 'fb')
+  const slides = allSlides.filter((s) => !isFull(s) && !isBanner(s) && Array.isArray(s.items) && s.items.length)
   const SLIDE_H = Math.round(H * 0.45)
   const VIDEO_H = H - SLIDE_H
   const TR = 0.34 // durée de la transition full <-> split
@@ -86,14 +102,21 @@ export function buildComposition(plan, opts = {}) {
   const subStroke = Math.max(4, Math.round(subSize * 0.16))
   const capTopFull = Math.round(H * 0.72) - Math.round(subSize * 0.75)
   const capTopSplit = SLIDE_H + Math.round(VIDEO_H * 0.62) - Math.round(subSize * 0.75)
-  const caps = (plan.captions || []).map((c, i) => ({
-    id: 'cap' + i,
-    text: String(c.text || '').toUpperCase(),
-    start: r2(c.start),
-    dur: r2(Math.max(0.1, c.end - c.start)),
-    accent: !!c.accent,
-    top: inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull,
-  })).filter((c) => c.text)
+  // pendant une scène plein cadre, les sous-titres passent sur fond clair (ombre au lieu du contour)
+  const inFullScene = (t) => fullDefs.some((f) => t >= f.start && t < f.start + f.dur)
+  const capTopCream = Math.round(H * 0.74)
+  const caps = (plan.captions || []).map((c, i) => {
+    const cream = inFullScene(r2(c.start) + 0.05)
+    return {
+      id: 'cap' + i,
+      text: String(c.text || '').toUpperCase(),
+      start: r2(c.start),
+      dur: r2(Math.max(0.1, c.end - c.start)),
+      accent: !!c.accent,
+      cream,
+      top: cream ? capTopCream : (inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull),
+    }
+  }).filter((c) => c.text)
 
   const hook = plan.hook && plan.hook.text ? {
     text: String(plan.hook.text).toUpperCase(),
@@ -116,7 +139,15 @@ export function buildComposition(plan, opts = {}) {
       </div>` : ''
 
   const capsHtml = caps.map((c) => `
-      <div class="clip cap${c.accent ? ' accent' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
+      <div class="clip cap${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
+
+  // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
+  const fullHtml = fullDefs.map((s) => `
+      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${fullSlideHtml(s, W, H)}</div>`).join('')
+  const bannersHtml = bannerDefs.map((s) => `
+      <div class="clip fbanner" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="11">${bannerHtml(s)}</div>`).join('')
+  const fullJs = fullDefs.map((s) => fullSlideJs(s, H)).join('')
+  const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
   // ── slides motion design (zone haute pendant les périodes split) ──────────
   const slideDefs = slides.map((s, i) => ({
@@ -384,14 +415,19 @@ export function buildComposition(plan, opts = {}) {
         left: 4%; right: 4%;
         text-align: center; color: #fff;
         font: 900 ${subSize}px/1.1 "Arial Black", Arial, sans-serif;
-        letter-spacing: 1px; will-change: transform; z-index: 6;
+        letter-spacing: 1px; will-change: transform; z-index: 8;
       }
+      /* sur une scène plein cadre (fond crème) : ombre portée au lieu du contour noir */
+      .cap.oncream { color: #FFFDF7; text-shadow: 0 8px 0 rgba(20,16,12,.22), 0 14px 34px rgba(20,16,12,.30); }
+      .cap.oncream::before { display: none; }
+      .cap.oncream.accent { color: #C2483A; text-shadow: 0 8px 0 rgba(20,16,12,.18); }
       .cap::before {
         content: attr(data-text); position: absolute; left: 0; right: 0; top: 0;
         -webkit-text-stroke: ${subStroke * 2}px rgba(0,0,0,.92); z-index: -1;
       }
       .cap.accent { color: #FF6B35; }
 ${slideCss}
+${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
     </style>
   </head>
   <body>
@@ -407,6 +443,8 @@ ${avatarSegs.map((a) => `            <video id="${a.id}" class="clip avatar-seg"
       </div>
 ${brollHtml}
 ${slidesHtml}
+${fullHtml}
+${bannersHtml}
 ${hookHtml}
 ${capsHtml}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
@@ -423,6 +461,8 @@ ${layoutJs}
 ${zoomJs}
 ${brollJs}
 ${slidesJs}
+${fullJs}
+${bannersJs}
 ${hookJs}
 ${capsJs}
 ${flashJs}
