@@ -5045,7 +5045,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19m-base-remux'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19n-avatar-cadeau'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9890,7 +9890,7 @@ function _mtProg(pct, label){
   if(!o){
     o=document.createElement('div'); o.id='mtProgOv';
     // l'écran vit DANS la zone de contenu (sidebar + topbar restent visibles, comme la maquette)
-    o.style.cssText='position:absolute;inset:0;z-index:9700;background:var(--bg);display:grid;place-items:center;padding:24px;font-family:var(--font)';
+    o.style.cssText='position:absolute;inset:0;z-index:9700;background:var(--bg);display:grid;place-items:center;padding:24px;font-family:var(--font);overflow-y:auto';
     o.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;text-align:center;width:100%;max-width:460px">'
       +'<div style="width:78px;height:78px;border-radius:24px;display:grid;place-items:center;margin-bottom:26px;position:relative;background:radial-gradient(120px 90px at 50% 20%, rgba(255,90,31,.4), transparent), var(--surface);border:1px solid var(--accent-line)">'
         +'<span style="color:var(--accent-2);display:flex"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg></span>'
@@ -10160,7 +10160,7 @@ async function _mtSegmentedGenerate(){
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan, input_video:inPath, assets, avatar_clips }) });
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
-    _mtPollSegmented(d.job_id);
+    _mtPollSegmented(d.job_id, _mtVideoDone);
   }catch(e){
     console.error('montage segmenté:', e);
     _mtProg(-1);
@@ -10257,6 +10257,34 @@ async function _mtVideoGenerate(){
     _mtPollSegmented(d.job_id, _mtVideoDone);
   }catch(e){ console.error('montage Ma vidéo:', e); _mtProg(-1); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
 }
+// 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
+// montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
+function _mtBonusImages(){
+  const out=[];
+  const o=_mt.avatar||null;
+  if(_mt._avF_portrait && _mt._avF_portrait!==o) out.push({ blob:_mt._avF_portrait, fmt:'9:16' });
+  if(_mt._avF_paysage  && _mt._avF_paysage !==o) out.push({ blob:_mt._avF_paysage,  fmt:'16:9' });
+  return out;
+}
+function _mtBonusHtml(){
+  const b=_mtBonusImages(); if(!b.length) return '';
+  try{ b.forEach((x)=>{ if(!x.url) x.url=URL.createObjectURL(x.blob); }); }catch(_){ return ''; }
+  window._mtBonus=b;
+  return '<div style="width:100%;margin-top:26px;padding-top:22px;border-top:1px solid var(--border)">'
+    +'<div class="mt-eyebrow" style="text-align:center">🎁 Offert — ton avatar recadré par l\'IA</div>'
+    +'<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">'
+    + b.map((x,i)=>'<button onclick="_mtBonusSave('+i+')" style="background:var(--surface);border:1px solid var(--border-2);border-radius:14px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-family:var(--font)">'
+        +'<img src="'+x.url+'" alt="" style="width:74px;height:74px;object-fit:cover;border-radius:9px;display:block">'
+        +'<span class="faint" style="font-size:11px">'+x.fmt+' · télécharger</span></button>').join('')
+    +'</div>'
+    +'<p class="faint center" style="font-size:11.5px;margin-top:10px">Générées pour ta vidéo, en pleine définition — elles sont à toi.</p></div>';
+}
+function _mtBonusSave(i){
+  const x=(window._mtBonus||[])[i]; if(!x) return;
+  const a=document.createElement('a'); a.href=x.url; a.download='avatar-'+x.fmt.replace(':','x')+'.png';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('🎁 Image enregistrée');
+}
 // carte de fin du flux « Ma vidéo » : MP4 téléchargé → terminer (retour module) ou ajuster.
 // « Ajuster » ouvre le MP4 FINAL (celui téléchargé), PAS la source — l'aperçu correspond au rendu.
 let _mtFinalUrl=null;
@@ -10275,6 +10303,7 @@ function _mtVideoDone(finalUrl){
       +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Ajuster dans l\'Éditeur</button>'
     +'<button onclick="_mtProg(-1);nav(\'montage\')" style="margin-top:18px;background:none;border:none;-webkit-appearance:none;appearance:none;color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px">'
       +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg> Créer une autre vidéo</button>'
+    + _mtBonusHtml()
     +'</div>';
 }
 // re-télécharge le MP4 final (le 1er téléchargement part tout seul à la fin du rendu)
