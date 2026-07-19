@@ -747,7 +747,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '1.1',
+      version: '1.2',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
