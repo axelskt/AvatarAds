@@ -4278,19 +4278,53 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="eyebrow" style="margin-bottom:16px">① Profil</div>
     <div style="margin-bottom:16px">
       <div class="setup-label" style="margin-bottom:8px">Prénom affiché</div>
-      <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom">
+      <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
     </div>
     <div style="margin-bottom:18px">
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
-      <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
+      <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
       <div class="setup-label" style="margin:18px 0 6px">Mot de passe <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
-      <div style="display:flex;gap:8px">
-        <input class="field" type="password" id="accountPassword" placeholder="Nouveau mot de passe · 8 caractères min." autocomplete="new-password" style="flex:1">
-        <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Enregistrer</button>
-      </div>
-      <div class="faint" style="font-size:10.5px;margin-top:7px;line-height:1.5">Te permet de te connecter sans code e-mail. Oublié ? Pas besoin de l'ancien — saisis directement le nouveau.</div>
+      <button onclick="openPwdModal()" class="btn btn-ghost" style="width:100%">🔐 Définir ou changer mon mot de passe</button>
     </div>
-    <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
+    <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
+
+    <!-- 🔐 Modale changement de mot de passe : vérification (ancien mdp OU code e-mail) → double saisie -->
+    <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(8,4,2,.82);backdrop-filter:blur(6px);place-items:center;padding:20px">
+      <div class="card" style="width:min(400px,94vw);padding:22px;text-align:left">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="display" style="font-size:18px;font-weight:800">Mot de passe</div>
+          <button class="btn-quiet" onclick="closePwdModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
+        </div>
+        <p id="pwdModalSub" class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:16px">Confirme d'abord que c'est bien toi.</p>
+
+        <!-- étape 1 · ancien mot de passe -->
+        <div id="pwdStepVerify">
+          <div class="setup-label" style="margin-bottom:6px">Mot de passe actuel</div>
+          <input class="field" type="password" id="pwdCurrent" autocomplete="current-password" placeholder="Ton mot de passe actuel" onkeydown="if(event.key==='Enter')pwdVerifyCurrent()">
+          <button onclick="pwdVerifyCurrent()" class="btn btn-primary" style="width:100%;margin-top:12px">Continuer</button>
+          <button onclick="pwdSendCode()" class="btn-quiet btn-sm" style="width:100%;margin-top:10px;background:transparent;border:none;cursor:pointer;font-family:var(--font);font-size:12px;text-decoration:underline">Je ne le connais pas — recevoir un code par e-mail</button>
+        </div>
+
+        <!-- étape 1 bis · code e-mail -->
+        <div id="pwdStepCode" style="display:none">
+          <div class="setup-label" style="margin-bottom:6px">Code reçu par e-mail</div>
+          <input class="field mono" id="pwdCode" inputmode="numeric" maxlength="6" placeholder="123456" style="letter-spacing:.35em;text-align:center;font-size:18px" onkeydown="if(event.key==='Enter')pwdVerifyCode()">
+          <button onclick="pwdVerifyCode()" class="btn btn-primary" style="width:100%;margin-top:12px">Vérifier le code</button>
+        </div>
+
+        <!-- étape 2 · nouveau mot de passe (double saisie) -->
+        <div id="pwdStepNew" style="display:none">
+          <div class="setup-label" style="margin-bottom:6px">Nouveau mot de passe</div>
+          <input class="field" type="password" id="pwdNew1" autocomplete="new-password" placeholder="8 caractères minimum" oninput="_pwdCheckMatch()">
+          <div class="setup-label" style="margin:12px 0 6px">Confirme le nouveau mot de passe</div>
+          <input class="field" type="password" id="pwdNew2" autocomplete="new-password" placeholder="Retape-le" oninput="_pwdCheckMatch()" onkeydown="if(event.key==='Enter')pwdSaveNew()">
+          <div id="pwdMatchHint" class="mono" style="font-size:10.5px;margin-top:7px;height:13px;color:var(--text-3)"></div>
+          <button onclick="pwdSaveNew()" class="btn btn-primary" style="width:100%;margin-top:10px">Enregistrer le mot de passe</button>
+        </div>
+
+        <div id="pwdModalMsg" style="display:none;font-size:12px;margin-top:12px;padding:10px 12px;border-radius:var(--r-sm)"></div>
+      </div>
+    </div>
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
@@ -4974,7 +5008,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19h-mdp-design'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19i-autosave-mdp-securise'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5546,25 +5580,127 @@ async function authForgotPwd(){
     toast('📩 Code envoyé — entre-le, puis choisis ton nouveau mot de passe');
   }catch(e){ show('Erreur réseau — réessaie'); }
 }
-// Mon compte · « Mot de passe oublié ? » — ici tu es DÉJÀ connecté, donc pas besoin de
-// l'ancien : on saisit directement le nouveau (Supabase ne le réclame pas avec une session).
-function accountForgotPwd(){
-  const inp=document.getElementById('accountPassword');
-  if(inp){ try{ inp.scrollIntoView({block:'center'}); }catch(_){} inp.focus(); }
-  toast('🔑 Pas besoin de l\'ancien — saisis ton nouveau mot de passe ici, puis Enregistrer');
+// 💾 Profil : sauvegarde AUTOMATIQUE (plus de bouton). Debounce 700 ms pendant la frappe,
+// immédiat au blur. Petit statut discret sous les champs, pas de toast à chaque lettre.
+let _accountSaveT=null;
+function _accountSaveHint(txt){ const h=document.getElementById('accountSaveHint'); if(h) h.textContent=txt||''; }
+function _accountAutoSave(now){
+  clearTimeout(_accountSaveT);
+  _accountSaveHint('…');
+  _accountSaveT = setTimeout(async function(){
+    if(!currentMember) return;
+    const firstName=(document.getElementById('accountFirstName')?.value||'').trim();
+    const phone=(document.getElementById('accountPhone')?.value||'').trim();
+    const updates={ phone: phone || null };
+    if(firstName) updates.first_name=firstName;
+    const { error } = await sb.from('profiles').update(updates).eq('id', currentMember.id);
+    if(error){ _accountSaveHint('⚠️ non enregistré'); return; }
+    if(firstName){ currentMember.first_name=firstName; const n=document.getElementById('memberName'); if(n) n.textContent=firstName; }
+    currentMember.phone = phone || null;
+    _accountSaveHint('✓ enregistré');
+    setTimeout(()=>_accountSaveHint(''), 1800);
+  }, now ? 0 : 700);
+}
+
+// ── 🔐 Changement de mot de passe sécurisé ──
+// 1) on prouve que c'est bien l'user : ancien mot de passe OU code e-mail (Resend)
+// 2) nouveau mot de passe saisi DEUX fois (évite de se verrouiller sur une faute de frappe)
+let _pwdVerified = false;
+function _pwdMsg(t, ok){
+  const m=document.getElementById('pwdModalMsg'); if(!m) return;
+  if(!t){ m.style.display='none'; return; }
+  m.style.display='block'; m.textContent=t;
+  m.style.color       = ok ? 'var(--green)' : 'var(--red)';
+  m.style.background  = ok ? 'rgba(40,199,149,.08)' : 'rgba(255,71,87,0.08)';
+  m.style.border      = '1px solid ' + (ok ? 'rgba(40,199,149,.25)' : 'rgba(255,71,87,0.2)');
+}
+function _pwdStep(step){
+  ['pwdStepVerify','pwdStepCode','pwdStepNew'].forEach(function(id){
+    const el=document.getElementById(id); if(el) el.style.display = (id===step) ? 'block' : 'none';
+  });
+  const sub=document.getElementById('pwdModalSub');
+  if(sub) sub.textContent = step==='pwdStepNew'
+    ? 'Choisis ton nouveau mot de passe et retape-le pour confirmer.'
+    : (step==='pwdStepCode' ? 'Entre le code à 6 chiffres reçu par e-mail.' : 'Confirme d\'abord que c\'est bien toi.');
+}
+// skipVerify = l'identité vient déjà d'être prouvée (connexion par code « mot de passe oublié »)
+function openPwdModal(skipVerify){
+  const m=document.getElementById('pwdModal'); if(!m) return;
+  m.style.display='grid';
+  _pwdMsg(''); _pwdVerified = !!skipVerify;
+  ['pwdCurrent','pwdCode','pwdNew1','pwdNew2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+  const hint=document.getElementById('pwdMatchHint'); if(hint) hint.textContent='';
+  _pwdStep(skipVerify ? 'pwdStepNew' : 'pwdStepVerify');
+  setTimeout(function(){ const f=document.getElementById(skipVerify?'pwdNew1':'pwdCurrent'); if(f) f.focus(); }, 80);
+}
+function closePwdModal(){ const m=document.getElementById('pwdModal'); if(m) m.style.display='none'; }
+// Vérif par l'ancien mot de passe : on re-authentifie (preuve que c'est bien lui)
+async function pwdVerifyCurrent(){
+  const cur=document.getElementById('pwdCurrent')?.value||'';
+  if(!cur){ _pwdMsg('Entre ton mot de passe actuel'); return; }
+  const email=(currentMember && currentMember.email) || (await sb.auth.getUser()).data?.user?.email;
+  if(!email){ _pwdMsg('Session expirée — reconnecte-toi'); return; }
+  _pwdMsg('Vérification…', true);
+  const { error } = await sb.auth.signInWithPassword({ email, password: cur });
+  if(error){ _pwdMsg('Mot de passe incorrect — ou utilise le code e-mail'); return; }
+  _pwdVerified = true; _pwdMsg('');
+  _pwdStep('pwdStepNew');
+  setTimeout(function(){ const f=document.getElementById('pwdNew1'); if(f) f.focus(); }, 80);
+}
+// Vérif par code e-mail (edge auth-otp → Resend), pour qui a oublié son mot de passe
+async function pwdSendCode(){
+  const email=(currentMember && currentMember.email) || (await sb.auth.getUser()).data?.user?.email;
+  if(!email){ _pwdMsg('Session expirée — reconnecte-toi'); return; }
+  _pwdMsg('Envoi du code…', true);
+  try{
+    const res = await _otpCall({ action:'send', mode:'login', email });
+    if(res.error){ _pwdMsg(_OTP_ERRORS[res.error] || 'Erreur. Réessaie.'); return; }
+    _otpCtx = { email, mode:'login', firstName:'' };
+    _pwdMsg('📩 Code envoyé à '+email, true);
+    _pwdStep('pwdStepCode');
+    setTimeout(function(){ const f=document.getElementById('pwdCode'); if(f) f.focus(); }, 80);
+  }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
+}
+async function pwdVerifyCode(){
+  const code=(document.getElementById('pwdCode')?.value||'').trim();
+  if(code.length!==6){ _pwdMsg('Entre les 6 chiffres du code'); return; }
+  _pwdMsg('Vérification…', true);
+  try{
+    const res = await _otpCall({ action:'verify', email:_otpCtx.email, code });
+    if(res.error || !res.token_hash){ _pwdMsg('Code invalide ou expiré'); return; }
+    const { error } = await sb.auth.verifyOtp({ type:'magiclink', token_hash: res.token_hash });
+    if(error){ _pwdMsg('Code invalide — redemande-en un'); return; }
+    _pwdVerified = true; _pwdMsg('');
+    _pwdStep('pwdStepNew');
+    setTimeout(function(){ const f=document.getElementById('pwdNew1'); if(f) f.focus(); }, 80);
+  }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
+}
+// Les deux saisies doivent correspondre — retour visuel en direct
+function _pwdCheckMatch(){
+  const a=document.getElementById('pwdNew1')?.value||'', b=document.getElementById('pwdNew2')?.value||'';
+  const h=document.getElementById('pwdMatchHint'); if(!h) return;
+  if(!a && !b){ h.textContent=''; return; }
+  if(a.length < 8){ h.textContent='8 caractères minimum'; h.style.color='var(--text-3)'; return; }
+  if(!b){ h.textContent='Retape-le pour confirmer'; h.style.color='var(--text-3)'; return; }
+  const ok = a===b;
+  h.textContent = ok ? '✓ les deux correspondent' : '✗ les deux ne correspondent pas';
+  h.style.color = ok ? 'var(--green)' : 'var(--red)';
+}
+async function pwdSaveNew(){
+  const a=document.getElementById('pwdNew1')?.value||'', b=document.getElementById('pwdNew2')?.value||'';
+  if(a.length < 8){ _pwdMsg('8 caractères minimum'); return; }
+  if(a !== b){ _pwdMsg('Les deux mots de passe ne correspondent pas'); return; }
+  if(!_pwdVerified){ _pwdMsg('Confirme d\'abord ton identité'); _pwdStep('pwdStepVerify'); return; }
+  _pwdMsg('Enregistrement…', true);
+  try{
+    const { error } = await sb.auth.updateUser({ password: a });
+    if(error){ _pwdMsg(error.message); return; }
+    closePwdModal();
+    toast('🔐 Mot de passe enregistré — tu peux maintenant te connecter avec');
+  }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
 }
 // Mon compte : définir/changer le mot de passe (active la connexion sans code)
-async function accountSetPassword(){
-  const inp=document.getElementById('accountPassword');
-  const pwd=(inp?.value||'');
-  if(pwd.length < 8){ toast('⚠️ 8 caractères minimum'); return; }
-  try{
-    const { error } = await sb.auth.updateUser({ password: pwd });
-    if(error){ toast('⚠️ '+error.message); return; }
-    if(inp) inp.value='';
-    toast('🔐 Mot de passe enregistré — tu peux maintenant te connecter avec');
-  }catch(e){ toast('⚠️ Erreur réseau — réessaie'); }
-}
+// (accountSetPassword retiré : remplacé par la modale sécurisée openPwdModal → pwdSaveNew)
 
 async function authSendCode(mode){
   const isLogin   = mode !== 'signup';
@@ -5678,10 +5814,9 @@ function _finishPwdReset(){
   if(!window._pwdResetFlow) return;
   window._pwdResetFlow = false;
   setTimeout(function(){
-    try{ openAccountSettings(); }catch(_){}
-    const inp=document.getElementById('accountPassword');
-    if(inp){ try{ inp.scrollIntoView({block:'center'}); }catch(_){} inp.focus(); }
-    toast('🔑 Choisis ton nouveau mot de passe, puis clique Enregistrer');
+    // le code e-mail vient de prouver l'identité → on saute la vérification
+    try{ openPwdModal(true); }catch(_){}
+    toast('🔑 Choisis ton nouveau mot de passe (deux fois pour confirmer)');
   }, 700);
 }
 
