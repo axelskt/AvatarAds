@@ -1818,7 +1818,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <!-- B · générer un gameplay IA depuis un audio (importable ici si absent) -->
                   <button onclick="_genGpFromAudio()" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left">
                     <span style="font-weight:800;font-size:12px">✨ Génération d'un gameplay IA</span>
-                    <span id="genGpAudioSub" style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio</span>
+                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio — obligatoire</span>
                   </button>
                   <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
                   <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>
@@ -4966,7 +4966,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19c-ux-nettoyage'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19d-audio-obligatoire'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9407,20 +9407,13 @@ function _genGpOnlyToggle(){
   const open = b.style.display==='none';
   b.style.display = open ? 'block' : 'none';
   if(c) c.textContent = open ? '▴' : '▾';
-  if(open) _genGpSyncAudioSub();
 }
-// le sous-titre du bouton « gameplay IA » dit si un audio est déjà là (sinon on en importe un)
-function _genGpSyncAudioSub(){
-  const s=document.getElementById('genGpAudioSub'); if(!s) return;
-  const f=(typeof mp4AudioFile!=='undefined' && mp4AudioFile) || window.mp4AudioFile;
-  s.textContent = f ? ('audio prêt : '+String(f.name||'ton audio').slice(0,28)+' — clique pour générer')
-                    : 'à partir d\'un audio — clique pour l\'importer';
-}
-// 🎮 gameplay IA depuis un audio : si un audio est déjà chargé on génère directement,
-// sinon pas de blocage → on ouvre simplement l'import pour en choisir un
+// 🎮 gameplay IA : un AUDIO EST OBLIGATOIRE (c'est lui qui porte le clip + les sous-titres).
+// Déjà chargé → on génère ; sinon on ouvre l'import, et la génération part dès qu'il est choisi.
 function _genGpFromAudio(){
   const f=(typeof mp4AudioFile!=='undefined' && mp4AudioFile) || window.mp4AudioFile;
   if(f){ genGameplayOnly('mp3', f); return; }
+  toast('🎙 Importe ton audio — il est obligatoire pour générer le gameplay');
   const inp=document.getElementById('genGpOnlyMp3'); if(inp) inp.click();
 }
 
