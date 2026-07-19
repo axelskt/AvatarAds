@@ -3371,13 +3371,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                       <span class="mt-qual-badge">Économique</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Character 3</div>
-                      <div class="mt-qual-sub">+2 crédits</div>
+                      <div class="mt-qual-sub">1 cr/s</div>
                     </div>
                     <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" class="mt-qual">
                       <span class="mt-qual-badge accent">Meilleure qualité</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Omni</div>
-                      <div class="mt-qual-sub">+4 crédits</div>
+                      <div class="mt-qual-sub">5 cr/s</div>
                     </div>
                   </div>
                 </div>
@@ -4958,7 +4958,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19-lipsync-quality'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19b-lipsync-perseconde'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5236,9 +5236,7 @@ const CREDIT_COSTS = {
   montageIA: 2,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
   export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
   omniPerSec: 5,          // 💎 OmniHuman 1.5 (scènes avatar du Montage IA segmenté, #119)
-  hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
-  lipC3: 2,               // 💠 supplément forfaitaire lipsync Character 3 (Montage IA, design Axel)
-  lipOmni: 4              // 💠 supplément forfaitaire lipsync Omni (Montage IA, design Axel)
+  hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -9502,11 +9500,21 @@ function mtSetLipModel(m){
 // estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
 // que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
 // pricing forfaitaire (design Axel) : base montage 2 cr + supplément lipsync (+2 C3 / +4 Omni)
-function _mtLipSurcharge(){ return _mt.lipModel==='omnihuman' ? CREDIT_COSTS.lipOmni : CREDIT_COSTS.lipC3; }
+// pricing À LA SECONDE (Axel) : base montage 2 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
+// sur les scènes avatar (~30% de la durée), le reste habillé en hyperframes (1 cr/s)
 function _mtUpdateCost(){
   const b=document.getElementById('mtGoLbl'); if(!b) return;
-  const total = CREDIT_COSTS.montageIA + ((_mt.src==='gameplay' && _mt.avatar) ? _mtLipSurcharge() : 0);
-  b.textContent = 'Créer ma vidéo — '+total+' crédits';
+  if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — 2 crédits'; return; }
+  const omni=_mt.lipModel==='omnihuman';
+  const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
+  const lbl=omni?'Omni':'Character 3';
+  if(_mt.mp3Dur){
+    const avSec=Math.min(8, Math.max(2, Math.round(_mt.mp3Dur*0.3)));
+    const est=Math.ceil(CREDIT_COSTS.montageIA + avSec*rate + Math.max(0,_mt.mp3Dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
+    b.textContent = 'Créer ma vidéo — ~'+est+' crédits';
+  } else {
+    b.textContent = 'Créer ma vidéo — 2 cr + lipsync '+lbl+' ('+rate+' cr/s)';
+  }
 }
 function mtSetVideo(f){
   if(!f || !f.type.startsWith('video/')){ toast('⚠️ Choisis un fichier vidéo'); return; }
@@ -9785,9 +9793,10 @@ async function _mtSegmentedGenerate(){
     plan.avatarSegments=segs;
 
     // 4) coût réel : avSec × tarif modèle + reste × hyperframes (1 cr/s) — débité avant Hedra
-    // pricing forfaitaire (design Axel) : supplément lipsync fixe (+2 C3 / +4 Omni), aligné sur le CTA
-    const scenesCost = _mtLipSurcharge();
-    if(!(await spendCreditsFor(scenesCost, 'lipsync '+modelLbl))){ _mtProg(-1); return; }
+    // pricing À LA SECONDE : lipsync sur les scènes (avSec × rate) + reste habillé (hyperframes 1 cr/s)
+    const avSec=segs.reduce((s,a)=>s+Math.max(0,(a.end||0)-(a.start||0)),0);
+    const scenesCost=Math.ceil(avSec*rate + Math.max(0, dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
+    if(!(await spendCreditsFor(scenesCost, 'scènes avatar '+modelLbl))){ _mtProg(-1); return; }
 
     // 5) génère chaque scène avatar (photo régénérée au bon format si besoin)
     const clipBlobs=[];
