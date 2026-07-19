@@ -252,8 +252,13 @@ const PLAN_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['type', 'layout', 'start', 'end', 'title', 'eyebrow', 'accent', 'sub', 'center', 'value', 'unit', 'wide', 'items'],
+        required: ['type', 'layout', 'start', 'end', 'title', 'eyebrow', 'accent', 'sub', 'center', 'value', 'unit', 'wide', 'options', 'items'],
         properties: {
+          // Deliberation : les traitements compares pour CE moment, notes sur 100.
+          // Format COMPACT "type|layout|score|pourquoi" (ex "nodes|full|82|montre les 3 etapes")
+          // -> un tableau d'objets imbrique ici fait exploser la grammaire du mode strict
+          // ("compiled grammar is too large"). On parse et on valide cote serveur.
+          options: { type: 'array', items: { type: 'string' } },
           type: { type: 'string', enum: ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner'] },
           layout: { type: 'string', enum: ['split', 'full', 'banner'] },
           start: { type: 'number' },
@@ -297,6 +302,8 @@ type Plan = {
   slides: {
     type: string; layout?: string; start: number; end: number; title: string; wide: boolean
     eyebrow?: string; accent?: string; sub?: string; center?: string; value?: string; unit?: string
+    // en entree : lignes "type|layout|score|pourquoi" ; en sortie : objets parses
+    options?: (string | { type: string; layout: string; score: number; why: string })[]
     items: { text: string; t: number; value?: string; label?: string }[]
   }[]
   face: { cy: number } | null
@@ -354,6 +361,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
 - REGLE ABSOLUE — C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis JAMAIS un rythme ou un type pour "faire varier" ou pour remplir un quota. Tu pars de CE QUI EST DIT a cet instant et tu prends la scene qui l'illustre le mieux. Si aucune scene ne colle a la phrase, tu restes en FULL ECRAN — c'est un choix valable et frequent. Une video ou 3 scenes seulement sont justifiees vaut mille fois mieux qu'une video ou tu as case 8 scenes decoratives.
 - TOUT LE TEXTE AFFICHE VIENT DE SA BOUCHE : chaque title, item, value, label reprend SES mots (condenses en 2 a 5 mots), avec SON vocabulaire. Tu n'inventes RIEN : pas un chiffre qu'il n'a pas prononce, pas une etape qu'il n'a pas citee, pas un prix, pas une marque, pas une statistique. Si le chiffre n'est ni dit ni visible a l'image (ni dans le contexte produit fourni), le type kpi/bars/versus est INTERDIT — prends autre chose.
 - Consequence naturelle : comme un script alterne les idees (une enumeration, puis une preuve, puis une punchline), les rythmes alternent d'eux-memes. Verifie juste a la fin que tu n'as pas 2 scenes IDENTIQUES collees ni plus de 5s sans le moindre changement visuel : si ca arrive, c'est le signe qu'une des deux scenes n'etait pas justifiee — SUPPRIME-LA (repasse en full ecran) plutot que d'en inventer une autre.
+- TU DELIBERES AVANT DE TRANCHER (obligatoire pour CHAQUE scene) : a chaque moment ou un traitement visuel est possible, tu ne prends pas la premiere idee. Tu remplis options[] avec 2 a 4 traitements CANDIDATS pour ce moment precis, chacun ecrit sur UNE ligne au format exact "type|layout|score|pourquoi" (ex "nodes|full|82|montre les 3 etapes citees" ou "fullscreen|none|45|rien a illustrer ici"), note sur 100 = son POTENTIEL VIRAL POUR CE SCRIPT-LA (retention : est-ce que ca donne envie de rester ? clarte : est-ce que ca rend l'idee plus limpide ? surprise : est-ce que ca casse la monotonie au bon moment ?), avec why = la raison en moins de 12 mots. "fullscreen"/layout "none" est TOUJOURS un des candidats a evaluer (rester sur la personne est souvent le meilleur choix). Puis type et layout de la scene = LE CANDIDAT LE MIEUX NOTE.
+- Note honnetement, sans complaisance : un traitement qui n'apporte rien merite 20, pas 60. Si le meilleur candidat est sous 55, ce moment ne merite AUCUNE scene — ne l'ecris pas du tout (le rendu restera en plein ecran). Deux scenes tres bien notees valent mieux que six scenes a 60.
 - TYPES PLEIN CADRE — le declencheur est ce qui est DIT, chacun a sa condition d'entree :
     nodes  — SI il enonce un enchainement de 2 a 4 etapes ("tu fais X, puis Y, et t'obtiens Z"). items[].text = 1 a 3 mots, ses mots.
     loop   — SI il decrit un cycle qui se repete tout seul ("et ca recommence", "en boucle", "tous les jours") ; center = le mot qui resume la boucle.
@@ -510,6 +519,17 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         value: txt(s.value, 12),
         unit: txt(s.unit, 26).toUpperCase(),
         wide: !!s.wide,
+        // deliberation du chef d'orchestre : "type|layout|score|pourquoi" -> objet
+        options: (Array.isArray(s.options) ? s.options : []).slice(0, 4)
+          .map((line) => {
+            const [ty, la, sc, ...rest] = String(line || '').split('|')
+            return {
+              type: txt(ty, 20).toLowerCase(), layout: txt(la, 10).toLowerCase(),
+              score: Math.round(clamp(Number(sc) || 0, 0, 100)), why: txt(rest.join('|'), 90),
+            }
+          })
+          .filter((o) => [...SLIDE_TYPES, 'fullscreen'].includes(o.type))
+          .sort((x, y) => y.score - x.score),
         items: (Array.isArray(s.items) ? s.items : []).slice(0, 8)
           .map((it) => ({
             text: txt(it.text, 60).toUpperCase(),
@@ -524,6 +544,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     .filter((s) => SLIDE_TYPES.includes(s.type) && s.end > s.start + 0.5
       && (s.layout === 'banner' ? !!s.title : s.items.length > 0))
     .filter((s) => s.layout !== 'full' || s.items.length > 0 || ['kpi', 'timer'].includes(s.type))
+    // seuil de deliberation : sous 55/100, le moment ne merite pas de traitement (plein ecran)
+    .filter((s) => !s.options.length || s.options[0].score >= 55)
     .sort((a, b) => a.start - b.start)
     .slice(0, 24)
   // ── GARDE-FOU ANTI-INVENTION ────────────────────────────────────────────────
@@ -747,7 +769,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '1.2',
+      version: '1.3',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
