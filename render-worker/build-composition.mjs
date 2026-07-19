@@ -118,7 +118,14 @@ export function buildComposition(plan, opts = {}) {
     }
   }).filter((c) => c.text)
 
-  const hook = plan.hook && plan.hook.text ? {
+  // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
+  const _nk = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 3)
+  const hookHiddenByBanner = !!(plan.hook && plan.hook.text) && bannerDefs.some((b) => {
+    if (!(b.start < (plan.hook.end ?? 3) && b.start + b.dur > (plan.hook.start || 0))) return false
+    const a = _nk(plan.hook.text), c = _nk(b.title)
+    return a.length ? a.filter((w) => c.includes(w)).length / a.length >= 0.5 : false
+  })
+  const hook = plan.hook && plan.hook.text && !hookHiddenByBanner ? {
     text: String(plan.hook.text).toUpperCase(),
     start: r2(plan.hook.start || 0),
     dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
