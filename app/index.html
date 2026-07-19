@@ -5008,7 +5008,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19i-autosave-mdp-securise'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19j-erreurs-fr'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5491,7 +5491,7 @@ async function authGoogle(){
       queryParams: { access_type: 'offline', prompt: 'consent' }
     }
   });
-  if(error) toast('⚠️ Erreur Google : ' + error.message);
+  if(error) toast('⚠️ Google : ' + _frAuthErr(error));
 }
 
 // ── AUTH PAR CODE E-MAIL (OTP à 6 chiffres, sans mot de passe) ──
@@ -5547,7 +5547,7 @@ async function authPwdLogin(){
     if(error){
       showErr(/invalid/i.test(error.message)
         ? 'E-mail ou mot de passe incorrect — si tu n\'as jamais défini de mot de passe, connecte-toi par code'
-        : error.message);
+        : _frAuthErr(error));
       return;
     }
     location.reload(); // la session est persistée → le boot recharge le compte connecté
@@ -5605,6 +5605,24 @@ function _accountAutoSave(now){
 // ── 🔐 Changement de mot de passe sécurisé ──
 // 1) on prouve que c'est bien l'user : ancien mot de passe OU code e-mail (Resend)
 // 2) nouveau mot de passe saisi DEUX fois (évite de se verrouiller sur une faute de frappe)
+// 🇫🇷 Supabase renvoie ses erreurs en ANGLAIS → on les traduit avant tout affichage.
+// Le message brut part en console pour le debug, jamais à l'écran.
+function _frAuthErr(e){
+  const raw = String((e && (e.message || e.error_description)) || e || '');
+  const m = raw.toLowerCase();
+  if(/different from the old password|same_password/.test(m))     return 'Ce mot de passe est identique à l\'ancien — choisis-en un autre.';
+  if(/at least .* characters|too short|weak.?password/.test(m))   return 'Mot de passe trop court ou trop simple — 8 caractères minimum.';
+  if(/invalid login credentials|invalid credentials/.test(m))     return 'E-mail ou mot de passe incorrect.';
+  if(/rate limit|too many requests/.test(m))                      return 'Trop de tentatives — réessaie dans quelques minutes.';
+  if(/only request this after|for security purposes/.test(m))     return 'Trop rapide — patiente quelques secondes avant de réessayer.';
+  if(/token has expired|expired|invalid token|otp/.test(m))       return 'Code expiré ou invalide — demandes-en un nouveau.';
+  if(/already registered|already exists/.test(m))                 return 'Un compte existe déjà avec cet e-mail.';
+  if(/unable to validate email|invalid email|invalid format/.test(m)) return 'Adresse e-mail invalide.';
+  if(/session|jwt|not authenticated|missing/.test(m))             return 'Session expirée — reconnecte-toi.';
+  if(/network|failed to fetch|load failed/.test(m))               return 'Erreur réseau — réessaie.';
+  if(raw) try{ console.warn('auth error (brut):', raw); }catch(_){}
+  return 'Une erreur est survenue — réessaie.';
+}
 let _pwdVerified = false;
 function _pwdMsg(t, ok){
   const m=document.getElementById('pwdModalMsg'); if(!m) return;
@@ -5694,7 +5712,7 @@ async function pwdSaveNew(){
   _pwdMsg('Enregistrement…', true);
   try{
     const { error } = await sb.auth.updateUser({ password: a });
-    if(error){ _pwdMsg(error.message); return; }
+    if(error){ _pwdMsg(_frAuthErr(error)); return; }
     closePwdModal();
     toast('🔐 Mot de passe enregistré — tu peux maintenant te connecter avec');
   }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
@@ -5793,7 +5811,7 @@ async function authVerifyCode(){
   const { data, error } = await sb.auth.verifyOtp({ type:'magiclink', token_hash: res.token_hash });
   if(error || !data || !data.user){
     btn.disabled = false; btn.innerHTML = oldLabel;
-    errEl.textContent = 'Erreur de connexion' + (error ? ' : ' + error.message : '') + '. Demande un nouveau code.';
+    errEl.textContent = error ? _frAuthErr(error) : 'Erreur de connexion — demande un nouveau code.';
     errEl.style.display='block'; return;
   }
   // « Rester connecté 14 jours » : on date la session
@@ -6006,7 +6024,7 @@ async function resetPassword(){
   const { data: { user } } = await sb.auth.getUser();
   if(!user?.email){ alert('Impossible de récupérer ton adresse email.'); return; }
   const { error } = await sb.auth.resetPasswordForEmail(user.email, { redirectTo: window.location.origin + '/app/' });
-  if(error){ alert('Erreur : ' + error.message); }
+  if(error){ alert(_frAuthErr(error)); }
   else {
     toast('📧 Email envoyé à ' + user.email + ' — vérifie ta boîte mail.');
   }
@@ -7331,7 +7349,7 @@ async function saveAccountProfile(){
   if(firstName) updates.first_name = firstName;
   updates.phone = phone || null;
   const { error } = await sb.from('profiles').update(updates).eq('id', currentMember.id);
-  if(error){ toast('⚠️ Erreur : ' + error.message); return; }
+  if(error){ toast('⚠️ ' + _frAuthErr(error)); return; }
   // Mettre à jour le cache local
   if(firstName){ currentMember.first_name = firstName; document.getElementById('memberName').textContent = firstName; }
   currentMember.phone = phone || null;
@@ -7382,7 +7400,7 @@ async function saveKeys(){
       const statusEl = document.getElementById('byok-status');
       if(statusEl) statusEl.style.display = newKey ? 'block' : 'none';
     } else {
-      toast('⚠️ Erreur sauvegarde clé Hedra : ' + error.message); return;
+      toast('⚠️ Clé Hedra non enregistrée — ' + _frAuthErr(error)); return;
     }
   }
   refreshDots();
