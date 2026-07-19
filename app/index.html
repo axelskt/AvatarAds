@@ -3469,6 +3469,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               <span id="mtGoLbl">Créer ma vidéo — 2 crédits</span>
             </button>
+            <p id="mtCostNote" class="faint center" style="display:none;font-size:11.5px;line-height:1.5;margin-top:10px;max-width:520px;margin-inline:auto"></p>
           </div>
 
         </div>
@@ -5044,7 +5045,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19l-brief-final'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19m-base-remux'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9809,12 +9810,28 @@ function _mtUpdateCost(){
   const omni=_mt.lipModel==='omnihuman';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
   const lbl=omni?'Omni':'Character 3';
+  const note=document.getElementById('mtCostNote');
   if(_mt.mp3Dur){
-    const avSec=Math.min(8, Math.max(2, Math.round(_mt.mp3Dur*0.3)));
-    const est=Math.ceil(CREDIT_COSTS.montageIA + avSec*rate + Math.max(0,_mt.mp3Dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
-    b.textContent = 'Créer ma vidéo — ~'+est+' crédits';
+    // L'avatar n'est PAS lipsyncé sur toute la vidéo : le chef d'orchestre ne garde que
+    // les passages où le voir sert (hook, temps forts) — en général 2 à 4 scènes.
+    // On annonce donc une FOURCHETTE, et le débit réel se fait sur les secondes générées.
+    const dur=_mt.mp3Dur;
+    const lo=Math.min(6, Math.max(2, Math.round(dur*0.18)));   // au mieux : le hook seul
+    const hi=Math.min(10, Math.max(lo+2, Math.round(dur*0.42))); // au pire : plusieurs scènes
+    const cost=(sec)=>Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
+    const cLo=cost(lo), cHi=cost(hi);
+    // à 1 cr/s (Character 3) l'avatar coûte le même prix que l'habillage : le total ne
+    // bouge pas selon le nombre de scènes → un seul chiffre, pas une fausse fourchette
+    b.textContent = 'Créer ma vidéo — '+(cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
+    if(note){
+      note.style.display='';
+      note.textContent = cLo===cHi
+        ? 'Prix fixe : '+lbl+' coûte le même tarif que l\'habillage ('+rate+' cr/s), donc '+Math.round(dur)+' s = '+cLo+' crédits quoi qu\'il arrive.'
+        : 'L\'avatar n\'est lipsyncé que sur les passages où on le voit — l\'IA en garde en général '+lo+' à '+hi+' s sur '+Math.round(dur)+' s. Tu es débité aux secondes réellement générées ; le reste du temps c\'est du gameplay à '+CREDIT_COSTS.hyperframesPerSec+' cr/s.';
+    }
   } else {
     b.textContent = 'Créer ma vidéo — 2 cr + lipsync '+lbl+' ('+rate+' cr/s)';
+    if(note){ note.style.display='none'; note.textContent=''; }
   }
 }
 function mtSetVideo(f){
@@ -10016,12 +10033,14 @@ async function _mtBuildBase(mp3File, durationSec){
   await ff.writeFile('gp.mp4', await fetchFile(url));
   await ff.writeFile('voice.mp3', await fetchFile(mp3File));
   const D=Math.max(3, Math.ceil(durationSec)+1); // marge → le worker n'a jamais à tronquer
+  // ⚡ REMUX, PAS DE RÉ-ENCODAGE VIDÉO : les clips sont déjà en 9:16 H.264, on se contente
+  // de les boucler et d'y coller la voix (`-c:v copy`) → quelques secondes au lieu de
+  // plusieurs MINUTES. Ré-encoder 1080×1920 dans ffmpeg.wasm bloquait la génération à 10 %.
+  // La mise au format 1080×1920 30 fps est faite par le worker (ffmpeg natif, ~2 s).
   await ff.exec(['-stream_loop','-1','-i','gp.mp4','-i','voice.mp3',
     '-t', String(D),
-    '-vf', "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
     '-map','0:v:0','-map','1:a:0',
-    '-c:v','libx264','-preset','veryfast','-crf','22','-pix_fmt','yuv420p',
-    '-c:a','aac','-b:a','160k','base.mp4']);
+    '-c:v','copy','-c:a','aac','-b:a','160k','-movflags','+faststart','base.mp4']);
   const data=await ff.readFile('base.mp4');
   return new Blob([data.buffer], {type:'video/mp4'});
 }
