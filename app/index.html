@@ -4283,12 +4283,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div style="margin-bottom:18px">
       <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
-      <div class="label" style="margin:14px 0 7px">Mot de passe <span style="font-weight:400;color:var(--text3);font-size:10.5px">· définir ou changer — pour te connecter sans code e-mail</span></div>
+      <div class="setup-label" style="margin:18px 0 6px">Mot de passe <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
       <div style="display:flex;gap:8px">
         <input class="field" type="password" id="accountPassword" placeholder="Nouveau mot de passe · 8 caractères min." autocomplete="new-password" style="flex:1">
         <button onclick="accountSetPassword()" class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 14px">Enregistrer</button>
       </div>
-      <div class="faint" style="font-size:10.5px;margin-top:6px">Déjà un mot de passe ? Saisis-en un nouveau ici pour le changer. <button onclick="accountForgotPwd()" style="background:none;border:none;color:var(--accent-2);font-family:var(--font);font-size:10.5px;cursor:pointer;text-decoration:underline;padding:0">Mot de passe oublié ?</button></div>
+      <div class="faint" style="font-size:10.5px;margin-top:7px;line-height:1.5">Te permet de te connecter sans code e-mail. Oublié ? Pas besoin de l'ancien — saisis directement le nouveau.</div>
     </div>
     <button class="btn btn-ghost" onclick="saveAccountProfile()" style="width:100%;margin-bottom:26px">💾 Sauvegarder le profil</button>
 
@@ -4974,7 +4974,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19g-reset-mdp'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19h-mdp-design'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
