@@ -66,7 +66,25 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   const proj = mkdtempSync(join(tmpdir(), 'aa-render-'))
   try {
     mkdirSync(join(proj, 'media'), { recursive: true })
-    copyFileSync(basePath, join(proj, 'media', 'base.mp4'))
+    // La base arrive telle quelle du navigateur (remux instantané, souvent 540×960) :
+    // c'est ICI qu'on la met au format de rendu — ffmpeg natif fait en ~2 s ce qui
+    // prenait des minutes en WASM côté client. On ne touche pas à l'audio (la voix).
+    const baseOut = join(proj, 'media', 'base.mp4')
+    let baseW = 0, baseH = 0
+    try { const d = ffprobe(basePath, 'stream=width,height').split(','); baseW = parseInt(d[0], 10) || 0; baseH = parseInt(d[1], 10) || 0 } catch (_) { /* probe optionnel */ }
+    if (baseW === 1080 && baseH === 1920) copyFileSync(basePath, baseOut)
+    else {
+      console.log(`▶ base ${baseW}×${baseH} → 1080×1920 (ffmpeg natif)…`)
+      try {
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', basePath,
+          '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+          '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
+          '-c:a', 'copy', baseOut])
+      } catch (e) {
+        console.warn('normalisation base impossible, on garde l\'original :', e.message)
+        copyFileSync(basePath, baseOut)
+      }
+    }
 
     const assetFiles = {}
     const assetsDir = join(jobDir, 'assets')
