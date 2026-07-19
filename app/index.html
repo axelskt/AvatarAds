@@ -5045,7 +5045,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19n-avatar-cadeau'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-19o-remboursement'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5339,12 +5339,41 @@ async function spendCreditsFor(amount, label){
     _insufficientCredits(amount - creditsBalance());
     return false;
   }
-  const { data, error } = await sb.rpc('spend_credits', { p_secs: amount });
+  const { data, error } = await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null });
   if(error){ console.warn('spend_credits:', error); toast('⚠️ Erreur crédits — réessaie'); return false; }
-  if(data === -1){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
-  currentMember.credits_remaining = data;
+  if(!data || data.ok !== true){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
+  currentMember.credits_remaining = data.balance;
+  // #122 : on retient l'opération pour pouvoir la REMBOURSER si la génération échoue
+  if(data.op_id) _creditOps.push(data.op_id);
   _updateQuotaDisplay();
   return true;
+}
+
+// ══ #122 · Remboursement automatique quand une génération échoue ══════════
+// Les crédits sont débités AVANT d'appeler Hedra/fal/ElevenLabs (anti-triche).
+// Si le fournisseur tombe, l'utilisateur ne doit PAS payer pour rien.
+// Chaque débit laisse une trace en base (credit_ops) ; `refund_credits` ne peut
+// rembourser qu'une opération existante, à soi, jamais déjà remboursée, récente.
+let _creditOps = [];
+function creditsFlowBegin(){ _creditOps = []; }        // début d'une génération
+function creditsFlowDone(){ _creditOps = []; }         // succès → plus rien à rendre
+async function creditsFlowRefund(why){
+  const ops = _creditOps.slice(); _creditOps = [];
+  let total = 0;
+  for(const id of ops){
+    try{
+      const { data, error } = await sb.rpc('refund_credits', { p_op_id: id });
+      if(!error && data && data.ok){
+        total += (data.refunded || 0);
+        if(typeof data.balance === 'number' && typeof currentMember !== 'undefined' && currentMember) currentMember.credits_remaining = data.balance;
+      }
+    }catch(e){ console.warn('refund_credits:', e); }
+  }
+  if(total > 0){
+    try{ _updateQuotaDisplay(); }catch(_){}
+    toast('↩️ ' + total + ' crédits remboursés — ' + (why || 'la génération a échoué'));
+  }
+  return total;
 }
 
 // Solde insuffisant : free → paywall plans ; abonné → upsell contextuel (upgrade + packs)
@@ -9883,7 +9912,7 @@ async function montageGo(){
 // overlay de progression dédié au flux segmenté (pct<0 → ferme)
 // écran de génération (design maquette MzRunning) : baguette pulsée, 5 étapes, barre + %
 const _MT_STAGES=['Analyse de ta source','Découpe des temps forts','Génération des sous-titres','Placement du b-roll & effets','Montage & rendu final'];
-function _mtAbortRun(){ window._mtAborted=true; if(window._mtPollIv){ clearInterval(window._mtPollIv); window._mtPollIv=null; } _mtProg(-1); toast('Montage annulé'); }
+function _mtAbortRun(){ window._mtAborted=true; if(window._mtPollIv){ clearInterval(window._mtPollIv); window._mtPollIv=null; } _mtProg(-1); creditsFlowRefund('tu as annulé le montage'); toast('Montage annulé'); }
 function _mtProg(pct, label){
   let o=document.getElementById('mtProgOv');
   if(pct<0){ if(o) o.remove(); return; }
@@ -10070,6 +10099,7 @@ async function _mtFramesFromVideo(blob, n){
 
 // pipeline complet du module (avatar) : orchestrate → N scènes Hedra → render-job
 async function _mtSegmentedGenerate(){
+  creditsFlowBegin();   // #122 : tout débit de ce flux redevient remboursable
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ toast('⚠️ Reconnecte-toi puis réessaie'); return; }
   if(!_mt.mp3 || !_mt.avatar){ toast('⚠️ Importe ton audio et une photo d\'avatar'); return; }
@@ -10163,6 +10193,7 @@ async function _mtSegmentedGenerate(){
     _mtPollSegmented(d.job_id, _mtVideoDone);
   }catch(e){
     console.error('montage segmenté:', e);
+    await creditsFlowRefund();
     _mtProg(-1);
     toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120));
   }
@@ -10172,19 +10203,22 @@ function _mtPollSegmented(jobId, onDone){
   window._mtAborted=false;
   const iv=setInterval(async ()=>{
     if(window._mtAborted){ clearInterval(iv); return; }
-    if(++n>180){ clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
+    if(++n>180){ clearInterval(iv); _mtProg(-1); await creditsFlowRefund('le rendu a été trop long'); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
     try{
       const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
       const d=await r.json().catch(()=>({}));
       if(d.status==='done' && d.url){
         clearInterval(iv);
+        creditsFlowDone();
         toast('✅ Ta vidéo montée est prête — téléchargement lancé !');
         const a=document.createElement('a'); a.href=d.url; a.download='montage-ia.mp4'; document.body.appendChild(a); a.click(); a.remove();
         // carte de fin (Terminé / Ajuster) au lieu de refermer sur l'Éditeur — reçoit l'URL du MP4 final
         if(typeof onDone==='function') onDone(d.url);
         else { _mtProg(100,'Terminé !'); setTimeout(()=>_mtProg(-1), 800); }
       } else if(d.status==='failed'){
-        clearInterval(iv); _mtProg(-1); toast('⚠️ Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
+        clearInterval(iv); _mtProg(-1);
+        await creditsFlowRefund('le rendu a échoué');
+        toast('⚠️ Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
       } else {
         _mtProg(Math.min(99, 92+n*0.35), 'Rendu final sur le serveur…');
       }
@@ -10196,6 +10230,7 @@ function _mtPollSegmented(jobId, onDone){
 // plan au chef d'orchestre, on upload la vidéo + le plan → worker → MP4 propre (avec slides).
 // « Ajuster » à la fin ouvre le MP4 FINAL (celui qui est téléchargé), pas la source.
 async function _mtVideoGenerate(){
+  creditsFlowBegin();   // #122 : tout débit de ce flux redevient remboursable
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ toast('⚠️ Reconnecte-toi puis réessaie'); return; }
   if(!_mt.video){ toast('⚠️ Importe d\'abord ta vidéo'); return; }
@@ -10255,7 +10290,7 @@ async function _mtVideoGenerate(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
     _mtPollSegmented(d.job_id, _mtVideoDone);
-  }catch(e){ console.error('montage Ma vidéo:', e); _mtProg(-1); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
+  }catch(e){ console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
 }
 // 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
 // montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
