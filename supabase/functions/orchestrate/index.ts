@@ -173,165 +173,79 @@ const PLAN_SCHEMA = {
   additionalProperties: false,
   required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
   properties: {
-    sections: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['role', 'start', 'end', 'label'],
-        properties: {
-          role: { type: 'string' },   // hook|benefice|preuve|cta|outro — filtre serveur
-          start: { type: 'number' },
-          end: { type: 'number' },
-          label: { type: 'string' },
-        },
-      },
-    },
-    zooms: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['t', 'dur', 'scale', 'cx', 'cy', 'reason'],
-        properties: {
-          t: { type: 'number' }, dur: { type: 'number' }, scale: { type: 'number' },
-          cx: { type: 'number' }, cy: { type: 'number' }, reason: { type: 'string' },
-        },
-      },
-    },
-    broll: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['assetId', 'start', 'end', 'reason'],
-        properties: {
-          assetId: { type: 'string' }, start: { type: 'number' }, end: { type: 'number' }, reason: { type: 'string' },
-        },
-      },
-    },
-    sfx: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['kind', 't'],
-        properties: { kind: { type: 'string' }, t: { type: 'number' } },   // SFX_KINDS — filtre serveur
-      },
-    },
-    hook: {
-      anyOf: [
-        {
-          type: 'object',
-          additionalProperties: false,
-          required: ['text', 'start', 'end'],
-          properties: { text: { type: 'string' }, start: { type: 'number' }, end: { type: 'number' } },
-        },
-        { type: 'null' },
-      ],
-    },
+    // LIGNES COMPACTES "champ|champ|…" — le format exact est decrit dans le prompt
+    // et re-etale en objets par expandPlan() juste apres la reponse.
+    sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label"
+    zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
+    broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end"
+    sfx: { type: 'array', items: { type: 'string' } },             // "kind|t"
+    beds: { type: 'array', items: { type: 'string' } },            // "name|t"
+    avatarSegments: { type: 'array', items: { type: 'string' } },  // "start|end|format"
+    hook: { type: 'string' },                                      // "texte|start|end" ("" si aucun)
     accents: { type: 'array', items: { type: 'string' } },
-    tone: { type: 'string' },   // fun|neutre — filtre serveur
-    beds: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['name', 't', 'reason'],
-        properties: {
-          name: { type: 'string' },   // grave|tension|montee — filtre serveur
-          t: { type: 'number' },
-          reason: { type: 'string' },
-        },
-      },
-    },
-    music: {
-      anyOf: [
-        {
-          type: 'object',
-          additionalProperties: false,
-          required: ['mood'],
-          properties: { mood: { type: 'string' } },   // intense|dynamique|chill — filtre serveur
-        },
-        { type: 'null' },
-      ],
-    },
-    face: {
-      anyOf: [
-        {
-          type: 'object',
-          additionalProperties: false,
-          required: ['cy'],
-          properties: { cy: { type: 'number' } },
-        },
-        { type: 'null' },
-      ],
-    },
-    detected: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['subtitles'],
-      properties: { subtitles: { type: 'boolean' } },
-    },
-    avatarSegments: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['start', 'end', 'format', 'reason'],
-        properties: {
-          start: { type: 'number' }, end: { type: 'number' },
-          format: { type: 'string' },   // portrait|paysage — filtre serveur
-          reason: { type: 'string' },
-        },
-      },
-    },
+    tone: { type: 'string' },
+    music: { type: 'string' },                                     // "intense"|"dynamique"|"chill"|""
+    face: { type: 'string' },                                      // "0.32" ou "" si aucun visage
+    detected: { type: 'string' },                                  // "subtitles" si deja incrustes, "" sinon
     slides: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['type', 'layout', 'motif', 'start', 'end', 'title', 'eyebrow', 'accent', 'sub', 'center', 'value', 'unit', 'wide', 'options', 'items'],
+        required: ['type', 'layout', 'motif', 'start', 'end', 'wide', 'title', 'meta', 'items'],
         properties: {
-          // Deliberation : les traitements compares pour CE moment, notes sur 100.
-          // Format COMPACT "type|layout|score|pourquoi" (ex "nodes|full|82|montre les 3 etapes")
-          // -> un tableau d'objets imbrique ici fait exploser la grammaire du mode strict
-          // ("compiled grammar is too large"). On parse et on valide cote serveur.
-          options: { type: 'array', items: { type: 'string' } },
-          type: { type: 'string' },   // liste dans le prompt — filtre serveur (SLIDE_TYPES)
-          layout: { type: 'string' },   // split|full|banner — recalcule serveur depuis le type
-          // #131 · l'ANIMATION, choisie d'apres ce que dit l'audio a cet instant.
-          // Utilisee par les styles visuels "page blanche" (Mot par mot, Editorial blanc) ;
-          // "" = laisse le rendu la deduire du type de scene.
-          motif: { type: 'string' },   // liste dans le prompt — filtre serveur (MOTIFS)
+          type: { type: 'string' },
+          layout: { type: 'string' },
+          motif: { type: 'string' },
           start: { type: 'number' },
           end: { type: 'number' },
-          title: { type: 'string' },
-          eyebrow: { type: 'string' },   // sur-titre des scenes plein cadre / bandeaux ("" sinon)
-          accent: { type: 'string' },    // bandeau : le mot du titre colore ("" sinon)
-          sub: { type: 'string' },       // bandeau : ligne de preuve ("" sinon)
-          center: { type: 'string' },    // loop : mot au centre ("" sinon)
-          value: { type: 'string' },     // kpi/timer : chiffre principal ("" sinon)
-          unit: { type: 'string' },      // kpi/timer : ce que mesure le chiffre ("" sinon)
           wide: { type: 'boolean' },
-          items: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['text', 't', 'value', 'label'],
-              properties: {
-                text: { type: 'string' },
-                t: { type: 'number' },
-                value: { type: 'string' },  // bars/versus : le chiffre ("" sinon)
-                label: { type: 'string' },  // bars/versus : le libelle sous le chiffre ("" sinon)
-              },
-            },
-          },
+          title: { type: 'string' },
+          meta: { type: 'string' },                                // "eyebrow|accent|sub|center|value|unit"
+          items: { type: 'array', items: { type: 'string' } },      // "texte|t|value|label"
         },
       },
     },
   },
+}
+
+// ---------- re-etalement des lignes compactes en objets ----------
+// Le reste du fichier (validatePlan, la sortie) travaille sur la forme objet
+// d'origine : tout se remet a plat ICI, juste apres la reponse du modele.
+const cut = (v: unknown, n: number) => {
+  const parts = String(v ?? '').split('|').map((x) => x.trim())
+  while (parts.length < n) parts.push('')
+  return parts.slice(0, n)
+}
+const num = (v: string) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0 }
+
+// deno-lint-ignore no-explicit-any
+function expandPlan(raw: any): Plan {
+  const arr = (v: unknown) => (Array.isArray(v) ? v : [])
+  const [hookText, hookStart, hookEnd] = cut(raw.hook, 3)
+  return {
+    sections: arr(raw.sections).map((l) => { const [role, a, b, label] = cut(l, 4); return { role, start: num(a), end: num(b), label } }),
+    zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
+    broll: arr(raw.broll).map((l) => { const [assetId, a, b] = cut(l, 3); return { assetId, start: num(a), end: num(b) } }),
+    sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
+    beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
+    avatarSegments: arr(raw.avatarSegments).map((l) => { const [a, b, format] = cut(l, 3); return { start: num(a), end: num(b), format } }),
+    hook: hookText ? { text: hookText, start: num(hookStart), end: num(hookEnd) } : null,
+    accents: arr(raw.accents).map((x) => String(x)),
+    tone: String(raw.tone || ''),
+    music: String(raw.music || '').trim() ? { mood: String(raw.music).trim() } : null,
+    face: String(raw.face || '').trim() ? { cy: num(String(raw.face)) } : null,
+    detected: { subtitles: /subtitle/i.test(String(raw.detected || '')) },
+    slides: arr(raw.slides).map((sl) => {
+      const [eyebrow, accent, sub, center, value, unit] = cut(sl?.meta, 6)
+      return {
+        type: String(sl?.type || ''), layout: String(sl?.layout || ''), motif: String(sl?.motif || ''),
+        start: Number(sl?.start) || 0, end: Number(sl?.end) || 0, wide: !!sl?.wide,
+        title: String(sl?.title || ''), eyebrow, accent, sub, center, value, unit,
+        items: arr(sl?.items).map((l) => { const [text, t, v, label] = cut(l, 4); return { text, t: num(t), value: v, label } }),
+      }
+    }),
+  }
 }
 
 type Plan = {
@@ -446,6 +360,22 @@ async function claudePlan(
     .join(' ')
 
   const styleBlock = `
+FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non des objets : un schema tout en objets imbriques fait exploser la grammaire du mode strict et l'API refuse alors TOUT appel. Respecte l'ordre des champs a la lettre, separateur "|", aucun espace autour :
+  sections[]       : "role|start|end|label"            ex "hook|0|3.2|l'accroche"
+  zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
+  broll[]          : "assetId|start|end"               ex "img1|6.20|8.40"
+  sfx[]            : "kind|t"                          ex "whoosh|4.10"
+  beds[]           : "name|t"                          ex "montee|12.00"
+  avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
+  hook             : "texte|start|end"                 ex "PERSONNE NE FAIT CA|0|2.60"   ("" si aucun hook)
+  music            : "intense" | "dynamique" | "chill" | ""   ("" = l'audio a deja une musique)
+  face             : la position verticale du visage, ex "0.32"   ("" si aucun visage)
+  detected         : "subtitles" si des sous-titres sont DEJA incrustes dans la video, "" sinon
+  slides[].meta    : "eyebrow|accent|sub|center|value|unit"  — laisse vide ce qui ne s'applique pas,
+                     mais garde les 5 barres. ex "ETAPE 01||||" ou "RESULTAT|||8750|VUES EN 24 H"
+  slides[].items[] : "texte|t|value|label"             ex "TU PARLES|3.20||" ou "PRO|5.10|49|PAR MOIS"
+Les autres champs de slides restent des champs normaux : type, layout, motif, start, end, wide, title.
+
 VALEURS AUTORISEES (le schema ne les contraint plus — un enum de schema fait exploser la grammaire du mode strict — donc RESPECTE-LES a la lettre, tout le reste est jete par le serveur) :
   sections[].role : hook | benefice | preuve | cta | outro
   slides[].type   : flow | checklist | compare | stat | card | nodes | loop | bars | kpi | timer | versus | punch | banner
@@ -475,7 +405,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
 - REGLE ABSOLUE — C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis JAMAIS un rythme ou un type pour "faire varier" ou pour remplir un quota. Tu pars de CE QUI EST DIT a cet instant et tu prends la scene qui l'illustre le mieux. Si aucune scene ne colle a la phrase, tu restes en FULL ECRAN — c'est un choix valable et frequent. Une video ou 3 scenes seulement sont justifiees vaut mille fois mieux qu'une video ou tu as case 8 scenes decoratives.
 - TOUT LE TEXTE AFFICHE VIENT DE SA BOUCHE : chaque title, item, value, label reprend SES mots (condenses en 2 a 5 mots), avec SON vocabulaire. Tu n'inventes RIEN : pas un chiffre qu'il n'a pas prononce, pas une etape qu'il n'a pas citee, pas un prix, pas une marque, pas une statistique. Si le chiffre n'est ni dit ni visible a l'image (ni dans le contexte produit fourni), le type kpi/bars/versus est INTERDIT — prends autre chose.
 - Consequence naturelle : comme un script alterne les idees (une enumeration, puis une preuve, puis une punchline), les rythmes alternent d'eux-memes. Verifie juste a la fin que tu n'as pas 2 scenes IDENTIQUES collees ni plus de 5s sans le moindre changement visuel : si ca arrive, c'est le signe qu'une des deux scenes n'etait pas justifiee — SUPPRIME-LA (repasse en full ecran) plutot que d'en inventer une autre.
-- TU DELIBERES AVANT DE TRANCHER (obligatoire pour CHAQUE scene) : a chaque moment ou un traitement visuel est possible, tu ne prends pas la premiere idee. Tu remplis options[] avec 2 a 4 traitements CANDIDATS pour ce moment precis, chacun ecrit sur UNE ligne au format exact "type|layout|score|pourquoi" (ex "nodes|full|82|montre les 3 etapes citees" ou "fullscreen|none|45|rien a illustrer ici"), note sur 100 = son POTENTIEL VIRAL POUR CE SCRIPT-LA (retention : est-ce que ca donne envie de rester ? clarte : est-ce que ca rend l'idee plus limpide ? surprise : est-ce que ca casse la monotonie au bon moment ?), avec why = la raison en moins de 12 mots. "fullscreen"/layout "none" est TOUJOURS un des candidats a evaluer (rester sur la personne est souvent le meilleur choix). Puis type et layout de la scene = LE CANDIDAT LE MIEUX NOTE.
+- TU DELIBERES AVANT DE TRANCHER (obligatoire pour CHAQUE scene) : a chaque moment ou un traitement visuel est possible, tu ne prends pas la premiere idee. Dans ton RAISONNEMENT (pas dans le JSON), compare 2 a 4 traitements candidats pour ce moment precis et note chacun sur 100 = son POTENTIEL VIRAL POUR CE SCRIPT-LA (retention : est-ce que ca donne envie de rester ? clarte : est-ce que ca rend l'idee plus limpide ? surprise : est-ce que ca casse la monotonie au bon moment ?). "rester en plein ecran sur la personne" est TOUJOURS un des candidats a evaluer, et c'est souvent le meilleur. Puis n'ecris dans le JSON que LE CANDIDAT LE MIEUX NOTE.
 - Note honnetement, sans complaisance : un traitement qui n'apporte rien merite 20, pas 60. Si le meilleur candidat est sous 55, ce moment ne merite AUCUNE scene — ne l'ecris pas du tout (le rendu restera en plein ecran). Deux scenes tres bien notees valent mieux que six scenes a 60.
 - TYPES PLEIN CADRE — le declencheur est ce qui est DIT, chacun a sa condition d'entree :
     nodes  — SI il enonce un enchainement de 2 a 4 etapes ("tu fais X, puis Y, et t'obtiens Z"). items[].text = 1 a 3 mots, ses mots.
@@ -626,7 +556,7 @@ Analyse d'abord la video, puis genere le plan de montage.`,
   if (data.stop_reason === 'max_tokens') throw new Error('Plan tronque — reessaie')
   const textBlock = (data.content || []).find((b: { type: string }) => b.type === 'text')
   if (!textBlock) throw new Error('Reponse Claude vide')
-  return { plan: JSON.parse(textBlock.text) as Plan, usage: data.usage }
+  return { plan: expandPlan(JSON.parse(textBlock.text)), usage: data.usage }
 }
 
 // ---------- validation / normalisation serveur (le schema garantit la forme, ici les bornes) ----------
@@ -872,7 +802,7 @@ function buildCaptions(words: Word[], accents: string[], duration: number) {
     // décide (les styles « punch » passent en majuscules, Apple / Éditorial blanc /
     // Mot par mot écrivent en casse normale, « une stratégie. » avec son point).
     // Normaliser ici rendait ces trois styles impossibles à respecter.
-    const text = w.text.replace(/[«»"']/g, '').trim()
+    const text = w.text.replace(/[«»"]/g, '').trim()   // l'apostrophe est GARDEE : « l'outil », « j'utilise »
     if (!text) continue
     let start = r2(clamp(w.start, 0, duration))
     let end = r2(clamp(w.end, 0, duration))
