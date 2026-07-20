@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20s-casse-thinks'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20t-casse-restauree'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10797,6 +10797,32 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec){
    disponibles À LA MAIN dans l'Éditeur, où l'on voit et entend la vidéo.
    Filtré ici plutôt que côté serveur : réversible en une ligne si on change d'avis. */
 const _MT_FUN_KINDS=['hu','bip','fahh','robot'];
+// La casse et la ponctuation des sous-titres se perdent dans orchestrate
+// (.toUpperCase() + suppression du point final) : les styles Apple, Éditorial
+// blanc et Mot par mot ne peuvent alors pas être fidèles — « une stratégie. »
+// devient « UNE STRATEGIE ». Le transcript, lui, arrive intact à côté du plan :
+// on réaligne mot à mot, dans l'ordre. Sans transcript exploitable on garde la
+// version majuscules — le rendu reste correct, juste moins fidèle.
+function _mtRestoreCaptionCase(plan, transcript){
+  if(!transcript || !plan || !Array.isArray(plan.captions) || !plan.captions.length) return 0;
+  const nrm = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const src = String(transcript).split(/\s+/).filter(w => nrm(w));
+  let i = 0, fixed = 0;
+  for(const c of plan.captions){
+    const key = nrm(c.text);
+    if(!key) continue;
+    // fenêtre courte : les sous-titres suivent l'ordre du transcript, mais Scribe
+    // peut avoir sauté un mot ici ou là
+    for(let j = i; j < Math.min(src.length, i + 6); j++){
+      if(nrm(src[j]) === key){
+        const exact = src[j].replace(/[«»"']/g,'').trim();
+        if(exact && exact !== c.text){ c.text = exact; fixed++; }
+        i = j + 1; break;
+      }
+    }
+  }
+  return fixed;
+}
 function _mtStripFun(plan){
   if(!plan) return plan;
   if(Array.isArray(plan.sfx)) plan.sfx=plan.sfx.filter(s=>!_MT_FUN_KINDS.includes(s&&s.kind));
@@ -10897,6 +10923,7 @@ async function _mtSegmentedGenerate(){
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
+    _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
     const _a=_mt.adv||{};
     plan.capStyle   = _a.subStyle || 'punch';   // style des sous-titres, lu par le worker
@@ -11042,6 +11069,7 @@ async function _mtVideoGenerate(){
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
+    _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
     const _a=_mt.adv||{};
     plan.capStyle   = _a.subStyle || 'punch';   // style des sous-titres, lu par le worker
