@@ -216,7 +216,7 @@ const PLAN_SCHEMA = {
         type: 'object',
         additionalProperties: false,
         required: ['kind', 't'],
-        properties: { kind: { type: 'string', enum: SFX_KINDS }, t: { type: 'number' } },
+        properties: { kind: { type: 'string' }, t: { type: 'number' } },   // SFX_KINDS — filtre serveur
       },
     },
     hook: {
@@ -455,6 +455,7 @@ VALEURS AUTORISEES (le schema ne les contraint plus — un enum de schema fait e
   music.mood      : intense | dynamique | chill
   beds[].name     : grave | tension | montee
   avatarSegments[].format : portrait | paysage
+  sfx[].kind      : whoosh | pop | ding | boom | click | riser | success | magic | hit | flash | snap | hu | bip | fahh | robot
 
 LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre du debut a la fin. Tu alternes QUATRE rythmes, et tu changes de rythme toutes les 2 a 5s.
   1. FULL ECRAN (layout absent) = la personne plein cadre : zooms punch, b-roll, respiration.
