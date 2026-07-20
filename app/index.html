@@ -3340,6 +3340,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         #v-montage .mt-brief-x{margin-left:auto;background:none;border:none;color:var(--text-3);font-size:12.5px;font-family:var(--font);cursor:pointer;padding:8px 4px;-webkit-appearance:none;appearance:none}
         #v-montage .mt-brief-x:hover{color:var(--text)}
         @media(max-width:760px){ #v-montage .mt-brief-x{margin-left:0} }
+        /* 🧠 mémoire de marque */
+        #v-montage .mt-mem{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:14px 16px}
+        #v-montage .mt-mem.on{border-color:var(--accent-line);background:var(--accent-soft)}
+        #v-montage .mt-mem-sum{font-size:12.5px;color:var(--text-2);line-height:1.55;margin-top:8px;white-space:pre-wrap;
+          display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+        #v-montage .mt-mem-auto{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);cursor:pointer;margin-left:auto}
+        #v-montage .mt-mem-auto input{accent-color:var(--accent-2);width:15px;height:15px;cursor:pointer}
+        @media(max-width:760px){ #v-montage .mt-mem-auto{margin-left:0;width:100%} }
         @keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
       </style>
       <div class="scroll-y" id="mtScroll" style="flex:1;padding:24px 40px 32px">
@@ -3437,6 +3445,37 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
                   <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
                   <p class="faint" style="font-size:11px;margin-top:7px">Jusqu'à 8 images/clips, placés au meilleur moment.</p>
+                </div>
+              </div>
+
+              <!-- 🧠 MÉMOIRE DE MARQUE (#124) — ce que l'IA retient d'une vidéo à l'autre -->
+              <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+                <div class="mt-eyebrow">Ma marque · ce que l'IA retient de toi</div>
+                <div class="mt-mem" id="mtMemCard">
+                  <div style="display:flex;align-items:flex-start;gap:14px">
+                    <span class="mt-brief-plus" style="border-radius:12px">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 18a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 7a3 3 0 00-3-3z"/><path d="M12 7v11"/></svg>
+                    </span>
+                    <div style="flex:1;min-width:0">
+                      <span class="mt-brief-t" id="mtMemTitle">Aucune fiche pour l'instant</span>
+                      <span class="mt-brief-s" id="mtMemSub">Analyse ton site une fois : l'IA connaîtra ton produit, tes offres et ton ton sur toutes tes prochaines vidéos.</span>
+                      <div class="mt-mem-sum" id="mtMemSum" style="display:none"></div>
+                    </div>
+                  </div>
+                  <div class="mt-chips" id="mtMemActions">
+                    <button type="button" class="mt-chip" id="mtMemScanBtn" onclick="mtMemFromSite()">Analyser mon site</button>
+                    <button type="button" class="mt-chip" id="mtMemEditBtn" onclick="mtMemEdit(true)" style="display:none">Modifier</button>
+                    <label class="mt-mem-auto" id="mtMemAutoWrap" style="display:none">
+                      <input type="checkbox" id="mtMemAuto" onchange="mtMemToggleAuto()"> Compléter après chaque vidéo
+                    </label>
+                  </div>
+                  <div id="mtMemEditBox" style="display:none;margin-top:12px">
+                    <textarea id="mtMemText" class="field mt-brief-ta" rows="7" placeholder="Ex : Je vends AvatarAds, un outil de création de vidéos IA pour les créateurs. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct, tutoiement. CTA habituel : « lien en bio »."></textarea>
+                    <div class="mt-chips">
+                      <button type="button" class="mt-chip" onclick="mtMemSave()">Enregistrer</button>
+                      <button type="button" class="mt-brief-x" onclick="mtMemEdit(false)">Annuler</button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -5045,7 +5084,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-19p-credits-blindes'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20a-memoire-de-marque'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9773,6 +9812,109 @@ function initMontage(){
     if(ts && (Date.now()-ts) < MT_SITE_TTL) s.value = localStorage.getItem('aa_user_site') || '';
   }catch(_){} }
   try{ _mtRenderMedia(); _mtUpdateCost(); }catch(_){}
+  try{ mtMemLoad(); }catch(_){}
+}
+
+/* ══════════ 🧠 MÉMOIRE DE MARQUE (#124) ══════════
+   Une fiche par utilisateur (business, produit, offres, ton, CTA) que le chef
+   d'orchestre relit à CHAQUE montage : il ne retape plus son contexte, et les
+   slides emploient ses vrais mots dès la première vidéo.
+   Lecture/écriture directes en base (RLS + privilèges colonne) ; les deux
+   opérations qui demandent Claude passent par la fonction brand-memory. */
+let _mtMem = null;
+
+async function mtMemLoad(){
+  if(!window.currentMember) return;
+  try{
+    const { data } = await sb.from('brand_memory')
+      .select('summary, facts, site_url, auto_learn')
+      .eq('user_id', currentMember.id).maybeSingle();
+    _mtMem = data || null;
+  }catch(_){ _mtMem = null; }
+  // le site enregistré dans la fiche pré-remplit le champ (il fait autorité sur le localStorage)
+  const s = document.getElementById('mtSite');
+  if(s && !s.value && _mtMem && _mtMem.site_url) s.value = _mtMem.site_url;
+  mtMemRender();
+}
+
+function mtMemRender(){
+  const card=document.getElementById('mtMemCard'); if(!card) return;
+  const has = !!(_mtMem && String(_mtMem.summary||'').trim());
+  const t=document.getElementById('mtMemTitle'), sub=document.getElementById('mtMemSub'),
+        sum=document.getElementById('mtMemSum'), edit=document.getElementById('mtMemEditBtn'),
+        scan=document.getElementById('mtMemScanBtn'), autoW=document.getElementById('mtMemAutoWrap'),
+        auto=document.getElementById('mtMemAuto');
+  card.classList.toggle('on', has);
+  if(t) t.textContent = has ? 'L\'IA connaît ton business' : 'Aucune fiche pour l\'instant';
+  if(sub) sub.style.display = has ? 'none' : '';
+  if(sum){ sum.style.display = has ? '' : 'none'; sum.textContent = has ? _mtMem.summary : ''; }
+  if(edit) edit.style.display = has ? '' : 'none';
+  if(scan) scan.textContent = has ? 'Réanalyser mon site' : 'Analyser mon site';
+  if(autoW) autoW.style.display = has ? '' : 'none';
+  if(auto) auto.checked = !(_mtMem && _mtMem.auto_learn === false);
+}
+
+// 1er remplissage (ou rafraîchissement) : Claude lit le site et construit la fiche
+async function mtMemFromSite(){
+  const btn=document.getElementById('mtMemScanBtn');
+  const site=(document.getElementById('mtSite')?.value||'').trim();
+  if(!site){ toast('Renseigne d\'abord ton site juste au-dessus.'); document.getElementById('mtSite')?.focus(); return; }
+  const old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Lecture de ton site…'; }
+  try{
+    const r=await fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
+      method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'from_site', website: site }),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('brand-memory '+r.status));
+    mtSaveSite();
+    await mtMemLoad();
+    toast('Fiche mise à jour — l\'IA connaît ton business.');
+  }catch(e){ toast('Analyse impossible : '+(e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
+}
+
+function mtMemEdit(open){
+  const box=document.getElementById('mtMemEditBox'), ta=document.getElementById('mtMemText');
+  if(!box) return;
+  if(open){ if(ta){ ta.value=(_mtMem&&_mtMem.summary)||''; } box.style.display=''; setTimeout(()=>ta&&ta.focus(), 30); }
+  else box.style.display='none';
+}
+
+async function mtMemSave(){
+  const ta=document.getElementById('mtMemText'); if(!ta || !window.currentMember) return;
+  const summary=String(ta.value||'').trim().slice(0, 4000);
+  try{
+    const { error } = await sb.from('brand_memory').upsert(
+      { user_id: currentMember.id, summary, facts: (_mtMem&&_mtMem.facts)||{} }, { onConflict:'user_id' });
+    if(error) throw error;
+    _mtMem = Object.assign({ facts:{}, auto_learn:true }, _mtMem||{}, { summary });
+    mtMemEdit(false); mtMemRender();
+    toast('Fiche enregistrée.');
+  }catch(e){ toast('Enregistrement impossible : '+(e.message||e)); }
+}
+
+async function mtMemToggleAuto(){
+  const c=document.getElementById('mtMemAuto'); if(!c || !window.currentMember) return;
+  const on=!!c.checked;
+  try{
+    const { error } = await sb.from('brand_memory').update({ auto_learn:on }).eq('user_id', currentMember.id);
+    if(error) throw error;
+    if(_mtMem) _mtMem.auto_learn=on;
+  }catch(e){ c.checked=!on; toast('Impossible de changer ce réglage.'); }
+}
+
+// après un montage réussi : la fiche apprend ce que la vidéo révèle de neuf.
+// Volontairement silencieux et non bloquant — l'utilisateur a déjà sa vidéo.
+function mtMemLearn(transcript){
+  if(_mtMem && _mtMem.auto_learn === false) return;
+  const site=(document.getElementById('mtSite')?.value||'').trim();
+  const brief=_mtBrief();
+  if(!transcript && !brief && !site) return;
+  getAuthHeader().then((h)=>fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
+    method:'POST', headers:{ ...h, 'Content-Type':'application/json' },
+    body: JSON.stringify({ action:'learn', transcript:String(transcript||'').slice(0,3000), brief, website:site }),
+  })).then(()=>{ try{ mtMemLoad(); }catch(_){} }).catch(()=>{});
 }
 function mtSetSrc(src){
   _mt.src = (src === 'mavideo') ? 'mavideo' : 'gameplay';
@@ -10153,6 +10295,7 @@ async function _mtSegmentedGenerate(){
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     let segs=Array.isArray(plan.avatarSegments) ? plan.avatarSegments.slice() : [];
     // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
     if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
@@ -10222,6 +10365,8 @@ function _mtPollSegmented(jobId, onDone){
       if(d.status==='done' && d.url){
         clearInterval(iv);
         creditsFlowDone();
+        // #124 : la fiche de marque apprend ce que cette vidéo révèle de neuf (silencieux)
+        try{ mtMemLearn(_mt._transcript||''); }catch(_){}
         toast('✅ Ta vidéo montée est prête — téléchargement lancé !');
         const a=document.createElement('a'); a.href=d.url; a.download='montage-ia.mp4'; document.body.appendChild(a); a.click(); a.remove();
         // carte de fin (Terminé / Ajuster) au lieu de refermer sur l'Éditeur — reçoit l'URL du MP4 final
@@ -10279,6 +10424,7 @@ async function _mtVideoGenerate(){
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
 
     // upload vidéo (base) + b-roll → render-media
     _mtProg(58, 'Envoi de ta vidéo au serveur…');

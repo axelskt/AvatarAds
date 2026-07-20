@@ -21,6 +21,7 @@
 // Sortie : { ok, plan, transcript, model, usage }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -336,6 +337,52 @@ async function fetchSiteContext(url: string): Promise<string> {
   } catch (_) { return '' }
 }
 
+// ---------- mémoire de marque (#124) ----------
+// La fiche de l'utilisateur, construite au fil de ses montages. Lue avec SON
+// jeton → RLS : on ne peut lire que la sienne. Jamais bloquante : si la table
+// ou la session pose problème, on monte la vidéo sans mémoire.
+type BrandMemory = { text: string; siteUrl: string; siteCache: string }
+
+async function loadBrandMemory(token: string): Promise<BrandMemory> {
+  const empty: BrandMemory = { text: '', siteUrl: '', siteCache: '' }
+  if (!token) return empty
+  try {
+    const sb = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: `Bearer ${token}` } } },
+    )
+    const { data } = await sb.from('brand_memory')
+      .select('summary, facts, site_url, site_cache, site_fetched_at')
+      .maybeSingle()
+    if (!data) return empty
+
+    const f = (data.facts || {}) as Record<string, unknown>
+    const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : [])
+    const lines: string[] = []
+    if (data.summary) lines.push(String(data.summary))
+    const push = (label: string, v: unknown) => { const s = String(v || '').trim(); if (s) lines.push(label + ' : ' + s) }
+    push('ACTIVITE', f.business)
+    push('PRODUIT', f.produit)
+    if (list(f.features).length) lines.push('FONCTIONNALITES / BENEFICES : ' + list(f.features).join(' · '))
+    if (list(f.chiffres).length) lines.push('CHIFFRES VERIFIES (a citer tels quels) : ' + list(f.chiffres).join(' · '))
+    push('AUDIENCE', f.audience)
+    push('OFFRES', f.offres)
+    if (list(f.reseaux).length) lines.push('RESEAUX : ' + list(f.reseaux).join(' · '))
+    push('TON', f.ton)
+    push('CTA HABITUEL', f.cta)
+    if (list(f.interdits).length) lines.push('A NE JAMAIS AFFICHER : ' + list(f.interdits).join(' · '))
+
+    // cache du site : valable 14 jours, rempli par la fonction brand-memory
+    const fresh = data.site_fetched_at && (Date.now() - new Date(data.site_fetched_at).getTime()) < 14 * 24 * 3600 * 1000
+    return {
+      text: lines.join('\n').slice(0, 2600),
+      siteUrl: String(data.site_url || ''),
+      siteCache: fresh ? String(data.site_cache || '') : '',
+    }
+  } catch (_) { return empty }
+}
+
 // ---------- appel Claude (Messages API, sortie structurée + vision) ----------
 async function claudePlan(
   duration: number,
@@ -346,6 +393,7 @@ async function claudePlan(
   siteContext: string,
   musicAlready: boolean,
   brief: string,
+  memory: string,
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -439,6 +487,15 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
       : `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :`
     content.push({ type: 'text', text: label })
     content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } })
+  }
+  if (memory) {
+    content.push({
+      type: 'text',
+      text: `MEMOIRE DE MARQUE (sa fiche, construite au fil de ses videos precedentes — c'est du VERIFIE, tu peux t'appuyer dessus comme sur ce qu'il dit) :
+${memory}
+
+Sers-t'en pour : employer SON vocabulaire, ses vrais noms de produit et de fonctionnalites, son ton, son CTA habituel, et pour ne jamais contredire son offre. Ces elements sont autorises a l'ecran meme s'il ne les prononce pas dans cet audio-la. Ce qui n'y est PAS et qui n'est ni dit ni sur le site reste interdit.`,
+    })
   }
   if (siteContext) {
     content.push({
@@ -765,24 +822,34 @@ serve(async (req: Request) => {
       frames.push({ t: Number(frameTimes[i]) || 0, media: f.type || 'image/jpeg', b64: btoa(bin) })
     }
 
-    // 1. transcription word-level + contexte site (en parallèle)
+    // 1. mémoire de marque (#124) : sa fiche + le cache de son site
+    const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
+    const mem = await loadBrandMemory(token)
+    const siteToRead = website || mem.siteUrl
+    // le site n'est re-crawlé que si le cache est vide ou porte sur une AUTRE url
+    const siteJob = (mem.siteCache && (!website || website === mem.siteUrl))
+      ? Promise.resolve(mem.siteCache)
+      : (siteToRead ? fetchSiteContext(siteToRead) : Promise.resolve(''))
+
+    // 2. transcription word-level + contexte site (en parallèle)
     const [scribe, siteContext] = await Promise.all([
       transcribe(audio, lang),
-      website ? fetchSiteContext(website) : Promise.resolve(''),
+      siteJob,
     ])
     if (!scribe.words.length) return json({ error: 'Aucune parole detectee dans l\'audio' }, 422)
 
-    // 2. alignement forcé si script fourni (texte exact + timing réel)
+    // 3. alignement forcé si script fourni (texte exact + timing réel)
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
-    // 3. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic, brief)
+    // 4. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
+    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text)
 
-    // 4. bornes/cohérence côté serveur
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief)
+    // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
+    // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
-    // 5. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
+    // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
     const captions = plan.detected.subtitles ? [] : buildCaptions(words, plan.accents, duration)
 
     return json({
