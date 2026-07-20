@@ -36,7 +36,10 @@ export function buildComposition(plan, opts = {}) {
   // Le verre, lui, a besoin que la vidéo reste plein écran SOUS les cartes : sinon
   // backdrop-filter n'a que du noir à réfracter.
   const overlay = wordMode || vs === 'glass'
-  const softCase = vs === 'apple' || vs === 'editorial'  // ces deux-là écrivent en casse normale
+  // Apple, Éditorial blanc et Mot par mot écrivent en casse normale : les capitales
+  // cassent la typo fine des deux premiers et, pour le troisième, la référence garde
+  // la ponctuation et la casse d'origine (« une stratégie. »).
+  const softCase = vs === 'apple' || vs === 'editorial' || vs === 'word'
   const CASE = (s) => (softCase ? String(s ?? '') : String(s ?? '').toUpperCase())
 
   // 3 familles de scènes : SPLIT (slide sombre en haut + vidéo en bas), PLEIN CADRE

@@ -827,7 +827,11 @@ function buildCaptions(words: Word[], accents: string[], duration: number) {
   const caps = []
   for (let i = 0; i < words.length; i++) {
     const w = words[i]
-    const text = w.text.replace(/[«»"']/g, '').replace(/[.,!?;:…]+$/, '').toUpperCase()
+    // On garde la casse ET la ponctuation de la transcription : c'est le RENDERER qui
+    // décide (les styles « punch » passent en majuscules, Apple / Éditorial blanc /
+    // Mot par mot écrivent en casse normale, « une stratégie. » avec son point).
+    // Normaliser ici rendait ces trois styles impossibles à respecter.
+    const text = w.text.replace(/[«»"']/g, '').trim()
     if (!text) continue
     let start = r2(clamp(w.start, 0, duration))
     let end = r2(clamp(w.end, 0, duration))

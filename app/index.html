@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20r-mot-par-mot'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20s-casse-thinks'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -22944,7 +22944,7 @@ function edStateCopy(){
     overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }),
     sfx:(_ed.sfx||[]).map(s=>({...s})),
     zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom,
-    subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, words:_ed.subsAI.words.map(w=>({...w})) } : null };
+    subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, softCase:!!_ed.subsAI.softCase, words:_ed.subsAI.words.map(w=>({...w})) } : null };
 }
 function edSnap(){ if(!_ed) return; _ed._redo=[]; _ed._hist=_ed._hist||[]; _ed._hist.push(edStateCopy()); if(_ed._hist.length>40) _ed._hist.shift(); }
 function edRestoreState(st){
@@ -22957,7 +22957,7 @@ function edRestoreState(st){
   _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; n._editing=false; n._cropMode=false; return n; });
   _ed.sfx=(st.sfx||[]).map(s=>({...s}));
   _ed.zooms=(st.zooms||[]).map(z=>({...z})); _ed.selZoom=st.selZoom||null;
-  _ed.subsAI=st.subsAI ? { enabled:st.subsAI.enabled, style:st.subsAI.style, words:(st.subsAI.words||[]).map(w=>({...w})) } : null;
+  _ed.subsAI=st.subsAI ? { enabled:st.subsAI.enabled, style:st.subsAI.style, softCase:!!st.subsAI.softCase, words:(st.subsAI.words||[]).map(w=>({...w})) } : null;
   _ed.sel=null;
   _ed.overlays.forEach(o=>edBuildOverlayEl(o));
   edResizeCanvas(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
@@ -23329,7 +23329,8 @@ function edAiApply(plan, toSource){
 
   const wantSubs=true; // l'IA renvoie captions=[] si la vidéo a déjà des sous-titres incrustés
   const caps=(plan.captions||[]).map(c=>({ text:String(c.text||''), start:remap(c.start), end:Math.max(remap(c.start)+0.1, remap(c.end)), accent:!!c.accent })).filter(c=>c.text);
-  _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', words:caps } : null;
+  const _softCase = ['apple','editorial','word'].includes((_mt.adv||{}).vstyle);
+  _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', softCase:_softCase, words:caps } : null;
 
   // 🎵 musique de fond choisie par l'IA (volume ducké sous la voix)
   const wantMusic=true; // l'IA met music=null si l'audio contient déjà une musique de fond
@@ -23520,9 +23521,10 @@ function _edDrawSubsAI(ctx, gt, W, H){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.lineJoin='round'; ctx.lineWidth=Math.max(2, size*0.22); ctx.strokeStyle='rgba(0,0,0,.92)';
   const x=W/2, y=H*0.72; // safe zone : au-dessus de l'UI TikTok/Reels
-  ctx.strokeText(w.text, x, y);
+  const txt = sa.softCase ? w.text : w.text.toUpperCase();
+  ctx.strokeText(txt, x, y);
   ctx.fillStyle=w.accent ? '#FF6B35' : '#ffffff';
-  ctx.fillText(w.text, x, y);
+  ctx.fillText(txt, x, y);
   ctx.restore();
 }
 
