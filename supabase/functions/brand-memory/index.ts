@@ -12,6 +12,10 @@
 //   POST { action:'from_site', website }                → 1er remplissage depuis le site
 //   POST { action:'learn', brief?, transcript?, website?, images? } → enrichissement après un montage
 //
+// ⚠️ RISQUE PUBLICITAIRE : les chiffres de preuve sociale d'un site (« +40K
+// utilisateurs », « 4,9/5 ») sont invérifiables et font rejeter les pubs Meta et
+// TikTok. Ils vont dans "interdits", jamais dans "chiffres".
+//
 // #125 — les CAPTURES D'ÉCRAN comptent autant que le site : une app derrière un
 // écran de connexion n'expose rien publiquement, donc les visuels que l'utilisateur
 // fournit pour son montage sont souvent la seule source fiable sur ses vraies
@@ -74,8 +78,8 @@ const MEMORY_SCHEMA = {
     summary: { type: 'string', description: 'La fiche en texte suivi, 6 lignes max, lisible par l\'utilisateur. C\'est ce que le monteur IA lira.' },
     business: { type: 'string', description: 'Ce que fait cette personne/entreprise, en 1 phrase.' },
     produit: { type: 'string', description: 'Le produit ou service principal.' },
-    features: { type: 'array', items: { type: 'string' }, description: 'Fonctionnalités / bénéfices concrets, formulés courts.' },
-    chiffres: { type: 'array', items: { type: 'string' }, description: 'Chiffres EXACTS trouvés (prix, délais, stats). Format "libellé|valeur".' },
+    features: { type: 'array', items: { type: 'string' }, description: 'Les fonctionnalités PHARES d\'abord — celles qui différencient et qui sont mises en avant partout (titre, hero, navigation, tarifs), avant les détails secondaires. Formulées courtes.' },
+    chiffres: { type: 'array', items: { type: 'string' }, description: 'Uniquement des chiffres FACTUELS et vérifiables sur le produit : prix, durées, quantités, formats. Format "libellé|valeur". PAS de preuve sociale invérifiable (nombre d\'utilisateurs, vues cumulées, note moyenne).' },
     audience: { type: 'string', description: 'À qui il s\'adresse.' },
     offres: { type: 'string', description: 'Forfaits / prix, tels qu\'affichés.' },
     reseaux: { type: 'array', items: { type: 'string' }, description: 'Format "plateforme|@handle ou url".' },
@@ -94,7 +98,8 @@ REGLES ABSOLUES :
 3. En cas de contradiction entre la fiche existante et la nouvelle source, la NOUVELLE source gagne (le business evolue), mais tu gardes l'ancienne formulation si elle est plus precise.
 4. Champ inconnu = chaine vide ou liste vide. Jamais de "N/A", jamais de remplissage.
 5. Si on te donne des CAPTURES D'ECRAN de son produit : c'est souvent la seule source fiable, parce qu'une app derriere un ecran de connexion n'expose rien sur son site public. Lis les VRAIS libelles affiches (noms de menus, de fonctionnalites, de forfaits, chiffres visibles) et note-les tels quels. Ne devine jamais ce qu'il y a derriere un bouton que tu ne vois pas.
-6. "summary" est lu par un humain ET par le monteur : concret, sans marketing creux, 6 lignes maximum, langue de l'utilisateur.`
+6. RISQUE PUBLICITAIRE — les chiffres de PREUVE SOCIALE affiches sur un site ("+40K utilisateurs", "+2 milliards de vues", "4,9/5", "+500 par jour") sont invérifiables : affiches dans une video, ils font REJETER les publicites sur Meta Ads et TikTok Ads, et peuvent couter le compte publicitaire. Tu ne les mets JAMAIS dans "chiffres". Tu les mets dans "interdits", formules ainsi : "ne pas afficher <le chiffre> — invérifiable, risque de rejet publicitaire". Les chiffres factuels sur le produit (un prix, une duree, un format) restent les bienvenus dans "chiffres".
+7. "summary" est lu par un humain ET par le monteur : concret, sans marketing creux, 6 lignes maximum, langue de l'utilisateur.`
 
 async function callClaude(userBlock: string, images: { media: string; b64: string }[] = []): Promise<Record<string, unknown> | null> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
