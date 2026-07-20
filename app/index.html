@@ -5179,7 +5179,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20k-liquid-glass'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20l-styles-viraux'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9884,12 +9884,15 @@ function mtBriefClose(){
    l'intention de l'utilisateur) — le style des sous-titres, lui, part avec le
    plan au moteur de rendu. */
 const MT_ADV_STYLES = [
+  // « auto » est le defaut : le chef d'orchestre choisit selon ce qui est dit.
+  // Les autres sont les styles qu'Axel a reperes sur TikTok (cf. #131).
+  // REGLE COMMUNE : moins de texte a l'ecran, plus d'animation — les sous-titres
+  // portent deja les mots, un pave de texte en double fait redondance.
   { k:'auto',      l:'Auto' },
-  { k:'apple',     l:'Épuré · Apple',   d:'sobre, beaucoup de vide, typo fine, une idee par ecran, aucune fioriture' },
-  { k:'editorial', l:'Éditorial',       d:'fond creme, gros titres serifs, mise en page magazine, rythme pose' },
-  { k:'punchy',    l:'Punchy',          d:'contrastes forts, gros mots-cles, coupes seches, energie maximale' },
-  { k:'cartoon',   l:'Cartoon',         d:'couleurs vives, formes rondes, ton joueur, animations rebondissantes' },
-  { k:'glass',     l:'Liquid glass',   d:'cartes en verre depoli translucide, reflets, look Apple, tres epure' },
+  { k:'sombre',    l:'Sombre premium', d:'fond noir profond, halo radial derriere l element central, cartes a bordure fine lumineuse, beaucoup de vide, une seule idee par ecran, micro-libelles en monospace. Tres peu de texte : on ANIME, les sous-titres portent les mots' },
+  { k:'glass',     l:'Liquid glass',   d:'cartes en verre depoli translucide posees sur la video, reflets et bord refractant, look Apple, tres epure. Presque aucun texte : la matiere fait le travail' },
+  { k:'mot',       l:'Mot par mot',    d:'fond uni plein ecran (blanc ou noir), UN SEUL mot au centre en tres gras, rien d autre, un objet 3D detoure sur les mots-cles. Rythme rapide, un mot a la fois' },
+  { k:'blanc',     l:'Éditorial blanc',d:'fond blanc pur, visuels produit dans des cartes arrondies qui flottent avec profondeur de champ, typographie legere dispersee, motifs en trame de points. Studio, aere, peu de texte' },
 ];
 const MT_ADV_CAPS = [
   { k:'punch',  l:'Punch (défaut)' },
