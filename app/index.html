@@ -4392,67 +4392,57 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
 
 
-    <!-- 🧠 Modale « Ma marque » — tout ce que l'IA doit savoir, au même endroit -->
-    <div id="brandModal" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(8,4,2,.82);backdrop-filter:blur(6px);place-items:center;padding:20px">
-      <div class="card" style="width:min(560px,94vw);max-height:88vh;overflow-y:auto;padding:22px;text-align:left">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">
-          <div>
-            <div class="display" style="font-size:18px;font-weight:800">Ma marque</div>
-            <p class="faint" style="font-size:12px;line-height:1.5;margin:6px 0 0">Deux choses, une seule fois : ce que tu fais, et tes fonctionnalités. Ajoute un visuel par fonctionnalité et le monteur saura quoi montrer quand tu en parles.</p>
-          </div>
-          <button class="btn-quiet" onclick="closeBrandModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px;flex:0 0 auto">✕</button>
-        </div>
-        <div style="height:16px"></div>
-      <div style="margin-bottom:14px">
-      <div class="setup-label" style="margin-bottom:8px">Ton site</div>
-      <input class="field" type="url" id="accMemSite" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
-      </div>
-      <!-- 🧠 MÉMOIRE DE MARQUE (#124) — ce que l'IA retient d'une vidéo à l'autre -->
-      <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
-      <div class="mt-eyebrow">La fiche · ce que l'IA retient de toi</div>
-      <div class="mt-mem" id="mtMemCard">
-      <div style="display:flex;align-items:flex-start;gap:14px">
-      <span class="mt-brief-plus" style="border-radius:12px">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 18a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 7a3 3 0 00-3-3z"/><path d="M12 7v11"/></svg>
-      </span>
-      <div style="flex:1;min-width:0">
-      <span class="mt-brief-t" id="mtMemTitle">Aucune fiche pour l'instant</span>
-      <span class="mt-brief-s" id="mtMemSub">Analyse ton site une fois : l'IA connaîtra ton produit, tes offres et ton ton sur toutes tes prochaines vidéos.</span>
-      <div class="mt-mem-sum" id="mtMemSum" style="display:none"></div>
-      </div>
-      </div>
-      <div class="mt-chips" id="mtMemActions">
-      <button type="button" class="mt-chip" id="mtMemScanBtn" onclick="mtMemFromSite()">Analyser mon site</button>
-      <button type="button" class="mt-chip" id="mtMemEditBtn" onclick="mtMemEdit(true)" style="display:none">Modifier</button>
-      <button type="button" class="mt-chip" id="mtMemShotBtn" onclick="document.getElementById('mtMemShotIn').click()">Apprendre depuis des captures</button>
-      <input type="file" id="mtMemShotIn" accept="image/*" multiple style="display:none" onchange="mtMemLearnFromShots(this.files);this.value=''">
-      <label class="mt-mem-auto" id="mtMemAutoWrap" style="display:none">
-      <input type="checkbox" id="mtMemAuto" onchange="mtMemToggleAuto()"> Compléter après chaque vidéo
-      </label>
-      </div>
-      <div id="mtMemEditBox" style="display:none;margin-top:12px">
-      <div id="mtMemForm" style="display:grid;gap:12px"></div>
-      <div class="mt-chips">
-      <button type="button" class="mt-chip" onclick="mtMemSave()">Enregistrer</button>
-      <button type="button" class="mt-brief-x" onclick="mtMemEdit(false)">Annuler</button>
-      </div>
-      </div>
-      </div>
+    <!-- 🧠 Modale « Ma marque » — maquette Claude Design, reprise au pixel -->
+    <div id="brandModal" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
+      <div class="card" style="width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
 
-      <!-- #126 · BIBLIOTHÈQUE DE MARQUE : déposé une fois, réutilisé sur CHAQUE vidéo -->
-      <div class="mt-eyebrow" style="margin-top:18px">Mes éléments · déposés une fois, gardés pour toujours</div>
-      <div class="mt-mem" id="mtLibCard">
-      <div id="mtLibGrid" style="display:flex;gap:10px;flex-wrap:wrap"></div>
-      <div class="mt-chips">
-      <button type="button" class="mt-chip" onclick="document.getElementById('mtLibIn').click()">+ Visuels (logo, produit…)</button>
-      <button type="button" class="mt-chip" onclick="document.getElementById('mtLibSndIn').click()">+ Mes sons</button>
-      </div>
-      <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
-      <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
-      <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Dis sous chaque visuel la fonctionnalité qu'il montre : le monteur le sortira quand tu en parleras. Tes sons rejoignent la banque de l'Éditeur.</p>
-      </div>
-      </div>
-        <div style="height:6px"></div>
+        <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div class="row gap12">
+            <div style="width:44px;height:44px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></div>
+            <div class="col" style="line-height:1.25">
+              <h3 class="display" style="font-size:22px;font-weight:700">Ma marque</h3>
+              <span class="faint" style="font-size:12.5px">L'IA connaît ton business, une fois pour toutes</span>
+            </div>
+          </div>
+          <button class="btn-quiet" onclick="closeBrandModal()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
+        </div>
+        <p class="muted" style="font-size:13.5px;line-height:1.55;margin:14px 0 22px">
+          Renseigne ton site et ce que tu fais <b style="color:var(--text)">une seule fois</b>. Le monteur IA saura quel visuel utiliser au bon moment.
+        </p>
+
+        <div class="label" style="margin-bottom:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg> Ton site</div>
+        <div style="position:relative;margin-bottom:22px">
+          <input class="field" id="accMemSite" type="url" style="padding-left:40px" placeholder="ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
+          <span class="faint" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg></span>
+        </div>
+
+        <div class="label" style="margin-bottom:12px">La fiche · ce que l'IA retient</div>
+        <div class="card" style="padding:0;overflow:hidden;border-color:var(--accent-line);background:linear-gradient(180deg,var(--accent-soft),transparent)">
+          <div style="padding:16px 18px">
+            <div class="row gap10" style="margin-bottom:10px">
+              <div style="width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></div>
+              <span style="font-weight:700;font-size:14.5px;align-self:center">L'IA connaît ton business</span>
+            </div>
+            <div id="mtMemBody"></div>
+          </div>
+          <button type="button" onclick="mtMemToggleAuto()" class="row gap10" style="width:100%;padding:12px 18px;border:none;border-top:1px solid var(--border);background:var(--panel-1);align-items:center;cursor:pointer;text-align:left;font-family:var(--font)">
+            <span id="mtMemAutoBox" style="width:20px;height:20px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center"></span>
+            <span class="faint" style="font-size:12.5px">Compléter ma fiche automatiquement après chaque vidéo</span>
+          </button>
+        </div>
+
+        <div class="label" style="margin:22px 0 12px">Mes éléments</div>
+        <div class="card" style="padding:18px">
+          <p class="faint" style="font-size:12.5px;line-height:1.5;margin:0 0 14px">Dépose un visuel par fonctionnalité (logo, produit, capture d'une feature) : le monteur le sortira au bon moment quand tu en parles.</p>
+          <div id="mtLibGrid" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+          <div class="row gap10" style="flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost grow" style="min-width:0;flex:1 1 190px" onclick="document.getElementById('mtLibIn').click()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Visuels (logo, produit…)</button>
+            <button type="button" class="btn btn-ghost grow" style="min-width:0;flex:1 1 130px" onclick="document.getElementById('mtLibSndIn').click()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Mes sons</button>
+          </div>
+          <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
+          <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
+        </div>
+
       </div>
     </div>
 
@@ -5189,7 +5179,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20i-parametres-avances'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20j-ma-marque-1-1'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10007,6 +9997,8 @@ let _mtMem = null;
 
 function openBrandModal(){
   const m=document.getElementById('brandModal'); if(!m) return;
+  // la modale vit dans l'overlay du compte : sans lui, elle resterait invisible
+  const ov=document.getElementById('accountOverlay'); if(ov) ov.style.display='flex';
   m.style.display='grid';
   try{ mtMemLoad(); mtLibLoad(); }catch(_){}
 }
@@ -10030,27 +10022,85 @@ async function mtMemLoad(){
   mtMemRender();
 }
 
+const _MI = { // icônes de la maquette (stroke 1.8, currentColor)
+  plug:'<path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+};
+const _ic = (k,sz)=>'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+_MI[k]+'</svg>';
+const _esc = (v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+let _mtMemEditing = false;
+
 function mtMemRender(){
-  const card=document.getElementById('mtMemCard'); if(!card) return;
+  const body=document.getElementById('mtMemBody');
+  const box=document.getElementById('mtMemAutoBox');
+  // case « compléter automatiquement » : rendu maison, comme dans la maquette
+  if(box){
+    const on = !(_mtMem && _mtMem.auto_learn === false);
+    box.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
+    box.style.border = '1px solid '+(on ? 'var(--accent)' : 'var(--border-2)');
+    box.style.color = '#1A0A02';
+    box.innerHTML = on ? _ic('check',13) : '';
+  }
+  // le site de la fiche pré-remplit le champ
+  if(_mtMem && _mtMem.site_url){
+    for(const id of ['accMemSite','mtSite']){ const el=document.getElementById(id); if(el && !el.value) el.value=_mtMem.site_url; }
+  }
+  const btnSub=document.getElementById('brandBtnSub');
   const has = !!(_mtMem && String(_mtMem.summary||'').trim());
-  const t=document.getElementById('mtMemTitle'), sub=document.getElementById('mtMemSub'),
-        sum=document.getElementById('mtMemSum'), edit=document.getElementById('mtMemEditBtn'),
-        scan=document.getElementById('mtMemScanBtn'), autoW=document.getElementById('mtMemAutoWrap'),
-        auto=document.getElementById('mtMemAuto');
-  card.classList.toggle('on', has);
-  if(t) t.textContent = has ? 'L\'IA connaît ton business' : 'Aucune fiche pour l\'instant';
-  if(sub) sub.style.display = has ? 'none' : '';
-  if(sum){ sum.style.display = has ? '' : 'none'; sum.textContent = has ? _mtMem.summary : ''; }
-  if(edit) edit.style.display = has ? '' : 'none';
-  if(scan) scan.textContent = has ? 'Réanalyser mon site' : 'Analyser mon site';
-  if(autoW) autoW.style.display = has ? '' : 'none';
-  if(auto) auto.checked = !(_mtMem && _mtMem.auto_learn === false);
-  // le bouton de Mon compte annonce l'état sans qu'on ait à ouvrir
-  const btnSub=document.getElementById('brandBtnSub');   // ≠ `sub` déjà pris plus haut
-  if(btnSub) btnSub.textContent = has
-    ? 'L\'IA connaît ton business' + (_mtLib.length ? ' · '+_mtLib.length+' élément'+(_mtLib.length>1?'s':'') : '')
-    : 'À remplir — ce que tu fais et tes fonctionnalités';
+  if(btnSub) btnSub.textContent = has ? "L'IA connaît ton business" : 'À remplir — ce que tu fais et tes fonctionnalités';
+  if(!body) return;
+
+  const desc  = (_mtMem && _mtMem.summary) || '';
+  const feats = (_mtMem && _mtMem.facts && Array.isArray(_mtMem.facts.features)) ? _mtMem.facts.features : [];
+
+  if(_mtMemEditing){
+    body.innerHTML =
+      '<div class="label" style="margin:6px 0 8px">Ta description</div>'
+      + '<textarea id="mtMemText" class="field" style="min-height:120px;resize:vertical;font-size:13.5px;line-height:1.5" placeholder="Ex : AvatarAds génère des vidéos faceless virales — avatar IA, voix clonée, sous-titres — sans caméra ni montage.">'+_esc(desc)+'</textarea>'
+      + '<div class="label" style="margin:16px 0 8px">Tes fonctionnalités principales</div>'
+      + '<div class="col gap8" id="mtMemFeats">'
+      +   (feats.length?feats:['']).map((f,i)=>_mtFeatRow(f,i)).join('')
+      +   '<button type="button" class="btn btn-ghost btn-sm" onclick="mtMemFeatAdd()" style="align-self:flex-start">'+_ic('plus',14)+' Ajouter une fonctionnalité</button>'
+      + '</div>'
+      + '<div class="row gap10" style="margin-top:16px">'
+      +   '<button type="button" class="btn btn-primary btn-sm" onclick="mtMemSave()">Enregistrer</button>'
+      +   '<button type="button" class="btn-quiet btn-sm" onclick="mtMemEdit(false)" style="border:none;background:none;cursor:pointer;font-family:var(--font)">Annuler</button>'
+      + '</div>';
+    setTimeout(()=>{ const t=document.getElementById('mtMemText'); if(t) t.focus(); }, 30);
+    return;
+  }
+
+  body.innerHTML =
+    (desc ? '<p class="muted" style="font-size:13px;line-height:1.55;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">'+_esc(desc)+'</p>'
+          : '<p class="faint" style="font-size:13px;line-height:1.55;margin:0">Analyse ton site : l\'IA saura ce que tu fais et emploiera tes vrais mots sur chaque vidéo.</p>')
+    + '<div class="row gap8" style="flex-wrap:wrap;margin-top:14px">'
+    +   '<button type="button" class="btn btn-ghost btn-sm" id="mtMemScanBtn" onclick="mtMemFromSite()">'+_ic('plug',14)+' '+(desc?'Réanalyser':'Analyser mon site')+'</button>'
+    +   '<button type="button" class="btn btn-sm" onclick="mtMemEdit(true)" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">✏️ Modifier</button>'
+    +   '<button type="button" class="btn btn-ghost btn-sm" id="mtMemShotBtn" onclick="document.getElementById(\'mtMemShotIn\').click()">'+_ic('image',14)+' Depuis des captures</button>'
+    +   '<input type="file" id="mtMemShotIn" accept="image/*" multiple style="display:none" onchange="mtMemLearnFromShots(this.files);this.value=\'\'">'
+    + '</div>'
+    + (feats.length ? '<div class="row gap8" style="flex-wrap:wrap;margin-top:12px">'
+        + feats.filter(Boolean).slice(0,5).map((f)=>'<span class="pill" style="font-size:11.5px">'+_esc(f)+'</span>').join('')
+        + '</div>' : '');
 }
+function _mtFeatRow(v,i){
+  return '<div class="row gap8">'
+    + '<input class="field" style="font-size:13.5px;padding:10px 12px" value="'+_esc(v)+'" placeholder="Ex : Clonage vocal en 30 s">'
+    + '<button type="button" onclick="this.parentElement.remove()" style="width:38px;height:38px;flex:0 0 auto;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:#FF6B6B;cursor:pointer;font-size:13px;font-family:var(--font)">✕</button>'
+    + '</div>';
+}
+function mtMemFeatAdd(){
+  const wrap=document.getElementById('mtMemFeats'); if(!wrap) return;
+  const btn=wrap.querySelector('button.btn-ghost');
+  const tmp=document.createElement('div'); tmp.innerHTML=_mtFeatRow('',0);
+  wrap.insertBefore(tmp.firstChild, btn);
+  const inputs=wrap.querySelectorAll('input.field'); if(inputs.length) inputs[inputs.length-1].focus();
+}
+
+function mtMemEdit(open){ _mtMemEditing = !!open; mtMemRender(); }
 
 // 1er remplissage (ou rafraîchissement) : Claude lit le site et construit la fiche
 /* La mémoire de marque démarre au plan Starter : sur Free, on renvoie au paywall
@@ -10081,50 +10131,18 @@ async function mtMemFromSite(){
   finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
 }
 
-/* Édition CHAMP PAR CHAMP : un seul gros bloc de texte, l'utilisateur ne sait pas
-   quoi y mettre et l'IA écrase ses formulations. Chaque champ de la fiche est donc
-   éditable séparément — et ce qu'il écrit à la main fait autorité. */
-const MT_MEM_FIELDS=[
-  { k:'features', l:'Tes fonctionnalités principales', t:'list', ph:'Une par ligne — ex : Montage IA, Express, Images IA, Générateur' },
-];
-const _mtEsc=(v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-
-function mtMemEdit(open){
-  const box=document.getElementById('mtMemEditBox'), form=document.getElementById('mtMemForm');
-  if(!box || !form) return;
-  if(!open){ box.style.display='none'; return; }
-  const f=(_mtMem&&_mtMem.facts)||{};
-  form.innerHTML =
-    '<div><div class="mt-eyebrow" style="margin:0 0 6px">Ta description — simple et efficace</div>'
-    + '<textarea id="mtMemText" class="field mt-brief-ta" rows="5" placeholder="Ex : AvatarAds crée des vidéos virales sans caméra : un avatar IA parle avec ta voix, le montage se fait tout seul."></textarea></div>'
-    + MT_MEM_FIELDS.map((fd)=>{
-        const v = fd.t==='list' ? (Array.isArray(f[fd.k]) ? f[fd.k].join('\n') : '') : (f[fd.k]||'');
-        const inp = fd.t==='list'
-          ? '<textarea id="mtMemF_'+fd.k+'" class="field mt-brief-ta" rows="3" style="min-height:70px" placeholder="'+_mtEsc(fd.ph)+'">'+_mtEsc(v)+'</textarea>'
-          : '<input id="mtMemF_'+fd.k+'" class="field" type="text" value="'+_mtEsc(v)+'" placeholder="'+_mtEsc(fd.ph)+'">';
-        return '<div><div class="mt-eyebrow" style="margin:0 0 6px">'+fd.l+'</div>'+inp+'</div>';
-      }).join('');
-  const ta=document.getElementById('mtMemText'); if(ta) ta.value=(_mtMem&&_mtMem.summary)||'';
-  box.style.display='';
-  setTimeout(()=>ta&&ta.focus(), 30);
-}
-
 async function mtMemSave(){
   const ta=document.getElementById('mtMemText'); if(!ta || !currentMember) return;
   const summary=String(ta.value||'').trim().slice(0, 4000);
-  const facts=Object.assign({}, (_mtMem&&_mtMem.facts)||{});
-  for(const fd of MT_MEM_FIELDS){
-    const el=document.getElementById('mtMemF_'+fd.k); if(!el) continue;
-    facts[fd.k] = fd.t==='list'
-      ? String(el.value||'').split('\n').map(x=>x.trim().slice(0,160)).filter(Boolean).slice(0,12)
-      : String(el.value||'').trim().slice(0,400);
-  }
+  const feats=[...document.querySelectorAll('#mtMemFeats input.field')]
+    .map(el=>String(el.value||'').trim().slice(0,160)).filter(Boolean).slice(0,12);
+  const facts=Object.assign({}, (_mtMem&&_mtMem.facts)||{}, { features: feats });
   try{
     const { error } = await sb.from('brand_memory').upsert(
       { user_id: currentMember.id, summary, facts }, { onConflict:'user_id' });
     if(error) throw error;
     _mtMem = Object.assign({ auto_learn:true }, _mtMem||{}, { summary, facts });
-    mtMemEdit(false); mtMemRender();
+    mtMemEdit(false);
     toast('Fiche enregistrée.');
   }catch(e){ toast('Enregistrement impossible : '+(e.message||e)); }
 }
@@ -10193,10 +10211,8 @@ async function mtLibLoad(){
 
 function mtLibRender(){
   const g=document.getElementById('mtLibGrid'); if(!g) return;
-  if(!_mtLib.length){
-    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose une capture par fonctionnalité (Montage IA, Express, Images IA…) : l\'IA les sortira au bon moment.</p>';
-    return;
-  }
+  if(!_mtLib.length){ g.innerHTML=''; g.style.marginBottom='0'; return; }
+  g.style.marginBottom='14px';
   g.innerHTML=_mtLib.map((a)=>{
     const on = a.auto !== false;
     const isSnd = a.kind==='audio';
