@@ -158,6 +158,16 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success',
 // SUPPRIMES DU PLAN cote serveur quand tone !== 'fun' (verrou, pas simple consigne).
 const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
 const BED_NAMES = ['grave', 'tension', 'montee']
+const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
+const MOODS = ['intense', 'dynamique', 'chill']
+const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
+
+// ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
+// grammaire ; chaque enum multiplie les branches et au-dela d'un seuil l'API refuse
+// tout appel avec « The compiled grammar is too large » — c'est ce qui a mis le
+// Montage IA a l'arret. Les valeurs permises sont donc annoncees dans le PROMPT et
+// verifiees ICI, cote serveur. Le filtre serveur est de toute facon le seul verrou
+// fiable : un enum de schema n'empeche pas un modele de renvoyer autre chose.
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -170,7 +180,7 @@ const PLAN_SCHEMA = {
         additionalProperties: false,
         required: ['role', 'start', 'end', 'label'],
         properties: {
-          role: { type: 'string', enum: ['hook', 'benefice', 'preuve', 'cta', 'outro'] },
+          role: { type: 'string' },   // hook|benefice|preuve|cta|outro — filtre serveur
           start: { type: 'number' },
           end: { type: 'number' },
           label: { type: 'string' },
@@ -221,7 +231,7 @@ const PLAN_SCHEMA = {
       ],
     },
     accents: { type: 'array', items: { type: 'string' } },
-    tone: { type: 'string', enum: ['fun', 'neutre'] },
+    tone: { type: 'string' },   // fun|neutre — filtre serveur
     beds: {
       type: 'array',
       items: {
@@ -229,7 +239,7 @@ const PLAN_SCHEMA = {
         additionalProperties: false,
         required: ['name', 't', 'reason'],
         properties: {
-          name: { type: 'string', enum: ['grave', 'tension', 'montee'] },
+          name: { type: 'string' },   // grave|tension|montee — filtre serveur
           t: { type: 'number' },
           reason: { type: 'string' },
         },
@@ -241,7 +251,7 @@ const PLAN_SCHEMA = {
           type: 'object',
           additionalProperties: false,
           required: ['mood'],
-          properties: { mood: { type: 'string', enum: ['intense', 'dynamique', 'chill'] } },
+          properties: { mood: { type: 'string' } },   // intense|dynamique|chill — filtre serveur
         },
         { type: 'null' },
       ],
@@ -271,7 +281,7 @@ const PLAN_SCHEMA = {
         required: ['start', 'end', 'format', 'reason'],
         properties: {
           start: { type: 'number' }, end: { type: 'number' },
-          format: { type: 'string', enum: ['portrait', 'paysage'] },
+          format: { type: 'string' },   // portrait|paysage — filtre serveur
           reason: { type: 'string' },
         },
       },
@@ -288,12 +298,12 @@ const PLAN_SCHEMA = {
           // -> un tableau d'objets imbrique ici fait exploser la grammaire du mode strict
           // ("compiled grammar is too large"). On parse et on valide cote serveur.
           options: { type: 'array', items: { type: 'string' } },
-          type: { type: 'string', enum: ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner'] },
-          layout: { type: 'string', enum: ['split', 'full', 'banner'] },
+          type: { type: 'string' },   // liste dans le prompt — filtre serveur (SLIDE_TYPES)
+          layout: { type: 'string' },   // split|full|banner — recalcule serveur depuis le type
           // #131 · l'ANIMATION, choisie d'apres ce que dit l'audio a cet instant.
           // Utilisee par les styles visuels "page blanche" (Mot par mot, Editorial blanc) ;
           // "" = laisse le rendu la deduire du type de scene.
-          motif: { type: 'string', enum: ['', 'chain', 'tiles', 'versus', 'bars', 'ring', 'cloud', 'halftone', 'grid'] },
+          motif: { type: 'string' },   // liste dans le prompt — filtre serveur (MOTIFS)
           start: { type: 'number' },
           end: { type: 'number' },
           title: { type: 'string' },
@@ -436,6 +446,16 @@ async function claudePlan(
     .join(' ')
 
   const styleBlock = `
+VALEURS AUTORISEES (le schema ne les contraint plus — un enum de schema fait exploser la grammaire du mode strict — donc RESPECTE-LES a la lettre, tout le reste est jete par le serveur) :
+  sections[].role : hook | benefice | preuve | cta | outro
+  slides[].type   : flow | checklist | compare | stat | card | nodes | loop | bars | kpi | timer | versus | punch | banner
+  slides[].layout : split | full | banner
+  slides[].motif  : "" | chain | tiles | versus | bars | ring | cloud | halftone | grid
+  tone            : fun | neutre
+  music.mood      : intense | dynamique | chill
+  beds[].name     : grave | tension | montee
+  avatarSegments[].format : portrait | paysage
+
 LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre du debut a la fin. Tu alternes QUATRE rythmes, et tu changes de rythme toutes les 2 a 5s.
   1. FULL ECRAN (layout absent) = la personne plein cadre : zooms punch, b-roll, respiration.
   2. SPLIT (layout "split") = la video glisse dans la moitie basse, une slide motion design sombre occupe la moitie haute. Types : flow, checklist, compare, stat, card.
@@ -615,7 +635,9 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = ''): Plan {
   const D = duration
   const sections = (plan.sections || [])
-    .map((s) => ({ ...s, start: r2(clamp(s.start, 0, D)), end: r2(clamp(s.end, 0, D)), label: String(s.label || '').slice(0, 60) }))
+    .map((s) => ({ ...s,
+      role: SECTION_ROLES.includes(String(s.role || '')) ? String(s.role) : 'benefice',
+      start: r2(clamp(s.start, 0, D)), end: r2(clamp(s.end, 0, D)), label: String(s.label || '').slice(0, 60) }))
     .filter((s) => s.end > s.start)
     .sort((a, b) => a.start - b.start)
 
@@ -628,7 +650,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   const slideMax = Math.max(slideMin + 1, r2(D - 2))
   const slides = (plan.slides || [])
     .map((s) => {
-      const type = String(s.type || '')
+      const type = SLIDE_TYPES.includes(String(s.type || '')) ? String(s.type) : ''
       // le layout se deduit du type si l'IA l'a oublie (ou l'a mis en contradiction)
       const layout = type === 'banner' ? 'banner' : FULL_TYPES.includes(type) ? 'full' : 'split'
       // #131 · motif d'animation : on ne laisse passer que la liste connue du rendu
