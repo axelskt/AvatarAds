@@ -4527,7 +4527,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </span>
       <span style="display:flex;flex-direction:column;line-height:1.35;min-width:0">
         <b style="font-size:14px">Ma marque</b>
-        <span class="faint" style="font-size:11.5px" id="brandBtnSub">Ton business, tes offres, ton ton, tes visuels — l'IA s'en sert sur chaque vidéo</span>
+        <span class="faint" style="font-size:11.5px" id="brandBtnSub">Ce que tu fais et tes fonctionnalités — l'IA s'en sert sur chaque vidéo</span>
       </span>
       <span class="faint" style="margin-left:auto;font-size:16px">›</span>
     </button>
@@ -5165,7 +5165,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20g-fiche-simplifiee'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20h-marque-starter'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9956,13 +9956,24 @@ function mtMemRender(){
   if(auto) auto.checked = !(_mtMem && _mtMem.auto_learn === false);
   // le bouton de Mon compte annonce l'état sans qu'on ait à ouvrir
   const btnSub=document.getElementById('brandBtnSub');   // ≠ `sub` déjà pris plus haut
-  if(btnSub) btnSub.textContent = has
+  const gratuit=(currentMember?.plan||'free').toLowerCase()==='free';
+  if(btnSub && gratuit) btnSub.textContent='🔒 À partir du plan Starter';
+  else if(btnSub) btnSub.textContent = has
     ? 'L\'IA connaît ton business' + (_mtLib.length ? ' · '+_mtLib.length+' élément'+(_mtLib.length>1?'s':'') : '')
-    : 'À remplir — ton business, tes offres, ton ton, tes visuels';
+    : 'À remplir — ce que tu fais et tes fonctionnalités';
 }
 
 // 1er remplissage (ou rafraîchissement) : Claude lit le site et construit la fiche
+/* La mémoire de marque démarre au plan Starter : sur Free, on renvoie au paywall
+   plutôt que de consommer un appel Claude et un crawl pour rien. */
+function _brandGate(){
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(plan==='free' || !currentMember){ showPaywall(); return false; }
+  return true;
+}
+
 async function mtMemFromSite(){
+  if(!_brandGate()) return;
   const btn=document.getElementById('mtMemScanBtn');
   const site=_mtSiteValue();
   if(!site){ toast('Renseigne d\'abord ton site juste au-dessus.'); (document.getElementById('accMemSite')||document.getElementById('mtSite'))?.focus(); return; }
@@ -10033,6 +10044,7 @@ async function mtMemSave(){
    derrière un écran de connexion, c'est la seule source fiable sur ses vraies
    fonctionnalités — son site public ne les montre pas. */
 async function mtMemLearnFromShots(list){
+  if(!_brandGate()) return;
   const files=Array.from(list||[]).slice(0,4); if(!files.length) return;
   const btn=document.getElementById('mtMemShotBtn'); const old=btn?btn.textContent:'';
   if(btn){ btn.disabled=true; btn.textContent='Lecture des captures…'; }
@@ -10116,6 +10128,7 @@ function mtLibRender(){
 
 async function mtLibUpload(list, kind){
   if(!currentMember) return;
+  if(!_brandGate()) return;
   const files=Array.from(list||[]); if(!files.length) return;
   for(const f of files){
     if(f.size > 25*1024*1024){ toast('⚠️ '+f.name+' dépasse 25 Mo'); continue; }
@@ -10210,6 +10223,7 @@ function mtLibRegisterSounds(){
 // après un montage réussi : la fiche apprend ce que la vidéo révèle de neuf.
 // Volontairement silencieux et non bloquant — l'utilisateur a déjà sa vidéo.
 async function mtMemLearn(transcript){
+  if((currentMember?.plan||'free').toLowerCase()==='free') return;
   if(_mtMem && _mtMem.auto_learn === false) return;
   const site=_mtSiteValue();
   const brief=_mtBrief();
