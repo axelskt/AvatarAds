@@ -4373,12 +4373,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div class="mt-chips" id="mtMemActions">
             <button type="button" class="mt-chip" id="mtMemScanBtn" onclick="mtMemFromSite()">Analyser mon site</button>
             <button type="button" class="mt-chip" id="mtMemEditBtn" onclick="mtMemEdit(true)" style="display:none">Modifier</button>
+            <button type="button" class="mt-chip" id="mtMemShotBtn" onclick="document.getElementById('mtMemShotIn').click()">Apprendre depuis des captures</button>
+            <input type="file" id="mtMemShotIn" accept="image/*" multiple style="display:none" onchange="mtMemLearnFromShots(this.files);this.value=''">
             <label class="mt-mem-auto" id="mtMemAutoWrap" style="display:none">
               <input type="checkbox" id="mtMemAuto" onchange="mtMemToggleAuto()"> Compléter après chaque vidéo
             </label>
           </div>
           <div id="mtMemEditBox" style="display:none;margin-top:12px">
-            <textarea id="mtMemText" class="field mt-brief-ta" rows="7" placeholder="Ex : Je vends AvatarAds, un outil de création de vidéos IA pour les créateurs. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct, tutoiement. CTA habituel : « lien en bio »."></textarea>
+            <div id="mtMemForm" style="display:grid;gap:12px"></div>
             <div class="mt-chips">
               <button type="button" class="mt-chip" onclick="mtMemSave()">Enregistrer</button>
               <button type="button" class="mt-brief-x" onclick="mtMemEdit(false)">Annuler</button>
@@ -5121,7 +5123,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20b-bibliotheque-de-marque'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20c-memoire-editable'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9922,24 +9924,88 @@ async function mtMemFromSite(){
   finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
 }
 
+/* Édition CHAMP PAR CHAMP : un seul gros bloc de texte, l'utilisateur ne sait pas
+   quoi y mettre et l'IA écrase ses formulations. Chaque champ de la fiche est donc
+   éditable séparément — et ce qu'il écrit à la main fait autorité. */
+const MT_MEM_FIELDS=[
+  { k:'business',  l:'Ton activité',            t:'line', ph:'Ce que tu fais, en une phrase' },
+  { k:'produit',   l:'Ton produit / service',   t:'line', ph:'Le principal' },
+  { k:'features',  l:'Fonctionnalités · bénéfices', t:'list', ph:'Une par ligne' },
+  { k:'chiffres',  l:'Chiffres à citer tels quels', t:'list', ph:'Une par ligne — ex : Prix Pro|49,99 €' },
+  { k:'audience',  l:'À qui tu parles',         t:'line', ph:'Créateurs, e-commerçants…' },
+  { k:'offres',    l:'Tes offres / prix',       t:'line', ph:'Tels que tu les affiches' },
+  { k:'reseaux',   l:'Tes réseaux',             t:'list', ph:'Une par ligne — ex : instagram|@moncompte' },
+  { k:'ton',       l:'Ton ton',                 t:'line', ph:'Direct, tutoiement, punchy…' },
+  { k:'cta',       l:'Ton appel à l\'action',   t:'line', ph:'Ex : lien en bio' },
+  { k:'interdits', l:'À ne JAMAIS afficher',    t:'list', ph:'Une par ligne — mots, promesses, chiffres interdits' },
+];
+const _mtEsc=(v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
 function mtMemEdit(open){
-  const box=document.getElementById('mtMemEditBox'), ta=document.getElementById('mtMemText');
-  if(!box) return;
-  if(open){ if(ta){ ta.value=(_mtMem&&_mtMem.summary)||''; } box.style.display=''; setTimeout(()=>ta&&ta.focus(), 30); }
-  else box.style.display='none';
+  const box=document.getElementById('mtMemEditBox'), form=document.getElementById('mtMemForm');
+  if(!box || !form) return;
+  if(!open){ box.style.display='none'; return; }
+  const f=(_mtMem&&_mtMem.facts)||{};
+  form.innerHTML =
+    '<div><div class="mt-eyebrow" style="margin:0 0 6px">Résumé — c\'est ce que le monteur lit en premier</div>'
+    + '<textarea id="mtMemText" class="field mt-brief-ta" rows="5" placeholder="Ex : Je vends AvatarAds, un outil de vidéos IA. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct. CTA : « lien en bio »."></textarea></div>'
+    + MT_MEM_FIELDS.map((fd)=>{
+        const v = fd.t==='list' ? (Array.isArray(f[fd.k]) ? f[fd.k].join('\n') : '') : (f[fd.k]||'');
+        const inp = fd.t==='list'
+          ? '<textarea id="mtMemF_'+fd.k+'" class="field mt-brief-ta" rows="3" style="min-height:70px" placeholder="'+_mtEsc(fd.ph)+'">'+_mtEsc(v)+'</textarea>'
+          : '<input id="mtMemF_'+fd.k+'" class="field" type="text" value="'+_mtEsc(v)+'" placeholder="'+_mtEsc(fd.ph)+'">';
+        return '<div><div class="mt-eyebrow" style="margin:0 0 6px">'+fd.l+'</div>'+inp+'</div>';
+      }).join('');
+  const ta=document.getElementById('mtMemText'); if(ta) ta.value=(_mtMem&&_mtMem.summary)||'';
+  box.style.display='';
+  setTimeout(()=>ta&&ta.focus(), 30);
 }
 
 async function mtMemSave(){
   const ta=document.getElementById('mtMemText'); if(!ta || !currentMember) return;
   const summary=String(ta.value||'').trim().slice(0, 4000);
+  const facts=Object.assign({}, (_mtMem&&_mtMem.facts)||{});
+  for(const fd of MT_MEM_FIELDS){
+    const el=document.getElementById('mtMemF_'+fd.k); if(!el) continue;
+    facts[fd.k] = fd.t==='list'
+      ? String(el.value||'').split('\n').map(x=>x.trim().slice(0,160)).filter(Boolean).slice(0,12)
+      : String(el.value||'').trim().slice(0,400);
+  }
   try{
     const { error } = await sb.from('brand_memory').upsert(
-      { user_id: currentMember.id, summary, facts: (_mtMem&&_mtMem.facts)||{} }, { onConflict:'user_id' });
+      { user_id: currentMember.id, summary, facts }, { onConflict:'user_id' });
     if(error) throw error;
-    _mtMem = Object.assign({ facts:{}, auto_learn:true }, _mtMem||{}, { summary });
+    _mtMem = Object.assign({ auto_learn:true }, _mtMem||{}, { summary, facts });
     mtMemEdit(false); mtMemRender();
     toast('Fiche enregistrée.');
   }catch(e){ toast('Enregistrement impossible : '+(e.message||e)); }
+}
+
+/* Apprendre depuis des captures d'écran, SANS attendre un montage : pour une app
+   derrière un écran de connexion, c'est la seule source fiable sur ses vraies
+   fonctionnalités — son site public ne les montre pas. */
+async function mtMemLearnFromShots(list){
+  const files=Array.from(list||[]).slice(0,4); if(!files.length) return;
+  const btn=document.getElementById('mtMemShotBtn'); const old=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Lecture des captures…'; }
+  try{
+    const images=[];
+    for(const f of files){
+      if(f.size > 4*1024*1024){ toast('⚠️ '+f.name+' dépasse 4 Mo'); continue; }
+      const b64=await new Promise((ok)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result||'').split(',')[1]||''); r.onerror=()=>ok(''); r.readAsDataURL(f); });
+      if(b64) images.push({ media: f.type||'image/jpeg', b64 });
+    }
+    if(!images.length) throw new Error('aucune image lisible');
+    const r=await fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
+      method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'learn', images, website:_mtSiteValue() }),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('brand-memory '+r.status));
+    await mtMemLoad();
+    toast('Fiche enrichie depuis tes captures.');
+  }catch(e){ toast('Lecture impossible : '+(e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
 }
 
 async function mtMemToggleAuto(){
