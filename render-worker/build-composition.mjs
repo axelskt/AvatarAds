@@ -105,6 +105,8 @@ export function buildComposition(plan, opts = {}) {
   // pendant une scène plein cadre, les sous-titres passent sur fond clair (ombre au lieu du contour)
   const inFullScene = (t) => fullDefs.some((f) => t >= f.start && t < f.start + f.dur)
   const capTopCream = Math.round(H * 0.74)
+  // style de sous-titres choisi par l'utilisateur (Parametres avances) ; 'punch' = defaut historique
+  const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ''
   const caps = (plan.captions || []).map((c, i) => {
     const cream = inFullScene(r2(c.start) + 0.05)
     return {
@@ -146,7 +148,7 @@ export function buildComposition(plan, opts = {}) {
       </div>` : ''
 
   const capsHtml = caps.map((c) => `
-      <div class="clip cap${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
+      <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
   const fullHtml = fullDefs.map((s) => `
@@ -425,6 +427,12 @@ export function buildComposition(plan, opts = {}) {
         letter-spacing: 1px; will-change: transform; z-index: 8;
       }
       /* sur une scène plein cadre (fond crème) : ombre portée au lieu du contour noir */
+      /* variantes demandees dans « Parametres avances » (plan.capStyle) */
+      .cap.st-neon { color: #FFFFFF; text-shadow: 0 0 12px #FF2FD0, 0 0 26px #7A2BFF, 0 3px 0 rgba(0,0,0,.5); }
+      .cap.st-neon::before { -webkit-text-stroke-color: #2A0B3F; }
+      .cap.st-neon.accent { color: #7CF6FF; text-shadow: 0 0 14px #00E5FF, 0 0 30px #0066FF; }
+      .cap.st-minimal { font-weight: 600; letter-spacing: .01em; text-shadow: 0 2px 10px rgba(0,0,0,.55); }
+      .cap.st-minimal::before { display: none; }
       .cap.oncream { color: #FFFDF7; text-shadow: 0 8px 0 rgba(20,16,12,.22), 0 14px 34px rgba(20,16,12,.30); }
       .cap.oncream::before { display: none; }
       .cap.oncream.accent { color: #C2483A; text-shadow: 0 8px 0 rgba(20,16,12,.18); }
