@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20q-styles-autre'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20r-mot-par-mot'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9911,7 +9911,7 @@ const MZ_VSTYLE = [
 
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
   ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'fond blanc, cartes produit flottantes avec profondeur de champ, typo legere dispersee'],
-  ['word','Mot par mot','texte plein écran rythmé',['#2A2438','#FFE500'],'fond uni plein ecran, UN SEUL mot au centre en tres gras, rythme rapide'],
+  ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'AUCUN clip video ni image : page blanche du debut a la fin, le sous-titre est le seul texte (un mot enorme au centre), et des formes geometriques animees illustrent chaque section. Donc : broll = [], pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
@@ -10905,7 +10905,9 @@ async function _mtSegmentedGenerate(){
     plan.capSize    = _a.subSize  || 'M';
     plan.slideStyle = _a.vstyle   || 'auto';
     plan.transitions= _a.transitions || 'cut';
-    if(_a.subStyle==='none') plan.captions=[];
+    // « Mot par mot » : le sous-titre EST le visuel. Sans lui il ne resterait
+    // qu'une page blanche vide — on ignore donc le « sans sous-titres ».
+    if(_a.subStyle==='none' && _a.vstyle!=='word') plan.captions=[];
     if(_a.sfx===false)   plan.sfx=[];
     if(_a.punch===false) plan.zooms=[];
     if(_a.broll===0)     plan.broll=[];
@@ -11048,7 +11050,9 @@ async function _mtVideoGenerate(){
     plan.capSize    = _a.subSize  || 'M';
     plan.slideStyle = _a.vstyle   || 'auto';
     plan.transitions= _a.transitions || 'cut';
-    if(_a.subStyle==='none') plan.captions=[];
+    // « Mot par mot » : le sous-titre EST le visuel. Sans lui il ne resterait
+    // qu'une page blanche vide — on ignore donc le « sans sous-titres ».
+    if(_a.subStyle==='none' && _a.vstyle!=='word') plan.captions=[];
     if(_a.sfx===false)   plan.sfx=[];
     if(_a.punch===false) plan.zooms=[];
     if(_a.broll===0)     plan.broll=[];
