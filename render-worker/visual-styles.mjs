@@ -308,7 +308,10 @@ function wordCss(W, H, fz) {
       .wm { position: absolute; left: 0; right: 0; z-index: 3; }
       .wm-s { position: absolute; will-change: transform, opacity; }
       .wm-l { position: absolute; height: ${Math.round(H * 0.004)}px; background: ${WORD_INK};
-        transform-origin: 0% 50%; will-change: transform, opacity; }`
+        transform-origin: 0% 50%; will-change: transform, opacity; }
+      /* motif « nuage » : les mots-clés éparpillés, même typo que le sous-titre */
+      .wm-w { position: absolute; font-family: ${SANS}; font-weight: 500; letter-spacing: -.01em;
+        white-space: nowrap; will-change: transform, opacity; }`
 }
 
 // ══════════════════════════════════════════════════════════ LIQUID GLASS
@@ -406,43 +409,103 @@ function glassCss(W, H, fz) {
 // Le mot porte le sens ; la forme porte le rythme. Pas une lettre de plus.
 // Le type de scène décidé par le chef d'orchestre choisit le motif ; la position
 // est SEEDÉE sur le timestamp (rendu frame par frame = doit être reproductible).
-export function wordMotif(s, si, W, H) {
-  const n = Math.max(1, Math.min(5, (s.items || []).length))
+// Le chef d'orchestre choisit le motif SELON L'AUDIO (champ `motif` du plan) ;
+// sans choix explicite, on le déduit du type de scène.
+export const MOTIFS = ['chain', 'tiles', 'versus', 'bars', 'ring', 'cloud', 'halftone', 'grid']
+const MOTIF_BY_TYPE = { flow: 'chain', checklist: 'tiles', compare: 'versus', versus: 'versus',
+  stat: 'bars', bars: 'bars', kpi: 'bars', nodes: 'chain', loop: 'ring' }
+export function resolveMotif(s) {
+  if (MOTIFS.includes(s.motif)) return s.motif
+  if (s.type === 'card' && (s.items || []).length > 1) return 'chain'
+  return MOTIF_BY_TYPE[s.type] || 'ring'
+}
+
+export function wordMotif(s, si, W, H, opts = {}) {
+  const items = s.items || []
+  const n = Math.max(1, Math.min(5, items.length))
+  const motif = resolveMotif(s)
   const col = (k) => WORD_SHAPES[(si + k) % WORD_SHAPES.length]
+  const ink = opts.ink || WORD_INK
   const band = Math.round(H * 0.235)                    // au-dessus du mot, hors zone UI
   const unit = Math.round(H * 0.062)
   const gap = Math.round(unit * 1.55)
   const x0 = Math.round(W / 2 - ((n - 1) * gap) / 2 - unit / 2)
   const at = (k) => x0 + k * gap
-  const type = s.type === 'card' && n > 1 ? 'flow' : s.type
-
   const box = (k, extra) => `<span class="wm-s" id="${s.id}m${k}" style="left:${at(k)}px;top:${band}px;` +
     `width:${unit}px;height:${unit}px;background:${col(k)};${extra}"></span>`
 
   let html = ''
-  if (type === 'flow') {
-    // une chaîne : des pastilles reliées par un trait qui se trace
+  if (motif === 'chain') {
     for (let k = 0; k < n; k++) {
       html += box(k, 'border-radius:50%')
       if (k > 0) html += `<span class="wm-l" id="${s.id}l${k}" style="left:${at(k - 1) + unit}px;` +
-        `top:${band + Math.round(unit / 2)}px;width:${gap - unit}px"></span>`
+        `top:${band + Math.round(unit / 2)}px;width:${gap - unit}px;background:${ink}"></span>`
     }
-  } else if (type === 'checklist') {
+  } else if (motif === 'tiles') {
     for (let k = 0; k < n; k++) html += box(k, `border-radius:${Math.round(unit * 0.26)}px`)
-  } else if (type === 'compare') {
+  } else if (motif === 'versus') {
     html = box(0, 'border-radius:50%') +
       `<span class="wm-s" id="${s.id}m1" style="left:${at(1)}px;top:${band}px;width:${unit}px;height:${unit}px;` +
       `background:transparent;border:${Math.round(unit * 0.16)}px solid ${col(1)};border-radius:${Math.round(unit * 0.26)}px"></span>`
-  } else if (type === 'stat' || type === 'bars' || type === 'kpi') {
-    // des barres qui poussent depuis le bas : le chiffre monte, sans écrire le chiffre
+  } else if (motif === 'bars') {
     for (let k = 0; k < n; k++) {
       const h = Math.round(unit * (0.7 + ((k + 1) / n) * 1.5))
       html += `<span class="wm-s" id="${s.id}m${k}" style="left:${at(k)}px;top:${band + unit * 2 - h}px;` +
         `width:${unit}px;height:${h}px;background:${col(k)};border-radius:${Math.round(unit * 0.16)}px;` +
         `transform-origin:50% 100%"></span>`
     }
+  } else if (motif === 'cloud') {
+    // les mots-clés éparpillés sur la page, qui arrivent un par un sur l'audio
+    const words = items.slice(0, 12)
+    const fs = Math.round(H * 0.026)
+    html = words.map((it, k) => {
+      // Suite dorée + un peu de bruit : le pur tirage aléatoire entassait les mots
+      // dans la même colonne, la suite dorée les étale sur toute la largeur.
+      const rx = ((k * 0.618 + seeded(Math.round(s.start * 1000) + k * 37) * 0.22) % 1)
+      const ry = seeded(Math.round(s.start * 1000) + k * 71)
+      const cx = Math.round(W * (0.18 + rx * 0.64))
+      // Répartition haut/bas ALTERNÉE plutôt que purement tirée au sort : sur 4 ou 5
+      // mots, le hasard les entassait tous du même côté. On évite aussi la bande
+      // centrale, occupée par le mot du sous-titre.
+      const up = k % 2 === 0
+      const t = up ? 0.11 + (0.28 * ((k >> 1) + ry) / Math.max(1, words.length / 2))
+        : 0.64 + (0.26 * ((k >> 1) + ry) / Math.max(1, words.length / 2))
+      // largeur estimée (~0.5em/glyphe en Inter medium) → le mot est centré sur son
+      // point d'ancrage sans transform, que GSAP écraserait en animant scale/y.
+      const wpx = Math.round(String(it.text).length * fs * 0.5)
+      return `<span class="wm-w" id="${s.id}m${k}" style="left:${Math.max(8, cx - Math.round(wpx / 2))}px;` +
+        `top:${Math.round(H * Math.min(0.9, t))}px;font-size:${fs}px;color:${ink}">${escAttr(it.text)}</span>`
+    }).join('')
+  } else if (motif === 'halftone') {
+    // disque en trame de points : une respiration entre deux sections
+    const R = Math.round(H * 0.075), step = Math.round(R / 5.5), cx = Math.round(W / 2), cy = band + R
+    const dots = []
+    for (let gy = -R; gy <= R; gy += step) {
+      for (let gx = -R; gx <= R; gx += step) {
+        const d = Math.hypot(gx, gy)
+        if (d > R) continue
+        const r = Math.max(1, Math.round(step * 0.36 * (0.45 + (d / R) * 0.75)))
+        dots.push(`<span style="position:absolute;left:${cx + gx - r}px;top:${cy + gy - r}px;` +
+          `width:${r * 2}px;height:${r * 2}px;border-radius:50%;background:${ink}"></span>`)
+      }
+    }
+    html = `<span class="wm-s" id="${s.id}m0" style="left:0;top:0;width:${W}px;height:${Math.round(H * 0.5)}px;background:none">${dots.join('')}</span>`
+  } else if (motif === 'grid') {
+    // mosaïque : la même tuile répétée, décalée, avec une ombre douce
+    const cell = Math.round(H * 0.036), cols = 7, rows = 5
+    const gw = cols * cell * 1.5, gx0 = Math.round(W / 2 - gw / 2), gy0 = band - Math.round(cell)
+    const cells = []
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const jx = Math.round((seeded(r * 31 + c * 7) - 0.5) * cell * 0.5)
+        const jy = Math.round((seeded(r * 13 + c * 41) - 0.5) * cell * 0.5)
+        cells.push(`<span style="position:absolute;left:${gx0 + Math.round(c * cell * 1.5) + jx}px;` +
+          `top:${gy0 + Math.round(r * cell * 1.5) + jy}px;width:${cell}px;height:${cell}px;` +
+          `border-radius:${Math.round(cell * 0.28)}px;background:${col(0)};box-shadow:0 ${Math.round(cell * 0.16)}px ${Math.round(cell * 0.4)}px rgba(17,17,17,.16)"></span>`)
+      }
+    }
+    html = `<span class="wm-s" id="${s.id}m0" style="left:0;top:0;width:${W}px;height:${Math.round(H * 0.5)}px;background:none">${cells.join('')}</span>`
   } else {
-    // punch / card : un anneau qui tourne autour d'un disque
     const big = Math.round(unit * 2.1)
     html = `<span class="wm-s" id="${s.id}m0" style="left:${Math.round(W / 2 - big / 2)}px;top:${band - Math.round(big * 0.2)}px;` +
       `width:${big}px;height:${big}px;background:transparent;border:${Math.round(unit * 0.14)}px solid ${col(0)};border-radius:50%"></span>` +
@@ -452,16 +515,37 @@ export function wordMotif(s, si, W, H) {
   return `<div class="wm" id="${s.id}w">${html}</div>`
 }
 
+const escAttr = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 export function wordMotifJs(s, si, r2) {
   const items = s.items || []
   const n = Math.max(1, Math.min(5, items.length))
   const end = r2(s.start + s.dur)
-  const type = s.type === 'card' && n > 1 ? 'flow' : s.type
+  const motif = resolveMotif(s)
   const tOf = (k) => r2(Math.max(s.start + 0.05, Math.min(end - 0.2, (items[k] || {}).t ?? s.start + 0.1 + k * 0.4)))
-  const growing = type === 'stat' || type === 'bars' || type === 'kpi'
-  const ring = !['flow', 'checklist', 'compare', 'stat', 'bars', 'kpi'].includes(type)
   let js = ''
-  const count = ring ? 2 : (type === 'compare' ? 2 : n)
+
+  if (motif === 'cloud') {
+    // un mot-clé apparaît sur SON timestamp, puis tout s'efface ensemble
+    items.slice(0, 12).forEach((_, k) => {
+      js += `
+      tl.fromTo('#${s.id}m${k}', { autoAlpha: 0, y: 14, scale: 0.9 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.3, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${tOf(k)});
+      tl.to('#${s.id}m${k}', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(tOf(k) + 0.3, end - 0.2))});`
+    })
+    return js
+  }
+  if (motif === 'halftone' || motif === 'grid') {
+    const t = tOf(0)
+    js += `
+      tl.fromTo('#${s.id}m0', { autoAlpha: 0, scale: 0.7 }, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(1.6)', transformOrigin: '50% 50%' }, ${t});
+      tl.to('#${s.id}m0', { scale: ${motif === 'halftone' ? 1.06 : 1.03}, duration: ${r2(Math.max(0.5, s.dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t + 0.4)});
+      tl.to('#${s.id}m0', { autoAlpha: 0, scale: 0.86, duration: 0.2, ease: 'power2.in' }, ${r2(Math.max(t + 0.4, end - 0.2))});`
+    return js
+  }
+
+  const growing = motif === 'bars'
+  const ring = motif === 'ring'
+  const count = ring || motif === 'versus' ? 2 : n
   for (let k = 0; k < count; k++) {
     const t = tOf(ring ? 0 : k)
     js += growing
@@ -474,7 +558,7 @@ export function wordMotifJs(s, si, r2) {
   }
   if (ring) js += `
       tl.to('#${s.id}m0', { rotation: 180, duration: ${r2(Math.max(0.6, s.dur))}, ease: 'none' }, ${r2(s.start)});`
-  if (type === 'flow') {
+  if (motif === 'chain') {
     for (let k = 1; k < n; k++) js += `
       tl.fromTo('#${s.id}l${k}', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${r2(Math.max(s.start + 0.05, tOf(k) - 0.16))});
       tl.to('#${s.id}l${k}', { autoAlpha: 0, duration: 0.14, ease: 'power2.in' }, ${r2(Math.max(s.start + 0.4, end - 0.18))});`

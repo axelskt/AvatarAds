@@ -211,6 +211,9 @@ export function buildComposition(plan, opts = {}) {
       wide: !!s.wide,
       // une card = une punchline ; si le plan y met plusieurs items, on bascule en flow
       type: (s.type === 'card' && its.length > 1) ? 'flow' : s.type,
+      // #131 · le chef d'orchestre choisit l'animation SELON L'AUDIO ; sans choix
+      // explicite, resolveMotif() la déduit du type de scène.
+      motif: s.motif,
       title: String(s.title || ''),
       start: r2(s.start),
       dur: r2(Math.max(0.6, (s.end ?? s.start + 1.5) - s.start)),
