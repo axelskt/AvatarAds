@@ -148,10 +148,23 @@ export function buildComposition(plan, opts = {}) {
     return a.length ? a.filter((w) => c.includes(w)).length / a.length >= 0.5 : false
   })
   const hookUnderWordPanel = wordMode && inSplit(r2(plan.hook?.start || 0) + 0.05)
-  const hook = plan.hook && plan.hook.text && !hookHiddenByBanner && !hookUnderWordPanel ? {
+
+  // Le badge hook est en haut (13,5 %) et au-dessus de tout (z 7) : la zone slides
+  // (0 → 45 %), les bandeaux (14,5 %) et les scènes plein cadre tombent PILE dessous.
+  // Si le chef d'orchestre ouvre une scène pendant que le hook est encore là, les deux
+  // textes se superposent et se cachent l'un l'autre. On coupe donc le hook juste avant
+  // la première scène qui empiète — et s'il ne reste presque rien, on ne l'affiche pas.
+  const hookStart = r2(plan.hook?.start || 0)
+  const hookWanted = r2(Math.max(0.8, (plan.hook?.end ?? 3) - hookStart))
+  const sceneStarts = [...slides, ...bannerDefs, ...fullDefs]
+    .map((x) => r2(x.start)).filter((t) => t > hookStart).sort((a, b) => a - b)
+  const firstClash = sceneStarts.find((t) => t < hookStart + hookWanted)
+  const hookDur = firstClash === undefined ? hookWanted : r2(firstClash - 0.15 - hookStart)
+
+  const hook = plan.hook && plan.hook.text && !hookHiddenByBanner && !hookUnderWordPanel && hookDur >= 0.6 ? {
     text: CASE(plan.hook.text),
-    start: r2(plan.hook.start || 0),
-    dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
+    start: hookStart,
+    dur: hookDur,
   } : null
 
   // clip vidéo b-roll : classe "clip" + data-start/duration → le moteur le seek
