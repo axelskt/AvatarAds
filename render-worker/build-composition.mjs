@@ -10,8 +10,8 @@
 
 import { scenePackCss, fullSlideHtml, fullSlideJs, bannerHtml, bannerJs, FULL_TYPES } from './scene-pack.mjs'
 import {
-  VSTYLES, fontFaceCss, WORD_BG, WORD_FG,
-  styleCss, styleExtraJs, scatterStyle, seeded, wordFontSize, WORD_SHAPE_A, WORD_FIT_JS,
+  VSTYLES, fontFaceCss,
+  styleCss, styleExtraJs, scatterStyle, wordFontSize, WORD_FIT_JS, WORD_ACCENT, wordMotif, wordMotifJs,
 } from './visual-styles.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -29,10 +29,12 @@ export function buildComposition(plan, opts = {}) {
   // #131 · style visuel choisi dans les Paramètres avancés — posé en classe sur <body>,
   // il repeint slides, scènes plein cadre, bandeaux et sous-titres (visual-styles.mjs).
   const vs = VSTYLES.includes(plan.slideStyle) ? plan.slideStyle : ''
-  const wordMode = vs === 'word'          // « Mot par mot » : plein écran, un mot à la fois
-  // En SURCOUCHE la vidéo ne descend pas dans la moitié basse : elle reste plein écran et
-  // les slides se posent dessus. Indispensable au verre — sans vidéo derrière, backdrop-filter
-  // n'a que du noir à réfracter — et c'est le principe même du « mot par mot ».
+  // « Mot par mot » : AUCUN clip. La vidéo source n'apparaît jamais, l'écran est blanc
+  // du début à la fin, le sous-titre EST le visuel (un mot énorme au centre) et des
+  // formes animées illustrent chaque section. C'est un mode de rendu à part entière.
+  const wordMode = vs === 'word'
+  // Le verre, lui, a besoin que la vidéo reste plein écran SOUS les cartes : sinon
+  // backdrop-filter n'a que du noir à réfracter.
   const overlay = wordMode || vs === 'glass'
   const softCase = vs === 'apple' || vs === 'editorial'  // ces deux-là écrivent en casse normale
   const CASE = (s) => (softCase ? String(s ?? '') : String(s ?? '').toUpperCase())
@@ -49,9 +51,13 @@ export function buildComposition(plan, opts = {}) {
     start: r2(s.start),
     items: (s.items || []).map((it, j) => ({ ...it, id: `${p}${i}i${j}`, text: String(it.text || ''), t: r2(it.t ?? s.start) })),
   }))
-  const fullDefs = withIds(allSlides.filter(isFull), 'fs')
-  const bannerDefs = withIds(allSlides.filter(isBanner), 'fb')
-  const slides = allSlides.filter((s) => !isFull(s) && !isBanner(s) && Array.isArray(s.items) && s.items.length)
+  // En « mot par mot » il n'y a plus ni scène plein cadre ni bandeau : TOUTE section
+  // devient un motif de formes sur la page blanche, sinon le montage aurait des trous
+  // sans la moindre animation.
+  const fullDefs = wordMode ? [] : withIds(allSlides.filter(isFull), 'fs')
+  const bannerDefs = wordMode ? [] : withIds(allSlides.filter(isBanner), 'fb')
+  const slides = wordMode ? allSlides
+    : allSlides.filter((s) => !isFull(s) && !isBanner(s) && Array.isArray(s.items) && s.items.length)
   const SLIDE_H = Math.round(H * 0.45)
   const VIDEO_H = H - SLIDE_H
   const TR = 0.34 // durée de la transition full <-> split
@@ -136,9 +142,7 @@ export function buildComposition(plan, opts = {}) {
       top: cream ? capTopCream : (!overlay && inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull),
     }
   }).filter((c) => c.text)
-    // « Mot par mot » : le panneau plein écran EST le texte — un sous-titre par-dessus
-    // ferait doublon (« moins de texte, plus d'animation »).
-    .filter((c) => !(wordMode && inSplit(r2(c.start) + 0.05)))
+
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
   const _nk = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 3)
@@ -181,8 +185,11 @@ export function buildComposition(plan, opts = {}) {
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
 
-  const capsHtml = caps.map((c) => `
-      <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`).join('')
+  const capsHtml = caps.map((c, i) => (wordMode
+    ? `
+      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+    : `
+      <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
   const fullHtml = fullDefs.map((s) => `
@@ -193,16 +200,20 @@ export function buildComposition(plan, opts = {}) {
   const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
   // ── slides motion design (zone haute pendant les périodes split) ──────────
-  const slideDefs = slides.map((s, i) => ({
-    id: 's' + i,
-    wide: !!s.wide,
-    // une card = une punchline ; si le plan y met plusieurs items, on bascule en flow
-    type: (s.type === 'card' && s.items.length > 1) ? 'flow' : s.type,
-    title: String(s.title || ''),
-    start: r2(s.start),
-    dur: r2(Math.max(0.6, s.end - s.start)),
-    items: s.items.map((it, j) => ({ id: `s${i}i${j}`, text: String(it.text || ''), t: r2(it.t) })),
-  }))
+  const slideDefs = slides.map((s, i) => {
+    // en « mot par mot » une section peut être un bandeau, donc sans items
+    const its = Array.isArray(s.items) ? s.items : []
+    return {
+      id: 's' + i,
+      wide: !!s.wide,
+      // une card = une punchline ; si le plan y met plusieurs items, on bascule en flow
+      type: (s.type === 'card' && its.length > 1) ? 'flow' : s.type,
+      title: String(s.title || ''),
+      start: r2(s.start),
+      dur: r2(Math.max(0.6, (s.end ?? s.start + 1.5) - s.start)),
+      items: its.map((it, j) => ({ id: `s${i}i${j}`, text: String(it.text || ''), t: r2(it.t ?? s.start) })),
+    }
+  })
 
   // « Éditorial blanc » : les cartes ne sont pas alignées au cordeau — légère rotation,
   // décalage, et une sur quatre en arrière-plan (flou de profondeur de champ). Le tirage
@@ -210,20 +221,8 @@ export function buildComposition(plan, opts = {}) {
   // condition sine qua non d'un rendu frame par frame reproductible.
   const scat = (s, j, o) => scatterStyle(vs, Math.round(s.start * 1000) + j * 97, o)
 
-  // « Mot par mot » : un panneau plein écran par slide, UN mot (ou un groupe court) à la
-  // fois, sur un aplat de couleur qui change à chaque plan + une forme découpée derrière.
-  const wordBody = (s, si) => s.items.map((it, j) => {
-    const fg = WORD_FG[(si + j) % WORD_FG.length]
-    const rx = seeded(Math.round(s.start * 1000) + j * 31)
-    const ry = seeded(Math.round(s.start * 1000) + j * 57)
-    const d = Math.round(W * (0.5 + seeded(si * 13 + j) * 0.5))
-    return `
-        <div class="wd-shape" id="${it.id}s" style="left:${Math.round(rx * (W - d))}px;top:${Math.round(ry * (H - d))}px;width:${d}px;height:${d}px;background:${fg}"></div>
-        <div class="wd-w" id="${it.id}"><span style="font-size:${wordFontSize(it.text, W, H)}px;color:${fg}">${esc(String(it.text).toUpperCase())}</span></div>`
-  }).join('')
-
   const slideBody = (s, si) => {
-    if (wordMode) return wordBody(s, si)
+    if (wordMode) return wordMotif(s, si, W, H)
     const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
     if (s.type === 'flow') {
       return `${title}<div class="sl-flow">${s.items.map((it, j) => `${j > 0 ? `
@@ -267,7 +266,8 @@ export function buildComposition(plan, opts = {}) {
   const fitWide = `{ top: ${WIDE_TOP}, height: ${WIDE_H}, duration: ${TR}, ease: 'power3.inOut' }`
   // « Mot par mot » : pas de split — le panneau recouvre TOUT l'écran (z-index 5), la
   // vidéo reste intacte dessous et réapparaît dès que le panneau s'efface.
-  const layoutJs = overlay ? periods.map((p) => `
+  const layoutJs = wordMode ? `
+      tl.set('#slidezone', { autoAlpha: 1 }, 0);` : overlay ? periods.map((p) => `
       tl.to('#slidezone', { autoAlpha: 1, duration: 0.1, ease: 'power1.out' }, ${r2(Math.max(0, p.start - 0.08))});
       tl.to('#slidezone', { autoAlpha: 0, duration: 0.1, ease: 'power1.in' }, ${r2(Math.max(0, p.end - 0.1))});`).join('')
     : periods.map((p) => {
@@ -322,33 +322,12 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${a.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${a.start});
       tl.to('#${a.id}', { autoAlpha: 0, duration: 0.12, ease: 'power1.in' }, ${r2(a.start + a.dur - 0.12)});`).join('')
 
-  const capsJs = caps.map((c) => `
-      tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
+  const capsJs = caps.map((c) => (wordMode ? `
+      tl.fromTo('#${c.id}', { scale: 0.72 }, { scale: 1, duration: ${r2(Math.min(0.16, c.dur))}, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${c.start});` : `
+      tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
   ).join('')
 
-  // « Mot par mot » : un aplat par plan, puis les mots qui se remplacent l'un l'autre —
-  // jamais deux à l'écran en même temps. La forme découpée arrive juste avant le mot.
-  const wordJs = slideDefs.map((s, si) => {
-    const end = r2(s.start + s.dur)
-    let js = `
-      tl.set('#slidezone', { backgroundColor: '${WORD_BG[si % WORD_BG.length]}' }, ${r2(Math.max(0, s.start - 0.1))});
-      tl.fromTo('#${s.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.08, ease: 'none' }, ${r2(Math.max(0, s.start - 0.06))});
-      tl.to('#${s.id}', { autoAlpha: 0, duration: 0.08, ease: 'none' }, ${r2(Math.max(s.start, end - 0.08))});`
-    s.items.forEach((it, j) => {
-      const t = r2(Math.max(it.t, s.start + 0.02))
-      const next = s.items[j + 1]
-      const off = r2(Math.min(end - 0.02, next ? Math.max(t + 0.24, next.t - 0.05) : end - 0.02))
-      js += `
-      tl.set(['#${it.id}', '#${it.id}s'], { autoAlpha: 0 }, 0);
-      tl.fromTo('#${it.id}s', { autoAlpha: 0, scale: 0.35 }, { autoAlpha: ${WORD_SHAPE_A}, scale: 1, duration: 0.32, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(Math.max(0, t - 0.07))});
-      tl.fromTo('#${it.id}', { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.16, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${t});
-      tl.to('#${it.id}', { autoAlpha: 0, scale: 1.12, duration: 0.1, ease: 'power2.in' }, ${off});
-      tl.to('#${it.id}s', { autoAlpha: 0, duration: 0.1, ease: 'power1.in' }, ${off});`
-    })
-    return js
-  }).join('')
-
-  const slidesJs = wordMode ? wordJs : slideDefs.map((s) => {
+  const slidesJs = wordMode ? slideDefs.map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
       tl.fromTo('#${s.id}', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${s.start});
