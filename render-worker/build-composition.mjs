@@ -107,6 +107,8 @@ export function buildComposition(plan, opts = {}) {
   const capTopCream = Math.round(H * 0.74)
   // style de sous-titres choisi par l'utilisateur (Parametres avances) ; 'punch' = defaut historique
   const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ''
+  // 🫧 verre : demande depuis les Parametres avances (plan.slideStyle)
+  const glassCls = plan.slideStyle === 'glass' ? ' gl' : ''
   const caps = (plan.captions || []).map((c, i) => {
     const cream = inFullScene(r2(c.start) + 0.05)
     return {
@@ -205,7 +207,7 @@ export function buildComposition(plan, opts = {}) {
   }
 
   const slidesHtml = slideDefs.map((s) => `
-      <div class="clip slide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
+      <div class="clip slide${glassCls}" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
 
   // ── timeline GSAP ─────────────────────────────────────────────────────────
   // transitions full <-> split : la zone vidéo glisse, la zone slides apparaît ;
@@ -328,6 +330,33 @@ export function buildComposition(plan, opts = {}) {
       }
       #slidezone::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: ${ACCENT}; }
 
+      /* 🫧 STYLE VERRE (plan.slideStyle === 'glass') — deterministe, sans WebGL ni JS.
+         La <video id="base"> est DANS la composition (track 2), donc backdrop-filter a
+         bien quelque chose a refracter. La distorsion feDisplacementMap n'est appliquee
+         qu'au CONTOUR : sur le texte elle le rendrait illisible. */
+      .gl .fl-step, .gl .ck-item, .gl .cmp-col, .gl .st-box, .gl .cd-box {
+        background: rgba(255,255,255,.10) !important;
+        backdrop-filter: blur(${fz(0.026)}px) saturate(180%);
+        -webkit-backdrop-filter: blur(${fz(0.026)}px) saturate(180%);
+        border: 1px solid rgba(255,255,255,.22) !important;
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.45),
+          inset 0 -1px 0 rgba(0,0,0,.25),
+          inset 0 ${fz(0.012)}px ${fz(0.03)}px rgba(255,255,255,.12),
+          0 ${fz(0.018)}px ${fz(0.045)}px rgba(0,0,0,.45) !important;
+        position: relative; overflow: hidden;
+      }
+      /* reflet speculaire diagonal */
+      .gl .fl-step::after, .gl .ck-item::after, .gl .cmp-col::after, .gl .st-box::after, .gl .cd-box::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(135deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 34%, rgba(255,255,255,0) 58%);
+      }
+      /* refraction : uniquement sur le liseré exterieur */
+      .gl .fl-step::before, .gl .ck-item::before, .gl .cmp-col::before, .gl .st-box::before, .gl .cd-box::before {
+        content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+        border: ${fz(0.004)}px solid rgba(255,255,255,.30);
+        filter: url(#glassEdge);
+      }
       .slide { left: 4%; right: 4%; top: 0; height: ${SLIDE_H}px; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: ${fz(0.03)}px; will-change: transform, opacity; z-index: 3;
         font-family: "Arial Black", Arial, sans-serif; padding-top: ${fz(0.06)}px; }
@@ -451,6 +480,12 @@ ${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-du
 ` : ''}      <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
         <div id="videoFit">
           <div id="zoomInner">
+            <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+              <filter id="glassEdge" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="7" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="${plan.slideStyle === 'glass' ? 8 : 0}" xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+            </defs></svg>
             <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
 ${avatarSegs.map((a) => `            <video id="${a.id}" class="clip avatar-seg" src="${esc(a.src)}" data-start="${a.start}" data-duration="${a.dur}" data-track-index="9" muted playsinline></video>`).join('\n')}
           </div>

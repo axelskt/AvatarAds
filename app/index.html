@@ -5179,7 +5179,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20j-ma-marque-1-1'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20k-liquid-glass'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9889,6 +9889,7 @@ const MT_ADV_STYLES = [
   { k:'editorial', l:'Éditorial',       d:'fond creme, gros titres serifs, mise en page magazine, rythme pose' },
   { k:'punchy',    l:'Punchy',          d:'contrastes forts, gros mots-cles, coupes seches, energie maximale' },
   { k:'cartoon',   l:'Cartoon',         d:'couleurs vives, formes rondes, ton joueur, animations rebondissantes' },
+  { k:'glass',     l:'Liquid glass',   d:'cartes en verre depoli translucide, reflets, look Apple, tres epure' },
 ];
 const MT_ADV_CAPS = [
   { k:'punch',  l:'Punch (défaut)' },
@@ -10805,6 +10806,7 @@ async function _mtSegmentedGenerate(){
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
     plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
+    if(_mt.adv && _mt.adv.style==='glass') plan.slideStyle='glass';   // 🫧 cartes en verre, lu par le worker
     if(plan.capStyle==='none') plan.captions=[];
     if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
     if(_mt.adv && _mt.adv.music==='none') plan.music=null;
@@ -10940,6 +10942,7 @@ async function _mtVideoGenerate(){
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
     plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
+    if(_mt.adv && _mt.adv.style==='glass') plan.slideStyle='glass';   // 🫧 cartes en verre, lu par le worker
     if(plan.capStyle==='none') plan.captions=[];
     if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
     if(_mt.adv && _mt.adv.music==='none') plan.music=null;
