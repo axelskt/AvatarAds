@@ -70,7 +70,7 @@ export function wordFontSize(text, W, H) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean)
   const longest = Math.max(3, ...words.map((w) => w.length))
   const lines = Math.max(1, Math.ceil(words.length / (words.length > 4 ? 2 : 1)))
-  const byWidth = (W * 0.88) / (0.63 * longest)        // ~0.63em par glyphe en très gras
+  const byWidth = (W * 0.86) / (0.86 * longest)        // ~0.86em par glyphe : Archivo Black est très large
   const byHeight = (H * 0.58) / (1.0 * lines)
   return Math.round(Math.max(H * 0.032, Math.min(H * 0.15, Math.min(byWidth, byHeight))))
 }
@@ -290,7 +290,7 @@ function wordCss(W, H, fz) {
       .wd-w { position: absolute; z-index: 1; inset: 0; display: flex; align-items: center; justify-content: center;
         padding: 0 5%; text-align: center; will-change: transform, opacity; }
       .wd-w span { font-family: ${BLACK}; font-weight: 900; text-transform: uppercase;
-        letter-spacing: -.035em; line-height: .92; display: block; }
+        letter-spacing: -.035em; line-height: .92; display: block; max-width: 100%; overflow: hidden; }
       /* le mot porte déjà le message : le sous-titre est retiré pendant ces plans */
       .vs-word .hook-box { background: ${WORD_FG[0]}; color: #14100A; font-family: ${BLACK}; }
 
@@ -331,6 +331,7 @@ function wordCss(W, H, fz) {
       .vs-word .sp-var path { stroke: ${WORD_FG[0]}; }
       .vs-word .sp-punch { color: #fff; }
       .vs-word .sp-punch em { color: ${WORD_FG[0]}; }
+      .vs-word .cap.oncream.accent { color: ${WORD_FG[0]}; }
       .vs-word .fbanner { background: ${WORD_BG[0]}; border-color: ${WORD_FG[0]}; }
       .vs-word .fb-eye { color: ${WORD_FG[0]}; }
       .vs-word .fb-t em { color: ${WORD_FG[0]}; }`
@@ -366,6 +367,7 @@ function glassCss(W, H, fz) {
         background: linear-gradient(180deg, rgba(6,6,10,.46) 0%, rgba(6,6,10,.30) 34%, rgba(6,6,10,0) 52%); }
       .vs-glass #slidezone::after { display: none; }
       .vs-glass .slide { z-index: 6; }
+      .vs-glass .sl-title { color: rgba(255,255,255,.92); text-shadow: 0 2px 14px rgba(0,0,0,.75); }
       .vs-glass .fl-step, .vs-glass .ck-box, .vs-glass .cmp-card, .vs-glass .sl-card { ${pane} }
       .vs-glass .fl-step::after, .vs-glass .ck-box::after, .vs-glass .cmp-card::after, .vs-glass .sl-card::after { ${spec} }
       .vs-glass .fl-step::before, .vs-glass .ck-box::before, .vs-glass .cmp-card::before, .vs-glass .sl-card::before { ${edge(fz(0.004))} }
@@ -380,6 +382,7 @@ function glassCss(W, H, fz) {
       .vs-glass .fb-eye { color: rgba(255,255,255,.86); }
       .vs-glass .fb-t { color: #fff; text-shadow: 0 4px 24px rgba(0,0,0,.45); }
       .vs-glass .fb-t em { color: #fff; }
+      .vs-glass .cap.oncream.accent { color: #9FD2FF; }
       .vs-glass .hook-box { ${pane} color: #fff; border-radius: ${Math.round(H * 0.012)}px !important; }
 
       /* la scène plein cadre masque la vidéo : sans elle repeinte, le montage
@@ -424,6 +427,27 @@ function glassCss(W, H, fz) {
       .vs-glass .fl-arrow path { stroke: rgba(255,255,255,.75); }
       .vs-glass .ck-box svg path { stroke: #fff; }`
 }
+
+// Filet de sécurité « mot par mot » : le calcul de taille au build est une estimation
+// (on ne peut pas mesurer un glyphe côté Node). Une fois les polices chargées, on
+// réduit les mots qui dépassent encore. Déterministe : mêmes polices → même résultat.
+export const WORD_FIT_JS = `
+      (function () {
+        function fit() {
+          var ws = document.querySelectorAll('.wd-w');
+          for (var i = 0; i < ws.length; i++) {
+            var box = ws[i], sp = box.firstElementChild;
+            if (!sp) continue;
+            var size = parseFloat(sp.style.fontSize) || 0, guard = 0;
+            while (guard++ < 40 && size > 24 &&
+                   (sp.scrollWidth > sp.clientWidth + 1 || sp.scrollHeight > box.clientHeight - 2)) {
+              size = Math.floor(size * 0.93);
+              sp.style.fontSize = size + 'px';
+            }
+          }
+        }
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit();
+      })();`
 
 // ── retouches de timeline propres à un style ──────────────────────────────
 // Apple = mouvement lent et continu : chaque plan dérive doucement pendant toute

@@ -11,7 +11,7 @@
 import { scenePackCss, fullSlideHtml, fullSlideJs, bannerHtml, bannerJs, FULL_TYPES } from './scene-pack.mjs'
 import {
   VSTYLES, fontFaceCss, WORD_BG, WORD_FG,
-  styleCss, styleExtraJs, scatterStyle, seeded, wordFontSize, WORD_SHAPE_A,
+  styleCss, styleExtraJs, scatterStyle, seeded, wordFontSize, WORD_SHAPE_A, WORD_FIT_JS,
 } from './visual-styles.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -540,7 +540,7 @@ ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-dur
 ` : ''}    </div>
 
     <script>
-      window.__timelines = window.__timelines || {};
+${wordMode ? WORD_FIT_JS + '\n' : ''}      window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
