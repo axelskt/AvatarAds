@@ -35,6 +35,16 @@ export function fontFaceCss() {
   ].join('')
 }
 
+// ── zone sûre TikTok / Reels / Shorts ────────────────────────────────────
+// Cumul du pire cas des trois plateformes : barre de statut + recherche en haut,
+// colonne photo de profil / like / commentaire / partage à droite, pseudo +
+// description + barre de lecture en bas. Rien de lisible ne doit y tomber.
+export const SAFE = { top: 0.12, bottom: 0.22, left: 0.04, right: 0.20 }
+export const safeX = (W) => ({ min: Math.round(W * SAFE.left), max: Math.round(W * (1 - SAFE.right)) })
+// Un texte CENTRÉ reste centré sur W/2 : sa demi-largeur ne doit donc pas dépasser
+// le bord le plus proche — à droite, la colonne de boutons.
+export const SAFE_CENTERED_W = 2 * (0.5 - SAFE.right)   // 0.60 de la largeur
+
 // ── palettes ──────────────────────────────────────────────────────────────
 export const APPLE = { bg: '#FFFFFF', panel: '#F5F5F7', ink: '#1D1D1F', mute: '#6E6E73', line: '#D2D2D7', acc: '#0071E3' }
 export const EDITO = { bg: '#FFFFFF', ink: '#111111', mute: '#8A8A8A', line: 'rgba(17,17,17,.12)' }
@@ -73,9 +83,10 @@ export function wordFontSize(text, W, H) {
   const lines = Math.max(1, Math.ceil(words.length / (words.length > 4 ? 2 : 1)))
   // ~0.55em par glyphe en Inter semibold ; le filet WORD_FIT_JS rattrape les cas
   // limites une fois la police vraiment chargée.
-  const byWidth = (W * 0.80) / (0.55 * longest)
-  const byHeight = (H * 0.40) / (1.2 * lines)
-  return Math.round(Math.max(H * 0.018, Math.min(H * 0.032, Math.min(byWidth, byHeight))))
+  // borné à la largeur centrée sûre : au-delà, le mot passe sous la colonne like/partage
+  const byWidth = (W * SAFE_CENTERED_W) / (0.55 * longest)
+  const byHeight = (H * 0.34) / (1.2 * lines)
+  return Math.round(Math.max(H * 0.016, Math.min(H * 0.028, Math.min(byWidth, byHeight))))
 }
 
 // ── CSS ───────────────────────────────────────────────────────────────────
@@ -427,7 +438,11 @@ export function wordMotif(s, si, W, H, opts = {}) {
   const col = (k) => WORD_SHAPES[(si + k) % WORD_SHAPES.length]
   const ink = opts.ink || WORD_INK
   const band = Math.round(H * 0.235)                    // au-dessus du mot, hors zone UI
-  const unit = Math.round(H * 0.062)
+  // largeur utilisable pour un bloc CENTRÉ (au-delà, on passe sous la colonne
+  // photo de profil / like / partage) : une chaîne de 5 pastilles à taille pleine
+  // faisait 79 % de la largeur, donc largement dans la zone des boutons.
+  const usable = W * SAFE_CENTERED_W
+  const unit = Math.round(Math.min(H * 0.062, usable / (1 + 1.55 * (n - 1))))
   const gap = Math.round(unit * 1.55)
   const x0 = Math.round(W / 2 - ((n - 1) * gap) / 2 - unit / 2)
   const at = (k) => x0 + k * gap
@@ -457,24 +472,33 @@ export function wordMotif(s, si, W, H, opts = {}) {
   } else if (motif === 'cloud') {
     // les mots-clés éparpillés sur la page, qui arrivent un par un sur l'audio
     const words = items.slice(0, 12)
-    const fs = Math.round(H * 0.026)
+    const fs = Math.round(H * 0.021)
     html = words.map((it, k) => {
       // Suite dorée + un peu de bruit : le pur tirage aléatoire entassait les mots
       // dans la même colonne, la suite dorée les étale sur toute la largeur.
       const rx = ((k * 0.618 + seeded(Math.round(s.start * 1000) + k * 37) * 0.22) % 1)
       const ry = seeded(Math.round(s.start * 1000) + k * 71)
-      const cx = Math.round(W * (0.18 + rx * 0.64))
+      const sx = safeX(W)
+      const cx = Math.round(sx.min + rx * (sx.max - sx.min))
       // Répartition haut/bas ALTERNÉE plutôt que purement tirée au sort : sur 4 ou 5
       // mots, le hasard les entassait tous du même côté. On évite aussi la bande
       // centrale, occupée par le mot du sous-titre.
       const up = k % 2 === 0
-      const t = up ? 0.11 + (0.28 * ((k >> 1) + ry) / Math.max(1, words.length / 2))
-        : 0.64 + (0.26 * ((k >> 1) + ry) / Math.max(1, words.length / 2))
+      const half = (k >> 1) + ry
+      const nHalf = Math.max(1, words.length / 2)
+      // au-dessus / en dessous de la bande centrale du sous-titre
+      const t = up ? SAFE.top + 0.015 + 0.26 * (half / nHalf) : 0.60 + 0.16 * (half / nHalf)
       // largeur estimée (~0.5em/glyphe en Inter medium) → le mot est centré sur son
       // point d'ancrage sans transform, que GSAP écraserait en animant scale/y.
-      const wpx = Math.round(String(it.text).length * fs * 0.5)
-      return `<span class="wm-w" id="${s.id}m${k}" style="left:${Math.max(8, cx - Math.round(wpx / 2))}px;` +
-        `top:${Math.round(H * Math.min(0.9, t))}px;font-size:${fs}px;color:${ink}">${escAttr(it.text)}</span>`
+      // 0.54 et non 0.50 : la largeur est estimée, mieux vaut la surestimer que
+      // laisser un mot mordre sur la colonne de boutons
+      const wpx = Math.round(String(it.text).length * fs * 0.54)
+      // le mot ENTIER reste dans la zone sûre : ni sous la colonne like/partage,
+      // ni sous le pseudo et la description
+      const left = Math.min(sx.max - wpx, Math.max(sx.min, cx - Math.round(wpx / 2)))
+      const y = Math.min(H * (1 - SAFE.bottom) - fs * 1.3, Math.max(H * SAFE.top, H * t))
+      return `<span class="wm-w" id="${s.id}m${k}" style="left:${Math.round(left)}px;` +
+        `top:${Math.round(y)}px;font-size:${fs}px;color:${ink}">${escAttr(it.text)}</span>`
     }).join('')
   } else if (motif === 'halftone') {
     // disque en trame de points : une respiration entre deux sections
@@ -492,7 +516,8 @@ export function wordMotif(s, si, W, H, opts = {}) {
     html = `<span class="wm-s" id="${s.id}m0" style="left:0;top:0;width:${W}px;height:${Math.round(H * 0.5)}px;background:none">${dots.join('')}</span>`
   } else if (motif === 'grid') {
     // mosaïque : la même tuile répétée, décalée, avec une ombre douce
-    const cell = Math.round(H * 0.036), cols = 7, rows = 5
+    const cols = 6, rows = 5
+    const cell = Math.round(Math.min(H * 0.036, (W * SAFE_CENTERED_W) / (cols * 1.5)))
     const gw = cols * cell * 1.5, gx0 = Math.round(W / 2 - gw / 2), gy0 = band - Math.round(cell)
     const cells = []
     for (let r = 0; r < rows; r++) {
