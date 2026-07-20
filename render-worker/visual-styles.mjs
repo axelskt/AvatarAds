@@ -38,10 +38,11 @@ export function fontFaceCss() {
 // ── palettes ──────────────────────────────────────────────────────────────
 export const APPLE = { bg: '#FFFFFF', panel: '#F5F5F7', ink: '#1D1D1F', mute: '#6E6E73', line: '#D2D2D7', acc: '#0071E3' }
 export const EDITO = { bg: '#FFFFFF', ink: '#111111', mute: '#8A8A8A', line: 'rgba(17,17,17,.12)' }
-// fonds « mot par mot » : profonds et saturés, alternés d'un mot à l'autre
-export const WORD_BG = ['#150F22', '#0E1B2E', '#1E1020', '#101E18', '#241408']
-export const WORD_SHAPE_A = 0.14   // opacité de la forme découpée derrière le mot
-export const WORD_FG = ['#FFE500', '#FFFFFF', '#7CF6FF', '#FFE500', '#FF6B35']
+// « mot par mot » : page blanche, encre noire, et des formes de couleur franche
+export const WORD_PAPER = '#FFFFFF'
+export const WORD_INK = '#111111'
+export const WORD_SHAPES = ['#FF5A36', '#2F6BFF', '#12B76A', '#FFC300', '#7A3BFF']
+export const WORD_ACCENT = '#FF5A36'   // le mot que le chef d'orchestre veut appuyer
 
 const SANS = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif'
 const SERIF = '"Instrument Serif", "Liberation Serif", Georgia, serif'
@@ -70,9 +71,11 @@ export function wordFontSize(text, W, H) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean)
   const longest = Math.max(3, ...words.map((w) => w.length))
   const lines = Math.max(1, Math.ceil(words.length / (words.length > 4 ? 2 : 1)))
-  const byWidth = (W * 0.86) / (0.86 * longest)        // ~0.86em par glyphe : Archivo Black est très large
+  // ~0.70em par glyphe en Archivo Black, marge comprise ; le filet WORD_FIT_JS
+  // rattrape les cas limites une fois la police vraiment chargée.
+  const byWidth = (W * 0.88) / (0.70 * longest)
   const byHeight = (H * 0.58) / (1.0 * lines)
-  return Math.round(Math.max(H * 0.032, Math.min(H * 0.15, Math.min(byWidth, byHeight))))
+  return Math.round(Math.max(H * 0.032, Math.min(H * 0.16, Math.min(byWidth, byHeight))))
 }
 
 // ── CSS ───────────────────────────────────────────────────────────────────
@@ -277,64 +280,35 @@ function editoCss(W, H, fz) {
 }
 
 // ══════════════════════════════════════════════════════════ MOT PAR MOT
+// AUCUN clip : la vidéo source n'apparaît jamais. Écran blanc du début à la fin,
+// UN mot à la fois au centre (le sous-titre lui-même, mot par mot), et des formes
+// animées qui illustrent ce que dit l'audio. C'est un mode de rendu à part entière,
+// pas une surcouche posée sur la vidéo.
 function wordCss(W, H, fz) {
   return `
-      /* ══ style « Mot par mot » — plein écran uni, UN mot énorme à la fois ══ */
-      .vs-word #slidezone { height: ${H}px; background: ${WORD_BG[0]}; background-image: none; z-index: 5; }
+      /* ══ style « Mot par mot » — page blanche, un mot, des formes animées ══ */
+      .vs-word, .vs-word body { background: ${WORD_PAPER}; }
+      .vs-word #videozone, .vs-word .broll, .vs-word .fslide, .vs-word .fbanner,
+      .vs-word #hook, .vs-word #flash { display: none !important; }
+      .vs-word #slidezone { left: 0; top: 0; width: ${W}px; height: ${H}px; z-index: 1;
+        background: ${WORD_PAPER}; background-image: none; }
       .vs-word #slidezone::after { display: none; }
-      .vs-word .slide { left: 0; right: 0; top: 0; height: ${H}px; padding: 0; z-index: 6; }
-      /* la forme découpée reste DERRIÈRE le mot : GSAP pilote son opacité (cf. WORD_SHAPE_A),
-         une opacité inline serait écrasée par le tween autoAlpha */
-      .wd-shape { position: absolute; z-index: 0; border-radius: 50%; will-change: transform, opacity;
-        filter: blur(${Math.round(H * 0.006)}px); }
-      .wd-w { position: absolute; z-index: 1; inset: 0; display: flex; align-items: center; justify-content: center;
-        padding: 0 5%; text-align: center; will-change: transform, opacity; }
-      .wd-w span { font-family: ${BLACK}; font-weight: 900; text-transform: uppercase;
-        letter-spacing: -.035em; line-height: .92; display: block; max-width: 100%; overflow: hidden; }
-      /* le mot porte déjà le message : le sous-titre est retiré pendant ces plans */
-      .vs-word .hook-box { background: ${WORD_FG[0]}; color: #14100A; font-family: ${BLACK}; }
+      .vs-word .slide { left: 0; right: 0; top: 0; height: ${H}px; padding: 0; z-index: 2;
+        display: block; }
 
-      /* les scènes plein cadre et les bandeaux suivent la même palette, sinon la vidéo
-         a l'air de changer de style en cours de route */
-      .vs-word .fslide { background: ${WORD_BG[0]}; color: #fff; }
-      .vs-word .fs-spec { background: rgba(255,229,0,.20); }
-      .vs-word .fs-eye { color: ${WORD_FG[0]}; }
-      .vs-word .fs-t { color: #fff; text-shadow: none; }
-      .vs-word .fs-t .ar { color: ${WORD_FG[0]}; }
-      .vs-word .sp-bead { background: #251D3C; box-shadow: none; }
-      .vs-word .sp-bead span { color: ${WORD_FG[0]}; }
-      .vs-word .sp-nd.dark .sp-bead { background: ${WORD_FG[0]}; }
-      .vs-word .sp-nd.dark .sp-bead span { color: #14100A; }
-      .vs-word .sp-lbl { color: #fff; }
-      .vs-word .sp-link { background: ${WORD_FG[0]}; }
-      .vs-word .sp-link::before, .vs-word .sp-link::after { background: ${WORD_BG[0]}; border-color: ${WORD_FG[0]}; }
-      .vs-word .sp-bf { background: #2C2447; }
-      .vs-word .sp-bar.hi .sp-bf { background: ${WORD_FG[0]}; }
-      .vs-word .sp-bar.hi .sp-bv { color: ${WORD_FG[0]}; }
-      .vs-word .sp-bv { color: #fff; }
-      .vs-word .sp-bl { color: rgba(255,255,255,.55); }
-      .vs-word .sp-kn { color: #fff; }
-      .vs-word .sp-kl { color: ${WORD_FG[0]}; }
-      .vs-word .sp-kup path { stroke: ${WORD_FG[0]}; }
-      .vs-word .sp-chart .gl { stroke: rgba(255,255,255,.12); }
-      .vs-word .sp-chart path[fill]:not([fill="none"]) { fill: ${WORD_FG[0]}; }
-      .vs-word .sp-chart path[stroke]:not([stroke="none"]) { stroke: ${WORD_FG[0]}; }
-      .vs-word .sp-chart circle { fill: ${WORD_BG[0]}; stroke: ${WORD_FG[0]}; }
-      .vs-word .sp-tm { background: ${WORD_FG[0]}; box-shadow: 0 20px 50px rgba(255,229,0,.18); }
-      .vs-word .sp-tl { color: rgba(255,255,255,.6); }
-      .vs-word .sp-tv { color: #fff; }
-      .vs-word .sp-cc { background: #1E1834; border-color: rgba(255,255,255,.12); box-shadow: none; }
-      .vs-word .sp-ct, .vs-word .sp-cp { color: #fff; }
-      .vs-word .sp-cc.ok .sp-cp { color: ${WORD_FG[0]}; }
-      .vs-word .sp-cs { color: rgba(255,255,255,.5); }
-      .vs-word .sp-strike { background: #FF6B35; }
-      .vs-word .sp-var path { stroke: ${WORD_FG[0]}; }
-      .vs-word .sp-punch { color: #fff; }
-      .vs-word .sp-punch em { color: ${WORD_FG[0]}; }
-      .vs-word .cap.oncream.accent { color: ${WORD_FG[0]}; }
-      .vs-word .fbanner { background: ${WORD_BG[0]}; border-color: ${WORD_FG[0]}; }
-      .vs-word .fb-eye { color: ${WORD_FG[0]}; }
-      .vs-word .fb-t em { color: ${WORD_FG[0]}; }`
+      /* le mot : c'est le sous-titre, en très gros, noir sur blanc */
+      .vs-word .cap { left: 0 !important; right: 0 !important; top: 0 !important;
+        height: ${H}px; display: flex; align-items: center; justify-content: center;
+        padding: 0 5%; color: ${WORD_INK}; z-index: 6; text-shadow: none; }
+      .vs-word .cap::before { display: none; }
+      .vs-word .cap span { font-family: ${BLACK}; font-weight: 900; text-transform: uppercase;
+        letter-spacing: -.035em; line-height: .9; display: block; max-width: 100%; overflow: hidden; }
+
+      /* les formes : elles illustrent la section, sans un mot de plus */
+      .wm { position: absolute; left: 0; right: 0; z-index: 3; }
+      .wm-s { position: absolute; will-change: transform, opacity; }
+      .wm-l { position: absolute; height: ${Math.round(H * 0.004)}px; background: ${WORD_INK};
+        transform-origin: 0% 50%; will-change: transform, opacity; }`
 }
 
 // ══════════════════════════════════════════════════════════ LIQUID GLASS
@@ -428,13 +402,93 @@ function glassCss(W, H, fz) {
       .vs-glass .ck-box svg path { stroke: #fff; }`
 }
 
+// ── « mot par mot » : les formes qui illustrent une section ────────────────
+// Le mot porte le sens ; la forme porte le rythme. Pas une lettre de plus.
+// Le type de scène décidé par le chef d'orchestre choisit le motif ; la position
+// est SEEDÉE sur le timestamp (rendu frame par frame = doit être reproductible).
+export function wordMotif(s, si, W, H) {
+  const n = Math.max(1, Math.min(5, (s.items || []).length))
+  const col = (k) => WORD_SHAPES[(si + k) % WORD_SHAPES.length]
+  const band = Math.round(H * 0.235)                    // au-dessus du mot, hors zone UI
+  const unit = Math.round(H * 0.062)
+  const gap = Math.round(unit * 1.55)
+  const x0 = Math.round(W / 2 - ((n - 1) * gap) / 2 - unit / 2)
+  const at = (k) => x0 + k * gap
+  const type = s.type === 'card' && n > 1 ? 'flow' : s.type
+
+  const box = (k, extra) => `<span class="wm-s" id="${s.id}m${k}" style="left:${at(k)}px;top:${band}px;` +
+    `width:${unit}px;height:${unit}px;background:${col(k)};${extra}"></span>`
+
+  let html = ''
+  if (type === 'flow') {
+    // une chaîne : des pastilles reliées par un trait qui se trace
+    for (let k = 0; k < n; k++) {
+      html += box(k, 'border-radius:50%')
+      if (k > 0) html += `<span class="wm-l" id="${s.id}l${k}" style="left:${at(k - 1) + unit}px;` +
+        `top:${band + Math.round(unit / 2)}px;width:${gap - unit}px"></span>`
+    }
+  } else if (type === 'checklist') {
+    for (let k = 0; k < n; k++) html += box(k, `border-radius:${Math.round(unit * 0.26)}px`)
+  } else if (type === 'compare') {
+    html = box(0, 'border-radius:50%') +
+      `<span class="wm-s" id="${s.id}m1" style="left:${at(1)}px;top:${band}px;width:${unit}px;height:${unit}px;` +
+      `background:transparent;border:${Math.round(unit * 0.16)}px solid ${col(1)};border-radius:${Math.round(unit * 0.26)}px"></span>`
+  } else if (type === 'stat' || type === 'bars' || type === 'kpi') {
+    // des barres qui poussent depuis le bas : le chiffre monte, sans écrire le chiffre
+    for (let k = 0; k < n; k++) {
+      const h = Math.round(unit * (0.7 + ((k + 1) / n) * 1.5))
+      html += `<span class="wm-s" id="${s.id}m${k}" style="left:${at(k)}px;top:${band + unit * 2 - h}px;` +
+        `width:${unit}px;height:${h}px;background:${col(k)};border-radius:${Math.round(unit * 0.16)}px;` +
+        `transform-origin:50% 100%"></span>`
+    }
+  } else {
+    // punch / card : un anneau qui tourne autour d'un disque
+    const big = Math.round(unit * 2.1)
+    html = `<span class="wm-s" id="${s.id}m0" style="left:${Math.round(W / 2 - big / 2)}px;top:${band - Math.round(big * 0.2)}px;` +
+      `width:${big}px;height:${big}px;background:transparent;border:${Math.round(unit * 0.14)}px solid ${col(0)};border-radius:50%"></span>` +
+      `<span class="wm-s" id="${s.id}m1" style="left:${Math.round(W / 2 - unit * 0.42)}px;top:${band + Math.round(big * 0.3)}px;` +
+      `width:${Math.round(unit * 0.84)}px;height:${Math.round(unit * 0.84)}px;background:${col(1)};border-radius:50%"></span>`
+  }
+  return `<div class="wm" id="${s.id}w">${html}</div>`
+}
+
+export function wordMotifJs(s, si, r2) {
+  const items = s.items || []
+  const n = Math.max(1, Math.min(5, items.length))
+  const end = r2(s.start + s.dur)
+  const type = s.type === 'card' && n > 1 ? 'flow' : s.type
+  const tOf = (k) => r2(Math.max(s.start + 0.05, Math.min(end - 0.2, (items[k] || {}).t ?? s.start + 0.1 + k * 0.4)))
+  const growing = type === 'stat' || type === 'bars' || type === 'kpi'
+  const ring = !['flow', 'checklist', 'compare', 'stat', 'bars', 'kpi'].includes(type)
+  let js = ''
+  const count = ring ? 2 : (type === 'compare' ? 2 : n)
+  for (let k = 0; k < count; k++) {
+    const t = tOf(ring ? 0 : k)
+    js += growing
+      ? `
+      tl.fromTo('#${s.id}m${k}', { autoAlpha: 0, scaleY: 0 }, { autoAlpha: 1, scaleY: 1, duration: 0.34, ease: 'power3.out' }, ${t});`
+      : `
+      tl.fromTo('#${s.id}m${k}', { autoAlpha: 0, scale: 0, y: 18 }, { autoAlpha: 1, scale: 1, y: 0, duration: 0.32, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t + (ring ? k * 0.12 : 0))});`
+    js += `
+      tl.to('#${s.id}m${k}', { autoAlpha: 0, scale: 0.7, duration: 0.16, ease: 'power2.in' }, ${r2(Math.max(t + 0.3, end - 0.18))});`
+  }
+  if (ring) js += `
+      tl.to('#${s.id}m0', { rotation: 180, duration: ${r2(Math.max(0.6, s.dur))}, ease: 'none' }, ${r2(s.start)});`
+  if (type === 'flow') {
+    for (let k = 1; k < n; k++) js += `
+      tl.fromTo('#${s.id}l${k}', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${r2(Math.max(s.start + 0.05, tOf(k) - 0.16))});
+      tl.to('#${s.id}l${k}', { autoAlpha: 0, duration: 0.14, ease: 'power2.in' }, ${r2(Math.max(s.start + 0.4, end - 0.18))});`
+  }
+  return js
+}
+
 // Filet de sécurité « mot par mot » : le calcul de taille au build est une estimation
 // (on ne peut pas mesurer un glyphe côté Node). Une fois les polices chargées, on
 // réduit les mots qui dépassent encore. Déterministe : mêmes polices → même résultat.
 export const WORD_FIT_JS = `
       (function () {
         function fit() {
-          var ws = document.querySelectorAll('.wd-w');
+          var ws = document.querySelectorAll('.vs-word .cap');
           for (var i = 0; i < ws.length; i++) {
             var box = ws[i], sp = box.firstElementChild;
             if (!sp) continue;
