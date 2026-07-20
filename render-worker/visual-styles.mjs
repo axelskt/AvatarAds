@@ -71,11 +71,11 @@ export function wordFontSize(text, W, H) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean)
   const longest = Math.max(3, ...words.map((w) => w.length))
   const lines = Math.max(1, Math.ceil(words.length / (words.length > 4 ? 2 : 1)))
-  // ~0.70em par glyphe en Archivo Black, marge comprise ; le filet WORD_FIT_JS
-  // rattrape les cas limites une fois la police vraiment chargée.
-  const byWidth = (W * 0.88) / (0.70 * longest)
-  const byHeight = (H * 0.58) / (1.0 * lines)
-  return Math.round(Math.max(H * 0.032, Math.min(H * 0.16, Math.min(byWidth, byHeight))))
+  // ~0.55em par glyphe en Inter semibold ; le filet WORD_FIT_JS rattrape les cas
+  // limites une fois la police vraiment chargée.
+  const byWidth = (W * 0.80) / (0.55 * longest)
+  const byHeight = (H * 0.40) / (1.2 * lines)
+  return Math.round(Math.max(H * 0.018, Math.min(H * 0.032, Math.min(byWidth, byHeight))))
 }
 
 // ── CSS ───────────────────────────────────────────────────────────────────
@@ -301,8 +301,8 @@ function wordCss(W, H, fz) {
         height: ${H}px; display: flex; align-items: center; justify-content: center;
         padding: 0 5%; color: ${WORD_INK}; z-index: 6; text-shadow: none; }
       .vs-word .cap::before { display: none; }
-      .vs-word .cap span { font-family: ${BLACK}; font-weight: 900; text-transform: uppercase;
-        letter-spacing: -.035em; line-height: .9; display: block; max-width: 100%; overflow: hidden; }
+      .vs-word .cap span { font-family: ${SANS}; font-weight: 600; text-transform: none;
+        letter-spacing: -.02em; line-height: 1.15; display: block; max-width: 100%; overflow: hidden; }
 
       /* les formes : elles illustrent la section, sans un mot de plus */
       .wm { position: absolute; left: 0; right: 0; z-index: 3; }
