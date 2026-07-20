@@ -3296,7 +3296,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="view" id="v-montage">
       <!-- ============ MONTAGE IA — refonte design 1:1 (maquette Claude Design) ============ -->
       <style>
-        #v-montage .mt-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px}
+        #v-montage .mt-eyebrow, #accountOverlay .mt-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px}
         #v-montage .mt-src{padding:14px 16px;border-radius:14px;display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:.15s;width:100%;font-family:var(--font);color:var(--text)}
         #v-montage .mt-src.on{border:2px solid var(--accent);background:var(--accent-soft)}
         #v-montage .mt-src .mt-src-i{color:var(--text-2);display:flex}
@@ -3330,24 +3330,24 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         /* script / brief */
         #v-montage .mt-briefrow{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:var(--surface);cursor:pointer;transition:.15s}
         #v-montage .mt-briefrow:hover{border-color:var(--accent-line);background:var(--accent-soft)}
-        #v-montage .mt-brief-plus{width:38px;height:38px;flex:0 0 auto;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:flex;align-items:center;justify-content:center}
-        #v-montage .mt-brief-t{display:block;font-size:14px;font-weight:700;color:var(--text)}
-        #v-montage .mt-brief-s{display:block;font-size:12px;color:var(--text-3);margin-top:2px;line-height:1.35}
-        #v-montage .mt-brief-ta{width:100%;box-sizing:border-box;min-height:112px;resize:vertical;padding:14px 16px;line-height:1.5;font-size:13.5px;font-family:var(--font)}
-        #v-montage .mt-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
-        #v-montage .mt-chip{border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);border-radius:99px;padding:8px 14px;font-size:12.5px;font-family:var(--font);cursor:pointer;transition:.15s;white-space:nowrap}
-        #v-montage .mt-chip:hover{border-color:var(--accent-line);color:var(--accent-2);background:var(--accent-soft)}
-        #v-montage .mt-brief-x{margin-left:auto;background:none;border:none;color:var(--text-3);font-size:12.5px;font-family:var(--font);cursor:pointer;padding:8px 4px;-webkit-appearance:none;appearance:none}
-        #v-montage .mt-brief-x:hover{color:var(--text)}
-        @media(max-width:760px){ #v-montage .mt-brief-x{margin-left:0} }
+        #v-montage .mt-brief-plus, #accountOverlay .mt-brief-plus{width:38px;height:38px;flex:0 0 auto;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:flex;align-items:center;justify-content:center}
+        #v-montage .mt-brief-t, #accountOverlay .mt-brief-t{display:block;font-size:14px;font-weight:700;color:var(--text)}
+        #v-montage .mt-brief-s, #accountOverlay .mt-brief-s{display:block;font-size:12px;color:var(--text-3);margin-top:2px;line-height:1.35}
+        #v-montage .mt-brief-ta, #accountOverlay .mt-brief-ta{width:100%;box-sizing:border-box;min-height:112px;resize:vertical;padding:14px 16px;line-height:1.5;font-size:13.5px;font-family:var(--font)}
+        #v-montage .mt-chips, #accountOverlay .mt-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+        #v-montage .mt-chip, #accountOverlay .mt-chip{border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);border-radius:99px;padding:8px 14px;font-size:12.5px;font-family:var(--font);cursor:pointer;transition:.15s;white-space:nowrap}
+        #v-montage .mt-chip:hover, #accountOverlay .mt-chip:hover{border-color:var(--accent-line);color:var(--accent-2);background:var(--accent-soft)}
+        #v-montage .mt-brief-x, #accountOverlay .mt-brief-x{margin-left:auto;background:none;border:none;color:var(--text-3);font-size:12.5px;font-family:var(--font);cursor:pointer;padding:8px 4px;-webkit-appearance:none;appearance:none}
+        #v-montage .mt-brief-x:hover, #accountOverlay .mt-brief-x:hover{color:var(--text)}
+        @media(max-width:760px){ #v-montage .mt-brief-x, #accountOverlay .mt-brief-x{margin-left:0} }
         /* 🧠 mémoire de marque */
-        #v-montage .mt-mem{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:14px 16px}
-        #v-montage .mt-mem.on{border-color:var(--accent-line);background:var(--accent-soft)}
-        #v-montage .mt-mem-sum{font-size:12.5px;color:var(--text-2);line-height:1.55;margin-top:8px;white-space:pre-wrap;
+        #v-montage .mt-mem, #accountOverlay .mt-mem{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:14px 16px}
+        #v-montage .mt-mem.on, #accountOverlay .mt-mem.on{border-color:var(--accent-line);background:var(--accent-soft)}
+        #v-montage .mt-mem-sum, #accountOverlay .mt-mem-sum{font-size:12.5px;color:var(--text-2);line-height:1.55;margin-top:8px;white-space:pre-wrap;
           display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-        #v-montage .mt-mem-auto{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);cursor:pointer;margin-left:auto}
-        #v-montage .mt-mem-auto input{accent-color:var(--accent-2);width:15px;height:15px;cursor:pointer}
-        @media(max-width:760px){ #v-montage .mt-mem-auto{margin-left:0;width:100%} }
+        #v-montage .mt-mem-auto, #accountOverlay .mt-mem-auto{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);cursor:pointer;margin-left:auto}
+        #v-montage .mt-mem-auto input, #accountOverlay .mt-mem-auto input{accent-color:var(--accent-2);width:15px;height:15px;cursor:pointer}
+        @media(max-width:760px){ #v-montage .mt-mem-auto, #accountOverlay .mt-mem-auto{margin-left:0;width:100%} }
         @keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
       </style>
       <div class="scroll-y" id="mtScroll" style="flex:1;padding:24px 40px 32px">
@@ -3445,50 +3445,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
                   <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
                   <p class="faint" style="font-size:11px;margin-top:7px">Jusqu'à 8 images/clips, placés au meilleur moment.</p>
-                </div>
-              </div>
-
-              <!-- 🧠 MÉMOIRE DE MARQUE (#124) — ce que l'IA retient d'une vidéo à l'autre -->
-              <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
-                <div class="mt-eyebrow">Ma marque · ce que l'IA retient de toi</div>
-                <div class="mt-mem" id="mtMemCard">
-                  <div style="display:flex;align-items:flex-start;gap:14px">
-                    <span class="mt-brief-plus" style="border-radius:12px">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 18a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 7a3 3 0 00-3-3z"/><path d="M12 7v11"/></svg>
-                    </span>
-                    <div style="flex:1;min-width:0">
-                      <span class="mt-brief-t" id="mtMemTitle">Aucune fiche pour l'instant</span>
-                      <span class="mt-brief-s" id="mtMemSub">Analyse ton site une fois : l'IA connaîtra ton produit, tes offres et ton ton sur toutes tes prochaines vidéos.</span>
-                      <div class="mt-mem-sum" id="mtMemSum" style="display:none"></div>
-                    </div>
-                  </div>
-                  <div class="mt-chips" id="mtMemActions">
-                    <button type="button" class="mt-chip" id="mtMemScanBtn" onclick="mtMemFromSite()">Analyser mon site</button>
-                    <button type="button" class="mt-chip" id="mtMemEditBtn" onclick="mtMemEdit(true)" style="display:none">Modifier</button>
-                    <label class="mt-mem-auto" id="mtMemAutoWrap" style="display:none">
-                      <input type="checkbox" id="mtMemAuto" onchange="mtMemToggleAuto()"> Compléter après chaque vidéo
-                    </label>
-                  </div>
-                  <div id="mtMemEditBox" style="display:none;margin-top:12px">
-                    <textarea id="mtMemText" class="field mt-brief-ta" rows="7" placeholder="Ex : Je vends AvatarAds, un outil de création de vidéos IA pour les créateurs. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct, tutoiement. CTA habituel : « lien en bio »."></textarea>
-                    <div class="mt-chips">
-                      <button type="button" class="mt-chip" onclick="mtMemSave()">Enregistrer</button>
-                      <button type="button" class="mt-brief-x" onclick="mtMemEdit(false)">Annuler</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- #126 · BIBLIOTHÈQUE DE MARQUE : déposé une fois, réutilisé sur CHAQUE vidéo -->
-                <div class="mt-eyebrow" style="margin-top:18px">Mes éléments · déposés une fois, réutilisés à chaque vidéo</div>
-                <div class="mt-mem" id="mtLibCard">
-                  <div id="mtLibGrid" style="display:flex;gap:10px;flex-wrap:wrap"></div>
-                  <div class="mt-chips">
-                    <button type="button" class="mt-chip" onclick="document.getElementById('mtLibIn').click()">+ Visuels (logo, produit…)</button>
-                    <button type="button" class="mt-chip" onclick="document.getElementById('mtLibSndIn').click()">+ Mes sons</button>
-                  </div>
-                  <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
-                  <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
-                  <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Les visuels cochés partent au monteur IA à chaque montage — plus besoin de les re-déposer. Tes sons rejoignent la banque de l'Éditeur.</p>
                 </div>
               </div>
 
@@ -4392,6 +4348,58 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <button onclick="openPwdModal()" class="btn btn-ghost" style="width:100%">🔐 Définir ou changer mon mot de passe</button>
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
+
+    <!-- ② Ma marque — #124/#126 : la fiche et les éléments vivent avec le COMPTE,
+         pas avec un module : ils servent à tous les outils, pas seulement au Montage IA -->
+    <div class="eyebrow" style="margin-bottom:16px">② Ma marque</div>
+    <div style="margin-bottom:14px">
+      <div class="setup-label" style="margin-bottom:8px">Ton site <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+      <input class="field" type="url" id="accMemSite" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
+    </div>
+      <!-- 🧠 MÉMOIRE DE MARQUE (#124) — ce que l'IA retient d'une vidéo à l'autre -->
+      <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+        <div class="mt-eyebrow">La fiche · ce que l'IA retient de toi</div>
+        <div class="mt-mem" id="mtMemCard">
+          <div style="display:flex;align-items:flex-start;gap:14px">
+            <span class="mt-brief-plus" style="border-radius:12px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a3 3 0 00-3 3 3 3 0 00-2 5.2A3 3 0 009 18a3 3 0 006 0 3 3 0 002-5.8A3 3 0 0015 7a3 3 0 00-3-3z"/><path d="M12 7v11"/></svg>
+            </span>
+            <div style="flex:1;min-width:0">
+              <span class="mt-brief-t" id="mtMemTitle">Aucune fiche pour l'instant</span>
+              <span class="mt-brief-s" id="mtMemSub">Analyse ton site une fois : l'IA connaîtra ton produit, tes offres et ton ton sur toutes tes prochaines vidéos.</span>
+              <div class="mt-mem-sum" id="mtMemSum" style="display:none"></div>
+            </div>
+          </div>
+          <div class="mt-chips" id="mtMemActions">
+            <button type="button" class="mt-chip" id="mtMemScanBtn" onclick="mtMemFromSite()">Analyser mon site</button>
+            <button type="button" class="mt-chip" id="mtMemEditBtn" onclick="mtMemEdit(true)" style="display:none">Modifier</button>
+            <label class="mt-mem-auto" id="mtMemAutoWrap" style="display:none">
+              <input type="checkbox" id="mtMemAuto" onchange="mtMemToggleAuto()"> Compléter après chaque vidéo
+            </label>
+          </div>
+          <div id="mtMemEditBox" style="display:none;margin-top:12px">
+            <textarea id="mtMemText" class="field mt-brief-ta" rows="7" placeholder="Ex : Je vends AvatarAds, un outil de création de vidéos IA pour les créateurs. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct, tutoiement. CTA habituel : « lien en bio »."></textarea>
+            <div class="mt-chips">
+              <button type="button" class="mt-chip" onclick="mtMemSave()">Enregistrer</button>
+              <button type="button" class="mt-brief-x" onclick="mtMemEdit(false)">Annuler</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- #126 · BIBLIOTHÈQUE DE MARQUE : déposé une fois, réutilisé sur CHAQUE vidéo -->
+        <div class="mt-eyebrow" style="margin-top:18px">Mes éléments · déposés une fois, gardés pour toujours</div>
+        <div class="mt-mem" id="mtLibCard">
+          <div id="mtLibGrid" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+          <div class="mt-chips">
+            <button type="button" class="mt-chip" onclick="document.getElementById('mtLibIn').click()">+ Visuels (logo, produit…)</button>
+            <button type="button" class="mt-chip" onclick="document.getElementById('mtLibSndIn').click()">+ Mes sons</button>
+          </div>
+          <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
+          <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
+          <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Les visuels cochés sont proposés au monteur IA, qui les place quand ton audio en parle — plus besoin de les re-déposer. Tes sons rejoignent la banque de l'Éditeur.</p>
+        </div>
+      </div>
+    <div style="height:26px"></div>
 
     <!-- 🔐 Modale changement de mot de passe : vérification (ancien mdp OU code e-mail) → double saisie -->
     <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(8,4,2,.82);backdrop-filter:blur(6px);place-items:center;padding:20px">
@@ -7272,6 +7280,7 @@ function openAccountSettings(){
   const overlay = document.getElementById('accountOverlay');
   if(!overlay) return;
   overlay.style.display = 'flex';
+  try{ mtMemLoad(); mtLibLoad(); }catch(_){}
   // Pré-remplir les champs
   if(currentMember){
     const initials = (currentMember.first_name||currentMember.email||'?')[0].toUpperCase();
@@ -9827,8 +9836,16 @@ function mtBriefPreset(kind){
 function _mtBrief(){ return String((_mt.brief||'')).trim().slice(0, 700); }
 // 💾 le site de l'user est mémorisé 14 jours → pré-rempli à son retour (gain de temps)
 const MT_SITE_TTL = 14*24*60*60*1000;
+// le site se saisit soit dans Mon compte, soit dans le module — les deux champs restent alignés
+function _mtSiteValue(){
+  return (document.getElementById('accMemSite')?.value||'').trim()
+      || (document.getElementById('mtSite')?.value||'').trim();
+}
 function mtSaveSite(){
-  const v=(document.getElementById('mtSite')?.value||'').trim();
+  const v=_mtSiteValue();
+  const a=document.getElementById('accMemSite'), m=document.getElementById('mtSite');
+  if(a && a.value.trim()!==v) a.value=v;
+  if(m && m.value.trim()!==v) m.value=v;
   try{
     if(v){ localStorage.setItem('aa_user_site', v); localStorage.setItem('aa_user_site_ts', String(Date.now())); }
     else { localStorage.removeItem('aa_user_site_ts'); }
@@ -9862,8 +9879,9 @@ async function mtMemLoad(){
     _mtMem = data || null;
   }catch(_){ _mtMem = null; }
   // le site enregistré dans la fiche pré-remplit le champ (il fait autorité sur le localStorage)
-  const s = document.getElementById('mtSite');
-  if(s && !s.value && _mtMem && _mtMem.site_url) s.value = _mtMem.site_url;
+  if(_mtMem && _mtMem.site_url){
+    for(const id of ['accMemSite','mtSite']){ const el=document.getElementById(id); if(el && !el.value) el.value=_mtMem.site_url; }
+  }
   mtMemRender();
 }
 
@@ -9887,8 +9905,8 @@ function mtMemRender(){
 // 1er remplissage (ou rafraîchissement) : Claude lit le site et construit la fiche
 async function mtMemFromSite(){
   const btn=document.getElementById('mtMemScanBtn');
-  const site=(document.getElementById('mtSite')?.value||'').trim();
-  if(!site){ toast('Renseigne d\'abord ton site juste au-dessus.'); document.getElementById('mtSite')?.focus(); return; }
+  const site=_mtSiteValue();
+  if(!site){ toast('Renseigne d\'abord ton site juste au-dessus.'); (document.getElementById('accMemSite')||document.getElementById('mtSite'))?.focus(); return; }
   const old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Lecture de ton site…'; }
   try{
     const r=await fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
@@ -9961,7 +9979,7 @@ async function mtLibLoad(){
 function mtLibRender(){
   const g=document.getElementById('mtLibGrid'); if(!g) return;
   if(!_mtLib.length){
-    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose ton logo, tes photos produit ou tes bruitages : ils reviendront tout seuls sur chaque vidéo.</p>';
+    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose ton logo, tes photos produit ou tes bruitages : l\'IA ira les chercher quand ton audio en parlera.</p>';
     return;
   }
   g.innerHTML=_mtLib.map((a)=>{
@@ -10061,7 +10079,7 @@ function mtLibRegisterSounds(){
 // Volontairement silencieux et non bloquant — l'utilisateur a déjà sa vidéo.
 async function mtMemLearn(transcript){
   if(_mtMem && _mtMem.auto_learn === false) return;
-  const site=(document.getElementById('mtSite')?.value||'').trim();
+  const site=_mtSiteValue();
   const brief=_mtBrief();
   // #125 · les visuels qu'il vient d'utiliser partent aussi : pour une app derrière un
   // écran de connexion, une capture est la SEULE source fiable — son site public ne
