@@ -3413,7 +3413,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                       <span class="mt-qual-badge accent">Meilleure qualité</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Omni</div>
-                      <div class="mt-qual-sub">5 cr/s</div>
+                      <div class="mt-qual-sub">5 cr/s · 1080p</div>
                     </div>
                   </div>
                 </div>
@@ -5361,7 +5361,7 @@ const CREDIT_COSTS = {
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
   montageIA: 2,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
   export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
-  omniPerSec: 5,          // 💎 OmniHuman 1.5 (scènes avatar du Montage IA segmenté, #119)
+  omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
   hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
@@ -10207,6 +10207,65 @@ async function _mtHedraScene(imageFile, audioWav, format, modelId){
   throw new Error('Timeout Hedra sur une scène (>6 min)');
 }
 
+// #121 · OmniHuman 1.5 passe par fal.ai (PLUS par Hedra) : fal sort du 1080p natif là où
+// nos générations Hedra étaient plafonnées à 720p. fal veut des URL publiques → on dépose
+// la photo et le segment audio dans render-media (privé) et on lui donne des liens signés
+// valables 1 h. La clé fal reste dans les secrets Supabase, jamais dans le navigateur.
+const FAL_OMNI = '/fal-ai/bytedance/omnihuman/v1.5';
+async function _mtOmniScene(imageFile, audioWav, format, segSec){
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const H=await getAuthHeader();
+  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) throw new Error('Session expirée');
+  const base=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  const imgPath=base+(/\.jpe?g$/i.test(imageFile.name||'') ? '.jpg' : '.png'), audPath=base+'.wav';
+  const upI=await sb.storage.from('render-media').upload(imgPath, imageFile, { contentType:imageFile.type||'image/png', upsert:true });
+  if(upI.error) throw new Error('upload photo OmniHuman : '+upI.error.message);
+  const upA=await sb.storage.from('render-media').upload(audPath, audioWav, { contentType:'audio/wav', upsert:true });
+  if(upA.error) throw new Error('upload audio OmniHuman : '+upA.error.message);
+  const sI=await sb.storage.from('render-media').createSignedUrl(imgPath, 3600);
+  const sA=await sb.storage.from('render-media').createSignedUrl(audPath, 3600);
+  if(sI.error || sA.error || !sI.data?.signedUrl || !sA.data?.signedUrl) throw new Error('Lien signé OmniHuman indisponible');
+
+  // fal : 1080p limité à 30 s d'audio, 720p jusqu'à 60 s. Nos scènes font 2-6 s, mais on
+  // se protège si le chef d'orchestre en pose une longue.
+  const resolution = (Number(segSec)||0) > 28 ? '720p' : '1080p';
+  const sub=await fPost(FAL_OMNI, {
+    image_url: sI.data.signedUrl,
+    audio_url: sA.data.signedUrl,
+    resolution,
+    prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise lip-sync matching every syllable and pause, clear articulation, static background, no camera movement',
+  });
+  if(!sub.ok){ const t=await sub.text(); throw new Error('OmniHuman '+sub.status+' '+t.slice(0,120)); }
+  const sd=await sub.json().catch(()=>({}));
+  const reqId=sd.request_id||sd.requestId; if(!reqId) throw new Error('OmniHuman : pas d\'identifiant de génération');
+
+  // polling (jusqu'à 6 min) — la file fal renvoie IN_QUEUE / IN_PROGRESS / COMPLETED
+  for(let i=0;i<72;i++){
+    await wait(5000);
+    const pr=await fGet(FAL_OMNI+'/requests/'+reqId+'/status'); if(!pr.ok) continue;
+    const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+    if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+    if(s==='COMPLETED'){
+      const rr=await fGet(FAL_OMNI+'/requests/'+reqId);
+      if(!rr.ok) throw new Error('OmniHuman résultat '+rr.status);
+      const rd=await rr.json().catch(()=>({}));
+      const url=rd?.video?.url||rd?.video_url||'';
+      if(!url) throw new Error('OmniHuman : URL de scène introuvable');
+      return await (await fetch(url)).blob();
+    }
+    throw new Error('Scène OmniHuman échouée'+(pd.error?' : '+String(pd.error).slice(0,60):''));
+  }
+  throw new Error('Timeout OmniHuman sur une scène (>6 min)');
+}
+// aiguillage : OmniHuman → fal.ai (1080p) · Character-3 → Hedra
+function _mtScene(img, wav, fmt, modelId, segSec){
+  return _mt.lipModel==='omnihuman' ? _mtOmniScene(img, wav, fmt, segSec) : _mtHedraScene(img, wav, fmt, modelId);
+}
+
 // base gameplay 9:16 bouclée à la durée de l'audio + la voix en piste audio → Blob mp4
 // (le render-worker prend la voix depuis la piste audio de cette base)
 async function _mtBuildBase(mp3File, durationSec){
@@ -10260,7 +10319,7 @@ async function _mtSegmentedGenerate(){
   const omni = _mt.lipModel==='omnihuman';
   const rate = omni ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec;
   const modelId = omni ? HEDRA_MODELS.omnihuman : HEDRA_MODELS.default;
-  const modelLbl = omni ? 'OmniHuman' : 'Character-3';
+  const modelLbl = omni ? 'OmniHuman 1080p' : 'Character-3';
 
   // 1) chef d'orchestre (transcription + plan) débité d'avance
   if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
@@ -10314,7 +10373,7 @@ async function _mtSegmentedGenerate(){
       _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
       const img=await _mtAvatarInFormat(fmt);
       const segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end);
-      clipBlobs.push(await _mtHedraScene(img, segWav, fmt, modelId));
+      clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0))));
     }
 
     // 6) upload base + scènes (ordre = avatarSegments) + b-roll → render-media
