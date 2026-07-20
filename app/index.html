@@ -1335,7 +1335,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
 
                 <!-- Gameplay upload -->
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Synchronise le gameplay à la voix <span style="opacity:.6">(optionnel)</span></div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Synchronise le gameplay à la voix</div>
                 <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:12px">
                   <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div></div>
                   <div id="silenceGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
@@ -1775,7 +1775,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <div id="genMontageImgs" style="display:none;margin-top:8px">
                 <input type="file" id="genAiImgIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_genAiRenderFiles();this.value=''">
-                <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images / clips b-roll (optionnel) — l'IA les place au meilleur moment</div>
+                <div onclick="document.getElementById('genAiImgIn').click()" style="border:1.5px dashed var(--border);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3)">🖼️ Tes images / clips b-roll — l'IA les place au meilleur moment</div>
                 <div id="genAiFiles" style="display:none;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:7px"></div>
               </div>
             </div>
@@ -2659,7 +2659,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <input id="bugTitle" class="field" type="text" placeholder="Ex : L'avatar ne s'affiche pas dans le preview" onkeydown="if(event.key==='Enter')document.getElementById('bugDesc').focus()">
             </div>
             <div style="margin-bottom:24px">
-              <div class="label">Description (optionnel)</div>
+              <div class="label">Description</div>
               <textarea id="bugDesc" class="field" rows="4" placeholder="Décris ce qui s'est passé, les étapes pour reproduire…" style="min-height:120px;resize:vertical"></textarea>
             </div>
             <button id="bugSubmitBtn" class="btn" onclick="submitBugReport()" style="width:100%;background:#FF4646;color:#fff;font-weight:700;border:none">Envoyer le bug report</button>
@@ -2848,7 +2848,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <span id="imgRefFace" class="col" style="align-items:center;gap:6px">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                   <span id="imgRefTitle" style="font-weight:700;font-size:12px;color:var(--text)">Image de référence</span>
-                  <span id="imgRefSubLabel" class="faint" style="font-size:9.5px">optionnel</span>
+                  <span id="imgRefSubLabel" class="faint" style="font-size:9.5px"></span>
                 </span>
                 <span id="imgRefClear" onclick="event.stopPropagation();_imgClearRefZone()" style="display:none;position:absolute;top:5px;right:5px;z-index:2;background:rgba(0,0,0,.65);border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center;color:#fff;font-size:11px;cursor:pointer">✕</span>
               </button>
@@ -3389,7 +3389,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
                 </div>
 
-                <div class="mt-eyebrow">3 · Ton avatar · optionnel</div>
+                <div class="mt-eyebrow">3 · Ton avatar</div>
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
                     <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="mt-drop-lbl" id="mtAvatarName">Ajoute une photo d'avatar</span></div>
@@ -3434,14 +3434,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <!-- site + visuels -->
               <div id="mtBottomGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
                 <div>
-                  <div class="mt-eyebrow">Ton site · optionnel</div>
+                  <div class="mt-eyebrow">Ton site</div>
                   <div style="position:relative">
                     <span class="faint" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span>
                     <input class="field" id="mtSite" style="padding-left:40px" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
                   </div>
                 </div>
                 <div>
-                  <div class="mt-eyebrow">Tes visuels · optionnel</div>
+                  <div class="mt-eyebrow">Tes visuels</div>
                   <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
                   <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
                   <p class="faint" style="font-size:11px;margin-top:7px">Jusqu'à 8 images/clips, placés au meilleur moment.</p>
@@ -3624,7 +3624,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="cartoonModule3Voice" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
               <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
-              <div style="font-size:13px;font-weight:700">Voix <span id="cartoonVoiceOptLabel" style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel)</span></div>
+              <div style="font-size:13px;font-weight:700">Voix <span id="cartoonVoiceOptLabel" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
             </div>
             <div id="cartoonVoiceHint" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, choisis une source ci-dessous (on remplace l'audio Veo).</div>
 
@@ -4272,7 +4272,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="logo-icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg></div>
         <div>
           <div class="display" style="font-size:21px;font-weight:700;letter-spacing:-.02em">AvatarAds — Connexions</div>
-          <div class="mono faint" style="font-size:11.5px;margin-top:2px">Configuration optionnelle</div>
+          <div class="mono faint" style="font-size:11.5px;margin-top:2px">Configuration</div>
         </div>
       </div>
       <button onclick="closeSetup()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:13px">✕</button>
@@ -4342,9 +4342,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <input class="field" type="text" id="accountFirstName" placeholder="Ton prénom" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
     </div>
     <div style="margin-bottom:18px">
-      <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+      <div class="setup-label" style="margin-bottom:8px">Numéro de téléphone</div>
       <input class="field" type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00" oninput="_accountAutoSave()" onblur="_accountAutoSave(true)">
-      <div class="setup-label" style="margin:18px 0 6px">Mot de passe <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+      <div class="setup-label" style="margin:18px 0 6px">Mot de passe</div>
       <button onclick="openPwdModal()" class="btn btn-ghost" style="width:100%">🔐 Définir ou changer mon mot de passe</button>
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
@@ -4362,7 +4362,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
         <div style="height:16px"></div>
       <div style="margin-bottom:14px">
-      <div class="setup-label" style="margin-bottom:8px">Ton site <span style="text-transform:none;letter-spacing:0;font-size:10.5px">optionnel</span></div>
+      <div class="setup-label" style="margin-bottom:8px">Ton site</div>
       <input class="field" type="url" id="accMemSite" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
       </div>
       <!-- 🧠 MÉMOIRE DE MARQUE (#124) — ce que l'IA retient d'une vidéo à l'autre -->
@@ -4723,7 +4723,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <button data-reason="technique" onclick="_retPick(this)" style="width:100%;text-align:left;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">🐞 J'ai eu des problèmes techniques</button>
         <button data-reason="autre" onclick="_retPick(this)" style="width:100%;text-align:left;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">💬 Autre raison</button>
       </div>
-      <textarea id="retDetail" placeholder="Un détail à nous partager ? (optionnel)" style="width:100%;min-height:64px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:14px"></textarea>
+      <textarea id="retDetail" placeholder="Un détail à nous partager ?" style="width:100%;min-height:64px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:14px"></textarea>
       <button id="retNext1" onclick="_retToStep2()" disabled style="width:100%;padding:12px;background:var(--bg4);border:1px solid var(--border);border-radius:11px;color:var(--text3);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;opacity:.5">Continuer →</button>
       <button onclick="closeRetention()" style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-family:var(--font);font-size:12px;cursor:pointer;margin-top:6px">Finalement, je reste 🎉</button>
     </div>
@@ -5147,7 +5147,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20d-ma-marque-modale'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20e-sans-optionnel'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -8046,7 +8046,7 @@ function _imgSetMode(m){
   // Composer : bouton image de référence — bordure/label selon le mode
   const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
   setTxt('imgRefTitle',    corr ? 'Image à corriger' : 'Image de référence');
-  setTxt('imgRefSubLabel', corr ? 'requis' : 'optionnel');
+  setTxt('imgRefSubLabel', corr ? 'requis' : '');
   const rb=document.getElementById('imgRefBtnComposer');
   if(rb && !_imgRefFile){ rb.style.borderColor = corr ? 'var(--accent-line)' : 'var(--border-2)'; rb.style.background = corr ? 'var(--accent-soft)' : 'var(--panel-1)'; }
   // Titre de l'état vide + placeholder du prompt
@@ -20615,7 +20615,7 @@ function cartoonPickVidModel(m, el){
   const optLbl=document.getElementById('cartoonVoiceOptLabel'), hint=document.getElementById('cartoonVoiceHint');
   if(optLbl){
     if(m==='seedance'){ optLbl.textContent='(obligatoire)'; optLbl.style.color='#ff8a5b'; }
-    else { optLbl.textContent='(optionnel)'; optLbl.style.color='var(--text3)'; }
+    else { optLbl.textContent=''; optLbl.style.color='var(--text3)'; }
   }
   if(hint) hint.innerHTML = (m==='seedance')
     ? '⚠️ <b style="color:#ff8a5b">Seedance n\'a pas d\'audio</b> — choisis une source de voix (Import / Gemini / ElevenLabs).'
