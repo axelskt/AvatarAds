@@ -299,8 +299,16 @@ function wordCss(W, H, fz) {
   return `
       /* ══ style « Mot par mot » — page blanche, un mot, des formes animées ══ */
       .vs-word, .vs-word body { background: ${WORD_PAPER}; }
-      .vs-word #videozone, .vs-word .broll, .vs-word .fslide, .vs-word .fbanner,
+      .vs-word #videozone, .vs-word .fslide, .vs-word .fbanner,
       .vs-word #hook, .vs-word #flash { display: none !important; }
+      /* les IMAGES de l'utilisateur restent : carte posée sur la page blanche, au-dessus
+         de la bande du mot pour ne pas le recouvrir. Une forme géométrique n'illustre
+         rien — une capture de son produit, si. */
+      .vs-word .broll { background: none; align-items: flex-start; padding-top: ${Math.round(H * SAFE.top + H * 0.01)}px; z-index: 4; }
+      .vs-word .broll-card { max-width: ${Math.round(W * SAFE_CENTERED_W)}px; max-height: ${Math.round(H * 0.30)}px;
+        border: 1px solid rgba(17,17,17,.10); border-radius: ${Math.round(H * 0.012)}px;
+        box-shadow: 0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.035)}px rgba(17,17,17,.16); }
+      .vs-word .broll-card img, .vs-word .broll-card video { max-height: ${Math.round(H * 0.30)}px; }
       .vs-word #slidezone { left: 0; top: 0; width: ${W}px; height: ${H}px; z-index: 1;
         background: ${WORD_PAPER}; background-image: none; }
       .vs-word #slidezone::after { display: none; }
