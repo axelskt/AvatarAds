@@ -4374,7 +4374,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">
           <div>
             <div class="display" style="font-size:18px;font-weight:800">Ma marque</div>
-            <p class="faint" style="font-size:12px;line-height:1.5;margin:6px 0 0">Renseigne-le une fois : le monteur IA s'en sert sur <b style="color:var(--text-2)">chaque</b> vidéo — tes vrais mots, tes vraies offres, tes vrais chiffres.</p>
+            <p class="faint" style="font-size:12px;line-height:1.5;margin:6px 0 0">Deux choses, une seule fois : ce que tu fais, et tes fonctionnalités. Ajoute un visuel par fonctionnalité et le monteur saura quoi montrer quand tu en parles.</p>
           </div>
           <button class="btn-quiet" onclick="closeBrandModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px;flex:0 0 auto">✕</button>
         </div>
@@ -4425,7 +4425,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
       <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
       <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
-      <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Les visuels cochés sont proposés au monteur IA, qui les place quand ton audio en parle — plus besoin de les re-déposer. Tes sons rejoignent la banque de l'Éditeur.</p>
+      <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Dis sous chaque visuel la fonctionnalité qu'il montre : le monteur le sortira quand tu en parleras. Tes sons rejoignent la banque de l'Éditeur.</p>
       </div>
       </div>
         <div style="height:6px"></div>
@@ -5165,7 +5165,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20f-connexion-features'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20g-fiche-simplifiee'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9985,16 +9985,7 @@ async function mtMemFromSite(){
    quoi y mettre et l'IA écrase ses formulations. Chaque champ de la fiche est donc
    éditable séparément — et ce qu'il écrit à la main fait autorité. */
 const MT_MEM_FIELDS=[
-  { k:'business',  l:'Ton activité',            t:'line', ph:'Ce que tu fais, en une phrase' },
-  { k:'produit',   l:'Ton produit / service',   t:'line', ph:'Le principal' },
-  { k:'features',  l:'Fonctionnalités · bénéfices', t:'list', ph:'Une par ligne' },
-  { k:'chiffres',  l:'Chiffres à citer tels quels', t:'list', ph:'Prix, durées, quantités — ex : Prix Pro|49,99 €. Évite les chiffres de preuve sociale (utilisateurs, vues, notes) : Meta Ads et TikTok Ads rejettent les affirmations invérifiables.' },
-  { k:'audience',  l:'À qui tu parles',         t:'line', ph:'Créateurs, e-commerçants…' },
-  { k:'offres',    l:'Tes offres / prix',       t:'line', ph:'Tels que tu les affiches' },
-  { k:'reseaux',   l:'Tes réseaux',             t:'list', ph:'Une par ligne — ex : instagram|@moncompte' },
-  { k:'ton',       l:'Ton ton',                 t:'line', ph:'Direct, tutoiement, punchy…' },
-  { k:'cta',       l:'Ton appel à l\'action',   t:'line', ph:'Ex : lien en bio' },
-  { k:'interdits', l:'À ne JAMAIS afficher',    t:'list', ph:'Une par ligne — mots, promesses, chiffres interdits' },
+  { k:'features', l:'Tes fonctionnalités principales', t:'list', ph:'Une par ligne — ex : Montage IA, Express, Images IA, Générateur' },
 ];
 const _mtEsc=(v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
@@ -10004,8 +9995,8 @@ function mtMemEdit(open){
   if(!open){ box.style.display='none'; return; }
   const f=(_mtMem&&_mtMem.facts)||{};
   form.innerHTML =
-    '<div><div class="mt-eyebrow" style="margin:0 0 6px">Résumé — c\'est ce que le monteur lit en premier</div>'
-    + '<textarea id="mtMemText" class="field mt-brief-ta" rows="5" placeholder="Ex : Je vends AvatarAds, un outil de vidéos IA. Offres : Starter 19,99 €, Pro 49,99 €. Ton direct. CTA : « lien en bio »."></textarea></div>'
+    '<div><div class="mt-eyebrow" style="margin:0 0 6px">Ta description — simple et efficace</div>'
+    + '<textarea id="mtMemText" class="field mt-brief-ta" rows="5" placeholder="Ex : AvatarAds crée des vidéos virales sans caméra : un avatar IA parle avec ta voix, le montage se fait tout seul."></textarea></div>'
     + MT_MEM_FIELDS.map((fd)=>{
         const v = fd.t==='list' ? (Array.isArray(f[fd.k]) ? f[fd.k].join('\n') : '') : (f[fd.k]||'');
         const inp = fd.t==='list'
@@ -10102,7 +10093,7 @@ async function mtLibLoad(){
 function mtLibRender(){
   const g=document.getElementById('mtLibGrid'); if(!g) return;
   if(!_mtLib.length){
-    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose ton logo, tes photos produit ou tes bruitages : l\'IA ira les chercher quand ton audio en parlera.</p>';
+    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose une capture par fonctionnalité (Montage IA, Express, Images IA…) : l\'IA les sortira au bon moment.</p>';
     return;
   }
   g.innerHTML=_mtLib.map((a)=>{
@@ -10111,10 +10102,14 @@ function mtLibRender(){
     const inner = isSnd
       ? '<span style="font-size:20px">🔊</span>'
       : (a.kind==='video' ? '<span style="font-size:20px">🎬</span>' : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
-    return '<div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:66px;height:66px;border-radius:12px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
+    return '<div style="display:flex;flex-direction:column;align-items:center;width:74px"><div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:66px;height:66px;border-radius:12px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
       + inner
       + (isSnd ? '' : '<button type="button" title="'+(on?'Ne plus proposer à l\'IA':'Proposer à l\'IA')+'" onclick="mtLibToggle(\''+a.id+'\')" style="position:absolute;left:3px;bottom:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:'+(on?'var(--accent-2)':'rgba(0,0,0,.6)')+';color:'+(on?'#1A0A02':'#fff')+'">'+(on?'✓':'+')+'</button>')
       + '<button type="button" title="Supprimer" onclick="mtLibDelete(\''+a.id+'\')" style="position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:rgba(0,0,0,.65);color:#ff8a8a">✕</button>'
+      + '</div>'
+      // le libellé = LA feature que ce visuel illustre → l'IA saura quand le sortir
+      + '<button type="button" onclick="mtLibLabel(\''+a.id+'\')" style="max-width:74px;background:none;border:none;padding:2px 0 0;cursor:pointer;font-family:var(--font);font-size:10px;line-height:1.25;color:'+(a.label?'var(--accent-2)':'var(--text-3)')+';text-align:center;overflow:hidden;display:block">'
+      + (a.label ? String(a.label).slice(0,24) : '+ quelle feature ?') + '</button>'
       + '</div>';
   }).join('');
 }
@@ -10138,6 +10133,20 @@ async function mtLibUpload(list, kind){
   }
   await mtLibLoad();
   toast('📦 Ajouté à ta bibliothèque');
+}
+
+// « Ce que ça montre » : Montage IA, Express, Images IA… c'est le lien entre
+// un visuel et le moment où l'audio en parle.
+async function mtLibLabel(id){
+  const a=_mtLib.find(x=>x.id===id); if(!a) return;
+  const v=prompt('Ce visuel montre quelle fonctionnalité ?\n(ex : Montage IA, Express, Images IA)', a.label||'');
+  if(v===null) return;
+  const label=String(v).trim().slice(0,200);
+  try{
+    const { error } = await sb.from('brand_assets').update({ label }).eq('id', id);
+    if(error) throw error;
+    a.label=label; mtLibRender();
+  }catch(e){ toast('Impossible d\'enregistrer : '+(e.message||e)); }
 }
 
 async function mtLibDelete(id){

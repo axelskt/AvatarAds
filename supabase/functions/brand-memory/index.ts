@@ -1,9 +1,11 @@
 // Supabase Edge Function — 🧠 Mémoire de marque (#124)
 //
-// Une fiche persistante par utilisateur : ce qu'il fait, son produit, ses
-// fonctionnalités, ses chiffres, ses réseaux, son ton, son CTA. Le chef
-// d'orchestre (orchestrate) la reçoit à CHAQUE montage → l'user ne retape
-// plus son contexte, et les slides sont justes dès la 1re vidéo.
+// Une fiche persistante par utilisateur, volontairement MINIMALE : une
+// description de son activité + la liste de ses fonctionnalités principales.
+// Le chef d'orchestre la reçoit à CHAQUE montage → l'user ne retape plus son
+// contexte, et les slides emploient ses vrais noms dès la 1re vidéo.
+// Le reste (prix, ton, réseaux, CTA) n'aide pas à monter une vidéo : on ne le
+// collecte pas.
 //
 // La lecture/écriture « simple » se fait côté client (RLS + privilèges
 // colonne sur public.brand_memory). Cette fonction ne sert qu'aux deux
@@ -14,7 +16,7 @@
 //
 // ⚠️ RISQUE PUBLICITAIRE : les chiffres de preuve sociale d'un site (« +40K
 // utilisateurs », « 4,9/5 ») sont invérifiables et font rejeter les pubs Meta et
-// TikTok. Ils vont dans "interdits", jamais dans "chiffres".
+// TikTok Ads. On ne les collecte pas du tout.
 //
 // #125 — les CAPTURES D'ÉCRAN comptent autant que le site : une app derrière un
 // écran de connexion n'expose rien publiquement, donc les visuels que l'utilisateur
@@ -73,33 +75,25 @@ async function fetchSite(url: string): Promise<string> {
 const MEMORY_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['summary', 'business', 'produit', 'features', 'chiffres', 'audience', 'offres', 'reseaux', 'ton', 'cta', 'interdits'],
+  required: ['summary', 'features'],
   properties: {
-    summary: { type: 'string', description: 'La fiche en texte suivi, 6 lignes max, lisible par l\'utilisateur. C\'est ce que le monteur IA lira.' },
-    business: { type: 'string', description: 'Ce que fait cette personne/entreprise, en 1 phrase.' },
-    produit: { type: 'string', description: 'Le produit ou service principal.' },
-    features: { type: 'array', items: { type: 'string' }, description: 'Les fonctionnalités PHARES d\'abord — celles qui différencient et qui sont mises en avant partout (titre, hero, navigation, tarifs), avant les détails secondaires. Formulées courtes.' },
-    chiffres: { type: 'array', items: { type: 'string' }, description: 'Uniquement des chiffres FACTUELS et vérifiables sur le produit : prix, durées, quantités, formats. Format "libellé|valeur". PAS de preuve sociale invérifiable (nombre d\'utilisateurs, vues cumulées, note moyenne).' },
-    audience: { type: 'string', description: 'À qui il s\'adresse.' },
-    offres: { type: 'string', description: 'Forfaits / prix, tels qu\'affichés.' },
-    reseaux: { type: 'array', items: { type: 'string' }, description: 'Format "plateforme|@handle ou url".' },
-    ton: { type: 'string', description: 'Ton de communication (ex : punchy, tutoiement, direct).' },
-    cta: { type: 'string', description: 'Appel à l\'action habituel (ex : "lien en bio").' },
-    interdits: { type: 'array', items: { type: 'string' }, description: 'Ce qu\'il ne faut jamais afficher/promettre.' },
+    summary: { type: 'string', description: 'La description de son activité : simple, efficace, factuelle. 4 lignes maximum. C\'est ce que le monteur lit en premier.' },
+    features: { type: 'array', items: { type: 'string' }, description: 'Ses fonctionnalités / offres PRINCIPALES, celles mises en avant partout (titre, hero, navigation, tarifs). Le nom tel qu\'il l\'emploie, court. Pas les détails secondaires.' },
   },
 }
 
 const SYSTEM = `Tu construis la FICHE DE MARQUE d'un utilisateur d'AvatarAds (outil de montage video IA).
-Cette fiche sera relue a chaque nouvelle video pour que le monteur IA connaisse deja son business.
+Elle est relue a chaque nouvelle video pour que le monteur sache de quoi il parle. Elle tient en DEUX choses : une description, et la liste de ses fonctionnalites principales.
 
 REGLES ABSOLUES :
-1. Tu n'INVENTES RIEN. Chaque element vient du site, du brief ou de ce qui est dit dans l'audio. Aucun chiffre, aucune promesse, aucune fonctionnalite devinee.
-2. Tu ne SUPPRIMES JAMAIS une information deja presente dans la fiche existante — surtout si elle a ete ecrite par l'utilisateur. Tu completes, tu precises, tu fusionnes les doublons.
-3. En cas de contradiction entre la fiche existante et la nouvelle source, la NOUVELLE source gagne (le business evolue), mais tu gardes l'ancienne formulation si elle est plus precise.
-4. Champ inconnu = chaine vide ou liste vide. Jamais de "N/A", jamais de remplissage.
-5. Si on te donne des CAPTURES D'ECRAN de son produit : c'est souvent la seule source fiable, parce qu'une app derriere un ecran de connexion n'expose rien sur son site public. Lis les VRAIS libelles affiches (noms de menus, de fonctionnalites, de forfaits, chiffres visibles) et note-les tels quels. Ne devine jamais ce qu'il y a derriere un bouton que tu ne vois pas.
-6. RISQUE PUBLICITAIRE — les chiffres de PREUVE SOCIALE affiches sur un site ("+40K utilisateurs", "+2 milliards de vues", "4,9/5", "+500 par jour") sont invérifiables : affiches dans une video, ils font REJETER les publicites sur Meta Ads et TikTok Ads, et peuvent couter le compte publicitaire. Tu ne les mets JAMAIS dans "chiffres". Tu les mets dans "interdits", formules ainsi : "ne pas afficher <le chiffre> — invérifiable, risque de rejet publicitaire". Les chiffres factuels sur le produit (un prix, une duree, un format) restent les bienvenus dans "chiffres".
-7. "summary" est lu par un humain ET par le monteur : concret, sans marketing creux, 6 lignes maximum, langue de l'utilisateur.`
+1. Tu n'INVENTES RIEN. Tout vient du site, des captures, du brief ou de ce qui est dit dans l'audio.
+2. Tu ne SUPPRIMES JAMAIS ce qui est deja dans la fiche — surtout si l'utilisateur l'a ecrit lui-meme. Tu completes et tu fusionnes les doublons.
+3. En cas de contradiction, la NOUVELLE source gagne (le business evolue), mais tu gardes la formulation la plus precise.
+4. Rien a dire = chaine vide ou liste vide. Jamais de \"N/A\", jamais de remplissage.
+5. Si on te donne des CAPTURES D'ECRAN de son produit : c'est souvent la seule source fiable, une app derriere un ecran de connexion n'expose rien publiquement. Lis les VRAIS libelles affiches. Ne devine jamais ce qu'il y a derriere un bouton que tu ne vois pas.
+6. Tu ne collectes AUCUN chiffre de preuve sociale (\"+40K utilisateurs\", \"+2 milliards de vues\", \"4,9/5\"). Ils sont invérifiables : affiches dans une video ils font REJETER les publicites sur Meta Ads et TikTok Ads. Ils n'ont rien a faire dans la fiche.
+7. Tu ne collectes pas non plus les prix, le ton, les reseaux sociaux ni le call-to-action : ca n'aide pas a monter une video et ca encombre.
+8. \"summary\" est lu par un humain ET par le monteur : concret, sans marketing creux, 4 lignes maximum, dans la langue de l'utilisateur.`
 
 async function callClaude(userBlock: string, images: { media: string; b64: string }[] = []): Promise<Record<string, unknown> | null> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
@@ -198,18 +192,7 @@ serve(async (req: Request) => {
     const out = await callClaude(parts.join('\n\n---\n\n'), images)
     if (!out) return json({ error: 'Réponse illisible du modèle' }, 502)
 
-    const facts = {
-      business: str(out.business, 400),
-      produit: str(out.produit, 300),
-      features: arr(out.features, 12),
-      chiffres: arr(out.chiffres, 10),
-      audience: str(out.audience, 250),
-      offres: str(out.offres, 400),
-      reseaux: arr(out.reseaux, 8),
-      ton: str(out.ton, 200),
-      cta: str(out.cta, 160),
-      interdits: arr(out.interdits, 8),
-    }
+    const facts = { features: arr(out.features, 12) }
     const summary = str(out.summary, MAX_SUMMARY)
 
     const row: Record<string, unknown> = { user_id: user.id, summary, facts }
