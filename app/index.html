@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20t-casse-restauree'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20u-musique-off'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9877,7 +9877,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -9901,7 +9901,7 @@ const MZ_ANIM   = [['word','Mot par mot'],['karaoke','Karaoké'],['all','Ligne c
 const MZ_SUBST  = [['punch','Punch'],['neon','Néon'],['auto','Auto'],['none','Aucun']];
 const MZ_POS    = [['haut','Haut'],['centre','Centre'],['bas','Bas']];
 const MZ_SIZE   = [['S','S'],['M','M'],['L','L']];
-const MZ_MUSIC  = [['auto','Auto'],['intense','Intense'],['dynamic','Dynamique'],['chill','Chill'],['none','Aucune']];
+const MZ_MUSIC  = [['none','Aucune'],['auto','Auto'],['intense','Intense'],['dynamic','Dynamique'],['chill','Chill']];
 const MZ_RHYTHM = [['auto','Auto'],['nerveux','Nerveux'],['pose','Posé']];
 const MZ_TRANS  = [['cut','Coupe nette'],['whip','Balayage rapide'],['fondu','Fondu doux']];
 const MZ_BROLL  = ['Aucune','Légère','Équilibrée','Dense'];
@@ -9911,11 +9911,11 @@ const MZ_VSTYLE = [
 
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
   ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'fond blanc, cartes produit flottantes avec profondeur de champ, typo legere dispersee'],
-  ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'AUCUN clip video ni image : page blanche du debut a la fin, le sous-titre est le seul texte (un mot enorme au centre), et des formes geometriques animees illustrent chaque section. Donc : broll = [], pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
+  ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
-  subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
+  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
 function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender();
@@ -10016,7 +10016,7 @@ function _mtAdvDirectives(){
   if(a.broll===0) out.push('B-ROLL : aucun (broll = []).');
   if(a.broll===3) out.push('B-ROLL : dense, illustre le maximum de passages.');
   if(a.punch===false) out.push('ZOOMS : aucun (zooms = []).');
-  if(a.music==='none') out.push('MUSIQUE : aucune (music = null).');
+  if(a.music==='none') out.push('MUSIQUE : aucune (music = null). Ce sont les BRUITAGES qui portent le rythme.');
   else if(a.music && a.music!=='auto') out.push('MUSIQUE : mood "'+(a.music==='dynamic'?'dynamique':a.music)+'" impose.');
   if(a.sfx===false) out.push('BRUITAGES : aucun (sfx = []).');
   if(a.subStyle==='none') out.push('SOUS-TITRES : aucun.');
