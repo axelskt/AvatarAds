@@ -3348,7 +3348,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         #v-montage .mt-mem-auto, #accountOverlay .mt-mem-auto, #brandModal .mt-mem-auto{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);cursor:pointer;margin-left:auto}
         #v-montage .mt-mem-auto input, #accountOverlay .mt-mem-auto input, #brandModal .mt-mem-auto input{accent-color:var(--accent-2);width:15px;height:15px;cursor:pointer}
         @media(max-width:760px){ #v-montage .mt-mem-auto, #accountOverlay .mt-mem-auto, #brandModal .mt-mem-auto{margin-left:0;width:100%} }
-        @keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
+        #mzAdvModal .mz-lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 9px}
+#mzAdvModal .seg{display:flex;gap:6px}
+#mzAdvModal .seg button{flex:1 1 auto;min-width:0;font-size:12.5px;padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-family:var(--font);cursor:pointer;transition:.15s}
+#mzAdvModal .seg button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2);font-weight:700}
+@keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
       </style>
       <div class="scroll-y" id="mtScroll" style="flex:1;padding:24px 40px 32px">
         <div style="max-width:760px;margin:0 auto">
@@ -3448,35 +3452,17 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
               </div>
 
-              <!-- ⚙️ PARAMÈTRES AVANCÉS — repliés : on ne les ouvre que si on veut vraiment diriger -->
-              <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
-                <div id="mtAdvRow" onclick="mtAdvToggle()" class="mt-briefrow">
-                  <span class="mt-brief-plus"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></span>
-                  <span>
-                    <span class="mt-brief-t">Paramètres avancés</span>
-                    <span class="mt-brief-s" id="mtAdvSum">Style visuel, sous-titres, musique, rythme</span>
+              <!-- ⚙️ PARAMÈTRES AVANCÉS — ouvre la modale (maquette Claude Design) -->
+              <button type="button" onclick="mzAdvOpen()" class="row" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:14px;border:1px solid var(--border);background:var(--surface);text-align:left;margin-top:2px;cursor:pointer;font-family:var(--font)">
+                <span class="row gap12" style="align-items:center">
+                  <span style="width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+                  <span class="col" style="line-height:1.3">
+                    <span style="font-weight:700;font-size:14.5px">Paramètres avancés</span>
+                    <span class="faint" style="font-size:12px" id="mzAdvSum">sous-titres mot-par-mot · musique auto</span>
                   </span>
-                </div>
-                <div id="mtAdvBox" style="display:none">
-                  <div class="mt-eyebrow">Style visuel</div>
-                  <div class="mt-chips" id="mtAdvStyles"></div>
-                  <textarea id="mtAdvStyleTxt" class="field mt-brief-ta" rows="2" style="min-height:64px;margin-top:10px" oninput="_mt.adv.styleTxt=this.value;mtAdvSummary()" placeholder="Décris le style que tu veux : couleurs, typo, ambiance, références…"></textarea>
-
-                  <div class="mt-eyebrow" style="margin-top:16px">Sous-titres</div>
-                  <div class="mt-chips" id="mtAdvCaps"></div>
-
-                  <div class="mt-eyebrow" style="margin-top:16px">Musique</div>
-                  <div class="mt-chips" id="mtAdvMusic"></div>
-
-                  <div class="mt-eyebrow" style="margin-top:16px">Rythme</div>
-                  <div class="mt-chips" id="mtAdvRythme"></div>
-
-                  <div class="mt-chips" style="margin-top:16px">
-                    <label class="mt-mem-auto" style="margin-left:0"><input type="checkbox" id="mtAdvSfx" checked onchange="_mt.adv.sfx=this.checked;mtAdvSummary()"> Bruitages</label>
-                    <button type="button" class="mt-brief-x" onclick="mtAdvReset()">Tout remettre en auto</button>
-                  </div>
-                </div>
-              </div>
+                </span>
+                <span class="faint" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+              </button>
 
               <!-- SCRIPT / BRIEF — ce que l'user veut vraiment, transmis au chef d'orchestre -->
               <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
@@ -4413,6 +4399,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
 
 
+
     <!-- 🧠 Modale « Ma marque » — maquette Claude Design, reprise au pixel -->
     <div id="brandModal" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
@@ -5200,7 +5187,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20n-pack-pro-sfx'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20o-avances-modale'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9882,7 +9869,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { style:'auto', styleTxt:'', caps:'punch', music:'auto', rythme:'auto', sfx:true } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -9899,84 +9886,128 @@ function mtBriefClose(){
   if(r) r.style.display='';
 }
 /* ══════════ ⚙️ PARAMÈTRES AVANCÉS (Montage IA) ══════════
-   Tout est sur AUTO par défaut : le chef d'orchestre décide. Ces réglages ne
-   servent qu'à le contraindre quand l'utilisateur a une idée précise.
-   Ils sont transmis en tête du brief (le champ que le monteur traite déjà comme
-   l'intention de l'utilisateur) — le style des sous-titres, lui, part avec le
-   plan au moteur de rendu. */
-const MT_ADV_STYLES = [
-  // « auto » est le defaut : le chef d'orchestre choisit selon ce qui est dit.
-  // Les autres sont les styles qu'Axel a reperes sur TikTok (cf. #131).
-  // REGLE COMMUNE : moins de texte a l'ecran, plus d'animation — les sous-titres
-  // portent deja les mots, un pave de texte en double fait redondance.
-  { k:'auto',      l:'Auto' },
-  { k:'sombre',    l:'Sombre premium', d:'fond noir profond, halo radial derriere l element central, cartes a bordure fine lumineuse, beaucoup de vide, une seule idee par ecran, micro-libelles en monospace. Tres peu de texte : on ANIME, les sous-titres portent les mots' },
-  { k:'glass',     l:'Liquid glass',   d:'cartes en verre depoli translucide posees sur la video, reflets et bord refractant, look Apple, tres epure. Presque aucun texte : la matiere fait le travail' },
-  { k:'mot',       l:'Mot par mot',    d:'fond uni plein ecran (blanc ou noir), UN SEUL mot au centre en tres gras, rien d autre, un objet 3D detoure sur les mots-cles. Rythme rapide, un mot a la fois' },
-  { k:'apple',     l:'Apple',          d:'pub Apple : fond blanc immacule, motion design lent et assure, un seul objet en heros au centre, typographie fine et large, enormement de vide, transitions douces. Aucun texte superflu' },
-  { k:'blanc',     l:'Éditorial blanc',d:'fond blanc pur, visuels produit dans des cartes arrondies qui flottent avec profondeur de champ, typographie legere dispersee, motifs en trame de points. Studio, aere, peu de texte' },
+   Maquette montage-handoff/src/gen-montage.jsx (MzAdvanced), reprise 1:1.
+   Tout est sur AUTO par défaut : ces réglages ne servent qu'à contraindre le
+   monteur quand l'utilisateur a une idée précise. */
+const MZ_ANIM   = [['word','Mot par mot'],['karaoke','Karaoké'],['all','Ligne complète']];
+const MZ_SUBST  = [['punch','Punch'],['neon','Néon'],['auto','Auto'],['none','Aucun']];
+const MZ_POS    = [['haut','Haut'],['centre','Centre'],['bas','Bas']];
+const MZ_SIZE   = [['S','S'],['M','M'],['L','L']];
+const MZ_MUSIC  = [['auto','Auto'],['intense','Intense'],['dynamic','Dynamique'],['chill','Chill'],['none','Aucune']];
+const MZ_RHYTHM = [['auto','Auto'],['nerveux','Nerveux'],['pose','Posé']];
+const MZ_TRANS  = [['cut','Coupe nette'],['whip','Balayage rapide'],['fondu','Fondu doux']];
+const MZ_BROLL  = ['Aucune','Légère','Équilibrée','Dense'];
+const MZ_VSTYLE = [
+  ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
+  ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
+  ['dark','Sombre premium','noir, contrastes chauds',['#1A1620','#FF7A1A'],'fond noir profond, halo radial, cartes a bordure fine lumineuse, tres peu de texte, on ANIME'],
+  ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
+  ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'fond blanc, cartes produit flottantes avec profondeur de champ, typo legere dispersee'],
+  ['word','Mot par mot','texte plein écran rythmé',['#2A2438','#FFE500'],'fond uni plein ecran, UN SEUL mot au centre en tres gras, rythme rapide'],
 ];
-const MT_ADV_CAPS = [
-  { k:'punch',  l:'Punch (défaut)' },
-  { k:'neon',   l:'Néon' },
-  { k:'minimal',l:'Minimal' },
-  { k:'none',   l:'Aucun' },
-];
-const MT_ADV_MUSIC = [
-  { k:'auto', l:'Auto' }, { k:'intense', l:'Intense' }, { k:'dynamique', l:'Dynamique' },
-  { k:'chill', l:'Chill' }, { k:'none', l:'Aucune' },
-];
-const MT_ADV_RYTHME = [
-  { k:'auto', l:'Auto' },
-  { k:'nerveux', l:'Nerveux', d:'un changement visuel toutes les 2 a 3s' },
-  { k:'pose',    l:'Posé',    d:'un changement visuel toutes les 4 a 6s, on laisse respirer' },
-];
-function _mtAdvDefaults(){ return { style:'auto', styleTxt:'', caps:'punch', music:'auto', rythme:'auto', sfx:true }; }
+function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
+  subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
 
-function mtAdvToggle(){
-  const b=document.getElementById('mtAdvBox'); if(!b) return;
-  const ouvert = b.style.display!=='none';
-  b.style.display = ouvert ? 'none' : '';
-  if(!ouvert) mtAdvRender();
-}
-function _mtAdvChips(id, list, key){
+let _mzPreviewTimer=null, _mzPreviewI=0;
+function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender();
+  clearInterval(_mzPreviewTimer); _mzPreviewTimer=setInterval(()=>{ _mzPreviewI=(_mzPreviewI+1)%8; mzPreviewRender(); }, 420); }
+function mzAdvClose(){ const m=document.getElementById('mzAdvModal'); if(m) m.style.display='none';
+  clearInterval(_mzPreviewTimer); _mzPreviewTimer=null; mzAdvSummary(); }
+function mzAdvSet(k,v){ _mt.adv[k]=v; mzAdvRender(); }
+function mzAdvReset(){ _mt.adv=_mzDefaults(); mzAdvRender(); }
+
+function _mzSeg(id, opts, field){
   const el=document.getElementById(id); if(!el) return;
-  el.innerHTML = list.map((o)=>'<button type="button" class="mt-chip'+(_mt.adv[key]===o.k?' on':'')+'" onclick="mtAdvSet(\''+key+'\',\''+o.k+'\')" style="'+(_mt.adv[key]===o.k?'border-color:var(--accent-line);color:var(--accent-2);background:var(--accent-soft)':'')+'">'+o.l+'</button>').join('');
+  el.innerHTML = opts.map(([v,l])=>'<button type="button" class="'+(_mt.adv[field]===v?'on':'')+'" onclick="mzAdvSet(\''+field+'\',\''+v+'\')">'+l+'</button>').join('');
 }
-function mtAdvRender(){
-  _mtAdvChips('mtAdvStyles', MT_ADV_STYLES, 'style');
-  _mtAdvChips('mtAdvCaps',   MT_ADV_CAPS,   'caps');
-  _mtAdvChips('mtAdvMusic',  MT_ADV_MUSIC,  'music');
-  _mtAdvChips('mtAdvRythme', MT_ADV_RYTHME, 'rythme');
-  const t=document.getElementById('mtAdvStyleTxt'); if(t && t.value!==_mt.adv.styleTxt) t.value=_mt.adv.styleTxt||'';
-  const c=document.getElementById('mtAdvSfx'); if(c) c.checked=_mt.adv.sfx!==false;
-  mtAdvSummary();
+function _mzToggle(id, field, titre, sous){
+  const el=document.getElementById(id); if(!el) return;
+  const on=!!_mt.adv[field];
+  el.innerHTML = '<button type="button" onclick="mzAdvSet(\''+field+'\','+(on?'false':'true')+')" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer;font-family:var(--font)">'
+    + '<span class="col" style="line-height:1.3"><span style="font-weight:600;font-size:14px">'+titre+'</span><span class="faint" style="font-size:11.5px">'+sous+'</span></span>'
+    + '<span style="width:42px;height:25px;border-radius:13px;flex:0 0 auto;padding:3px;transition:.2s;background:'+(on?'var(--accent)':'var(--surface-3)')+';display:flex;justify-content:'+(on?'flex-end':'flex-start')+'">'
+    + '<span style="width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></span></button>';
 }
-function mtAdvSet(key, val){ _mt.adv[key]=val; mtAdvRender(); }
-function mtAdvReset(){ _mt.adv=_mtAdvDefaults(); mtAdvRender(); }
-function mtAdvSummary(){
-  const el=document.getElementById('mtAdvSum'); if(!el) return;
+function mzPreviewRender(){
+  const box=document.getElementById('mzPreviewWords'); if(!box) return;
+  const a=_mt.adv, mots=['Voici','comment','doubler','tes','VUES','🔥'];
+  const fs = a.subSize==='S'?18:a.subSize==='L'?30:24, i=_mzPreviewI;
+  box.innerHTML = mots.map((w,j)=>{
+    const vu = a.subAnim==='all' ? true : j<=i;
+    const actif = a.subAnim!=='all' && j===i;
+    const fort = w===w.toUpperCase() && w.length>2;
+    const emo = /\p{Emoji}/u.test(w);
+    if(emo && !a.subEmoji) return '';
+    let col='#fff', bg='transparent', pad='0';
+    if(a.subStyle==='karaoke'){ col=(j<=i)?'#FFE500':'rgba(255,255,255,.5)'; }
+    else if(a.subStyle==='punch'){ if(fort){ col='#1A0A02'; bg='var(--accent)'; pad='1px 7px'; } }
+    else if(a.subStyle==='neon'){ col=actif?'#39FF88':'#fff'; }
+    else if(a.subStyle==='auto'){ col=fort?'#FFE500':'#fff'; }
+    return '<span style="font-family:var(--display);font-weight:800;font-size:'+fs+'px;line-height:1.1;transition:transform .18s,opacity .18s;'
+      +'opacity:'+(vu?1:0.18)+';transform:'+(actif?'scale(1.18)':'scale(1)')+';display:inline-block;color:'+col+';background:'+bg+';padding:'+pad
+      +';border-radius:6px;text-shadow:'+((a.subStyle==='neon'&&actif)?'0 0 10px #39FF88':'0 2px 6px rgba(0,0,0,.6)')+'">'+w+'</span>';
+  }).join('');
+  const n=document.getElementById('mzPreviewNote');
+  if(n) n.textContent='aperçu · '+(a.subAnim==='word'?'mot par mot':a.subAnim==='all'?'ligne complète':a.subAnim);
+  const p=document.getElementById('mzPreview');
+  if(p) p.style.display = a.subStyle==='none' ? 'none' : 'grid';
+}
+function mzAdvRender(){
+  const a=_mt.adv;
+  _mzSeg('mzSegAnim',MZ_ANIM,'subAnim'); _mzSeg('mzSegStyle',MZ_SUBST,'subStyle');
+  _mzSeg('mzSegPos',MZ_POS,'subPos');    _mzSeg('mzSegSize',MZ_SIZE,'subSize');
+  _mzSeg('mzSegMusic',MZ_MUSIC,'music'); _mzSeg('mzSegRhythm',MZ_RHYTHM,'rhythm');
+  _mzSeg('mzSegTrans',MZ_TRANS,'transitions');
+  _mzToggle('mzTogEmoji','subEmoji','Emoji auto sur les mots-clés','🔥 💰 ✨ ajoutés sur les temps forts');
+  _mzToggle('mzTogPunch','punch','Accent des temps forts','Zoom punch-in · shake · flash sur les beats');
+  _mzToggle('mzTogSfx','sfx','Bruitages','Woosh, pop, impacts calés sur le rythme');
+  // sous-titres coupés : position, taille et emoji n'ont plus de sens
+  const ps=document.getElementById('mzPosSize'), te=document.getElementById('mzTogEmoji');
+  const off = a.subStyle==='none';
+  if(ps) ps.style.display = off ? 'none' : '';
+  if(te) te.style.display = off ? 'none' : '';
+  const g=document.getElementById('mzStyleGrid');
+  if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols])=>{
+    const on=a.vstyle===v;
+    return '<button type="button" onclick="mzAdvSet(\'vstyle\',\''+v+'\')" class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:pointer;font-family:var(--font);'
+      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
+      +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative">'
+      +'<span style="position:absolute;left:8px;bottom:6px;width:46%;height:6px;border-radius:3px;background:rgba(255,255,255,.85)"></span>'
+      +'<span style="position:absolute;left:8px;bottom:15px;width:64%;height:6px;border-radius:3px;background:rgba(255,255,255,.55)"></span></span>'
+      +'<span style="display:block;padding:9px 11px">'
+      +'<span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">'+l+'</span>'
+      +(on?'<span style="color:var(--accent-2);display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>':'')
+      +'</span><span class="faint" style="display:block;font-size:11px">'+sub+'</span></span></button>';
+  }).join('');
+  const br=document.getElementById('mzBroll'), bl=document.getElementById('mzBrollLbl');
+  if(br){ br.value=a.broll; br.style.background='linear-gradient(90deg,var(--accent) '+(a.broll/3*100)+'%,var(--surface-3) '+(a.broll/3*100)+'%)'; }
+  if(bl) bl.textContent=MZ_BROLL[a.broll];
+  mzPreviewRender(); mzAdvSummary();
+}
+function mzAdvSummary(){
+  const el=document.getElementById('mzAdvSum'); if(!el) return;
   const a=_mt.adv, bits=[];
-  if(a.style!=='auto') bits.push((MT_ADV_STYLES.find(x=>x.k===a.style)||{}).l);
-  if(a.styleTxt && a.styleTxt.trim()) bits.push('style décrit');
-  if(a.caps!=='punch') bits.push('sous-titres '+((MT_ADV_CAPS.find(x=>x.k===a.caps)||{}).l||'').toLowerCase());
-  if(a.music!=='auto') bits.push('musique '+((MT_ADV_MUSIC.find(x=>x.k===a.music)||{}).l||'').toLowerCase());
-  if(a.rythme!=='auto') bits.push('rythme '+((MT_ADV_RYTHME.find(x=>x.k===a.rythme)||{}).l||'').toLowerCase());
+  if(a.vstyle!=='auto') bits.push((MZ_VSTYLE.find(x=>x[0]===a.vstyle)||[])[1]);
+  bits.push(a.subStyle==='none' ? 'sans sous-titres' : (a.subAnim==='word' ? 'sous-titres mot-par-mot' : 'sous-titres '+a.subStyle));
+  bits.push(a.music==='none' ? 'sans musique' : 'musique '+a.music);
   if(a.sfx===false) bits.push('sans bruitages');
-  el.textContent = bits.length ? bits.join(' · ') : 'Style visuel, sous-titres, musique, rythme';
+  el.textContent = bits.filter(Boolean).join(' · ');
 }
-// les consignes passent en tête du brief : le monteur les traite comme l'intention de l'user
+// les consignes passent en tête du brief ; le reste est écrit dans le plan
 function _mtAdvDirectives(){
   const a=_mt.adv||{}, out=[];
-  const st=MT_ADV_STYLES.find(x=>x.k===a.style);
-  if(st && st.d) out.push('STYLE VISUEL : '+st.d+'.');
-  if(a.styleTxt && a.styleTxt.trim()) out.push('STYLE DEMANDE : '+a.styleTxt.trim().slice(0,220));
-  const ry=MT_ADV_RYTHME.find(x=>x.k===a.rythme);
-  if(ry && ry.d) out.push('RYTHME : '+ry.d+'.');
+  const st=MZ_VSTYLE.find(x=>x[0]===a.vstyle);
+  if(st && st[4]) out.push('STYLE VISUEL : '+st[4]+'.');
+  if(a.styleTxt && a.styleTxt.trim()) out.push('STYLE DEMANDE : '+a.styleTxt.trim().slice(0,200));
+  if(a.rhythm==='nerveux') out.push('RYTHME : un changement visuel toutes les 2 a 3s.');
+  if(a.rhythm==='pose')    out.push('RYTHME : un changement visuel toutes les 4 a 6s, on laisse respirer.');
+  if(a.broll===0) out.push('B-ROLL : aucun (broll = []).');
+  if(a.broll===3) out.push('B-ROLL : dense, illustre le maximum de passages.');
+  if(a.punch===false) out.push('ZOOMS : aucun (zooms = []).');
   if(a.music==='none') out.push('MUSIQUE : aucune (music = null).');
-  else if(a.music && a.music!=='auto') out.push('MUSIQUE : mood "'+a.music+'" impose.');
+  else if(a.music && a.music!=='auto') out.push('MUSIQUE : mood "'+(a.music==='dynamic'?'dynamique':a.music)+'" impose.');
   if(a.sfx===false) out.push('BRUITAGES : aucun (sfx = []).');
-  if(a.caps==='none') out.push('SOUS-TITRES : aucun.');
+  if(a.subStyle==='none') out.push('SOUS-TITRES : aucun.');
   return out.join(' ');
 }
 
@@ -10830,12 +10861,19 @@ async function _mtSegmentedGenerate(){
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
-    plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
-    if(_mt.adv && _mt.adv.style==='glass') plan.slideStyle='glass';   // 🫧 cartes en verre, lu par le worker
-    if(plan.capStyle==='none') plan.captions=[];
-    if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
-    if(_mt.adv && _mt.adv.music==='none') plan.music=null;
-    else if(_mt.adv && _mt.adv.music && _mt.adv.music!=='auto') plan.music={ mood:_mt.adv.music };
+    const _a=_mt.adv||{};
+    plan.capStyle   = _a.subStyle || 'punch';   // style des sous-titres, lu par le worker
+    plan.capAnim    = _a.subAnim  || 'word';
+    plan.capPos     = _a.subPos   || 'bas';
+    plan.capSize    = _a.subSize  || 'M';
+    plan.slideStyle = _a.vstyle   || 'auto';
+    plan.transitions= _a.transitions || 'cut';
+    if(_a.subStyle==='none') plan.captions=[];
+    if(_a.sfx===false)   plan.sfx=[];
+    if(_a.punch===false) plan.zooms=[];
+    if(_a.broll===0)     plan.broll=[];
+    if(_a.music==='none') plan.music=null;
+    else if(_a.music && _a.music!=='auto') plan.music={ mood:(_a.music==='dynamic'?'dynamique':_a.music) };
     let segs=Array.isArray(plan.avatarSegments) ? plan.avatarSegments.slice() : [];
     // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
     if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
@@ -10966,12 +11004,19 @@ async function _mtVideoGenerate(){
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
-    plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
-    if(_mt.adv && _mt.adv.style==='glass') plan.slideStyle='glass';   // 🫧 cartes en verre, lu par le worker
-    if(plan.capStyle==='none') plan.captions=[];
-    if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
-    if(_mt.adv && _mt.adv.music==='none') plan.music=null;
-    else if(_mt.adv && _mt.adv.music && _mt.adv.music!=='auto') plan.music={ mood:_mt.adv.music };
+    const _a=_mt.adv||{};
+    plan.capStyle   = _a.subStyle || 'punch';   // style des sous-titres, lu par le worker
+    plan.capAnim    = _a.subAnim  || 'word';
+    plan.capPos     = _a.subPos   || 'bas';
+    plan.capSize    = _a.subSize  || 'M';
+    plan.slideStyle = _a.vstyle   || 'auto';
+    plan.transitions= _a.transitions || 'cut';
+    if(_a.subStyle==='none') plan.captions=[];
+    if(_a.sfx===false)   plan.sfx=[];
+    if(_a.punch===false) plan.zooms=[];
+    if(_a.broll===0)     plan.broll=[];
+    if(_a.music==='none') plan.music=null;
+    else if(_a.music && _a.music!=='auto') plan.music={ mood:(_a.music==='dynamic'?'dynamique':_a.music) };
 
     // upload vidéo (base) + b-roll → render-media
     _mtProg(58, 'Envoi de ta vidéo au serveur…');
@@ -24217,5 +24262,68 @@ window.mPreviewClose=function(){
   if(gr&&window._mPrevHome){ if(window._mPrevNext&&window._mPrevNext.parentNode===window._mPrevHome) window._mPrevHome.insertBefore(gr,window._mPrevNext); else window._mPrevHome.appendChild(gr); }
 };
 </script>
+    <!-- ⚙️ Modale « Paramètres avancés » — maquette montage-handoff, reprise au pixel -->
+    <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
+      <div class="card" style="width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div class="row gap12">
+            <div style="width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
+            <div class="col" style="line-height:1.25">
+              <h3 class="display" style="font-size:22px;font-weight:700">Paramètres avancés</h3>
+              <span class="faint" style="font-size:12.5px">Contrôle fin du rendu — laisse en Auto si tu hésites</span>
+            </div>
+          </div>
+          <button class="btn-quiet" onclick="mzAdvClose()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
+        </div>
+
+        <div style="margin:20px 0 24px">
+          <div class="mz-lbl">Sous-titres · aperçu live</div>
+          <div id="mzPreview" style="position:relative;height:150px;border-radius:16px;overflow:hidden;background:repeating-linear-gradient(48deg, oklch(0.34 0.09 265) 0 16px, oklch(0.22 0.06 265) 16px 32px);display:grid;place-items:center;padding:16px">
+            <div id="mzPreviewWords" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:90%"></div>
+            <span class="mono" id="mzPreviewNote" style="position:absolute;bottom:8px;left:10px;font-size:9px;color:rgba(255,255,255,.6)"></span>
+          </div>
+        </div>
+
+        <div class="col" style="gap:13px;margin-bottom:24px">
+          <div><div class="mz-lbl">Animation</div><div class="seg" id="mzSegAnim" style="width:100%;flex-wrap:wrap"></div></div>
+          <div><div class="mz-lbl">Style</div><div class="seg" id="mzSegStyle" style="width:100%;flex-wrap:wrap"></div></div>
+          <div class="row gap12" id="mzPosSize" style="flex-wrap:wrap">
+            <div style="flex:1;min-width:0"><div class="mz-lbl">Position</div><div class="seg" id="mzSegPos" style="width:100%;flex-wrap:wrap"></div></div>
+            <div style="flex:1;min-width:0"><div class="mz-lbl">Taille</div><div class="seg" id="mzSegSize" style="width:100%;flex-wrap:wrap"></div></div>
+          </div>
+          <div id="mzTogEmoji"></div>
+        </div>
+
+        <div class="divider" style="margin-bottom:22px"></div>
+
+        <div class="mz-lbl">Style visuel</div>
+        <div id="mzStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"></div>
+        <textarea id="mzStyleTxt" class="field" style="display:none;min-height:64px;resize:vertical;margin-bottom:24px" placeholder="Décris le style que tu veux : couleurs, typo, ambiance, références…" oninput="_mt.adv.styleTxt=this.value"></textarea>
+        <div id="mzStyleGap" style="margin-bottom:24px"></div>
+
+        <div class="col" style="gap:13px;margin-bottom:24px">
+          <div><div class="mz-lbl">Musique</div><div class="seg" id="mzSegMusic" style="width:100%;flex-wrap:wrap"></div></div>
+          <div><div class="mz-lbl">Rythme du montage</div><div class="seg" id="mzSegRhythm" style="width:100%;flex-wrap:wrap"></div></div>
+          <div><div class="mz-lbl">Transitions entre les plans</div><div class="seg" id="mzSegTrans" style="width:100%;flex-wrap:wrap"></div>
+            <p class="faint" style="font-size:11px;margin-top:7px">L'effet visuel à chaque changement de plan.</p></div>
+        </div>
+
+        <div style="margin-bottom:22px">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Images d'illustration (b-roll)</div><span class="mono" id="mzBrollLbl" style="font-size:12px;color:var(--accent-2)">Équilibrée</span></div>
+          <input type="range" id="mzBroll" class="ed-range" min="0" max="3" step="1" value="2" oninput="mzAdvSet('broll',+this.value)" style="width:100%">
+          <p class="faint" style="font-size:11px;margin-top:8px">Quantité d'images/clips ajoutés par-dessus ta voix pour illustrer tes propos.</p>
+        </div>
+
+        <div class="col" style="gap:13px;margin-bottom:24px">
+          <div id="mzTogPunch"></div>
+          <div id="mzTogSfx"></div>
+        </div>
+
+        <div class="row gap10" style="margin-top:8px">
+          <button type="button" class="btn-quiet btn-sm" onclick="mzAdvReset()" style="border:none;background:none;cursor:pointer;font-family:var(--font)">↺ Tout remettre en auto</button>
+          <button type="button" class="btn btn-primary" style="margin-left:auto;padding:12px 28px;font-weight:800" onclick="mzAdvClose()">Appliquer</button>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
