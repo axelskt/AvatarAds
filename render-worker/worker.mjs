@@ -25,8 +25,10 @@ const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le te
 const MUSIC_BY_MOOD = { intense: 'music-2.mp3', dynamique: 'music-1.mp3', chill: 'music-3.mp3' }
 // volume par mood calibré sur la loudness mesurée de chaque piste (music-2 ≈ -5 LUFS,
 // music-1 ≈ -9.5, music-3 ≈ -11) → la voix reste TOUJOURS clairement au-dessus
-const MUSIC_VOL_BY_MOOD = { intense: 0.09, dynamique: 0.13, chill: 0.15 }
-const MUSIC_VOL_EXTRA = 0.12 // titres ajoutés (assets/music/<mood>-N.mp3) : normalise-les à ~-14 LUFS
+// Volumes revus a la baisse (~-6 dB) : la musique couvrait la voix et ecrasait les
+// bruitages, qui portent bien mieux le rythme. Elle n'est plus active par defaut.
+const MUSIC_VOL_BY_MOOD = { intense: 0.045, dynamique: 0.065, chill: 0.075 }
+const MUSIC_VOL_EXTRA = 0.06 // titres ajoutés (assets/music/<mood>-N.mp3) : normalise-les à ~-14 LUFS
 
 // banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
 // entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
