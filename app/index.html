@@ -9906,15 +9906,29 @@ async function mtMemToggleAuto(){
 
 // après un montage réussi : la fiche apprend ce que la vidéo révèle de neuf.
 // Volontairement silencieux et non bloquant — l'utilisateur a déjà sa vidéo.
-function mtMemLearn(transcript){
+async function mtMemLearn(transcript){
   if(_mtMem && _mtMem.auto_learn === false) return;
   const site=(document.getElementById('mtSite')?.value||'').trim();
   const brief=_mtBrief();
-  if(!transcript && !brief && !site) return;
-  getAuthHeader().then((h)=>fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
-    method:'POST', headers:{ ...h, 'Content-Type':'application/json' },
-    body: JSON.stringify({ action:'learn', transcript:String(transcript||'').slice(0,3000), brief, website:site }),
-  })).then(()=>{ try{ mtMemLoad(); }catch(_){} }).catch(()=>{});
+  // #125 · les visuels qu'il vient d'utiliser partent aussi : pour une app derrière un
+  // écran de connexion, une capture est la SEULE source fiable — son site public ne
+  // montre pas ses fonctionnalités. On n'envoie que des images (jamais de vidéo).
+  let images=[];
+  try{
+    for(const a of (_edAi.files||[]).filter(f=>!f.isVideo).slice(0,3)){
+      const th=await _edAiThumb(a.file); if(!th) continue;
+      const b64=await new Promise((ok)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result||'').split(',')[1]||''); r.onerror=()=>ok(''); r.readAsDataURL(th); });
+      if(b64) images.push({ media: th.type||'image/jpeg', b64 });
+    }
+  }catch(_){ images=[]; }
+  if(!transcript && !brief && !site && !images.length) return;
+  try{
+    await fetch(SUPABASE_URL+'/functions/v1/brand-memory', {
+      method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'learn', transcript:String(transcript||'').slice(0,3000), brief, website:site, images }),
+    });
+    mtMemLoad();
+  }catch(_){ /* la vidéo est déjà livrée : un échec ici ne doit rien casser */ }
 }
 function mtSetSrc(src){
   _mt.src = (src === 'mavideo') ? 'mavideo' : 'gameplay';

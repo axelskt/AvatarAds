@@ -18,6 +18,14 @@
 //   website   : (optionnel) URL du site de l'utilisateur → contexte produit pour les slides
 //   brief     : (optionnel) ce que l'utilisateur veut mettre en avant (≠ script : c'est une INTENTION, pas le texte parlé)
 //
+// #124 — MÉMOIRE DE MARQUE : la fiche de l'utilisateur (business, produit,
+// fonctionnalités, chiffres, réseaux, ton, CTA) est lue en base avec SON jeton
+// et injectée dans le prompt. Il ne retape plus son contexte à chaque vidéo, et
+// le cache de son site évite de re-crawler à chaque montage.
+//
+// #125 — REGISTRE SONORE : le plan porte un `tone` (fun / neutre). Les bruitages
+// comiques et les lits musicaux ne survivent à la validation que si tone === 'fun'.
+//
 // Sortie : { ok, plan, transcript, model, usage }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -144,11 +152,16 @@ async function transcribe(audio: File, lang: string | null): Promise<{ text: str
 }
 
 // ---------- schéma JSON strict du plan (sortie Claude garantie valide) ----------
-const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success', 'magic', 'hit', 'flash', 'snap']
+const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success', 'magic', 'hit', 'flash', 'snap', 'hu', 'bip', 'fahh', 'robot']
+// #125 · REGISTRE FUN : ces sons-la ne vont QUE sur un contenu qui assume l'humour.
+// Sur une video serieuse ils sonnent amateur et tuent la credibilite -> ils sont
+// SUPPRIMES DU PLAN cote serveur quand tone !== 'fun' (verrou, pas simple consigne).
+const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
+const BED_NAMES = ['grave', 'tension', 'montee']
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments'],
+  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
   properties: {
     sections: {
       type: 'array',
@@ -208,6 +221,20 @@ const PLAN_SCHEMA = {
       ],
     },
     accents: { type: 'array', items: { type: 'string' } },
+    tone: { type: 'string', enum: ['fun', 'neutre'] },
+    beds: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 't', 'reason'],
+        properties: {
+          name: { type: 'string', enum: ['grave', 'tension', 'montee'] },
+          t: { type: 'number' },
+          reason: { type: 'string' },
+        },
+      },
+    },
     music: {
       anyOf: [
         {
@@ -300,6 +327,8 @@ type Plan = {
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
+  tone?: string
+  beds?: { name: string; t: number; reason?: string }[]
   music: { mood: string } | null
   slides: {
     type: string; layout?: string; start: number; end: number; title: string; wide: boolean
@@ -470,6 +499,21 @@ ALTERNE selon l'AUDIO : le HOOK est presque toujours une scene portrait (le visa
 HOOK TEXTE : si les 3 premieres secondes contiennent une accroche forte, un texte MAJUSCULES de 5 mots max qui la resume (start 0, end <= 3). Sinon null.
 
 ACCENTS : 5 a 12 mots EXACTS du transcript (les plus percutants : chiffres, benefices, verbes d'action) qui seront colores en orange dans les sous-titres.
+
+TON DE LA VIDEO (tone) : "fun" UNIQUEMENT si le contenu assume l'humour, l'autoderision, le second degre, le storytelling decontracte. "neutre" pour tout le reste : demonstration produit, conseil, vente, temoignage serieux, sujet sensible. Dans le doute, c'est "neutre" — un son comique sur une video serieuse fait amateur et detruit la credibilite, alors qu'une video fun sans son comique reste tres bien.
+
+SONS FUN (uniquement si tone = "fun", sinon ils sont supprimes) : ils ne s'ajoutent JAMAIS "pour faire rire". Chacun a un declencheur precis et tu n'en poses AU MAXIMUM que 2 dans toute la video — un seul, bien place, vaut mieux que trois.
+  hu    — une reaction de surprise ("hein ?") : sur un retournement, une question rhetorique, une affirmation qui choque.
+  bip   — un bip de censure : sur un gros mot, un chiffre/nom qu'il fait mine de cacher.
+  fahh  — une exclamation qui claque : sur LA punchline, un resultat spectaculaire.
+  robot — voix robotique : quand il parle d'IA, d'automatisation, de machine.
+  Regles de pose : sur le timestamp EXACT du mot declencheur (pas entre deux mots), jamais avant 1s, jamais pendant une slide, jamais a moins de 3s d'un autre son fun. Si aucun declencheur clair n'existe dans le script, tu n'en mets AUCUN — c'est le cas le plus frequent.
+
+LITS MUSICAUX (beds) : un extrait de ~10s pose a un instant et qui accompagne un passage (il ne boucle pas, il passe sous la voix). AU MAXIMUM 1 par video, et seulement si le moment le justifie vraiment :
+  grave   — lourd, sombre : quand il decrit un probleme, un echec, une galere.
+  tension — tenu, suspense : quand il fait attendre ("attends de voir la suite").
+  montee  — build-up qui CULMINE a ~9s : pose-le donc environ 9 SECONDES AVANT la punchline ou le CTA, pour que le pic tombe pile dessus. Si la video est trop courte pour ca, ne le mets pas.
+  Si rien ne colle : beds = []. C'est le defaut.
 
 MUSIQUE : choisis l'ambiance de la musique de fond selon le ton du script — "intense" (vente agressive, hype, urgence), "dynamique" (astuce, tuto rythme, presentation produit), "chill" (storytelling, lifestyle, calme). Mets null UNIQUEMENT si l'audio semble deja contenir de la musique.
 
@@ -692,12 +736,42 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     .sort((a, b) => a.t - b.t)
     .filter((z, i, arr) => i === 0 || z.t - arr[i - 1].t >= 0.8)
 
+  // #125 · le ton commande le registre sonore. « fun » doit etre EXPLICITE : tout ce qui
+  // n'est pas exactement 'fun' retombe sur 'neutre' (defaut sur), et les sons comiques
+  // sautent. C'est un filtre, pas une consigne : le modele ne peut pas passer outre.
+  const tone = plan.tone === 'fun' ? 'fun' : 'neutre'
+  let funLeft = tone === 'fun' ? 2 : 0   // 2 sons fun maximum sur toute la video
   const sfx = (plan.sfx || [])
     .filter((s) => SFX_KINDS.includes(s.kind))
     .map((s) => ({ kind: s.kind, t: r2(clamp(s.t, 0, D - 0.1)) }))
     .sort((a, b) => a.t - b.t)
     .filter((s, i, arr) => i === 0 || s.t - arr[i - 1].t >= 1.2)
+    .filter((s) => {
+      if (!SFX_FUN.includes(s.kind)) return true
+      // un son comique ne se pose ni sur l'accroche, ni par-dessus une slide qui delivre
+      // une info, ni colle a un autre son comique
+      if (funLeft <= 0 || s.t < 1 || inSlide(s.t, 0.3)) return false
+      funLeft--
+      return true
+    })
     .slice(0, Math.ceil(D / 1.5))
+  // ecart minimum de 3s entre deux sons fun (deux gags colles = effet lourd)
+  const funPlaced: number[] = []
+  const sfxClean = sfx.filter((s) => {
+    if (!SFX_FUN.includes(s.kind)) return true
+    if (funPlaced.some((t) => Math.abs(t - s.t) < 3)) return false
+    funPlaced.push(s.t)
+    return true
+  })
+
+  // lits musicaux : 1 maximum, jamais sur une video neutre, jamais dans la derniere seconde
+  const beds = tone === 'fun'
+    ? (plan.beds || [])
+      .filter((b) => BED_NAMES.includes(b.name))
+      .map((b) => ({ name: b.name, t: r2(clamp(b.t, 0, Math.max(0, D - 1))) }))
+      .sort((a, b) => a.t - b.t)
+      .slice(0, 1)
+    : []
 
   let hook = plan.hook || null
   if (hook) {
@@ -744,7 +818,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     else avatarSegments.push({ ...a })
   }
 
-  return { sections, zooms, broll: cleanBroll, sfx, hook, accents, music, slides, face, detected, avatarSegments }
+  return { sections, zooms, broll: cleanBroll, sfx: sfxClean, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
@@ -854,7 +928,7 @@ serve(async (req: Request) => {
 
     return json({
       ok: true,
-      version: '1.4',
+      version: '1.5',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },

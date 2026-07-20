@@ -42,6 +42,11 @@ function pickMusic(mood, seed) {
   return base ? { file: join(dir, base), vol: MUSIC_VOL_BY_MOOD[mood] || 0.12 } : null
 }
 const SFX_VOL = 0.85
+// 🎭 LITS MUSICAUX (#125) — des extraits de 9-11 s posés à UN moment précis, pas bouclés
+// sur toute la vidéo comme la musique de fond. Un bruitage ponctue un mot, un lit
+// accompagne un passage. Volume bas : ils passent SOUS la voix, jamais devant.
+const BED_VOL = 0.34
+const BEDS = ['grave', 'tension', 'montee']
 
 const args = process.argv.slice(2)
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args[i + 1] ?? true) : null }
@@ -175,6 +180,21 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       const ms = Math.max(0, Math.round(s.t * 1000))
       filters.push(`[${idx}:a]adelay=${ms}|${ms},volume=${SFX_VOL}[s${idx}]`)
       mixIns.push(`[s${idx}]`)
+      idx++
+    }
+
+    // lits musicaux : posés à leur instant, coupés à la fin de la vidéo, fondus en sortie
+    for (const b of plan.beds || []) {
+      if (!BEDS.includes(b.name)) continue
+      const f = join(HERE, 'assets', 'music', `bed-${b.name}.mp3`)
+      if (!existsSync(f)) continue
+      const at = Math.max(0, Math.min(b.t || 0, plan.duration - 0.5))
+      const room = plan.duration - at            // ce qu'il reste de vidéo après le point de pose
+      if (room < 1) continue
+      inputs.push('-i', f)
+      const ms = Math.round(at * 1000)
+      filters.push(`[${idx}:a]atrim=0:${room.toFixed(2)},asetpts=PTS-STARTPTS,volume=${BED_VOL},afade=t=out:st=${Math.max(0, room - 0.7).toFixed(2)}:d=0.7,adelay=${ms}|${ms}[b${idx}]`)
+      mixIns.push(`[b${idx}]`)
       idx++
     }
 
