@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20p-cta-fixe'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20q-styles-autre'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9908,10 +9908,11 @@ const MZ_BROLL  = ['Aucune','Légère','Équilibrée','Dense'];
 const MZ_VSTYLE = [
   ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
   ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
-  ['dark','Sombre premium','noir, contrastes chauds',['#1A1620','#FF7A1A'],'fond noir profond, halo radial, cartes a bordure fine lumineuse, tres peu de texte, on ANIME'],
+
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
   ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'fond blanc, cartes produit flottantes avec profondeur de champ, typo legere dispersee'],
   ['word','Mot par mot','texte plein écran rythmé',['#2A2438','#FFE500'],'fond uni plein ecran, UN SEUL mot au centre en tres gras, rythme rapide'],
+  ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
   subPos:'bas', subSize:'M', music:'auto', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
@@ -9931,7 +9932,7 @@ function _mzSeg(id, opts, field){
 function _mzToggle(id, field, titre, sous){
   const el=document.getElementById(id); if(!el) return;
   const on=!!_mt.adv[field];
-  el.innerHTML = '<button type="button" onclick="mzAdvSet(\''+field+'\','+(on?'false':'true')+')" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer;font-family:var(--font)">'
+  el.innerHTML = '<button type="button" onclick="mzAdvSet(\''+field+'\','+(on?'false':'true')+')" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text)">'
     + '<span class="col" style="line-height:1.3"><span style="font-weight:600;font-size:14px">'+titre+'</span><span class="faint" style="font-size:11.5px">'+sous+'</span></span>'
     + '<span style="width:42px;height:25px;border-radius:13px;flex:0 0 auto;padding:3px;transition:.2s;background:'+(on?'var(--accent)':'var(--surface-3)')+';display:flex;justify-content:'+(on?'flex-end':'flex-start')+'">'
     + '<span style="width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></span></button>';
@@ -9974,10 +9975,13 @@ function mzAdvRender(){
   const off = a.subStyle==='none';
   if(ps) ps.style.display = off ? 'none' : '';
   if(te) te.style.display = off ? 'none' : '';
+  const ta=document.getElementById('mzStyleTxt'), gap=document.getElementById('mzStyleGap');
+  if(ta){ ta.style.display = a.vstyle==='autre' ? '' : 'none'; if(a.vstyle==='autre' && ta.value!==a.styleTxt) ta.value=a.styleTxt||''; }
+  if(gap) gap.style.display = a.vstyle==='autre' ? 'none' : '';
   const g=document.getElementById('mzStyleGrid');
   if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols])=>{
     const on=a.vstyle===v;
-    return '<button type="button" onclick="mzAdvSet(\'vstyle\',\''+v+'\')" class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:pointer;font-family:var(--font);'
+    return '<button type="button" onclick="mzAdvSet(\'vstyle\',\''+v+'\')" class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text);'
       +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
       +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative">'
       +'<span style="position:absolute;left:8px;bottom:6px;width:46%;height:6px;border-radius:3px;background:rgba(255,255,255,.85)"></span>'
