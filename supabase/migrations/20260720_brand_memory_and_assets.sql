@@ -133,3 +133,11 @@ create policy brand_assets_user_delete on storage.objects
 alter table public.brand_assets drop constraint if exists brand_assets_kind_check;
 alter table public.brand_assets add constraint brand_assets_kind_check
   check (kind in ('image', 'video', 'logo', 'audio'));
+
+-- 🐛 (20/07, après test réel) PostgREST traduit un upsert en
+-- INSERT … ON CONFLICT DO UPDATE SET <toutes les colonnes envoyées>, user_id compris.
+-- Sans UPDATE sur user_id → « permission denied » → brand-memory renvoyait 500 et
+-- « Analyser mon site » échouait à tous les coups. La policy WITH CHECK
+-- (user_id = auth.uid()) empêche toujours d'écrire la ligne d'un autre.
+grant update (user_id) on table public.brand_memory to authenticated;
+grant update (user_id) on table public.brand_assets to authenticated;
