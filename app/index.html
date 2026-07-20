@@ -4033,6 +4033,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="edAddSfxAtPlayhead('flash')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(226,232,240,.5);background:rgba(226,232,240,.12);color:#e2e8f0">📸 Flash</button>
                   <button onclick="edAddSfxAtPlayhead('snap')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fbbf24">🫰 Clac</button>
                 </div>
+                <!-- #125b · sons FUN : jamais placés par l'IA, uniquement à la main ici, en regardant la vidéo -->
+                <div class="label" onclick="const b=document.getElementById('edFunBank'),c=document.getElementById('edFunChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edFunChev">▸</span> Sons fun — à caler à l'oreille</div>
+                <div id="edFunBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px">
+                  <button onclick="edAddSfxAtPlayhead('hu')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">😳 Hu</button>
+                  <button onclick="edAddSfxAtPlayhead('bip')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🔇 Bip</button>
+                  <button onclick="edAddSfxAtPlayhead('fahh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🤯 Fahh</button>
+                  <button onclick="edAddSfxAtPlayhead('robot')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🤖 Robot</button>
+                  <button onclick="edAddSfxAtPlayhead('bedgrave')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit grave</button>
+                  <button onclick="edAddSfxAtPlayhead('bedtension')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit tension</button>
+                  <button onclick="edAddSfxAtPlayhead('bedmontee')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit montée</button>
+                  <p class="faint" style="grid-column:1/-1;font-size:10.5px;line-height:1.45;margin:2px 0 0">Place-les en regardant la vidéo : un son mal calé se remarque plus qu'il n'apporte. Le lit « montée » culmine à 9 s — pose-le 9 s avant ta punchline.</p>
+                </div>
                 <div class="label" style="margin:14px 0 8px;font-size:10px">Zoom punch-in — au curseur</div>
                 <button onclick="edAddZoomAtPlayhead()" style="width:100%;padding:9px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(154,124,255,.55);background:rgba(154,124,255,.14);color:#c9b8ff">🔎 Ajouter un zoom au curseur</button>
                 <div class="faint mono" style="font-size:9px;margin-top:7px;line-height:1.5">Tout se règle sur le bloc dans la timeline : tire les bords = durée · − / + = intensité · clique l'aperçu = point de zoom.</div>
@@ -10275,6 +10287,18 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec){
   }
   throw new Error('Timeout OmniHuman sur une scène (>6 min)');
 }
+/* #125b · L'IA NE POSE PAS DE SON FUN.
+   Un bruitage comique mal calé se remarque bien plus qu'il n'apporte, et le bon
+   moment ne se déduit pas d'un transcript : il s'entend. Ces sons restent donc
+   disponibles À LA MAIN dans l'Éditeur, où l'on voit et entend la vidéo.
+   Filtré ici plutôt que côté serveur : réversible en une ligne si on change d'avis. */
+const _MT_FUN_KINDS=['hu','bip','fahh','robot'];
+function _mtStripFun(plan){
+  if(!plan) return plan;
+  if(Array.isArray(plan.sfx)) plan.sfx=plan.sfx.filter(s=>!_MT_FUN_KINDS.includes(s&&s.kind));
+  plan.beds=[];
+  return plan;
+}
 // aiguillage : OmniHuman → fal.ai (1080p) · Character-3 → Hedra
 function _mtScene(img, wav, fmt, modelId, segSec){
   return _mt.lipModel==='omnihuman' ? _mtOmniScene(img, wav, fmt, segSec) : _mtHedraScene(img, wav, fmt, modelId);
@@ -10369,6 +10393,7 @@ async function _mtSegmentedGenerate(){
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
+    _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
     let segs=Array.isArray(plan.avatarSegments) ? plan.avatarSegments.slice() : [];
     // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
     if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
@@ -10498,6 +10523,7 @@ async function _mtVideoGenerate(){
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
+    _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
 
     // upload vidéo (base) + b-roll → render-media
     _mtProg(58, 'Envoi de ta vidéo au serveur…');
@@ -22104,7 +22130,36 @@ function edRenderMusicTrack(){
 /* ---------- SFX (sons synthétisés Web Audio: gloup / transition / ding) ---------- */
 function _edNoise(ac,dur){ const len=Math.floor(ac.sampleRate*dur); const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len); const s=ac.createBufferSource(); s.buffer=buf; return s; }
 function _edTone(ac,g,type,f0,f1,t,dur,peak){ const o=ac.createOscillator(); o.type=type; o.frequency.setValueAtTime(f0,t); if(f1) o.frequency.exponentialRampToValueAtTime(f1,t+dur); const e=ac.createGain(); e.gain.setValueAtTime(0.0001,t); e.gain.exponentialRampToValueAtTime(peak,t+0.012); e.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(e); e.connect(g); try{o.start(t);o.stop(t+dur+0.02);}catch(err){} }
+/* #125b · SONS FICHIERS (les bruitages « fun » d'Axel + les lits musicaux).
+   Contrairement aux autres, ils ne sont pas synthétisables : ce sont des MP3.
+   Ils passent par le MÊME graphe audio que les sons synthétisés (les nœuds `outs`),
+   sinon ils s'entendraient à l'aperçu mais seraient ABSENTS de l'export — l'export
+   capture la sortie du graphe, pas les <audio> de la page. */
+const _SFX_FILES={ hu:'hu.mp3', bip:'bip.mp3', fahh:'fahh.mp3', robot:'robot.mp3',
+                   bedgrave:'bed-grave.mp3', bedtension:'bed-tension.mp3', bedmontee:'bed-montee.mp3' };
+const _SFX_FILE_GAIN={ bedgrave:0.34, bedtension:0.34, bedmontee:0.34 };  // les lits passent SOUS la voix
+const _sfxBufCache={};
+async function _edSfxBuffer(ac, type){
+  if(_sfxBufCache[type]) return _sfxBufCache[type];
+  const f=_SFX_FILES[type]; if(!f) return null;
+  try{
+    const ab=await (await fetch('../assets/sfx/'+f)).arrayBuffer();
+    _sfxBufCache[type]=await ac.decodeAudioData(ab);
+    return _sfxBufCache[type];
+  }catch(e){ return null; }
+}
+function _edPlayFileSfx(ac, outs, type, when){
+  _edSfxBuffer(ac, type).then((buf)=>{
+    if(!buf) return;
+    const src=ac.createBufferSource(); src.buffer=buf;
+    const g=ac.createGain(); g.gain.value=_SFX_FILE_GAIN[type]||0.9;
+    src.connect(g); outs.forEach(n=>{ try{ g.connect(n); }catch(e){} });
+    // `when` est déjà passé : si le buffer arrive après, on joue immédiatement
+    try{ src.start(Math.max(when||ac.currentTime, ac.currentTime)); }catch(e){}
+  });
+}
 function _edBlip(ac, outs, type, when){
+  if(_SFX_FILES[type]) return _edPlayFileSfx(ac, outs, type, when);
   const t=when||ac.currentTime; const g=ac.createGain(); outs.forEach(n=>{try{g.connect(n);}catch(e){}});
   // #93 · petit transitoire de bruit filtré à l'attaque → rend les percussions plus réalistes (« claque » du réel)
   const _tick=(peak,freq,dur)=>{ dur=dur||0.02; const s=_edNoise(ac,dur); const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=freq||2000; const eg=ac.createGain(); eg.gain.setValueAtTime(peak,t); eg.gain.exponentialRampToValueAtTime(0.0001,t+dur); s.connect(hp); hp.connect(eg); eg.connect(g); try{s.start(t);s.stop(t+dur+0.01);}catch(e){} };
@@ -22160,7 +22215,8 @@ function _edBlip(ac, outs, type, when){
 }
 function _edSfxAc(){ if(!_ed) return null; if(_ed.audio&&_ed.audio.ac) return _ed.audio.ac; if(!_ed._sfxAc){ try{ const AC=window.AudioContext||window.webkitAudioContext; _ed._sfxAc=new AC(); }catch(e){ _ed._sfxAc=null; } } return _ed._sfxAc; }
 function edPlaySfxPreview(type){ const ac=_edSfxAc(); if(!ac) return; if(ac.state==='suspended'){ try{ac.resume();}catch(e){} } _edBlip(ac,[ac.destination],type); }
-const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding', boom:'Boom', click:'Click', riser:'Riser', coin:'Coin', buzz:'Erreur', success:'Succès', magic:'Magie', hit:'Impact', flash:'Flash', snap:'Clac' };
+const _SFX_LABEL={ pop:'Gloup', whoosh:'Transition', ding:'Ding', boom:'Boom', click:'Click', riser:'Riser', coin:'Coin', buzz:'Erreur', success:'Succès', magic:'Magie', hit:'Impact', flash:'Flash', snap:'Clac',
+  hu:'Hu', bip:'Bip', fahh:'Fahh', robot:'Robot', bedgrave:'Lit grave', bedtension:'Lit tension', bedmontee:'Lit montée' };
 function edAddSfx(type,t){ if(!_ed) return; if(!_ed.sfx) _ed.sfx=[]; _ed.sfx.push({ id:'sfx'+Date.now()+Math.random().toString(36).slice(2,6), type, t:Math.max(0,t||0), len:0.6, label:_SFX_LABEL[type]||'Son' }); edRenderSfxTrack(); }
 function edAddSfxAtPlayhead(type){ if(!_ed) return; edSnap(); edAddSfx(type, edGlobalNow()); edPlaySfxPreview(type); toast('🔊 Son ajouté au curseur'); }
 function edRemoveSfx(id){ if(!_ed||!_ed.sfx) return; edSnap(); _ed.sfx=_ed.sfx.filter(s=>s.id!==id); edRenderSfxTrack(); toast('🗑 Son retiré'); }
