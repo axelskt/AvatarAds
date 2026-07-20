@@ -3448,6 +3448,36 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
               </div>
 
+              <!-- ⚙️ PARAMÈTRES AVANCÉS — repliés : on ne les ouvre que si on veut vraiment diriger -->
+              <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+                <div id="mtAdvRow" onclick="mtAdvToggle()" class="mt-briefrow">
+                  <span class="mt-brief-plus"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg></span>
+                  <span>
+                    <span class="mt-brief-t">Paramètres avancés</span>
+                    <span class="mt-brief-s" id="mtAdvSum">Style visuel, sous-titres, musique, rythme</span>
+                  </span>
+                </div>
+                <div id="mtAdvBox" style="display:none">
+                  <div class="mt-eyebrow">Style visuel</div>
+                  <div class="mt-chips" id="mtAdvStyles"></div>
+                  <textarea id="mtAdvStyleTxt" class="field mt-brief-ta" rows="2" style="min-height:64px;margin-top:10px" oninput="_mt.adv.styleTxt=this.value;mtAdvSummary()" placeholder="Décris le style que tu veux : couleurs, typo, ambiance, références…"></textarea>
+
+                  <div class="mt-eyebrow" style="margin-top:16px">Sous-titres</div>
+                  <div class="mt-chips" id="mtAdvCaps"></div>
+
+                  <div class="mt-eyebrow" style="margin-top:16px">Musique</div>
+                  <div class="mt-chips" id="mtAdvMusic"></div>
+
+                  <div class="mt-eyebrow" style="margin-top:16px">Rythme</div>
+                  <div class="mt-chips" id="mtAdvRythme"></div>
+
+                  <div class="mt-chips" style="margin-top:16px">
+                    <label class="mt-mem-auto" style="margin-left:0"><input type="checkbox" id="mtAdvSfx" checked onchange="_mt.adv.sfx=this.checked;mtAdvSummary()"> Bruitages</label>
+                    <button type="button" class="mt-brief-x" onclick="mtAdvReset()">Tout remettre en auto</button>
+                  </div>
+                </div>
+              </div>
+
               <!-- SCRIPT / BRIEF — ce que l'user veut vraiment, transmis au chef d'orchestre -->
               <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
                 <div id="mtBriefRow" onclick="mtBriefOpen()" class="mt-briefrow">
@@ -3458,14 +3488,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </span>
                 </div>
                 <div id="mtBriefBox" style="display:none">
-                  <div class="mt-eyebrow">Ton brief · dis à l'IA quoi mettre en avant</div>
                   <textarea id="mtBrief" class="field mt-brief-ta" rows="4" oninput="_mt.brief=this.value" placeholder="Ex : Présentation de mon app AvatarAds. Insiste sur : génération en 2 min, sans caméra, 3 forfaits. Ton punchy, CTA « lien en bio ». Montre le logo au début."></textarea>
                   <div class="mt-chips">
-                    <button type="button" class="mt-chip" onclick="mtBriefPreset('app')">Présentation d'app</button>
-                    <button type="button" class="mt-chip" onclick="mtBriefPreset('promo')">Promo produit</button>
-                    <button type="button" class="mt-chip" onclick="mtBriefPreset('story')">Story-time</button>
-                    <button type="button" class="mt-chip" onclick="mtBriefPreset('tuto')">Tuto / astuce</button>
-                    <button type="button" class="mt-chip" onclick="mtBriefPreset('temoignage')">Témoignage</button>
                     <button type="button" class="mt-brief-x" onclick="mtBriefClose()">Retirer</button>
                   </div>
                 </div>
@@ -5165,7 +5189,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20h-marque-starter'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20i-parametres-avances'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9847,16 +9871,9 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '' };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { style:'auto', styleTxt:'', caps:'punch', music:'auto', rythme:'auto', sfx:true } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
-const MT_BRIEF_PRESETS = {
-  app:         "Présentation de mon app [nom]. Insiste sur : [bénéfice 1], [bénéfice 2], [bénéfice 3]. Ton punchy, CTA « lien en bio ».",
-  promo:       "Promo de [produit]. Mets en avant : [l'offre], [le prix], [ce qu'on y gagne]. Monte en urgence sur la fin, CTA « lien en bio ».",
-  story:       "Story-time : [ce qui m'est arrivé]. Garde le suspense jusqu'à la chute, ton naturel, pas de jargon.",
-  tuto:        "Tuto : [ce qu'on apprend] en [N] étapes. Montre chaque étape clairement, CTA « enregistre la vidéo ».",
-  temoignage:  "Témoignage : [le résultat obtenu] grâce à [produit]. Insiste sur l'avant / après, ton sincère.",
-};
 function mtBriefOpen(){
   const r=document.getElementById('mtBriefRow'), b=document.getElementById('mtBriefBox');
   if(r) r.style.display='none';
@@ -9870,14 +9887,88 @@ function mtBriefClose(){
   if(b) b.style.display='none';
   if(r) r.style.display='';
 }
-function mtBriefPreset(kind){
-  const t=document.getElementById('mtBrief'); if(!t) return;
-  t.value = MT_BRIEF_PRESETS[kind] || '';
-  _mt.brief = t.value;
-  t.focus();
+/* ══════════ ⚙️ PARAMÈTRES AVANCÉS (Montage IA) ══════════
+   Tout est sur AUTO par défaut : le chef d'orchestre décide. Ces réglages ne
+   servent qu'à le contraindre quand l'utilisateur a une idée précise.
+   Ils sont transmis en tête du brief (le champ que le monteur traite déjà comme
+   l'intention de l'utilisateur) — le style des sous-titres, lui, part avec le
+   plan au moteur de rendu. */
+const MT_ADV_STYLES = [
+  { k:'auto',      l:'Auto' },
+  { k:'apple',     l:'Épuré · Apple',   d:'sobre, beaucoup de vide, typo fine, une idee par ecran, aucune fioriture' },
+  { k:'editorial', l:'Éditorial',       d:'fond creme, gros titres serifs, mise en page magazine, rythme pose' },
+  { k:'punchy',    l:'Punchy',          d:'contrastes forts, gros mots-cles, coupes seches, energie maximale' },
+  { k:'cartoon',   l:'Cartoon',         d:'couleurs vives, formes rondes, ton joueur, animations rebondissantes' },
+];
+const MT_ADV_CAPS = [
+  { k:'punch',  l:'Punch (défaut)' },
+  { k:'neon',   l:'Néon' },
+  { k:'minimal',l:'Minimal' },
+  { k:'none',   l:'Aucun' },
+];
+const MT_ADV_MUSIC = [
+  { k:'auto', l:'Auto' }, { k:'intense', l:'Intense' }, { k:'dynamique', l:'Dynamique' },
+  { k:'chill', l:'Chill' }, { k:'none', l:'Aucune' },
+];
+const MT_ADV_RYTHME = [
+  { k:'auto', l:'Auto' },
+  { k:'nerveux', l:'Nerveux', d:'un changement visuel toutes les 2 a 3s' },
+  { k:'pose',    l:'Posé',    d:'un changement visuel toutes les 4 a 6s, on laisse respirer' },
+];
+function _mtAdvDefaults(){ return { style:'auto', styleTxt:'', caps:'punch', music:'auto', rythme:'auto', sfx:true }; }
+
+function mtAdvToggle(){
+  const b=document.getElementById('mtAdvBox'); if(!b) return;
+  const ouvert = b.style.display!=='none';
+  b.style.display = ouvert ? 'none' : '';
+  if(!ouvert) mtAdvRender();
 }
+function _mtAdvChips(id, list, key){
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML = list.map((o)=>'<button type="button" class="mt-chip'+(_mt.adv[key]===o.k?' on':'')+'" onclick="mtAdvSet(\''+key+'\',\''+o.k+'\')" style="'+(_mt.adv[key]===o.k?'border-color:var(--accent-line);color:var(--accent-2);background:var(--accent-soft)':'')+'">'+o.l+'</button>').join('');
+}
+function mtAdvRender(){
+  _mtAdvChips('mtAdvStyles', MT_ADV_STYLES, 'style');
+  _mtAdvChips('mtAdvCaps',   MT_ADV_CAPS,   'caps');
+  _mtAdvChips('mtAdvMusic',  MT_ADV_MUSIC,  'music');
+  _mtAdvChips('mtAdvRythme', MT_ADV_RYTHME, 'rythme');
+  const t=document.getElementById('mtAdvStyleTxt'); if(t && t.value!==_mt.adv.styleTxt) t.value=_mt.adv.styleTxt||'';
+  const c=document.getElementById('mtAdvSfx'); if(c) c.checked=_mt.adv.sfx!==false;
+  mtAdvSummary();
+}
+function mtAdvSet(key, val){ _mt.adv[key]=val; mtAdvRender(); }
+function mtAdvReset(){ _mt.adv=_mtAdvDefaults(); mtAdvRender(); }
+function mtAdvSummary(){
+  const el=document.getElementById('mtAdvSum'); if(!el) return;
+  const a=_mt.adv, bits=[];
+  if(a.style!=='auto') bits.push((MT_ADV_STYLES.find(x=>x.k===a.style)||{}).l);
+  if(a.styleTxt && a.styleTxt.trim()) bits.push('style décrit');
+  if(a.caps!=='punch') bits.push('sous-titres '+((MT_ADV_CAPS.find(x=>x.k===a.caps)||{}).l||'').toLowerCase());
+  if(a.music!=='auto') bits.push('musique '+((MT_ADV_MUSIC.find(x=>x.k===a.music)||{}).l||'').toLowerCase());
+  if(a.rythme!=='auto') bits.push('rythme '+((MT_ADV_RYTHME.find(x=>x.k===a.rythme)||{}).l||'').toLowerCase());
+  if(a.sfx===false) bits.push('sans bruitages');
+  el.textContent = bits.length ? bits.join(' · ') : 'Style visuel, sous-titres, musique, rythme';
+}
+// les consignes passent en tête du brief : le monteur les traite comme l'intention de l'user
+function _mtAdvDirectives(){
+  const a=_mt.adv||{}, out=[];
+  const st=MT_ADV_STYLES.find(x=>x.k===a.style);
+  if(st && st.d) out.push('STYLE VISUEL : '+st.d+'.');
+  if(a.styleTxt && a.styleTxt.trim()) out.push('STYLE DEMANDE : '+a.styleTxt.trim().slice(0,220));
+  const ry=MT_ADV_RYTHME.find(x=>x.k===a.rythme);
+  if(ry && ry.d) out.push('RYTHME : '+ry.d+'.');
+  if(a.music==='none') out.push('MUSIQUE : aucune (music = null).');
+  else if(a.music && a.music!=='auto') out.push('MUSIQUE : mood "'+a.music+'" impose.');
+  if(a.sfx===false) out.push('BRUITAGES : aucun (sfx = []).');
+  if(a.caps==='none') out.push('SOUS-TITRES : aucun.');
+  return out.join(' ');
+}
+
 // le brief part avec l'audio vers orchestrate (champ « brief », ≠ « script » qui sert à l'alignement)
-function _mtBrief(){ return String((_mt.brief||'')).trim().slice(0, 700); }
+function _mtBrief(){
+  const d=_mtAdvDirectives(), b=String((_mt.brief||'')).trim();
+  return (d ? d+(b?' \n':'') : '')+b;   // borne serveur : 700 car., les directives passent en premier
+}
 // 💾 le site de l'user est mémorisé 14 jours → pré-rempli à son retour (gain de temps)
 const MT_SITE_TTL = 14*24*60*60*1000;
 // le site se saisit soit dans Mon compte, soit dans le module — les deux champs restent alignés
@@ -9956,9 +10047,7 @@ function mtMemRender(){
   if(auto) auto.checked = !(_mtMem && _mtMem.auto_learn === false);
   // le bouton de Mon compte annonce l'état sans qu'on ait à ouvrir
   const btnSub=document.getElementById('brandBtnSub');   // ≠ `sub` déjà pris plus haut
-  const gratuit=(currentMember?.plan||'free').toLowerCase()==='free';
-  if(btnSub && gratuit) btnSub.textContent='🔒 À partir du plan Starter';
-  else if(btnSub) btnSub.textContent = has
+  if(btnSub) btnSub.textContent = has
     ? 'L\'IA connaît ton business' + (_mtLib.length ? ' · '+_mtLib.length+' élément'+(_mtLib.length>1?'s':'') : '')
     : 'À remplir — ce que tu fais et tes fonctionnalités';
 }
@@ -10699,6 +10788,11 @@ async function _mtSegmentedGenerate(){
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
+    plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
+    if(plan.capStyle==='none') plan.captions=[];
+    if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
+    if(_mt.adv && _mt.adv.music==='none') plan.music=null;
+    else if(_mt.adv && _mt.adv.music && _mt.adv.music!=='auto') plan.music={ mood:_mt.adv.music };
     let segs=Array.isArray(plan.avatarSegments) ? plan.avatarSegments.slice() : [];
     // filet de sécurité : au moins 1 scène (hook) si le chef n'en a pas placé
     if(!segs.length){ segs=[{ start:0, end:Math.min(dur, Math.max(2, Math.min(6, dur*0.35))), format:'portrait' }]; }
@@ -10829,6 +10923,11 @@ async function _mtVideoGenerate(){
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
+    plan.capStyle = (_mt.adv && _mt.adv.caps) || 'punch';        // style des sous-titres, lu par le worker
+    if(plan.capStyle==='none') plan.captions=[];
+    if(_mt.adv && _mt.adv.sfx===false) plan.sfx=[];              // l'utilisateur a coupé les bruitages
+    if(_mt.adv && _mt.adv.music==='none') plan.music=null;
+    else if(_mt.adv && _mt.adv.music && _mt.adv.music!=='auto') plan.music={ mood:_mt.adv.music };
 
     // upload vidéo (base) + b-roll → render-media
     _mtProg(58, 'Envoi de ta vidéo au serveur…');
