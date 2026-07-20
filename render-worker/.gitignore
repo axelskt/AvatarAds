@@ -2,3 +2,6 @@ node_modules/
 test/final*.mp4
 test/f*.png
 .env
+
+# banc d'essai styles (#131) : regenere par node test/styles-preview.mjs
+test/styles/

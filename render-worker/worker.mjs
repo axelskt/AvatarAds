@@ -137,6 +137,15 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
+    // polices embarquées (#131) : les styles visuels les référencent en 'fonts/*.woff2'.
+    // Copiées dans le projet plutôt que servies par un CDN — un rendu ne doit jamais
+    // dépendre du réseau pour sa typographie.
+    const fontsSrc = join(HERE, 'assets', 'fonts')
+    if (existsSync(fontsSrc)) {
+      mkdirSync(join(proj, 'fonts'), { recursive: true })
+      for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
+    }
+
     writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({

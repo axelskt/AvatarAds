@@ -16,6 +16,11 @@
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
 const up = (s) => String(s ?? '').toUpperCase()
+// Apple et Éditorial blanc écrivent en casse normale (les capitales cassent la typo
+// fine de l'un et le sérif de l'autre) ; les autres styles restent tout en majuscules.
+// Les « eyebrow » monospace gardent leurs capitales dans tous les cas.
+const SOFT_CASE = ['apple', 'editorial']
+const mkUp = (style) => (SOFT_CASE.includes(style) ? ((s) => String(s ?? '')) : up)
 
 export const CREAM = '#F7F5E9'
 export const INK = '#16130F'
@@ -139,7 +144,8 @@ export function scenePackCss(W, H) {
 }
 
 // ────────────────────────────────────────────────────────────── HTML corps
-function bodyHtml(s, W, H) {
+function bodyHtml(s, W, H, style) {
+  const U = mkUp(style)
   const it = s.items || []
   switch (s.type) {
     case 'nodes': {
@@ -205,23 +211,25 @@ function bodyHtml(s, W, H) {
     }
     default: { // punch
       const v = it[0] || { id: s.id + 'i0', text: s.title || '' }
-      return `<div class="sp-punch" id="${v.id}">${esc(up(v.text))}</div>`
+      return `<div class="sp-punch" id="${v.id}">${esc(U(v.text))}</div>`
     }
   }
 }
 
-export function fullSlideHtml(s, W, H) {
+export function fullSlideHtml(s, W, H, style) {
+  const U = mkUp(style)
   const hd = (s.eyebrow || s.title)
-    ? `<div class="fs-hd">${s.eyebrow ? `<div class="fs-eye">${esc(up(s.eyebrow))}</div>` : ''}${s.title ? `<div class="fs-t">${esc(up(s.title)).replace(/ \/ /g, '<br>')}</div>` : ''}</div>`
+    ? `<div class="fs-hd">${s.eyebrow ? `<div class="fs-eye">${esc(up(s.eyebrow))}</div>` : ''}${s.title ? `<div class="fs-t">${esc(U(s.title)).replace(/ \/ /g, '<br>')}</div>` : ''}</div>`
     : ''
   const specs = [[90, 520, 22], [960, 640, 14], [140, 1180, 16], [900, 1320, 20], [60, 880, 12], [1010, 980, 10]]
     .map(([x, y, r]) => `<span class="fs-spec" style="left:${Math.round(x / 1080 * W)}px;top:${Math.round(y / 1920 * H)}px;width:${r}px;height:${r}px"></span>`).join('')
-  return `${specs}${hd}<div class="fs-body">${bodyHtml(s, W, H)}</div>`
+  return `${specs}${hd}<div class="fs-body">${bodyHtml(s, W, H, style)}</div>`
 }
 
-export function bannerHtml(s) {
+export function bannerHtml(s, style) {
+  const U = mkUp(style)
   return `<div class="fb-eye">${esc(up(s.eyebrow || ''))}</div>
-        <div class="fb-t">${esc(up(s.title || '')).replace(/ \/ /g, '<br>').replace(esc(up(s.accent || ' ')), `<em id="${s.id}em">${esc(up(s.accent || ''))}</em>`)}</div>
+        <div class="fb-t">${esc(U(s.title || '')).replace(/ \/ /g, '<br>').replace(esc(U(s.accent || ' ')), `<em id="${s.id}em">${esc(U(s.accent || ''))}</em>`)}</div>
         ${s.sub ? `<div class="fb-sub">${esc(s.sub)}</div>` : ''}`
 }
 

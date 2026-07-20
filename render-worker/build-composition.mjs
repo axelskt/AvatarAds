@@ -9,6 +9,10 @@
 // La zone vidéo est animée entre les deux états (transition 0.34s) à chaque frontière.
 
 import { scenePackCss, fullSlideHtml, fullSlideJs, bannerHtml, bannerJs, FULL_TYPES } from './scene-pack.mjs'
+import {
+  VSTYLES, fontFaceCss, WORD_BG, WORD_FG,
+  styleCss, styleExtraJs, scatterStyle, seeded, wordFontSize, WORD_SHAPE_A,
+} from './visual-styles.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -21,6 +25,17 @@ export function buildComposition(plan, opts = {}) {
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
   const assetFiles = opts.assetFiles || {} // { assetId: 'media/img1.jpg' }
+
+  // #131 · style visuel choisi dans les Paramètres avancés — posé en classe sur <body>,
+  // il repeint slides, scènes plein cadre, bandeaux et sous-titres (visual-styles.mjs).
+  const vs = VSTYLES.includes(plan.slideStyle) ? plan.slideStyle : ''
+  const wordMode = vs === 'word'          // « Mot par mot » : plein écran, un mot à la fois
+  // En SURCOUCHE la vidéo ne descend pas dans la moitié basse : elle reste plein écran et
+  // les slides se posent dessus. Indispensable au verre — sans vidéo derrière, backdrop-filter
+  // n'a que du noir à réfracter — et c'est le principe même du « mot par mot ».
+  const overlay = wordMode || vs === 'glass'
+  const softCase = vs === 'apple' || vs === 'editorial'  // ces deux-là écrivent en casse normale
+  const CASE = (s) => (softCase ? String(s ?? '') : String(s ?? '').toUpperCase())
 
   // 3 familles de scènes : SPLIT (slide sombre en haut + vidéo en bas), PLEIN CADRE
   // (scène éditoriale crème, la vidéo disparaît) et BANDEAU (carte posée sur la vidéo).
@@ -105,22 +120,25 @@ export function buildComposition(plan, opts = {}) {
   // pendant une scène plein cadre, les sous-titres passent sur fond clair (ombre au lieu du contour)
   const inFullScene = (t) => fullDefs.some((f) => t >= f.start && t < f.start + f.dur)
   const capTopCream = Math.round(H * 0.74)
-  // style de sous-titres choisi par l'utilisateur (Parametres avances) ; 'punch' = defaut historique
-  const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ''
-  // 🫧 verre : demande depuis les Parametres avances (plan.slideStyle)
-  const glassCls = plan.slideStyle === 'glass' ? ' gl' : ''
+  // style de sous-titres choisi par l'utilisateur (Parametres avances) ; 'punch' = defaut
+  // historique. 'st-auto' = l'utilisateur n'a rien imposé → le style visuel peut habiller
+  // les sous-titres (typo fine Apple, sérif éditorial…) sans écraser un choix explicite.
+  const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ' st-auto'
   const caps = (plan.captions || []).map((c, i) => {
     const cream = inFullScene(r2(c.start) + 0.05)
     return {
       id: 'cap' + i,
-      text: String(c.text || '').toUpperCase(),
+      text: CASE(c.text),
       start: r2(c.start),
       dur: r2(Math.max(0.1, c.end - c.start)),
       accent: !!c.accent,
       cream,
-      top: cream ? capTopCream : (inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull),
+      top: cream ? capTopCream : (!overlay && inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull),
     }
   }).filter((c) => c.text)
+    // « Mot par mot » : le panneau plein écran EST le texte — un sous-titre par-dessus
+    // ferait doublon (« moins de texte, plus d'animation »).
+    .filter((c) => !(wordMode && inSplit(r2(c.start) + 0.05)))
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
   const _nk = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 3)
@@ -129,8 +147,9 @@ export function buildComposition(plan, opts = {}) {
     const a = _nk(plan.hook.text), c = _nk(b.title)
     return a.length ? a.filter((w) => c.includes(w)).length / a.length >= 0.5 : false
   })
-  const hook = plan.hook && plan.hook.text && !hookHiddenByBanner ? {
-    text: String(plan.hook.text).toUpperCase(),
+  const hookUnderWordPanel = wordMode && inSplit(r2(plan.hook?.start || 0) + 0.05)
+  const hook = plan.hook && plan.hook.text && !hookHiddenByBanner && !hookUnderWordPanel ? {
+    text: CASE(plan.hook.text),
     start: r2(plan.hook.start || 0),
     dur: r2(Math.max(0.8, (plan.hook.end ?? 3) - (plan.hook.start || 0))),
   } : null
@@ -154,9 +173,9 @@ export function buildComposition(plan, opts = {}) {
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
   const fullHtml = fullDefs.map((s) => `
-      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${fullSlideHtml(s, W, H)}</div>`).join('')
+      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${fullSlideHtml(s, W, H, vs)}</div>`).join('')
   const bannersHtml = bannerDefs.map((s) => `
-      <div class="clip fbanner" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="11">${bannerHtml(s)}</div>`).join('')
+      <div class="clip fbanner" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="11">${bannerHtml(s, vs)}</div>`).join('')
   const fullJs = fullDefs.map((s) => fullSlideJs(s, H)).join('')
   const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
@@ -172,16 +191,35 @@ export function buildComposition(plan, opts = {}) {
     items: s.items.map((it, j) => ({ id: `s${i}i${j}`, text: String(it.text || ''), t: r2(it.t) })),
   }))
 
-  const slideBody = (s) => {
+  // « Éditorial blanc » : les cartes ne sont pas alignées au cordeau — légère rotation,
+  // décalage, et une sur quatre en arrière-plan (flou de profondeur de champ). Le tirage
+  // est SEEDÉ sur le timestamp : le même plan redonne exactement la même mise en page,
+  // condition sine qua non d'un rendu frame par frame reproductible.
+  const scat = (s, j, o) => scatterStyle(vs, Math.round(s.start * 1000) + j * 97, o)
+
+  // « Mot par mot » : un panneau plein écran par slide, UN mot (ou un groupe court) à la
+  // fois, sur un aplat de couleur qui change à chaque plan + une forme découpée derrière.
+  const wordBody = (s, si) => s.items.map((it, j) => {
+    const fg = WORD_FG[(si + j) % WORD_FG.length]
+    const rx = seeded(Math.round(s.start * 1000) + j * 31)
+    const ry = seeded(Math.round(s.start * 1000) + j * 57)
+    const d = Math.round(W * (0.5 + seeded(si * 13 + j) * 0.5))
+    return `
+        <div class="wd-shape" id="${it.id}s" style="left:${Math.round(rx * (W - d))}px;top:${Math.round(ry * (H - d))}px;width:${d}px;height:${d}px;background:${fg}"></div>
+        <div class="wd-w" id="${it.id}"><span style="font-size:${wordFontSize(it.text, W, H)}px;color:${fg}">${esc(String(it.text).toUpperCase())}</span></div>`
+  }).join('')
+
+  const slideBody = (s, si) => {
+    if (wordMode) return wordBody(s, si)
     const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
     if (s.type === 'flow') {
       return `${title}<div class="sl-flow">${s.items.map((it, j) => `${j > 0 ? `
         <svg class="fl-arrow" id="${it.id}a" viewBox="0 0 64 28"><path d="M2 14 H48 M38 4 L50 14 L38 24" stroke="${ACCENT}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ''}
-        <div class="fl-step" id="${it.id}">${esc(it.text)}</div>`).join('')}</div>`
+        <div class="fl-step" id="${it.id}"${scat(s, j)}>${esc(it.text)}</div>`).join('')}</div>`
     }
     if (s.type === 'checklist') {
-      return `${title}<div class="sl-list">${s.items.map((it) => `
-        <div class="ck-row" id="${it.id}">
+      return `${title}<div class="sl-list">${s.items.map((it, j) => `
+        <div class="ck-row" id="${it.id}"${scat(s, j)}>
           <div class="ck-box"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6.5" stroke="${ACCENT}" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div class="ck-txt">${esc(it.text)}</div>
         </div>`).join('')}</div>`
@@ -189,8 +227,8 @@ export function buildComposition(plan, opts = {}) {
     if (s.type === 'compare') {
       const a = s.items[0], b = s.items[1] || { id: s.id + 'ib', text: '' }
       return `${title}<div class="sl-cmp">
-        <div class="cmp-card ok" id="${a.id}"><div class="cmp-badge ok">✓</div><div class="cmp-lbl ok">${esc(a.text)}</div></div>
-        <div class="cmp-card ko" id="${b.id}"><div class="cmp-badge ko">✕</div><div class="cmp-lbl ko">${esc(b.text)}</div></div>
+        <div class="cmp-card ok" id="${a.id}"${scat(s, 0, { blur: false })}><div class="cmp-badge ok">✓</div><div class="cmp-lbl ok">${esc(a.text)}</div></div>
+        <div class="cmp-card ko" id="${b.id}"${scat(s, 1, { blur: false })}><div class="cmp-badge ko">✕</div><div class="cmp-lbl ko">${esc(b.text)}</div></div>
       </div>`
     }
     if (s.type === 'stat') {
@@ -206,15 +244,20 @@ export function buildComposition(plan, opts = {}) {
     return `${title}<div class="sl-cardwrap"><div class="sl-card" id="${c.id}">${esc(c.text)}</div></div>`
   }
 
-  const slidesHtml = slideDefs.map((s) => `
-      <div class="clip slide${glassCls}" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s)}</div>`).join('')
+  const slidesHtml = slideDefs.map((s, si) => `
+      <div class="clip slide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="6">${slideBody(s, si)}</div>`).join('')
 
   // ── timeline GSAP ─────────────────────────────────────────────────────────
   // transitions full <-> split : la zone vidéo glisse, la zone slides apparaît ;
   // le cadrage interne (#videoFit) alterne plein cadre / bande 16:9 selon chaque slide
   const fitTall = `{ top: 0, height: ${VIDEO_H}, duration: ${TR}, ease: 'power3.inOut' }`
   const fitWide = `{ top: ${WIDE_TOP}, height: ${WIDE_H}, duration: ${TR}, ease: 'power3.inOut' }`
-  const layoutJs = periods.map((p) => {
+  // « Mot par mot » : pas de split — le panneau recouvre TOUT l'écran (z-index 5), la
+  // vidéo reste intacte dessous et réapparaît dès que le panneau s'efface.
+  const layoutJs = overlay ? periods.map((p) => `
+      tl.to('#slidezone', { autoAlpha: 1, duration: 0.1, ease: 'power1.out' }, ${r2(Math.max(0, p.start - 0.08))});
+      tl.to('#slidezone', { autoAlpha: 0, duration: 0.1, ease: 'power1.in' }, ${r2(Math.max(0, p.end - 0.1))});`).join('')
+    : periods.map((p) => {
     const tIn = r2(Math.max(0, p.start - TR))
     const tOut = r2(Math.min(D - 0.05, p.end - 0.02))
     let js = `
@@ -270,7 +313,29 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
   ).join('')
 
-  const slidesJs = slideDefs.map((s) => {
+  // « Mot par mot » : un aplat par plan, puis les mots qui se remplacent l'un l'autre —
+  // jamais deux à l'écran en même temps. La forme découpée arrive juste avant le mot.
+  const wordJs = slideDefs.map((s, si) => {
+    const end = r2(s.start + s.dur)
+    let js = `
+      tl.set('#slidezone', { backgroundColor: '${WORD_BG[si % WORD_BG.length]}' }, ${r2(Math.max(0, s.start - 0.1))});
+      tl.fromTo('#${s.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.08, ease: 'none' }, ${r2(Math.max(0, s.start - 0.06))});
+      tl.to('#${s.id}', { autoAlpha: 0, duration: 0.08, ease: 'none' }, ${r2(Math.max(s.start, end - 0.08))});`
+    s.items.forEach((it, j) => {
+      const t = r2(Math.max(it.t, s.start + 0.02))
+      const next = s.items[j + 1]
+      const off = r2(Math.min(end - 0.02, next ? Math.max(t + 0.24, next.t - 0.05) : end - 0.02))
+      js += `
+      tl.set(['#${it.id}', '#${it.id}s'], { autoAlpha: 0 }, 0);
+      tl.fromTo('#${it.id}s', { autoAlpha: 0, scale: 0.35 }, { autoAlpha: ${WORD_SHAPE_A}, scale: 1, duration: 0.32, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(Math.max(0, t - 0.07))});
+      tl.fromTo('#${it.id}', { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.16, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${t});
+      tl.to('#${it.id}', { autoAlpha: 0, scale: 1.12, duration: 0.1, ease: 'power2.in' }, ${off});
+      tl.to('#${it.id}s', { autoAlpha: 0, duration: 0.1, ease: 'power1.in' }, ${off});`
+    })
+    return js
+  }).join('')
+
+  const slidesJs = wordMode ? wordJs : slideDefs.map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
       tl.fromTo('#${s.id}', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${s.start});
@@ -330,33 +395,6 @@ export function buildComposition(plan, opts = {}) {
       }
       #slidezone::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: ${ACCENT}; }
 
-      /* 🫧 STYLE VERRE (plan.slideStyle === 'glass') — deterministe, sans WebGL ni JS.
-         La <video id="base"> est DANS la composition (track 2), donc backdrop-filter a
-         bien quelque chose a refracter. La distorsion feDisplacementMap n'est appliquee
-         qu'au CONTOUR : sur le texte elle le rendrait illisible. */
-      .gl .fl-step, .gl .ck-item, .gl .cmp-col, .gl .st-box, .gl .cd-box {
-        background: rgba(255,255,255,.10) !important;
-        backdrop-filter: blur(${fz(0.026)}px) saturate(180%);
-        -webkit-backdrop-filter: blur(${fz(0.026)}px) saturate(180%);
-        border: 1px solid rgba(255,255,255,.22) !important;
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.45),
-          inset 0 -1px 0 rgba(0,0,0,.25),
-          inset 0 ${fz(0.012)}px ${fz(0.03)}px rgba(255,255,255,.12),
-          0 ${fz(0.018)}px ${fz(0.045)}px rgba(0,0,0,.45) !important;
-        position: relative; overflow: hidden;
-      }
-      /* reflet speculaire diagonal */
-      .gl .fl-step::after, .gl .ck-item::after, .gl .cmp-col::after, .gl .st-box::after, .gl .cd-box::after {
-        content: ""; position: absolute; inset: 0; pointer-events: none;
-        background: linear-gradient(135deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 34%, rgba(255,255,255,0) 58%);
-      }
-      /* refraction : uniquement sur le liseré exterieur */
-      .gl .fl-step::before, .gl .ck-item::before, .gl .cmp-col::before, .gl .st-box::before, .gl .cd-box::before {
-        content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
-        border: ${fz(0.004)}px solid rgba(255,255,255,.30);
-        filter: url(#glassEdge);
-      }
       .slide { left: 4%; right: 4%; top: 0; height: ${SLIDE_H}px; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: ${fz(0.03)}px; will-change: transform, opacity; z-index: 3;
         font-family: "Arial Black", Arial, sans-serif; padding-top: ${fz(0.06)}px; }
@@ -472,9 +510,10 @@ export function buildComposition(plan, opts = {}) {
       .cap.accent { color: #FF6B35; }
 ${slideCss}
 ${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
+${vs ? fontFaceCss() + styleCss(vs, W, H, SLIDE_H) : ''}
     </style>
   </head>
-  <body>
+  <body${vs ? ` class="vs-${vs}"` : ''}>
     <div id="root" data-composition-id="montage" data-start="0" data-duration="${D}" data-width="${W}" data-height="${H}">
 ${slides.length ? `      <div id="slidezone" class="clip" data-start="0" data-duration="${D}" data-track-index="1"></div>
 ` : ''}      <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
@@ -517,6 +556,7 @@ ${hookJs}
 ${capsJs}
 ${flashJs}
 ${avatarJs}
+${vs ? styleExtraJs(vs, r2, { slides: slideDefs, fulls: fullDefs, banners: bannerDefs }) : ''}
       tl.set({}, {}, ${D}); // borne la durée de la timeline
       window.__timelines['montage'] = tl;
     </script>
