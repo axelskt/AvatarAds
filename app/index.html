@@ -3477,6 +3477,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     </div>
                   </div>
                 </div>
+
+                <!-- #126 · BIBLIOTHÈQUE DE MARQUE : déposé une fois, réutilisé sur CHAQUE vidéo -->
+                <div class="mt-eyebrow" style="margin-top:18px">Mes éléments · déposés une fois, réutilisés à chaque vidéo</div>
+                <div class="mt-mem" id="mtLibCard">
+                  <div id="mtLibGrid" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+                  <div class="mt-chips">
+                    <button type="button" class="mt-chip" onclick="document.getElementById('mtLibIn').click()">+ Visuels (logo, produit…)</button>
+                    <button type="button" class="mt-chip" onclick="document.getElementById('mtLibSndIn').click()">+ Mes sons</button>
+                  </div>
+                  <input type="file" id="mtLibIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="mtLibUpload(this.files,'visuel');this.value=''">
+                  <input type="file" id="mtLibSndIn" accept="audio/*" multiple style="display:none" onchange="mtLibUpload(this.files,'audio');this.value=''">
+                  <p class="faint" style="font-size:11px;line-height:1.45;margin:9px 0 0">Les visuels cochés partent au monteur IA à chaque montage — plus besoin de les re-déposer. Tes sons rejoignent la banque de l'Éditeur.</p>
+                </div>
               </div>
 
               <!-- SCRIPT / BRIEF — ce que l'user veut vraiment, transmis au chef d'orchestre -->
@@ -4044,6 +4057,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="edAddSfxAtPlayhead('bedtension')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit tension</button>
                   <button onclick="edAddSfxAtPlayhead('bedmontee')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit montée</button>
                   <p class="faint" style="grid-column:1/-1;font-size:10.5px;line-height:1.45;margin:2px 0 0">Place-les en regardant la vidéo : un son mal calé se remarque plus qu'il n'apporte. Le lit « montée » culmine à 9 s — pose-le 9 s avant ta punchline.</p>
+                </div>
+                <!-- #126 · les bruitages que l'utilisateur a déposés dans « Ma marque » -->
+                <div class="label" onclick="const b=document.getElementById('edLibBank'),c=document.getElementById('edLibChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edLibChev">▸</span> Mes sons</div>
+                <div id="edLibBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px"></div>
                 </div>
                 <div class="label" style="margin:14px 0 8px;font-size:10px">Zoom punch-in — au curseur</div>
                 <button onclick="edAddZoomAtPlayhead()" style="width:100%;padding:9px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(154,124,255,.55);background:rgba(154,124,255,.14);color:#c9b8ff">🔎 Ajouter un zoom au curseur</button>
@@ -5096,7 +5113,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20a-memoire-de-marque'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-20b-bibliotheque-de-marque'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9825,6 +9842,7 @@ function initMontage(){
   }catch(_){} }
   try{ _mtRenderMedia(); _mtUpdateCost(); }catch(_){}
   try{ mtMemLoad(); }catch(_){}
+  try{ mtLibLoad(); }catch(_){}
 }
 
 /* ══════════ 🧠 MÉMOIRE DE MARQUE (#124) ══════════
@@ -9836,7 +9854,7 @@ function initMontage(){
 let _mtMem = null;
 
 async function mtMemLoad(){
-  if(!window.currentMember) return;
+  if(!currentMember) return;
   try{
     const { data } = await sb.from('brand_memory')
       .select('summary, facts, site_url, auto_learn')
@@ -9894,7 +9912,7 @@ function mtMemEdit(open){
 }
 
 async function mtMemSave(){
-  const ta=document.getElementById('mtMemText'); if(!ta || !window.currentMember) return;
+  const ta=document.getElementById('mtMemText'); if(!ta || !currentMember) return;
   const summary=String(ta.value||'').trim().slice(0, 4000);
   try{
     const { error } = await sb.from('brand_memory').upsert(
@@ -9907,13 +9925,136 @@ async function mtMemSave(){
 }
 
 async function mtMemToggleAuto(){
-  const c=document.getElementById('mtMemAuto'); if(!c || !window.currentMember) return;
+  const c=document.getElementById('mtMemAuto'); if(!c || !currentMember) return;
   const on=!!c.checked;
   try{
     const { error } = await sb.from('brand_memory').update({ auto_learn:on }).eq('user_id', currentMember.id);
     if(error) throw error;
     if(_mtMem) _mtMem.auto_learn=on;
   }catch(e){ c.checked=!on; toast('Impossible de changer ce réglage.'); }
+}
+
+/* ══════════ 📦 BIBLIOTHÈQUE DE MARQUE (#126) ══════════
+   L'utilisateur dépose UNE FOIS son logo, ses photos produit, ses propres
+   bruitages — et on les lui re-sert à chaque vidéo au lieu de lui redemander.
+   Les visuels cochés rejoignent automatiquement les médias envoyés au monteur IA ;
+   ses sons rejoignent la banque de l'Éditeur.
+   Stockage : bucket privé brand-assets (dossier = son uid) + table brand_assets. */
+let _mtLib = [];
+
+async function mtLibLoad(){
+  if(!currentMember) return;
+  try{
+    const { data } = await sb.from('brand_assets').select('*').eq('user_id', currentMember.id).order('created_at', { ascending:false });
+    _mtLib = data || [];
+    // liens signés 2 h : le bucket est privé, on ne peut pas pointer l'URL brute
+    for(const a of _mtLib){
+      const s = await sb.storage.from('brand-assets').createSignedUrl(a.path, 7200);
+      a._url = s.data?.signedUrl || '';
+    }
+  }catch(_){ _mtLib = []; }
+  mtLibRender();
+  mtLibSyncToMontage();
+  mtLibRegisterSounds();
+}
+
+function mtLibRender(){
+  const g=document.getElementById('mtLibGrid'); if(!g) return;
+  if(!_mtLib.length){
+    g.innerHTML='<p class="faint" style="font-size:12px;margin:0">Rien pour l\'instant. Dépose ton logo, tes photos produit ou tes bruitages : ils reviendront tout seuls sur chaque vidéo.</p>';
+    return;
+  }
+  g.innerHTML=_mtLib.map((a)=>{
+    const on = a.auto !== false;
+    const isSnd = a.kind==='audio';
+    const inner = isSnd
+      ? '<span style="font-size:20px">🔊</span>'
+      : (a.kind==='video' ? '<span style="font-size:20px">🎬</span>' : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
+    return '<div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:66px;height:66px;border-radius:12px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
+      + inner
+      + (isSnd ? '' : '<button type="button" title="'+(on?'Ne plus proposer à l\'IA':'Proposer à l\'IA')+'" onclick="mtLibToggle(\''+a.id+'\')" style="position:absolute;left:3px;bottom:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:'+(on?'var(--accent-2)':'rgba(0,0,0,.6)')+';color:'+(on?'#1A0A02':'#fff')+'">'+(on?'✓':'+')+'</button>')
+      + '<button type="button" title="Supprimer" onclick="mtLibDelete(\''+a.id+'\')" style="position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:rgba(0,0,0,.65);color:#ff8a8a">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function mtLibUpload(list, kind){
+  if(!currentMember) return;
+  const files=Array.from(list||[]); if(!files.length) return;
+  for(const f of files){
+    if(f.size > 25*1024*1024){ toast('⚠️ '+f.name+' dépasse 25 Mo'); continue; }
+    const isSnd = kind==='audio' || (f.type||'').startsWith('audio/');
+    const ext=(f.name.split('.').pop()||'bin').toLowerCase().slice(0,5);
+    const path=currentMember.id+'/'+(crypto.randomUUID ? crypto.randomUUID() : Date.now()+''+Math.random().toString(36).slice(2))+'.'+ext;
+    try{
+      const up=await sb.storage.from('brand-assets').upload(path, f, { contentType:f.type||'application/octet-stream', upsert:false });
+      if(up.error) throw up.error;
+      const row={ user_id: currentMember.id, path, name: String(f.name||'').slice(0,120),
+        kind: isSnd ? 'audio' : ((f.type||'').startsWith('video/') ? 'video' : 'image') };
+      const ins=await sb.from('brand_assets').insert(row);
+      if(ins.error) throw ins.error;
+    }catch(e){ toast('Envoi impossible : '+(e.message||e)); }
+  }
+  await mtLibLoad();
+  toast('📦 Ajouté à ta bibliothèque');
+}
+
+async function mtLibDelete(id){
+  const a=_mtLib.find(x=>x.id===id); if(!a) return;
+  try{
+    await sb.storage.from('brand-assets').remove([a.path]);
+    const { error } = await sb.from('brand_assets').delete().eq('id', id);
+    if(error) throw error;
+    // retire aussi la copie posée dans les médias du montage en cours
+    if(_edAi) _edAi.files=(_edAi.files||[]).filter(f=>f.libId!==id);
+    try{ _mtRenderMedia(); }catch(_){}
+  }catch(e){ toast('Suppression impossible : '+(e.message||e)); return; }
+  await mtLibLoad();
+}
+
+async function mtLibToggle(id){
+  const a=_mtLib.find(x=>x.id===id); if(!a) return;
+  const on = a.auto === false;   // on inverse
+  try{
+    const { error } = await sb.from('brand_assets').update({ auto:on }).eq('id', id);
+    if(error) throw error;
+    a.auto=on;
+  }catch(e){ toast('Impossible de changer ce réglage.'); return; }
+  if(!on && _edAi) _edAi.files=(_edAi.files||[]).filter(f=>f.libId!==id);
+  mtLibRender(); mtLibSyncToMontage();
+}
+
+// les visuels cochés rejoignent les médias du montage — comme s'il venait de les déposer
+async function mtLibSyncToMontage(){
+  if(typeof _edAi === 'undefined' || !_edAi) return;
+  for(const a of _mtLib){
+    if(a.kind==='audio' || a.auto===false || !a._url) continue;
+    if((_edAi.files||[]).some(f=>f.libId===a.id)) continue;
+    if((_edAi.files||[]).length >= 8) break;
+    try{
+      const blob=await (await fetch(a._url)).blob();
+      const file=new File([blob], a.name||'visuel', { type: blob.type || (a.kind==='video'?'video/mp4':'image/jpeg') });
+      const isVid = a.kind==='video';
+      const item={ id:'lib'+a.id.slice(0,8), libId:a.id, file, url: isVid?'':URL.createObjectURL(file), isVideo:isVid };
+      _edAi.files.push(item);
+      if(isVid) _edAiVideoPoster(item);
+    }catch(_){ /* lien expiré : on réessaiera au prochain chargement */ }
+  }
+  try{ _edAiRenderFiles(); _mtRenderMedia(); }catch(_){}
+}
+
+// les sons de l'utilisateur entrent dans la banque de l'Éditeur (mêmes rouages que les sons fun)
+function mtLibRegisterSounds(){
+  for(const a of _mtLib){
+    if(a.kind!=='audio' || !a._url) continue;
+    _SFX_FILES['lib_'+a.id] = a._url;                       // URL absolue : gérée par _edSfxBuffer
+    _SFX_LABEL['lib_'+a.id] = String(a.name||'Mon son').replace(/\.[^.]+$/,'').slice(0,18);
+  }
+  const bank=document.getElementById('edLibBank'); if(!bank) return;
+  const snds=_mtLib.filter(a=>a.kind==='audio' && a._url);
+  bank.innerHTML = snds.length
+    ? snds.map(a=>'<button onclick="edAddSfxAtPlayhead(\'lib_'+a.id+'\')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12);color:#22c55e">🔊 '+String(a.name||'Son').replace(/\.[^.]+$/,'').slice(0,14)+'</button>').join('')
+    : '<p class="faint" style="grid-column:1/-1;font-size:10.5px;margin:0">Dépose tes propres bruitages dans « Ma marque » (module Montage IA) : ils apparaîtront ici.</p>';
 }
 
 // après un montage réussi : la fiche apprend ce que la vidéo révèle de neuf.
@@ -22143,7 +22284,7 @@ async function _edSfxBuffer(ac, type){
   if(_sfxBufCache[type]) return _sfxBufCache[type];
   const f=_SFX_FILES[type]; if(!f) return null;
   try{
-    const ab=await (await fetch('../assets/sfx/'+f)).arrayBuffer();
+    const ab=await (await fetch(/^https?:/.test(f) ? f : '../assets/sfx/'+f)).arrayBuffer();
     _sfxBufCache[type]=await ac.decodeAudioData(ab);
     return _sfxBufCache[type];
   }catch(e){ return null; }

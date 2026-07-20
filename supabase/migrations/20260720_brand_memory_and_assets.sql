@@ -128,3 +128,8 @@ drop policy if exists brand_assets_user_delete on storage.objects;
 create policy brand_assets_user_delete on storage.objects
   for delete to authenticated
   using (bucket_id = 'brand-assets' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- #126 (20/07) · la bibliothèque accueille aussi les SONS de l'utilisateur
+alter table public.brand_assets drop constraint if exists brand_assets_kind_check;
+alter table public.brand_assets add constraint brand_assets_kind_check
+  check (kind in ('image', 'video', 'logo', 'audio'));
