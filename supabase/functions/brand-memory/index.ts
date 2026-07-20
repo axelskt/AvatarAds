@@ -10,10 +10,15 @@
 // opérations qui demandent Claude :
 //
 //   POST { action:'from_site', website }                → 1er remplissage depuis le site
-//   POST { action:'learn', brief?, transcript?, website? } → enrichissement après un montage
+//   POST { action:'learn', brief?, transcript?, website?, images? } → enrichissement après un montage
 //
-// Règle absolue des deux : on n'INVENTE rien. On ne garde que ce qui est
-// écrit sur le site / dit dans l'audio / donné dans le brief. Et on ne
+// #125 — les CAPTURES D'ÉCRAN comptent autant que le site : une app derrière un
+// écran de connexion n'expose rien publiquement, donc les visuels que l'utilisateur
+// fournit pour son montage sont souvent la seule source fiable sur ses vraies
+// fonctionnalités.
+//
+// Règle absolue : on n'INVENTE rien. On ne garde que ce qui est écrit sur le site /
+// visible sur les captures / dit dans l'audio / donné dans le brief. Et on ne
 // supprime jamais ce que l'utilisateur a écrit lui-même dans sa fiche.
 //
 // Auth : JWT utilisateur. Toutes les écritures passent par le client
@@ -88,9 +93,10 @@ REGLES ABSOLUES :
 2. Tu ne SUPPRIMES JAMAIS une information deja presente dans la fiche existante — surtout si elle a ete ecrite par l'utilisateur. Tu completes, tu precises, tu fusionnes les doublons.
 3. En cas de contradiction entre la fiche existante et la nouvelle source, la NOUVELLE source gagne (le business evolue), mais tu gardes l'ancienne formulation si elle est plus precise.
 4. Champ inconnu = chaine vide ou liste vide. Jamais de "N/A", jamais de remplissage.
-5. "summary" est lu par un humain ET par le monteur : concret, sans marketing creux, 6 lignes maximum, langue de l'utilisateur.`
+5. Si on te donne des CAPTURES D'ECRAN de son produit : c'est souvent la seule source fiable, parce qu'une app derriere un ecran de connexion n'expose rien sur son site public. Lis les VRAIS libelles affiches (noms de menus, de fonctionnalites, de forfaits, chiffres visibles) et note-les tels quels. Ne devine jamais ce qu'il y a derriere un bouton que tu ne vois pas.
+6. "summary" est lu par un humain ET par le monteur : concret, sans marketing creux, 6 lignes maximum, langue de l'utilisateur.`
 
-async function callClaude(userBlock: string): Promise<Record<string, unknown> | null> {
+async function callClaude(userBlock: string, images: { media: string; b64: string }[] = []): Promise<Record<string, unknown> | null> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY absente')
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -101,7 +107,13 @@ async function callClaude(userBlock: string): Promise<Record<string, unknown> | 
       max_tokens: 2000,
       output_config: { format: { type: 'json_schema', schema: MEMORY_SCHEMA } },
       system: SYSTEM,
-      messages: [{ role: 'user', content: [{ type: 'text', text: userBlock }] }],
+      messages: [{ role: 'user', content: [
+        ...images.flatMap((im) => ([
+          { type: 'text', text: 'Capture d\'ecran de son produit (lis les VRAIS libelles affiches) :' },
+          { type: 'image', source: { type: 'base64', media_type: im.media, data: im.b64 } },
+        ])),
+        { type: 'text', text: userBlock },
+      ] }],
     }),
   })
   if (!res.ok) throw new Error('Claude ' + res.status + ' ' + (await res.text()).slice(0, 200))
@@ -141,6 +153,12 @@ serve(async (req: Request) => {
     const website = str(body.website, 300) || str(cur?.site_url, 300)
     const brief = str(body.brief, 900)
     const transcript = str(body.transcript, 3000)
+    // captures d'ecran : les visuels que l'utilisateur a fournis pour son montage.
+    // Pour une app derriere un login, c'est la seule facon de connaitre ses vraies
+    // fonctionnalites — le site public ne les montre pas.
+    const images = (Array.isArray(body.images) ? body.images : []).slice(0, 4)
+      .map((im: { media?: string; b64?: string }) => ({ media: String(im?.media || 'image/jpeg'), b64: String(im?.b64 || '') }))
+      .filter((im: { b64: string }) => im.b64.length > 100 && im.b64.length < 1_400_000)
 
     // site : cache 14 jours (le crawl coûte ~1 s à chaque montage sinon)
     let siteCtx = ''
@@ -154,7 +172,7 @@ serve(async (req: Request) => {
       siteFresh = !!siteCtx
     }
 
-    if (action === 'from_site' && !siteCtx && !brief) {
+    if (action === 'from_site' && !siteCtx && !brief && !images.length) {
       return json({ error: 'Rien à lire : site injoignable et aucun brief fourni.' }, 422)
     }
 
@@ -171,7 +189,8 @@ serve(async (req: Request) => {
       ? 'Construis la fiche a partir du site.'
       : 'Mets a jour la fiche avec ce que cette nouvelle video/brief revele de neuf. Si rien de neuf, renvoie la fiche telle quelle.')
 
-    const out = await callClaude(parts.join('\n\n---\n\n'))
+    if (images.length) parts.push('Des captures de son produit sont jointes ci-dessus : sers-t\'en pour ses vrais noms de fonctionnalites et de forfaits.')
+    const out = await callClaude(parts.join('\n\n---\n\n'), images)
     if (!out) return json({ error: 'Réponse illisible du modèle' }, 502)
 
     const facts = {
@@ -195,7 +214,7 @@ serve(async (req: Request) => {
     const { error: upErr } = await sb.from('brand_memory').upsert(row, { onConflict: 'user_id' })
     if (upErr) return json({ error: 'Enregistrement : ' + upErr.message }, 500)
 
-    return json({ ok: true, summary, facts, site_used: !!siteCtx })
+    return json({ ok: true, summary, facts, site_used: !!siteCtx, images_used: images.length })
   } catch (err) {
     console.error('brand-memory error:', err)
     return json({ error: String((err as Error)?.message || err).slice(0, 300) }, 500)
