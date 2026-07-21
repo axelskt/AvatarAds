@@ -319,7 +319,12 @@ export function buildComposition(plan, opts = {}) {
     // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
     // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
     // rien et ne correspondent à aucun mot de l'audio. Le mot se suffit.
-    if (wordMode) return s.motif ? wordMotif(s, si, W, H) : ''
+    // Pas de MOTIF en mot-à-mot : des carrés de couleur qui apparaissent ne montrent
+    // rien, et c'est le reproche qu'Axel fait depuis le premier rendu. Ici seule une
+    // vraie animation illustre — le reste laisse la page blanche, ce qui vaut mieux
+    // qu'une forme décorative sans rapport avec ce qui est dit. Les motifs restent
+    // en service sur les autres styles page blanche (editorial).
+    if (wordMode) return ''
     const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
     if (s.type === 'flow') {
       return `${title}<div class="sl-flow">${s.items.map((it, j) => `${j > 0 ? `
