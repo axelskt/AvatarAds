@@ -13,6 +13,7 @@ import {
   VSTYLES, fontFaceCss,
   styleCss, styleExtraJs, scatterStyle, wordFontSize, WORD_FIT_JS, WORD_ACCENT, wordMotif, wordMotifJs,
 } from './visual-styles.mjs'
+import { ANIMS, animHtml, animJs, animCss } from './anim-pack.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -214,6 +215,8 @@ export function buildComposition(plan, opts = {}) {
       // #131 · le chef d'orchestre choisit l'animation SELON L'AUDIO ; sans choix
       // explicite, resolveMotif() la déduit du type de scène.
       motif: s.motif,
+      // #135 · animation demandée par le chef d'orchestre (prioritaire sur le motif)
+      anim: ANIMS.includes(s.anim) ? s.anim : '',
       title: String(s.title || ''),
       start: r2(s.start),
       dur: r2(Math.max(0.6, (s.end ?? s.start + 1.5) - s.start)),
@@ -228,6 +231,9 @@ export function buildComposition(plan, opts = {}) {
   const scat = (s, j, o) => scatterStyle(vs, Math.round(s.start * 1000) + j * 97, o)
 
   const slideBody = (s, si) => {
+    // une animation fabriquée l'emporte : elle montre le concept, là où une capture
+    // d'interface ou une forme abstraite n'illustre rien
+    if (s.anim) return animHtml(s.anim, s, W, H, vs)
     if (wordMode) return wordMotif(s, si, W, H)
     const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
     if (s.type === 'flow') {
@@ -333,7 +339,8 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
   ).join('')
 
-  const slidesJs = wordMode ? slideDefs.map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.map((s) => {
+  const animJsAll = slideDefs.filter((s) => s.anim).map((s) => animJs(s.anim, s, r2)).join('')
+  const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
       tl.fromTo('#${s.id}', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${s.start});
@@ -381,7 +388,7 @@ export function buildComposition(plan, opts = {}) {
     if (s.title) js += `
       tl.fromTo('#${s.id} .sl-title', { autoAlpha: 0 }, { autoAlpha: 0.6, duration: 0.2, ease: 'power1.out' }, ${r2(s.start + 0.05)});`
     return js
-  }).join('')
+  }).join(''))
 
   const fz = (k) => Math.round(SLIDE_H * k) // tailles relatives à la zone slides
   const slideCss = slides.length ? `
@@ -509,6 +516,7 @@ export function buildComposition(plan, opts = {}) {
 ${slideCss}
 ${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
 ${vs ? fontFaceCss() + styleCss(vs, W, H, SLIDE_H) : ''}
+${slideDefs.some((s) => s.anim) ? animCss(W, H) : ''}
     </style>
   </head>
   <body${vs ? ` class="vs-${vs}"` : ''}>
