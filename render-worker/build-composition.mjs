@@ -152,6 +152,8 @@ export function buildComposition(plan, opts = {}) {
     .filter((t) => t > 0.5 && t < D - 0.5)
     .filter((t) => !periods.some((p) => Math.abs(t - p.start) < 0.5 || Math.abs(t - p.end) < 0.5))
 
+  const inHero = (t) => rawBroll.some((b, i) => heroIds.has(i) && t >= b.start - 0.15 && t < b.end + 0.05)
+
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
   const subSize = Math.round(H * 0.052)
   const subStroke = Math.max(4, Math.round(subSize * 0.16))
@@ -176,6 +178,9 @@ export function buildComposition(plan, opts = {}) {
       top: cream ? capTopCream : (!overlay && inSplit(r2(c.start) + 0.05) ? capTopSplit : capTopFull),
     }
   }).filter((c) => c.text)
+    // MOMENT FORT : l'image occupe toute la zone sûre — le sous-titre est retiré,
+    // pas déplacé. C'est une respiration visuelle, l'image se suffit.
+    .filter((c) => !(wordMode && inHero(r2(c.start) + 0.05)))
 
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
@@ -219,10 +224,9 @@ export function buildComposition(plan, opts = {}) {
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
 
-  const inHero = (t) => rawBroll.some((b, i) => heroIds.has(i) && t >= b.start - 0.1 && t < b.end + 0.1)
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
-      <div class="clip cap${inHero(c.start) ? ' low' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
 
@@ -350,8 +354,8 @@ export function buildComposition(plan, opts = {}) {
   const brollJs = brolls.map((b) => (b.hero ? `
       tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out' }, ${b.start});
       tl.fromTo('#${b.id} .broll-card', { y: ${Math.round(H * 0.16)}, scale: 0.82, autoAlpha: 0 },
-        { y: 0, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${b.start});
-      tl.to('#${b.id} .broll-card', { scale: 1.05, duration: ${r2(Math.max(0.4, b.dur - 0.7))}, ease: 'none' }, ${r2(b.start + 0.5)});
+        { y: 0, scale: 1, autoAlpha: 1, duration: 0.28, ease: 'power4.out' }, ${b.start});
+      tl.to('#${b.id} .broll-card', { scale: 1.04, duration: ${r2(Math.max(0.4, b.dur - 0.5))}, ease: 'none' }, ${r2(b.start + 0.28)});
       tl.to('#${b.id}', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${r2(b.start + b.dur - 0.24)});` : `
       tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18, ease: 'power1.out' }, ${b.start});
       tl.fromTo('#${b.id} .broll-card', { scale: 0.82, rotation: -4, y: 26, autoAlpha: 0 },
