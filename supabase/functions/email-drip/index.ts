@@ -46,13 +46,45 @@ function tpl(opts: { title: string; body: string; cta: string; ctaUrl: string; u
 
 // ── Blocs réutilisables : galerie d'exemples générés + témoignages (avis de la LP) ──
 const ASSETS = 'https://avatarads.fr/assets/mail'
-const DEMO_IMAGES = `
+const LP = 'https://avatarads.fr/assets/lp'
+// Une image ne doit JAMAIS revenir d'un mail a l'autre : cinq galeries distinctes,
+// chacune sur un angle different (resultats video, creations IA, avatars, avant/apres).
+const gallery = (items: [string, string][], legend: string) => `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
-    <td width="33%" style="padding-right:5px"><a href="${APP_URL}"><img src="${ASSETS}/demo-cartoon.jpg" alt="Personnage cartoon 3D généré par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-    <td width="33%" style="padding:0 3px"><a href="${APP_URL}"><img src="${ASSETS}/demo-paris.jpg" alt="Personnages fruits à Paris générés par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${ASSETS}/demo-basket.jpg" alt="Scène de basket ultra-réaliste générée par IA" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+${items.map(([src, alt], k) => `    <td width="33%" style="${k === 0 ? 'padding-right:5px' : k === items.length - 1 ? 'padding-left:5px' : 'padding:0 3px'}"><a href="${APP_URL}"><img src="${src}" alt="${alt}" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>`).join('\n')}
   </tr></table>
-  <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">Générées avec AvatarAds — un prompt, quelques secondes ✨</div>`
+  <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">${legend}</div>`
+
+const GAL_VIDEOS = gallery([
+  [`${LP}/hero-strawberry.jpg`, 'Vidéo verticale générée avec un personnage IA'],
+  [`${LP}/lipsync.jpg`, 'Avatar IA en lipsync'],
+  [`${LP}/hero-center.jpg`, 'Vidéo verticale générée par AvatarAds'],
+], 'À quoi ressemblent tes vidéos, dès la première ✨')
+
+const GAL_IMAGES_IA = gallery([
+  [`${ASSETS}/demo-cartoon.jpg`, 'Personnage cartoon 3D généré par IA'],
+  [`${ASSETS}/demo-paris.jpg`, 'Personnages fruits à Paris générés par IA'],
+  [`${ASSETS}/demo-basket.jpg`, 'Scène de basket ultra-réaliste générée par IA'],
+], 'Générées avec Images IA — un prompt, quelques secondes ✨')
+
+const GAL_MONTAGE = gallery([
+  [`${LP}/feat-split.jpg`, 'Vidéo en split screen : avatar en haut, gameplay en bas'],
+  [`${LP}/montage-apres.jpg`, 'Vidéo montée automatiquement par le Montage IA'],
+  [`${LP}/express-veo.jpg`, 'Vidéo Express générée en 30 secondes'],
+], 'Split screen, montage auto, Express — tout est inclus ✨')
+
+const GAL_AVATARS = gallery([
+  [`${LP}/gen-fan-1.jpg`, 'Avatar IA généré, format vertical'],
+  [`${LP}/gen-fan-2.jpg`, 'Autre avatar IA généré'],
+  [`${LP}/gen-fan-4.jpg`, 'Avatar IA en situation produit'],
+], 'Ton avatar, ta voix — sans jamais te filmer ✨')
+
+const GAL_AVANT_APRES = gallery([
+  [`${LP}/ia-before.jpg`, 'Image avant retouche IA'],
+  [`${LP}/ia-after.jpg`, 'La même image après retouche IA'],
+  [`${LP}/tout-en-un.jpg`, 'Tous les outils réunis dans AvatarAds'],
+], 'Avant / après, et tout dans le même abonnement ✨')
+
 const quoteBlock = (q: string, who: string, tag: string) => `
   <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:18px 20px;margin-top:22px">
     <div style="color:#f59e0b;font-size:13px;letter-spacing:2px;margin-bottom:8px">★★★★★</div>
@@ -60,17 +92,9 @@ const quoteBlock = (q: string, who: string, tag: string) => `
     <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
   </div>`
 const HERO_SOUSTITRES = `
-  <a href="${APP_URL}"><img src="${ASSETS}/soustitres-8-styles.jpg" alt="Les 8 styles de sous-titres du générateur AvatarAds" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
+  <a href="${APP_URL}"><img src="${LP}/feat-soustitres.jpg" alt="Sous-titres animés sur une vidéo TikTok" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
 // Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
 // pas des captures d'interface.
-const LP = 'https://avatarads.fr/assets/lp'
-const RESULT_IMAGES = `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
-    <td width="33%" style="padding-right:5px"><a href="${APP_URL}"><img src="${LP}/feat-split.jpg" alt="Vidéo en split screen : avatar en haut, gameplay en bas" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-    <td width="33%" style="padding:0 3px"><a href="${APP_URL}"><img src="${LP}/lipsync.jpg" alt="Avatar IA en lipsync sur une vidéo verticale" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${ASSETS}/soustitres-8-styles.jpg" alt="Les 8 styles de sous-titres du générateur" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-  </tr></table>
-  <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">Des vidéos réellement sorties d'AvatarAds ✨</div>`
 
 const QUOTE_SARAH  = quoteBlock("Je n'aimais pas me filmer. Mon avatar parle à ma place avec ma propre voix. Mes abonnés ne font pas la différence.", "Sarah K.", "Coach business · 2 vidéos/jour automatisées")
 const QUOTE_INES   = quoteBlock("De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", "Inès B.", "Nutrition & fitness · ×30 sur les vues")
@@ -85,27 +109,27 @@ const DRIP: Stage[] = [
     subject: 'Ta première vidéo t’attend 🎬',
     title: 'Ta première vidéo est à 2 minutes',
     body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES + QUOTE_SARAH + DEMO_IMAGES },
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES + QUOTE_SARAH + GAL_VIDEOS },
   { kind: 'drip_24h', minH: 24, maxH: 72,
     subject: 'Les pubs IA qui tournent en ce moment 👀',
     title: 'Pendant que tu hésites, d’autres publient',
     body: n => `${hi(n)}les marques qui explosent sur TikTok publient 1 à 3 vidéos par jour. Avec AvatarAds, une vidéo se génère en quelques minutes : avatar lipsync, vidéos Express, images IA — tout est au même endroit.`,
-    cta: 'Voir ce que je peux créer →', ctaUrl: APP_URL, extra: QUOTE_LUCAS + DEMO_IMAGES },
+    cta: 'Voir ce que je peux créer →', ctaUrl: APP_URL, extra: QUOTE_LUCAS + GAL_IMAGES_IA },
   { kind: 'drip_3d', minH: 72, maxH: 120,
     subject: '🌞 +25 crédits offerts sur ton 1er mois',
     title: 'Ton bonus de bienvenue est encore là',
     body: n => `${hi(n)}en ce moment, ton premier abonnement vient avec des crédits bonus : +25 sur Starter, +50 sur Pro, +75 sur Élite. C’est le moment de tester en vrai.`,
-    cta: 'Choisir mon plan →', ctaUrl: PRICING_URL, extra: QUOTE_INES + RESULT_IMAGES },
+    cta: 'Choisir mon plan →', ctaUrl: PRICING_URL, extra: QUOTE_INES + GAL_MONTAGE },
   { kind: 'drip_5d', minH: 120, maxH: 168,
     subject: '1 € par jour pour ne plus jamais tourner de vidéo',
     title: 'Starter, c’est 1 € par jour',
     body: n => `${hi(n)}29,99 €/mois = 150 secondes de vidéo IA, des images et l’export sans watermark. Moins cher qu’un café par jour, et ta pub tourne pendant que tu dors.`,
-    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS + DEMO_IMAGES },
+    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS + GAL_AVATARS },
   { kind: 'drip_7d', minH: 168, maxH: 336,
     subject: 'On garde ta place ? 💛',
     title: 'Dernier rappel, promis',
     body: n => `${hi(n)}ton compte reste ouvert, mais on ne voudrait pas que tu passes à côté : les crédits bonus du premier mois ne dureront pas éternellement. Si AvatarAds n’est pas pour toi, aucun souci — cet e-mail est le dernier de la série.`,
-    cta: 'Retourner sur AvatarAds →', ctaUrl: APP_URL, extra: QUOTE_HUGO + RESULT_IMAGES },
+    cta: 'Retourner sur AvatarAds →', ctaUrl: APP_URL, extra: QUOTE_HUGO + GAL_AVANT_APRES },
 ]
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
