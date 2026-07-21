@@ -255,7 +255,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual, '-map', '0:v',
         '-c:v', 'copy', '-an', '-t', String(plan.duration), outPath], { stdio: 'inherit' })
     } else {
-      filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0[aout]`)
+      // NORMALISATION DE SONIE. Un rendu sortait a -22,3 LUFS quand les plateformes
+      // calent sur -14 : la video s'entend deux fois moins fort que celle d'avant dans
+      // le fil, et le spectateur scrolle au lieu de monter le son. loudnorm ramene la
+      // sonie integree a -14 LUFS avec un vrai pic a -1,5 dBTP (pas d'ecretage).
+      // Sortie en STEREO : une piste mono est repliee au centre par certains lecteurs.
+      filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0,loudnorm=I=-13:TP=-1.5:LRA=11,aformat=channel_layouts=stereo[aout]`)
       console.log(`▶ mix audio (${mixIns.length} pistes)…`)
       execFileSync('ffmpeg', [
         '-v', 'error', '-y', ...inputs,
