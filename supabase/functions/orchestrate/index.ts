@@ -617,6 +617,62 @@ Analyse d'abord la video, puis genere le plan de montage.`,
 const r2 = (n: number) => Math.round(n * 100) / 100
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
+
+// ── LEXIQUE mot→emoji (#135) ────────────────────────────────────────────────
+// Permet au SERVEUR de poser un emoji sur un mot fort SANS repasser par le modele.
+// C'est ce qui garantit la cadence : le modele place les visuels evidents, le
+// serveur comble les trous pour atteindre un visuel toutes les ~2,5s (reference
+// Thinks). Cle = racine normalisee (prefixe), valeur = nom d'emoji de la banque.
+const EMOJI_LEX: [string, string][] = [
+  ['argent', 'money_bag'], ['euro', 'money_bag'], ['dollar', 'dollar_banknote'], ['revenu', 'money_with_wings'],
+  ['gagn', 'money_bag'], ['paie', 'credit_card'], ['cash', 'money_bag'], ['million', 'money_bag'], ['mille', 'money_bag'],
+  ['banqu', 'bank'], ['compte', 'bank'], ['carte', 'credit_card'], ['paiement', 'credit_card'], ['piece', 'coin'], ['credit', 'coin'],
+  ['croiss', 'chart_increasing'], ['augment', 'chart_increasing'], ['monte', 'chart_increasing'], ['progress', 'chart_increasing'],
+  ['hausse', 'chart_increasing'], ['scale', 'chart_increasing'], ['baisse', 'chart_decreasing'], ['chute', 'chart_decreasing'],
+  ['diminu', 'chart_decreasing'], ['statis', 'bar_chart'], ['resultat', 'bar_chart'], ['chiffre', 'bar_chart'], ['donnee', 'bar_chart'], ['courbe', 'chart_increasing'],
+  ['temps', 'stopwatch'], ['minute', 'stopwatch'], ['heure', 'alarm_clock'], ['rapid', 'high_voltage'], ['vite', 'high_voltage'],
+  ['chrono', 'stopwatch'], ['seconde', 'stopwatch'], ['jour', 'calendar'], ['semaine', 'spiral_calendar'], ['planning', 'spiral_calendar'],
+  ['fusee', 'rocket'], ['lance', 'rocket'], ['decoll', 'rocket'], ['boost', 'rocket'], ['demarr', 'rocket'],
+  ['feu', 'fire'], ['viral', 'fire'], ['tendance', 'fire'], ['explos', 'fire'], ['energie', 'high_voltage'], ['puissan', 'high_voltage'],
+  ['cerveau', 'brain'], ['intellig', 'brain'], ['apprend', 'brain'], ['reflech', 'thinking_face'], ['pense', 'thinking_face'],
+  ['idee', 'light_bulb'], ['astuce', 'light_bulb'], ['solution', 'light_bulb'], ['cible', 'direct_hit'], ['objectif', 'bullseye'], ['precis', 'direct_hit'],
+  ['trophe', 'trophy'], ['gagnant', 'trophy'], ['meilleur', 'trophy'], ['champion', 'trophy'], ['victoire', 'trophy'], ['succes', 'trophy'],
+  ['etoile', 'glowing_star'], ['premium', 'crown'], ['qualite', 'glowing_star'], ['avis', 'star'], ['parfait', 'hundred_points'], ['total', 'hundred_points'],
+  ['ordinateur', 'desktop_computer'], ['logiciel', 'laptop'], ['saas', 'desktop_computer'], ['plateforme', 'laptop'], ['outil', 'hammer_and_wrench'],
+  ['appli', 'mobile_phone'], ['site', 'laptop'], ['telephone', 'mobile_phone'], ['mobile', 'mobile_phone'], ['tiktok', 'mobile_phone'],
+  ['insta', 'mobile_phone'], ['reseau', 'mobile_phone'], ['story', 'mobile_phone'], ['poste', 'mobile_phone'], ['robot', 'robot'], ['automat', 'robot'],
+  ['reglage', 'gear'], ['parametre', 'gear'], ['config', 'gear'], ['moteur', 'gear'], ['cle', 'key'], ['acces', 'key'], ['secret', 'key'],
+  ['verrou', 'locked'], ['secur', 'locked'], ['protege', 'locked'], ['debloqu', 'unlocked'], ['lien', 'link'], ['connect', 'link'], ['integr', 'link'],
+  ['camera', 'video_camera'], ['video', 'video_camera'], ['film', 'movie_camera'], ['montage', 'clapper_board'], ['micro', 'studio_microphone'],
+  ['voix', 'studio_microphone'], ['audio', 'headphone'], ['parl', 'speech_balloon'], ['enregistr', 'microphone'], ['musique', 'musical_note'],
+  ['annonce', 'loudspeaker'], ['diffus', 'megaphone'], ['promo', 'megaphone'], ['message', 'speech_balloon'], ['commentaire', 'speech_balloon'],
+  ['mail', 'envelope'], ['email', 'envelope'], ['contact', 'envelope'], ['notif', 'bell'], ['alerte', 'bell'], ['rappel', 'bell'],
+  ['oeil', 'eyes'], ['regard', 'eyes'], ['vue', 'eyes'], ['visib', 'eyes'], ['attention', 'eyes'], ['coeur', 'red_heart'], ['aime', 'red_heart'],
+  ['passion', 'growing_heart'], ['fan', 'growing_heart'], ['communaut', 'busts_in_silhouette'], ['cadeau', 'gift'], ['offre', 'gift'], ['gratuit', 'gift'],
+  ['bonus', 'gift'], ['fete', 'party_popper'], ['celebr', 'party_popper'], ['nouveau', 'sparkles'], ['magi', 'magic_wand'], ['transform', 'magic_wand'],
+  ['brillant', 'sparkles'], ['incroyable', 'sparkles'], ['livre', 'books'], ['formation', 'open_book'], ['cours', 'open_book'], ['guide', 'open_book'],
+  ['script', 'memo'], ['texte', 'memo'], ['ecri', 'memo'], ['redig', 'memo'], ['contenu', 'memo'], ['catalogue', 'bookmark_tabs'], ['modele', 'bookmark_tabs'],
+  ['puzzle', 'puzzle_piece'], ['assembl', 'puzzle_piece'], ['combin', 'puzzle_piece'], ['construis', 'hammer_and_wrench'], ['build', 'hammer_and_wrench'],
+  ['coupe', 'scissors'], ['decoup', 'scissors'], ['clip', 'scissors'], ['panier', 'shopping_cart'], ['achat', 'shopping_cart'], ['vente', 'shopping_cart'],
+  ['boutique', 'shopping_cart'], ['ecommerce', 'shopping_cart'], ['produit', 'package'], ['colis', 'package'], ['livraison', 'package'],
+  ['couronne', 'crown'], ['leader', 'crown'], ['elite', 'crown'], ['partenaire', 'handshake'], ['deal', 'handshake'], ['collab', 'handshake'],
+  ['accord', 'handshake'], ['rejoins', 'handshake'], ['client', 'busts_in_silhouette'], ['utilisateur', 'busts_in_silhouette'], ['gens', 'busts_in_silhouette'],
+  ['audience', 'busts_in_silhouette'], ['futur', 'crystal_ball'], ['avenir', 'crystal_ball'], ['recycl', 'recycling_symbol'], ['boucle', 'recycling_symbol'],
+  ['repet', 'recycling_symbol'], ['valide', 'check_mark_button'], ['reussi', 'check_mark_button'], ['erreur', 'cross_mark'], ['stop', 'cross_mark'],
+  ['jamais', 'cross_mark'], ['evit', 'cross_mark'], ['probleme', 'warning'], ['piege', 'warning'], ['danger', 'warning'], ['important', 'red_exclamation_mark'],
+  ['pourquoi', 'question_mark'], ['comment', 'question_mark'], ['cherch', 'magnifying_glass_tilted_left'], ['trouv', 'magnifying_glass_tilted_left'],
+  ['analys', 'magnifying_glass_tilted_left'], ['decouvr', 'magnifying_glass_tilted_left'], ['sauvegard', 'floppy_disk'], ['batterie', 'battery'],
+  ['voyage', 'airplane'], ['vacances', 'beach_with_umbrella'], ['detente', 'beach_with_umbrella'], ['chill', 'beach_with_umbrella'], ['passif', 'beach_with_umbrella'],
+  ['photo', 'camera'], ['image', 'camera'],
+]
+const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
+function emojiForWord(w: string): string {
+  const k = norm(w)
+  if (k.length < 3 || STOP_FILL.has(k)) return ''
+  for (const [stem, emo] of EMOJI_LEX) if (k.startsWith(stem)) return emo
+  return ''
+}
+
 // `strict` distingue deux familles de filtres. Les contraintes PHYSIQUES (chevauchements,
 // safe zone, durees, ids d'assets connus) s'appliquent toujours : sans elles le rendu casse.
 // Les filtres de GOUT (seuil de deliberation, garde-fou anti-invention, verrou des bruitages)
@@ -894,6 +950,53 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     const first = sfxOnEvent[0].kind
     const palette = [first, ...SFX_ROTATION.filter((k) => k !== first)].slice(0, 3)
     sfxOnEvent = sfxOnEvent.map((x, i) => ({ ...x, kind: palette[i % palette.length] }))
+  }
+
+  // ── GARANTIE DE CADENCE (#135) ──────────────────────────────────────────────
+  // La reference (Thinks) pose un visuel toutes les ~2,5s. Le modele n'en met que
+  // 4 a 6 : demander la densite dans le prompt ne suffit pas (comme le reste). Le
+  // serveur comble donc les trous lui-meme, avec un emoji pose sur un mot fort du
+  // creux — mot choisi par le lexique, sans nouvel appel modele. Deterministe.
+  {
+    const TARGET = 2.5   // un visuel au moins tous les 2,5s
+    const occupied = (t: number) =>
+      slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
+      cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)
+    // instants deja couverts par un visuel (slide portant emoji/anim, ou image)
+    const visualStarts = [
+      ...slides.filter((sl) => sl.emoji || sl.anim).map((sl) => sl.start),
+      ...cleanBroll.map((b) => b.start),
+    ].sort((a, b) => a - b)
+    const added: typeof slides = []
+    let lastPlaced = 1.5
+    const marks = [...visualStarts, D]
+    let cursor = 1.5
+    for (const next of marks) {
+      // dans chaque trou [cursor, next], place autant d'emojis que la cadence l'exige
+      while (next - cursor > TARGET) {
+        const from = Math.max(cursor + 0.3, lastPlaced + TARGET)
+        if (from > next - 0.6) break
+        // premier mot fort apres `from` qui a un emoji et n'est pas deja occupe
+        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start) && emojiForWord(x.text))
+        if (!w) break
+        const emo = emojiForWord(w.text)
+        const end = r2(Math.min(w.start + 1.2, next - 0.2, D - 0.4))
+        if (end - w.start < 0.5) { cursor = w.start + 0.3; continue }
+        added.push({
+          type: 'card', layout: 'full', motif: '', anim: '', emoji: emo,
+          start: r2(w.start), end, title: '', eyebrow: '', accent: '', sub: '',
+          center: '', value: '', unit: '', wide: false, options: [], items: [],
+        })
+        lastPlaced = w.start
+        cursor = w.start + TARGET * 0.9
+      }
+      cursor = Math.max(cursor, next)
+    }
+    // pas plus d'un visuel ajoute par 1,2s (evite l'empilement) et respect du CTA
+    for (const a of added) {
+      if (!slides.some((sl) => Math.abs(sl.start - a.start) < 1.2)) slides.push(a)
+    }
+    slides.sort((x, y) => x.start - y.start)
   }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }

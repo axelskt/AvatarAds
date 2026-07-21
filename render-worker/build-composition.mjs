@@ -311,7 +311,8 @@ export function buildComposition(plan, opts = {}) {
   const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
   // ── slides motion design (zone haute pendant les périodes split) ──────────
-  const slideDefs = slides.map((s, i) => {
+  const isEmojiOnly = (s) => s.emoji && !s.anim && !(s.items && s.items.length) && !s.title
+  const slideDefs = slides.filter((s) => !isEmojiOnly(s)).map((s, i) => {
     // en « mot par mot » une section peut être un bandeau, donc sans items
     const its = Array.isArray(s.items) ? s.items : []
     return {
