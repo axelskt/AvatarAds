@@ -863,33 +863,18 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   let sfxOnEvent = strict
     ? sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
     : sfxClean
-  // VARIETE DES BRUITAGES. Le modele se fixe sur un seul son et le repete : sur un
-  // test, les 8 bruitages du plan etaient huit 'whoosh'. Un meme son a chaque
-  // apparition sonne comme un tic de montage et aplatit la video. On ne remplace donc
-  // que les REPETITIONS : le premier choix du modele est conserve, les suivants
-  // tournent sur une rotation neutre (les sons 'fun' restent hors jeu hors ton fun).
+  // TROIS SONS DIFFERENTS AU MAXIMUM, MAIS REUTILISABLES. Chaque moment souligne
+  // merite son bruitage — ce qui gachait la video, ce n'etait pas leur NOMBRE mais
+  // le fait d'en entendre huit DIFFERENTS : l'oreille n'y reconnaissait aucune
+  // intention. Une palette de trois, en rotation, produit l'inverse : une signature
+  // sonore. Le premier son est celui que le modele a choisi, les deux autres
+  // viennent de la rotation neutre ; on alterne pour ne jamais repeter deux fois de
+  // suite le meme.
   const SFX_ROTATION = ['pop', 'ding', 'snap', 'click', 'success', 'magic', 'hit', 'boom']
-  {
-    const used: string[] = []
-    sfxOnEvent = sfxOnEvent.map((x) => {
-      if (!used.includes(x.kind)) { used.push(x.kind); return x }
-      const alt = SFX_ROTATION.find((k) => !used.includes(k))
-      if (!alt) return x
-      used.push(alt)
-      return { ...x, kind: alt }
-    })
-    // TROIS BRUITAGES AU MAXIMUM. Un son a chaque apparition sature l'oreille et
-    // gache la video — 8 sur 30 s, c'etait le cas. Deux ou trois bien espaces
-    // suffisent a rythmer, quitte a repeter le meme. On garde donc les premiers
-    // separes d'au moins un cinquieme de la video, jamais plus de trois.
-    const MIN_GAP = Math.max(3, D / 5)
-    const kept: typeof sfxOnEvent = []
-    for (const x of sfxOnEvent) {
-      if (kept.length >= 3) break
-      if (kept.length && x.t - kept[kept.length - 1].t < MIN_GAP) continue
-      kept.push(x)
-    }
-    sfxOnEvent = kept
+  if (sfxOnEvent.length) {
+    const first = sfxOnEvent[0].kind
+    const palette = [first, ...SFX_ROTATION.filter((k) => k !== first)].slice(0, 3)
+    sfxOnEvent = sfxOnEvent.map((x, i) => ({ ...x, kind: palette[i % palette.length] }))
   }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
