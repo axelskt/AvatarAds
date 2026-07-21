@@ -201,6 +201,23 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       idx++
     }
 
+    // SON DE FRAPPE sous l'animation `type` : le texte s'écrit tout seul à l'écran,
+    // on entend le clavier. Il est lié à l'ANIMATION, pas au plafond de 3 bruitages
+    // de ponctuation — c'est une texture qui accompagne une image, pas un coup qui
+    // souligne un instant. Le fichier mac-typing est enregistré bas (moyenne −33 dB,
+    // pics à −3,9) : à moitié volume il disparaissait sous la voix, d'où le gain.
+    for (const sl of plan.slides || []) {
+      if (sl.anim !== 'type') continue
+      const f = join(HERE, 'assets', 'sfx', 'mac-typing.mp3')
+      if (!existsSync(f)) continue
+      const dur = Math.max(0.6, Math.min(2.6, (sl.end - sl.start) - 0.4))
+      const ms = Math.max(0, Math.round((sl.start + 0.15) * 1000))
+      inputs.push('-stream_loop', '-1', '-i', f)
+      filters.push(`[${idx}:a]atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=${(SFX_VOL * 1.1).toFixed(3)}[kb${idx}]`)
+      mixIns.push(`[kb${idx}]`)
+      idx++
+    }
+
     // lits musicaux : posés à leur instant, coupés à la fin de la vidéo, fondus en sortie
     for (const b of plan.beds || []) {
       if (!BEDS.includes(b.name)) continue
