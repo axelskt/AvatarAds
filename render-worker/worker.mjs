@@ -142,6 +142,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // polices embarquées (#131) : les styles visuels les référencent en 'fonts/*.woff2'.
     // Copiées dans le projet plutôt que servies par un CDN — un rendu ne doit jamais
     // dépendre du réseau pour sa typographie.
+    // logo de marque pour l'animation `logo` (#135), copié comme les polices
+    const brandSrc = join(HERE, 'assets', 'brand')
+    if (existsSync(brandSrc)) {
+      mkdirSync(join(proj, 'brand'), { recursive: true })
+      for (const f of readdirSync(brandSrc)) copyFileSync(join(brandSrc, f), join(proj, 'brand', f))
+    }
+
     const fontsSrc = join(HERE, 'assets', 'fonts')
     if (existsSync(fontsSrc)) {
       mkdirSync(join(proj, 'fonts'), { recursive: true })

@@ -10,7 +10,7 @@
 
 import { SAFE, SAFE_CENTERED_W, WORD_SHAPES } from './visual-styles.mjs'
 
-export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar']
+export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -124,6 +124,15 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-feed" id="${id}fd">${card(2, P.acc)}${card(31, P.line)}${card(60, P.acc)}${card(89, P.line)}${card(118, P.acc)}</span>
       </div>`)
     }
+    case 'logo': {
+      // Le logo de la marque, quand il prononce son nom. Copié dans le projet de
+      // rendu (assets/brand → brand/) : pas de dépendance réseau.
+      const d = Math.round(f.h * 0.86)
+      return box(`<div class="an-lg" id="${id}lg" style="left:${Math.round((f.w - d) / 2)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px">
+        <span class="an-halo" id="${id}ha" style="border:${Math.round(d * 0.02)}px solid ${P.acc}"></span>
+        <img src="brand/logo.png" alt="" id="${id}im" />
+      </div>`)
+    }
     case 'avatar': {
       // Une silhouette qui se compose dans un cadre vertical : la génération d'un
       // avatar. Une capture de l'écran « Choisis ton avatar » ne montre rien en 2 s.
@@ -178,6 +187,11 @@ export function animJs(name, s, r2) {
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
+    case 'logo':
+      return inOut + `
+      tl.fromTo('#${id}im', { scale: 0.5, autoAlpha: 0, rotation: -8 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.44, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}ha', { scale: 0.7, autoAlpha: 0 }, { scale: 1.18, autoAlpha: 0, duration: 0.9, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(t0 + 0.18)});
+      tl.to('#${id}im', { scale: 1.05, duration: ${r2(Math.max(0.5, dur - 0.5))}, ease: 'sine.inOut' }, ${r2(t0 + 0.45)});`
     case 'avatar':
       return inOut + `
       tl.fromTo('#${id}ph', { scale: 0.9, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.8)' }, ${t0});
@@ -204,5 +218,8 @@ export function animCss(W, H) {
         font-family: "Inter", Helvetica, Arial, sans-serif; font-weight: 600; letter-spacing: -.02em; white-space: nowrap; }
       .an-cur { display: inline-block; width: 3px; height: 1em; margin-left: 4px; vertical-align: -0.12em; }
       .an-feed { position: absolute; left: 0; top: 0; width: 100%; height: 220%; display: block; will-change: transform; }
-      .an-hand { position: absolute; left: 50%; bottom: 50%; width: 4px; margin-left: -2px; border-radius: 99px; will-change: transform; }`
+      .an-hand { position: absolute; left: 50%; bottom: 50%; width: 4px; margin-left: -2px; border-radius: 99px; will-change: transform; }
+      .an-lg { position: absolute; display: flex; align-items: center; justify-content: center; }
+      .an-lg img { max-width: 82%; max-height: 82%; display: block; will-change: transform, opacity; }
+      .an-halo { position: absolute; inset: 6%; border-radius: 50%; will-change: transform, opacity; }`
 }
