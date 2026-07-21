@@ -58,13 +58,13 @@ ${files.map(([f, alt], k) => `    <td width="33.33%" style="${k === 0 ? 'padding
 
 const GAL_CLAUDE = gallery([
   ['feat-claude', 'AvatarAds connecté à Claude'],
-  ['feat-plateforme', 'Publication sur TikTok, Reels, Shorts, Facebook'],
+  ['step-05', 'Une vidéo diffusée sur tous les réseaux'],
   ['gen-fan-1', 'Vidéo générée, prête à poster'],
 ], 'Tu demandes, Claude génère, tu publies ✨')
 
 const GAL_MONTAGE = gallery([
-  ['montage-avant', 'Rush brut avant montage'],
-  ['feat-split', 'La même vidéo en split screen'],
+  ['avant-apres', 'Le rush brut à gauche, la vidéo montée à droite'],
+  ['split-reel', 'Split screen : gameplay en haut, avatar en bas'],
   ['feat-editeur', 'Montage récupérable dans l\'Éditeur'],
 ], 'Ton rush entre brut, il ressort monté ✨')
 
@@ -76,8 +76,8 @@ const GAL_IMAGES = gallery([
 
 const GAL_LIPSYNC = gallery([
   ['lipsync', 'Avatar IA en lipsync, indétectable'],
-  ['step-03', 'Clonage de voix à partir de 30 secondes'],
-  ['gen-fan-1b', 'Rendu réaliste en plein écran'],
+  ['gen-fan-5', 'Avatar IA indiscernable d\'une vraie personne'],
+  ['hero-center', 'Rendu réaliste en plein écran'],
 ], 'Ton visage, ta voix — sans jamais te filmer ✨')
 
 const GAL_EXPRESS = gallery([
