@@ -87,7 +87,23 @@ export function buildComposition(plan, opts = {}) {
   const WIDE_TOP = Math.round((VIDEO_H - WIDE_H) / 2)
 
   // ── b-roll : carte flottante — image fixe, ou clip vidéo qui JOUE (#111) ──
-  const brolls = (plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b, i) => ({
+  // Sur une page blanche, un écran vide trop longtemps donne une vidéo pauvre. Le chef
+  // d'orchestre reste prudent (il applique sa règle b-roll habituelle de 1,5 à 3,5 s,
+  // pensée pour du b-roll POSÉ SUR une vidéo). En mode page blanche, on étire donc
+  // chaque visuel jusqu'au suivant — plafonné à 4 s pour qu'il ne s'installe pas.
+  const rawBroll = (plan.broll || []).filter((b) => assetFiles[b.assetId])
+    .slice().sort((a, b) => a.start - b.start)
+  if (wordMode && rawBroll.length) {
+    const busy = [...slides.filter((sl) => sl.anim).map((sl) => sl.start)].sort((a, b) => a - b)
+    rawBroll.forEach((b, i) => {
+      const nextVisual = Math.min(
+        rawBroll[i + 1] ? rawBroll[i + 1].start : D,
+        busy.find((t) => t > b.start) ?? D,
+      )
+      b.end = Math.min(Math.max(b.end, Math.min(b.start + 4, nextVisual - 0.2)), D - 0.1)
+    })
+  }
+  const brolls = rawBroll.map((b, i) => ({
     id: 'broll' + i,
     src: assetFiles[b.assetId],
     isVid: /\.(mp4|mov|webm|m4v)$/i.test(assetFiles[b.assetId]),
