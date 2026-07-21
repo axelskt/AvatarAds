@@ -29,8 +29,10 @@ export function animPalette(vs) {
 // Cadre de travail : centré, dans la zone sûre, au-dessus du sous-titre.
 function frame(W, H) {
   const w = Math.round(W * SAFE_CENTERED_W)
-  const h = Math.round(H * 0.24)
-  return { w, h, x: Math.round((W - w) / 2), y: Math.round(H * (SAFE.top + 0.03)) }
+  // borné à 44 % de la hauteur : en dessous commence la bande du sous-titre
+  const y = Math.round(H * (SAFE.top + 0.03))
+  const h = Math.round(H * 0.44) - y
+  return { w, h, x: Math.round((W - w) / 2), y }
 }
 
 export function animHtml(name, s, W, H, vs) {
@@ -71,12 +73,20 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'list': {
-      // des lignes qui s'empilent : une bibliothèque, des scripts, des options
-      const rows = Math.max(4, Math.min(6, items.length || 5))
+      // Des CARTES de script empilées, avec un titre et deux lignes de texte :
+      // des rectangles gris ne disent pas « une bibliothèque de scripts ».
+      const rows = 4, rh = Math.round(f.h / rows) - 8, cw = Math.round(f.w * 0.62)
+      const cx = Math.round((f.w - cw) / 2)
       let h = ''
       for (let k = 0; k < rows; k++) {
-        const rw = Math.round(f.w * (0.55 + ((k * 37) % 40) / 100))
-        h += `<span class="an-r" id="${id}r${k}" style="left:0;top:${k * Math.round(f.h / rows)}px;width:${rw}px;height:${Math.round(f.h / rows) - 10}px;background:${k === 1 ? P.acc : P.soft};border-radius:${Math.round(f.h * 0.03)}px"></span>`
+        const on = k === 1
+        const pad = Math.round(rh * 0.22)
+        h += `<span class="an-r" id="${id}r${k}" style="left:${cx + (k % 2 ? 10 : 0)}px;top:${k * (rh + 8)}px;width:${cw}px;height:${rh}px;` +
+          `background:${on ? P.acc : P.soft};border:1px solid ${on ? 'transparent' : P.line};border-radius:${Math.round(rh * 0.22)}px">` +
+          `<span style="position:absolute;left:${pad}px;top:${pad}px;width:${Math.round(cw * 0.34)}px;height:${Math.round(rh * 0.16)}px;border-radius:99px;background:${on ? 'rgba(255,255,255,.9)' : P.line}"></span>` +
+          `<span style="position:absolute;left:${pad}px;top:${Math.round(pad * 2.1)}px;width:${Math.round(cw * 0.66)}px;height:${Math.round(rh * 0.11)}px;border-radius:99px;background:${on ? 'rgba(255,255,255,.55)' : P.soft}"></span>` +
+          `<span style="position:absolute;left:${pad}px;top:${Math.round(pad * 3.0)}px;width:${Math.round(cw * 0.48)}px;height:${Math.round(rh * 0.11)}px;border-radius:99px;background:${on ? 'rgba(255,255,255,.4)' : P.soft}"></span>` +
+          `</span>`
       }
       return box(h)
     }
@@ -104,10 +114,14 @@ export function animHtml(name, s, W, H, vs) {
       return box(`<div class="an-t" id="${id}t" style="font-size:${fs}px;color:${P.ink}">${esc(txt)}<span class="an-cur" id="${id}cur" style="background:${P.acc}"></span></div>`)
     }
     case 'phone': {
-      // un téléphone vertical dont le contenu défile : le format final
+      // Un vrai fil : des vignettes de vidéo qui défilent, avec la barre d'actions
+      // à droite. Un dégradé qui glisse ne montre rien.
       const pw = Math.round(f.h * 0.52), ph = f.h
-      return box(`<div class="an-ph" id="${id}ph" style="left:${Math.round((f.w - pw) / 2)}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.16)}px;overflow:hidden">
-        <span class="an-feed" id="${id}fd" style="background:linear-gradient(180deg,${P.acc} 0%,${P.soft} 45%,${P.acc} 100%)"></span>
+      const card = (top, col) => `<span style="position:absolute;left:6%;top:${top}%;width:88%;height:26%;border-radius:${Math.round(pw * 0.06)}px;background:${col}">` +
+        `<span style="position:absolute;right:6%;bottom:8%;width:${Math.round(pw * 0.07)}px;height:${Math.round(pw * 0.07)}px;border-radius:50%;background:rgba(255,255,255,.75)"></span>` +
+        `<span style="position:absolute;left:8%;bottom:9%;width:42%;height:${Math.round(pw * 0.035)}px;border-radius:99px;background:rgba(255,255,255,.6)"></span></span>`
+      return box(`<div class="an-ph" id="${id}ph" style="left:${Math.round((f.w - pw) / 2)}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.16)}px;overflow:hidden;background:${P.soft}">
+        <span class="an-feed" id="${id}fd">${card(2, P.acc)}${card(31, P.line)}${card(60, P.acc)}${card(89, P.line)}${card(118, P.acc)}</span>
       </div>`)
     }
     default: { // clock — le temps qui passe, la rapidité
