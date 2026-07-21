@@ -395,7 +395,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   2. SPLIT (layout "split") = la video glisse dans la moitie basse, une slide motion design sombre occupe la moitie haute. Types : flow, checklist, compare, stat, card.
   3. PLEIN CADRE (layout "full") = la video DISPARAIT, une scene editoriale sur fond creme occupe tout l'ecran (gros titre noir + sur-titre) et les sous-titres passent dessus. C'est le rythme le plus fort visuellement : garde-le pour les moments cles (une demonstration, un chiffre, un avant/apres, une punchline). Types : nodes, loop, bars, kpi, timer, versus, punch.
   4. BANDEAU (layout "banner") = la personne reste plein ecran et une carte titre noire se pose en haut de l'image. Parfait pour poser le sujet au debut ou annoncer une partie.
-- MOTIF D'ANIMATION (champ "motif", une valeur par scene) : c'est TOI qui choisis l'animation, d'apres CE QUI EST DIT a cet instant. Elle est utilisee par les styles visuels "page blanche" (Mot par mot, Editorial blanc) ou il n'y a ni video ni image : l'animation est alors le seul visuel, elle doit donc coller au sens.
+- MOTIF D'ANIMATION (champ "motif", une valeur par scene) : une forme abstraite, utilisee par le style "Editorial blanc" uniquement. Le style "Mot par mot" l'IGNORE — des carres de couleur qui apparaissent n'y montrent rien ; sur ce style, seul le champ "anim" illustre. Quand tu hesites, laisse motif vide.
     chain    — un enchainement, des etapes qui se suivent, une progression.
     tiles    — une enumeration d'elements de meme nature (une liste, des inclus).
     versus   — une opposition, un avant/apres, un "au lieu de".
