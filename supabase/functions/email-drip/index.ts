@@ -60,7 +60,7 @@ const quoteBlock = (q: string, who: string, tag: string) => `
     <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
   </div>`
 const HERO_SOUSTITRES = `
-  <a href="${APP_URL}"><img src="${ASSETS}/demo-soustitres.jpg" alt="Styles de sous-titres AvatarAds sur une vidéo TikTok" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
+  <a href="${APP_URL}"><img src="${ASSETS}/soustitres-8-styles.jpg" alt="Les 8 styles de sous-titres du générateur AvatarAds" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
 // Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
 // pas des captures d'interface.
 const LP = 'https://avatarads.fr/assets/lp'
@@ -68,7 +68,7 @@ const RESULT_IMAGES = `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
     <td width="33%" style="padding-right:5px"><a href="${APP_URL}"><img src="${LP}/feat-split.jpg" alt="Vidéo en split screen : avatar en haut, gameplay en bas" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
     <td width="33%" style="padding:0 3px"><a href="${APP_URL}"><img src="${LP}/lipsync.jpg" alt="Avatar IA en lipsync sur une vidéo verticale" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
-    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${LP}/feat-soustitres.jpg" alt="Sous-titres animés sur une vidéo TikTok" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${ASSETS}/soustitres-8-styles.jpg" alt="Les 8 styles de sous-titres du générateur" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
   </tr></table>
   <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">Des vidéos réellement sorties d'AvatarAds ✨</div>`
 
@@ -124,6 +124,23 @@ serve(async (req) => {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!RESEND_API_KEY) return new Response(JSON.stringify({ ok: true, skipped: 'RESEND_API_KEY manquant' }), { status: 200 })
+
+  // Mode APERCU : { test_to: "adresse" } envoie les 5 mails du drip a cette seule
+  // adresse, sans lire la base ni journaliser — sert a verifier le rendu reel dans
+  // une boite mail (images, largeurs, mode sombre) avant de les envoyer a de vrais
+  // inscrits. Protege par la meme cle cron que le reste.
+  let testTo = ''
+  try { testTo = String((await req.clone().json())?.test_to || '') } catch (_) { /* pas de corps JSON */ }
+  if (testTo) {
+    const results: Record<string, boolean> = {}
+    for (const st of DRIP) {
+      results[st.kind] = await sendEmail(testTo, '[TEST] ' + st.subject,
+        tpl({ title: st.title, body: st.body('Axel'), cta: st.cta, ctaUrl: st.ctaUrl, unsubUrl: APP_URL, extra: st.extra }))
+    }
+    return new Response(JSON.stringify({ ok: true, test_to: testTo, results }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   const now = Date.now()
