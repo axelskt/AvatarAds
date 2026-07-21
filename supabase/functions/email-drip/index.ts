@@ -61,6 +61,20 @@ const quoteBlock = (q: string, who: string, tag: string) => `
   </div>`
 const HERO_SOUSTITRES = `
   <a href="${APP_URL}"><img src="${ASSETS}/demo-soustitres.jpg" alt="Styles de sous-titres AvatarAds sur une vidéo TikTok" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
+// Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
+// pas des captures d'interface.
+const LP = 'https://avatarads.fr/assets/lp'
+const RESULT_IMAGES = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
+    <td width="33%" style="padding-right:5px"><a href="${APP_URL}"><img src="${LP}/feat-split.jpg" alt="Vidéo en split screen : avatar en haut, gameplay en bas" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+    <td width="33%" style="padding:0 3px"><a href="${APP_URL}"><img src="${LP}/lipsync.jpg" alt="Avatar IA en lipsync sur une vidéo verticale" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+    <td width="33%" style="padding-left:5px"><a href="${APP_URL}"><img src="${LP}/feat-soustitres.jpg" alt="Sous-titres animés sur une vidéo TikTok" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>
+  </tr></table>
+  <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">Des vidéos réellement sorties d'AvatarAds ✨</div>`
+
+const QUOTE_SARAH  = quoteBlock("Je n'aimais pas me filmer. Mon avatar parle à ma place avec ma propre voix. Mes abonnés ne font pas la différence.", "Sarah K.", "Coach business · 2 vidéos/jour automatisées")
+const QUOTE_INES   = quoteBlock("De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", "Inès B.", "Nutrition & fitness · ×30 sur les vues")
+const QUOTE_HUGO   = quoteBlock("Premier mois : 3 vidéos virales, 12k nouveaux abonnés et mes premières ventes en automatique. Je ne reviendrai jamais en arrière.", "Hugo L.", "Finance perso · +12k abonnés / mois")
 const QUOTE_LUCAS  = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.", 'Lucas M. · E-commerce', '+80k vues · 40 leads')
 const QUOTE_THOMAS = quoteBlock("Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.", 'Thomas D. · Agence SMMA', '−1500€/mois économisés')
 
@@ -71,7 +85,7 @@ const DRIP: Stage[] = [
     subject: 'Ta première vidéo t’attend 🎬',
     title: 'Ta première vidéo est à 2 minutes',
     body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES },
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES + QUOTE_SARAH + DEMO_IMAGES },
   { kind: 'drip_24h', minH: 24, maxH: 72,
     subject: 'Les pubs IA qui tournent en ce moment 👀',
     title: 'Pendant que tu hésites, d’autres publient',
@@ -81,17 +95,17 @@ const DRIP: Stage[] = [
     subject: '🌞 +25 crédits offerts sur ton 1er mois',
     title: 'Ton bonus de bienvenue est encore là',
     body: n => `${hi(n)}en ce moment, ton premier abonnement vient avec des crédits bonus : +25 sur Starter, +50 sur Pro, +75 sur Élite. C’est le moment de tester en vrai.`,
-    cta: 'Choisir mon plan →', ctaUrl: PRICING_URL },
+    cta: 'Choisir mon plan →', ctaUrl: PRICING_URL, extra: QUOTE_INES + RESULT_IMAGES },
   { kind: 'drip_5d', minH: 120, maxH: 168,
     subject: '1 € par jour pour ne plus jamais tourner de vidéo',
     title: 'Starter, c’est 1 € par jour',
     body: n => `${hi(n)}29,99 €/mois = 150 secondes de vidéo IA, des images et l’export sans watermark. Moins cher qu’un café par jour, et ta pub tourne pendant que tu dors.`,
-    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS },
+    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS + DEMO_IMAGES },
   { kind: 'drip_7d', minH: 168, maxH: 336,
     subject: 'On garde ta place ? 💛',
     title: 'Dernier rappel, promis',
     body: n => `${hi(n)}ton compte reste ouvert, mais on ne voudrait pas que tu passes à côté : les crédits bonus du premier mois ne dureront pas éternellement. Si AvatarAds n’est pas pour toi, aucun souci — cet e-mail est le dernier de la série.`,
-    cta: 'Retourner sur AvatarAds →', ctaUrl: APP_URL },
+    cta: 'Retourner sur AvatarAds →', ctaUrl: APP_URL, extra: QUOTE_HUGO + RESULT_IMAGES },
 ]
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
