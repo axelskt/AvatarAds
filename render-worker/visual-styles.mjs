@@ -85,7 +85,7 @@ export function wordFontSize(text, W, H) {
   // limites une fois la police vraiment chargée.
   // borné à la largeur centrée sûre : au-delà, le mot passe sous la colonne like/partage
   const byWidth = (W * SAFE_CENTERED_W) / (0.55 * longest)
-  const byHeight = (H * 0.34) / (1.2 * lines)
+  const byHeight = (H * 0.20) / (1.2 * lines)
   return Math.round(Math.max(H * 0.016, Math.min(H * 0.028, Math.min(byWidth, byHeight))))
 }
 
@@ -305,10 +305,10 @@ function wordCss(W, H, fz) {
          de la bande du mot pour ne pas le recouvrir. Une forme géométrique n'illustre
          rien — une capture de son produit, si. */
       .vs-word .broll { background: none; align-items: flex-start; padding-top: ${Math.round(H * SAFE.top + H * 0.01)}px; z-index: 4; }
-      .vs-word .broll-card { max-width: ${Math.round(W * SAFE_CENTERED_W)}px; max-height: ${Math.round(H * 0.30)}px;
+      .vs-word .broll-card { max-width: ${Math.round(W * SAFE_CENTERED_W)}px; max-height: ${Math.round(H * 0.29)}px;
         border: 1px solid rgba(17,17,17,.10); border-radius: ${Math.round(H * 0.012)}px;
         box-shadow: 0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.035)}px rgba(17,17,17,.16); }
-      .vs-word .broll-card img, .vs-word .broll-card video { max-height: ${Math.round(H * 0.30)}px; }
+      .vs-word .broll-card img, .vs-word .broll-card video { max-height: ${Math.round(H * 0.29)}px; }
       .vs-word #slidezone { left: 0; top: 0; width: ${W}px; height: ${H}px; z-index: 1;
         background: ${WORD_PAPER}; background-image: none; }
       .vs-word #slidezone::after { display: none; }
@@ -316,8 +316,11 @@ function wordCss(W, H, fz) {
         display: block; }
 
       /* le mot : c'est le sous-titre, en très gros, noir sur blanc */
-      .vs-word .cap { left: 0 !important; right: 0 !important; top: 0 !important;
-        height: ${H}px; display: flex; align-items: center; justify-content: center;
+      /* BANDE DU MOT : 46 % → 68 % de la hauteur. Les visuels (animations, images)
+         restent au-dessus de 44 % — les deux zones ne peuvent plus se croiser, quel
+         que soit le nombre de lignes du sous-titre. */
+      .vs-word .cap { left: 0 !important; right: 0 !important; top: ${Math.round(H * 0.46)}px !important;
+        height: ${Math.round(H * 0.22)}px; display: flex; align-items: center; justify-content: center;
         padding: 0 5%; color: ${WORD_INK}; z-index: 6; text-shadow: none; }
       .vs-word .cap::before { display: none; }
       .vs-word .cap span { font-family: ${SANS}; font-weight: 600; text-transform: none;
