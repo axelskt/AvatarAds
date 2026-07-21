@@ -101,9 +101,23 @@ export function buildComposition(plan, opts = {}) {
         busy.find((t) => t > b.start) ?? D,
       )
       b.end = Math.min(Math.max(b.end, Math.min(b.start + 4, nextVisual - 0.2)), D - 0.1)
+      if (b.end - b.start > 4.2) b.end = r2(b.start + 4.2)
     })
   }
+  // MOMENTS FORTS (#135) : deux fois dans la video, l'image passe au centre, plus
+  // grande, en montant depuis le bas — puis disparait. Ca casse le rythme d'une page
+  // blanche ou tout se ressemble. On prend les deux visuels les plus longs, espaces.
+  const heroIds = new Set()
+  if (wordMode) {
+    const cand = rawBroll.map((b, i) => ({ i, b, len: b.end - b.start })).sort((x, y) => y.len - x.len)
+    for (const c of cand) {
+      if (heroIds.size >= 2) break
+      if ([...heroIds].some((j) => Math.abs(rawBroll[j].start - c.b.start) < D * 0.25)) continue
+      heroIds.add(c.i)
+    }
+  }
   const brolls = rawBroll.map((b, i) => ({
+    hero: heroIds.has(i),
     id: 'broll' + i,
     src: assetFiles[b.assetId],
     isVid: /\.(mp4|mov|webm|m4v)$/i.test(assetFiles[b.assetId]),
@@ -194,7 +208,7 @@ export function buildComposition(plan, opts = {}) {
   // clip vidéo b-roll : classe "clip" + data-start/duration → le moteur le seek
   // frame par frame (il joue depuis son début pendant sa fenêtre, comme #base)
   const brollHtml = brolls.map((b) => `
-      <div class="clip broll" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
+      <div class="clip broll${b.hero ? ' hero' : ''}" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
         <div class="broll-card">${b.isVid
           ? `<video id="${b.id}v" class="clip" src="${esc(b.src)}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3" muted playsinline></video>`
           : `<img src="${esc(b.src)}" alt="" />`}</div>
@@ -205,9 +219,10 @@ export function buildComposition(plan, opts = {}) {
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
 
+  const inHero = (t) => rawBroll.some((b, i) => heroIds.has(i) && t >= b.start - 0.1 && t < b.end + 0.1)
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
-      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+      <div class="clip cap${inHero(c.start) ? ' low' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
 
@@ -332,12 +347,17 @@ export function buildComposition(plan, opts = {}) {
       tl.to('#zoomInner', { scale: 1, duration: ${down}, ease: 'power2.inOut' }, ${r2(t + up + hold)});`
   }).join('')
 
-  const brollJs = brolls.map((b) => `
+  const brollJs = brolls.map((b) => (b.hero ? `
+      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out' }, ${b.start});
+      tl.fromTo('#${b.id} .broll-card', { y: ${Math.round(H * 0.16)}, scale: 0.82, autoAlpha: 0 },
+        { y: 0, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${b.start});
+      tl.to('#${b.id} .broll-card', { scale: 1.05, duration: ${r2(Math.max(0.4, b.dur - 0.7))}, ease: 'none' }, ${r2(b.start + 0.5)});
+      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${r2(b.start + b.dur - 0.24)});` : `
       tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18, ease: 'power1.out' }, ${b.start});
       tl.fromTo('#${b.id} .broll-card', { scale: 0.82, rotation: -4, y: 26, autoAlpha: 0 },
         { scale: 1, rotation: -1.5, y: 0, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.7)' }, ${b.start});
       tl.to('#${b.id} .broll-card', { scale: 1.04, duration: ${r2(Math.max(0.3, b.dur - 0.34))}, ease: 'none' }, ${r2(b.start + 0.34)});
-      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.16, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.16)});`
+      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.16, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.16)});`)
   ).join('')
 
   const hookJs = hook ? `
