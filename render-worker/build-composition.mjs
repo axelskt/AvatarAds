@@ -159,7 +159,23 @@ export function buildComposition(plan, opts = {}) {
   // ENTIÈRE d'un coup — elle reste à l'écran, on a le temps de la lire et d'agir.
   const ctaSec = (plan.sections || []).filter((x) => x.role === 'cta' || x.role === 'outro')
     .sort((a, b) => b.start - a.start)[0]
-  const ctaStart = wordMode ? r2(ctaSec ? Math.max(ctaSec.start, D - 6) : D - 4) : Infinity
+  // Le CTA est UNE PHRASE, pas une tranche de temps. Le chef d'orchestre place la
+  // frontière de section au jugé — sur un test il a ouvert « appel à l'action » à
+  // 26,2 s alors que le vrai CTA démarrait à 28,5 s, et le bloc avalait la phrase
+  // précédente (« … est extrêmement simple pour les débutants »), ce qui casse la
+  // fin. On recale donc sur la DERNIÈRE PHRASE réellement prononcée : le point final
+  // qui précède le CTA est un repère objectif, valable quel que soit l'audio.
+  const lastSentenceStart = (() => {
+    const caps = (plan.captions || []).filter((c) => String(c.text || '').trim())
+    for (let i = caps.length - 1; i > 0; i--) {
+      if (/[.!?]$/.test(String(caps[i - 1].text).trim())) return r2(caps[i].start)
+    }
+    return null
+  })()
+  const ctaFloor = ctaSec ? Math.max(ctaSec.start, D - 6) : D - 4
+  const ctaStart = wordMode
+    ? r2(lastSentenceStart !== null ? Math.max(ctaFloor, lastSentenceStart) : ctaFloor)
+    : Infinity
   // chaque mot garde SON timestamp : la phrase s'écrit sur la voix, mot après mot,
   // et les mots déjà dits RESTENT à l'écran — au lieu de se remplacer.
   const ctaWords = wordMode
