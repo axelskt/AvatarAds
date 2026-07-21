@@ -16,7 +16,7 @@
 import { execFileSync, execSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, dirname, resolve } from 'node:path'
+import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
 
@@ -143,10 +143,15 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // Copiées dans le projet plutôt que servies par un CDN — un rendu ne doit jamais
     // dépendre du réseau pour sa typographie.
     // logo de marque pour l'animation `logo` (#135), copié comme les polices
-    const brandSrc = join(HERE, 'assets', 'brand')
-    if (existsSync(brandSrc)) {
+    // Le logo vient du JOB, donc de la marque de l'utilisateur — jamais d'un fichier
+    // livre avec le worker. Un test sur l'audio d'une autre marque a affiche le logo
+    // AvatarAds quand la voix disait « thinks.fr » : un logo code en dur est faux
+    // pour tout le monde sauf nous. Sans logo fourni, l'animation ne rend rien.
+    const jobLogo = ['brand-logo.png', 'brand-logo.jpg', 'logo.png']
+      .map((n) => join(jobDir, n)).find((f) => existsSync(f))
+    if (jobLogo) {
       mkdirSync(join(proj, 'brand'), { recursive: true })
-      for (const f of readdirSync(brandSrc)) copyFileSync(join(brandSrc, f), join(proj, 'brand', f))
+      copyFileSync(jobLogo, join(proj, 'brand', 'logo' + extname(jobLogo)))
     }
 
     const fontsSrc = join(HERE, 'assets', 'fonts')
@@ -155,7 +160,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
     }
 
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips }))
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
