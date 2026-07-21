@@ -234,7 +234,10 @@ export function buildComposition(plan, opts = {}) {
     // une animation fabriquée l'emporte : elle montre le concept, là où une capture
     // d'interface ou une forme abstraite n'illustre rien
     if (s.anim) return animHtml(s.anim, s, W, H, vs)
-    if (wordMode) return wordMotif(s, si, W, H)
+    // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
+    // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
+    // rien et ne correspondent à aucun mot de l'audio. Le mot se suffit.
+    if (wordMode) return s.motif ? wordMotif(s, si, W, H) : ''
     const title = s.title ? `<div class="sl-title">${esc(s.title)}</div>` : ''
     if (s.type === 'flow') {
       return `${title}<div class="sl-flow">${s.items.map((it, j) => `${j > 0 ? `
@@ -340,7 +343,7 @@ export function buildComposition(plan, opts = {}) {
   ).join('')
 
   const animJsAll = slideDefs.filter((s) => s.anim).map((s) => animJs(s.anim, s, r2)).join('')
-  const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
+  const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim && s.motif).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
       tl.fromTo('#${s.id}', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.22, ease: 'power2.out' }, ${s.start});
