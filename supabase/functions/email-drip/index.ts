@@ -63,8 +63,8 @@ const GAL_CLAUDE = gallery([
 ], 'Tu demandes, Claude génère, tu publies ✨')
 
 const GAL_MONTAGE = gallery([
-  ['avant-apres', 'Le rush brut à gauche, la vidéo montée à droite'],
-  ['split-reel', 'Split screen : gameplay en haut, avatar en bas'],
+  ['feat-split', 'Vidéo en split screen'],
+  ['feat-soustitres', 'Sous-titres animés sur la vidéo montée'],
   ['feat-editeur', 'Montage récupérable dans l\'Éditeur'],
 ], 'Ton rush entre brut, il ressort monté ✨')
 
