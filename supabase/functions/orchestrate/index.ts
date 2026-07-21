@@ -160,6 +160,7 @@ const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
+const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -192,11 +193,12 @@ const PLAN_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['type', 'layout', 'motif', 'start', 'end', 'wide', 'title', 'meta', 'items'],
+        required: ['type', 'layout', 'motif', 'anim', 'start', 'end', 'wide', 'title', 'meta', 'items'],
         properties: {
           type: { type: 'string' },
           layout: { type: 'string' },
           motif: { type: 'string' },
+          anim: { type: 'string' },     // #135 · animation fabriquee — liste dans le prompt
           start: { type: 'number' },
           end: { type: 'number' },
           wide: { type: 'boolean' },
@@ -240,6 +242,7 @@ function expandPlan(raw: any): Plan {
       const [eyebrow, accent, sub, center, value, unit] = cut(sl?.meta, 6)
       return {
         type: String(sl?.type || ''), layout: String(sl?.layout || ''), motif: String(sl?.motif || ''),
+        anim: String(sl?.anim || ''),
         start: Number(sl?.start) || 0, end: Number(sl?.end) || 0, wide: !!sl?.wide,
         title: String(sl?.title || ''), eyebrow, accent, sub, center, value, unit,
         items: arr(sl?.items).map((l) => { const [text, t, v, label] = cut(l, 4); return { text, t: num(t), value: v, label } }),
@@ -259,7 +262,7 @@ type Plan = {
   beds?: { name: string; t: number; reason?: string }[]
   music: { mood: string } | null
   slides: {
-    type: string; layout?: string; motif?: string; start: number; end: number; title: string; wide: boolean
+    type: string; layout?: string; motif?: string; anim?: string; start: number; end: number; title: string; wide: boolean
     eyebrow?: string; accent?: string; sub?: string; center?: string; value?: string; unit?: string
     // en entree : lignes "type|layout|score|pourquoi" ; en sortie : objets parses
     options?: (string | { type: string; layout: string; score: number; why: string })[]
@@ -402,6 +405,16 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     halftone — une respiration, une transition, un moment ou il laisse un blanc.
     grid     — de la quantite, de la repetition, "des centaines de...", l'echelle.
   Laisse "" si aucune ne s'impose : le rendu deduira l'animation du type de scene.
+- ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
+    split   — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
+    voice   — une voix, un clonage vocal, un enregistrement, du son.
+    list    — une liste, une bibliotheque, un catalogue, "plus de X scripts / modeles / options".
+    grow    — une croissance, des vues qui montent, un resultat qui progresse.
+    compare — un avant/apres, deux options opposees, "au lieu de".
+    type    — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max).
+    phone   — le format final vertical, une video qui defile, "sur TikTok / Reels / Shorts".
+    clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
+  REGLE : si une image fournie illustre DEJA precisement ce qu'il dit, prends l'image (broll) — une vraie capture vaut mieux qu'un pictogramme. L'animation est pour tout le reste : les notions abstraites, et les fonctionnalites dont aucune image ne montre le RESULTAT. Laisse "" si la scene n'a besoin d'aucune des deux.
 - REGLE ABSOLUE — C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis JAMAIS un rythme ou un type pour "faire varier" ou pour remplir un quota. Tu pars de CE QUI EST DIT a cet instant et tu prends la scene qui l'illustre le mieux. Si aucune scene ne colle a la phrase, tu restes en FULL ECRAN — c'est un choix valable et frequent. Une video ou 3 scenes seulement sont justifiees vaut mille fois mieux qu'une video ou tu as case 8 scenes decoratives.
 - TOUT LE TEXTE AFFICHE VIENT DE SA BOUCHE : chaque title, item, value, label reprend SES mots (condenses en 2 a 5 mots), avec SON vocabulaire. Tu n'inventes RIEN : pas un chiffre qu'il n'a pas prononce, pas une etape qu'il n'a pas citee, pas un prix, pas une marque, pas une statistique. Si le chiffre n'est ni dit ni visible a l'image (ni dans le contexte produit fourni), le type kpi/bars/versus est INTERDIT — prends autre chose.
 - Consequence naturelle : comme un script alterne les idees (une enumeration, puis une preuve, puis une punchline), les rythmes alternent d'eux-memes. Verifie juste a la fin que tu n'as pas 2 scenes IDENTIQUES collees ni plus de 5s sans le moindre changement visuel : si ca arrive, c'est le signe qu'une des deux scenes n'etait pas justifiee — SUPPRIME-LA (repasse en full ecran) plutot que d'en inventer une autre.
@@ -587,10 +600,12 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // #131 · motif d'animation : on ne laisse passer que la liste connue du rendu
       const MOTIFS = ['chain', 'tiles', 'versus', 'bars', 'ring', 'cloud', 'halftone', 'grid']
       const motif = MOTIFS.includes(String(s.motif || '')) ? String(s.motif) : ''
+      const anim = ANIMS.includes(String(s.anim || '')) ? String(s.anim) : ''
       return {
         type,
         layout,
         motif,
+        anim,
         // un bandeau peut se poser des la 1re seconde (la video reste visible dessous)
         start: r2(clamp(s.start, layout === 'banner' ? 0.3 : slideMin, D)),
         end: r2(clamp(s.end, 0, layout === 'banner' ? r2(D - 0.3) : slideMax)),
