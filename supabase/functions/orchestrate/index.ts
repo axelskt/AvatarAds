@@ -160,7 +160,7 @@ const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
-const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar']
+const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -415,6 +415,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     phone   — le format final vertical, une video qui defile, "sur TikTok / Reels / Shorts".
     clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
     avatar  — la creation d'un avatar, un personnage qui se genere, "ton premier avatar".
+    logo    — SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
   REGLE 1 — UNE CAPTURE D'INTERFACE NE MONTRE RIEN : un ecran d'application entier (menus, champs, boutons) est ILLISIBLE en video verticale — le spectateur a 2 secondes, il ne comprend pas ce qu'il regarde. Pour tout ce qui est un CONCEPT (split screen, clonage de voix, generation d'avatar, montage automatique), prends l'ANIMATION : elle montre l'idee en un coup d'oeil.
   L'image ne gagne QUE si elle montre un RESULTAT lisible instantanement : une vidéo finie, une creation, une photo. Dans le doute entre une capture d'ecran et une animation : ANIMATION.
   REGLE 2 — REMPLIS, MAIS AVEC DU JUSTE : sur une page blanche, un ecran vide trop longtemps donne une video pauvre. VISE 60 a 70% de la duree couverte par un visuel, en alternant. Concretement sur 30s : 7 a 9 visuels, aucun trou de plus de 3s.
