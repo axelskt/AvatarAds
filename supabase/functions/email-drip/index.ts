@@ -56,35 +56,35 @@ ${files.map(([f, alt], k) => `    <td width="33.33%" style="${k === 0 ? 'padding
   </tr></table>
   <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">${legend}</div>`
 
-const GAL_VIDEOS = gallery([
-  ['hero-strawberry', 'Personnage IA dans une vidéo verticale'],
-  ['lipsync', 'Avatar IA en lipsync face caméra'],
-  ['hero-center', 'Vidéo générée par AvatarAds'],
-], 'À quoi ressemblent tes vidéos, dès la première ✨')
-
-const GAL_IMAGES_IA = gallery([
-  ['demo-cartoon', 'Personnage cartoon 3D généré par IA'],
-  ['demo-paris', 'Personnages fruits à Paris générés par IA'],
-  ['demo-basket', 'Scène de basket ultra-réaliste générée par IA'],
-], 'Générées avec Images IA — un prompt, quelques secondes ✨')
+const GAL_CLAUDE = gallery([
+  ['feat-claude', 'AvatarAds connecté à Claude'],
+  ['feat-plateforme', 'Publication sur TikTok, Reels, Shorts, Facebook'],
+  ['gen-fan-1', 'Vidéo générée, prête à poster'],
+], 'Tu demandes, Claude génère, tu publies ✨')
 
 const GAL_MONTAGE = gallery([
-  ['feat-split', 'Vidéo en split screen'],
-  ['express-veo', 'Vidéo Express générée en 30 secondes'],
-  ['gen-fan-5', 'Vidéo verticale prête à poster'],
-], 'Split screen, Express, montage auto — tout est inclus ✨')
+  ['montage-avant', 'Rush brut avant montage'],
+  ['feat-split', 'La même vidéo en split screen'],
+  ['feat-editeur', 'Montage récupérable dans l\'Éditeur'],
+], 'Ton rush entre brut, il ressort monté ✨')
 
-const GAL_AVATARS = gallery([
-  ['gen-fan-1', 'Avatar IA généré'],
-  ['gen-fan-2', 'Autre avatar IA généré'],
-  ['gen-fan-4', 'Avatar IA en situation'],
-], 'Ton avatar, ta voix — sans jamais te filmer ✨')
+const GAL_IMAGES = gallery([
+  ['demo-basket', 'Scène de sport ultra-réaliste générée en 4K'],
+  ['hero-bacteria', 'Personnage 3D généré par IA'],
+  ['demo-paris', 'Scène de rue générée par IA'],
+], 'Images 4K — un prompt, quelques secondes ✨')
 
-const GAL_AVANT_APRES = gallery([
-  ['ia-before', 'Image avant retouche IA'],
-  ['ia-after', 'La même image après retouche IA'],
-  ['tout-en-un', 'Tous les outils réunis dans AvatarAds'],
-], 'Avant / après, et tout dans le même abonnement ✨')
+const GAL_LIPSYNC = gallery([
+  ['lipsync', 'Avatar IA en lipsync, indétectable'],
+  ['step-03', 'Clonage de voix à partir de 30 secondes'],
+  ['gen-fan-1b', 'Rendu réaliste en plein écran'],
+], 'Ton visage, ta voix — sans jamais te filmer ✨')
+
+const GAL_EXPRESS = gallery([
+  ['gen-veo', 'Scène générée avec Veo 3.1'],
+  ['express-veo', 'Vidéo Express prête en 30 secondes'],
+  ['hero-strawberry', 'Personnage IA dans une vidéo verticale'],
+], 'Express × Veo 3.1 — une idée, une vidéo ✨')
 
 const quoteBlock = (q: string, who: string, tag: string) => `
   <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:18px 20px;margin-top:22px">
@@ -95,40 +95,44 @@ const quoteBlock = (q: string, who: string, tag: string) => `
 // Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
 // pas des captures d'interface.
 
-const QUOTE_SARAH  = quoteBlock("Je n'aimais pas me filmer. Mon avatar parle à ma place avec ma propre voix. Mes abonnés ne font pas la différence.", "Sarah K.", "Coach business · 2 vidéos/jour automatisées")
-const QUOTE_INES   = quoteBlock("De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", "Inès B.", "Nutrition & fitness · ×30 sur les vues")
-const QUOTE_HUGO   = quoteBlock("Premier mois : 3 vidéos virales, 12k nouveaux abonnés et mes premières ventes en automatique. Je ne reviendrai jamais en arrière.", "Hugo L.", "Finance perso · +12k abonnés / mois")
-const QUOTE_LUCAS  = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain. Clairement l'outil le plus ROI que j'utilise.", 'Lucas M. · E-commerce', '+80k vues · 40 leads')
-const QUOTE_THOMAS = quoteBlock("Mon agence me facturait 1500€/mois pour du montage. J'ai tout internalisé avec AvatarAds pour le prix d'un café par jour.", 'Thomas D. · Agence SMMA', '−1500€/mois économisés')
+const Q_CLAUDE  = quoteBlock("J'ai lancé une boutique et une chaîne faceless en parallèle. 5 vidéos avatar le matin, je publie, je passe à autre chose.", "Karim Z.", "Dropshipping · 5 vidéos/jour")
+const Q_MONTAGE = quoteBlock("Tout est inclus, je me connecte et je génère. Avant je payais 4 abonnements séparés, là c'est tout en un. Game changer.", "Mehdi R.", "Créateur de contenu · Stack IA complète")
+const Q_IMAGES  = quoteBlock("De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", "Inès B.", "Nutrition & fitness · ×30 sur les vues")
+const Q_LIPSYNC = quoteBlock("Les sous-titres et le lipsync sont bluffants. On dirait vraiment un vrai créateur qui parle. Personne ne capte que c'est IA.", "Yasmine A.", "Beauté & lifestyle · Lipsync indétectable")
+const Q_EXPRESS = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain.", "Lucas M.", "E-commerce · +80k vues · 40 leads")
 
 type Stage = { kind: string; subject: string; title: string; body: (name: string) => string; cta: string; ctaUrl: string; minH: number; maxH: number; extra?: string }
 const hi = (n: string) => n ? `${n}, ` : ''
 const DRIP: Stage[] = [
   { kind: 'drip_2h', minH: 2, maxH: 24,
-    subject: 'Ta première vidéo t’attend 🎬',
-    title: 'Ta première vidéo est en ligne ce soir',
-    body: n => `${hi(n)}ton compte est prêt. Tu décris ton produit, l’IA tourne la vidéo à ta place — voix, sous-titres, montage. Concrètement : tu peux publier ce soir au lieu de bloquer un après-midi de tournage, et commencer à récolter des vues pendant que tes concurrents cherchent encore un angle.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: QUOTE_SARAH + GAL_VIDEOS },
-  { kind: 'drip_24h', minH: 24, maxH: 72,
-    subject: 'Les pubs IA qui tournent en ce moment 👀',
+    subject: 'Demande tes vidéos à Claude, il les fait 🤖',
     title: 'Ils publient 10 fois pendant que tu publies une fois',
-    body: n => `${hi(n)}l’algorithme récompense le volume : plus tu postes, plus tu multiplies tes chances de toucher la bonne audience. AvatarAds se connecte à Claude — tu lui demandes tes vidéos, il les génère en série pendant que tu fais autre chose. Résultat : tu occupes le terrain tous les jours, et ce sont tes vidéos qui remontent, pas celles des autres.`,
-    cta: 'Voir ce que je peux créer →', ctaUrl: APP_URL, extra: QUOTE_LUCAS + GAL_IMAGES_IA },
+    body: n => `${hi(n)}AvatarAds se branche directement sur Claude : tu lui demandes tes vidéos en langage normal, il les génère en série pendant que tu fais autre chose. L'algorithme récompense le volume — plus tu postes, plus tu multiplies tes chances de tomber sur la bonne audience. Résultat : tu occupes le terrain tous les jours, et ce sont tes vidéos qui remontent.`,
+    cta: 'Connecter Claude →', ctaUrl: APP_URL, extra: Q_CLAUDE + GAL_CLAUDE },
+
+  { kind: 'drip_24h', minH: 24, maxH: 72,
+    subject: 'Ton rush entre brut, il ressort monté 🎬',
+    title: 'Le montage, c\'est ce qui te prend le plus de temps',
+    body: n => `${hi(n)}tu enregistres, tu déposes, et le Montage IA fait le reste : il écoute ce que tu dis, place les zooms sur les mots forts, ajoute les sous-titres, les bruitages et les visuels au bon moment. Ce qui te prenait une soirée sur un logiciel te prend le temps d'un café — et tu récupères tout dans l'Éditeur si tu veux ajuster.`,
+    cta: 'Monter ma vidéo →', ctaUrl: APP_URL, extra: Q_MONTAGE + GAL_MONTAGE },
+
   { kind: 'drip_3d', minH: 72, maxH: 120,
-    subject: '🌞 +25 crédits offerts sur ton 1er mois',
-    title: 'Des visuels 4K qu’on ne prend pas pour de l’IA',
-    body: n => `${hi(n)}tes crédits bonus t’attendent : +25 sur Starter, +50 sur Pro, +75 sur Élite. De quoi tester ce qui fait la différence — nos images sortent en 4K avec un rendu de peau qui tient le plein écran, là où la plupart des générateurs trahissent l’IA au premier zoom. Une créa qui ne fait pas « faite par une machine », c’est une créa qu’on regarde jusqu’au bout.`,
-    cta: 'Choisir mon plan →', ctaUrl: PRICING_URL, extra: QUOTE_INES + GAL_MONTAGE },
+    subject: 'Des visuels 4K qu\'on ne prend pas pour de l\'IA 🎨',
+    title: 'La qualité qui fait qu\'on regarde jusqu\'au bout',
+    body: n => `${hi(n)}Images IA sort en 4K, avec un rendu de peau qui tient le plein écran — là où la plupart des générateurs trahissent l'IA au premier zoom. C'est ce détail qui fait la différence entre une créa qu'on scrolle et une créa qu'on regarde : personne ne s'arrête sur une image qui sent la machine.`,
+    cta: 'Générer mes visuels →', ctaUrl: APP_URL, extra: Q_IMAGES + GAL_IMAGES },
+
   { kind: 'drip_5d', minH: 120, maxH: 168,
-    subject: '1 € par jour pour ne plus jamais tourner de vidéo',
-    title: '1 € par jour, contre 1500 € d’agence',
-    body: n => `${hi(n)}29,99 €/mois pour des vidéos, des images et l’export sans watermark. Le montage qu’une agence te facture 1500 € par mois, tu le fais toi-même en quelques minutes — et tout ce que tu ne dépenses plus en production part directement dans ta marge ou dans ta pub.`,
-    cta: 'Démarrer avec Starter →', ctaUrl: PRICING_URL, extra: QUOTE_THOMAS + GAL_AVATARS },
+    subject: 'Ta voix, ton visage — sans jamais te filmer 🎙️',
+    title: 'Personne ne voit que c\'est une IA',
+    body: n => `${hi(n)}30 secondes d'enregistrement suffisent à cloner ta voix. Ton avatar parle ensuite avec TON timbre, et le lipsync est calé au mot près — tes abonnés ne font pas la différence. Plus besoin de te maquiller, de trouver la lumière ou de refaire dix prises : tu écris, il parle.`,
+    cta: 'Cloner ma voix →', ctaUrl: APP_URL, extra: Q_LIPSYNC + GAL_LIPSYNC },
+
   { kind: 'drip_7d', minH: 168, maxH: 336,
-    subject: 'On garde ta place ? 💛',
-    title: 'Ce que tu laisses passer',
-    body: n => `${hi(n)}ton compte reste ouvert, mais les crédits bonus du premier mois ne dureront pas. Chaque semaine sans publier, c’est une audience qui va chez quelqu’un d’autre — et elle ne revient pas toute seule. Si AvatarAds n’est pas pour toi, aucun souci : cet e-mail est le dernier de la série.`,
-    cta: 'Retourner sur AvatarAds →', ctaUrl: APP_URL, extra: QUOTE_HUGO + GAL_AVANT_APRES },
+    subject: 'Une idée le matin, la vidéo à midi ⚡',
+    title: 'Express : de l\'idée à la vidéo, en une phrase',
+    body: n => `${hi(n)}tu écris ce que tu veux montrer, Express le fabrique avec Veo 3.1 — décor, mouvement, ambiance, tout est généré. Pas de tournage, pas de banque d'images, pas de montage. Pour moins qu'un café par jour, tu as de quoi alimenter tes réseaux toute la semaine. Si AvatarAds n'est pas pour toi, aucun souci : cet e-mail est le dernier de la série.`,
+    cta: 'Essayer Express →', ctaUrl: APP_URL, extra: Q_EXPRESS + GAL_EXPRESS },
 ]
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -213,7 +217,7 @@ serve(async (req) => {
       const unsubUrl = `${UNSUB_BASE}?u=${u.id}&k=${await unsubKey(u.id)}`
       const ok = await sendEmail(u.email, 'Plus de crédits ⚡ Recharge en 1 clic', tpl({
         title: 'Ton solde est à zéro',
-        body: `${hi(u.first_name || '')}tes crédits du mois sont épuisés — bien joué, ça veut dire que tu produis 💪 Recharge avec un pack (Flash +40, Pack S +90, Pack L +250, dès 9,99 €) ou passe au plan supérieur pour un budget mensuel plus large.`,
+        body: `${hi(u.first_name || '')}tes crédits du mois sont épuisés — bien joué, ça veut dire que tu produis 💪 Recharge en un clic avec un pack de crédits, ou passe au plan supérieur pour ne plus jamais compter.`,
         cta: 'Recharger mes crédits →', ctaUrl: APP_URL, unsubUrl,
       }))
       if (ok) { sent++; report[zeroKind] = (report[zeroKind] || 0) + 1 }
