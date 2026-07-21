@@ -12,7 +12,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY  = Deno.env.get('RESEND_API_KEY') ?? ''
-const CRON_SECRET     = Deno.env.get('CRON_SECRET') ?? ''   // optionnel : verrouille le déclenchement
+const CRON_SECRET     = Deno.env.get('CRON_SECRET') ?? ''   // OBLIGATOIRE : verrouille le déclenchement
 const FROM            = 'AvatarAds <bonjour@avatarads.fr>'
 const APP_URL         = 'https://avatarads.fr/app/'
 const PRICING_URL     = 'https://avatarads.fr/tarifs.html'
@@ -147,7 +147,18 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
-  if (CRON_SECRET && req.headers.get('x-cron-key') !== CRON_SECRET) {
+  // ÉCHEC FERMÉ. Avant, la garde était `if (CRON_SECRET && ...)` : le secret n'étant
+  // pas défini côté Supabase, la condition sautait et N'IMPORTE QUI muni de la clé
+  // publiable — publique dans app/index.html — pouvait déclencher un envoi de mails
+  // à de vrais inscrits. Un endpoint qui écrit à des clients ne s'ouvre jamais par
+  // défaut d'une variable manquante.
+  if (!CRON_SECRET) {
+    console.error('❌ CRON_SECRET absent : envoi refusé (à définir dans Supabase → Edge Functions → Secrets)')
+    return new Response(JSON.stringify({ error: 'CRON_SECRET non configuré côté serveur' }), {
+      status: 503, headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  if (req.headers.get('x-cron-key') !== CRON_SECRET) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!RESEND_API_KEY) return new Response(JSON.stringify({ ok: true, skipped: 'RESEND_API_KEY manquant' }), { status: 200 })

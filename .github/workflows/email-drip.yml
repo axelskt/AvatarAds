@@ -14,8 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Déclencher email-drip
+        # L'en-tête Authorization est exigé par la PASSERELLE Supabase (verify_jwt),
+        # avant même d'entrer dans la fonction : sans lui, 401
+        # UNAUTHORIZED_NO_AUTH_HEADER. Le CLI remet verify_jwt à true à chaque
+        # `functions deploy`, donc on ne peut pas compter sur le réglage — on envoie
+        # la clé publiable, qui est déjà publique dans app/index.html.
+        # La vraie autorisation reste CRON_SECRET, vérifiée par la fonction.
+        # --fail-with-body : sans lui, l'échec ne dit pas POURQUOI.
         run: |
-          curl -sf -X POST "https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/email-drip" \
+          curl -sS --fail-with-body -X POST "https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/email-drip" \
+            -H "Authorization: Bearer sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck" \
+            -H "apikey: sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck" \
             -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             -d '{}'
