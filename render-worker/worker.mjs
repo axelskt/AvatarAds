@@ -154,6 +154,17 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       copyFileSync(jobLogo, join(proj, 'brand', 'logo' + extname(jobLogo)))
     }
 
+    // emojis 3D (#135) : on ne copie QUE ceux que le plan utilise — la banque en
+    // compte 84, inutile d'en embarquer 84 dans chaque rendu.
+    const wanted = new Set((plan.slides || []).map((sl) => sl.emoji).filter(Boolean))
+    if (wanted.size) {
+      mkdirSync(join(proj, 'emoji'), { recursive: true })
+      for (const name of wanted) {
+        const f = join(HERE, 'assets', 'emoji', name + '.png')
+        if (existsSync(f)) copyFileSync(f, join(proj, 'emoji', name + '.png'))
+      }
+    }
+
     const fontsSrc = join(HERE, 'assets', 'fonts')
     if (existsSync(fontsSrc)) {
       mkdirSync(join(proj, 'fonts'), { recursive: true })

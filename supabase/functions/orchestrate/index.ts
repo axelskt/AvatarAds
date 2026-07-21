@@ -163,6 +163,10 @@ const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'success', 'magic',
 // Sur une video serieuse ils sonnent amateur et tuent la credibilite -> ils sont
 // SUPPRIMES DU PLAN cote serveur quand tone !== 'fun' (verrou, pas simple consigne).
 const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
+// #135 · EMOJIS 3D (Fluent Emoji, licence MIT). Vocabulaire UNIVERSEL : contrairement
+// aux animations maison — taillees pour AvatarAds — il illustre n'importe quel script.
+// Sur un audio d'une autre marque, les animations ne couvraient que 11 % de la duree.
+const EMOJIS = ['airplane', 'alarm_clock', 'bank', 'bar_chart', 'battery', 'beach_with_umbrella', 'bell', 'bookmark_tabs', 'books', 'brain', 'bullseye', 'bust_in_silhouette', 'busts_in_silhouette', 'calendar', 'camera', 'chart_decreasing', 'chart_increasing', 'check_mark_button', 'clapper_board', 'coin', 'credit_card', 'cross_mark', 'crown', 'crystal_ball', 'desktop_computer', 'direct_hit', 'dollar_banknote', 'envelope', 'eyes', 'fire', 'floppy_disk', 'gear', 'gift', 'glowing_star', 'growing_heart', 'hammer_and_wrench', 'handshake', 'headphone', 'high_voltage', 'hourglass_done', 'hundred_points', 'key', 'laptop', 'light_bulb', 'link', 'locked', 'loudspeaker', 'magic_wand', 'magnifying_glass_tilted_left', 'megaphone', 'memo', 'microphone', 'mobile_phone', 'money_bag', 'money_with_wings', 'movie_camera', 'musical_note', 'open_book', 'package', 'party_popper', 'puzzle_piece', 'question_mark', 'rainbow', 'recycling_symbol', 'red_exclamation_mark', 'red_heart', 'robot', 'rocket', 'scissors', 'shopping_cart', 'sparkles', 'speaker_high_volume', 'speech_balloon', 'spiral_calendar', 'star', 'stopwatch', 'studio_microphone', 'thinking_face', 'trophy', 'unlocked', 'video_camera', 'warning', 'wrench']
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
@@ -205,6 +209,7 @@ const PLAN_SCHEMA = {
           layout: { type: 'string' },
           motif: { type: 'string' },
           anim: { type: 'string' },     // #135 · animation fabriquee — liste dans le prompt
+          emoji: { type: 'string' },    // #135 · emoji 3D — liste dans le prompt
           start: { type: 'number' },
           end: { type: 'number' },
           wide: { type: 'boolean' },
@@ -249,6 +254,7 @@ function expandPlan(raw: any): Plan {
       return {
         type: String(sl?.type || ''), layout: String(sl?.layout || ''), motif: String(sl?.motif || ''),
         anim: String(sl?.anim || ''),
+        emoji: String(sl?.emoji || ''),
         start: Number(sl?.start) || 0, end: Number(sl?.end) || 0, wide: !!sl?.wide,
         title: String(sl?.title || ''), eyebrow, accent, sub, center, value, unit,
         items: arr(sl?.items).map((l) => { const [text, t, v, label] = cut(l, 4); return { text, t: num(t), value: v, label } }),
@@ -268,7 +274,7 @@ type Plan = {
   beds?: { name: string; t: number; reason?: string }[]
   music: { mood: string } | null
   slides: {
-    type: string; layout?: string; motif?: string; anim?: string; start: number; end: number; title: string; wide: boolean
+    type: string; layout?: string; motif?: string; anim?: string; emoji?: string; start: number; end: number; title: string; wide: boolean
     eyebrow?: string; accent?: string; sub?: string; center?: string; value?: string; unit?: string
     // en entree : lignes "type|layout|score|pourquoi" ; en sortie : objets parses
     options?: (string | { type: string; layout: string; score: number; why: string })[]
@@ -412,6 +418,17 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     grid     — de la quantite, de la repetition, "des centaines de...", l'echelle.
   Laisse "" quand le mot prononce n'evoque VRAIMENT rien de visuel (un connecteur, une transition) : une forme decorative qui ne correspond a rien casse la video. Mais ne laisse pas l'ecran vide plus de 3s d'affilee — s'il n'y a ni image ni animation qui colle, c'est que la scene ne devait pas exister : etends la scene voisine.
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
+- EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
+  Quand PREFERER l'emoji a l'animation : des que le mot evoque un OBJET, une NOTION concrete ou une emotion. L'animation maison ne gagne que sur les mecaniques propres au produit (un split screen, une voix qu'on clone, un avatar qui se genere) — partout ailleurs l'emoji est plus rapide a lire et plus juste.
+  Rythme : un emoji par idee forte, 0,7 a 1,5s, jamais deux colles. Sur 30s, 4 a 8 emojis est un bon compte.
+  VALEURS AUTORISEES (toute autre valeur est jetee) :
+    airplane alarm_clock bank bar_chart battery beach_with_umbrella bell bookmark_tabs books brain bullseye bust_in_silhouette busts_in_silhouette
+    calendar camera chart_decreasing chart_increasing check_mark_button clapper_board coin credit_card cross_mark crown crystal_ball desktop_computer
+    direct_hit dollar_banknote envelope eyes fire floppy_disk gear gift glowing_star growing_heart hammer_and_wrench handshake headphone high_voltage
+    hourglass_done hundred_points key laptop light_bulb link locked loudspeaker magic_wand magnifying_glass_tilted_left megaphone memo microphone
+    mobile_phone money_bag money_with_wings movie_camera musical_note open_book package party_popper puzzle_piece question_mark rainbow
+    recycling_symbol red_exclamation_mark red_heart robot rocket scissors shopping_cart sparkles speaker_high_volume speech_balloon spiral_calendar
+    star stopwatch studio_microphone thinking_face trophy unlocked video_camera warning wrench
     split   — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
     voice   — une voix, un clonage vocal, un enregistrement, du son.
     list    — une liste, une bibliotheque, un catalogue, "plus de X scripts / modeles / options".
@@ -630,11 +647,13 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const MOTIFS = ['chain', 'tiles', 'versus', 'bars', 'ring', 'cloud', 'halftone', 'grid']
       const motif = MOTIFS.includes(String(s.motif || '')) ? String(s.motif) : ''
       const anim = ANIMS.includes(String(s.anim || '')) ? String(s.anim) : ''
+      const emoji = EMOJIS.includes(String(s.emoji || '')) ? String(s.emoji) : ''
       return {
         type,
         layout,
         motif,
         anim,
+        emoji,
         // un bandeau peut se poser des la 1re seconde (la video reste visible dessous)
         start: r2(clamp(s.start, layout === 'banner' ? 0.3 : slideMin, D)),
         end: r2(clamp(s.end, 0, layout === 'banner' ? r2(D - 0.3) : slideMax)),
@@ -672,8 +691,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // ne vient pas de son texte. Sans cette exception, toutes les animations pures
     // (split, faceless, logo...) etaient jetees ici et la video repartait quasi vide.
     .filter((s) => SLIDE_TYPES.includes(s.type) && s.end > s.start + 0.5
-      && (s.layout === 'banner' ? !!s.title : (s.items.length > 0 || !!s.anim)))
-    .filter((s) => s.layout !== 'full' || s.items.length > 0 || !!s.anim || ['kpi', 'timer'].includes(s.type))
+      && (s.layout === 'banner' ? !!s.title : (s.items.length > 0 || !!s.anim || !!s.emoji)))
+    .filter((s) => s.layout !== 'full' || s.items.length > 0 || !!s.anim || !!s.emoji || ['kpi', 'timer'].includes(s.type))
     // seuil de deliberation : sous 55/100, le moment ne merite pas de traitement (plein ecran)
     .filter((s) => !strict || !s.options.length || s.options[0].score >= 55)
     .sort((a, b) => a.start - b.start)
