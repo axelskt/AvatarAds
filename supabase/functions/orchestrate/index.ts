@@ -152,7 +152,10 @@ async function transcribe(audio: File, lang: string | null): Promise<{ text: str
 }
 
 // ---------- schéma JSON strict du plan (sortie Claude garantie valide) ----------
-const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success', 'magic', 'hit', 'flash', 'snap', 'hu', 'bip', 'fahh', 'robot']
+// 'flash' retire de la banque : pose sur « plus de cinquante scripts », il sonnait
+// comme une erreur et gachait le passage. Il reste disponible dans l'Editeur manuel,
+// ou l'utilisateur le place lui-meme en connaissance de cause.
+const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success', 'magic', 'hit', 'snap', 'hu', 'bip', 'fahh', 'robot']
 // #125 · REGISTRE FUN : ces sons-la ne vont QUE sur un contenu qui assume l'humour.
 // Sur une video serieuse ils sonnent amateur et tuent la credibilite -> ils sont
 // SUPPRIMES DU PLAN cote serveur quand tone !== 'fun' (verrou, pas simple consigne).
@@ -862,7 +865,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   // apparition sonne comme un tic de montage et aplatit la video. On ne remplace donc
   // que les REPETITIONS : le premier choix du modele est conserve, les suivants
   // tournent sur une rotation neutre (les sons 'fun' restent hors jeu hors ton fun).
-  const SFX_ROTATION = ['pop', 'ding', 'snap', 'flash', 'click', 'riser', 'success', 'magic', 'hit', 'boom']
+  const SFX_ROTATION = ['pop', 'ding', 'snap', 'click', 'riser', 'success', 'magic', 'hit', 'boom']
   {
     const used: string[] = []
     sfxOnEvent = sfxOnEvent.map((x) => {
@@ -872,6 +875,18 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       used.push(alt)
       return { ...x, kind: alt }
     })
+    // TROIS BRUITAGES AU MAXIMUM. Un son a chaque apparition sature l'oreille et
+    // gache la video — 8 sur 30 s, c'etait le cas. Deux ou trois bien espaces
+    // suffisent a rythmer, quitte a repeter le meme. On garde donc les premiers
+    // separes d'au moins un cinquieme de la video, jamais plus de trois.
+    const MIN_GAP = Math.max(3, D / 5)
+    const kept: typeof sfxOnEvent = []
+    for (const x of sfxOnEvent) {
+      if (kept.length >= 3) break
+      if (kept.length && x.t - kept[kept.length - 1].t < MIN_GAP) continue
+      kept.push(x)
+    }
+    sfxOnEvent = kept
   }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
