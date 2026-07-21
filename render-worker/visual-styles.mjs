@@ -309,13 +309,13 @@ function wordCss(W, H, fz) {
         border: 1px solid rgba(17,17,17,.10); border-radius: ${Math.round(H * 0.012)}px;
         box-shadow: 0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.035)}px rgba(17,17,17,.16); }
       .vs-word .broll-card img, .vs-word .broll-card video { max-height: ${Math.round(H * 0.29)}px; }
-      /* MOMENT FORT : l'image passe au centre, nettement plus grande — le mot descend
-         sous elle (classe .low) pour qu'ils ne se croisent jamais. */
-      .vs-word .broll.hero { align-items: center; padding-top: 0; padding-bottom: ${Math.round(H * 0.22)}px; }
-      .vs-word .broll.hero .broll-card { max-width: ${Math.round(W * 0.78)}px; max-height: ${Math.round(H * 0.40)}px;
-        box-shadow: 0 ${Math.round(H * 0.02)}px ${Math.round(H * 0.05)}px rgba(17,17,17,.22); }
-      .vs-word .broll.hero .broll-card img, .vs-word .broll.hero .broll-card video { max-height: ${Math.round(H * 0.40)}px; }
-      .vs-word .cap.low { top: ${Math.round(H * 0.70)}px !important; height: ${Math.round(H * 0.13)}px; }
+      /* MOMENT FORT : l'image PREND toute la zone sûre et cache le sous-titre —
+         12 % → 78 % en hauteur, 4 % → 80 % en largeur. Aucun texte par-dessus. */
+      .vs-word .broll.hero { align-items: center; justify-content: center; padding: 0; }
+      .vs-word .broll.hero .broll-card { max-width: ${Math.round(W * 0.76)}px; max-height: ${Math.round(H * 0.62)}px;
+        border-radius: ${Math.round(H * 0.016)}px;
+        box-shadow: 0 ${Math.round(H * 0.024)}px ${Math.round(H * 0.06)}px rgba(17,17,17,.26); }
+      .vs-word .broll.hero .broll-card img, .vs-word .broll.hero .broll-card video { max-height: ${Math.round(H * 0.62)}px; }
       .vs-word #slidezone { left: 0; top: 0; width: ${W}px; height: ${H}px; z-index: 1;
         background: ${WORD_PAPER}; background-image: none; }
       .vs-word #slidezone::after { display: none; }
