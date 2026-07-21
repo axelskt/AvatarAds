@@ -164,7 +164,7 @@ export function buildComposition(plan, opts = {}) {
   // et les mots déjà dits RESTENT à l'écran — au lieu de se remplacer.
   const ctaWords = wordMode
     ? (plan.captions || []).filter((c) => c.start >= ctaStart)
-      .map((c, i) => ({ id: 'ctw' + i, text: String(c.text || ''), t: r2(c.start) }))
+      .map((c, i) => ({ id: 'ctw' + i, text: String(c.text || ''), t: r2(c.start), accent: !!c.accent }))
       .filter((w) => w.text)
     : []
   const hasCta = wordMode && ctaWords.length >= 3
@@ -602,7 +602,7 @@ ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
 ${capsHtml}${hasCta ? `
-      <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
+      <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}"${w.accent ? ` style="color:${WORD_ACCENT}"` : ''}>${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}    </div>
 
