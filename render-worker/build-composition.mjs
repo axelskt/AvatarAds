@@ -160,10 +160,13 @@ export function buildComposition(plan, opts = {}) {
   const ctaSec = (plan.sections || []).filter((x) => x.role === 'cta' || x.role === 'outro')
     .sort((a, b) => b.start - a.start)[0]
   const ctaStart = wordMode ? r2(ctaSec ? Math.max(ctaSec.start, D - 6) : D - 4) : Infinity
+  // chaque mot garde SON timestamp : la phrase s'écrit sur la voix, mot après mot,
+  // et les mots déjà dits RESTENT à l'écran — au lieu de se remplacer.
   const ctaWords = wordMode
-    ? (plan.captions || []).filter((c) => c.start >= ctaStart).map((c) => String(c.text || '')).filter(Boolean)
+    ? (plan.captions || []).filter((c) => c.start >= ctaStart)
+      .map((c, i) => ({ id: 'ctw' + i, text: String(c.text || ''), t: r2(c.start) }))
+      .filter((w) => w.text)
     : []
-  const ctaText = ctaWords.join(' ').trim()
   const hasCta = wordMode && ctaWords.length >= 3
 
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
@@ -599,7 +602,7 @@ ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
 ${capsHtml}${hasCta ? `
-      <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${esc(ctaText)}</span></div>` : ''}
+      <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}    </div>
 
@@ -618,8 +621,10 @@ ${fullJs}
 ${bannersJs}
 ${hookJs}
 ${capsJs}${hasCta ? `
-      tl.fromTo('#ctablk span', { autoAlpha: 0, y: 26, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.42, ease: 'back.out(1.7)' }, ${r2(ctaStart + 0.1)});
-      tl.to('#ctablk span', { scale: 1.03, duration: ${r2(Math.max(0.6, D - ctaStart - 0.6))}, ease: 'sine.inOut' }, ${r2(ctaStart + 0.55)});` : ''}
+${ctaWords.map((w) => `
+      tl.set('#${w.id}', { autoAlpha: 0 }, 0);
+      tl.fromTo('#${w.id}', { autoAlpha: 0, y: 14, scale: 0.9 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.22, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(Math.max(ctaStart, w.t))});`).join('')}
+      tl.to('#ctablk span', { scale: 1.04, duration: ${r2(Math.max(0.6, D - ctaStart - 0.4))}, ease: 'sine.inOut' }, ${r2(ctaStart + 0.3)});` : ''}
 ${flashJs}
 ${avatarJs}
 ${vs ? styleExtraJs(vs, r2, { slides: slideDefs, fulls: fullDefs, banners: bannerDefs }) : ''}
