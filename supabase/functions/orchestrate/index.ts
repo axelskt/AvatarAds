@@ -152,10 +152,13 @@ async function transcribe(audio: File, lang: string | null): Promise<{ text: str
 }
 
 // ---------- schéma JSON strict du plan (sortie Claude garantie valide) ----------
-// 'flash' retire de la banque : pose sur « plus de cinquante scripts », il sonnait
-// comme une erreur et gachait le passage. Il reste disponible dans l'Editeur manuel,
-// ou l'utilisateur le place lui-meme en connaissance de cause.
-const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'riser', 'success', 'magic', 'hit', 'snap', 'hu', 'bip', 'fahh', 'robot']
+// Deux sons retires de la banque du Montage IA (ils restent dans l'Editeur manuel,
+// ou l'utilisateur les place lui-meme en connaissance de cause) :
+//   'flash' — pose sur « plus de cinquante scripts », il sonnait comme une erreur ;
+//   'riser' — le fichier dure DIX SECONDES. Pose sur « cloner ta voix », il couvrait
+//             tout le reste de la video. Un bruitage de ponctuation souligne un
+//             instant ; au-dela de ~2,5 s ce n'est plus un accent, c'est un tapis.
+const SFX_KINDS = ['whoosh', 'pop', 'ding', 'boom', 'click', 'success', 'magic', 'hit', 'snap', 'hu', 'bip', 'fahh', 'robot']
 // #125 · REGISTRE FUN : ces sons-la ne vont QUE sur un contenu qui assume l'humour.
 // Sur une video serieuse ils sonnent amateur et tuent la credibilite -> ils sont
 // SUPPRIMES DU PLAN cote serveur quand tone !== 'fun' (verrou, pas simple consigne).
@@ -865,7 +868,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   // apparition sonne comme un tic de montage et aplatit la video. On ne remplace donc
   // que les REPETITIONS : le premier choix du modele est conserve, les suivants
   // tournent sur une rotation neutre (les sons 'fun' restent hors jeu hors ton fun).
-  const SFX_ROTATION = ['pop', 'ding', 'snap', 'click', 'riser', 'success', 'magic', 'hit', 'boom']
+  const SFX_ROTATION = ['pop', 'ding', 'snap', 'click', 'success', 'magic', 'hit', 'boom']
   {
     const used: string[] = []
     sfxOnEvent = sfxOnEvent.map((x) => {
