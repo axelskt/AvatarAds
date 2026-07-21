@@ -159,6 +159,24 @@ serve(async (req) => {
   let testTo = ''
   try { testTo = String((await req.clone().json())?.test_to || '') } catch (_) { /* pas de corps JSON */ }
   if (testTo) {
+    // Garde-fou : on a déjà envoyé cinq mails dont les images n'étaient pas encore
+    // en ligne (recadrées mais jamais poussées). On vérifie donc CHAQUE URL avant
+    // d'écrire à qui que ce soit, et on refuse l'envoi s'il en manque une.
+    const html = DRIP.map((st) => String(st.extra || '')).join('')
+    const urls = [...new Set([...html.matchAll(/src="([^"]+)"/g)].map((m) => m[1]))]
+    const broken: string[] = []
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { method: 'HEAD' })
+        if (!r.ok) broken.push(`${u} → ${r.status}`)
+      } catch (_) { broken.push(`${u} → injoignable`) }
+    }
+    if (broken.length) {
+      return new Response(JSON.stringify({ ok: false, error: 'images cassées, rien envoyé', broken }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const results: Record<string, boolean> = {}
     for (const st of DRIP) {
       results[st.kind] = await sendEmail(testTo, '[TEST] ' + st.subject,
