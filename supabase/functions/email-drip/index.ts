@@ -46,43 +46,44 @@ function tpl(opts: { title: string; body: string; cta: string; ctaUrl: string; u
 
 // ── Blocs réutilisables : galerie d'exemples générés + témoignages (avis de la LP) ──
 const ASSETS = 'https://avatarads.fr/assets/mail'
-const LP = 'https://avatarads.fr/assets/lp'
-// Une image ne doit JAMAIS revenir d'un mail a l'autre : cinq galeries distinctes,
-// chacune sur un angle different (resultats video, creations IA, avatars, avant/apres).
-const gallery = (items: [string, string][], legend: string) => `
+// Toutes les vignettes de galerie sont pré-recadrées en CARRÉ 600×600 : des ratios
+// différents faisaient des galeries bancales (une image haute au milieu, deux
+// écrasées sur les côtés), et aucun client mail ne gère object-fit de façon fiable.
+const G = 'https://avatarads.fr/assets/mail/g'
+const gallery = (files: [string, string][], legend: string) => `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr>
-${items.map(([src, alt], k) => `    <td width="33%" style="${k === 0 ? 'padding-right:5px' : k === items.length - 1 ? 'padding-left:5px' : 'padding:0 3px'}"><a href="${APP_URL}"><img src="${src}" alt="${alt}" width="100%" style="display:block;border-radius:10px;border:1px solid #e7e5e4"></a></td>`).join('\n')}
+${files.map(([f, alt], k) => `    <td width="33.33%" style="${k === 0 ? 'padding-right:4px' : k === files.length - 1 ? 'padding-left:4px' : 'padding:0 4px'}"><a href="${APP_URL}"><img src="${G}/${f}.jpg" alt="${alt}" width="100%" style="display:block;width:100%;height:auto;border-radius:10px"></a></td>`).join('\n')}
   </tr></table>
   <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">${legend}</div>`
 
 const GAL_VIDEOS = gallery([
-  [`${LP}/hero-strawberry.jpg`, 'Vidéo verticale générée avec un personnage IA'],
-  [`${LP}/lipsync.jpg`, 'Avatar IA en lipsync'],
-  [`${LP}/hero-center.jpg`, 'Vidéo verticale générée par AvatarAds'],
+  ['hero-strawberry', 'Personnage IA dans une vidéo verticale'],
+  ['lipsync', 'Avatar IA en lipsync face caméra'],
+  ['hero-center', 'Vidéo générée par AvatarAds'],
 ], 'À quoi ressemblent tes vidéos, dès la première ✨')
 
 const GAL_IMAGES_IA = gallery([
-  [`${ASSETS}/demo-cartoon.jpg`, 'Personnage cartoon 3D généré par IA'],
-  [`${ASSETS}/demo-paris.jpg`, 'Personnages fruits à Paris générés par IA'],
-  [`${ASSETS}/demo-basket.jpg`, 'Scène de basket ultra-réaliste générée par IA'],
+  ['demo-cartoon', 'Personnage cartoon 3D généré par IA'],
+  ['demo-paris', 'Personnages fruits à Paris générés par IA'],
+  ['demo-basket', 'Scène de basket ultra-réaliste générée par IA'],
 ], 'Générées avec Images IA — un prompt, quelques secondes ✨')
 
 const GAL_MONTAGE = gallery([
-  [`${LP}/feat-split.jpg`, 'Vidéo en split screen : avatar en haut, gameplay en bas'],
-  [`${LP}/montage-apres.jpg`, 'Vidéo montée automatiquement par le Montage IA'],
-  [`${LP}/express-veo.jpg`, 'Vidéo Express générée en 30 secondes'],
-], 'Split screen, montage auto, Express — tout est inclus ✨')
+  ['feat-split', 'Vidéo en split screen'],
+  ['express-veo', 'Vidéo Express générée en 30 secondes'],
+  ['gen-fan-5', 'Vidéo verticale prête à poster'],
+], 'Split screen, Express, montage auto — tout est inclus ✨')
 
 const GAL_AVATARS = gallery([
-  [`${LP}/gen-fan-1.jpg`, 'Avatar IA généré, format vertical'],
-  [`${LP}/gen-fan-2.jpg`, 'Autre avatar IA généré'],
-  [`${LP}/gen-fan-4.jpg`, 'Avatar IA en situation produit'],
+  ['gen-fan-1', 'Avatar IA généré'],
+  ['gen-fan-2', 'Autre avatar IA généré'],
+  ['gen-fan-4', 'Avatar IA en situation'],
 ], 'Ton avatar, ta voix — sans jamais te filmer ✨')
 
 const GAL_AVANT_APRES = gallery([
-  [`${LP}/ia-before.jpg`, 'Image avant retouche IA'],
-  [`${LP}/ia-after.jpg`, 'La même image après retouche IA'],
-  [`${LP}/tout-en-un.jpg`, 'Tous les outils réunis dans AvatarAds'],
+  ['ia-before', 'Image avant retouche IA'],
+  ['ia-after', 'La même image après retouche IA'],
+  ['tout-en-un', 'Tous les outils réunis dans AvatarAds'],
 ], 'Avant / après, et tout dans le même abonnement ✨')
 
 const quoteBlock = (q: string, who: string, tag: string) => `
@@ -91,8 +92,6 @@ const quoteBlock = (q: string, who: string, tag: string) => `
     <div style="font-size:14px;color:#44403c;line-height:1.6;font-style:italic">« ${q} »</div>
     <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
   </div>`
-const HERO_SOUSTITRES = `
-  <a href="${APP_URL}"><img src="${LP}/feat-soustitres.jpg" alt="Sous-titres animés sur une vidéo TikTok" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px"></a>`
 // Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
 // pas des captures d'interface.
 
@@ -109,7 +108,7 @@ const DRIP: Stage[] = [
     subject: 'Ta première vidéo t’attend 🎬',
     title: 'Ta première vidéo est à 2 minutes',
     body: n => `${hi(n)}ton compte AvatarAds est prêt. Décris ton produit, choisis un avatar, et l’IA tourne ta vidéo publicitaire à ta place — voix, sous-titres et montage inclus.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: HERO_SOUSTITRES + QUOTE_SARAH + GAL_VIDEOS },
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: QUOTE_SARAH + GAL_VIDEOS },
   { kind: 'drip_24h', minH: 24, maxH: 72,
     subject: 'Les pubs IA qui tournent en ce moment 👀',
     title: 'Pendant que tu hésites, d’autres publient',
