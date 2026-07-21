@@ -183,6 +183,20 @@ export function buildComposition(plan, opts = {}) {
       .map((c, i) => ({ id: 'ctw' + i, text: String(c.text || ''), t: r2(c.start), accent: !!c.accent }))
       .filter((w) => w.text)
     : []
+  // LE MOT-CLÉ DU CTA EN ORANGE. Le chef d'orchestre remplit `accents` avec les mots
+  // forts du script mais oublie le CTA — sur un test il avait accentué « viral »,
+  // « visage », « scripts »… et rien dans « Marque prêt en commentaire ». Or c'est LE
+  // mot que le spectateur doit retenir puisqu'il doit l'écrire.
+  // Repli déterministe : le mot juste après le verbe d'action, c'est-à-dire le premier
+  // mot porteur qui suit le premier. « Marque PRÊT en commentaire », « Écris TEST en
+  // commentaire », « Commente OUI » — la forme est toujours verbe + jeton à écrire.
+  if (ctaWords.length > 1 && !ctaWords.some((w) => w.accent)) {
+    const CTA_STOP = new Set(['en', 'si', 'tu', 'te', 'la', 'le', 'les', 'un', 'une', 'de', 'du', 'des',
+      'pour', 'dans', 'et', 'ou', 'a', 'à', 'ce', 'que', 'qui', 'veux', 'avoir', 'me', 'moi', 'y'])
+    const bare = (t) => String(t).toLowerCase().replace(/[^a-zà-ÿ]/g, '')
+    const key = ctaWords.slice(1).find((w) => { const b = bare(w.text); return b.length > 1 && !CTA_STOP.has(b) })
+    if (key) key.accent = true
+  }
   const hasCta = wordMode && ctaWords.length >= 3
 
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──

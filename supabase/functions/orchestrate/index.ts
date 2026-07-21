@@ -854,9 +854,25 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     ...avatarSegments.flatMap((a) => [a.start, a.end]),
     ...(hook ? [hook.start, hook.end] : []),
   ].filter((t) => typeof t === 'number')
-  const sfxOnEvent = strict
+  let sfxOnEvent = strict
     ? sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
     : sfxClean
+  // VARIETE DES BRUITAGES. Le modele se fixe sur un seul son et le repete : sur un
+  // test, les 8 bruitages du plan etaient huit 'whoosh'. Un meme son a chaque
+  // apparition sonne comme un tic de montage et aplatit la video. On ne remplace donc
+  // que les REPETITIONS : le premier choix du modele est conserve, les suivants
+  // tournent sur une rotation neutre (les sons 'fun' restent hors jeu hors ton fun).
+  const SFX_ROTATION = ['pop', 'ding', 'snap', 'flash', 'click', 'riser', 'success', 'magic', 'hit', 'boom']
+  {
+    const used: string[] = []
+    sfxOnEvent = sfxOnEvent.map((x) => {
+      if (!used.includes(x.kind)) { used.push(x.kind); return x }
+      const alt = SFX_ROTATION.find((k) => !used.includes(k))
+      if (!alt) return x
+      used.push(alt)
+      return { ...x, kind: alt }
+    })
+  }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
