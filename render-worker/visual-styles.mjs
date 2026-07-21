@@ -304,18 +304,27 @@ function wordCss(W, H, fz) {
       /* les IMAGES de l'utilisateur restent : carte posée sur la page blanche, au-dessus
          de la bande du mot pour ne pas le recouvrir. Une forme géométrique n'illustre
          rien — une capture de son produit, si. */
-      .vs-word .broll { background: none; align-items: flex-start; padding-top: ${Math.round(H * SAFE.top + H * 0.01)}px; z-index: 4; }
-      .vs-word .broll-card { max-width: ${Math.round(W * SAFE_CENTERED_W)}px; max-height: ${Math.round(H * 0.29)}px;
-        border: 1px solid rgba(17,17,17,.10); border-radius: ${Math.round(H * 0.012)}px;
-        box-shadow: 0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.035)}px rgba(17,17,17,.16); }
-      .vs-word .broll-card img, .vs-word .broll-card video { max-height: ${Math.round(H * 0.29)}px; }
+      /* L'image est CENTREE SUR LA ZONE SURE (4 % → 80 % en largeur), pas sur le cadre :
+         son centre tombe à 42 % et elle peut faire 76 % de large au lieu de 60 %. Une
+         contrainte pensée pour du TEXTE — que l'UI TikTok couvre à droite — rapetissait
+         inutilement les captures, au point de les rendre illisibles. */
+      .vs-word .broll { background: none; align-items: flex-start; padding-top: ${Math.round(H * SAFE.top + H * 0.01)}px; z-index: 4;
+        transform: translateX(${Math.round(W * -0.08)}px); }
+      /* Boîte de taille FIXE, l'image la remplit en contain. Avec un simple max-width
+         l'image s'affichait à sa taille naturelle — un asset de 440 px restait un
+         timbre-poste dans un cadre de 820 : max-width ne fait que réduire, jamais
+         agrandir. Pas de bordure ni d'ombre ici : elles cercleraient la boîte, pas
+         l'image, et les captures portent déjà leur propre fond. */
+      .vs-word .broll-card { width: ${Math.round(W * 0.76)}px; height: ${Math.round(H * 0.31)}px;
+        max-width: none; max-height: none; border: 0; box-shadow: none; background: none; }
+      .vs-word .broll-card img, .vs-word .broll-card video { width: 100%; height: 100%;
+        max-width: none; max-height: none; object-fit: contain; border-radius: ${Math.round(H * 0.010)}px; }
       /* MOMENT FORT : l'image PREND toute la zone sûre et cache le sous-titre —
          12 % → 78 % en hauteur, 4 % → 80 % en largeur. Aucun texte par-dessus. */
       .vs-word .broll.hero { align-items: center; justify-content: center; padding: 0; }
-      .vs-word .broll.hero .broll-card { max-width: ${Math.round(W * 0.76)}px; max-height: ${Math.round(H * 0.62)}px;
-        border-radius: ${Math.round(H * 0.016)}px;
-        box-shadow: 0 ${Math.round(H * 0.024)}px ${Math.round(H * 0.06)}px rgba(17,17,17,.26); }
-      .vs-word .broll.hero .broll-card img, .vs-word .broll.hero .broll-card video { max-height: ${Math.round(H * 0.62)}px; }
+      .vs-word .broll.hero .broll-card { width: ${Math.round(W * 0.76)}px; height: ${Math.round(H * 0.62)}px; }
+      .vs-word .broll.hero .broll-card img, .vs-word .broll.hero .broll-card video {
+        border-radius: ${Math.round(H * 0.014)}px; }
       .vs-word #slidezone { left: 0; top: 0; width: ${W}px; height: ${H}px; z-index: 1;
         background: ${WORD_PAPER}; background-image: none; }
       .vs-word #slidezone::after { display: none; }
