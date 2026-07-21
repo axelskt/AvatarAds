@@ -160,7 +160,7 @@ const SFX_FUN = ['hu', 'bip', 'fahh', 'robot']
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
-const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo']
+const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -416,16 +416,21 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
     avatar  — la creation d'un avatar, un personnage qui se genere, "ton premier avatar".
     logo    — SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
-  REGLE 1 — UNE CAPTURE D'INTERFACE NE MONTRE RIEN : un ecran d'application entier (menus, champs, boutons) est ILLISIBLE en video verticale — le spectateur a 2 secondes, il ne comprend pas ce qu'il regarde. Pour tout ce qui est un CONCEPT (split screen, clonage de voix, generation d'avatar, montage automatique), prends l'ANIMATION : elle montre l'idee en un coup d'oeil.
-  L'image ne gagne QUE si elle montre un RESULTAT lisible instantanement : une vidéo finie, une creation, une photo. Dans le doute entre une capture d'ecran et une animation : ANIMATION.
-  REGLE 2 — REMPLIS, MAIS AVEC DU JUSTE : sur une page blanche, un ecran vide trop longtemps donne une video pauvre. VISE 60 a 70% de la duree couverte par un visuel, en alternant. Concretement sur 30s : 7 a 9 visuels, aucun trou de plus de 3s.
-  Deux limites seulement : AU MAXIMUM 3 CAPTURES D'INTERFACE (les images qui montrent un ecran de l'app — au-dela on dirait une doc produit), et jamais deux fois la MEME animation, ni deux animations qui se suivent.
-  Tout le reste est libre : images de resultat, images produit, animations — prends ce qui illustre le mieux, autant de fois qu'il le faut.
-  REGLE 3 — SOIS LITTERAL : l'animation doit correspondre a ce qu'il dit MOT POUR MOT, pas a une idee vaguement proche. S'il dit "sur n'importe quel reseau", "phone" ne montre pas les reseaux — laisse "" plutot que de mettre une animation qui n'illustre rien. Dans le doute, pas d'animation.
-- REGLE ABSOLUE — C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis JAMAIS un rythme ou un type pour "faire varier" ou pour remplir un quota. Tu pars de CE QUI EST DIT a cet instant et tu prends la scene qui l'illustre le mieux. Si aucune scene ne colle a la phrase, tu restes en FULL ECRAN — c'est un choix valable et frequent. Une video ou 3 scenes seulement sont justifiees vaut mille fois mieux qu'une video ou tu as case 8 scenes decoratives.
+    faceless— l'anonymat : "sans montrer ton visage", "sans camera", "personne ne sait que c'est toi". Une tete dont les yeux se font masquer.
+  COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
+  ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
+  ETAPE 2 · CHAQUE MOMENT FORT RECOIT SON VISUEL. Sans exception : c'est exactement la que le spectateur decroche s'il ne voit rien. Par defaut une ANIMATION. Tu ne deliberes pas pour savoir SI le moment merite un visuel — il en a un ; tu deliberes seulement pour savoir LEQUEL.
+    Deux erreurs a ne jamais commettre ici :
+      · Une PROMESSE couverte par une capture d'interface. "Sans jamais montrer ton visage" n'est pas une page d'accueil, c'est "faceless". Cherche l'animation qui DIT la phrase.
+      · Une ENUMERATION ecrasee sous UNE SEULE scene de 8 ou 10 secondes. S'il cite 3, 4 ou 5 fonctionnalites a la suite, chacune a SON visuel de 1,5 a 2,5s, cale sur la seconde exacte ou il la prononce. Une checklist figee pendant qu'il en enumere cinq, c'est cinq moments forts perdus d'un coup.
+  ETAPE 3 · UNE CAPTURE D'INTERFACE NE MONTRE RIEN. Un ecran d'application entier (menus, champs, boutons) est ILLISIBLE en video verticale : le spectateur a 2 secondes, il ne comprend pas ce qu'il regarde. Pour tout ce qui est un CONCEPT (split screen, clonage de voix, generation d'avatar, montage automatique), prends l'ANIMATION. L'image ne gagne QUE si elle montre un RESULTAT lisible instantanement : une video finie, une creation, une photo. Dans le doute : ANIMATION.
+  ETAPE 4 · TU COMBLES ENSUITE. Une fois les moments forts servis, regarde les trous : sur une page blanche, un ecran vide trop longtemps donne une video pauvre. VISE 60 a 70% de la duree couverte, aucun trou de plus de 3s — soit 7 a 9 visuels sur 30s. Si un trou ne t'inspire rien de juste, etends le visuel voisin plutot que d'inventer une scene decorative.
+  ETAPE 5 · LES LIMITES, et il n'y en a que trois : AU MAXIMUM 3 CAPTURES D'INTERFACE (au-dela on dirait une doc produit) ; jamais deux fois la MEME animation ; jamais deux animations qui se suivent. Tout le reste est libre.
+  ETAPE 6 · SOIS LITTERAL. L'animation doit correspondre a ce qu'il dit MOT POUR MOT, pas a une idee vaguement proche : s'il dit "sur n'importe quel reseau", "phone" ne montre pas les reseaux. Sur un moment fort, cette regle veut dire CHERCHE MIEUX — pas "laisse vide". Sur un moment secondaire, elle veut dire laisse vide.
+- C'EST LE SCRIPT QUI COMMANDE, PAS LA VARIETE : tu ne choisis jamais un rythme ou un type pour "faire varier". Tu pars de CE QUI EST DIT a cet instant et tu prends le traitement qui l'illustre le mieux. Sur les moments SECONDAIRES, rester en plein ecran sur la personne est un choix valable et frequent — une scene decorative qui n'illustre rien vaut moins que rien. Mais un moment fort laisse nu est la faute la plus couteuse de toutes.
 - TOUT LE TEXTE AFFICHE VIENT DE SA BOUCHE : chaque title, item, value, label reprend SES mots (condenses en 2 a 5 mots), avec SON vocabulaire. Tu n'inventes RIEN : pas un chiffre qu'il n'a pas prononce, pas une etape qu'il n'a pas citee, pas un prix, pas une marque, pas une statistique. Si le chiffre n'est ni dit ni visible a l'image (ni dans le contexte produit fourni), le type kpi/bars/versus est INTERDIT — prends autre chose.
-- Consequence naturelle : comme un script alterne les idees (une enumeration, puis une preuve, puis une punchline), les rythmes alternent d'eux-memes. Verifie juste a la fin que tu n'as pas 2 scenes IDENTIQUES collees ni plus de 5s sans le moindre changement visuel : si ca arrive, c'est le signe qu'une des deux scenes n'etait pas justifiee — SUPPRIME-LA (repasse en full ecran) plutot que d'en inventer une autre.
-- TU DELIBERES AVANT DE TRANCHER (obligatoire pour CHAQUE scene) : a chaque moment ou un traitement visuel est possible, tu ne prends pas la premiere idee. Dans ton RAISONNEMENT (pas dans le JSON), compare 2 a 4 traitements candidats pour ce moment precis et note chacun sur 100 = son POTENTIEL VIRAL POUR CE SCRIPT-LA (retention : est-ce que ca donne envie de rester ? clarte : est-ce que ca rend l'idee plus limpide ? surprise : est-ce que ca casse la monotonie au bon moment ?). "rester en plein ecran sur la personne" est TOUJOURS un des candidats a evaluer, et c'est souvent le meilleur. Puis n'ecris dans le JSON que LE CANDIDAT LE MIEUX NOTE.
+- Verification finale : tu ne dois avoir ni 2 scenes IDENTIQUES collees, ni un moment fort de l'ETAPE 1 sans visuel, ni un trou de plus de 3s. Si deux scenes se ressemblent, c'est l'une des deux qui n'etait pas justifiee — supprime-la ; si un moment fort est nu, c'est une animation qui manque — ajoute-la.
+- TU DELIBERES AVANT DE TRANCHER (obligatoire pour CHAQUE scene) : a chaque moment ou un traitement visuel est possible, tu ne prends pas la premiere idee. Dans ton RAISONNEMENT (pas dans le JSON), compare 2 a 4 traitements candidats pour ce moment precis et note chacun sur 100 = son POTENTIEL VIRAL POUR CE SCRIPT-LA (retention : est-ce que ca donne envie de rester ? clarte : est-ce que ca rend l'idee plus limpide ? surprise : est-ce que ca casse la monotonie au bon moment ?). "rester en plein ecran sur la personne" est TOUJOURS un des candidats a evaluer, et c'est souvent le meilleur. Puis n'ecris dans le JSON que LE CANDIDAT LE MIEUX NOTE. Attention : cette deliberation tranche QUEL traitement, jamais SI le moment merite un visuel — les moments forts de la REGLE 3 en ont un, toujours ; c'est seulement entre eux que "rester en plein ecran" redevient un candidat.
 - Note honnetement, sans complaisance : un traitement qui n'apporte rien merite 20, pas 60. Si le meilleur candidat est sous 55, ce moment ne merite AUCUNE scene — ne l'ecris pas du tout (le rendu restera en plein ecran). Deux scenes tres bien notees valent mieux que six scenes a 60.
 - TYPES PLEIN CADRE — le declencheur est ce qui est DIT, chacun a sa condition d'entree :
     nodes  — SI il enonce un enchainement de 2 a 4 etapes ("tu fais X, puis Y, et t'obtiens Z"). items[].text = 1 a 3 mots, ses mots.
@@ -645,10 +650,13 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
           .filter((it) => it.text.trim()),
       }
     })
-    // un bandeau n'a pas d'items ; les autres en exigent au moins un
+    // Un bandeau n'a pas d'items ; les autres en exigent au moins un — SAUF une scene
+    // qui porte une animation fabriquee (#135) : elle se suffit a elle-meme, son visuel
+    // ne vient pas de son texte. Sans cette exception, toutes les animations pures
+    // (split, faceless, logo...) etaient jetees ici et la video repartait quasi vide.
     .filter((s) => SLIDE_TYPES.includes(s.type) && s.end > s.start + 0.5
-      && (s.layout === 'banner' ? !!s.title : s.items.length > 0))
-    .filter((s) => s.layout !== 'full' || s.items.length > 0 || ['kpi', 'timer'].includes(s.type))
+      && (s.layout === 'banner' ? !!s.title : (s.items.length > 0 || !!s.anim)))
+    .filter((s) => s.layout !== 'full' || s.items.length > 0 || !!s.anim || ['kpi', 'timer'].includes(s.type))
     // seuil de deliberation : sous 55/100, le moment ne merite pas de traitement (plein ecran)
     .filter((s) => !s.options.length || s.options[0].score >= 55)
     .sort((a, b) => a.start - b.start)
