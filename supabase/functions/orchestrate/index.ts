@@ -789,10 +789,52 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     else avatarSegments.push({ ...a })
   }
 
-  return { sections, zooms, broll: cleanBroll, sfx: sfxClean, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
+  // Un bruitage SOULIGNE quelque chose. S'il tombe sur un instant ou rien ne bouge
+  // a l'ecran, il sonne comme une erreur de montage — c'est ce qu'Axel a entendu sur
+  // les premiers essais. On ne garde donc que ceux qui coincident (+/- 0.35s) avec un
+  // evenement visuel reel. Verrou serveur : la consigne seule ne suffisait pas.
+  const visualEvents = [
+    ...cleanBroll.flatMap((b) => [b.start, b.end]),
+    ...slides.flatMap((sl) => [sl.start, sl.end, ...(sl.items || []).map((it) => it.t)]),
+    ...zooms.map((z) => z.t),
+    ...sections.slice(1).map((sec) => sec.start),
+    ...avatarSegments.flatMap((a) => [a.start, a.end]),
+    ...(hook ? [hook.start, hook.end] : []),
+  ].filter((t) => typeof t === 'number')
+  const sfxOnEvent = sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
+
+  return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
+// Scribe entend « avataria » pour « AvatarAds », « lypsync » pour « lipsync »… Les noms
+// propres de la marque sont connus (fiche + site + brief) : on retablit ceux qui sont
+// clairement le meme mot, sans jamais reecrire ce que la personne a reellement dit.
+function fixBrandWords(words: Word[], terms: string[]): Word[] {
+  const known = [...new Set(terms.map((t) => t.trim()).filter(Boolean))]
+    .map((t) => ({ t, k: norm(t) }))
+    .filter((x) => x.k.length >= 5)
+  if (!known.length) return words
+  return words.map((w) => {
+    const k = norm(w.text)
+    if (k.length < 5) return w
+    for (const { t, k: tk } of known) {
+      if (k === tk) return w                      // deja ecrit correctement
+      if (sim(k, tk) >= 0.7) return { ...w, text: t }
+    }
+    return w
+  })
+}
+
+// noms propres candidats : mots capitalises ou en CamelCase du contexte fourni
+function brandTerms(...sources: string[]): string[] {
+  const out = new Set<string>()
+  for (const src of sources) {
+    for (const m of String(src || '').matchAll(/\b[A-Z][a-zA-Z]{3,}(?:[A-Z][a-zA-Z]*)*\b/g)) out.add(m[0])
+  }
+  return [...out].slice(0, 40)
+}
+
 function buildCaptions(words: Word[], accents: string[], duration: number) {
   const accentKeys = accents.map(norm).filter(Boolean)
   const caps = []
@@ -899,7 +941,9 @@ serve(async (req: Request) => {
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
-    const captions = plan.detected.subtitles ? [] : buildCaptions(words, plan.accents, duration)
+    // les noms propres de la marque sont retablis AVANT de fabriquer les sous-titres
+    const fixedWords = fixBrandWords(words, brandTerms(mem.text, siteContext, brief))
+    const captions = plan.detected.subtitles ? [] : buildCaptions(fixedWords, plan.accents, duration)
 
     return json({
       ok: true,
