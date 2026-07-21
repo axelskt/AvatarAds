@@ -154,6 +154,18 @@ export function buildComposition(plan, opts = {}) {
 
   const inHero = (t) => rawBroll.some((b, i) => heroIds.has(i) && t >= b.start - 0.15 && t < b.end + 0.05)
 
+  // CTA DE FIN : le défilement mot par mot dilue l'appel à l'action. Sur la dernière
+  // section (rôle « cta », sinon les 4 dernières secondes), on affiche la phrase
+  // ENTIÈRE d'un coup — elle reste à l'écran, on a le temps de la lire et d'agir.
+  const ctaSec = (plan.sections || []).filter((x) => x.role === 'cta' || x.role === 'outro')
+    .sort((a, b) => b.start - a.start)[0]
+  const ctaStart = wordMode ? r2(ctaSec ? Math.max(ctaSec.start, D - 6) : D - 4) : Infinity
+  const ctaWords = wordMode
+    ? (plan.captions || []).filter((c) => c.start >= ctaStart).map((c) => String(c.text || '')).filter(Boolean)
+    : []
+  const ctaText = ctaWords.join(' ').trim()
+  const hasCta = wordMode && ctaWords.length >= 3
+
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
   const subSize = Math.round(H * 0.052)
   const subStroke = Math.max(4, Math.round(subSize * 0.16))
@@ -181,6 +193,8 @@ export function buildComposition(plan, opts = {}) {
     // MOMENT FORT : l'image occupe toute la zone sûre — le sous-titre est retiré,
     // pas déplacé. C'est une respiration visuelle, l'image se suffit.
     .filter((c) => !(wordMode && inHero(r2(c.start) + 0.05)))
+    // les mots du CTA sont remplacés par la phrase entière
+    .filter((c) => !(hasCta && c.start >= ctaStart))
 
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
@@ -584,7 +598,8 @@ ${slidesHtml}
 ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
-${capsHtml}
+${capsHtml}${hasCta ? `
+      <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${esc(ctaText)}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}    </div>
 
@@ -602,7 +617,9 @@ ${slidesJs}
 ${fullJs}
 ${bannersJs}
 ${hookJs}
-${capsJs}
+${capsJs}${hasCta ? `
+      tl.fromTo('#ctablk span', { autoAlpha: 0, y: 26, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.42, ease: 'back.out(1.7)' }, ${r2(ctaStart + 0.1)});
+      tl.to('#ctablk span', { scale: 1.03, duration: ${r2(Math.max(0.6, D - ctaStart - 0.6))}, ease: 'sine.inOut' }, ${r2(ctaStart + 0.55)});` : ''}
 ${flashJs}
 ${avatarJs}
 ${vs ? styleExtraJs(vs, r2, { slides: slideDefs, fulls: fullDefs, banners: bannerDefs }) : ''}
