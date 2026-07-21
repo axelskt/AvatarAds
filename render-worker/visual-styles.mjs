@@ -339,6 +339,8 @@ function wordCss(W, H, fz) {
       .vs-word .ctablk span { font-family: ${SANS}; font-weight: 700; color: ${WORD_INK};
         font-size: ${Math.round(H * 0.042)}px; line-height: 1.22; letter-spacing: -.025em;
         display: block; max-width: 100%; }
+      /* chaque mot du CTA est un élément à part : il apparaît sur sa syllabe et reste */
+      .vs-word .ctablk span i { font-style: normal; display: inline-block; will-change: transform, opacity; }
       .vs-word .cap span { font-family: ${SANS}; font-weight: 600; text-transform: none;
         letter-spacing: -.02em; line-height: 1.15; display: block; max-width: 100%; overflow: hidden; }
 
