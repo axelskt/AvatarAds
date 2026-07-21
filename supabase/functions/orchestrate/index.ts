@@ -178,7 +178,7 @@ const PLAN_SCHEMA = {
     // et re-etale en objets par expandPlan() juste apres la reponse.
     sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label"
     zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
-    broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end"
+    broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end|fonctionnalite"
     sfx: { type: 'array', items: { type: 'string' } },             // "kind|t"
     beds: { type: 'array', items: { type: 'string' } },            // "name|t"
     avatarSegments: { type: 'array', items: { type: 'string' } },  // "start|end|format"
@@ -228,7 +228,7 @@ function expandPlan(raw: any): Plan {
   return {
     sections: arr(raw.sections).map((l) => { const [role, a, b, label] = cut(l, 4); return { role, start: num(a), end: num(b), label } }),
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
-    broll: arr(raw.broll).map((l) => { const [assetId, a, b] = cut(l, 3); return { assetId, start: num(a), end: num(b) } }),
+    broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
     sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
     beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
     avatarSegments: arr(raw.avatarSegments).map((l) => { const [a, b, format] = cut(l, 3); return { start: num(a), end: num(b), format } }),
@@ -254,7 +254,7 @@ function expandPlan(raw: any): Plan {
 type Plan = {
   sections: { role: string; start: number; end: number; label: string }[]
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
-  broll: { assetId: string; start: number; end: number; reason?: string }[]
+  broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
@@ -366,7 +366,7 @@ async function claudePlan(
 FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non des objets : un schema tout en objets imbriques fait exploser la grammaire du mode strict et l'API refuse alors TOUT appel. Respecte l'ordre des champs a la lettre, separateur "|", aucun espace autour :
   sections[]       : "role|start|end|label"            ex "hook|0|3.2|l'accroche"
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
-  broll[]          : "assetId|start|end"               ex "img1|6.20|8.40"
+  broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
@@ -423,7 +423,9 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     Deux erreurs a ne jamais commettre ici :
       · Une PROMESSE couverte par une capture d'interface. "Sans jamais montrer ton visage" n'est pas une page d'accueil, c'est "faceless". Cherche l'animation qui DIT la phrase.
       · Une ENUMERATION ecrasee sous UNE SEULE scene de 8 ou 10 secondes. S'il cite 3, 4 ou 5 fonctionnalites a la suite, chacune a SON visuel de 1,5 a 2,5s, cale sur la seconde exacte ou il la prononce. Une checklist figee pendant qu'il en enumere cinq, c'est cinq moments forts perdus d'un coup.
-  ETAPE 3 · UNE CAPTURE D'INTERFACE NE MONTRE RIEN. Un ecran d'application entier (menus, champs, boutons) est ILLISIBLE en video verticale : le spectateur a 2 secondes, il ne comprend pas ce qu'il regarde. Pour tout ce qui est un CONCEPT (split screen, clonage de voix, generation d'avatar, montage automatique), prends l'ANIMATION. L'image ne gagne QUE si elle montre un RESULTAT lisible instantanement : une video finie, une creation, une photo. Dans le doute : ANIMATION.
+  ETAPE 3 · QUAND UNE IMAGE, QUAND UNE ANIMATION — la regle est nette. UNE IMAGE NE SERT QU'A PRESENTER UNE FONCTIONNALITE : il la NOMME, il dit ce qu'elle fait, tu montres a quoi elle ressemble. C'est son unique emploi. TOUT LE RESTE — l'accroche, la promesse, un benefice, une transition, le CTA — c'est une ANIMATION, ou rien.
+    Pourquoi : une animation parle mieux qu'une capture (un ecran d'application entier, avec ses menus et ses boutons, est ILLISIBLE en vertical : le spectateur a 2 secondes) et elle reste dans la direction artistique du style, alors qu'une image posee sur une promesse casse les deux d'un coup.
+    Concretement : "le split screen disponible" -> il nomme une fonctionnalite, image possible. "sans jamais montrer ton visage" -> une promesse, donc animation (faceless), JAMAIS une capture.
   ETAPE 4 · TU COMBLES ENSUITE. Une fois les moments forts servis, regarde les trous : sur une page blanche, un ecran vide trop longtemps donne une video pauvre. VISE 60 a 70% de la duree couverte, aucun trou de plus de 3s — soit 7 a 9 visuels sur 30s. Si un trou ne t'inspire rien de juste, etends le visuel voisin plutot que d'inventer une scene decorative.
   ETAPE 5 · LES LIMITES, et il n'y en a que trois : AU MAXIMUM 3 CAPTURES D'INTERFACE (au-dela on dirait une doc produit) ; jamais deux fois la MEME animation ; jamais deux animations qui se suivent. Tout le reste est libre.
   ETAPE 6 · SOIS LITTERAL. L'animation doit correspondre a ce qu'il dit MOT POUR MOT, pas a une idee vaguement proche : s'il dit "sur n'importe quel reseau", "phone" ne montre pas les reseaux. Sur un moment fort, cette regle veut dire CHERCHE MIEUX — pas "laisse vide". Sur un moment secondaire, elle veut dire laisse vide.
@@ -477,7 +479,9 @@ RYTHME ADAPTATIF : decoupe D'ABORD le transcript en phrases — TOUTES les borne
 
 ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, declenches PILE sur un mot fort (le timestamp du mot). cx/cy = point de zoom relatif (0-1) deduit des images de la video (la ou est reellement le visage). Pas de zoom pendant un b-roll.
 
-B-ROLL (images utilisateur, plein ecran par-dessus la video) : place CHAQUE image au moment ou son CONTENU correspond a ce qui est dit (regarde les images !). Duree 1.5 a 3.5s. Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
+B-ROLL (images utilisateur, plein ecran par-dessus la video) — UNE IMAGE NE SERT QU'A PRESENTER UNE FONCTIONNALITE. C'est sa seule raison d'exister : il NOMME une fonctionnalite et dit ce qu'elle fait, tu montres a quoi elle ressemble. Partout ailleurs — l'accroche, la promesse, un benefice, une transition, le CTA — c'est une ANIMATION, ou rien. Une animation parle mieux qu'une capture et elle reste dans la direction artistique du style ; une image posee sur une promesse casse les deux.
+Le 4e champ est OBLIGATOIRE : ecris-y la fonctionnalite presentee, avec SES mots a lui, tels qu'il les prononce a cet instant ("split screen", "clonage de voix", "sous-titres"). Le serveur verifie que ces mots sont reellement dits dans la fenetre — une image dont la fonctionnalite n'est pas prononcee la est jetee.
+Place CHAQUE image au moment ou son CONTENU correspond a ce qui est dit (regarde les images !). Duree 1.5 a 3.5s. Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
 
 SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur les enumerations, riser avant le CTA, success/ding sur une preuve ou un resultat. Maximum 1 SFX par 1.5s. Les timestamps tombent sur les evenements qu'ils soulignent.
 
@@ -588,7 +592,12 @@ Analyse d'abord la video, puis genere le plan de montage.`,
 const r2 = (n: number) => Math.round(n * 100) / 100
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = ''): Plan {
+// `strict` distingue deux familles de filtres. Les contraintes PHYSIQUES (chevauchements,
+// safe zone, durees, ids d'assets connus) s'appliquent toujours : sans elles le rendu casse.
+// Les filtres de GOUT (seuil de deliberation, garde-fou anti-invention, verrou des bruitages)
+// sautent en mode 'low' — c'est le seul moyen de voir ce que le chef d'orchestre PROPOSE
+// vraiment, sans mes reglages par-dessus.
+export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = '', strict = true): Plan {
   const D = duration
   const sections = (plan.sections || [])
     .map((s) => ({ ...s,
@@ -658,9 +667,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       && (s.layout === 'banner' ? !!s.title : (s.items.length > 0 || !!s.anim)))
     .filter((s) => s.layout !== 'full' || s.items.length > 0 || !!s.anim || ['kpi', 'timer'].includes(s.type))
     // seuil de deliberation : sous 55/100, le moment ne merite pas de traitement (plein ecran)
-    .filter((s) => !s.options.length || s.options[0].score >= 55)
+    .filter((s) => !strict || !s.options.length || s.options[0].score >= 55)
     .sort((a, b) => a.start - b.start)
-    .slice(0, 24)
+    .slice(0, strict ? 24 : 40)
   // ── GARDE-FOU ANTI-INVENTION ────────────────────────────────────────────────
   // Une scene doit parler de ce que l'utilisateur dit A CE MOMENT-LA : au moins un
   // mot significatif de la scene doit avoir ete REELLEMENT prononce dans sa fenetre
@@ -688,7 +697,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       || [...said].some((w) => (w.length >= 5 && k.length >= 5
         && (w.startsWith(k.slice(0, 5)) || k.startsWith(w.slice(0, 5)))) || sim(w, k) >= 0.82))
   }
-  const grounded = slides.filter(echoesScript)
+  const grounded = strict ? slides.filter(echoesScript) : slides
   slides.length = 0
   slides.push(...grounded)
 
@@ -712,9 +721,21 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
 
   const broll = (plan.broll || [])
     .filter((b) => assetIds.includes(b.assetId))
-    .map((b) => ({ assetId: b.assetId, start: r2(clamp(b.start, 1.5, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
+    .map((b) => ({ assetId: b.assetId, feature: String(b.feature || ''), start: r2(clamp(b.start, 1.5, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
     .map((b) => ({ ...b, end: r2(clamp(b.end, b.start + 1.0, b.start + 4.0)) }))
     .filter((b) => b.end > b.start && b.end <= D)
+    // VERROU · une image ne sert qu'a PRESENTER UNE FONCTIONNALITE : il la nomme, on
+    // montre a quoi elle ressemble. Elle doit donc declarer laquelle, et ces mots-la
+    // doivent etre REELLEMENT prononces dans sa fenetre. Sinon c'est une capture posee
+    // sur une promesse ou une transition — la ou une animation parle mieux et reste
+    // dans la direction artistique du style. Filtre de gout : saute en mode 'low'.
+    .filter((b) => {
+      if (!strict || !words.length) return true
+      const mine = keys(b.feature)
+      if (!mine.length) return false
+      const said = spokenAround(b.start, b.end)
+      return mine.some((k) => said.has(k) || [...said].some((w) => sim(w, k) >= 0.82))
+    })
     // jamais pendant une slide (la zone haute est occupee)
     .filter((b) => !slides.some((s) => b.start < s.end + 0.3 && b.end > s.start - 0.3))
     .sort((a, b) => a.start - b.start)
@@ -831,7 +852,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     ...avatarSegments.flatMap((a) => [a.start, a.end]),
     ...(hook ? [hook.start, hook.end] : []),
   ].filter((t) => typeof t === 'number')
-  const sfxOnEvent = sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
+  const sfxOnEvent = strict
+    ? sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
+    : sfxClean
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
@@ -904,9 +927,11 @@ serve(async (req: Request) => {
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
-    let options: { lang?: string } = {}
+    let options: { lang?: string; filters?: string } = {}
     try { options = JSON.parse(String(form.get('options') || '{}')) } catch (_) { /* défauts */ }
     const lang = (options.lang || 'fr').slice(0, 5)
+    // carte blanche au chef d'orchestre : ne desactive QUE les filtres de gout
+    const filters = options.filters === 'low' ? 'low' : 'normal'
     const website = String(form.get('website') || '').trim().slice(0, 300)
     // brief = l'intention de l'utilisateur (≠ script, qui sert a l'alignement des sous-titres)
     const brief = String(form.get('brief') || '').trim().slice(0, 700)
@@ -967,7 +992,7 @@ serve(async (req: Request) => {
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text)
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text, filters !== 'low')
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
