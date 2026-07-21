@@ -342,6 +342,14 @@ function wordCss(W, H, fz) {
 
       /* CTA DE FIN : la phrase entière, posée au centre, plus grosse que les mots
          du défilement — c'est le moment où on demande quelque chose. */
+      /* EMOJI 3D : il occupe LA MÊME bande que le mot, puisqu'il le remplace.
+         Un seul élément à l'écran à la fois — c'est ce qui rend la lecture
+         instantanée dans la référence (Thinks). */
+      .vs-word .emo { position: absolute; left: 0; top: ${Math.round(H * 0.40)}px;
+        width: ${W}px; height: ${Math.round(H * 0.28)}px; z-index: 6;
+        display: flex; align-items: center; justify-content: center; }
+      .vs-word .emo img { width: ${Math.round(W * 0.34)}px; height: auto; display: block;
+        will-change: transform, opacity; }
       .vs-word .ctablk { left: ${Math.round(W * SAFE.left)}px; right: ${Math.round(W * SAFE.right)}px;
         top: ${Math.round(H * 0.30)}px; height: ${Math.round(H * 0.40)}px; z-index: 7;
         display: flex; align-items: center; justify-content: center; text-align: center; }

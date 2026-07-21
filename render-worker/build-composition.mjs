@@ -214,6 +214,23 @@ export function buildComposition(plan, opts = {}) {
   // historique. 'st-auto' = l'utilisateur n'a rien imposé → le style visuel peut habiller
   // les sous-titres (typo fine Apple, sérif éditorial…) sans écraser un choix explicite.
   const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ' st-auto'
+  // ── EMOJIS 3D (#135) ────────────────────────────────────────────────────────
+  // Le geste de la reference (Thinks) : l'emoji REMPLACE le mot, il ne s'ajoute pas.
+  // Un seul element a l'ecran, au meme endroit — c'est ce qui rend la lecture
+  // instantanee. D'ou le filtre sur les sous-titres pendant sa fenetre.
+  const emojiDefs = wordMode
+    ? slides.filter((s) => s.emoji).map((s, i) => ({
+      id: 'emo' + i,
+      file: 'emoji/' + s.emoji + '.png',
+      start: r2(s.start),
+      dur: r2(Math.min(1.5, Math.max(0.7, s.end - s.start))),
+    }))
+      // le CTA de fin affiche une phrase entière : un emoji par-dessus la recouvre
+      .filter((e) => !(hasCta && e.start + e.dur > ctaStart))
+      .sort((a, b) => a.start - b.start)
+    : []
+  const inEmoji = (t) => emojiDefs.some((e) => t >= e.start - 0.05 && t < e.start + e.dur)
+
   const caps = (plan.captions || []).map((c, i) => {
     const cream = inFullScene(r2(c.start) + 0.05)
     return {
@@ -229,6 +246,8 @@ export function buildComposition(plan, opts = {}) {
     // MOMENT FORT : l'image occupe toute la zone sûre — le sous-titre est retiré,
     // pas déplacé. C'est une respiration visuelle, l'image se suffit.
     .filter((c) => !(wordMode && inHero(r2(c.start) + 0.05)))
+    // l'emoji PREND la place du mot : jamais les deux ensemble
+    .filter((c) => !inEmoji(r2(c.start) + 0.05))
     // les mots du CTA sont remplacés par la phrase entière
     .filter((c) => !(hasCta && c.start >= ctaStart))
 
@@ -279,6 +298,9 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
+
+  const emojiHtml = emojiDefs.map((e) => `
+      <div class="clip emo" id="${e.id}" data-start="${e.start}" data-duration="${e.dur}" data-track-index="5"><img src="${e.file}" alt="" /></div>`).join('')
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
   const fullHtml = fullDefs.map((s) => `
@@ -437,7 +459,11 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
   ).join('')
 
-  const animJsAll = slideDefs.filter((s) => s.anim).map((s) => animJs(s.anim, s, r2)).join('')
+  const emojiJs = emojiDefs.map((e) => `
+      tl.fromTo('#${e.id} img', { scale: 0.45, autoAlpha: 0, rotation: -10 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.3, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${e.start});
+      tl.to('#${e.id} img', { scale: 1.06, duration: ${r2(Math.max(0.3, e.dur - 0.42))}, ease: 'sine.inOut' }, ${r2(e.start + 0.3)});
+      tl.to('#${e.id} img', { scale: 0.85, autoAlpha: 0, duration: 0.14, ease: 'power2.in' }, ${r2(e.start + e.dur - 0.14)});`).join('')
+  const animJsAll = emojiJs + slideDefs.filter((s) => s.anim).map((s) => animJs(s.anim, s, r2)).join('')
   const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim && s.motif).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
@@ -639,7 +665,7 @@ ${slidesHtml}
 ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
-${capsHtml}${hasCta ? `
+${capsHtml}${emojiHtml}${hasCta ? `
       <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}"${w.accent ? ` style="color:${WORD_ACCENT}"` : ''}>${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}    </div>
