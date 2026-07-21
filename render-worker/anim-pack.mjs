@@ -42,11 +42,18 @@ export function animHtml(name, s, W, H, vs) {
 
   switch (name) {
     case 'split': {
-      // l'écran se coupe en deux : c'est ÇA, un split screen
-      const hh = Math.round(f.h / 2) - 6
-      return box(
-        `<div class="an-p" id="${id}p1" style="left:0;top:0;width:100%;height:${hh}px;background:${P.acc};border-radius:${Math.round(hh * 0.16)}px"></div>` +
-        `<div class="an-p" id="${id}p2" style="left:0;top:${hh + 12}px;width:100%;height:${hh}px;background:${P.soft};border:2px solid ${P.line};border-radius:${Math.round(hh * 0.16)}px"></div>`)
+      // Un vrai écran vertical qui se coupe en deux, avec deux contenus distincts :
+      // deux rectangles qui glissent ne montrent pas un split screen, ils le suggèrent.
+      const pw = Math.round(f.h * 0.54), ph = f.h, px = Math.round((f.w - pw) / 2)
+      const half = Math.round((ph - 10) / 2), r = Math.round(pw * 0.13)
+      const head = (top, col) => `<span style="position:absolute;left:${Math.round(pw * 0.16)}px;top:${top}px;width:${Math.round(pw * 0.24)}px;height:${Math.round(pw * 0.24)}px;border-radius:50%;background:${col}"></span>`
+      const lines = (top, col, n) => Array.from({ length: n }, (_, k) =>
+        `<span style="position:absolute;left:${Math.round(pw * 0.16)}px;top:${top + k * Math.round(pw * 0.14)}px;width:${Math.round(pw * (0.56 - k * 0.12))}px;height:${Math.round(pw * 0.06)}px;border-radius:99px;background:${col}"></span>`).join('')
+      return box(`<div class="an-ph" id="${id}ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${r}px;overflow:hidden">
+        <span class="an-p" id="${id}p1" style="left:0;top:0;width:100%;height:${half}px;background:${P.acc}">${head(Math.round(half * 0.22), 'rgba(255,255,255,.75)')}${lines(Math.round(half * 0.62), 'rgba(255,255,255,.6)', 2)}</span>
+        <span class="an-p" id="${id}p2" style="left:0;top:${half + 10}px;width:100%;height:${half}px;background:${P.soft}">${head(Math.round(half * 0.22), P.line)}${lines(Math.round(half * 0.62), P.line, 2)}</span>
+        <span class="an-p" id="${id}sep" style="left:0;top:${half}px;width:100%;height:10px;background:${P.ink}"></span>
+      </div>`)
     }
     case 'voice': {
       // une onde qui se dédouble : la voix clonée
@@ -55,9 +62,12 @@ export function animHtml(name, s, W, H, vs) {
         const hgt = Math.round(f.h * 0.12 + Math.abs(Math.sin(k * 0.9)) * f.h * 0.26)
         return `<span class="an-b ${cls}" id="${id}${cls}${k}" style="left:${k * gap}px;top:${top - hgt / 2}px;width:${bw}px;height:${hgt}px;background:${col};border-radius:99px"></span>`
       }
-      let h = ''
-      for (let k = 0; k < n; k++) h += bar(k, 'w1', P.ink, Math.round(f.h * 0.3))
-      for (let k = 0; k < n; k++) h += bar(k, 'w2', P.acc, Math.round(f.h * 0.72))
+      // un micro à gauche : l'onde SORT de quelque chose, elle ne flotte pas
+      const mw = Math.round(f.h * 0.2)
+      let h = `<span class="an-p" id="${id}mic" style="left:0;top:${Math.round(f.h / 2 - mw * 0.9)}px;width:${mw}px;height:${Math.round(mw * 1.5)}px;border-radius:99px;background:${P.ink}"></span>` +
+        `<span class="an-p" style="left:${Math.round(mw * 0.42)}px;top:${Math.round(f.h / 2 + mw * 0.6)}px;width:${Math.round(mw * 0.16)}px;height:${Math.round(mw * 0.5)}px;background:${P.ink}"></span>`
+      for (let k = 2; k < n; k++) h += bar(k, 'w1', P.ink, Math.round(f.h * 0.32))
+      for (let k = 2; k < n; k++) h += bar(k, 'w2', P.acc, Math.round(f.h * 0.7))
       return box(h)
     }
     case 'list': {
@@ -118,8 +128,10 @@ export function animJs(name, s, r2) {
   switch (name) {
     case 'split':
       return inOut + `
-      tl.fromTo('#${id}p1', { y: ${'60'}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4, ease: 'power3.out' }, ${t0});
-      tl.fromTo('#${id}p2', { y: -60, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4, ease: 'power3.out' }, ${r2(t0 + 0.12)});`
+      tl.fromTo('#${id}ph', { scale: 0.88, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.8)' }, ${t0});
+      tl.fromTo('#${id}sep', { scaleX: 0 }, { scaleX: 1, duration: 0.34, ease: 'power3.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.3)});
+      tl.fromTo('#${id}p1', { y: 0 }, { y: -6, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.32)});
+      tl.fromTo('#${id}p2', { y: 0 }, { y: 6, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.32)});`
     case 'voice':
       return inOut + `
       tl.fromTo('#${id}an .w1', { scaleY: 0.15 }, { scaleY: 1, duration: 0.5, stagger: 0.02, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
