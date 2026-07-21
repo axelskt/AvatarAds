@@ -330,6 +330,15 @@ function wordCss(W, H, fz) {
         height: ${Math.round(H * 0.22)}px; display: flex; align-items: center; justify-content: center;
         padding: 0 5%; color: ${WORD_INK}; z-index: 6; text-shadow: none; }
       .vs-word .cap::before { display: none; }
+
+      /* CTA DE FIN : la phrase entière, posée au centre, plus grosse que les mots
+         du défilement — c'est le moment où on demande quelque chose. */
+      .vs-word .ctablk { left: ${Math.round(W * SAFE.left)}px; right: ${Math.round(W * SAFE.right)}px;
+        top: ${Math.round(H * 0.30)}px; height: ${Math.round(H * 0.40)}px; z-index: 7;
+        display: flex; align-items: center; justify-content: center; text-align: center; }
+      .vs-word .ctablk span { font-family: ${SANS}; font-weight: 700; color: ${WORD_INK};
+        font-size: ${Math.round(H * 0.042)}px; line-height: 1.22; letter-spacing: -.025em;
+        display: block; max-width: 100%; }
       .vs-word .cap span { font-family: ${SANS}; font-weight: 600; text-transform: none;
         letter-spacing: -.02em; line-height: 1.15; display: block; max-width: 100%; overflow: hidden; }
 
