@@ -139,12 +139,15 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" id="${id}br" style="left:${cx - Math.round(bw / 2)}px;top:${ey - Math.round(bh / 2)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.22)}px;background:${P.ink}"></span>`)
     }
     case 'logo': {
-      // Le logo de la marque, quand il prononce son nom. Copié dans le projet de
-      // rendu (assets/brand → brand/) : pas de dépendance réseau.
+      // Le logo de la marque, quand il prononce son nom. Il vient du JOB (brand/logo.png,
+      // copié depuis le dossier de l'utilisateur) — jamais d'un fichier livré avec le
+      // worker : un logo codé en dur serait celui d'AvatarAds sur la vidéo de n'importe
+      // quel client. Si le job n'en fournit pas, `logoFile` est vide et rien ne rend.
+      if (!s.logoFile) return ''
       const d = Math.round(f.h * 0.86)
       return box(`<div class="an-lg" id="${id}lg" style="left:${Math.round((f.w - d) / 2)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px">
         <span class="an-halo" id="${id}ha" style="border:${Math.round(d * 0.02)}px solid ${P.acc}"></span>
-        <img src="brand/logo.png" alt="" id="${id}im" />
+        <img src="${s.logoFile}" alt="" id="${id}im" />
       </div>`)
     }
     case 'avatar': {

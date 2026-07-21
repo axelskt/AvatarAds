@@ -26,6 +26,9 @@ export function buildComposition(plan, opts = {}) {
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
   const assetFiles = opts.assetFiles || {} // { assetId: 'media/img1.jpg' }
+  // Chemin du logo de marque DANS LE PROJET, fourni par le worker uniquement si le job
+  // en contenait un. Vide = l'animation `logo` ne rend rien (cf. anim-pack.mjs).
+  const logoFile = opts.logoFile || ''
 
   // #131 · style visuel choisi dans les Paramètres avancés — posé en classe sur <body>,
   // il repeint slides, scènes plein cadre, bandeaux et sous-titres (visual-styles.mjs).
@@ -315,7 +318,7 @@ export function buildComposition(plan, opts = {}) {
   const slideBody = (s, si) => {
     // une animation fabriquée l'emporte : elle montre le concept, là où une capture
     // d'interface ou une forme abstraite n'illustre rien
-    if (s.anim) return animHtml(s.anim, s, W, H, vs)
+    if (s.anim) return animHtml(s.anim, { ...s, logoFile }, W, H, vs)
     // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
     // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
     // rien et ne correspondent à aucun mot de l'audio. Le mot se suffit.
