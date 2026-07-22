@@ -187,6 +187,26 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
     }
 
+    // DERNIER MOT SUR LES BRUITAGES. Le serveur verrouille deja chaque son sur un
+    // visuel, mais il ne sait pas que le rendu vient d'ECARTER des images trop
+    // basse resolution : leur son restait alors seul sur un ecran fixe — le
+    // « bruitage sans animation » qu'Axel entend. On refait donc le calcul ici,
+    // avec la liste reelle de ce qui sera affiche.
+    {
+      const shown = [
+        ...(plan.broll || []).filter((b) => assetFiles[b.assetId]).map((b) => b.start),
+        ...(plan.slides || []).filter((sl) => sl.emoji || sl.anim || (sl.items || []).length || sl.title)
+          .map((sl) => sl.start),
+      ].filter((t) => typeof t === 'number')
+      const before = (plan.sfx || []).length
+      plan.sfx = shown.length
+        ? (plan.sfx || []).filter((x) => shown.some((e) => Math.abs(e - x.t) <= 0.35))
+        : []
+      if (before !== plan.sfx.length) {
+        console.log(`▶ ${before - plan.sfx.length} bruitage(s) retiré(s) : plus aucun visuel à cet instant`)
+      }
+    }
+
     writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
