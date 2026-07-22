@@ -308,8 +308,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     if (!mixIns.length) {
       // aucune piste audio (base muet + ni musique ni SFX) → vidéo seule
       console.log('▶ aucun audio à mixer → vidéo seule')
+      // +faststart : sans lui l'atome moov reste en FIN de fichier, et les apps
+      // mobiles (YouTube, Instagram) refusent d'importer — « Impossible d'exporter
+      // la vidéo ». Toutes les vidéos sortaient ainsi.
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual, '-map', '0:v',
-        '-c:v', 'copy', '-an', '-t', String(plan.duration), outPath], { stdio: 'inherit' })
+        '-c:v', 'copy', '-an', '-t', String(plan.duration),
+        '-movflags', '+faststart', outPath], { stdio: 'inherit' })
     } else {
       // NORMALISATION DE SONIE. Un rendu sortait a -22,3 LUFS quand les plateformes
       // calent sur -14 : la video s'entend deux fois moins fort que celle d'avant dans
@@ -322,8 +326,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         '-v', 'error', '-y', ...inputs,
         '-filter_complex', filters.join(';'),
         '-map', '0:v', '-map', '[aout]',
-        '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
+        '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2',
         '-t', String(plan.duration),
+        // métadonnées en TÊTE : indispensable pour l'import mobile (cf. ci-dessus)
+        '-movflags', '+faststart',
         outPath,
       ], { stdio: 'inherit' })
     }
