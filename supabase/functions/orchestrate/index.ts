@@ -454,6 +454,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   ETAPE 2 · CHAQUE MOMENT FORT RECOIT SON VISUEL. Sans exception : c'est exactement la que le spectateur decroche s'il ne voit rien. Par defaut une ANIMATION. Tu ne deliberes pas pour savoir SI le moment merite un visuel — il en a un ; tu deliberes seulement pour savoir LEQUEL.
     Deux erreurs a ne jamais commettre ici :
       · Une PROMESSE couverte par une capture d'interface. "Sans jamais montrer ton visage" n'est pas une page d'accueil, c'est "faceless". Cherche l'animation qui DIT la phrase.
+      · Une ENUMERATION de BENEFICES sans visuel a chacun. Quand il enchaine ce que ca apporte ("tu gagnes du temps, tu produis plus, tu touches plus de monde"), CHAQUE benefice recoit SON animation, calee sur le moment ou il le dit.
       · Une ENUMERATION ecrasee sous UNE SEULE scene de 8 ou 10 secondes. S'il cite 3, 4 ou 5 fonctionnalites a la suite, chacune a SON visuel de 1,5 a 2,5s, cale sur la seconde exacte ou il la prononce. Une checklist figee pendant qu'il en enumere cinq, c'est cinq moments forts perdus d'un coup.
   ETAPE 3 · QUAND UNE IMAGE, QUAND UNE ANIMATION — la regle est nette. UNE IMAGE NE SERT QU'A PRESENTER UNE FONCTIONNALITE : il la NOMME, il dit ce qu'elle fait, tu montres a quoi elle ressemble. C'est son unique emploi. TOUT LE RESTE — l'accroche, la promesse, un benefice, une transition, le CTA — c'est une ANIMATION, ou rien.
     Pourquoi : une animation parle mieux qu'une capture (un ecran d'application entier, avec ses menus et ses boutons, est ILLISIBLE en vertical : le spectateur a 2 secondes) et elle reste dans la direction artistique du style, alors qu'une image posee sur une promesse casse les deux d'un coup.
@@ -1016,7 +1017,11 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   // serveur comble donc les trous lui-meme, avec un emoji pose sur un mot fort du
   // creux — mot choisi par le lexique, sans nouvel appel modele. Deterministe.
   {
-    const TARGET = 3.0   // Axel : UNE ANIMATION TOUTES LES 3 SECONDES, sans exception
+    // Pas de cadence mecanique : on illustre QUAND l'audio le demande. Le pas de 3s
+    // n'est qu'un espacement MINIMUM entre deux visuels — le remplissage ne pose une
+    // animation que si un mot du creux la justifie vraiment (lexique). Un moment qui
+    // n'evoque rien reste nu, et c'est tres bien.
+    const TARGET = 3.0
     const occupied = (t: number) =>
       slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
       cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)

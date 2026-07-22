@@ -16,6 +16,7 @@
 import { execFileSync, execSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
@@ -173,6 +174,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // emojis 3D (#135) : on ne copie QUE ceux que le plan utilise — la banque en
     // compte 84, inutile d'en embarquer 84 dans chaque rendu.
     const wanted = new Set((plan.slides || []).map((sl) => sl.emoji).filter(Boolean))
+    // les scènes d'emojis 3D (money, rocket, check…) tirent leurs propres fichiers
+    for (const sl of plan.slides || []) {
+      for (const e of ANIM_EMOJI_SET[sl.anim] || []) wanted.add(e)
+    }
     if (wanted.size) {
       mkdirSync(join(proj, 'emoji'), { recursive: true })
       for (const name of wanted) {
