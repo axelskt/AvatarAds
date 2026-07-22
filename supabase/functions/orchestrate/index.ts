@@ -1106,6 +1106,24 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     }
     slides.sort((x, y) => x.start - y.start)
 
+    // AUCUN CHEVAUCHEMENT. Mon remplissage enchaine bien ses propres animations, mais
+    // celles du MODELE gardaient leur fin : sur un test, voice (23,16 -> 25,56)
+    // englobait toggle (24,2). Deux clips qui se recouvrent sur la meme piste ne
+    // s'affichent pas de facon fiable. On coupe donc chaque visuel a l'arrivee du
+    // suivant, et on jette ceux qui deviennent trop courts.
+    {
+      const vis = slides.filter((sl) => sl.anim || sl.emoji).sort((a, b) => a.start - b.start)
+      for (let i = 0; i < vis.length - 1; i++) {
+        if (vis[i].end > vis[i + 1].start - 0.05) vis[i].end = r2(vis[i + 1].start - 0.05)
+      }
+      const tooShort = new Set(vis.filter((v) => v.end - v.start < 0.5))
+      if (tooShort.size) {
+        const keep = slides.filter((sl) => !tooShort.has(sl))
+        slides.length = 0
+        slides.push(...keep)
+      }
+    }
+
     // LE LOGO QUAND IL NOMME SA MARQUE. Le modele l'oublie une fois sur deux : on le
     // pose nous-memes. La transcription deforme souvent le nom (« Avatar Ads »,
     // « avataria »…), d'ou la comparaison par similarite, sur le mot seul ET sur deux

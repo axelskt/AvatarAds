@@ -470,7 +470,14 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${e.id} img', { scale: 0.2, autoAlpha: 0, rotation: -430 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.42, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${e.start});
       tl.to('#${e.id} img', { scale: 1.08, duration: ${r2(Math.max(0.3, e.dur - 0.56))}, ease: 'sine.inOut' }, ${r2(e.start + 0.42)});
       tl.to('#${e.id} img', { scale: 0.7, autoAlpha: 0, rotation: 40, duration: 0.14, ease: 'power2.in' }, ${r2(e.start + e.dur - 0.14)});`).join('')
-  const animJsAll = emojiJs + slideDefs.filter((s) => s.anim).map((s) => animJs(s.anim, s, r2)).join('')
+  // CHAQUE ANIMATION EST ISOLEE. Une seule erreur dans le JS d'une animation cassait
+  // TOUTE la timeline : les tweens suivants n'etaient jamais ajoutes (leurs elements
+  // restaient visibles, figes) et les precedents restaient bloques a opacity 0 par le
+  // fromTo deja applique. Resultat : une video sans aucune animation, sans le moindre
+  // message d'erreur. Un try/catch par animation rend ce scenario impossible.
+  const animJsAll = emojiJs + slideDefs.filter((s) => s.anim)
+    .map((s) => `\n      try {${animJs(s.anim, s, r2)}\n      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }`)
+    .join('')
   const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim && s.motif).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
     const end = r2(s.start + s.dur)
     let js = `
