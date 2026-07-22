@@ -137,22 +137,107 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-feed" id="${id}fd">${card(2, P.acc)}${card(31, P.line)}${card(60, P.acc)}${card(89, P.line)}${card(118, P.acc)}</span>
       </div>`)
     }
-    // ── SCÈNES D'EMOJIS 3D ──────────────────────────────────────────────────
-    // Mes dessins plats (fusée en SVG, cercles de cible…) faisaient clipart : Axel
-    // les a jugés « pas pro », à raison. Les emojis 3D sont de vrais assets rendus,
-    // avec matière et ombres. Ces animations les COMPOSENT et les font bouger : on
-    // garde le mouvement d'une animation et la qualité d'un asset 3D.
-    case 'money': case 'idea': case 'target': case 'lock':
-    case 'search': case 'rocket': case 'network': case 'check': {
-      const SET = ANIM_EMOJI_SET[name]
-      const n = SET.length
-      const d = Math.round(f.h * (n === 1 ? 0.66 : n === 2 ? 0.48 : 0.4))
-      const gap = Math.round(d * 0.28)
-      const total = n * d + (n - 1) * gap
-      const x0 = Math.round((f.w - total) / 2)
-      return box(SET.map((e, k) => `<span class="an-e3" id="${id}e${k}"
-        style="left:${x0 + k * (d + gap)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px">
-        <img src="emoji/${e}.png" alt="" /></span>`).join(''))
+    case 'money': {
+      // Un compteur qui monte + des jetons qui s'empilent. Une SCÈNE, pas une icône :
+      // c'est le langage des animations d'origine (cadres, cartes, barres) qu'Axel a
+      // validées — un pictogramme isolé fait clipart.
+      const cw = Math.round(f.w * 0.54), ch = Math.round(f.h * 0.3)
+      const cx = Math.round((f.w - cw) / 2)
+      let coins = ''
+      for (let k = 0; k < 4; k++) {
+        const cd = Math.round(f.h * 0.13)
+        coins += `<span class="an-p an-coin" id="${id}c${k}" style="left:${Math.round(f.w / 2 - cd / 2 + (k - 1.5) * cd * 1.15)}px;top:${Math.round(f.h * 0.62)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${k % 2 ? P.acc : P.ink}"></span>`
+      }
+      return box(`<div class="an-p" id="${id}cd" style="left:${cx}px;top:${Math.round(f.h * 0.16)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(ch * 0.16)}px;background:${P.soft};border:2px solid ${P.line}">
+          <span class="an-p" style="left:8%;top:20%;width:34%;height:12%;border-radius:99px;background:${P.line}"></span>
+          <span class="an-p an-amt" id="${id}am" style="left:8%;top:44%;width:64%;height:30%;border-radius:${Math.round(ch * 0.08)}px;background:${P.acc}"></span>
+        </div>${coins}`)
+    }
+    case 'idea': {
+      // Des fragments qui convergent et forment un bloc net : l'idée qui se précise.
+      const d = Math.round(f.h * 0.4), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.46)
+      let bits = ''
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2, R = f.h * 0.34
+        bits += `<span class="an-p an-bit" id="${id}f${k}" style="left:${Math.round(cx + Math.cos(a) * R - d * 0.13)}px;top:${Math.round(cy + Math.sin(a) * R - d * 0.13)}px;width:${Math.round(d * 0.26)}px;height:${Math.round(d * 0.26)}px;border-radius:${Math.round(d * 0.07)}px;background:${P.line}"></span>`
+      }
+      return box(`${bits}<span class="an-p" id="${id}co" style="left:${cx - Math.round(d / 2)}px;top:${cy - Math.round(d / 2)}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.22)}px;background:${P.acc}"></span>`)
+    }
+    case 'target': {
+      // Un anneau de progression qui se remplit jusqu'au bout : l'objectif atteint.
+      const d = Math.round(f.h * 0.66), cx = Math.round(f.w / 2), cy = Math.round(f.h / 2)
+      const sw = Math.round(d * 0.1), R = (d - sw) / 2
+      const C = Math.round(2 * Math.PI * R)
+      return box(`<svg width="${d}" height="${d}" viewBox="0 0 ${d} ${d}" style="position:absolute;left:${cx - Math.round(d / 2)}px;top:${cy - Math.round(d / 2)}px">
+          <circle cx="${d / 2}" cy="${d / 2}" r="${R}" fill="none" stroke="${P.line}" stroke-width="${sw}" />
+          <circle id="${id}ring" cx="${d / 2}" cy="${d / 2}" r="${R}" fill="none" stroke="${P.acc}" stroke-width="${sw}" stroke-linecap="round"
+            stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 ${d / 2} ${d / 2})" />
+        </svg>
+        <span class="an-p" id="${id}dot" style="left:${cx - Math.round(d * 0.11)}px;top:${cy - Math.round(d * 0.11)}px;width:${Math.round(d * 0.22)}px;height:${Math.round(d * 0.22)}px;border-radius:50%;background:${P.acc}"></span>`)
+    }
+    case 'lock': {
+      // Un champ de saisie dont les caractères deviennent des points : c'est protégé.
+      const bw = Math.round(f.w * 0.6), bh = Math.round(f.h * 0.19)
+      const x = Math.round((f.w - bw) / 2), y = Math.round(f.h * 0.4)
+      let dots = ''
+      for (let k = 0; k < 5; k++) {
+        const dd = Math.round(bh * 0.3)
+        dots += `<span class="an-p an-dot" id="${id}d${k}" style="left:${x + Math.round(bw * 0.1) + k * Math.round(dd * 1.7)}px;top:${y + Math.round((bh - dd) / 2)}px;width:${dd}px;height:${dd}px;border-radius:50%;background:${P.ink}"></span>`
+      }
+      const sh = Math.round(bh * 0.7)
+      return box(`<span class="an-p" id="${id}bx" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.28)}px;background:${P.soft};border:2px solid ${P.line}"></span>${dots}
+        <span class="an-p" id="${id}sh" style="left:${x + bw - Math.round(sh * 1.5)}px;top:${y - Math.round(sh * 0.72)}px;width:${sh}px;height:${sh}px;border:${Math.round(sh * 0.17)}px solid ${P.acc};border-bottom:0;border-radius:${Math.round(sh * 0.5)}px ${Math.round(sh * 0.5)}px 0 0"></span>`)
+    }
+    case 'search': {
+      // Une barre de recherche qu'on remplit, puis des résultats qui tombent.
+      const bw = Math.round(f.w * 0.66), bh = Math.round(f.h * 0.15)
+      const x = Math.round((f.w - bw) / 2)
+      let rows = ''
+      for (let k = 0; k < 3; k++) {
+        rows += `<span class="an-p an-res" id="${id}r${k}" style="left:${x}px;top:${Math.round(f.h * 0.36 + k * bh * 1.24)}px;width:${Math.round(bw * (1 - k * 0.12))}px;height:${Math.round(bh * 0.72)}px;border-radius:${Math.round(bh * 0.2)}px;background:${k === 0 ? P.acc : P.soft}"></span>`
+      }
+      return box(`<span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.13)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" id="${id}ty" style="left:${x + Math.round(bh * 0.5)}px;top:${Math.round(f.h * 0.13 + bh * 0.36)}px;width:4px;height:${Math.round(bh * 0.3)}px;border-radius:99px;background:${P.ink}"></span>${rows}`)
+    }
+    case 'rocket': {
+      // Une courbe qui décolle avec sa traînée : la montée en flèche.
+      const w2 = Math.round(f.w * 0.62), h2 = Math.round(f.h * 0.56)
+      const x = Math.round((f.w - w2) / 2), y = Math.round(f.h * 0.2)
+      return box(`<svg width="${w2}" height="${h2}" viewBox="0 0 100 80" preserveAspectRatio="none" style="position:absolute;left:${x}px;top:${y}px">
+          <path id="${id}tr" d="M4 76 C28 74 44 56 58 34 C68 18 78 8 96 4" fill="none" stroke="${P.acc}" stroke-width="7" stroke-linecap="round"
+            stroke-dasharray="180" stroke-dashoffset="180" />
+        </svg>
+        <span class="an-p" id="${id}hd" style="left:${x + w2 - Math.round(f.h * 0.07)}px;top:${y - Math.round(f.h * 0.02)}px;width:${Math.round(f.h * 0.11)}px;height:${Math.round(f.h * 0.11)}px;border-radius:50%;background:${P.acc}"></span>`)
+    }
+    case 'network': {
+      // Des profils qui se relient : le réseau, la communauté.
+      const n = 5, R = Math.round(f.h * 0.32), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.5)
+      const cd = Math.round(f.h * 0.16)
+      let h = ''
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 - Math.PI / 2
+        const px = Math.round(cx + Math.cos(a) * R), py = Math.round(cy + Math.sin(a) * R)
+        h += `<span class="an-p an-ln" id="${id}l${k}" style="left:${cx}px;top:${cy}px;width:${R}px;height:${Math.max(3, Math.round(f.h * 0.008))}px;background:${P.ink};opacity:.28;transform:rotate(${Math.round((a * 180) / Math.PI)}deg);transform-origin:0 50%"></span>`
+        h += `<span class="an-p an-av" id="${id}a${k}" style="left:${px - Math.round(cd / 2)}px;top:${py - Math.round(cd / 2)}px;width:${cd}px;height:${cd}px;border-radius:${Math.round(cd * 0.32)}px;background:${k === 0 ? P.acc : P.soft};border:2px solid ${P.line}">
+          <span class="an-p" style="left:28%;top:18%;width:44%;height:36%;border-radius:50%;background:${k === 0 ? 'rgba(255,255,255,.85)' : P.line}"></span>
+          <span class="an-p" style="left:20%;top:60%;width:60%;height:30%;border-radius:${Math.round(cd * 0.3)}px ${Math.round(cd * 0.3)}px 0 0;background:${k === 0 ? 'rgba(255,255,255,.85)' : P.line}"></span></span>`
+      }
+      return box(h)
+    }
+    case 'check': {
+      // Une liste dont les lignes se cochent une par une : tout est inclus.
+      const rw = Math.round(f.w * 0.62), rh = Math.round(f.h * 0.16)
+      const x = Math.round((f.w - rw) / 2)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        const y = Math.round(f.h * 0.16 + k * rh * 1.4)
+        const bd = Math.round(rh * 0.6)
+        h += `<span class="an-p an-row" id="${id}w${k}" style="left:${x}px;top:${y}px;width:${rw}px;height:${rh}px;border-radius:${Math.round(rh * 0.26)}px;background:${P.soft}"></span>
+          <span class="an-p an-bx" id="${id}k${k}" style="left:${x + Math.round(rh * 0.3)}px;top:${y + Math.round((rh - bd) / 2)}px;width:${bd}px;height:${bd}px;border-radius:${Math.round(bd * 0.3)}px;background:${P.acc}">
+            <svg width="${bd}" height="${bd}" viewBox="0 0 100 100"><path id="${id}p${k}" d="M26 52 L44 70 L75 34" fill="none" stroke="#FFF" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90" /></svg></span>
+          <span class="an-p" style="left:${x + Math.round(rh * 1.15)}px;top:${y + Math.round(rh * 0.38)}px;width:${Math.round(rw * (0.5 - k * 0.08))}px;height:${Math.round(rh * 0.22)}px;border-radius:99px;background:${P.line}"></span>`
+      }
+      return box(h)
     }
     case 'faceless': {
       // « sans jamais montrer ton visage » : une tête, puis une bande qui masque
@@ -174,7 +259,9 @@ export function animHtml(name, s, W, H, vs) {
       // worker : un logo codé en dur serait celui d'AvatarAds sur la vidéo de n'importe
       // quel client. Si le job n'en fournit pas, `logoFile` est vide et rien ne rend.
       if (!s.logoFile) return ''
-      const d = Math.round(f.h * 0.86)
+      // EN GRAND : le logo prend toute la largeur utile de la zone sure. C'est le
+      // moment ou la marque se grave — un logotype timide ne sert a rien.
+      const d = Math.min(Math.round(f.w * 0.92), Math.round(f.h * 1.0))
       return box(`<div class="an-lg" id="${id}lg" style="left:${Math.round((f.w - d) / 2)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px">
         <span class="an-halo" id="${id}ha" style="border:${Math.round(d * 0.02)}px solid ${P.acc}"></span>
         <img src="${s.logoFile}" alt="" id="${id}im" />
@@ -234,12 +321,43 @@ export function animJs(name, s, r2) {
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
-    case 'money': case 'idea': case 'target': case 'lock':
-    case 'search': case 'rocket': case 'network': case 'check':
+    case 'money':
       return inOut + `
-      tl.fromTo('#${id}an .an-e3 img', { scale: 0.15, autoAlpha: 0, rotation: -400 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.46, stagger: 0.12, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${t0});
-      tl.to('#${id}an .an-e3 img', { yPercent: -9, duration: ${r2(Math.max(0.4, (dur - 0.7) / 2))}, stagger: 0.08, yoyo: true, repeat: 1, ease: 'sine.inOut' }, ${r2(t0 + 0.5)});
-      tl.to('#${id}an .an-e3 img', { scale: 0.7, autoAlpha: 0, rotation: 45, duration: 0.16, stagger: 0.05, ease: 'power2.in' }, ${r2(end - 0.28)});`
+      tl.fromTo('#${id}cd', { scale: 0.85, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.7)' }, ${t0});
+      tl.fromTo('#${id}am', { scaleX: 0.15 }, { scaleX: 1, duration: 0.6, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});
+      tl.fromTo('#${id}an .an-coin', { yPercent: -120, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.42, stagger: 0.1, ease: 'bounce.out' }, ${r2(t0 + 0.34)});`
+    case 'idea':
+      return inOut + `
+      tl.fromTo('#${id}an .an-bit', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.05, ease: 'power2.out', transformOrigin: '50% 50%' }, ${t0});
+      tl.to('#${id}an .an-bit', { left: '50%', top: '50%', scale: 0.2, autoAlpha: 0, duration: 0.36, stagger: 0.04, ease: 'power2.in' }, ${r2(t0 + 0.34)});
+      tl.fromTo('#${id}co', { scale: 0.2, autoAlpha: 0, rotation: -25 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.34, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.6)});`
+    case 'target':
+      return inOut + `
+      tl.fromTo('#${id}dot', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
+      tl.to('#${id}ring', { strokeDashoffset: 0, duration: ${r2(Math.max(0.6, dur - 0.7))}, ease: 'power2.inOut' }, ${r2(t0 + 0.16)});
+      tl.to('#${id}dot', { scale: 1.35, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(end - 0.5)});`
+    case 'lock':
+      return inOut + `
+      tl.fromTo('#${id}bx', { scaleX: 0.6, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, ease: 'power3.out', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-dot', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.2, stagger: 0.08, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.24)});
+      tl.fromTo('#${id}sh', { yPercent: -50, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'bounce.out' }, ${r2(t0 + 0.62)});`
+    case 'search':
+      return inOut + `
+      tl.fromTo('#${id}ty', { scaleX: 0 }, { scaleX: 1, duration: 0.1, repeat: 5, yoyo: true, ease: 'none', transformOrigin: '0% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-res', { yPercent: -40, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.3, stagger: 0.1, ease: 'power2.out' }, ${r2(t0 + 0.5)});`
+    case 'rocket':
+      return inOut + `
+      tl.fromTo('#${id}tr', { strokeDashoffset: 180 }, { strokeDashoffset: 0, duration: ${r2(Math.max(0.6, dur - 0.6))}, ease: 'power2.inOut' }, ${t0});
+      tl.fromTo('#${id}hd', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + Math.max(0.4, dur - 0.8))});`
+    case 'network':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ln', { scaleX: 0 }, { scaleX: 1, duration: 0.3, stagger: 0.07, ease: 'power2.out', transformOrigin: '0% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-av', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.07, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.16)});`
+    case 'check':
+      return inOut + `
+      tl.fromTo('#${id}an .an-row', { xPercent: -18, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}an .an-bx', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, stagger: 0.14, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.14)});
+      ${[0, 1, 2].map((k) => `tl.fromTo('#${id}p${k}', { strokeDashoffset: 90 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.3 + k * 0.14)});`).join('\n      ')}`
     case 'faceless':
       return inOut + `
       tl.fromTo('#${id}hd', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
