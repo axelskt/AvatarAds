@@ -418,6 +418,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     grid     — de la quantite, de la repetition, "des centaines de...", l'echelle.
   Laisse "" quand le mot prononce n'evoque VRAIMENT rien de visuel (un connecteur, une transition) : une forme decorative qui ne correspond a rien casse la video. Mais ne laisse pas l'ecran vide plus de 3s d'affilee — s'il n'y a ni image ni animation qui colle, c'est que la scene ne devait pas exister : etends la scene voisine.
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
+- REGLE DE FOND, VALABLE POUR TOUT VISUEL : une animation doit MONTRER quelque chose de CONCRET, un objet ou une action qu'on reconnait en un coup d'oeil. Si le spectateur ne peut pas dire en une seconde « c'est un billet », « c'est une fusee », « c'est un cadenas », l'animation ne sert a rien et il vaut mieux ne rien mettre. Une forme abstraite, un rectangle qui bouge, un motif decoratif : ca ne montre RIEN. Ne place jamais un visuel juste pour occuper l'ecran.
 - EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
   L'EMOJI EST UN REPLI RARE, PAS LE DEFAUT. La regle voulue est 99% d'ANIMATIONS et 1% d'emoji : une animation dure, elle occupe le cadre et elle raconte, la ou l'emoji n'est qu'une image posee. Cherche donc TOUJOURS une animation d'abord dans la liste ci-dessus — elle couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit. Ne prends un emoji que si AUCUNE animation ne colle, et au maximum une ou deux fois par video.
   Rythme : 0,7 a 1,5s, jamais deux colles.
@@ -964,17 +965,23 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   // a l'ecran, il sonne comme une erreur de montage — c'est ce qu'Axel a entendu sur
   // les premiers essais. On ne garde donc que ceux qui coincident (+/- 0.35s) avec un
   // evenement visuel reel. Verrou serveur : la consigne seule ne suffisait pas.
+  // Ne comptent QUE les evenements qu'on voit vraiment APPARAITRE. Avant, cette liste
+  // contenait aussi les frontieres de section, les segments avatar, le hook et les
+  // zooms : en mode mot-a-mot rien de tout ca ne rend quoi que ce soit (la video est
+  // masquee), donc un bruitage tombait sur un ecran immobile — le son sans image
+  // qu'Axel entend. On garde l'APPARITION d'une slide qui porte un visuel et
+  // l'apparition d'une image ; leur fin ne compte pas non plus, rien n'y « arrive ».
   const visualEvents = [
-    ...cleanBroll.flatMap((b) => [b.start, b.end]),
-    ...slides.flatMap((sl) => [sl.start, sl.end, ...(sl.items || []).map((it) => it.t)]),
-    ...zooms.map((z) => z.t),
-    ...sections.slice(1).map((sec) => sec.start),
-    ...avatarSegments.flatMap((a) => [a.start, a.end]),
-    ...(hook ? [hook.start, hook.end] : []),
+    ...cleanBroll.map((b) => b.start),
+    ...slides.filter((sl) => sl.emoji || sl.anim || (sl.items || []).length || sl.title)
+      .flatMap((sl) => [sl.start, ...(sl.items || []).map((it) => it.t)]),
   ].filter((t) => typeof t === 'number')
   let sfxOnEvent = strict
     ? sfxClean.filter((x) => visualEvents.some((e) => Math.abs(e - x.t) <= 0.35))
     : sfxClean
+  // Aucun visuel dans la video => aucun bruitage. Un son seul sur une page fixe
+  // s'entend comme une erreur de montage.
+  if (strict && !visualEvents.length) sfxOnEvent = []
   // TROIS SONS DIFFERENTS AU MAXIMUM, MAIS REUTILISABLES. Chaque moment souligne
   // merite son bruitage — ce qui gachait la video, ce n'etait pas leur NOMBRE mais
   // le fait d'en entendre huit DIFFERENTS : l'oreille n'y reconnaissait aucune
@@ -1054,6 +1061,21 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       if (!slides.some((sl) => Math.abs(sl.start - a.start) < 1.2)) slides.push(a)
     }
     slides.sort((x, y) => x.start - y.start)
+
+    // RE-VERROUILLAGE DES BRUITAGES. Le verrou plus haut s'applique AVANT ce
+    // remplissage : il ne voyait donc pas les animations qu'on vient d'ajouter. On
+    // rejoue la regle sur la liste finale — un bruitage ne survit que s'il coincide
+    // avec l'APPARITION d'un visuel reel. Pas de visuel a cet instant, pas de son.
+    if (strict) {
+      const finalEvents = [
+        ...cleanBroll.map((b) => b.start),
+        ...slides.filter((sl) => sl.emoji || sl.anim || (sl.items || []).length || sl.title)
+          .map((sl) => sl.start),
+      ]
+      sfxOnEvent = finalEvents.length
+        ? sfxOnEvent.filter((x) => finalEvents.some((e) => Math.abs(e - x.t) <= 0.35))
+        : []
+    }
   }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
