@@ -23,7 +23,8 @@ export const ANIM_EMOJI_SET = {
   check: ['check_mark_button', 'hundred_points'],
 }
 
-export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check']
+export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
+  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -239,6 +240,104 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(h)
     }
+    case 'swipe': {
+      // Un fil qui défile vite dans un téléphone : le scroll, le feed.
+      const pw = Math.round(f.h * 0.52), ph = f.h, px = Math.round((f.w - pw) / 2)
+      const ch = Math.round(ph * 0.26)
+      let cards = ''
+      for (let k = 0; k < 5; k++) {
+        cards += `<span class="an-p an-sw" id="${id}s${k}" style="left:6%;top:${k * Math.round(ch * 1.12)}px;width:88%;height:${ch}px;border-radius:${Math.round(ch * 0.14)}px;background:${k === 1 ? P.acc : P.soft}"></span>`
+      }
+      return box(`<div class="an-ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.14)}px;overflow:hidden">
+        <div class="an-p" id="${id}fd" style="left:0;top:0;width:100%;height:${Math.round(ch * 1.12 * 5)}px">${cards}</div></div>`)
+    }
+    case 'views': {
+      // Un compteur de vues qui grimpe, avec sa barre : la portée.
+      const bw = Math.round(f.w * 0.62), bh = Math.round(f.h * 0.16)
+      const x = Math.round((f.w - bw) / 2)
+      return box(`<span class="an-p" id="${id}pl" style="left:${Math.round(f.w / 2 - f.h * 0.11)}px;top:${Math.round(f.h * 0.1)}px;width:${Math.round(f.h * 0.22)}px;height:${Math.round(f.h * 0.22)}px;border-radius:50%;background:${P.acc}">
+          <svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M40 30 L72 50 L40 70 Z" fill="#FFF"/></svg></span>
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.46)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.soft}"></span>
+        <span class="an-p" id="${id}bar" style="left:${x}px;top:${Math.round(f.h * 0.46)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.acc}"></span>
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.7)}px;width:${Math.round(bw * 0.42)}px;height:${Math.round(bh * 0.4)}px;border-radius:99px;background:${P.line}"></span>`)
+    }
+    case 'engage': {
+      // Des bulles de commentaire et des cœurs qui montent : l'engagement.
+      const bw = Math.round(f.w * 0.42), bh = Math.round(f.h * 0.17)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        h += `<span class="an-p an-bub" id="${id}b${k}" style="left:${Math.round(f.w * (k % 2 ? 0.5 : 0.1))}px;top:${Math.round(f.h * (0.08 + k * 0.26))}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.36)}px ${Math.round(bh * 0.36)}px ${Math.round(bh * 0.36)}px ${Math.round(bh * 0.1)}px;background:${k === 1 ? P.acc : P.soft}"></span>`
+      }
+      for (let k = 0; k < 4; k++) {
+        const hd = Math.round(f.h * 0.11)
+        h += `<span class="an-p an-hrt" id="${id}h${k}" style="left:${Math.round(f.w * (0.68 + (k % 2) * 0.12))}px;top:${Math.round(f.h * 0.72)}px;width:${hd}px;height:${hd}px">
+          <svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 21s-8-5.2-8-10a4.6 4.6 0 018-3 4.6 4.6 0 018 3c0 4.8-8 10-8 10z" fill="${P.acc}"/></svg></span>`
+      }
+      return box(h)
+    }
+    case 'calendar': {
+      // Une grille de semaine qui se remplit : publier régulièrement.
+      const cols = 4, rows = 3
+      const cw = Math.round(f.w * 0.15), gap = Math.round(cw * 0.24)
+      const gw = cols * cw + (cols - 1) * gap
+      const x = Math.round((f.w - gw) / 2), y = Math.round(f.h * 0.16)
+      let h = ''
+      for (let k = 0; k < cols * rows; k++) {
+        h += `<span class="an-p an-cell" id="${id}c${k}" style="left:${x + (k % cols) * (cw + gap)}px;top:${y + Math.floor(k / cols) * (cw + gap)}px;width:${cw}px;height:${cw}px;border-radius:${Math.round(cw * 0.22)}px;background:${k % 3 === 1 ? P.acc : P.soft}"></span>`
+      }
+      return box(h)
+    }
+    case 'upload': {
+      // Une carte qui s'envole vers une barre : publier, mettre en ligne.
+      const cw = Math.round(f.w * 0.34), ch = Math.round(cw * 1.3)
+      return box(`<span class="an-p" style="left:${Math.round(f.w * 0.16)}px;top:${Math.round(f.h * 0.08)}px;width:${Math.round(f.w * 0.68)}px;height:${Math.round(f.h * 0.1)}px;border-radius:99px;background:${P.soft};border:2px dashed ${P.line}"></span>
+        <span class="an-p" id="${id}cd" style="left:${Math.round((f.w - cw) / 2)}px;top:${Math.round(f.h * 0.42)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.acc}"></span>
+        <span class="an-p" id="${id}ar" style="left:${Math.round(f.w / 2 - f.h * 0.035)}px;top:${Math.round(f.h * 0.26)}px;width:${Math.round(f.h * 0.07)}px;height:${Math.round(f.h * 0.12)}px;background:${P.ink};clip-path:polygon(50% 0,100% 55%,72% 55%,72% 100%,28% 100%,28% 55%,0 55%)"></span>`)
+    }
+    case 'stack': {
+      // Des vidéos qui s'empilent : le volume, produire en série.
+      const cw = Math.round(f.w * 0.42), ch = Math.round(cw * 1.42)
+      let h = ''
+      for (let k = 0; k < 4; k++) {
+        h += `<span class="an-p an-st" id="${id}s${k}" style="left:${Math.round((f.w - cw) / 2 + (k - 1.5) * cw * 0.22)}px;top:${Math.round((f.h - ch) / 2 + (k - 1.5) * ch * 0.06)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${k === 3 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
+      }
+      return box(h)
+    }
+    case 'swap': {
+      // Une chose remplacée par une autre : au lieu de, à la place.
+      const cw = Math.round(f.w * 0.34), ch = Math.round(f.h * 0.46)
+      return box(`<span class="an-p" id="${id}a" style="left:${Math.round(f.w * 0.08)}px;top:${Math.round((f.h - ch) / 2)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" id="${id}b" style="left:${Math.round(f.w * 0.58)}px;top:${Math.round((f.h - ch) / 2)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.acc}"></span>
+        <span class="an-p" id="${id}ar" style="left:${Math.round(f.w * 0.45)}px;top:${Math.round(f.h * 0.47)}px;width:${Math.round(f.w * 0.1)}px;height:${Math.max(4, Math.round(f.h * 0.014))}px;border-radius:99px;background:${P.ink}"></span>`)
+    }
+    case 'cut': {
+      // Une timeline qu'on coupe : le montage, la découpe.
+      const bw = Math.round(f.w * 0.76), bh = Math.round(f.h * 0.22)
+      const x = Math.round((f.w - bw) / 2), y = Math.round((f.h - bh) / 2)
+      return box(`<span class="an-p" id="${id}l" style="left:${x}px;top:${y}px;width:${Math.round(bw * 0.46)}px;height:${bh}px;border-radius:${Math.round(bh * 0.16)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" id="${id}r" style="left:${x + Math.round(bw * 0.54)}px;top:${y}px;width:${Math.round(bw * 0.46)}px;height:${bh}px;border-radius:${Math.round(bh * 0.16)}px;background:${P.acc}"></span>
+        <span class="an-p" id="${id}k" style="left:${x + Math.round(bw * 0.49)}px;top:${y - Math.round(bh * 0.3)}px;width:${Math.max(4, Math.round(f.w * 0.012))}px;height:${Math.round(bh * 1.6)}px;background:${P.ink}"></span>`)
+    }
+    case 'steps': {
+      // 1 · 2 · 3 : une méthode en quelques étapes.
+      const d = Math.round(f.h * 0.26), gap = Math.round(d * 0.5)
+      const tot = 3 * d + 2 * gap, x = Math.round((f.w - tot) / 2)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        h += `<span class="an-p an-sp" id="${id}n${k}" style="left:${x + k * (d + gap)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px;border-radius:50%;background:${k === 0 ? P.acc : P.soft};border:2px solid ${P.line};display:flex;align-items:center;justify-content:center">
+          <span class="an-p" style="position:relative;left:auto;top:auto;width:${Math.round(d * 0.16)}px;height:${Math.round(d * 0.42)}px;border-radius:99px;background:${k === 0 ? '#FFF' : P.line}"></span></span>`
+        if (k < 2) h += `<span class="an-p an-lk" id="${id}k${k}" style="left:${x + k * (d + gap) + d}px;top:${Math.round(f.h / 2)}px;width:${gap}px;height:${Math.max(3, Math.round(f.h * 0.01))}px;background:${P.line}"></span>`
+      }
+      return box(h)
+    }
+    case 'toggle': {
+      // Un interrupteur qui s'allume : activer, en un clic.
+      const tw = Math.round(f.w * 0.44), th = Math.round(tw * 0.52)
+      const x = Math.round((f.w - tw) / 2), y = Math.round((f.h - th) / 2)
+      const kd = Math.round(th * 0.76)
+      return box(`<span class="an-p" id="${id}tr" style="left:${x}px;top:${y}px;width:${tw}px;height:${th}px;border-radius:99px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" id="${id}kn" style="left:${x + Math.round((th - kd) / 2)}px;top:${y + Math.round((th - kd) / 2)}px;width:${kd}px;height:${kd}px;border-radius:50%;background:${P.ink}"></span>`)
+    }
     case 'faceless': {
       // « sans jamais montrer ton visage » : une tête, puis une bande qui masque
       // les yeux. C'est la promesse la plus forte du script — elle ne peut pas
@@ -358,6 +457,50 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-row', { xPercent: -18, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'power2.out' }, ${t0});
       tl.fromTo('#${id}an .an-bx', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, stagger: 0.14, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.14)});
       ${[0, 1, 2].map((k) => `tl.fromTo('#${id}p${k}', { strokeDashoffset: 90 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.3 + k * 0.14)});`).join('\n      ')}`
+    case 'swipe':
+      return inOut + `
+      tl.fromTo('#${id}fd', { yPercent: 0 }, { yPercent: -32, duration: ${r2(Math.max(0.7, dur - 0.4))}, ease: 'power2.inOut' }, ${t0});
+      tl.fromTo('#${id}an .an-sw', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, stagger: 0.05 }, ${t0});`
+    case 'views':
+      return inOut + `
+      tl.fromTo('#${id}pl', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}bar', { scaleX: 0.05 }, { scaleX: 1, duration: ${r2(Math.max(0.6, dur - 0.6))}, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});`
+    case 'engage':
+      return inOut + `
+      tl.fromTo('#${id}an .an-bub', { xPercent: -30, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.3, stagger: 0.12, ease: 'back.out(1.6)' }, ${t0});
+      tl.fromTo('#${id}an .an-hrt', { yPercent: 60, autoAlpha: 0, scale: 0.4 }, { yPercent: -90, autoAlpha: 1, scale: 1, duration: 0.7, stagger: 0.13, ease: 'power2.out' }, ${r2(t0 + 0.24)});`
+    case 'calendar':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cell', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.22, stagger: 0.035, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});`
+    case 'upload':
+      return inOut + `
+      tl.fromTo('#${id}cd', { yPercent: 25, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.3, ease: 'power2.out' }, ${t0});
+      tl.to('#${id}cd', { yPercent: -60, scale: 0.72, duration: ${r2(Math.max(0.5, dur - 0.7))}, ease: 'power2.inOut' }, ${r2(t0 + 0.36)});
+      tl.fromTo('#${id}ar', { yPercent: 30, autoAlpha: 0 }, { yPercent: -20, autoAlpha: 1, duration: 0.5, repeat: 2, ease: 'power1.out' }, ${r2(t0 + 0.3)});`
+    case 'stack':
+      return inOut + `
+      tl.fromTo('#${id}an .an-st', { yPercent: 30, autoAlpha: 0, rotation: -6 }, { yPercent: 0, autoAlpha: 1, rotation: 0, duration: 0.34, stagger: 0.11, ease: 'back.out(1.7)' }, ${t0});`
+    case 'swap':
+      return inOut + `
+      tl.fromTo('#${id}a', { scale: 1, autoAlpha: 1 }, { scale: 0.8, autoAlpha: 0.35, duration: 0.36, ease: 'power2.in', transformOrigin: '50% 50%' }, ${r2(t0 + 0.3)});
+      tl.fromTo('#${id}ar', { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});
+      tl.fromTo('#${id}b', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.38, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.44)});`
+    case 'cut':
+      return inOut + `
+      tl.fromTo(['#${id}l', '#${id}r'], { scaleX: 0.5, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, ease: 'power3.out', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}k', { yPercent: -70, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.24, ease: 'power3.in' }, ${r2(t0 + 0.34)});
+      tl.to('#${id}l', { xPercent: -12, duration: 0.26, ease: 'power2.out' }, ${r2(t0 + 0.58)});
+      tl.to('#${id}r', { xPercent: 12, duration: 0.26, ease: 'power2.out' }, ${r2(t0 + 0.58)});`
+    case 'steps':
+      return inOut + `
+      tl.fromTo('#${id}an .an-sp', { scale: 0.25, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, stagger: 0.18, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-lk', { scaleX: 0 }, { scaleX: 1, duration: 0.2, stagger: 0.18, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});`
+    case 'toggle':
+      return inOut + `
+      tl.fromTo('#${id}tr', { scaleX: 0.7, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}kn', { x: 0, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.2 }, ${r2(t0 + 0.16)});
+      tl.to('#${id}kn', { xPercent: 118, backgroundColor: '#FF5A2B', duration: 0.34, ease: 'back.out(2)' }, ${r2(t0 + 0.44)});
+      tl.to('#${id}tr', { borderColor: '#FF5A2B', duration: 0.3 }, ${r2(t0 + 0.44)});`
     case 'faceless':
       return inOut + `
       tl.fromTo('#${id}hd', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
