@@ -273,8 +273,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // de ponctuation — c'est une texture qui accompagne une image, pas un coup qui
     // souligne un instant. Le fichier mac-typing est enregistré bas (moyenne −33 dB,
     // pics à −3,9) : à moitié volume il disparaissait sous la voix, d'où le gain.
-    for (const sl of plan.slides || []) {
-      if (sl.anim !== 'type') continue
+    // clavier explicite : le plan peut demander une frappe a un instant precis
+    // (quand il DICTE son prompt a l'ecran), independamment de l'animation `type`.
+    const kbSpots = [
+      ...(plan.keyboard || []).map((k) => ({ start: k.t, end: k.t + (k.dur || 1.6) })),
+      ...(plan.slides || []).filter((sl) => sl.anim === 'type').map((sl) => ({ start: sl.start, end: sl.end })),
+    ]
+    for (const sl of kbSpots) {
       const f = join(HERE, 'assets', 'sfx', 'mac-typing.mp3')
       if (!existsSync(f)) continue
       const dur = Math.max(0.6, Math.min(2.6, (sl.end - sl.start) - 0.4))
