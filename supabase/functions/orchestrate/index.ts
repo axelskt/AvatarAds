@@ -170,7 +170,8 @@ const EMOJIS = ['airplane', 'alarm_clock', 'bank', 'bar_chart', 'battery', 'beac
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
-const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check']
+const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
+  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -420,6 +421,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
 - REGLE DE FOND, VALABLE POUR TOUT VISUEL : une animation doit MONTRER quelque chose de CONCRET, un objet ou une action qu'on reconnait en un coup d'oeil. Si le spectateur ne peut pas dire en une seconde « c'est un billet », « c'est une fusee », « c'est un cadenas », l'animation ne sert a rien et il vaut mieux ne rien mettre. Une forme abstraite, un rectangle qui bouge, un motif decoratif : ca ne montre RIEN. Ne place jamais un visuel juste pour occuper l'ecran.
 - EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
+  DENSITE — LE PLUS DYNAMIQUE POSSIBLE. Une video virale illustre presque en permanence : les gens comprennent mieux avec des images. Tu peux couvrir JUSQU'A 99% de la duree d'animations, il n'y a AUCUN quota a respecter et aucun espacement a tenir. La seule limite est la PERTINENCE : chaque animation doit illustrer ce qui est dit A CET INSTANT. Deux regles fermes : jamais deux fois la MEME animation dans une video, et jamais une animation qui ne correspond pas au sens (mieux vaut un blanc qu'un contresens).
+  C'EST TOI QUI CHOISIS, PAS UNE LISTE DE MOTS. Tu comprends le SENS d'une phrase ; un mot-cle isole se trompe. « sans jamais montrer ton visage » n'appelle pas un cadenas parce qu'il y a « jamais » : ca appelle faceless. Lis la phrase entiere, demande-toi ce qu'elle MONTRE, et prends l'animation qui la dessine.
   L'EMOJI EST UN REPLI RARE, PAS LE DEFAUT. La regle voulue est 99% d'ANIMATIONS et 1% d'emoji : une animation dure, elle occupe le cadre et elle raconte, la ou l'emoji n'est qu'une image posee. Cherche donc TOUJOURS une animation d'abord dans la liste ci-dessus — elle couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit. Ne prends un emoji que si AUCUNE animation ne colle, et au maximum une ou deux fois par video.
   Rythme : 0,7 a 1,5s, jamais deux colles.
   VALEURS AUTORISEES (toute autre valeur est jetee) :
@@ -448,6 +451,16 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     rocket  — un lancement, un decollage, ce qui explose, devenir viral.
     network — un reseau, une connexion, une communaute, des gens relies.
     check   — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
+    swipe   — un fil qui defile, le scroll, "les gens scrollent", le feed.
+    views   — des vues qui grimpent, la portee, "X personnes t'ont vu".
+    engage  — des commentaires et des coeurs qui montent : l'engagement, les reactions.
+    calendar— une grille qui se remplit : publier regulierement, tous les jours, la constance.
+    upload  — une carte qui s'envole : publier, mettre en ligne, poster.
+    stack   — des videos qui s'empilent : le volume, produire en serie, "10 videos par jour".
+    swap    — une chose remplacee par une autre : "au lieu de", "a la place de", remplacer.
+    cut     — une timeline qu'on coupe : le montage, la decoupe, "on enleve les blancs".
+    steps   — 1, 2, 3 : une methode, "il te suffit de", les etapes.
+    toggle  — un interrupteur qui s'allume : activer, "en un clic", ca se met en marche.
     faceless— l'anonymat : "sans montrer ton visage", "sans camera", "personne ne sait que c'est toi". Une tete dont les yeux se font masquer.
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
@@ -680,49 +693,13 @@ const EMOJI_LEX: [string, string][] = [
 // les emojis : a moment egal, une animation vaut mieux qu'un emoji — elle dure, elle
 // raconte, elle occupe le cadre. L'emoji reste le repli quand aucune ne colle.
 const ANIM_LEX: [string, string][] = [
-  ['liste', 'list'], ['catalogue', 'list'], ['bibliotheque', 'list'], ['modele', 'list'], ['script', 'list'], ['choix', 'list'],
-  ['croiss', 'grow'], ['augment', 'grow'], ['monte', 'grow'], ['progress', 'grow'], ['hausse', 'grow'], ['scale', 'grow'],
-  ['resultat', 'grow'], ['courbe', 'grow'], ['vues', 'grow'], ['abonne', 'grow'],
-  ['temps', 'clock'], ['minute', 'clock'], ['heure', 'clock'], ['seconde', 'clock'], ['rapid', 'clock'], ['vite', 'clock'], ['chrono', 'clock'],
-  ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'],
-  ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'],
-  ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'],
-  ['argent', 'money'], ['euro', 'money'], ['dollar', 'money'], ['revenu', 'money'], ['gagn', 'money'], ['paie', 'money'], ['prix', 'money'],
-  ['cash', 'money'], ['million', 'money'], ['mille', 'money'], ['gratuit', 'money'], ['cout', 'money'], ['tarif', 'money'], ['budget', 'money'],
-  ['idee', 'idea'], ['astuce', 'idea'], ['solution', 'idea'], ['secret', 'idea'], ['methode', 'idea'], ['truc', 'idea'], ['comprend', 'idea'],
-  ['cible', 'target'], ['objectif', 'target'], ['precis', 'target'], ['but', 'target'], ['exact', 'target'], ['pile', 'target'],
-  ['secur', 'lock'], ['protege', 'lock'], ['prive', 'lock'], ['verrou', 'lock'], ['acces', 'lock'], ['cle', 'lock'], ['debloqu', 'lock'],
-  ['cherch', 'search'], ['trouv', 'search'], ['analys', 'search'], ['decouvr', 'search'], ['repere', 'search'], ['detect', 'search'],
-  ['lance', 'rocket'], ['decoll', 'rocket'], ['demarr', 'rocket'], ['boost', 'rocket'], ['explos', 'rocket'], ['viral', 'rocket'], ['propuls', 'rocket'],
-  ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'],
-  ['valide', 'check'], ['reussi', 'check'], ['fait', 'check'], ['termine', 'check'], ['fini', 'check'], ['marche', 'check'], ['parfait', 'check'],
-  ['simple', 'check'], ['facile', 'check'], ['inclus', 'check'],
-  // élargissement : ce sont les mots courants d'un script marketing FR. Sans eux, des
-  // fenêtres entières de 3 s ne trouvaient aucune animation et restaient vides.
-  ['video', 'phone'], ['clip', 'phone'], ['short', 'phone'], ['post', 'phone'], ['publi', 'phone'], ['contenu', 'phone'],
-  ['compte', 'network'], ['abonne', 'network'], ['follow', 'network'], ['public', 'network'], ['monde', 'network'], ['client', 'network'],
-  ['outil', 'idea'], ['app', 'idea'], ['logiciel', 'idea'], ['plateforme', 'idea'], ['system', 'idea'], ['fonctionn', 'idea'],
-  ['creer', 'type'], ['fais', 'type'], ['produi', 'type'], ['constru', 'type'], ['prompt', 'type'], ['mot', 'type'],
-  ['test', 'search'], ['essai', 'search'], ['essaie', 'search'], ['regarde', 'search'], ['voir', 'search'], ['montre', 'search'],
-  ['jour', 'clock'], ['semaine', 'clock'], ['mois', 'clock'], ['annee', 'clock'], ['maintenant', 'clock'], ['direct', 'clock'],
-  ['premier', 'target'], ['meilleur', 'target'], ['top', 'target'], ['numero', 'target'], ['unique', 'target'],
-  ['nouveau', 'rocket'], ['debut', 'rocket'], ['commence', 'rocket'], ['grandi', 'rocket'], ['dev', 'rocket'],
-  ['tout', 'list'], ['plusieurs', 'list'], ['options', 'list'], ['plein', 'list'], ['tas', 'list'], ['different', 'list'],
-  ['sans', 'lock'], ['besoin', 'lock'], ['obliga', 'lock'], ['interdit', 'lock'], ['limite', 'lock'],
-  ['deja', 'check'], ['toujours', 'check'], ['sur', 'check'], ['vraiment', 'check'], ['exactement', 'check'],
-  ['beaucoup', 'grow'], ['plus', 'grow'], ['max', 'grow'], ['double', 'grow'], ['triple', 'grow'], ['fois', 'grow'],
-  // VOCABULAIRE DES BENEFICES. Axel : « plein de benefices que je dis n'ont pas
-  // d'animation ». Un benefice se dit avec des verbes de gain, pas avec des noms
-  // d'objets — c'est ce qui manquait au lexique.
-  ['econom', 'clock'], ['gagne', 'clock'], ['perd', 'clock'], ['libre', 'clock'], ['dispo', 'clock'], ['24', 'clock'],
-  ['illimit', 'grow'], ['autant', 'grow'], ['volume', 'grow'], ['masse', 'grow'], ['serie', 'grow'], ['chaine', 'grow'],
-  ['personnalis', 'idea'], ['adapt', 'idea'], ['sur-mesure', 'idea'], ['choisi', 'idea'], ['controle', 'idea'], ['libert', 'idea'],
-  ['qualite', 'target'], ['pro', 'target'], ['net', 'target'], ['propre', 'target'], ['impec', 'target'], ['4k', 'target'],
-  ['auto', 'check'], ['seul', 'check'], ['clic', 'check'], ['direct', 'check'], ['instant', 'check'], ['immediat', 'check'],
-  ['aucun', 'lock'], ['zero', 'lock'], ['jamais', 'lock'], ['anonym', 'lock'], ['discret', 'lock'], ['cache', 'lock'],
-  ['partout', 'network'], ['toutes', 'network'], ['multi', 'network'], ['plateformes', 'network'], ['audience', 'network'],
-  ['essaye', 'search'], ['decouvre', 'search'], ['compare', 'search'], ['choisis', 'search'],
-  ['viral', 'rocket'], ['perce', 'rocket'], ['exploser', 'rocket'], ['carton', 'rocket'], ['succes', 'rocket'],
+  // FILET DE SECURITE uniquement. Les mots-outils (tout, plus, sans, jamais, deja,
+  // fois...) ont ete RETIRES : ils declenchaient une animation sans rapport — un
+  // champ de mot de passe sur « visage » parce que « jamais » pointait vers lock.
+  // Le CHOIX revient au chef d'orchestre, qui comprend le sens ; ce lexique ne
+  // sert plus qu'a combler un trou quand un mot est sans ambiguite.
+  ['liste', 'list'], ['catalogue', 'list'], ['bibliotheque', 'list'], ['modele', 'list'], ['script', 'list'], ['choix', 'list'], ['croiss', 'grow'], ['augment', 'grow'], ['monte', 'grow'], ['progress', 'grow'], ['hausse', 'grow'], ['scale', 'grow'], ['resultat', 'grow'], ['courbe', 'grow'], ['vues', 'grow'], ['abonne', 'grow'], ['temps', 'clock'], ['minute', 'clock'], ['heure', 'clock'], ['seconde', 'clock'], ['rapid', 'clock'], ['vite', 'clock'], ['chrono', 'clock'], ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'], ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'], ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'], ['argent', 'money'], ['euro', 'money'], ['dollar', 'money'], ['revenu', 'money'], ['gagn', 'money'], ['paie', 'money'], ['prix', 'money'], ['cash', 'money'], ['million', 'money'], ['mille', 'money'], ['gratuit', 'money'], ['cout', 'money'], ['tarif', 'money'], ['budget', 'money'], ['idee', 'idea'], ['astuce', 'idea'], ['solution', 'idea'], ['secret', 'idea'], ['methode', 'idea'], ['truc', 'idea'], ['comprend', 'idea'], ['cible', 'target'], ['objectif', 'target'], ['precis', 'target'], ['but', 'target'], ['exact', 'target'], ['pile', 'target'], ['secur', 'lock'], ['protege', 'lock'], ['prive', 'lock'], ['verrou', 'lock'], ['acces', 'lock'], ['cle', 'lock'], ['debloqu', 'lock'], ['cherch', 'search'], ['trouv', 'search'], ['analys', 'search'], ['decouvr', 'search'], ['repere', 'search'], ['detect', 'search'], ['lance', 'rocket'], ['decoll', 'rocket'], ['demarr', 'rocket'], ['boost', 'rocket'], ['explos', 'rocket'], ['viral', 'rocket'], ['propuls', 'rocket'], ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'], ['valide', 'check'], ['reussi', 'check'], ['fait', 'check'], ['termine', 'check'], ['fini', 'check'], ['marche', 'check'], ['parfait', 'check'], ['simple', 'check'], ['facile', 'check'], ['inclus', 'check'], ['video', 'phone'], ['clip', 'phone'], ['short', 'phone'], ['post', 'phone'], ['publi', 'phone'], ['contenu', 'phone'], ['compte', 'network'], ['abonne', 'network'], ['follow', 'network'], ['public', 'network'], ['monde', 'network'], ['client', 'network'], ['outil', 'idea'], ['app', 'idea'], ['logiciel', 'idea'], ['plateforme', 'idea'], ['system', 'idea'], ['fonctionn', 'idea'], ['creer', 'type'], ['produi', 'type'], ['constru', 'type'], ['prompt', 'type'], ['test', 'search'], ['essai', 'search'], ['essaie', 'search'], ['regarde', 'search'], ['jour', 'clock'], ['semaine', 'clock'], ['mois', 'clock'], ['annee', 'clock'], ['premier', 'target'], ['meilleur', 'target'], ['top', 'target'], ['numero', 'target'], ['unique', 'target'], ['nouveau', 'rocket'], ['commence', 'rocket'], ['grandi', 'rocket'], ['plusieurs', 'list'], ['options', 'list'], ['different', 'list'], ['double', 'grow'], ['triple', 'grow'], ['econom', 'clock'], ['gagne', 'clock'], ['perd', 'clock'], ['libre', 'clock'], ['dispo', 'clock'], ['24', 'clock'], ['illimit', 'grow'], ['autant', 'grow'], ['volume', 'grow'], ['masse', 'grow'], ['serie', 'grow'], ['chaine', 'grow'], ['personnalis', 'idea'], ['adapt', 'idea'], ['sur-mesure', 'idea'], ['choisi', 'idea'], ['controle', 'idea'], ['libert', 'idea'], ['qualite', 'target'], ['pro', 'target'], ['net', 'target'], ['propre', 'target'], ['impec', 'target'], ['4k', 'target'], ['auto', 'check'], ['clic', 'check'], ['instant', 'check'], ['immediat', 'check'], ['anonym', 'lock'], ['discret', 'lock'], ['cache', 'lock'], ['partout', 'network'], ['toutes', 'network'], ['multi', 'network'], ['plateformes', 'network'], ['audience', 'network'], ['essaye', 'search'], ['decouvre', 'search'], ['compare', 'search'], ['choisis', 'search'], ['viral', 'rocket'],
+  ['perce', 'rocket'], ['exploser', 'rocket'], ['carton', 'rocket'], ['succes', 'rocket'],
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
@@ -1033,7 +1010,11 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // n'est qu'un espacement MINIMUM entre deux visuels — le remplissage ne pose une
     // animation que si un mot du creux la justifie vraiment (lexique). Un moment qui
     // n'evoque rien reste nu, et c'est tres bien.
-    const TARGET = 2.6   // espacement mini : une animation tombe donc entre 2 et 4 s
+    // LE PLUS DENSE POSSIBLE. Axel : « oublie l'espacement, le but c'est le truc le
+    // plus dynamique possible ». Le lexique est desormais purge des mots-outils, donc
+    // chaque correspondance est fiable : on peut poser serre sans risquer le
+    // contresens. 1,6 s = juste de quoi ne pas empiler deux animations.
+    const TARGET = 1.6
     const occupied = (t: number) =>
       slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
       cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)
@@ -1081,7 +1062,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         const emo = ''
         if (!an && !emo) { cursor = w.start + 0.3; continue }
         if (an) usedAnims.add(an)
-        const end = r2(Math.min(w.start + (an ? 2.6 : 1.3), next - 0.2, D - 0.4))
+        const end = r2(Math.min(w.start + (an ? 2.0 : 1.3), next - 0.2, D - 0.4))
         if (end - w.start < 0.5) { cursor = w.start + 0.3; continue }
         added.push({
           type: 'card', layout: 'full', motif: '', anim: an, emoji: emo,
@@ -1089,7 +1070,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
           center: '', value: '', unit: '', wide: false, options: [], items: [],
         })
         lastPlaced = w.start
-        cursor = w.start + TARGET * 0.9
+        cursor = w.start + TARGET
       }
       cursor = Math.max(cursor, next)
     }
