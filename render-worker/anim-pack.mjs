@@ -125,6 +125,16 @@ export function animHtml(name, s, W, H, vs) {
       // du texte qui s'écrit, avec le curseur : un script qui se rédige tout seul
       const txt = (items[0] || s.title || '').slice(0, 34)
       const fs = Math.round(H * 0.026)
+      // SANS TEXTE : des lignes qui s'ecrivent l'une apres l'autre. Le remplissage
+      // automatique ne fournit pas de phrase, et un `type` vide n'affichait rien —
+      // pire, il cassait toute la timeline (childNodes[0] etait le curseur, pas un
+      // noeud texte, donc .nodeValue valait null).
+      if (!txt) {
+        const lw = Math.round(f.w * 0.78), lh = Math.round(f.h * 0.09)
+        const x = Math.round((f.w - lw) / 2)
+        return box([0, 1, 2].map((k) => `<span class="an-p an-tl" id="${id}l${k}" style="left:${x}px;top:${Math.round(f.h * 0.3 + k * lh * 1.7)}px;width:${Math.round(lw * (1 - k * 0.18))}px;height:${lh}px;border-radius:${Math.round(lh * 0.35)}px;background:${k === 1 ? P.acc : P.soft}"></span>`).join('') +
+          `<span class="an-p an-cur" id="${id}cur" style="left:${x + lw}px;top:${Math.round(f.h * 0.3)}px;width:${Math.max(4, Math.round(f.w * 0.012))}px;height:${lh}px;background:${P.ink}"></span>`)
+      }
       return box(`<div class="an-t" id="${id}t" style="font-size:${fs}px;color:${P.ink}">${esc(txt)}<span class="an-cur" id="${id}cur" style="background:${P.acc}"></span></div>`)
     }
     case 'phone': {
@@ -416,7 +426,14 @@ export function animJs(name, s, r2) {
     case 'type':
       return inOut + `
       (function(){ var el = document.querySelector('#${id}t'), cur = document.querySelector('#${id}cur');
-        var full = el ? el.childNodes[0].nodeValue : '', o = { n: 0 };
+        if (!el) {
+          tl.fromTo('#${id}an .an-tl', { scaleX: 0 }, { scaleX: 1, duration: 0.34, stagger: 0.16, ease: 'power2.out', transformOrigin: '0% 50%' }, ${t0});
+          if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.26, repeat: 5, yoyo: true, ease: 'none' }, ${t0});
+          return;
+        }
+        var node = el.childNodes[0];
+        var full = (node && node.nodeValue) || '', o = { n: 0 };
+        if (!full) return;
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
