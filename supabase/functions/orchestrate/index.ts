@@ -439,7 +439,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     phone   — le format final vertical, une video qui defile, "sur TikTok / Reels / Shorts".
     clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
     avatar  — la creation d'un avatar, un personnage qui se genere, "ton premier avatar".
-    logo    — SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
+    logo    — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
     money   — l'argent, un revenu, un prix, un cout, ce qui est gratuit.
     idea    — une idee, une astuce, une methode, un declic, "le secret c'est...".
     target  — un objectif, une cible, quelque chose de precis, "exactement".
@@ -1021,7 +1021,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // n'est qu'un espacement MINIMUM entre deux visuels — le remplissage ne pose une
     // animation que si un mot du creux la justifie vraiment (lexique). Un moment qui
     // n'evoque rien reste nu, et c'est tres bien.
-    const TARGET = 3.0
+    const TARGET = 2.6   // espacement mini : une animation tombe donc entre 2 et 4 s
     const occupied = (t: number) =>
       slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
       cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)
@@ -1052,8 +1052,10 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         const from = Math.max(cursor + 0.3, lastPlaced + TARGET)
         if (from > next - 0.6) break
         // premier mot fort apres `from` qui a un emoji et n'est pas deja occupe
-        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start)
-          && (animForWord(x.text) || emojiForWord(x.text)))
+        // ANIMATIONS UNIQUEMENT. Axel : « stop avec les emojis, je veux des
+        // animations ». Le remplissage ne cherche donc plus que des mots qui
+        // correspondent a une ANIMATION ; s'il n'y en a pas, le moment reste nu.
+        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start) && animForWord(x.text))
         if (!w) break
         // ANIMATION D'ABORD : Axel veut plus d'animations que d'emojis. Une animation
         // deja utilisee n'est pas rejouee (jamais deux fois la meme dans une video) —
@@ -1061,9 +1063,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         const anForW = animForWord(w.text)
         // On evite de repeter, mais si l'animation a deja servi et qu'il n'y a pas
         // d'emoji de repli, on la REJOUE : un ecran vide est pire qu'une redite.
-        const emoAlt = emojiForWord(w.text)
-        const an = anForW && (!usedAnims.has(anForW) || !emoAlt) ? anForW : ''
-        const emo = an ? '' : emoAlt
+        const an = anForW
+        const emo = ''
         if (!an && !emo) { cursor = w.start + 0.3; continue }
         if (an) usedAnims.add(an)
         const end = r2(Math.min(w.start + (an ? 2.6 : 1.3), next - 0.2, D - 0.4))
