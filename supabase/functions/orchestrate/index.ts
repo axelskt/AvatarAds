@@ -665,11 +665,30 @@ const EMOJI_LEX: [string, string][] = [
   ['voyage', 'airplane'], ['vacances', 'beach_with_umbrella'], ['detente', 'beach_with_umbrella'], ['chill', 'beach_with_umbrella'], ['passif', 'beach_with_umbrella'],
   ['photo', 'camera'], ['image', 'camera'],
 ]
+// Lexique mot→ANIMATION. Ces six animations-la sont GENERIQUES (elles ne parlent pas
+// d'AvatarAds) donc elles marchent sur n'importe quel script. Elles sont testees AVANT
+// les emojis : a moment egal, une animation vaut mieux qu'un emoji — elle dure, elle
+// raconte, elle occupe le cadre. L'emoji reste le repli quand aucune ne colle.
+const ANIM_LEX: [string, string][] = [
+  ['liste', 'list'], ['catalogue', 'list'], ['bibliotheque', 'list'], ['modele', 'list'], ['script', 'list'], ['choix', 'list'],
+  ['croiss', 'grow'], ['augment', 'grow'], ['monte', 'grow'], ['progress', 'grow'], ['hausse', 'grow'], ['scale', 'grow'],
+  ['resultat', 'grow'], ['courbe', 'grow'], ['vues', 'grow'], ['abonne', 'grow'],
+  ['temps', 'clock'], ['minute', 'clock'], ['heure', 'clock'], ['seconde', 'clock'], ['rapid', 'clock'], ['vite', 'clock'], ['chrono', 'clock'],
+  ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'],
+  ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'],
+  ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'],
+]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
   const k = norm(w)
   if (k.length < 3 || STOP_FILL.has(k)) return ''
   for (const [stem, emo] of EMOJI_LEX) if (k.startsWith(stem)) return emo
+  return ''
+}
+function animForWord(w: string): string {
+  const k = norm(w)
+  if (k.length < 3 || STOP_FILL.has(k)) return ''
+  for (const [stem, an] of ANIM_LEX) if (k.startsWith(stem)) return an
   return ''
 }
 
@@ -968,6 +987,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       ...cleanBroll.map((b) => b.start),
     ].sort((a, b) => a - b)
     const added: typeof slides = []
+    const usedAnims = new Set(slides.filter((sl) => sl.anim).map((sl) => sl.anim as string))
     let lastPlaced = 1.5
     const marks = [...visualStarts, D]
     let cursor = 1.5
@@ -977,13 +997,21 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         const from = Math.max(cursor + 0.3, lastPlaced + TARGET)
         if (from > next - 0.6) break
         // premier mot fort apres `from` qui a un emoji et n'est pas deja occupe
-        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start) && emojiForWord(x.text))
+        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start)
+          && (animForWord(x.text) || emojiForWord(x.text)))
         if (!w) break
-        const emo = emojiForWord(w.text)
-        const end = r2(Math.min(w.start + 1.2, next - 0.2, D - 0.4))
+        // ANIMATION D'ABORD : Axel veut plus d'animations que d'emojis. Une animation
+        // deja utilisee n'est pas rejouee (jamais deux fois la meme dans une video) —
+        // dans ce cas on retombe sur l'emoji.
+        const anForW = animForWord(w.text)
+        const an = anForW && !usedAnims.has(anForW) ? anForW : ''
+        const emo = an ? '' : emojiForWord(w.text)
+        if (!an && !emo) { cursor = w.start + 0.3; continue }
+        if (an) usedAnims.add(an)
+        const end = r2(Math.min(w.start + (an ? 2.0 : 1.2), next - 0.2, D - 0.4))
         if (end - w.start < 0.5) { cursor = w.start + 0.3; continue }
         added.push({
-          type: 'card', layout: 'full', motif: '', anim: '', emoji: emo,
+          type: 'card', layout: 'full', motif: '', anim: an, emoji: emo,
           start: r2(w.start), end, title: '', eyebrow: '', accent: '', sub: '',
           center: '', value: '', unit: '', wide: false, options: [], items: [],
         })
