@@ -252,25 +252,22 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'screen': {
-      // MODE PRESENTATION 3D. L'interface reelle sur un plan incline qui pivote, avec
-      // un zoom qui se resserre sur la zone dont il parle et un cadre qui l'entoure.
-      // Le zoom se fait par transform sur un CALQUE qui contient l'image ET le cadre :
-      // ainsi le cadre suit exactement le zoom (avec object-position, il derivait).
+      // MODE PRESENTATION 3D. L'interface sur un plan incline, un zoom sur la zone
+      // dont il parle, et un cadre qui l'entoure. Si une SECONDE cible est donnee
+      // (screenX2/Y2), la camera DESCEND de la premiere a la seconde sans coupure :
+      // sur l'audio de test, « fruit » et « format » sont dits a 0,54 s d'intervalle,
+      // deux plans separes n'y tiennent pas — il faut un travelling.
       if (!s.screenFile) return ''
       const w = Math.round(f.w * 1.3)
       const h = Math.round(w * 0.625)
-      const zx = typeof s.screenX === 'number' ? s.screenX : 0.5
-      const zy = typeof s.screenY === 'number' ? s.screenY : 0.5
-      const bw = typeof s.boxW === 'number' ? s.boxW : 0
-      const bh2 = typeof s.boxH === 'number' ? s.boxH : 0
-      const bx = typeof s.boxX === 'number' ? s.boxX : zx
-      const by = typeof s.boxY === 'number' ? s.boxY : zy
-      const boxEl = bw > 0 && bh2 > 0
-        ? `<span class="an-3dbox" id="${id}bx" style="left:${((bx - bw / 2) * 100).toFixed(2)}%;top:${((by - bh2 / 2) * 100).toFixed(2)}%;width:${(bw * 100).toFixed(2)}%;height:${(bh2 * 100).toFixed(2)}%;border-color:${P.acc}"></span>`
+      const mkBox = (bx, by, bw, bh2, n) => (bw > 0 && bh2 > 0)
+        ? `<span class="an-3dbox" id="${id}bx${n}" style="left:${((bx - bw / 2) * 100).toFixed(2)}%;top:${((by - bh2 / 2) * 100).toFixed(2)}%;width:${(bw * 100).toFixed(2)}%;height:${(bh2 * 100).toFixed(2)}%;border-color:${P.acc}"></span>`
         : ''
+      const b1 = mkBox(typeof s.boxX === 'number' ? s.boxX : 0, typeof s.boxY === 'number' ? s.boxY : 0, s.boxW || 0, s.boxH || 0, 1)
+      const b2 = mkBox(typeof s.boxX2 === 'number' ? s.boxX2 : 0, typeof s.boxY2 === 'number' ? s.boxY2 : 0, s.boxW2 || 0, s.boxH2 || 0, 2)
       return box(`<div class="an-3d" id="${id}sc" style="left:${Math.round((f.w - w) / 2)}px;top:${Math.round((f.h - h) / 2)}px;width:${w}px;height:${h}px">
         <div class="an-3di">
-          <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${boxEl}</div>
+          <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}</div>
         </div></div>`)
     }
     case 'swipe': {
@@ -503,11 +500,22 @@ export function animJs(name, s, r2) {
       const zs = typeof s.screenZoom === 'number' ? s.screenZoom : 1
       const tx = ((0.5 - zx) * 100).toFixed(2)
       const ty = ((0.5 - zy) * 100).toFixed(2)
+      const has2 = typeof s.screenX2 === 'number' && typeof s.screenY2 === 'number'
+      const zs2 = typeof s.screenZoom2 === 'number' ? s.screenZoom2 : zs
+      const tx2 = has2 ? ((0.5 - s.screenX2) * 100).toFixed(2) : tx
+      const ty2 = has2 ? ((0.5 - s.screenY2) * 100).toFixed(2) : ty
+      // le travelling occupe la seconde moitie de la scene
+      const panAt = r2(t0 + Math.max(0.9, (dur - 0.5) * 0.5))
+      const panDur = r2(Math.max(0.6, end - 0.25 - panAt))
       return inOut + `
       tl.fromTo('#${id}sc', { rotationY: -24, rotationX: 8, scale: 0.86, autoAlpha: 0 }, { rotationY: -11, rotationX: 4, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${t0});
       tl.to('#${id}sc', { rotationY: -3, rotationX: 1, duration: ${r2(Math.max(0.8, dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t0 + 0.5)});
-      tl.fromTo('#${id}z', { scale: 1, xPercent: 0, yPercent: 0 }, { scale: ${zs}, xPercent: ${tx}, yPercent: ${ty}, duration: ${r2(Math.max(0.7, dur - 0.55))}, ease: 'power2.inOut' }, ${r2(t0 + 0.3)});
-      tl.fromTo('#${id}bx', { autoAlpha: 0, scale: 1.6 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.6)});`
+      tl.fromTo('#${id}z', { scale: 1, xPercent: 0, yPercent: 0 }, { scale: ${zs}, xPercent: ${tx}, yPercent: ${ty}, duration: ${r2(Math.max(0.55, (has2 ? panAt - t0 : dur - 0.55)))}, ease: 'power2.inOut' }, ${r2(t0 + 0.25)});
+      tl.fromTo('#${id}bx1', { autoAlpha: 0, scale: 1.6 }, { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.5)});` +
+      (has2 ? `
+      tl.to('#${id}z', { scale: ${zs2}, xPercent: ${tx2}, yPercent: ${ty2}, duration: ${panDur}, ease: 'power2.inOut' }, ${panAt});
+      tl.to('#${id}bx1', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${panAt});
+      tl.fromTo('#${id}bx2', { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(panAt + panDur - 0.3)});` : '')
     }
     case 'swipe':
       return inOut + `
