@@ -498,12 +498,16 @@ export function animJs(name, s, r2) {
       const zx = typeof s.screenX === 'number' ? s.screenX : 0.5
       const zy = typeof s.screenY === 'number' ? s.screenY : 0.5
       const zs = typeof s.screenZoom === 'number' ? s.screenZoom : 1
-      const tx = ((0.5 - zx) * 100).toFixed(2)
-      const ty = ((0.5 - zy) * 100).toFixed(2)
+      // GSAP compose translate(t) scale(z) : l'echelle s'applique AVANT la
+      // translation, donc le decalage doit lui aussi etre multiplie par le zoom.
+      // Sans ce facteur, la zone visee derivait d'autant plus qu'on zoomait — c'est
+      // ce qui empechait la fonction d'etre pile au centre.
       const has2 = typeof s.screenX2 === 'number' && typeof s.screenY2 === 'number'
       const zs2 = typeof s.screenZoom2 === 'number' ? s.screenZoom2 : zs
-      const tx2 = has2 ? ((0.5 - s.screenX2) * 100).toFixed(2) : tx
-      const ty2 = has2 ? ((0.5 - s.screenY2) * 100).toFixed(2) : ty
+      const tx = ((0.5 - zx) * zs * 100).toFixed(2)
+      const ty = ((0.5 - zy) * zs * 100).toFixed(2)
+      const tx2 = has2 ? ((0.5 - s.screenX2) * zs2 * 100).toFixed(2) : tx
+      const ty2 = has2 ? ((0.5 - s.screenY2) * zs2 * 100).toFixed(2) : ty
       // le travelling occupe la seconde moitie de la scene
       const panAt = r2(t0 + Math.max(0.9, (dur - 0.5) * 0.5))
       const panDur = r2(Math.max(0.6, end - 0.25 - panAt))
