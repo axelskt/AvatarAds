@@ -39,7 +39,11 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-const CLAUDE_MODEL = 'claude-opus-4-8'
+// Sonnet 5 plutot qu'Opus : le chef d'orchestre ne fait plus le gros du travail —
+// le placement dense, la cadence, les bruitages et les verrous sont deterministes
+// cote serveur. Ce qui lui reste (decouper les sections, reperer les moments forts)
+// ne justifie pas le tarif d'Opus. A rebasculer si la qualite des plans chute.
+const CLAUDE_MODEL = 'claude-sonnet-5'
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024
 const MAX_ASSETS = 8
 const MAX_THUMB_BYTES = 400 * 1024
@@ -1038,7 +1042,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // plus dynamique possible ». Le lexique est desormais purge des mots-outils, donc
     // chaque correspondance est fiable : on peut poser serre sans risquer le
     // contresens. 1,6 s = juste de quoi ne pas empiler deux animations.
-    const TARGET = 1.6
+    const TARGET = 1.15  // vise 85-90 % de couverture : une animation par groupe de mots
     // Les IMAGES ne bloquent plus. Le style mot-a-mot ne les affiche pas (0 image par
     // defaut), mais elles restaient dans le plan et rendaient leurs instants
     // « occupes » : l'ecran etait vide ET l'animation refusee. C'est ce qui privait
@@ -1069,26 +1073,36 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // split@20,8 / voice@23,2 etaient tous dans le lexique ET dans le transcript, et
     // aucun n'etait pose. On balaie donc les mots dans l'ordre, une seule fois, et on
     // pose des qu'un mot correspond a une animation encore libre.
-    const added: typeof slides = []
-    let lastPlaced = -99
+    // DEUX PASSES. Avant, chaque animation durait 2 s en dur et « occupait » la suite :
+    // « sous-titres » tombait dans la fenetre de l'animation avatar et etait donc
+    // ignore — d'ou une animation sans rapport a cet instant. Maintenant on repere
+    // d'abord TOUS les mots qui appellent une animation, puis on fait durer chacune
+    // jusqu'a la suivante. Rien ne bloque plus rien, et l'ecran reste occupe.
+    const cand: { t: number; an: string }[] = []
+    let lastT = -99
     for (const w of words) {
-      if (w.start < 1.2 || w.start > D - 1.0) continue
-      if (w.start - lastPlaced < TARGET) continue
+      if (w.start < 1.0 || w.start > D - 0.9) continue
+      if (w.start - lastT < TARGET) continue
       if (occupied(w.start)) continue
       const an = animForWord(w.text)
       if (!an || usedAnims.has(an)) continue
-      const end = r2(Math.min(w.start + 2.0, D - 0.4))
-      if (end - w.start < 0.6) continue
       usedAnims.add(an)
-      lastPlaced = w.start
+      lastT = w.start
+      cand.push({ t: w.start, an })
+    }
+    const added: typeof slides = []
+    for (let i = 0; i < cand.length; i++) {
+      const nextT = i + 1 < cand.length ? cand[i + 1].t : D
+      const end = r2(Math.min(cand[i].t + 2.4, nextT - 0.05, D - 0.4))
+      if (end - cand[i].t < 0.55) continue
       added.push({
-        type: 'card', layout: 'full', motif: '', anim: an, emoji: '',
-        start: r2(w.start), end, title: '', eyebrow: '', accent: '', sub: '',
+        type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
+        start: r2(cand[i].t), end, title: '', eyebrow: '', accent: '', sub: '',
         center: '', value: '', unit: '', wide: false, options: [], items: [],
       })
     }
     for (const a of added) {
-      if (!slides.some((sl) => Math.abs(sl.start - a.start) < 1.0)) slides.push(a)
+      if (!slides.some((sl) => Math.abs(sl.start - a.start) < 0.7)) slides.push(a)
     }
     slides.sort((x, y) => x.start - y.start)
 
