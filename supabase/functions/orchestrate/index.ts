@@ -711,6 +711,18 @@ const ANIM_LEX: [string, string][] = [
   ['sans', 'lock'], ['besoin', 'lock'], ['obliga', 'lock'], ['interdit', 'lock'], ['limite', 'lock'],
   ['deja', 'check'], ['toujours', 'check'], ['sur', 'check'], ['vraiment', 'check'], ['exactement', 'check'],
   ['beaucoup', 'grow'], ['plus', 'grow'], ['max', 'grow'], ['double', 'grow'], ['triple', 'grow'], ['fois', 'grow'],
+  // VOCABULAIRE DES BENEFICES. Axel : « plein de benefices que je dis n'ont pas
+  // d'animation ». Un benefice se dit avec des verbes de gain, pas avec des noms
+  // d'objets — c'est ce qui manquait au lexique.
+  ['econom', 'clock'], ['gagne', 'clock'], ['perd', 'clock'], ['libre', 'clock'], ['dispo', 'clock'], ['24', 'clock'],
+  ['illimit', 'grow'], ['autant', 'grow'], ['volume', 'grow'], ['masse', 'grow'], ['serie', 'grow'], ['chaine', 'grow'],
+  ['personnalis', 'idea'], ['adapt', 'idea'], ['sur-mesure', 'idea'], ['choisi', 'idea'], ['controle', 'idea'], ['libert', 'idea'],
+  ['qualite', 'target'], ['pro', 'target'], ['net', 'target'], ['propre', 'target'], ['impec', 'target'], ['4k', 'target'],
+  ['auto', 'check'], ['seul', 'check'], ['clic', 'check'], ['direct', 'check'], ['instant', 'check'], ['immediat', 'check'],
+  ['aucun', 'lock'], ['zero', 'lock'], ['jamais', 'lock'], ['anonym', 'lock'], ['discret', 'lock'], ['cache', 'lock'],
+  ['partout', 'network'], ['toutes', 'network'], ['multi', 'network'], ['plateformes', 'network'], ['audience', 'network'],
+  ['essaye', 'search'], ['decouvre', 'search'], ['compare', 'search'], ['choisis', 'search'],
+  ['viral', 'rocket'], ['perce', 'rocket'], ['exploser', 'rocket'], ['carton', 'rocket'], ['succes', 'rocket'],
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
@@ -731,7 +743,7 @@ function animForWord(w: string): string {
 // Les filtres de GOUT (seuil de deliberation, garde-fou anti-invention, verrou des bruitages)
 // sautent en mode 'low' — c'est le seul moyen de voir ce que le chef d'orchestre PROPOSE
 // vraiment, sans mes reglages par-dessus.
-export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = '', strict = true): Plan {
+export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = '', strict = true, brand = ''): Plan {
   const D = duration
   const sections = (plan.sections || [])
     .map((s) => ({ ...s,
@@ -1063,7 +1075,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         const anForW = animForWord(w.text)
         // On evite de repeter, mais si l'animation a deja servi et qu'il n'y a pas
         // d'emoji de repli, on la REJOUE : un ecran vide est pire qu'une redite.
-        const an = anForW
+        // JAMAIS DEUX FOIS LA MEME. Axel : « toujours des animations differentes ».
+        const an = anForW && !usedAnims.has(anForW) ? anForW : ''
+        if (!an) { cursor = w.start + 0.3; continue }
         const emo = ''
         if (!an && !emo) { cursor = w.start + 0.3; continue }
         if (an) usedAnims.add(an)
@@ -1085,20 +1099,47 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     }
     slides.sort((x, y) => x.start - y.start)
 
+    // LE LOGO QUAND IL NOMME SA MARQUE. Le modele l'oublie une fois sur deux : on le
+    // pose nous-memes. La transcription deforme souvent le nom (« Avatar Ads »,
+    // « avataria »…), d'ou la comparaison par similarite, sur le mot seul ET sur deux
+    // mots colles.
+    if (brand.length >= 4 && !slides.some((sl) => sl.anim === 'logo')) {
+      const bk = norm(brand)
+      let at = -1
+      for (let i = 0; i < words.length; i++) {
+        const a = norm(words[i].text)
+        const b = i + 1 < words.length ? a + norm(words[i + 1].text) : ''
+        if (sim(a, bk) >= 0.82 || (b && sim(b, bk) >= 0.82)) { at = words[i].start; break }
+      }
+      if (at >= 1.2 && at < D - 1.2) {
+        const clash = slides.find((sl) => at < sl.end + 0.2 && at + 2.2 > sl.start - 0.2)
+        if (clash) { clash.anim = 'logo'; clash.emoji = '' } else {
+          slides.push({
+            type: 'card', layout: 'full', motif: '', anim: 'logo', emoji: '',
+            start: r2(at), end: r2(Math.min(at + 2.2, D - 0.6)), title: '', eyebrow: '',
+            accent: '', sub: '', center: '', value: '', unit: '', wide: false, options: [], items: [],
+          })
+          slides.sort((x, y) => x.start - y.start)
+        }
+      }
+    }
+
+    // UN BRUITAGE SUR CHAQUE ANIMATION. Axel : « chaque fois qu'il y a une animation,
+    // mettre un bruitage ». On repart donc des visuels, pas de ce que le modele a
+    // propose : chaque apparition recoit un son, pris dans une palette de trois qui
+    // tourne (jamais deux fois le meme d'affilee).
+    {
+      const PAL = ['whoosh', 'pop', 'ding']
+      const starts = slides.filter((sl) => sl.anim || sl.emoji).map((sl) => sl.start).sort((a, b) => a - b)
+      sfxOnEvent = starts.map((t, i) => ({ kind: PAL[i % PAL.length], t: r2(t) }))
+    }
+
     // RE-VERROUILLAGE DES BRUITAGES. Le verrou plus haut s'applique AVANT ce
     // remplissage : il ne voyait donc pas les animations qu'on vient d'ajouter. On
     // rejoue la regle sur la liste finale — un bruitage ne survit que s'il coincide
     // avec l'APPARITION d'un visuel reel. Pas de visuel a cet instant, pas de son.
-    if (strict) {
-      const finalEvents = [
-        ...cleanBroll.map((b) => b.start),
-        ...slides.filter((sl) => sl.emoji || sl.anim || (sl.items || []).length || sl.title)
-          .map((sl) => sl.start),
-      ]
-      sfxOnEvent = finalEvents.length
-        ? sfxOnEvent.filter((x) => finalEvents.some((e) => Math.abs(e - x.t) <= 0.35))
-        : []
-    }
+    // (les sons viennent d'etre recalcules a partir des visuels eux-memes : ils sont
+    // donc alignes par construction, il n'y a plus rien a filtrer ici)
   }
 
   return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
@@ -1237,7 +1278,9 @@ serve(async (req: Request) => {
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text, filters !== 'low')
+    // nom de marque deduit du site : « https://avatarads.fr » -> « avatarads »
+    const brandName = website.replace(/^https?:\/\//, '').split('/')[0].split('.')[0]
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text, filters !== 'low', brandName)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
