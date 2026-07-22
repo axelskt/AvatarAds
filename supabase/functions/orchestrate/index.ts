@@ -1039,9 +1039,13 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // chaque correspondance est fiable : on peut poser serre sans risquer le
     // contresens. 1,6 s = juste de quoi ne pas empiler deux animations.
     const TARGET = 1.6
+    // Les IMAGES ne bloquent plus. Le style mot-a-mot ne les affiche pas (0 image par
+    // defaut), mais elles restaient dans le plan et rendaient leurs instants
+    // « occupes » : l'ecran etait vide ET l'animation refusee. C'est ce qui privait
+    // « generation de ton premier avatar », « sous-titres » et « split screen » de
+    // toute animation — les trois moments ou le modele avait justement pose une image.
     const occupied = (t: number) =>
-      slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
-      cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)
+      slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2)
     // instants deja couverts par un visuel (slide portant emoji/anim, ou image)
     const visualStarts = [
       ...slides.filter((sl) => sl.emoji || sl.anim).map((sl) => sl.start),
@@ -1059,48 +1063,32 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const hit = said.map((w) => animForWord(w.text)).find((a) => a && !usedAnims.has(a))
       if (hit) { sl.anim = hit; sl.emoji = ''; usedAnims.add(hit) }
     }
+    // PASSAGE UNIQUE SUR TOUTE LA TIMELINE. L'ancienne version travaillait « trou par
+    // trou » entre les scenes du modele, et un defaut de cette machinerie laissait des
+    // pans entiers sans rien : sur l'audio de test, avatar@13,9 / type@15,4 /
+    // split@20,8 / voice@23,2 etaient tous dans le lexique ET dans le transcript, et
+    // aucun n'etait pose. On balaie donc les mots dans l'ordre, une seule fois, et on
+    // pose des qu'un mot correspond a une animation encore libre.
     const added: typeof slides = []
-    let lastPlaced = 1.5
-    const marks = [...visualStarts, D]
-    let cursor = 1.5
-    for (const next of marks) {
-      // dans chaque trou [cursor, next], place autant d'emojis que la cadence l'exige
-      while (next - cursor > TARGET) {
-        const from = Math.max(cursor + 0.3, lastPlaced + TARGET)
-        if (from > next - 0.6) break
-        // premier mot fort apres `from` qui a un emoji et n'est pas deja occupe
-        // ANIMATIONS UNIQUEMENT. Axel : « stop avec les emojis, je veux des
-        // animations ». Le remplissage ne cherche donc plus que des mots qui
-        // correspondent a une ANIMATION ; s'il n'y en a pas, le moment reste nu.
-        const w = words.find((x) => x.start >= from && x.start < next - 0.4 && !occupied(x.start) && animForWord(x.text))
-        if (!w) break
-        // ANIMATION D'ABORD : Axel veut plus d'animations que d'emojis. Une animation
-        // deja utilisee n'est pas rejouee (jamais deux fois la meme dans une video) —
-        // dans ce cas on retombe sur l'emoji.
-        const anForW = animForWord(w.text)
-        // On evite de repeter, mais si l'animation a deja servi et qu'il n'y a pas
-        // d'emoji de repli, on la REJOUE : un ecran vide est pire qu'une redite.
-        // JAMAIS DEUX FOIS LA MEME. Axel : « toujours des animations differentes ».
-        const an = anForW && !usedAnims.has(anForW) ? anForW : ''
-        if (!an) { cursor = w.start + 0.3; continue }
-        const emo = ''
-        if (!an && !emo) { cursor = w.start + 0.3; continue }
-        if (an) usedAnims.add(an)
-        const end = r2(Math.min(w.start + (an ? 2.0 : 1.3), next - 0.2, D - 0.4))
-        if (end - w.start < 0.5) { cursor = w.start + 0.3; continue }
-        added.push({
-          type: 'card', layout: 'full', motif: '', anim: an, emoji: emo,
-          start: r2(w.start), end, title: '', eyebrow: '', accent: '', sub: '',
-          center: '', value: '', unit: '', wide: false, options: [], items: [],
-        })
-        lastPlaced = w.start
-        cursor = w.start + TARGET
-      }
-      cursor = Math.max(cursor, next)
+    let lastPlaced = -99
+    for (const w of words) {
+      if (w.start < 1.2 || w.start > D - 1.0) continue
+      if (w.start - lastPlaced < TARGET) continue
+      if (occupied(w.start)) continue
+      const an = animForWord(w.text)
+      if (!an || usedAnims.has(an)) continue
+      const end = r2(Math.min(w.start + 2.0, D - 0.4))
+      if (end - w.start < 0.6) continue
+      usedAnims.add(an)
+      lastPlaced = w.start
+      added.push({
+        type: 'card', layout: 'full', motif: '', anim: an, emoji: '',
+        start: r2(w.start), end, title: '', eyebrow: '', accent: '', sub: '',
+        center: '', value: '', unit: '', wide: false, options: [], items: [],
+      })
     }
-    // pas plus d'un visuel ajoute par 1,2s (evite l'empilement) et respect du CTA
     for (const a of added) {
-      if (!slides.some((sl) => Math.abs(sl.start - a.start) < 1.2)) slides.push(a)
+      if (!slides.some((sl) => Math.abs(sl.start - a.start) < 1.0)) slides.push(a)
     }
     slides.sort((x, y) => x.start - y.start)
 
