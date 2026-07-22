@@ -1004,8 +1004,19 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       ...slides.filter((sl) => sl.emoji || sl.anim).map((sl) => sl.start),
       ...cleanBroll.map((b) => b.start),
     ].sort((a, b) => a - b)
-    const added: typeof slides = []
     const usedAnims = new Set(slides.filter((sl) => sl.anim).map((sl) => sl.anim as string))
+    // CONVERSION EMOJI → ANIMATION. Le modele pose des emojis de lui-meme ; comme le
+    // remplissage ne touche que les TROUS, ces emojis-la restaient et plombaient le
+    // ratio (Axel veut 99% d'animations). On regarde donc les mots prononces pendant
+    // chaque emoji : si une animation dit la meme chose et n'a pas servi, elle prend
+    // sa place. L'emoji ne survit que si aucune animation ne couvre son moment.
+    for (const sl of slides) {
+      if (!sl.emoji || sl.anim) continue
+      const said = words.filter((w) => w.start >= sl.start - 0.4 && w.start < sl.end + 0.4)
+      const hit = said.map((w) => animForWord(w.text)).find((a) => a && !usedAnims.has(a))
+      if (hit) { sl.anim = hit; sl.emoji = ''; usedAnims.add(hit) }
+    }
+    const added: typeof slides = []
     let lastPlaced = 1.5
     const marks = [...visualStarts, D]
     let cursor = 1.5
