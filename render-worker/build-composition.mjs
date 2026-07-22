@@ -94,7 +94,11 @@ export function buildComposition(plan, opts = {}) {
   // d'orchestre reste prudent (il applique sa règle b-roll habituelle de 1,5 à 3,5 s,
   // pensée pour du b-roll POSÉ SUR une vidéo). En mode page blanche, on étire donc
   // chaque visuel jusqu'au suivant — plafonné à 4 s pour qu'il ne s'installe pas.
-  const rawBroll = (plan.broll || []).filter((b) => assetFiles[b.assetId])
+  // ZÉRO IMAGE EN MOT-À-MOT. Les captures fournies sont des vignettes de landing page
+  // (440-600 px) : étirées sur une carte de 820 px elles sont floues, et surtout elles
+  // ne montrent rien — un écran d'application ne se lit pas en 2 s. Ce style n'affiche
+  // donc QUE des animations. Les autres styles gardent le b-roll.
+  const rawBroll = wordMode ? [] : (plan.broll || []).filter((b) => assetFiles[b.assetId])
     .slice().sort((a, b) => a.start - b.start)
   if (wordMode && rawBroll.length) {
     const busy = [...slides.filter((sl) => sl.anim).map((sl) => sl.start)].sort((a, b) => a - b)
