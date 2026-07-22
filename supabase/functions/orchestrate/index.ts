@@ -696,6 +696,20 @@ const ANIM_LEX: [string, string][] = [
   ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'],
   ['valide', 'check'], ['reussi', 'check'], ['fait', 'check'], ['termine', 'check'], ['fini', 'check'], ['marche', 'check'], ['parfait', 'check'],
   ['simple', 'check'], ['facile', 'check'], ['inclus', 'check'],
+  // élargissement : ce sont les mots courants d'un script marketing FR. Sans eux, des
+  // fenêtres entières de 3 s ne trouvaient aucune animation et restaient vides.
+  ['video', 'phone'], ['clip', 'phone'], ['short', 'phone'], ['post', 'phone'], ['publi', 'phone'], ['contenu', 'phone'],
+  ['compte', 'network'], ['abonne', 'network'], ['follow', 'network'], ['public', 'network'], ['monde', 'network'], ['client', 'network'],
+  ['outil', 'idea'], ['app', 'idea'], ['logiciel', 'idea'], ['plateforme', 'idea'], ['system', 'idea'], ['fonctionn', 'idea'],
+  ['creer', 'type'], ['fais', 'type'], ['produi', 'type'], ['constru', 'type'], ['prompt', 'type'], ['mot', 'type'],
+  ['test', 'search'], ['essai', 'search'], ['essaie', 'search'], ['regarde', 'search'], ['voir', 'search'], ['montre', 'search'],
+  ['jour', 'clock'], ['semaine', 'clock'], ['mois', 'clock'], ['annee', 'clock'], ['maintenant', 'clock'], ['direct', 'clock'],
+  ['premier', 'target'], ['meilleur', 'target'], ['top', 'target'], ['numero', 'target'], ['unique', 'target'],
+  ['nouveau', 'rocket'], ['debut', 'rocket'], ['commence', 'rocket'], ['grandi', 'rocket'], ['dev', 'rocket'],
+  ['tout', 'list'], ['plusieurs', 'list'], ['options', 'list'], ['plein', 'list'], ['tas', 'list'], ['different', 'list'],
+  ['sans', 'lock'], ['besoin', 'lock'], ['obliga', 'lock'], ['interdit', 'lock'], ['limite', 'lock'],
+  ['deja', 'check'], ['toujours', 'check'], ['sur', 'check'], ['vraiment', 'check'], ['exactement', 'check'],
+  ['beaucoup', 'grow'], ['plus', 'grow'], ['max', 'grow'], ['double', 'grow'], ['triple', 'grow'], ['fois', 'grow'],
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
@@ -1002,7 +1016,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   // serveur comble donc les trous lui-meme, avec un emoji pose sur un mot fort du
   // creux — mot choisi par le lexique, sans nouvel appel modele. Deterministe.
   {
-    const TARGET = 2.5   // un visuel au moins tous les 2,5s
+    const TARGET = 3.0   // Axel : UNE ANIMATION TOUTES LES 3 SECONDES, sans exception
     const occupied = (t: number) =>
       slides.some((sl) => (sl.emoji || sl.anim) && t >= sl.start - 0.2 && t < sl.end + 0.2) ||
       cleanBroll.some((b) => t >= b.start - 0.2 && t < b.end + 0.2)
@@ -1040,11 +1054,14 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         // deja utilisee n'est pas rejouee (jamais deux fois la meme dans une video) —
         // dans ce cas on retombe sur l'emoji.
         const anForW = animForWord(w.text)
-        const an = anForW && !usedAnims.has(anForW) ? anForW : ''
-        const emo = an ? '' : emojiForWord(w.text)
+        // On evite de repeter, mais si l'animation a deja servi et qu'il n'y a pas
+        // d'emoji de repli, on la REJOUE : un ecran vide est pire qu'une redite.
+        const emoAlt = emojiForWord(w.text)
+        const an = anForW && (!usedAnims.has(anForW) || !emoAlt) ? anForW : ''
+        const emo = an ? '' : emoAlt
         if (!an && !emo) { cursor = w.start + 0.3; continue }
         if (an) usedAnims.add(an)
-        const end = r2(Math.min(w.start + (an ? 2.0 : 1.2), next - 0.2, D - 0.4))
+        const end = r2(Math.min(w.start + (an ? 2.6 : 1.3), next - 0.2, D - 0.4))
         if (end - w.start < 0.5) { cursor = w.start + 0.3; continue }
         added.push({
           type: 'card', layout: 'full', motif: '', anim: an, emoji: emo,
