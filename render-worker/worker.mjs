@@ -44,6 +44,9 @@ function pickMusic(mood, seed) {
   return base ? { file: join(dir, base), vol: MUSIC_VOL_BY_MOOD[mood] || 0.12 } : null
 }
 const SFX_VOL = 0.85
+// largeur minimale d'une image de b-roll : la carte fait 76 % de 1080 px ≈ 820 px.
+// En dessous, l'image est agrandie donc floue — on préfère ne pas l'afficher.
+const MIN_IMAGE_W = 700
 // 🎭 LITS MUSICAUX (#125) — des extraits de 9-11 s posés à UN moment précis, pas bouclés
 // sur toute la vidéo comme la musique de fond. Un bruitage ponctue un mot, un lit
 // accompagne un passage. Volume bas : ils passent SOUS la voix, jamais devant.
@@ -116,8 +119,21 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
             } catch (_) { console.warn('asset b-roll ignoré (illisible):', f) }
           }
         } else {
-          copyFileSync(src, join(proj, 'media', f))
-          assetFiles[id] = 'media/' + f
+          // GARDE-FOU RÉSOLUTION. La carte d'image occupe 76 % de la largeur, soit
+          // ~820 px sur du 1080. Une image plus petite que ça est ÉTIRÉE, donc floue —
+          // c'est ce qu'Axel a vu sur l'avatar en 480 px de large. On l'écarte plutôt
+          // que de livrer du flou : une image illisible ne montre rien de toute façon.
+          let wpx = 0
+          try {
+            wpx = Number(String(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+              '-show_entries', 'stream=width', '-of', 'csv=p=0', src])).trim()) || 0
+          } catch (_) { wpx = 0 }
+          if (wpx && wpx < MIN_IMAGE_W) {
+            console.warn(`asset ignoré (trop basse résolution : ${wpx}px < ${MIN_IMAGE_W}px, serait flou) :`, f)
+          } else {
+            copyFileSync(src, join(proj, 'media', f))
+            assetFiles[id] = 'media/' + f
+          }
         }
       }
     }
