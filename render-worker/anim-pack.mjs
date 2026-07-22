@@ -10,7 +10,7 @@
 
 import { SAFE, SAFE_CENTERED_W, WORD_SHAPES } from './visual-styles.mjs'
 
-export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless']
+export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -124,6 +124,74 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-feed" id="${id}fd">${card(2, P.acc)}${card(31, P.line)}${card(60, P.acc)}${card(89, P.line)}${card(118, P.acc)}</span>
       </div>`)
     }
+    case 'money': {
+      // des billets qui tombent : l'argent, le revenu, le prix
+      const bw = Math.round(f.w * 0.26), bh = Math.round(bw * 0.52)
+      let h = ''
+      for (let k = 0; k < 5; k++) {
+        const x = Math.round(f.w * (0.16 + (k % 3) * 0.24) + (k > 2 ? f.w * 0.12 : 0))
+        h += `<span class="an-p an-bill" id="${id}b${k}" style="left:${x}px;top:${Math.round(f.h * (0.12 + k * 0.13))}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.12)}px;background:${k % 2 ? P.acc : P.ink};opacity:${k % 2 ? 1 : 0.85}"></span>`
+      }
+      return box(h)
+    }
+    case 'idea': {
+      // une ampoule qui s'allume : l'idée, la solution, le déclic
+      const d = Math.round(f.h * 0.42), cx = Math.round(f.w / 2), top = Math.round(f.h * 0.14)
+      return box(`<span class="an-p" id="${id}bl" style="left:${cx - Math.round(d / 2)}px;top:${top}px;width:${d}px;height:${d}px;border-radius:50%;background:${P.acc}"></span>
+        <span class="an-p" id="${id}bs" style="left:${cx - Math.round(d * 0.16)}px;top:${top + d - 4}px;width:${Math.round(d * 0.32)}px;height:${Math.round(d * 0.26)}px;border-radius:0 0 ${Math.round(d * 0.1)}px ${Math.round(d * 0.1)}px;background:${P.ink}"></span>
+        ${[0, 1, 2, 3, 4, 5].map((k) => { const a = (k / 6) * Math.PI * 2; const r = d * 0.78; return `<span class="an-p an-ray" id="${id}r${k}" style="left:${Math.round(cx + Math.cos(a) * r - d * 0.045)}px;top:${Math.round(top + d / 2 + Math.sin(a) * r - d * 0.045)}px;width:${Math.round(d * 0.09)}px;height:${Math.round(d * 0.09)}px;border-radius:50%;background:${P.acc}"></span>` }).join('')}`)
+    }
+    case 'target': {
+      // une cible et une flèche qui se plante au centre : l'objectif, la précision
+      const d = Math.round(f.h * 0.72), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.5)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        const rr = Math.round(d * (0.5 - k * 0.15))
+        h += `<span class="an-p an-ring" id="${id}g${k}" style="left:${cx - rr}px;top:${cy - rr}px;width:${rr * 2}px;height:${rr * 2}px;border-radius:50%;border:${Math.round(d * 0.045)}px solid ${k % 2 ? P.ink : P.acc}"></span>`
+      }
+      h += `<span class="an-p" id="${id}dt" style="left:${cx - Math.round(d * 0.06)}px;top:${cy - Math.round(d * 0.06)}px;width:${Math.round(d * 0.12)}px;height:${Math.round(d * 0.12)}px;border-radius:50%;background:${P.acc}"></span>`
+      return box(h)
+    }
+    case 'lock': {
+      // un cadenas qui se ferme : la sécurité, le verrou, l'accès réservé
+      const bw = Math.round(f.h * 0.34), bh = Math.round(f.h * 0.28), cx = Math.round(f.w / 2)
+      const top = Math.round(f.h * 0.36)
+      return box(`<span class="an-p" id="${id}sh" style="left:${cx - Math.round(bw * 0.3)}px;top:${top - Math.round(bh * 0.72)}px;width:${Math.round(bw * 0.6)}px;height:${Math.round(bh * 0.8)}px;border:${Math.round(bw * 0.11)}px solid ${P.ink};border-bottom:0;border-radius:${Math.round(bw * 0.32)}px ${Math.round(bw * 0.32)}px 0 0"></span>
+        <span class="an-p" id="${id}bd" style="left:${cx - Math.round(bw / 2)}px;top:${top}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw * 0.13)}px;background:${P.acc}"></span>`)
+    }
+    case 'search': {
+      // une loupe qui balaie : chercher, analyser, trouver
+      const d = Math.round(f.h * 0.42), cx = Math.round(f.w * 0.44), cy = Math.round(f.h * 0.44)
+      return box(`<span class="an-p" id="${id}mg" style="left:${cx - Math.round(d / 2)}px;top:${cy - Math.round(d / 2)}px;width:${d}px;height:${d}px;border-radius:50%;border:${Math.round(d * 0.12)}px solid ${P.ink}"></span>
+        <span class="an-p" id="${id}hd" style="left:${cx + Math.round(d * 0.34)}px;top:${cy + Math.round(d * 0.34)}px;width:${Math.round(d * 0.46)}px;height:${Math.round(d * 0.12)}px;border-radius:99px;background:${P.ink};transform:rotate(45deg);transform-origin:0 50%"></span>`)
+    }
+    case 'rocket': {
+      // une fusée qui décolle : le lancement, la croissance, la vitesse
+      const w2 = Math.round(f.h * 0.2), h2 = Math.round(f.h * 0.46), cx = Math.round(f.w / 2)
+      return box(`<span class="an-p" id="${id}rk" style="left:${cx - Math.round(w2 / 2)}px;top:${Math.round(f.h * 0.3)}px;width:${w2}px;height:${h2}px;border-radius:${Math.round(w2 / 2)}px ${Math.round(w2 / 2)}px ${Math.round(w2 * 0.2)}px ${Math.round(w2 * 0.2)}px;background:${P.acc}"></span>
+        <span class="an-p" id="${id}fl" style="left:${cx - Math.round(w2 * 0.22)}px;top:${Math.round(f.h * 0.3) + h2 - 2}px;width:${Math.round(w2 * 0.44)}px;height:${Math.round(h2 * 0.34)}px;border-radius:0 0 ${Math.round(w2 * 0.3)}px ${Math.round(w2 * 0.3)}px;background:${P.ink}"></span>`)
+    }
+    case 'network': {
+      // des points qui se relient : le réseau, la connexion, la communauté
+      const n = 6, R = Math.round(f.h * 0.34), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.5)
+      const dd = Math.round(f.h * 0.09)
+      let h = `<span class="an-p" id="${id}c0" style="left:${cx - Math.round(dd * 0.7)}px;top:${cy - Math.round(dd * 0.7)}px;width:${Math.round(dd * 1.4)}px;height:${Math.round(dd * 1.4)}px;border-radius:50%;background:${P.acc}"></span>`
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2
+        const x = Math.round(cx + Math.cos(a) * R), y = Math.round(cy + Math.sin(a) * R)
+        h += `<span class="an-p an-nd" id="${id}n${k}" style="left:${x - Math.round(dd / 2)}px;top:${y - Math.round(dd / 2)}px;width:${dd}px;height:${dd}px;border-radius:50%;background:${P.ink}"></span>`
+        h += `<span class="an-p an-ln" id="${id}l${k}" style="left:${cx}px;top:${cy}px;width:${R}px;height:3px;background:${P.line};transform:rotate(${Math.round((a * 180) / Math.PI)}deg);transform-origin:0 50%"></span>`
+      }
+      return box(h)
+    }
+    case 'check': {
+      // une coche qui se trace : c'est validé, c'est fait, ça marche
+      const d = Math.round(f.h * 0.6), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.5)
+      return box(`<span class="an-p" id="${id}cc" style="left:${cx - Math.round(d / 2)}px;top:${cy - Math.round(d / 2)}px;width:${d}px;height:${d}px;border-radius:50%;background:${P.acc}"></span>
+        <svg id="${id}cv" width="${d}" height="${d}" viewBox="0 0 100 100" style="position:absolute;left:${cx - Math.round(d / 2)}px;top:${cy - Math.round(d / 2)}px">
+          <path id="${id}cp" d="M26 52 L44 70 L75 34" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90" />
+        </svg>`)
+    }
     case 'faceless': {
       // « sans jamais montrer ton visage » : une tête, puis une bande qui masque
       // les yeux. C'est la promesse la plus forte du script — elle ne peut pas
@@ -204,6 +272,40 @@ export function animJs(name, s, r2) {
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
+    case 'money':
+      return inOut + `
+      tl.fromTo('#${id}an .an-bill', { yPercent: -160, autoAlpha: 0, rotation: -12 }, { yPercent: 0, autoAlpha: 1, rotation: 0, duration: 0.42, stagger: 0.07, ease: 'back.out(1.6)' }, ${t0});`
+    case 'idea':
+      return inOut + `
+      tl.fromTo('#${id}bs', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.2, ease: 'power2.out', transformOrigin: '50% 0%' }, ${t0});
+      tl.fromTo('#${id}bl', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.1)});
+      tl.fromTo('#${id}an .an-ray', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.03, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.32)});`
+    case 'target':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ring', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, stagger: 0.08, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}dt', { scale: 3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'power3.in', transformOrigin: '50% 50%' }, ${r2(t0 + 0.42)});`
+    case 'lock':
+      return inOut + `
+      tl.fromTo('#${id}bd', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}sh', { yPercent: -60, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'bounce.out' }, ${r2(t0 + 0.18)});`
+    case 'search':
+      return inOut + `
+      tl.fromTo(['#${id}mg', '#${id}hd'], { scale: 0.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an', { xPercent: -14 }, { xPercent: 14, duration: ${r2(Math.max(0.6, dur - 0.4))}, ease: 'sine.inOut' }, ${r2(t0 + 0.28)});`
+    case 'rocket':
+      return inOut + `
+      tl.fromTo(['#${id}rk', '#${id}fl'], { yPercent: 60, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.32, ease: 'power2.out' }, ${t0});
+      tl.to(['#${id}rk', '#${id}fl'], { yPercent: -45, duration: ${r2(Math.max(0.5, dur - 0.5))}, ease: 'power2.in' }, ${r2(t0 + 0.34)});
+      tl.fromTo('#${id}fl', { scaleY: 0.6 }, { scaleY: 1.25, duration: 0.16, repeat: 5, yoyo: true, ease: 'sine.inOut', transformOrigin: '50% 0%' }, ${r2(t0 + 0.34)});`
+    case 'network':
+      return inOut + `
+      tl.fromTo('#${id}c0', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-ln', { scaleX: 0 }, { scaleX: 1, duration: 0.3, stagger: 0.06, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});
+      tl.fromTo('#${id}an .an-nd', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.06, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.3)});`
+    case 'check':
+      return inOut + `
+      tl.fromTo('#${id}cc', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}cp', { strokeDashoffset: 90 }, { strokeDashoffset: 0, duration: 0.36, ease: 'power2.out' }, ${r2(t0 + 0.24)});`
     case 'faceless':
       return inOut + `
       tl.fromTo('#${id}hd', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});

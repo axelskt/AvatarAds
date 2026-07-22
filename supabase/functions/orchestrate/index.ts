@@ -170,7 +170,7 @@ const EMOJIS = ['airplane', 'alarm_clock', 'bank', 'bar_chart', 'battery', 'beac
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
-const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless']
+const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -419,8 +419,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   Laisse "" quand le mot prononce n'evoque VRAIMENT rien de visuel (un connecteur, une transition) : une forme decorative qui ne correspond a rien casse la video. Mais ne laisse pas l'ecran vide plus de 3s d'affilee — s'il n'y a ni image ni animation qui colle, c'est que la scene ne devait pas exister : etends la scene voisine.
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
 - EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
-  Quand PREFERER l'emoji a l'animation : des que le mot evoque un OBJET, une NOTION concrete ou une emotion. L'animation maison ne gagne que sur les mecaniques propres au produit (un split screen, une voix qu'on clone, un avatar qui se genere) — partout ailleurs l'emoji est plus rapide a lire et plus juste.
-  Rythme : un emoji par idee forte, 0,7 a 1,5s, jamais deux colles. Sur 30s, 4 a 8 emojis est un bon compte.
+  L'EMOJI EST UN REPLI RARE, PAS LE DEFAUT. La regle voulue est 99% d'ANIMATIONS et 1% d'emoji : une animation dure, elle occupe le cadre et elle raconte, la ou l'emoji n'est qu'une image posee. Cherche donc TOUJOURS une animation d'abord dans la liste ci-dessus — elle couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit. Ne prends un emoji que si AUCUNE animation ne colle, et au maximum une ou deux fois par video.
+  Rythme : 0,7 a 1,5s, jamais deux colles.
   VALEURS AUTORISEES (toute autre valeur est jetee) :
     airplane alarm_clock bank bar_chart battery beach_with_umbrella bell bookmark_tabs books brain bullseye bust_in_silhouette busts_in_silhouette
     calendar camera chart_decreasing chart_increasing check_mark_button clapper_board coin credit_card cross_mark crown crystal_ball desktop_computer
@@ -439,6 +439,14 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
     avatar  — la creation d'un avatar, un personnage qui se genere, "ton premier avatar".
     logo    — SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
+    money   — l'argent, un revenu, un prix, un cout, ce qui est gratuit.
+    idea    — une idee, une astuce, une methode, un declic, "le secret c'est...".
+    target  — un objectif, une cible, quelque chose de precis, "exactement".
+    lock    — la securite, l'acces reserve, ce qui se debloque, une cle.
+    search  — chercher, analyser, trouver, reperer.
+    rocket  — un lancement, un decollage, ce qui explose, devenir viral.
+    network — un reseau, une connexion, une communaute, des gens relies.
+    check   — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
     faceless— l'anonymat : "sans montrer ton visage", "sans camera", "personne ne sait que c'est toi". Une tete dont les yeux se font masquer.
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
@@ -677,6 +685,16 @@ const ANIM_LEX: [string, string][] = [
   ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'],
   ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'],
   ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'],
+  ['argent', 'money'], ['euro', 'money'], ['dollar', 'money'], ['revenu', 'money'], ['gagn', 'money'], ['paie', 'money'], ['prix', 'money'],
+  ['cash', 'money'], ['million', 'money'], ['mille', 'money'], ['gratuit', 'money'], ['cout', 'money'], ['tarif', 'money'], ['budget', 'money'],
+  ['idee', 'idea'], ['astuce', 'idea'], ['solution', 'idea'], ['secret', 'idea'], ['methode', 'idea'], ['truc', 'idea'], ['comprend', 'idea'],
+  ['cible', 'target'], ['objectif', 'target'], ['precis', 'target'], ['but', 'target'], ['exact', 'target'], ['pile', 'target'],
+  ['secur', 'lock'], ['protege', 'lock'], ['prive', 'lock'], ['verrou', 'lock'], ['acces', 'lock'], ['cle', 'lock'], ['debloqu', 'lock'],
+  ['cherch', 'search'], ['trouv', 'search'], ['analys', 'search'], ['decouvr', 'search'], ['repere', 'search'], ['detect', 'search'],
+  ['lance', 'rocket'], ['decoll', 'rocket'], ['demarr', 'rocket'], ['boost', 'rocket'], ['explos', 'rocket'], ['viral', 'rocket'], ['propuls', 'rocket'],
+  ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'],
+  ['valide', 'check'], ['reussi', 'check'], ['fait', 'check'], ['termine', 'check'], ['fini', 'check'], ['marche', 'check'], ['parfait', 'check'],
+  ['simple', 'check'], ['facile', 'check'], ['inclus', 'check'],
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
