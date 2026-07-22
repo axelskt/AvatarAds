@@ -1093,7 +1093,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     const added: typeof slides = []
     for (let i = 0; i < cand.length; i++) {
       const nextT = i + 1 < cand.length ? cand[i + 1].t : D
-      const end = r2(Math.min(cand[i].t + 2.4, nextT - 0.05, D - 0.4))
+      // 0,3 s de respiration : a 0,05 s les animations se touchaient et l'oeil ne
+      // voyait qu'un flux continu. Il faut un souffle entre deux.
+      const end = r2(Math.min(cand[i].t + 2.4, nextT - 0.3, D - 0.4))
       if (end - cand[i].t < 0.55) continue
       added.push({
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
@@ -1114,7 +1116,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     {
       const vis = slides.filter((sl) => sl.anim || sl.emoji).sort((a, b) => a.start - b.start)
       for (let i = 0; i < vis.length - 1; i++) {
-        if (vis[i].end > vis[i + 1].start - 0.05) vis[i].end = r2(vis[i + 1].start - 0.05)
+        if (vis[i].end > vis[i + 1].start - 0.3) vis[i].end = r2(vis[i + 1].start - 0.3)
       }
       const tooShort = new Set(vis.filter((v) => v.end - v.start < 0.5))
       if (tooShort.size) {
