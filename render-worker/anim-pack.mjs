@@ -24,7 +24,8 @@ export const ANIM_EMOJI_SET = {
 }
 
 export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
-  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
+  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
+  'screen']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -250,6 +251,23 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(h)
     }
+    case 'screen': {
+      // MODE PRESENTATION 3D. L'interface reelle, posee sur un plan incline qui pivote
+      // lentement, avec un zoom qui se resserre sur la zone dont il parle. C'est le
+      // geste de la reference (hugomatias) : on suit le tuto A L'ECRAN pendant qu'il
+      // l'explique. Le fichier vient du job (tuto/*.png), comme le logo.
+      if (!s.screenFile) return ''
+      const w = Math.round(f.w * 1.06)
+      const h = Math.round(w * 0.625)
+      // le cadrage : 0 = plein ecran, sinon on agrandit et on decale vers la zone
+      const zx = typeof s.screenX === 'number' ? s.screenX : 0.5
+      const zy = typeof s.screenY === 'number' ? s.screenY : 0.5
+      const zs = typeof s.screenZoom === 'number' ? s.screenZoom : 1
+      return box(`<div class="an-3d" id="${id}sc" style="left:${Math.round((f.w - w) / 2)}px;top:${Math.round((f.h - h) / 2)}px;width:${w}px;height:${h}px">
+        <div class="an-3di" id="${id}in" style="--zx:${(zx * 100).toFixed(1)}%;--zy:${(zy * 100).toFixed(1)}%;--zs:${zs}">
+          <img src="${s.screenFile}" alt="" />
+        </div></div>`)
+    }
     case 'swipe': {
       // Un fil qui défile vite dans un téléphone : le scroll, le feed.
       const pw = Math.round(f.h * 0.52), ph = f.h, px = Math.round((f.w - pw) / 2)
@@ -474,6 +492,11 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-row', { xPercent: -18, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'power2.out' }, ${t0});
       tl.fromTo('#${id}an .an-bx', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, stagger: 0.14, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.14)});
       ${[0, 1, 2].map((k) => `tl.fromTo('#${id}p${k}', { strokeDashoffset: 90 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.3 + k * 0.14)});`).join('\n      ')}`
+    case 'screen':
+      return inOut + `
+      tl.fromTo('#${id}sc', { rotationY: -26, rotationX: 9, scale: 0.82, autoAlpha: 0 }, { rotationY: -13, rotationX: 5, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${t0});
+      tl.to('#${id}sc', { rotationY: -4, rotationX: 2, duration: ${r2(Math.max(0.8, dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t0 + 0.5)});
+      tl.fromTo('#${id}in img', { scale: 1, xPercent: 0, yPercent: 0 }, { scale: ${typeof s.screenZoom === 'number' ? s.screenZoom : 1.35}, duration: ${r2(Math.max(0.8, dur - 0.5))}, ease: 'power2.inOut' }, ${r2(t0 + 0.35)});`
     case 'swipe':
       return inOut + `
       tl.fromTo('#${id}fd', { yPercent: 0 }, { yPercent: -32, duration: ${r2(Math.max(0.7, dur - 0.4))}, ease: 'power2.inOut' }, ${t0});
@@ -559,6 +582,13 @@ export function animCss(W, H) {
       .an-e3 { position: absolute; display: flex; align-items: center; justify-content: center; }
       .an-e3 img { width: 100%; height: 100%; object-fit: contain; display: block;
         will-change: transform, opacity; }
+      .an-3d { position: absolute; perspective: 1400px; transform-style: preserve-3d;
+        will-change: transform, opacity; }
+      .an-3di { width: 100%; height: 100%; overflow: hidden; border-radius: 14px;
+        box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+        transform-style: preserve-3d; }
+      .an-3di img { width: 100%; height: 100%; object-fit: cover; object-position: var(--zx) var(--zy);
+        display: block; will-change: transform; transform-origin: var(--zx) var(--zy); }
       .an-lg { position: absolute; display: flex; align-items: center; justify-content: center; }
       .an-lg img { max-width: 82%; max-height: 82%; display: block; will-change: transform, opacity; }
       .an-halo { position: absolute; inset: 6%; border-radius: 50%; will-change: transform, opacity; }`
