@@ -125,14 +125,21 @@ export function animHtml(name, s, W, H, vs) {
       </div>`)
     }
     case 'money': {
-      // des billets qui tombent : l'argent, le revenu, le prix
-      const bw = Math.round(f.w * 0.26), bh = Math.round(bw * 0.52)
-      let h = ''
-      for (let k = 0; k < 5; k++) {
-        const x = Math.round(f.w * (0.16 + (k % 3) * 0.24) + (k > 2 ? f.w * 0.12 : 0))
-        h += `<span class="an-p an-bill" id="${id}b${k}" style="left:${x}px;top:${Math.round(f.h * (0.12 + k * 0.13))}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.12)}px;background:${k % 2 ? P.acc : P.ink};opacity:${k % 2 ? 1 : 0.85}"></span>`
+      // De VRAIS billets qui tombent. Des barres de couleur ne disent pas « argent » :
+      // il faut la forme du billet, avec sa pastille centrale.
+      const bw = Math.round(f.w * 0.34), bh = Math.round(bw * 0.46)
+      const bill = (k) => {
+        const x = Math.round(f.w * (0.1 + (k % 3) * 0.22))
+        const y = Math.round(f.h * (0.1 + Math.floor(k / 3) * 0.3) + (k % 3) * f.h * 0.09)
+        return `<span class="an-p an-bill" id="${id}b${k}" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px">
+          <svg width="${bw}" height="${bh}" viewBox="0 0 120 55">
+            <rect x="1" y="1" width="118" height="53" rx="7" fill="${k % 2 ? P.acc : P.ink}" />
+            <circle cx="60" cy="27" r="13" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="4" />
+            <rect x="12" y="10" width="16" height="7" rx="3" fill="rgba(255,255,255,.6)" />
+            <rect x="92" y="38" width="16" height="7" rx="3" fill="rgba(255,255,255,.6)" />
+          </svg></span>`
       }
-      return box(h)
+      return box([0, 1, 2, 3, 4].map(bill).join(''))
     }
     case 'idea': {
       // une ampoule qui s'allume : l'idée, la solution, le déclic
@@ -166,10 +173,22 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" id="${id}hd" style="left:${cx + Math.round(d * 0.34)}px;top:${cy + Math.round(d * 0.34)}px;width:${Math.round(d * 0.46)}px;height:${Math.round(d * 0.12)}px;border-radius:99px;background:${P.ink};transform:rotate(45deg);transform-origin:0 50%"></span>`)
     }
     case 'rocket': {
-      // une fusée qui décolle : le lancement, la croissance, la vitesse
-      const w2 = Math.round(f.h * 0.2), h2 = Math.round(f.h * 0.46), cx = Math.round(f.w / 2)
-      return box(`<span class="an-p" id="${id}rk" style="left:${cx - Math.round(w2 / 2)}px;top:${Math.round(f.h * 0.3)}px;width:${w2}px;height:${h2}px;border-radius:${Math.round(w2 / 2)}px ${Math.round(w2 / 2)}px ${Math.round(w2 * 0.2)}px ${Math.round(w2 * 0.2)}px;background:${P.acc}"></span>
-        <span class="an-p" id="${id}fl" style="left:${cx - Math.round(w2 * 0.22)}px;top:${Math.round(f.h * 0.3) + h2 - 2}px;width:${Math.round(w2 * 0.44)}px;height:${Math.round(h2 * 0.34)}px;border-radius:0 0 ${Math.round(w2 * 0.3)}px ${Math.round(w2 * 0.3)}px;background:${P.ink}"></span>`)
+      // Une VRAIE fusée : ogive, ailerons, hublot, flamme. Deux rectangles empilés
+      // donnaient un esquimau — c'est ce qu'Axel a vu à l'écran.
+      const rh = Math.round(f.h * 0.62), rw = Math.round(rh * 0.62)
+      const x = Math.round((f.w - rw) / 2), y = Math.round(f.h * 0.14)
+      return box(`<span class="an-p" id="${id}rk" style="left:${x}px;top:${y}px;width:${rw}px;height:${rh}px">
+        <svg width="${rw}" height="${rh}" viewBox="0 0 100 160">
+          <path d="M22 118 L4 150 L26 140 Z" fill="${P.ink}" />
+          <path d="M78 118 L96 150 L74 140 Z" fill="${P.ink}" />
+          <path d="M50 4 C70 34 78 68 78 96 L78 132 L22 132 L22 96 C22 68 30 34 50 4 Z" fill="${P.acc}" />
+          <circle cx="50" cy="62" r="15" fill="rgba(255,255,255,.92)" />
+          <rect x="34" y="132" width="32" height="9" rx="4" fill="${P.ink}" />
+        </svg></span>
+        <span class="an-p" id="${id}fl" style="left:${Math.round(x + rw * 0.3)}px;top:${y + rh - 4}px;width:${Math.round(rw * 0.4)}px;height:${Math.round(rh * 0.34)}px">
+          <svg width="${Math.round(rw * 0.4)}" height="${Math.round(rh * 0.34)}" viewBox="0 0 40 54">
+            <path d="M20 54 C6 34 4 18 20 0 C36 18 34 34 20 54 Z" fill="${P.acc}" opacity=".85" />
+          </svg></span>`)
     }
     case 'network': {
       // des points qui se relient : le réseau, la connexion, la communauté
@@ -180,7 +199,7 @@ export function animHtml(name, s, W, H, vs) {
         const a = (k / n) * Math.PI * 2
         const x = Math.round(cx + Math.cos(a) * R), y = Math.round(cy + Math.sin(a) * R)
         h += `<span class="an-p an-nd" id="${id}n${k}" style="left:${x - Math.round(dd / 2)}px;top:${y - Math.round(dd / 2)}px;width:${dd}px;height:${dd}px;border-radius:50%;background:${P.ink}"></span>`
-        h += `<span class="an-p an-ln" id="${id}l${k}" style="left:${cx}px;top:${cy}px;width:${R}px;height:3px;background:${P.line};transform:rotate(${Math.round((a * 180) / Math.PI)}deg);transform-origin:0 50%"></span>`
+        h += `<span class="an-p an-ln" id="${id}l${k}" style="left:${cx}px;top:${cy}px;width:${R}px;height:${Math.max(4, Math.round(f.h * 0.011))}px;background:${P.ink};opacity:.35;transform:rotate(${Math.round((a * 180) / Math.PI)}deg);transform-origin:0 50%"></span>`
       }
       return box(h)
     }
@@ -274,7 +293,7 @@ export function animJs(name, s, r2) {
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
     case 'money':
       return inOut + `
-      tl.fromTo('#${id}an .an-bill', { yPercent: -160, autoAlpha: 0, rotation: -12 }, { yPercent: 0, autoAlpha: 1, rotation: 0, duration: 0.42, stagger: 0.07, ease: 'back.out(1.6)' }, ${t0});`
+      tl.fromTo('#${id}an .an-bill', { yPercent: -180, autoAlpha: 0, rotation: -24 }, { yPercent: 0, autoAlpha: 1, rotation: (i) => (i % 2 ? 8 : -8), duration: 0.5, stagger: 0.08, ease: 'back.out(1.4)' }, ${t0});`
     case 'idea':
       return inOut + `
       tl.fromTo('#${id}bs', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.2, ease: 'power2.out', transformOrigin: '50% 0%' }, ${t0});
@@ -294,9 +313,9 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an', { xPercent: -14 }, { xPercent: 14, duration: ${r2(Math.max(0.6, dur - 0.4))}, ease: 'sine.inOut' }, ${r2(t0 + 0.28)});`
     case 'rocket':
       return inOut + `
-      tl.fromTo(['#${id}rk', '#${id}fl'], { yPercent: 60, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.32, ease: 'power2.out' }, ${t0});
-      tl.to(['#${id}rk', '#${id}fl'], { yPercent: -45, duration: ${r2(Math.max(0.5, dur - 0.5))}, ease: 'power2.in' }, ${r2(t0 + 0.34)});
-      tl.fromTo('#${id}fl', { scaleY: 0.6 }, { scaleY: 1.25, duration: 0.16, repeat: 5, yoyo: true, ease: 'sine.inOut', transformOrigin: '50% 0%' }, ${r2(t0 + 0.34)});`
+      tl.fromTo(['#${id}rk', '#${id}fl'], { yPercent: 55, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.5)' }, ${t0});
+      tl.to(['#${id}rk', '#${id}fl'], { yPercent: -38, duration: ${r2(Math.max(0.5, dur - 0.5))}, ease: 'power2.in' }, ${r2(t0 + 0.36)});
+      tl.fromTo('#${id}fl', { scaleY: 0.55, autoAlpha: 0.7 }, { scaleY: 1.3, autoAlpha: 1, duration: 0.13, repeat: 7, yoyo: true, ease: 'sine.inOut', transformOrigin: '50% 0%' }, ${r2(t0 + 0.36)});`
     case 'network':
       return inOut + `
       tl.fromTo('#${id}c0', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
