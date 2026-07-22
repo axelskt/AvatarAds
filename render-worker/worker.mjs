@@ -186,6 +186,16 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
+    // captures du tuto pour le mode presentation 3D (#135)
+    const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
+    if (wantedScreens.size) {
+      mkdirSync(join(proj, 'tuto'), { recursive: true })
+      for (const name of wantedScreens) {
+        const f = join(HERE, 'assets', 'tuto', name + '.png')
+        if (existsSync(f)) copyFileSync(f, join(proj, 'tuto', name + '.png'))
+      }
+    }
+
     const fontsSrc = join(HERE, 'assets', 'fonts')
     if (existsSync(fontsSrc)) {
       mkdirSync(join(proj, 'fonts'), { recursive: true })

@@ -329,6 +329,13 @@ export function buildComposition(plan, opts = {}) {
       motif: s.motif,
       // #135 · animation demandée par le chef d'orchestre (prioritaire sur le motif)
       anim: ANIMS.includes(s.anim) ? s.anim : '',
+      // #135 · mode presentation 3D : la capture du tuto et son cadrage. Ces champs
+      // etaient perdus ici (slideDefs reconstruit l'objet), donc l'animation `screen`
+      // ne recevait aucun fichier et ne rendait rien.
+      screen: String(s.screen || ''),
+      screenZoom: typeof s.screenZoom === 'number' ? s.screenZoom : undefined,
+      screenX: typeof s.screenX === 'number' ? s.screenX : undefined,
+      screenY: typeof s.screenY === 'number' ? s.screenY : undefined,
       title: String(s.title || ''),
       start: r2(s.start),
       dur: r2(Math.max(0.6, (s.end ?? s.start + 1.5) - s.start)),
@@ -345,7 +352,7 @@ export function buildComposition(plan, opts = {}) {
   const slideBody = (s, si) => {
     // une animation fabriquée l'emporte : elle montre le concept, là où une capture
     // d'interface ou une forme abstraite n'illustre rien
-    if (s.anim) return animHtml(s.anim, { ...s, logoFile }, W, H, vs)
+    if (s.anim) return animHtml(s.anim, { ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, W, H, vs)
     // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
     // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
     // rien et ne correspondent à aucun mot de l'audio. Le mot se suffit.
@@ -476,7 +483,7 @@ export function buildComposition(plan, opts = {}) {
   // fromTo deja applique. Resultat : une video sans aucune animation, sans le moindre
   // message d'erreur. Un try/catch par animation rend ce scenario impossible.
   const animJsAll = emojiJs + slideDefs.filter((s) => s.anim)
-    .map((s) => `\n      try {${animJs(s.anim, s, r2)}\n      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }`)
+    .map((s) => `\n      try {${animJs(s.anim, { ...s, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, r2)}\n      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }`)
     .join('')
   const slidesJs = animJsAll + (wordMode ? slideDefs.filter((s) => !s.anim && s.motif).map((s, si) => wordMotifJs(s, si, r2)).join('') : slideDefs.filter((s) => !s.anim).map((s) => {
     const end = r2(s.start + s.dur)
