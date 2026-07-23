@@ -8,7 +8,7 @@
 // animation illustre mieux que n'importe quelle image. Elle prend alors toute la
 // zone visuelle, au-dessus de la bande du sous-titre.
 
-import { SAFE, SAFE_CENTERED_W, WORD_SHAPES } from './visual-styles.mjs'
+import { SAFE, SAFE_CENTERED_W, WORD_SHAPES, SANS } from './visual-styles.mjs'
 
 // Emojis 3D utilisés par les scènes ci-dessous — exporté pour que le worker n'embarque
 // dans le projet de rendu que les fichiers réellement nécessaires.
@@ -25,7 +25,7 @@ export const ANIM_EMOJI_SET = {
 
 export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  'screen']
+  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -269,6 +269,77 @@ export function animHtml(name, s, W, H, vs) {
         <div class="an-3di">
           <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}</div>
         </div></div>`)
+    }
+    case 'flow': {
+      // A RELIE B RELIE C — le schema qu'Axel montre (Budget -> Leads -> Clients) :
+      // des etapes reliees par des fleches qui se tracent l'une apres l'autre.
+      // Les libelles viennent des items de la scene ; sans texte, des blocs muets.
+      const labs = (items.length ? items : ['', '', '']).slice(0, 3)
+      const n = labs.length
+      const d = Math.round(f.h * 0.26)
+      const fs = Math.round(f.h * 0.075)
+      let h = ''
+      for (let k = 0; k < n; k++) {
+        const cx = Math.round(f.w * (k % 2 === 0 ? 0.30 : 0.70))
+        const cy = Math.round(f.h * (0.16 + k * 0.33))
+        h += `<span class="an-p an-nd" id="${id}n${k}" style="left:${cx - d / 2}px;top:${cy - d / 2}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.26)}px;background:${k === n - 1 ? P.acc : P.soft};border:3px solid ${k === n - 1 ? P.acc : P.line};display:flex;align-items:center;justify-content:center">
+          <span class="an-p" style="position:relative;left:auto;top:auto;width:52%;height:14%;border-radius:99px;background:${k === n - 1 ? 'rgba(255,255,255,.9)' : P.line}"></span></span>`
+        if (labs[k]) h += `<span class="an-p an-lb" id="${id}t${k}" style="left:${cx - Math.round(f.w * 0.24)}px;top:${cy + d / 2 + 6}px;width:${Math.round(f.w * 0.48)}px;text-align:center;font-family:${SANS};font-weight:700;font-size:${fs}px;color:${P.ink}">${esc(String(labs[k]).slice(0, 14))}</span>`
+        if (k < n - 1) {
+          const nx = Math.round(f.w * ((k + 1) % 2 === 0 ? 0.30 : 0.70))
+          const ny = Math.round(f.h * (0.16 + (k + 1) * 0.33))
+          const dx = nx - cx, dy = ny - cy
+          const len = Math.round(Math.sqrt(dx * dx + dy * dy) - d)
+          const ang = Math.round((Math.atan2(dy, dx) * 180) / Math.PI)
+          h += `<span class="an-p an-ar" id="${id}a${k}" style="left:${cx}px;top:${cy}px;width:${len}px;height:${Math.max(4, Math.round(f.h * 0.012))}px;background:${P.ink};opacity:.5;transform:rotate(${ang}deg) translateX(${Math.round(d * 0.55)}px);transform-origin:0 50%;border-radius:99px"></span>`
+        }
+      }
+      return box(h)
+    }
+    case 'funnel': {
+      // un entonnoir : beaucoup entrent, peu ressortent
+      const w0 = Math.round(f.w * 0.62), hh = Math.round(f.h * 0.2)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        const ww = Math.round(w0 * (1 - k * 0.28))
+        h += `<span class="an-p an-fn" id="${id}f${k}" style="left:${Math.round((f.w - ww) / 2)}px;top:${Math.round(f.h * 0.12 + k * hh * 1.35)}px;width:${ww}px;height:${hh}px;border-radius:${Math.round(hh * 0.22)}px;background:${k === 2 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
+      }
+      return box(h)
+    }
+    case 'orbit': {
+      // un centre et des satellites qui tournent : tout part d'un seul outil
+      const cd = Math.round(f.h * 0.2), R = Math.round(f.h * 0.34)
+      const cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.5)
+      let h = `<span class="an-p" id="${id}c" style="left:${cx - cd / 2}px;top:${cy - cd / 2}px;width:${cd}px;height:${cd}px;border-radius:${Math.round(cd * 0.28)}px;background:${P.acc}"></span>`
+      h += `<span class="an-p an-orb" id="${id}o" style="left:${cx - R}px;top:${cy - R}px;width:${R * 2}px;height:${R * 2}px;border-radius:50%;border:3px dashed ${P.line}"></span>`
+      for (let k = 0; k < 4; k++) {
+        const a = (k / 4) * Math.PI * 2, sd = Math.round(cd * 0.5)
+        h += `<span class="an-p an-sat" id="${id}s${k}" style="left:${Math.round(cx + Math.cos(a) * R - sd / 2)}px;top:${Math.round(cy + Math.sin(a) * R - sd / 2)}px;width:${sd}px;height:${sd}px;border-radius:${Math.round(sd * 0.3)}px;background:${P.soft};border:2px solid ${P.line}"></span>`
+      }
+      return box(h)
+    }
+    case 'bars2': {
+      // deux colonnes qui montent a des vitesses differentes : la comparaison chiffree
+      const bw = Math.round(f.w * 0.16), gap = Math.round(f.w * 0.14)
+      const x0 = Math.round((f.w - (2 * bw + gap)) / 2)
+      const hmax = Math.round(f.h * 0.62)
+      let h = ''
+      for (let k = 0; k < 2; k++) {
+        const hh = Math.round(hmax * (k === 0 ? 0.38 : 1))
+        h += `<span class="an-p an-b2" id="${id}b${k}" style="left:${x0 + k * (bw + gap)}px;top:${Math.round(f.h * 0.8) - hh}px;width:${bw}px;height:${hh}px;border-radius:${Math.round(bw * 0.18)}px ${Math.round(bw * 0.18)}px 0 0;background:${k === 1 ? P.acc : P.soft}"></span>`
+      }
+      return box(h)
+    }
+    case 'wallet': {
+      // un portefeuille qui se remplit de cartes : ce que ca rapporte
+      const ww = Math.round(f.w * 0.5), wh = Math.round(ww * 0.66)
+      const x = Math.round((f.w - ww) / 2), y = Math.round(f.h * 0.42)
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        h += `<span class="an-p an-cd" id="${id}c${k}" style="left:${x + Math.round(ww * 0.1) + k * Math.round(ww * 0.1)}px;top:${y - Math.round(wh * 0.42) - k * Math.round(wh * 0.13)}px;width:${Math.round(ww * 0.62)}px;height:${Math.round(wh * 0.5)}px;border-radius:${Math.round(wh * 0.08)}px;background:${k === 2 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
+      }
+      h += `<span class="an-p" id="${id}w" style="left:${x}px;top:${y}px;width:${ww}px;height:${wh}px;border-radius:${Math.round(wh * 0.16)}px;background:${P.ink}"></span>`
+      return box(h)
     }
     case 'swipe': {
       // Un fil qui défile vite dans un téléphone : le scroll, le feed.
@@ -521,6 +592,26 @@ export function animJs(name, s, r2) {
       tl.to('#${id}bx1', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${panAt});
       tl.fromTo('#${id}bx2', { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(panAt + panDur - 0.3)});` : '')
     }
+    case 'flow':
+      return inOut + `
+      tl.fromTo('#${id}an .an-nd', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.34, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-lb', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.24, stagger: 0.34, ease: 'power2.out' }, ${r2(t0 + 0.16)});
+      tl.fromTo('#${id}an .an-ar', { scaleX: 0 }, { scaleX: 1, duration: 0.28, stagger: 0.34, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.3)});`
+    case 'funnel':
+      return inOut + `
+      tl.fromTo('#${id}an .an-fn', { scaleX: 0.2, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, stagger: 0.16, ease: 'back.out(1.6)', transformOrigin: '50% 50%' }, ${t0});`
+    case 'orbit':
+      return inOut + `
+      tl.fromTo('#${id}c', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-sat', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.09, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.22)});
+      tl.fromTo('#${id}o', { rotation: 0, autoAlpha: 0 }, { rotation: 120, autoAlpha: 1, duration: ${r2(Math.max(0.9, dur - 0.4))}, ease: 'none', transformOrigin: '50% 50%' }, ${r2(t0 + 0.2)});`
+    case 'bars2':
+      return inOut + `
+      tl.fromTo('#${id}an .an-b2', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.5, stagger: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${t0});`
+    case 'wallet':
+      return inOut + `
+      tl.fromTo('#${id}w', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.8)', transformOrigin: '50% 100%' }, ${t0});
+      tl.fromTo('#${id}an .an-cd', { yPercent: 60, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.36, stagger: 0.12, ease: 'back.out(1.5)' }, ${r2(t0 + 0.24)});`
     case 'swipe':
       return inOut + `
       tl.fromTo('#${id}fd', { yPercent: 0 }, { yPercent: -32, duration: ${r2(Math.max(0.7, dur - 0.4))}, ease: 'power2.inOut' }, ${t0});

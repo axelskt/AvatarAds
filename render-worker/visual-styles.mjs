@@ -54,7 +54,7 @@ export const WORD_INK = '#111111'
 export const WORD_SHAPES = ['#FF5A36', '#2F6BFF', '#12B76A', '#FFC300', '#7A3BFF']
 export const WORD_ACCENT = '#FF5A36'   // le mot que le chef d'orchestre veut appuyer
 
-const SANS = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif'
+export const SANS = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif'
 const SERIF = '"Instrument Serif", "Liberation Serif", Georgia, serif'
 const MONO = '"JetBrains Mono", "Liberation Mono", ui-monospace, monospace'
 const BLACK = '"Archivo Black", "Arial Black", Arial, sans-serif'
