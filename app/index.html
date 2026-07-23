@@ -7401,60 +7401,53 @@ function _mcpConfirmPaint(on){
   box.style.borderColor = on ? 'var(--accent)' : 'var(--border-2)';
   if(check) check.style.display = on ? 'block' : 'none';
 }
-// Carte d'état de la clé : verte quand active (design), neutre sinon
-function _mcpKeyCardPaint(st, active){
-  st.style.borderColor = active ? 'rgba(40,199,149,.3)' : 'var(--border)';
-  st.style.background  = active ? 'rgba(40,199,149,.07)' : 'var(--panel-1)';
-}
-// Le bouton de la carte ① change de gabarit selon l'état, comme dans la maquette :
-// bouton principal pleine largeur quand il n'y a pas de clé, lien discret « Régénérer »
-// à côté de « Révoquer » quand une clé existe.
-function _mcpCreateBtnPaint(btn, hasKey){
-  if(!btn) return;
-  if(hasKey){
-    btn.className = 'btn-quiet btn-sm row gap6';
-    btn.style.cssText = 'font-size:12px;color:var(--text-3);padding:0;background:none;border:none;cursor:pointer';
-  } else {
-    btn.className = 'btn btn-primary';
-    btn.style.cssText = 'width:100%;cursor:pointer';
+// La carte ① a trois états exclusifs, exactement comme la maquette :
+//   A · pas de clé      → gros bouton « Générer ma clé »
+//   B · clé révélée     → l'URL + l'avertissement (juste après la création)
+//   C · clé active      → pastille verte + dates, puis Régénérer / Révoquer
+// L'état B ne revient jamais : l'URL n'est affichable qu'une fois.
+function _mcpState(name){
+  const map = { A:'mcpNoKey', B:'mcpKeyResult', C:'mcpKeyActive' };
+  for(const [k, id] of Object.entries(map)){
+    const el = document.getElementById(id);
+    if(el) el.style.display = (k === name) ? 'block' : 'none';
   }
 }
 async function mcpKeyRefresh(){
-  const st = document.getElementById('mcpKeyStatus');
-  const revokeBtn = document.getElementById('mcpKeyRevokeBtn');
   const createBtn = document.getElementById('mcpKeyCreateBtn');
-  const confirmRow = document.getElementById('mcpConfirmRow');
-  if(!st) return;
+  const lockNote  = document.getElementById('mcpLockNote');
+  const confirmRow= document.getElementById('mcpConfirmRow');
+  if(!createBtn) return;
   const res = await _mcpKeyCall('status');
-  if(!res){ st.textContent = '⚠️ Impossible de vérifier la clé — réessaie.'; _mcpKeyCardPaint(st, false); return; }
+  if(!res){
+    _mcpState('A');
+    if(lockNote){ lockNote.style.display = 'block'; lockNote.textContent = '⚠️ Impossible de vérifier la clé — réessaie.'; }
+    return;
+  }
   window._mcpPlanAllowed = res.plan_allowed !== false;
   if(!window._mcpPlanAllowed){
-    _mcpKeyCardPaint(st, false);
-    st.innerHTML = '🔒 Réservé aux plans <strong style="color:var(--text2)">Pro</strong> et <strong style="color:var(--text2)">Élite</strong>.';
-    _mcpCreateBtnPaint(createBtn, false);
-    if(createBtn) createBtn.textContent = '⚡ Passer au plan Pro';
-    if(revokeBtn) revokeBtn.style.display = res.exists ? '' : 'none';
+    _mcpState('A');
+    if(lockNote){ lockNote.style.display = 'block'; lockNote.innerHTML = '🔒 Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.'; }
+    createBtn.textContent = '⚡ Passer au plan Pro';
     if(confirmRow) confirmRow.style.display = 'none';
     return;
   }
+  if(lockNote) lockNote.style.display = 'none';
   if(confirmRow) confirmRow.style.display = 'flex';
   const chk = document.getElementById('mcpConfirmChk');
   if(chk){ chk.checked = res.require_confirm !== false; _mcpConfirmPaint(chk.checked); }
   if(res.exists){
-    const d = new Date(res.created_at).toLocaleDateString('fr-FR');
-    _mcpKeyCardPaint(st, true);
-    st.innerHTML = '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(40,199,149,.7);margin-right:9px;vertical-align:1px"></span>'
-      + '<strong style="color:var(--text)">Clé active</strong> <span style="color:var(--text-3)">— créée le '+d
-      + (res.last_used_at ? ' · dernière utilisation le '+new Date(res.last_used_at).toLocaleDateString('fr-FR') : ' · jamais utilisée') + '</span>';
-    if(revokeBtn) revokeBtn.style.display = '';
-    _mcpCreateBtnPaint(createBtn, true);
-    if(createBtn) createBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Régénérer';
+    _mcpState('C');
+    const dates = document.getElementById('mcpKeyDates');
+    if(dates){
+      const d = new Date(res.created_at).toLocaleDateString('fr-FR');
+      dates.innerHTML = 'Créée le ' + d + '<br>' + (res.last_used_at
+        ? 'Dernière utilisation le ' + new Date(res.last_used_at).toLocaleDateString('fr-FR')
+        : 'Jamais utilisée');
+    }
   } else {
-    _mcpKeyCardPaint(st, false);
-    st.textContent = 'Aucune clé pour le moment.';
-    if(revokeBtn) revokeBtn.style.display = 'none';
-    _mcpCreateBtnPaint(createBtn, false);
-    if(createBtn) createBtn.textContent = '🔑 Générer ma clé';
+    _mcpState('A');
+    createBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Générer ma clé';
   }
 }
 async function mcpConfirmToggle(on){
@@ -7462,22 +7455,22 @@ async function mcpConfirmToggle(on){
   if(!res || !res.ok){ toast('⚠️ Erreur — réessaie'); mcpKeyRefresh(); return; }
   toast(on ? '✅ Confirmation avant génération activée' : '⚡ Génération directe sans confirmation');
 }
-async function mcpKeyCreate(){
+async function mcpKeyCreate(regen){
   if(window._mcpPlanAllowed === false){ closeAccountSettings(); showPaywall(); return; }
-  const btn = document.getElementById('mcpKeyCreateBtn');
-  if(btn && /R[ée]g[ée]n[ée]rer/.test(btn.textContent)){
-    if(!confirm('Regénérer la clé ? L\'ancienne sera immédiatement révoquée — il faudra mettre à jour l\'URL dans Claude.')) return;
-  }
+  if(regen && !confirm('Regénérer la clé ? L\'ancienne sera immédiatement révoquée — il faudra mettre à jour l\'URL dans Claude.')) return;
+  const btn = document.getElementById(regen ? 'mcpKeyRegenBtn' : 'mcpKeyCreateBtn');
+  const label = btn ? btn.innerHTML : '';
   if(btn){ btn.disabled = true; btn.textContent = '⏳ Génération…'; }
   const res = await _mcpKeyCall('create');
-  if(btn) btn.disabled = false;
+  if(btn){ btn.disabled = false; btn.innerHTML = label; }
   if(res && res.error === 'plan_required'){ mcpKeyRefresh(); closeAccountSettings(); showPaywall(); return; }
   if(!res || !res.ok){ toast('⚠️ Erreur — réessaie'); mcpKeyRefresh(); return; }
-  const box = document.getElementById('mcpKeyResult');
   const inp = document.getElementById('mcpKeyUrl');
   if(inp) inp.value = res.url;
-  if(box) box.style.display = 'block';
-  mcpKeyRefresh();
+  // Le refresh remettrait la carte sur l'état C : on l'attend, puis on force
+  // l'état B pour laisser l'URL à l'écran le temps de la copier.
+  await mcpKeyRefresh();
+  _mcpState('B');
   toast('🔑 Clé créée — copie l\'URL !');
 }
 function mcpKeyCopy(){
@@ -7504,54 +7497,10 @@ function _mcpCopyDone(){
   }, 1600);
 }
 
-// ── Tuto « Connecter Claude » : modale à étapes avec screenshots (assets/tuto-mcp/etape-N.png) ──
-const MCP_TUTO_STEPS = [
-  { img:'../assets/tuto-mcp/etape-1.png', t:'Génère ta clé personnelle',
-    d:`Juste au-dessus, clique <strong style="color:var(--text2)">🔑 Générer ma clé</strong> puis <strong style="color:var(--text2)">📋 Copier</strong>. L'URL n'est affichée qu'une seule fois — c'est ta clé personnelle, ne la partage jamais.` },
-  { img:'../assets/tuto-mcp/etape-2.png', t:'Ouvre les Connecteurs de Claude',
-    d:`Sur <strong style="color:var(--text2)">claude.ai</strong>, clique sur tes initiales (en bas à gauche) → <strong style="color:var(--text2)">Paramètres</strong> → onglet <strong style="color:var(--text2)">Connecteurs</strong>. Raccourci direct : <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" style="color:var(--orange2)">ouvrir « Ajouter un connecteur »</a>.` },
-  { img:'../assets/tuto-mcp/etape-3.png', t:'Ajoute un connecteur personnalisé',
-    d:`Tout en bas de la page, clique <strong style="color:var(--text2)">« Ajouter un connecteur personnalisé »</strong>. Nom : <em style="color:var(--text2)">AvatarAds</em> · URL : colle l'URL copiée à l'étape 1 → <strong style="color:var(--text2)">Ajouter</strong>.` },
-  { img:'../assets/tuto-mcp/etape-4.png', t:'Active-le dans ta conversation',
-    d:`Dans une <a href="https://claude.ai/new" target="_blank" rel="noopener" style="color:var(--orange2)">nouvelle conversation</a>, clique l'icône <strong style="color:var(--text2)">réglages / connecteurs</strong> sous la zone de texte et vérifie qu'<em style="color:var(--text2)">AvatarAds</em> est bien activé.` },
-  { img:'../assets/tuto-mcp/etape-5.png', t:'Demande, Claude génère',
-    d:`Écris simplement : <em style="color:var(--text2)">« Génère-moi une image d'un yéti bleu qui tient mon produit »</em> ou <em style="color:var(--text2)">« Fais-moi une vidéo de 8 secondes de… »</em>. Claude t'annonce le coût en crédits et attend ton OK.` },
-];
-function openMcpTuto(){
-  let m = document.getElementById('mcpTutoModal');
-  if(m){ m.style.display='flex'; return; }
-  m = document.createElement('div');
-  m.id = 'mcpTutoModal';
-  m.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px';
-  m.addEventListener('click', e => { if(e.target === m) closeMcpTuto(); });
-  const steps = MCP_TUTO_STEPS.map((s,i)=>`
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-      <img src="${s.img}" alt="Étape ${i+1}" loading="lazy" style="width:100%;display:block;border-bottom:1px solid var(--border)"
-        onerror="this.outerHTML='<div style=&quot;padding:22px;text-align:center;font:600 10px var(--mono);color:var(--text3);letter-spacing:1px;border-bottom:1px dashed var(--border2);background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 10px,transparent 10px 20px)&quot;>📸 CAPTURE À VENIR</div>'">
-      <div style="padding:13px 15px">
-        <div style="font-size:10px;font-family:var(--mono);color:var(--orange2);letter-spacing:1px;margin-bottom:5px">ÉTAPE ${i+1} — ${s.t.toUpperCase()}</div>
-        <div style="font-size:12px;color:var(--text3);line-height:1.65">${s.d}</div>
-      </div>
-    </div>`).join('');
-  m.innerHTML = `
-    <div style="width:min(560px,94vw);max-height:88vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:17px;font-weight:800;letter-spacing:-.3px">Connecter Claude à AvatarAds</div>
-        <button onclick="closeMcpTuto()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1">✕</button>
-      </div>
-      <div style="font-size:11.5px;color:var(--text3);line-height:1.6;margin-bottom:14px">5 étapes, ~2 minutes. Ta clé reste personnelle et révocable à tout moment.</div>
-      <div style="display:flex;flex-direction:column;gap:10px">${steps}</div>
-      <button onclick="closeMcpTuto()" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer">C'est bon, j'ai connecté ✓</button>
-    </div>`;
-  document.body.appendChild(m);
-}
-function closeMcpTuto(){ const m=document.getElementById('mcpTutoModal'); if(m) m.style.display='none'; }
 async function mcpKeyRevoke(){
   if(!confirm('Révoquer la clé ? Claude ne pourra plus accéder à ton compte AvatarAds.')) return;
   const res = await _mcpKeyCall('revoke');
   if(!res || !res.ok){ toast('⚠️ Erreur — réessaie'); return; }
-  const box = document.getElementById('mcpKeyResult');
-  if(box) box.style.display = 'none';
   mcpKeyRefresh();
   toast('🔒 Clé révoquée');
 }
@@ -24435,19 +24384,43 @@ window.mPreviewClose=function(){
               <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Copie ta clé</span>
             </div>
             <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Ta clé connecteur personnelle. Tu la colleras dans Claude à l'étape 2.</p>
-            <div id="mcpKeyStatus" class="card" style="margin-top:18px;padding:10px 12px;font-size:12.5px;color:var(--text-3);background:var(--panel-1)">Chargement…</div>
-            <div id="mcpKeyResult" style="display:none;margin-top:10px">
+
+            <!-- état A — pas encore de clé (ou plan insuffisant) -->
+            <div id="mcpNoKey" style="margin-top:18px">
+              <p id="mcpLockNote" class="faint" style="display:none;font-size:11px;line-height:1.5;margin:0 0 10px">🔒 Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
+              <button id="mcpKeyCreateBtn" class="btn btn-primary" onclick="mcpKeyCreate()" style="width:100%;cursor:pointer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                Générer ma clé
+              </button>
+            </div>
+
+            <!-- état B — clé tout juste créée : l'URL, une seule fois -->
+            <div id="mcpKeyResult" style="display:none;margin-top:18px">
               <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1)">
                 <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:11.5px;border:none;background:none;color:var(--text-2);text-overflow:ellipsis;padding:0">
                 <button id="mcpKeyCopyBtn" class="btn btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
                 </button>
               </div>
-              <div class="mono" style="font-size:10px;color:#f59e0b;margin-top:6px;line-height:1.5">⚠️ Affichée une seule fois — copie-la maintenant. C'est une clé personnelle, ne la partage pas.</div>
+              <p style="font-size:11px;line-height:1.5;margin-top:10px;color:var(--amber)">⚠️ Copie-la maintenant : pour ta sécurité, elle ne sera plus jamais affichée.</p>
             </div>
-            <div class="row gap8" style="margin-top:12px">
-              <button id="mcpKeyCreateBtn" class="btn btn-primary" onclick="mcpKeyCreate()" style="width:100%;cursor:pointer">🔑 Générer ma clé</button>
-              <button id="mcpKeyRevokeBtn" class="btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="display:none;font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
+
+            <!-- état C — clé active (l'URL n'est plus affichable) -->
+            <div id="mcpKeyActive" style="display:none;margin-top:18px">
+              <div id="mcpKeyStatus" class="card" style="padding:12px 14px;background:rgba(40,199,149,.07);border-color:rgba(40,199,149,.3)">
+                <div class="row gap8" style="font-size:13px">
+                  <span class="dot" style="background:var(--green);box-shadow:0 0 8px rgba(40,199,149,.7)"></span><span><b>Clé active</b></span>
+                </div>
+                <div id="mcpKeyDates" class="faint mono" style="font-size:10.5px;line-height:1.6;margin-top:8px"></div>
+              </div>
+              <p class="faint" style="font-size:11px;line-height:1.5;margin-top:10px">Ta clé est stockée de façon sécurisée et n'est affichée qu'une fois. Perdue ? Régénère-la.</p>
+              <div class="row gap8" style="margin-top:12px">
+                <button id="mcpKeyRegenBtn" class="btn-quiet btn-sm faint row gap6" onclick="mcpKeyCreate(true)" style="font-size:12px;padding:0;background:none;border:none;cursor:pointer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+                  Régénérer
+                </button>
+                <button id="mcpKeyRevokeBtn" class="btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
+              </div>
             </div>
           </div>
 
@@ -24484,10 +24457,6 @@ window.mPreviewClose=function(){
           </span>
           <span class="faint" style="font-size:13px;line-height:1.5">Demander confirmation avant chaque génération, avec le coût en crédits <b style="color:var(--text-2)">(recommandé)</b></span>
         </label>
-
-        <div class="center" style="margin-top:16px">
-          <button class="btn-quiet btn-sm faint" onclick="openMcpTuto()" style="font-size:12.5px;cursor:pointer;background:none;border:none">📖 Voir le tuto en images</button>
-        </div>
       </div>
     </div>
 
