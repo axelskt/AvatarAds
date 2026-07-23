@@ -187,13 +187,14 @@ const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'l
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
+  required: ['sections', 'zooms', 'broll', 'beats', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
   properties: {
     // LIGNES COMPACTES "champ|champ|…" — le format exact est decrit dans le prompt
     // et re-etale en objets par expandPlan() juste apres la reponse.
     sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label"
     zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
     broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end|fonctionnalite"
+    beats: { type: 'array', items: { type: 'string' } },           // "mot|animation" — les mots forts
     sfx: { type: 'array', items: { type: 'string' } },             // "kind|t"
     beds: { type: 'array', items: { type: 'string' } },            // "name|t"
     avatarSegments: { type: 'array', items: { type: 'string' } },  // "start|end|format"
@@ -245,6 +246,7 @@ function expandPlan(raw: any): Plan {
     sections: arr(raw.sections).map((l) => { const [role, a, b, label] = cut(l, 4); return { role, start: num(a), end: num(b), label } }),
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
     broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
+    beats: arr(raw.beats).map((l) => { const [word, anim] = cut(l, 2); return { word, anim } }),
     sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
     beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
     avatarSegments: arr(raw.avatarSegments).map((l) => { const [a, b, format] = cut(l, 3); return { start: num(a), end: num(b), format } }),
@@ -272,6 +274,7 @@ type Plan = {
   sections: { role: string; start: number; end: number; label: string }[]
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
   broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
+  beats?: { word: string; anim: string }[]
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
@@ -384,6 +387,7 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   sections[]       : "role|start|end|label"            ex "hook|0|3.2|l'accroche"
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
   broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
+  beats[]          : "mot|animation"                    ex "viral|rocket"
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
@@ -425,6 +429,9 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
 - REGLE DE FOND, VALABLE POUR TOUT VISUEL : une animation doit MONTRER quelque chose de CONCRET, un objet ou une action qu'on reconnait en un coup d'oeil. Si le spectateur ne peut pas dire en une seconde « c'est un billet », « c'est une fusee », « c'est un cadenas », l'animation ne sert a rien et il vaut mieux ne rien mettre. Une forme abstraite, un rectangle qui bouge, un motif decoratif : ca ne montre RIEN. Ne place jamais un visuel juste pour occuper l'ecran.
 - EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
+  LES MOTS FORTS, C'EST TOI QUI LES DESIGNES (champ "beats"). Relis le script mot a mot et sors la LISTE des mots qui appellent une image mentale — un objet, une action, un gain, un chiffre, une emotion. Pour chacun, ecris "mot|animation" avec le mot EXACTEMENT tel qu'il est prononce (une seule forme, sans article) et l'animation de la banque qui le dessine. Vise 15 a 25 lignes sur 45 secondes, dans l'ordre du script.
+  C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
+  Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
   COMBIEN ? BEAUCOUP PLUS QUE TU NE CROIS. Sur 30 secondes, vise 12 a 20 animations ; sur 45 secondes, 18 a 30. Une par phrase au minimum, et souvent une par GROUPE DE MOTS : "tu gagnes du temps" / "tu produis plus" / "tu touches plus de monde" = trois animations, pas une. Si tu en as pose moins de 10 sur 30 s, tu n'as pas fini : relis le script et cherche ce que chaque phrase MONTRE.
   CHAQUE BENEFICE A LA SIENNE. C'est la faute la plus frequente : il enumere ce que ca apporte et l'ecran ne bouge pas. Des qu'il dit un gain — du temps, de l'argent, de la simplicite, de la portee, de la qualite, de la liberte — cette seconde-la merite son animation.
   DENSITE — LE PLUS DYNAMIQUE POSSIBLE. Une video virale illustre presque en permanence : les gens comprennent mieux avec des images. Tu peux couvrir JUSQU'A 99% de la duree d'animations, il n'y a AUCUN quota a respecter et aucun espacement a tenir. La seule limite est la PERTINENCE : chaque animation doit illustrer ce qui est dit A CET INSTANT. Deux regles fermes : jamais deux fois la MEME animation dans une video, et jamais une animation qui ne correspond pas au sens (mieux vaut un blanc qu'un contresens).
@@ -1078,13 +1085,52 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // ignore — d'ou une animation sans rapport a cet instant. Maintenant on repere
     // d'abord TOUS les mots qui appellent une animation, puis on fait durer chacune
     // jusqu'a la suivante. Rien ne bloque plus rien, et l'ecran reste occupe.
+    // index des « beats » proposes par le chef d'orchestre : mot normalise -> animation
+    // Le modele confond les deux banques et repond souvent avec un nom d'EMOJI
+    // (clapper_board, money_bag, eyes...). Plutot que de jeter ces lignes — c'est
+    // l'essentiel de sa proposition — on les traduit vers l'animation equivalente.
+    const EMO2ANIM: Record<string, string> = {
+      money_bag: 'money', dollar_banknote: 'money', money_with_wings: 'money', coin: 'money',
+      credit_card: 'money', bank: 'money', chart_increasing: 'grow', bar_chart: 'grow',
+      eyes: 'views', clapper_board: 'cut', movie_camera: 'cut', video_camera: 'cut',
+      camera: 'phone', mobile_phone: 'phone', laptop: 'idea', desktop_computer: 'idea',
+      robot: 'avatar', bust_in_silhouette: 'avatar', busts_in_silhouette: 'network',
+      light_bulb: 'idea', brain: 'idea', thinking_face: 'idea', crystal_ball: 'idea',
+      memo: 'type', open_book: 'list', books: 'list', bookmark_tabs: 'list', puzzle_piece: 'list',
+      rocket: 'rocket', fire: 'rocket', high_voltage: 'rocket', party_popper: 'engage',
+      alarm_clock: 'clock', stopwatch: 'clock', hourglass_done: 'clock', calendar: 'calendar',
+      spiral_calendar: 'calendar', locked: 'lock', unlocked: 'lock', key: 'lock',
+      magnifying_glass_tilted_left: 'search', direct_hit: 'target', bullseye: 'target',
+      trophy: 'target', crown: 'target', hundred_points: 'check', check_mark_button: 'check',
+      cross_mark: 'swap', link: 'network', handshake: 'network', speech_balloon: 'engage',
+      red_heart: 'engage', growing_heart: 'engage', megaphone: 'upload', loudspeaker: 'upload',
+      package: 'upload', envelope: 'upload', shopping_cart: 'stack', gift: 'money',
+      microphone: 'voice', studio_microphone: 'voice', headphone: 'voice', musical_note: 'voice',
+      speaker_high_volume: 'voice', gear: 'toggle', hammer_and_wrench: 'toggle', wrench: 'toggle',
+      magic_wand: 'toggle', sparkles: 'toggle', recycling_symbol: 'swap', scissors: 'cut',
+    }
+    const beatMap = new Map<string, string>()
+    for (const b of plan.beats || []) {
+      const k = norm(String(b.word || ''))
+      const raw = String(b.anim || '')
+      const a = ANIMS.includes(raw) ? raw : (EMO2ANIM[raw] || '')
+      if (k.length >= 3 && a && !beatMap.has(k)) beatMap.set(k, a)
+    }
+    const beatFor = (t: string) => {
+      const k = norm(t)
+      if (k.length < 3) return ''
+      return beatMap.get(k) || ''
+    }
     const cand: { t: number; an: string }[] = []
     let lastT = -99
     for (const w of words) {
-      if (w.start < 1.0 || w.start > D - 0.9) continue
+      // Le HOOK aussi merite ses animations : c'est la ou le spectateur decide de
+      // rester. On ne s'interdit plus que la toute premiere demi-seconde.
+      if (w.start < 0.5 || w.start > D - 0.9) continue
       if (w.start - lastT < TARGET) continue
       if (occupied(w.start)) continue
-      const an = animForWord(w.text)
+      // le modele a designe les mots forts (beats) : ils priment sur le lexique
+      const an = beatFor(w.text) || animForWord(w.text)
       if (!an || usedAnims.has(an)) continue
       usedAnims.add(an)
       lastT = w.start
@@ -1095,7 +1141,10 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const nextT = i + 1 < cand.length ? cand[i + 1].t : D
       // 0,3 s de respiration : a 0,05 s les animations se touchaient et l'oeil ne
       // voyait qu'un flux continu. Il faut un souffle entre deux.
-      const end = r2(Math.min(cand[i].t + 2.4, nextT - 0.3, D - 0.4))
+      // Chaque animation tient jusqu'a la suivante (moins la respiration), plafonnee
+      // a 4 s. C'est ce qui fait passer la couverture au-dessus des 80 % demandes
+      // sans inventer d'animation qui ne correspondrait a rien.
+      const end = r2(Math.min(cand[i].t + 4.0, nextT - 0.3, D - 0.4))
       if (end - cand[i].t < 0.55) continue
       added.push({
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
@@ -1156,7 +1205,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // propose : chaque apparition recoit un son, pris dans une palette de trois qui
     // tourne (jamais deux fois le meme d'affilee).
     {
-      const PAL = ['whoosh', 'pop', 'ding']
+      const PAL = ['whoosh', 'pop', 'ding', 'snap']
       const starts = slides.filter((sl) => sl.anim || sl.emoji).map((sl) => sl.start).sort((a, b) => a - b)
       sfxOnEvent = starts.map((t, i) => ({ kind: PAL[i % PAL.length], t: r2(t) }))
     }
@@ -1169,7 +1218,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // donc alignes par construction, il n'y a plus rien a filtrer ici)
   }
 
-  return { sections, zooms, broll: cleanBroll, sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
+  return { sections, zooms, broll: cleanBroll, beats: plan.beats || [], sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
