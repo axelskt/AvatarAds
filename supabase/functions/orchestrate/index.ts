@@ -1160,11 +1160,28 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const zone = String(tu.zone || '')
       const rect = TUTO[screen] && TUTO[screen][zone]
       if (!rect) continue
-      const k = norm(String(tu.word || ''))
-      if (k.length < 3) continue
-      const w = words.find((x) => norm(x.text) === k && !tutoShots.some((sh) => Math.abs(sh.t - x.start) < 0.05))
+      // Le modele repond souvent par un GROUPE DE MOTS (« format TikTok »,
+      // « decrire l'avatar ») alors que la transcription est mot a mot : chercher
+      // une correspondance exacte ne trouvait presque rien. On cherche donc la
+      // suite de mots, puis a defaut le mot le plus long du groupe (le plus
+      // distinctif — « format » plutot que « le »).
+      const toks = String(tu.word || '').split(/\s+/).map(norm).filter((x) => x.length >= 3)
+      if (!toks.length) continue
+      const free = (x: Word) => !tutoShots.some((sh) => Math.abs(sh.t - x.start) < 0.05)
+      let w: Word | undefined
+      for (let j = 0; j + toks.length <= words.length && !w; j++) {
+        if (toks.every((tk, m) => norm(words[j + m].text) === tk) && free(words[j])) w = words[j]
+      }
+      if (!w) {
+        const main = toks.slice().sort((a, b) => b.length - a.length)[0]
+        w = words.find((x) => norm(x.text) === main && free(x))
+      }
       if (!w) continue
       const prev = tutoShots[tutoShots.length - 1]
+      // JAMAIS DEUX FOIS LE MEME PLAN : Axel a vu la meme scene revenir a
+      // l'identique. Une (ecran, zone) deja montree est ignoree — le modele
+      // propose souvent plusieurs mots qui pointent vers la meme case.
+      if (tutoShots.some((sh) => sh.screen === screen && (sh.z === rect || sh.z2 === rect))) continue
       if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 1.2) prev.z2 = rect
       else tutoShots.push({ t: w.start, screen, z: rect })
     }

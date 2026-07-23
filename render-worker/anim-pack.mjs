@@ -257,18 +257,31 @@ export function animHtml(name, s, W, H, vs) {
       // (screenX2/Y2), la camera DESCEND de la premiere a la seconde sans coupure :
       // sur l'audio de test, « fruit » et « format » sont dits a 0,54 s d'intervalle,
       // deux plans separes n'y tiennent pas — il faut un travelling.
+      // La reference d'Axel (hugomatias / avatarads-express-3d) : l'ecran flotte
+      // dans une PIECE SOMBRE avec une lueur orange et une retombee de lumiere au
+      // sol, incline franchement — pas une carte posee sur du blanc. On sort donc
+      // du fond clair du mode mot-a-mot sur toute la duree du plan.
       if (!s.screenFile) return ''
-      const w = Math.round(f.w * 1.3)
+      // L'ecran REMPLIT le cadre comme dans la reference : il deborde volontairement
+      // de chaque cote, et il est centre sur toute la hauteur de la video (pas sur la
+      // zone d'animation) — sinon il reste coince en haut avec du vide dessous.
+      const w = Math.round(W * 1.5)
       const h = Math.round(w * 0.625)
       const mkBox = (bx, by, bw, bh2, n) => (bw > 0 && bh2 > 0)
         ? `<span class="an-3dbox" id="${id}bx${n}" style="left:${((bx - bw / 2) * 100).toFixed(2)}%;top:${((by - bh2 / 2) * 100).toFixed(2)}%;width:${(bw * 100).toFixed(2)}%;height:${(bh2 * 100).toFixed(2)}%;border-color:${P.acc}"></span>`
         : ''
       const b1 = mkBox(typeof s.boxX === 'number' ? s.boxX : 0, typeof s.boxY === 'number' ? s.boxY : 0, s.boxW || 0, s.boxH || 0, 1)
       const b2 = mkBox(typeof s.boxX2 === 'number' ? s.boxX2 : 0, typeof s.boxY2 === 'number' ? s.boxY2 : 0, s.boxW2 || 0, s.boxH2 || 0, 2)
-      return box(`<div class="an-3d" id="${id}sc" style="left:${Math.round((f.w - w) / 2)}px;top:${Math.round((f.h - h) / 2)}px;width:${w}px;height:${h}px">
-        <div class="an-3di">
-          <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}</div>
-        </div></div>`)
+      return `<div class="an-room" id="${id}rm">
+        <div class="an-room-glow" style="background:radial-gradient(60% 45% at 50% 42%, ${P.acc}2e 0%, transparent 70%)"></div>
+        <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${Math.round(H * 0.40 - h / 2)}px;width:${w}px;height:${h}px">
+          <div class="an-3di">
+            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}</div>
+          </div>
+          <div class="an-3dspill" style="background:linear-gradient(to bottom, ${P.acc}3a, transparent)"></div>
+        </div>
+        <div class="an-room-vig"></div>
+      </div>`
     }
     case 'flow': {
       // A RELIE B RELIE C — le schema qu'Axel montre (Budget -> Leads -> Clients) :
@@ -583,8 +596,13 @@ export function animJs(name, s, r2) {
       const panAt = r2(t0 + Math.max(0.9, (dur - 0.5) * 0.5))
       const panDur = r2(Math.max(0.6, end - 0.25 - panAt))
       return inOut + `
-      tl.fromTo('#${id}sc', { rotationY: -24, rotationX: 8, scale: 0.86, autoAlpha: 0 }, { rotationY: -11, rotationX: 4, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${t0});
-      tl.to('#${id}sc', { rotationY: -3, rotationX: 1, duration: ${r2(Math.max(0.8, dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t0 + 0.5)});
+      tl.fromTo('#${id}rm', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${t0});
+      tl.to('#${id}rm', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${r2(end - 0.22)});
+      // inclinaison FRANCHE et tenue : la reference garde l'ecran de biais du debut
+      // a la fin, elle ne le redresse jamais. On derive lentement au lieu de revenir
+      // de face, ce qui donnait un rendu plat.
+      tl.fromTo('#${id}sc', { rotationY: -30, rotationX: 10, rotationZ: -2, scale: 0.88, autoAlpha: 0 }, { rotationY: -22, rotationX: 6, rotationZ: -1.5, scale: 1, autoAlpha: 1, duration: 0.55, ease: 'power3.out' }, ${t0});
+      tl.to('#${id}sc', { rotationY: -17, rotationX: 4, duration: ${r2(Math.max(0.8, dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t0 + 0.55)});
       tl.fromTo('#${id}z', { scale: 1, xPercent: 0, yPercent: 0 }, { scale: ${zs}, xPercent: ${tx}, yPercent: ${ty}, duration: ${r2(Math.max(0.55, (has2 ? panAt - t0 : dur - 0.55)))}, ease: 'power2.inOut' }, ${r2(t0 + 0.25)});
       tl.fromTo('#${id}bx1', { autoAlpha: 0, scale: 1.6 }, { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.5)});` +
       (has2 ? `
@@ -697,13 +715,20 @@ export function animCss(W, H) {
       .an-e3 { position: absolute; display: flex; align-items: center; justify-content: center; }
       .an-e3 img { width: 100%; height: 100%; object-fit: contain; display: block;
         will-change: transform, opacity; }
-      .an-3d { position: absolute; perspective: 1400px; transform-style: preserve-3d;
+      .an-room { position: absolute; inset: 0; background: #07070a; overflow: hidden; }
+      .an-room-glow { position: absolute; inset: 0; }
+      .an-room-vig { position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(75% 60% at 50% 45%, transparent 40%, rgba(0,0,0,.82) 100%); }
+      .an-3dspill { position: absolute; left: 6%; right: 6%; top: 100%; height: 34%;
+        filter: blur(28px); opacity: .5; border-radius: 50%; }
+      .an-3d { position: absolute; perspective: 1100px; transform-style: preserve-3d;
         will-change: transform, opacity; }
-      .an-3di { width: 100%; height: 100%; overflow: hidden; border-radius: 14px;
+      .an-3di { width: 100%; height: 100%; overflow: hidden; border-radius: 10px;
         box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
         transform-style: preserve-3d; }
       .an-3dz { position: absolute; inset: 0; will-change: transform; transform-origin: 50% 50%; }
-      .an-3dbox { position: absolute; border: 3px solid; border-radius: 6px;
+      .an-3dbox { position: absolute; border: 3px solid;
+        box-shadow: 0 0 0 4000px rgba(0,0,0,.55), 0 0 24px 2px currentColor; border-radius: 6px;
         box-shadow: 0 0 0 4000px rgba(0,0,0,.42); will-change: transform, opacity; }
       .an-3dz img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .an-lg { position: absolute; display: flex; align-items: center; justify-content: center; }
