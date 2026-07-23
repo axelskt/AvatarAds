@@ -474,6 +474,11 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     cut     — une timeline qu'on coupe : le montage, la decoupe, "on enleve les blancs".
     steps   — 1, 2, 3 : une methode, "il te suffit de", les etapes.
     toggle  — un interrupteur qui s'allume : activer, "en un clic", ca se met en marche.
+    flow    — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour "tu fais X, ca te donne Y, et Y te rapporte Z".
+    funnel  — un entonnoir : beaucoup entrent, peu ressortent.
+    orbit   — un centre et des satellites : tout part d'un seul outil.
+    bars2   — deux colonnes comparees : le avant/apres chiffre.
+    wallet  — un portefeuille qui se remplit : ce que ca rapporte.
     faceless— l'anonymat : "sans montrer ton visage", "sans camera", "personne ne sait que c'est toi". Une tete dont les yeux se font masquer.
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
