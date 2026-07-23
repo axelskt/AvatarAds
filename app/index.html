@@ -145,6 +145,8 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
   html,body{overflow:auto}
   .layout{flex-direction:column;overflow:auto}
   .sidebar{display:none}
+  /* sans colonne de gauche, la barre d'action reprend toute la largeur */
+  .mt-sticky{left:0 !important;padding-left:16px !important;padding-right:16px !important}
   .main{overflow:visible}
   .view.on{display:flex;flex-direction:column}
   .gen-view{flex-direction:column!important;overflow:visible!important}
@@ -718,7 +720,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div class="nav-i" onclick="nav('montage',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/></svg>
         Montage IA
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">NOUVEAU</span>
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BÊTA</span>
       </div>
       <div class="nav-i" onclick="nav('studio',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
@@ -3490,11 +3492,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- barre d'action COLLANTE : visible dès l'arrivée quelle que soit la hauteur
              de la coque ; seul le contenu au-dessus défile -->
-        <div id="mtFooter" style="position:fixed;left:0;right:0;bottom:0;z-index:60;padding:14px 40px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--panel-1);display:none">
+        <div id="mtFooter" class="mt-sticky" style="position:fixed;left:248px;right:0;bottom:0;z-index:60;padding:14px 40px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--panel-1);display:none">
           <div style="max-width:760px;margin:0 auto">
             <button id="mtGoBtn" onclick="montageGo()" class="btn btn-primary" style="width:100%;padding:17px;font-weight:800;font-size:17px;border-radius:16px">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-            <span id="mtGoLbl">Créer ma vidéo — 2 crédits</span>
+            <span id="mtGoLbl">Créer ma vidéo — 5 crédits</span>
             </button>
             <p id="mtCostNote" class="faint center" style="display:none;font-size:11.5px;line-height:1.5;margin-top:10px;max-width:520px;margin-inline:auto"></p>
           </div>
@@ -5470,7 +5472,10 @@ const CREDIT_COSTS = {
   expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
-  montageIA: 2,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
+  // 5 et non 2 : mesuré en usage réel, le chef d'orchestre consomme nettement plus
+  // d'API que l'estimation initiale (transcription + plan + reprises). Les tarifs
+  // lipsync à la seconde ne bougent pas (avatarPerSec 1, omniPerSec 5).
+  montageIA: 5,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
   export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
   hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
@@ -10514,12 +10519,14 @@ function mtSetLipModel(m){
 }
 // estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
 // que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
-// pricing forfaitaire (design Axel) : base montage 2 cr + supplément lipsync (+2 C3 / +4 Omni)
-// pricing À LA SECONDE (Axel) : base montage 2 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
+// pricing forfaitaire (design Axel) : base montage 5 cr + supplément lipsync (+2 C3 / +4 Omni)
+// pricing À LA SECONDE (Axel) : base montage 5 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
+// La base passe de 2 à 5 crédits : le chef d'orchestre consomme plus d'API que prévu.
+// Les tarifs lipsync eux NE BOUGENT PAS (1 et 5 cr/s), comme convenu.
 // sur les scènes avatar (~30% de la durée), le reste habillé en hyperframes (1 cr/s)
 function _mtUpdateCost(){
   const b=document.getElementById('mtGoLbl'); if(!b) return;
-  if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — 2 crédits'; return; }
+  if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — 5 crédits'; return; }
   const omni=_mt.lipModel==='omnihuman';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
   const lbl=omni?'Omni':'Character 3';
@@ -10553,6 +10560,18 @@ function mtSetVideo(f){
   _mtDropFill('mtVideoDrop', 'mtVideoName', 'mtVideoSub', f.name);
 }
 async function montageGo(){
+  // ⛔ RÉSERVÉ ÉLITE POUR L'INSTANT. Décision d'Axel : le rendu demande encore du
+  // travail, on ne l'ouvre pas aux paliers inférieurs tant qu'il n'est pas au
+  // niveau. À rouvrir (Starter+) une fois la qualité stabilisée — c'est le seul
+  // endroit à modifier.
+  {
+    const _plan = String(currentMember?.plan || 'free').toLowerCase();
+    if(!['elite','developer'].includes(_plan)){
+      toast('🔒 Le Montage IA est réservé au plan Élite pendant la bêta');
+      try{ openPaywall && openPaywall('elite'); }catch(_){}
+      return;
+    }
+  }
   // le site est mémorisé une bonne fois — edAiGenerate/orchestrate le récupèrent tout seuls
   const site = (document.getElementById('mtSite')?.value || '').trim();
   try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
@@ -24335,12 +24354,12 @@ window.mPreviewClose=function(){
 </script>
     <!-- ⚙️ Modale « Paramètres avancés » — maquette montage-handoff, reprise au pixel -->
     <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
-      <div class="card" style="width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
-        <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+      <div class="card" style="width:100%;max-width:600px;max-height:84vh;overflow-y:auto;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;margin:2px 0 6px">
           <div class="row gap12">
             <div style="width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
             <div class="col" style="line-height:1.25">
-              <h3 class="display" style="font-size:22px;font-weight:700">Paramètres avancés</h3>
+              <h3 class="display" style="font-size:22px;font-weight:700;color:var(--text);margin:0">Paramètres avancés</h3>
               <span class="faint" style="font-size:12.5px">Contrôle fin du rendu — laisse en Auto si tu hésites</span>
             </div>
           </div>
