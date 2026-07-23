@@ -1441,6 +1441,43 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       }
     }
 
+    // ═══ ARBITRAGE FINAL PAR PRIORITÉ ═══
+    // J'ai empile quatre poseurs prioritaires (etapes de demo, logo, compteur,
+    // entree de module) qui se raccourcissaient mutuellement selon l'ordre du code.
+    // Resultat : la saisie Images IA disparaissait un coup sur deux. Une seule passe
+    // tranche desormais, et l'ordre est ecrit noir sur blanc.
+    {
+      const prio = (sl: { anim?: string; screenText?: string }) => {
+        if (sl.anim === 'screen' && sl.screenText) return 5   // le texte se tape + le clavier sonne
+        if (sl.anim === 'logo') return 4                      // la marque est nommee
+        if (sl.anim === 'countup') return 4                   // un chiffre est annonce
+        if (sl.anim === 'screen') return 3                    // une etape de la demo
+        return 1                                              // habillage
+      }
+      const vis = slides.filter((sl) => sl.anim || sl.emoji)
+        .sort((a, b) => a.start - b.start) as unknown as
+        { start: number; end: number; anim?: string; screenText?: string }[]
+      for (let i = 0; i < vis.length; i++) {
+        for (let j = 0; j < vis.length; j++) {
+          if (i === j) continue
+          const a = vis[i], b = vis[j]
+          if (a.end <= b.start || a.start >= b.end) continue
+          // le moins prioritaire cede ; a egalite, celui qui commence apres cede
+          const loser = prio(a) !== prio(b) ? (prio(a) < prio(b) ? a : b) : (a.start > b.start ? a : b)
+          const win = loser === a ? b : a
+          if (loser.start < win.start) loser.end = r2(win.start - 0.3)
+          else loser.start = r2(win.end + 0.3)
+        }
+      }
+      const dead = new Set(vis.filter((v) => v.end - v.start < 0.6))
+      if (dead.size) {
+        const keep = slides.filter((sl) => !dead.has(sl as unknown as typeof vis[number]))
+        slides.length = 0
+        slides.push(...keep)
+      }
+      slides.sort((x, y) => x.start - y.start)
+    }
+
     // UN BRUITAGE SUR CHAQUE ANIMATION. Axel : « chaque fois qu'il y a une animation,
     // mettre un bruitage ». On repart donc des visuels, pas de ce que le modele a
     // propose : chaque apparition recoit un son, pris dans une palette de trois qui
@@ -1597,12 +1634,18 @@ serve(async (req: Request) => {
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
     // nom de marque deduit du site : « https://avatarads.fr » -> « avatarads »
     const brandName = website.replace(/^https?:\/\//, '').split('/')[0].split('.')[0]
-    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), words, brief + '\n' + mem.text, filters !== 'low', brandName)
+
+    // ⚠️ LA CORRECTION DE MARQUE VIENT AVANT LE PLACEMENT, pas apres. Elle n'etait
+    // appliquee qu'aux sous-titres : le placement voyait la transcription brute, ou
+    // « AvatarAds » ressort souvent en deux morceaux ou deforme. Resultat, le logo
+    // n'etait pas pose alors qu'il apparaissait bien dans les sous-titres — Axel :
+    // « il ne met pas le logo, il met une animation ». Les deux voient desormais
+    // exactement les memes mots.
+    const fixedWords = fixBrandWords(words, brandTerms(mem.text, siteContext, brief))
+    const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), fixedWords, brief + '\n' + mem.text, filters !== 'low', brandName)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
-    // les noms propres de la marque sont retablis AVANT de fabriquer les sous-titres
-    const fixedWords = fixBrandWords(words, brandTerms(mem.text, siteContext, brief))
     const captions = plan.detected.subtitles ? [] : buildCaptions(fixedWords, plan.accents, duration)
 
     return json({
