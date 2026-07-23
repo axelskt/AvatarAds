@@ -277,7 +277,7 @@ export function animHtml(name, s, W, H, vs) {
       // mot-a-mot et on ne retient que l'inclinaison franche et la profondeur.
       const typed = String(s.screenText || '')
       const tz = typed && s.boxW > 0
-        ? `<span class="an-3dtype" id="${id}tp" style="left:${((s.boxX - s.boxW / 2) * 100).toFixed(2)}%;top:${((s.boxY - s.boxH / 2) * 100).toFixed(2)}%;width:${(s.boxW * 100).toFixed(2)}%;height:${(s.boxH * 100).toFixed(2)}%;font-size:${Math.round(h * 0.030)}px;color:${P.ink}"><span id="${id}tt"></span><i class="an-3dcar" style="background:${P.acc}"></i></span>`
+        ? `<span class="an-3dtype" id="${id}tp" style="left:${((s.boxX - s.boxW / 2) * 100).toFixed(2)}%;top:${((s.boxY - s.boxH / 2) * 100).toFixed(2)}%;width:${(s.boxW * 100).toFixed(2)}%;height:${(s.boxH * 100).toFixed(2)}%;font-size:${Math.round(h * 0.030)}px"><span id="${id}tt"></span><i class="an-3dcar" style="background:${P.acc}"></i></span>`
         : ''
       return `<div class="an-stage" id="${id}rm">
         <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${Math.round(H * 0.30 - h / 2)}px;width:${w}px;height:${h}px">
@@ -736,9 +736,13 @@ export function animCss(W, H) {
         will-change: transform, opacity; }
       .an-stage { position: absolute; inset: 0; }
       /* le texte qui s'ecrit DANS le champ de l'app, au meme endroit que le cadre */
+      /* MASQUE OPAQUE : la capture contient deja du texte dans le champ, il faut
+         le couvrir avant d'ecrire par-dessus — et ecrire en BLANC, pas en noir
+         (Axel : « l'ecriture est en noir donc on voit rien »). */
       .an-3dtype { position: absolute; display: flex; align-items: center; gap: .35em;
         padding: 0 1.4%; font-family: "Inter", Helvetica, Arial, sans-serif; font-weight: 600;
-        white-space: nowrap; overflow: hidden; }
+        white-space: nowrap; overflow: hidden; background: #101319; color: #fff;
+        border-radius: 8px; }
       .an-3dcar { display: inline-block; width: .09em; height: 1.15em; flex: none; }
       .an-3d { position: absolute; perspective: 1100px; transform-style: preserve-3d;
         will-change: transform, opacity; }

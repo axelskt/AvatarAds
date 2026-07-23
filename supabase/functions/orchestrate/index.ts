@@ -181,7 +181,9 @@ const TUTO: Record<string, Record<string, number[]>> = {
   // 'photo-reel' est mesure sur la capture : meme colonne que 'fruit', une ligne
   // au-dessus (Axel disait « selectionner photo reel » et on encadrait Fruit).
   'images-ia': { 'photo-reel': [0.240, 0.309, 0.089, 0.087], fruit: [0.240, 0.409, 0.089, 0.087], format: [0.288, 0.668, 0.057, 0.078], prompt: [0.749, 0.818, 0.472, 0.121] },
-  'express': { menu: [0.086, 0.421, 0.150, 0.055], ajouter: [0.704, 0.536, 0.180, 0.120], prompt: [0.783, 0.761, 0.400, 0.110], generer: [0.886, 0.936, 0.150, 0.045] },
+  // 'ajouter' etait a cote : l'icone « Ajoute tes images » est mesuree a 0,833/0,274
+  // sur la capture (Axel : « l'ajout d'avatar zoom sur n'importe quoi »).
+  'express': { menu: [0.086, 0.421, 0.150, 0.055], ajouter: [0.833, 0.300, 0.150, 0.160], prompt: [0.783, 0.761, 0.400, 0.110], generer: [0.886, 0.936, 0.150, 0.045] },
   'generateur': { script: [0.500, 0.400, 0.500, 0.200], lancer: [0.860, 0.900, 0.180, 0.060] },
 }
 const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express', 'generateur': '03-generateur' }
@@ -1279,15 +1281,24 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         if (sim(a, bk) >= 0.82 || (b && sim(b, bk) >= 0.82)) { at = words[i].start; break }
       }
       if (at >= 1.2 && at < D - 1.2) {
-        const clash = slides.find((sl) => at < sl.end + 0.2 && at + 2.2 > sl.start - 0.2)
-        if (clash) { clash.anim = 'logo'; clash.emoji = '' } else {
-          slides.push({
-            type: 'card', layout: 'full', motif: '', anim: 'logo', emoji: '',
-            start: r2(at), end: r2(Math.min(at + 2.2, D - 0.6)), title: '', eyebrow: '',
-            accent: '', sub: '', center: '', value: '', unit: '', wide: false, options: [], items: [],
-          })
-          slides.sort((x, y) => x.start - y.start)
+        // LE LOGO EST PRIORITAIRE. Avant, il etait pose puis rabote a zero par le
+        // passage anti-chevauchement des qu'une demo tombait au meme moment — Axel
+        // ne le voyait donc jamais. On libere sa fenetre : ce qui empiete est
+        // raccourci, et supprime si le reste devient trop court pour etre lu.
+        const lg = { start: r2(at), end: r2(Math.min(at + 2.0, D - 0.6)) }
+        for (let i = slides.length - 1; i >= 0; i--) {
+          const sl = slides[i]
+          if (sl.end <= lg.start || sl.start >= lg.end) continue
+          if (sl.start < lg.start) sl.end = r2(lg.start - 0.2)
+          else sl.start = r2(lg.end + 0.2)
+          if (sl.end - sl.start < 1.0) slides.splice(i, 1)
         }
+        slides.push({
+          type: 'card', layout: 'full', motif: '', anim: 'logo', emoji: '',
+          start: lg.start, end: lg.end, title: '', eyebrow: '',
+          accent: '', sub: '', center: '', value: '', unit: '', wide: false, options: [], items: [],
+        })
+        slides.sort((x, y) => x.start - y.start)
       }
     }
 
