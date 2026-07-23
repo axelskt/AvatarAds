@@ -25,7 +25,7 @@ export const ANIM_EMOJI_SET = {
 
 export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup']
+  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -286,6 +286,23 @@ export function animHtml(name, s, W, H, vs) {
           </div>
         </div>
       </div>`
+    }
+    case 'result': {
+      // LE RESULTAT. Axel : « dommage qu'on n'ait pas le resultat de l'Images IA ».
+      // Apres l'ecran de generation, on montre l'image qui vient de sortir, puis le
+      // geste d'enregistrement — c'est ce qu'il voulait montrer : on la garde pour
+      // la reutiliser. L'image est FOURNIE (screenFile), jamais inventee ici.
+      if (!s.screenFile) return ''
+      // c'est le moment de recompense : l'image occupe le cadre, pas une vignette.
+      const ph = Math.round(H * 0.46)
+      const pw = Math.round(ph * 0.6667)
+      return `<div class="an-stage"><div class="an-res" id="${id}rs" style="left:${Math.round((W - pw) / 2)}px;top:${Math.round(H * 0.30 - ph / 2)}px;width:${pw}px;height:${ph}px">
+        <img src="${s.screenFile}" alt="" />
+        <span class="an-res-flash" id="${id}fl"></span>
+        <span class="an-res-save" id="${id}sv" style="background:${P.acc}">
+          <svg width="${Math.round(pw * 0.11)}" height="${Math.round(pw * 0.11)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+      </div></div>`
     }
     case 'countup': {
       // LE CHIFFRE QUI DEFILE. Axel : « une animation 0 a 3 millions de vues pour
@@ -644,6 +661,13 @@ export function animJs(name, s, r2) {
       tl.to('#${id}bx1', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${panAt});
       tl.fromTo('#${id}bx2', { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(panAt + panDur - 0.3)});` : '')
     }
+    case 'result':
+      return inOut + `
+      // l'image arrive comme un tirage : legere echelle + un flash bref, puis la
+      // pastille « enregistre » qui vient se poser.
+      tl.fromTo('#${id}rs', { scale: 0.9, autoAlpha: 0, rotationZ: -1.5 }, { scale: 1, autoAlpha: 1, rotationZ: 0, duration: 0.42, ease: 'back.out(1.5)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}fl', { autoAlpha: 0.85 }, { autoAlpha: 0, duration: 0.35, ease: 'power2.out' }, ${r2(t0 + 0.1)});
+      tl.fromTo('#${id}sv', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + Math.max(0.7, dur * 0.42))});`
     case 'countup': {
       const raw = String(s.value || '').replace(/[^0-9.]/g, '')
       const target = parseFloat(raw) || 0
@@ -769,6 +793,13 @@ export function animCss(W, H) {
       .an-e3 img { width: 100%; height: 100%; object-fit: contain; display: block;
         will-change: transform, opacity; }
       .an-stage { position: absolute; inset: 0; }
+      .an-res { position: absolute; border-radius: 18px; overflow: hidden;
+        box-shadow: 0 26px 70px -18px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.06); }
+      .an-res img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .an-res-flash { position: absolute; inset: 0; background: #fff; }
+      .an-res-save { position: absolute; right: 6%; bottom: 5%; width: 22%; aspect-ratio: 1;
+        border-radius: 50%; display: grid; place-items: center;
+        box-shadow: 0 8px 22px -6px rgba(0,0,0,.45); }
       .an-cu { position: absolute; inset: 0; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: .12em; }
       .an-cun { line-height: 1; font-variant-numeric: tabular-nums; font-weight: 900;
