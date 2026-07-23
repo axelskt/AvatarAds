@@ -2881,8 +2881,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
                   <div id="imgSuggestions" class="row gap8" style="flex-wrap:nowrap;flex:1;min-width:0;overflow:hidden"></div>
-                  <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:16px 52px;font-weight:800;font-size:17px;border-radius:16px;flex-shrink:0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</button>
+                  <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:13px 48px;font-weight:800;font-size:17px;border-radius:16px;flex-shrink:0">
+                    <span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15"><span style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</span><span style="font-size:10px;font-weight:800;opacity:.75;font-family:var(--mono);letter-spacing:.05em;margin-top:2px">3 cr</span></span></button>
                 </div>
                 <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
               </div>
@@ -7910,6 +7910,7 @@ function _imgRenderQuality(){
       'style="background:linear-gradient(90deg, var(--accent) '+pct+'%, var(--surface-3) '+pct+'%)">'+
     '<div class="row" style="justify-content:space-between;margin-top:9px">'+labels+'</div>';
   _imgUpdateIdleMeta();
+  _imgSyncGenBtn();  // la qualité change le coût → met à jour le bouton Générer
 }
 
 let _imgSelectedStyleId    = 'photo';
@@ -8061,8 +8062,7 @@ async function _imgMakeRealistic(btn){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const _plan = (currentMember?.plan || 'free').toLowerCase();
   if(!['pro','elite','byok','developer'].includes(_plan)){
-    toast('🔒 « Améliorer en 4K » est réservé aux plans Pro et Élite');
-    try{ showPaywall(); }catch(_){}
+    try{ showPaywall(); }catch(_){}   // Starter/free → redirigé direct vers le paywall
     return;
   }
   if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
@@ -8144,6 +8144,7 @@ function _imgSetMode(m){
   showFlex('imgStyleSection', !corr);        // style visuel (génération only) — carte extensible
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
   if(corr){ _imgRenderCorrectPresets(); _imgSyncRealCost(); }
+  else _imgSyncGenBtn();  // onglet Génération : coût dynamique sur « Générer l'image »
   _imgInitSuggestions();
   // Composer : bouton image de référence — bordure/label selon le mode
   const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
@@ -8328,16 +8329,26 @@ function _imgInitCountGrid(){
   ).join('');
 }
 
+// ── Bouton « Générer l'image » dynamique : coût = coût/image (selon qualité) × nombre.
+// Deux lignes : « Générer l'image » + « N cr » en dessous. Recalculé quand la qualité
+// ou le nombre change ; suit CREDIT_COSTS, donc un changement de tarif se reflète direct.
+function _imgGenCost(){ return _imgCreditCost(_imgEffectiveQuality()) * (_imgSelectedCount || 1); }
+function _imgGenBtnHTML(){
+  const n = _imgSelectedCount || 1;
+  const cr = _imgGenCost();
+  return '<span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15">'
+    + '<span style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer ' + (n>1 ? n+' images' : 'l\'image') + '</span>'
+    + '<span style="font-size:10px;font-weight:800;opacity:.75;font-family:var(--mono);letter-spacing:.05em;margin-top:2px">' + cr + ' cr</span>'
+    + '</span>';
+}
+function _imgSyncGenBtn(){ const b=document.getElementById('imgGenBtn'); if(b && !b.disabled) b.innerHTML = _imgGenBtnHTML(); }
+
 function _imgPickCount(n){
   _imgSelectedCount = n;
   _imgInitCountGrid();
   const cost = document.getElementById('imgCountCost');
-  if(cost) cost.textContent = n + ' créd.';
-  // Libellé du bouton Générer
-  const btn = document.getElementById('imgGenBtn');
-  if(btn && !btn.disabled){
-    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer ' + (n>1? n+' images' : 'l\'image');
-  }
+  if(cost) cost.textContent = _imgGenCost() + ' créd.';
+  _imgSyncGenBtn();  // libellé + coût du bouton Générer
   _imgUpdateIdleMeta();
 }
 
@@ -8656,7 +8667,6 @@ async function _imgGenerateFluxKontext(token, prompt, refFile, size){
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
   // Styles réalistes (Photo Réel / UGC) → Flux raw SI moteur flux, sinon gpt-image (prompt brut)
-  // (Test Nano Banana 2.5 Flash retiré : rendu trop lissé/plastique — gpt-image medium repris.)
   if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _IMG_REALISTIC_ENGINE==='flux'){
     return await _imgGenerateFlux(token, enhancedPrompt, size, _imgFluxTier());
   }
@@ -8907,7 +8917,7 @@ async function generateImage(){
   if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()) * actualCount, 'image'))) return;
 
   const btn = document.getElementById('imgGenBtn');
-  const baseLabel = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7.5 2l1.4 2.8 3.1.45-2.25 2.2.53 3.1L7.5 9.1 4.72 10.55l.53-3.1L3 5.25l3.1-.45z"/></svg> Générer ' + (count>1? count+' images' : 'l\'image');
+  const baseLabel = _imgGenBtnHTML();
   btn.disabled = true; btn.style.opacity = '0.75';
 
   const singleWrap = document.getElementById('imgResult');
@@ -8986,8 +8996,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgSelectedStyleLabel, size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      const _eng = (window._imgGenEngine && window._imgGenEngine!=='gpt-image') ? ' ('+window._imgGenEngine+')' : '';
-      toast('✅ Image générée' + _eng + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     } else {
       // ── Mode multi (2-3 images) ──
       singleWrap.style.display = 'none';
