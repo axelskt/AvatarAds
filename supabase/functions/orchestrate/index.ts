@@ -1334,7 +1334,22 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // suivant, et on jette ceux qui deviennent trop courts.
     {
       const vis = slides.filter((sl) => sl.anim || sl.emoji).sort((a, b) => a.start - b.start)
+      // UN PLAN OU LE TEXTE S'ECRIT NE SE FAIT PAS RABOTER. Sur un test, la demo
+      // Images IA tombait de 5 s a 1,3 s parce qu'une animation demarrait dedans :
+      // le texte n'avait plus le temps de se taper, donc le bruit du clavier non
+      // plus. C'est le voisin qui cede, comme pour le logo.
+      const typing = (sl: typeof vis[number]) => sl.anim === 'screen'
+        && !!(sl as unknown as { screenText?: string }).screenText
+      for (let i = vis.length - 1; i >= 0; i--) {
+        if (!typing(vis[i])) continue
+        for (const o of vis) {
+          if (o === vis[i] || o.start < vis[i].start) continue
+          if (o.start < vis[i].end + 0.3) o.start = r2(vis[i].end + 0.3)
+        }
+      }
+      vis.sort((a, b) => a.start - b.start)
       for (let i = 0; i < vis.length - 1; i++) {
+        if (typing(vis[i])) continue
         if (vis[i].end > vis[i + 1].start - 0.3) vis[i].end = r2(vis[i + 1].start - 0.3)
       }
       const tooShort = new Set(vis.filter((v) => v.end - v.start < 0.5))

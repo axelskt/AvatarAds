@@ -283,6 +283,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   // texte d'avatarads en meme temps que l'audio »).
   ...(plan.slides || []).filter((sl) => sl.anim === 'screen' && sl.screenText).map((sl) => ({ start: sl.start + 0.6, end: Math.min(sl.end - 0.2, sl.start + 0.6 + String(sl.screenText).length * 0.045) })),
     ]
+    if (kbSpots.length) console.log('⌨️  frappes clavier :', kbSpots.map((k) => k.start.toFixed(1) + '-' + k.end.toFixed(1)).join(' · '))
     for (const sl of kbSpots) {
       const f = join(HERE, 'assets', 'sfx', 'mac-typing.mp3')
       if (!existsSync(f)) continue
