@@ -7869,11 +7869,14 @@ const _IMG_REALISTIC_ENGINE = 'gptimage';
 const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
-const _IMG_REALISM_SUFFIX = '. Hyper-realistic natural human skin with visible pores and fine micro skin texture, subtle freckles and small beauty marks, fine peach fuzz and vellus hair on the skin, slight natural redness and uneven skin tone, subtle blemishes and imperfections, realistic detailed hands with natural skin and knuckle creases, natural skin texture on ALL visible skin (face, neck, arms, legs, hands), detailed natural hairline with fine baby hairs, individual eyebrow hairs and eyelashes, detailed iris with catchlights, realistic lip texture with fine vertical lines, natural facial asymmetry, authentic candid expression, documentary photography realism, natural window daylight, the ENTIRE background fully sharp and in focus with deep depth of field, no background blur, no bokeh, no depth-of-field blur, no lens blur, everything crisp front to back, no beauty filter, no airbrushing, no plastic skin, no wax texture, no AI-generated look.';
+const _IMG_REALISM_SUFFIX = '. Hyper-realistic natural human skin with visible pores and fine micro skin texture, subtle freckles and small beauty marks, fine peach fuzz and vellus hair on the skin, slight natural redness and uneven skin tone, subtle blemishes and imperfections, realistic detailed hands with natural skin and knuckle creases, natural skin texture on ALL visible skin (face, neck, arms, legs, hands), detailed natural hairline with fine baby hairs, individual eyebrow hairs and eyelashes, detailed iris with catchlights, realistic lip texture with fine vertical lines, natural facial asymmetry, authentic candid expression, documentary photography realism, crisp directional light that rakes across the skin and reveals its relief, specular micro-highlights on the skin, visible subsurface scattering in the ears and nostrils, the ENTIRE background fully sharp and in focus with deep depth of field, no background blur, no bokeh, no depth-of-field blur, no lens blur, everything crisp front to back, no beauty filter, no airbrushing, no plastic skin, no wax texture, no AI-generated look.';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  if(['elite','developer'].includes(p)) return 'medium';
+  // Élite payait le palier 4K sans jamais l'avoir par défaut : il recevait le même
+  // 'medium' que Pro. Sur gpt-image, la qualité est le levier de micro-détail le
+  // plus direct — c'est là que se jouent les pores et les cheveux fins.
+  if(['elite','developer'].includes(p)) return 'high';
   if(['pro','byok'].includes(p)) return 'medium';
   return 'low'; // Starter (et free) : qualité low uniquement — la Standard est l'upsell vers Pro
 }
