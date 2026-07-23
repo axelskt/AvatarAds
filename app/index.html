@@ -8638,9 +8638,20 @@ async function _imgGenerateFluxKontext(token, prompt, refFile, size){
 }
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
+  window._imgGenEngine = 'gpt-image';
   // Styles réalistes (Photo Réel / UGC) → Flux raw SI moteur flux, sinon gpt-image (prompt brut)
   if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _IMG_REALISTIC_ENGINE==='flux'){
     return await _imgGenerateFlux(token, enhancedPrompt, size, _imgFluxTier());
+  }
+  // 🧪 TEST — Premium (qualité medium) sur les styles réalistes → Nano Banana 2.5 Flash.
+  // Réversible : supprimer ce bloc = retour gpt-image medium. Repli gpt-image si l'appel
+  // Google échoue, pour ne jamais bloquer la génération.
+  if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _imgEffectiveQuality()==='medium'){
+    try{
+      const url = await _nbGenerate(token, enhancedPrompt, _NB_FMT_ASPECT[size]||'9:16', ['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'], null);
+      window._imgGenEngine = 'Nano Banana 2.5 Flash';
+      return url;
+    }catch(e){ console.warn('Nano Banana 2.5 indispo (Premium), repli gpt-image :', e); }
   }
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
@@ -8794,6 +8805,24 @@ async function _nbRefine4K(token, dataUrl, aspect){
 }
 // Correspondance format app → aspect ratio Nano Banana.
 const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
+// Génération texte→image via Nano Banana (pas d'image d'entrée). `models` peut
+// être un tableau de candidats (le vrai id GA vs -preview) essayés dans l'ordre.
+async function _nbGenerate(token, prompt, aspect, models, size){
+  let lastErr='';
+  for(const model of (Array.isArray(models)?models:[models])){
+    const path='/v1beta/models/'+model+':generateContent';
+    const call=async(payload)=>{ const r=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(payload)}); return r.json(); };
+    const cfg={ aspectRatio: aspect, ...(size?{imageSize:size}:{}) };
+    let d=await call({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:cfg} });
+    if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name/i.test(JSON.stringify(d.error))){
+      d=await call({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{responseModalities:['TEXT','IMAGE']} });
+    }
+    if(d?.error){ lastErr=d.error.message||JSON.stringify(d.error); if(/not found|does not exist|unsupported|not supported/i.test(lastErr)) continue; throw new Error(lastErr); }
+    const b64=_nbExtractImage(d); if(b64) return 'data:image/jpeg;base64,'+b64;
+    lastErr='aucune image renvoyée';
+  }
+  throw new Error(lastErr);
+}
 
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
@@ -8968,7 +8997,8 @@ async function generateImage(){
       _imgSaveHistory(url, _imgSelectedStyleLabel, size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      const _eng = (window._imgGenEngine && window._imgGenEngine!=='gpt-image') ? ' ('+window._imgGenEngine+')' : '';
+      toast('✅ Image générée' + _eng + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     } else {
       // ── Mode multi (2-3 images) ──
       singleWrap.style.display = 'none';
@@ -15616,78 +15646,6 @@ window.listHedraModels = async function(){
   return all;
 };
 
-// 🧪 DEV — Comparateur de moteurs d'images (developer/owner uniquement).
-// Envoie LE MÊME prompt (+ suffixe réalisme) aux 5 moteurs en parallèle et les
-// affiche côte à côte, avec le prix. Sert à trancher gpt-image vs Nano Banana
-// vs Nano Banana Pro en vrai, au lieu de deviner. Consomme les vrais crédits API.
-// Usage console : benchImages("mon prompt")  ·  ou le bouton flottant 🧪.
-window.benchImages = async function(userPrompt){
-  const P = (userPrompt && String(userPrompt).trim()) || 'A male lifestyle influencer sitting at his wooden desk inside a modern Bali villa, a swimming pool visible in the background, a podcast microphone in front of him, looking at the camera, natural daylight';
-  const full = P + (typeof _IMG_REALISM_SUFFIX==='string' ? _IMG_REALISM_SUFFIX : '');
-  const session = (await sb.auth.getSession()).data.session;
-  const token = session?.access_token;
-  if(!token){ alert('Connecte-toi d\'abord'); return; }
-
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.93);overflow:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-content:start';
-  const head = document.createElement('div');
-  head.style.cssText = 'grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:#fff;font:600 13px system-ui;gap:12px';
-  head.innerHTML = '<span style="opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🧪 '+P.slice(0,70)+'…</span>';
-  const close = document.createElement('button');
-  close.textContent = '✕ Fermer'; close.style.cssText='flex:0 0 auto;background:#333;color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font:600 12px system-ui';
-  close.onclick = ()=>ov.remove(); head.appendChild(close); ov.appendChild(head);
-  document.body.appendChild(ov);
-
-  const card = (label, cost)=>{
-    const c=document.createElement('div');
-    c.style.cssText='background:#111;border:1px solid #333;border-radius:12px;overflow:hidden';
-    c.innerHTML='<div style="padding:8px 10px;color:#fff;font:600 12px system-ui">'+label+' <span style="color:#888;font-weight:400">· '+cost+'</span></div><div class="_b" style="aspect-ratio:9/16;display:grid;place-items:center;color:#888;font:11px system-ui;text-align:center;padding:8px">⏳ génération…</div>';
-    ov.appendChild(c); return c.querySelector('._b');
-  };
-  const gpt = async(q)=>{
-    const r=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/generations',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({model:'gpt-image-1',prompt:full,n:1,size:'1024x1536',quality:q,moderation:'low'})});
-    const d=await r.json(); if(d.error) throw new Error(d.error.message||'err'); const it=d.data?.[0];
-    return it?.b64_json ? 'data:image/png;base64,'+it.b64_json : it?.url;
-  };
-  const nb = async(models, cfg)=>{
-    let lastErr='';
-    for(const model of (Array.isArray(models)?models:[models])){
-      const path='/v1beta/models/'+model+':generateContent';
-      const post=async(body)=>{ const r=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); };
-      let body={contents:[{role:'user',parts:[{text:full}]}],generationConfig:{responseModalities:['TEXT','IMAGE'],...(cfg?{imageConfig:cfg}:{})}};
-      let d=await post(body);
-      if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name/i.test(JSON.stringify(d.error))){ d=await post({contents:body.contents,generationConfig:{responseModalities:['TEXT','IMAGE']}}); }
-      if(d?.error){ lastErr=d.error.message||JSON.stringify(d.error); if(/not found|does not exist|unsupported|not supported/i.test(lastErr)) continue; throw new Error(lastErr); }
-      const b64=_nbExtractImage(d); if(b64) return 'data:image/jpeg;base64,'+b64;
-      lastErr='aucune image renvoyée';
-    }
-    throw new Error(lastErr);
-  };
-  const run = async(label, cost, fn)=>{ const b=card(label,cost); try{ const u=await fn(); b.innerHTML='<img src="'+u+'" style="width:100%;display:block">'; }catch(e){ b.innerHTML='<span style="color:#f66">❌ '+String(e.message||e).slice(0,140)+'</span>'; } };
-
-  // ordre par prix croissant, gpt et Nano intercalés pour comparer à budget proche
-  await Promise.all([
-    run('gpt-image low','0,015 €',()=>gpt('low')),
-    run('Nano Banana (2.5 Flash)','0,036 €',()=>nb(['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'],{aspectRatio:'9:16'})),
-    run('gpt-image medium','0,058 €',()=>gpt('medium')),
-    run('Nano Banana Pro 2K','0,124 €',()=>nb(['gemini-3-pro-image-preview'],{imageSize:'2K',aspectRatio:'9:16'})),
-    run('gpt-image high','0,231 €',()=>gpt('high')),
-  ]);
-};
-// Bouton flottant, injecté seulement pour un compte developer/owner.
-(function(){
-  let n=0; const iv=setInterval(()=>{
-    if(++n>40){ clearInterval(iv); return; }
-    const m=(typeof currentMember!=='undefined')?currentMember:null; if(!m) return;
-    clearInterval(iv);
-    const dev=(String(m.plan||'').toLowerCase()==='developer')||m.is_owner;
-    if(!dev || document.getElementById('devBenchBtn')) return;
-    const b=document.createElement('button'); b.id='devBenchBtn'; b.textContent='🧪 Comparer moteurs';
-    b.style.cssText='position:fixed;bottom:14px;left:14px;z-index:9000;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:10px;padding:8px 12px;font:600 12px system-ui;cursor:pointer;opacity:.85';
-    b.onclick=()=>{ const p=prompt('Prompt à comparer sur les 5 moteurs :','A male lifestyle influencer sitting at his wooden desk inside a modern Bali villa, a swimming pool visible in the background, a podcast microphone in front of him, looking at the camera, natural daylight'); if(p!==null) window.benchImages(p); };
-    document.body.appendChild(b);
-  }, 1000);
-})();
 
 async function callHedra(audioBlob){
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
