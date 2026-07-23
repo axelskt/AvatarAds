@@ -8675,7 +8675,7 @@ async function _imgDownload(ev){
 // Veo 3.1 → aucun travail backend pour ajouter ce modèle.
 // Tarif Google : 0,134 $ en 1K/2K · 0,24 $ en 4K. Trop cher pour chaque brouillon,
 // mais c'est exactement l'usage recommandé : une passe 4K sur une image qu'on garde.
-const _NB_MODEL = 'gemini-3-pro-image';
+const _NB_MODEL = 'gemini-3-pro-image-preview';
 const _NB_REFINE_PROMPT = 'Re-render this exact photograph at maximum resolution and detail. Keep the identity, face, pose, framing, composition, colors and lighting strictly identical — change nothing about the content. Restore authentic photographic micro-detail: visible skin pores and micro-relief, fine vellus hair, individual eyebrow hairs and eyelashes, natural uneven skin tone with subtle redness and blemishes, catchlights in the iris, individual hair strands, fabric weave and material texture. No smoothing, no beauty filter, no airbrushing, no reinterpretation of the scene.';
 // Google renvoie l'image en base64 ; le nom du champ a déjà bougé entre versions
 // d'API, donc on cherche la première charge utile plausible au lieu de parier dessus.
@@ -8703,22 +8703,40 @@ function _nbAspect(w, h){
   return cands.reduce((best,c)=> Math.abs(r-c[1]) < Math.abs(r-best[1]) ? c : best, cands[0])[0];
 }
 // Repasse une image existante en 4K via Nano Banana Pro. Renvoie une data URL.
+// API = generateContent (la voie stable, celle qu'utilise déjà le proxy pour Imagen).
+// La première doc lue donnait un endpoint /interactions qui n'existe pas → 404
+// silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image-preview,
+// config par responseModalities + imageConfig(imageSize/aspectRatio).
 async function _nbRefine4K(token, dataUrl, aspect){
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if(!m) throw new Error('Image illisible pour la passe 4K');
-  const res = await fetch(SUPABASE_URL + '/functions/v1/google-ai-proxy?path=/v1beta/interactions', {
-    method:'POST',
-    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-    body: JSON.stringify({
-      model: _NB_MODEL,
-      input: [
-        { type:'text',  text: _NB_REFINE_PROMPT },
-        { type:'image', mime_type: m[1], data: m[2] }
-      ],
-      response_format: { type:'image', mime_type:'image/jpeg', aspect_ratio: aspect, image_size:'4K' }
-    })
-  });
-  const d = await res.json();
+  const path = '/v1beta/models/' + _NB_MODEL + ':generateContent';
+  const body = {
+    contents: [{ role:'user', parts: [
+      { text: _NB_REFINE_PROMPT },
+      { inline_data: { mime_type: m[1], data: m[2] } }
+    ]}],
+    generationConfig: {
+      responseModalities: ['TEXT','IMAGE'],
+      imageConfig: { imageSize: '4K', aspectRatio: aspect }
+    }
+  };
+  const call = async (payload) => {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path), {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  };
+  let d = await call(body);
+  // Certaines versions n'acceptent pas imageConfig et renvoient un 400 sur ce champ.
+  // On retente alors sans imageConfig (Nano Banana Pro rend quand même, à sa taille
+  // par défaut — mieux que retomber sur Clarity), plutôt que d'abandonner le modèle.
+  if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name|Invalid JSON/i.test(JSON.stringify(d.error))){
+    const slim = { contents: body.contents, generationConfig: { responseModalities: ['TEXT','IMAGE'] } };
+    d = await call(slim);
+  }
   if(d?.error) throw new Error(d.error.message || String(d.error));
   const b64 = _nbExtractImage(d);
   if(!b64) throw new Error('Aucune image renvoyée par Nano Banana Pro');
@@ -8745,11 +8763,13 @@ async function _imgUpscaleHD(btn){
       const resp=await fetch(src); const blob=await resp.blob();
       src = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);});
     }
-    let finalUrl = null;
+    let finalUrl = null, engine = 'Nano Banana Pro';
     try{
       finalUrl = await _nbRefine4K(token, src, _nbAspect(img.naturalWidth, img.naturalHeight));
     }catch(e){
       // Repli sur Clarity : moins de détail restauré, mais on ne laisse pas l'user sans rien.
+      // Le toast dira « (Clarity) » → on sait tout de suite si le chemin principal a raté.
+      engine = 'Clarity';
       console.warn('Nano Banana Pro indisponible, repli Clarity :', e);
       const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
       const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
@@ -8773,7 +8793,7 @@ async function _imgUpscaleHD(btn){
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('✨ Détails restaurés en 4K');
+    toast('✨ Détails restaurés — ' + engine);
   }catch(e){
     // Ni Nano Banana Pro ni Clarity n'ont rendu d'image → on rend les crédits.
     try{ await creditsFlowRefund('la restauration 4K a échoué'); }catch(_){}
