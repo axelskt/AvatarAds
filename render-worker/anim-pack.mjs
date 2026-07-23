@@ -272,15 +272,19 @@ export function animHtml(name, s, W, H, vs) {
         : ''
       const b1 = mkBox(typeof s.boxX === 'number' ? s.boxX : 0, typeof s.boxY === 'number' ? s.boxY : 0, s.boxW || 0, s.boxH || 0, 1)
       const b2 = mkBox(typeof s.boxX2 === 'number' ? s.boxX2 : 0, typeof s.boxY2 === 'number' ? s.boxY2 : 0, s.boxW2 || 0, s.boxH2 || 0, 2)
-      return `<div class="an-room" id="${id}rm">
-        <div class="an-room-glow" style="background:radial-gradient(60% 45% at 50% 42%, ${P.acc}2e 0%, transparent 70%)"></div>
-        <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${Math.round(H * 0.40 - h / 2)}px;width:${w}px;height:${h}px">
+      // Axel : « non non toujours sur du blanc ». La reference servait a montrer la
+      // PERSPECTIVE voulue, pas a changer le fond : on garde donc le fond clair du
+      // mot-a-mot et on ne retient que l'inclinaison franche et la profondeur.
+      const typed = String(s.screenText || '')
+      const tz = typed && s.boxW > 0
+        ? `<span class="an-3dtype" id="${id}tp" style="left:${((s.boxX - s.boxW / 2) * 100).toFixed(2)}%;top:${((s.boxY - s.boxH / 2) * 100).toFixed(2)}%;width:${(s.boxW * 100).toFixed(2)}%;height:${(s.boxH * 100).toFixed(2)}%;font-size:${Math.round(h * 0.030)}px;color:${P.ink}"><span id="${id}tt"></span><i class="an-3dcar" style="background:${P.acc}"></i></span>`
+        : ''
+      return `<div class="an-stage" id="${id}rm">
+        <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${Math.round(H * 0.30 - h / 2)}px;width:${w}px;height:${h}px">
           <div class="an-3di">
-            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}</div>
+            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}${tz}</div>
           </div>
-          <div class="an-3dspill" style="background:linear-gradient(to bottom, ${P.acc}3a, transparent)"></div>
         </div>
-        <div class="an-room-vig"></div>
       </div>`
     }
     case 'flow': {
@@ -598,6 +602,21 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}rm', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${t0});
       tl.to('#${id}rm', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${r2(end - 0.22)});
+      ${s.screenText ? `
+      // LE TEXTE S'ECRIT DANS LE CHAMP pendant qu'il le dit. Le curseur clignote
+      // en pas discrets (pas de repeat -1 : le rendu doit rester deterministe).
+      tl.fromTo('#${id}tp', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, ${r2(t0 + 0.5)});
+      (function(){
+        var full = ${JSON.stringify(String(s.screenText))};
+        var n = ${String(s.screenText).length}, T = ${r2(Math.max(0.9, Math.min(dur - 1.4, String(s.screenText).length * 0.045)))};
+        for (var i = 1; i <= n; i++) {
+          tl.set('#${id}tt', { textContent: full.slice(0, i) }, ${r2(t0 + 0.6)} + (i / n) * T);
+        }
+      })();
+      for (var cb = 0; cb < 8; cb++) {
+        tl.set('#${id}car', {}, 0);
+        tl.to('#${id}sc .an-3dcar', { opacity: cb % 2 ? 1 : 0.15, duration: 0.01 }, ${r2(t0 + 0.6)} + cb * 0.28);
+      }` : ''}
       // inclinaison FRANCHE et tenue : la reference garde l'ecran de biais du debut
       // a la fin, elle ne le redresse jamais. On derive lentement au lieu de revenir
       // de face, ce qui donnait un rendu plat.
@@ -715,12 +734,12 @@ export function animCss(W, H) {
       .an-e3 { position: absolute; display: flex; align-items: center; justify-content: center; }
       .an-e3 img { width: 100%; height: 100%; object-fit: contain; display: block;
         will-change: transform, opacity; }
-      .an-room { position: absolute; inset: 0; background: #07070a; overflow: hidden; }
-      .an-room-glow { position: absolute; inset: 0; }
-      .an-room-vig { position: absolute; inset: 0; pointer-events: none;
-        background: radial-gradient(75% 60% at 50% 45%, transparent 40%, rgba(0,0,0,.82) 100%); }
-      .an-3dspill { position: absolute; left: 6%; right: 6%; top: 100%; height: 34%;
-        filter: blur(28px); opacity: .5; border-radius: 50%; }
+      .an-stage { position: absolute; inset: 0; }
+      /* le texte qui s'ecrit DANS le champ de l'app, au meme endroit que le cadre */
+      .an-3dtype { position: absolute; display: flex; align-items: center; gap: .35em;
+        padding: 0 1.4%; font-family: "Inter", Helvetica, Arial, sans-serif; font-weight: 600;
+        white-space: nowrap; overflow: hidden; }
+      .an-3dcar { display: inline-block; width: .09em; height: 1.15em; flex: none; }
       .an-3d { position: absolute; perspective: 1100px; transform-style: preserve-3d;
         will-change: transform, opacity; }
       .an-3di { width: 100%; height: 100%; overflow: hidden; border-radius: 10px;
