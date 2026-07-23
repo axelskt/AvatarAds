@@ -5472,6 +5472,9 @@ const CREDIT_COSTS = {
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
   // surtout jamais au-dessus d'un Montage IA, sinon le barème devient illisible.
   imgUpscale4K: 5,
+  // ✨ « Rendre réaliste » via Nano Banana Pro 2K (img2img). Coût Google 0,134 $
+  // ≈ 0,12 € → 3 crédits = ~0,25 € encaissés, même palier que medium.
+  imgRealistic: 3,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
   // 6 et non 2 : mesuré en usage réel, le chef d'orchestre consomme nettement plus
   // d'API que l'estimation initiale (transcription + plan + reprises). Les tarifs
@@ -8044,8 +8047,50 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
-// « Rendre réaliste / Améliorer la qualité » — 1 clic, prompt réalisme back-end.
-function _imgMakeRealistic(btn){ return _imgDoEdit(_IMG_REALISM_EDIT, btn, 'Rendu réaliste… (~20s)', 'Réaliste'); }
+// « Rendre réaliste / Améliorer la qualité » — 1 clic, via Nano Banana Pro 2K (img2img).
+// gpt-image lissait la peau (rendu « plastique ») : c'est justement le bouton où la
+// texture réelle compte le plus. Nano Banana garde identité/pose/décor et ajoute le
+// vrai grain. Repli automatique sur gpt-image si Google échoue → le bouton marche
+// toujours. Le toast dit quel moteur a tourné, pour diagnostiquer d'un coup d'œil.
+async function _imgMakeRealistic(btn){
+  if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'rendre réaliste'))) return;
+  const orig = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Rendu réaliste… (~30s)'; }
+  const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    const dispFmt = _imgSelectedFormat;
+    const aspect  = _NB_FMT_ASPECT[dispFmt] || '9:16';
+    const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+    if(multiWrap) multiWrap.style.display='none';
+    if(singleWrap) singleWrap.style.display='block';
+    const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
+    _imgIdleShow(false);
+    if(overlay) overlay.style.display='flex';
+    _imgProgStart('Rendu réaliste… (~30s)');
+    let url, engine='Nano Banana Pro';
+    try{
+      url = await _nbEdit(token, dataUrl, _IMG_REALISM_EDIT, aspect, '2K');
+    }catch(e){
+      // Repli gpt-image : moins réaliste, mais on ne laisse jamais l'user sans rien.
+      engine='gpt-image';
+      console.warn('Nano Banana Pro indispo (rendre réaliste), repli gpt-image :', e);
+      const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+      url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
+    }
+    _imgMonthIncrement();
+    _imgShowSingle(url, dispFmt);
+    _imgSaveHistory(url, 'Réaliste', dispFmt);
+    _imgRenderHistory();
+    creditsFlowDone();
+    toast('✨ Rendu réaliste — '+engine);
+  }catch(e){ await creditsFlowRefund('le rendu réaliste a échoué'); toast('⚠️ '+(e.message||e)); }
+  finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
+}
 
 // Corrections rapides (grille) — exécutent directement leur prompt back-end.
 // Si la correction a besoin d'une précision (objet, décor…), on lit le champ prompt ; sinon on focus dessus.
@@ -8702,23 +8747,24 @@ function _nbAspect(w, h){
   const cands = [['1:1',1],['9:16',0.5625],['16:9',1.7778],['3:4',0.75],['4:3',1.3333],['2:3',0.6667],['3:2',1.5]];
   return cands.reduce((best,c)=> Math.abs(r-c[1]) < Math.abs(r-best[1]) ? c : best, cands[0])[0];
 }
-// Repasse une image existante en 4K via Nano Banana Pro. Renvoie une data URL.
+// Édition img2img générique via Nano Banana Pro. size = '1K' | '2K' | '4K'.
 // API = generateContent (la voie stable, celle qu'utilise déjà le proxy pour Imagen).
 // La première doc lue donnait un endpoint /interactions qui n'existe pas → 404
 // silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image-preview,
 // config par responseModalities + imageConfig(imageSize/aspectRatio).
-async function _nbRefine4K(token, dataUrl, aspect){
+// Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
+async function _nbEdit(token, dataUrl, prompt, aspect, size){
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
-  if(!m) throw new Error('Image illisible pour la passe 4K');
+  if(!m) throw new Error('Image illisible pour Nano Banana Pro');
   const path = '/v1beta/models/' + _NB_MODEL + ':generateContent';
   const body = {
     contents: [{ role:'user', parts: [
-      { text: _NB_REFINE_PROMPT },
+      { text: prompt },
       { inline_data: { mime_type: m[1], data: m[2] } }
     ]}],
     generationConfig: {
       responseModalities: ['TEXT','IMAGE'],
-      imageConfig: { imageSize: '4K', aspectRatio: aspect }
+      imageConfig: { imageSize: size || '2K', aspectRatio: aspect }
     }
   };
   const call = async (payload) => {
@@ -8732,7 +8778,7 @@ async function _nbRefine4K(token, dataUrl, aspect){
   let d = await call(body);
   // Certaines versions n'acceptent pas imageConfig et renvoient un 400 sur ce champ.
   // On retente alors sans imageConfig (Nano Banana Pro rend quand même, à sa taille
-  // par défaut — mieux que retomber sur Clarity), plutôt que d'abandonner le modèle.
+  // par défaut — mieux que retomber sur le repli), plutôt que d'abandonner le modèle.
   if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name|Invalid JSON/i.test(JSON.stringify(d.error))){
     const slim = { contents: body.contents, generationConfig: { responseModalities: ['TEXT','IMAGE'] } };
     d = await call(slim);
@@ -8742,6 +8788,12 @@ async function _nbRefine4K(token, dataUrl, aspect){
   if(!b64) throw new Error('Aucune image renvoyée par Nano Banana Pro');
   return 'data:image/jpeg;base64,' + b64;
 }
+// Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
+async function _nbRefine4K(token, dataUrl, aspect){
+  return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K');
+}
+// Correspondance format app → aspect ratio Nano Banana.
+const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
 
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
