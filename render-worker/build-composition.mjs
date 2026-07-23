@@ -334,6 +334,9 @@ export function buildComposition(plan, opts = {}) {
       // ne recevait aucun fichier et ne rendait rien.
       screen: String(s.screen || ''),
       screenText: String(s.screenText || ''),
+      // #135 · le compteur qui defile lit sa cible ici (chiffre pris dans l'audio)
+      value: String(s.value || ''),
+      unit: String(s.unit || ''),
       screenZoom: typeof s.screenZoom === 'number' ? s.screenZoom : undefined,
       screenX: typeof s.screenX === 'number' ? s.screenX : undefined,
       screenY: typeof s.screenY === 'number' ? s.screenY : undefined,
