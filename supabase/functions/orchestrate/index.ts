@@ -1158,6 +1158,11 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // du meme ecran trop rapprochees (< 1,2 s) deviennent un seul plan avec travelling
     // — deux plans separes n'y tiendraient pas et l'un des deux serait jete.
     const tutoShots: { t: number; screen: string; z: number[]; z2?: number[]; text?: string }[] = []
+    // RECHERCHE MONOTONE. Les etapes sont donnees DANS L'ORDRE du script : on ne
+    // cherche donc chaque mot qu'APRES le precedent. Sans ca, « image » etait
+    // trouve a 4,1 s dans une phrase sans rapport — le plan « Images IA » tombait
+    // dans le hook, et il n'en restait plus quand il presentait vraiment le module.
+    let from = 0
     for (const tu of plan.tuto || []) {
       const screen = String(tu.screen || '')
       const zone = String(tu.zone || '')
@@ -1170,16 +1175,19 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // distinctif — « format » plutot que « le »).
       const toks = String(tu.word || '').split(/\s+/).map(norm).filter((x) => x.length >= 3)
       if (!toks.length) continue
-      const free = (x: Word) => !tutoShots.some((sh) => Math.abs(sh.t - x.start) < 0.05)
       let w: Word | undefined
-      for (let j = 0; j + toks.length <= words.length && !w; j++) {
-        if (toks.every((tk, m) => norm(words[j + m].text) === tk) && free(words[j])) w = words[j]
+      let wi = -1
+      for (let j = from; j + toks.length <= words.length && !w; j++) {
+        if (toks.every((tk, m) => norm(words[j + m].text) === tk)) { w = words[j]; wi = j }
       }
       if (!w) {
         const main = toks.slice().sort((a, b) => b.length - a.length)[0]
-        w = words.find((x) => norm(x.text) === main && free(x))
+        for (let j = from; j < words.length && !w; j++) {
+          if (norm(words[j].text) === main) { w = words[j]; wi = j }
+        }
       }
       if (!w) continue
+      from = wi + 1
       const prev = tutoShots[tutoShots.length - 1]
       // JAMAIS DEUX FOIS LE MEME PLAN : Axel a vu la meme scene revenir a
       // l'identique. Une (ecran, zone) deja montree est ignoree — le modele
