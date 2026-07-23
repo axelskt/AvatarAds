@@ -1298,6 +1298,53 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       if (!slides.some((sl) => Math.abs(sl.start - a.start) < 0.7)) slides.push(a)
     }
 
+    // ENTRÉE DE MODULE GARANTIE. Axel : « quand je dis "tu vas aller dans Express",
+    // on doit voir le zoom sur Express ». Le modèle proposait cette étape une fois
+    // sur deux seulement. On ne lui fait donc plus confiance là-dessus : dès que le
+    // NOM d'un module est prononcé et qu'on a sa capture, on pose l'écran nous-mêmes
+    // sur sa zone `menu` — sauf si ce moment est déjà couvert par une autre démo.
+    {
+      const NAMES: Record<string, string[]> = {
+        'express': ['express'],
+        'images-ia': ['imagesia', 'imageia'],
+      }
+      for (const [screen, keys] of Object.entries(NAMES)) {
+        const rect = TUTO[screen] && TUTO[screen].menu
+        if (!rect) continue
+        for (let i = 0; i < words.length; i++) {
+          const a = norm(words[i].text)
+          const two = i + 1 < words.length ? a + norm(words[i + 1].text) : ''
+          if (!keys.includes(a) && !keys.includes(two)) continue
+          const t = words[i].start
+          if (t < 1.0 || t > D - 2.0) continue
+          // deja montre a cet instant ? on ne double pas
+          if (slides.some((sl) => sl.anim === 'screen' && t >= sl.start - 0.4 && t <= sl.end + 0.4)) break
+          const start = r2(Math.max(0.2, t - 0.15))
+          const nxt = slides.filter((sl) => sl.start > start).sort((x, y) => x.start - y.start)[0]
+          const end = r2(Math.min(start + 3.0, nxt ? nxt.start - 0.3 : D - 0.4, D - 0.4))
+          if (end - start < 1.2) break
+          // ce qui empiete est raccourci : l'entree de module est un repere, elle prime
+          for (let k = slides.length - 1; k >= 0; k--) {
+            const sl = slides[k]
+            if (sl.end <= start || sl.start >= end) continue
+            if (sl.start < start) sl.end = r2(start - 0.2)
+            else sl.start = r2(end + 0.2)
+            if (sl.end - sl.start < 0.9) slides.splice(k, 1)
+          }
+          slides.push({
+            type: 'card', layout: 'full', motif: '', anim: 'screen', emoji: '',
+            screen: TUTO_FILE[screen] || '', screenText: '', start, end,
+            screenZoom: 2.1, screenX: rect[0], screenY: rect[1],
+            boxX: rect[0], boxY: rect[1], boxW: rect[2], boxH: rect[3],
+            title: '', eyebrow: '', accent: '', sub: '', center: '', value: '', unit: '',
+            wide: false, options: [], items: [],
+          } as unknown as typeof slides[number])
+          slides.sort((x, y) => x.start - y.start)
+          break
+        }
+      }
+    }
+
     // LE COMPTEUR PASSE DEVANT. Axel veut voir « 0 -> 8000 € » quand il annonce son
     // chiffre. Or ces moments-la sont justement les plus denses : une animation du
     // modele s'y trouvait deja et le remplissage n'y touchait pas. Un resultat
