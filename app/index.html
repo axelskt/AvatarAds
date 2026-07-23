@@ -4526,37 +4526,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
-    <!-- ④ Connecter Claude -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      <span class="eyebrow">④ Connecter Claude</span>
-      <span class="tag-beta">BÊTA</span>
-      <span class="mono" style="font-size:10px;letter-spacing:.08em;color:var(--text-3)">PRO · ÉLITE</span>
-    </div>
-    <p style="font-size:12.5px;color:var(--text-3);line-height:1.6;margin:0 0 18px">
-      Génère tes images et vidéos AvatarAds directement depuis <b style="color:var(--text-2)">Claude</b> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
-    </p>
-    <div id="mcpKeyStatus" class="card" style="padding:13px 15px;margin-bottom:18px;font-size:13px;color:var(--text-3)">Chargement…</div>
-    <div id="mcpKeyResult" style="display:none;margin-bottom:16px">
-      <div style="display:flex;gap:8px">
-        <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="field mono" style="flex:1;min-width:0;font-size:10.5px;padding:10px 12px">
-        <button class="btn btn-ghost btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;white-space:nowrap">📋 Copier</button>
-      </div>
-      <div class="mono" style="font-size:10px;color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
-    </div>
-    <label id="mcpConfirmRow" style="display:none;align-items:flex-start;gap:10px;margin-bottom:18px;cursor:pointer;width:100%;text-align:left">
-      <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
-      <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;margin-top:1px;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
-        <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    <!-- ④ Connecter Claude — ligne compacte, même gabarit que « Ma marque » ci-dessous.
+         La section dépliée prenait un tiers de la modale « Mon compte » ; son contenu
+         part dans sa propre modale, ouverte par cette ligne. -->
+    <button onclick="openMcpModal()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;justify-content:flex-start;gap:12px;padding:15px 16px;text-align:left">
+      <span style="width:34px;height:34px;flex:0 0 auto;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 01-12 0z"/><path d="M12 18v4"/></svg>
       </span>
-      <span style="font-size:12.5px;line-height:1.5;color:var(--text-3)">Claude doit demander <b style="color:var(--text-2)">confirmation avant chaque génération</b>, avec le coût en crédits (recommandé)</span>
-    </label>
-    <div style="display:flex;gap:10px;margin-bottom:16px">
-      <button id="mcpKeyCreateBtn" class="btn btn-ghost" onclick="mcpKeyCreate()" style="flex:1">🔑 Générer ma clé</button>
-      <button id="mcpKeyRevokeBtn" class="btn btn-ghost" onclick="mcpKeyRevoke()" style="display:none;flex:0 0 auto;color:#FF6B6B;border-color:rgba(255,70,70,.25)">Révoquer</button>
-    </div>
-    <button class="btn btn-primary" onclick="openMcpTuto()" style="width:100%">📖 Voir le tuto — connecter ta clé à Claude</button>
-
-    <div style="height:1px;background:var(--border);margin:26px 0"></div>
+      <span style="display:flex;flex-direction:column;line-height:1.35;min-width:0">
+        <b style="font-size:14px;display:flex;align-items:center;gap:7px">Connecter Claude <span class="tag-beta">BÊTA</span></b>
+        <span class="faint" style="font-size:11.5px">Génère depuis Claude avec tes crédits</span>
+      </span>
+      <span class="faint" style="margin-left:auto;font-size:16px">›</span>
+    </button>
 
     <!-- 🧠 Ma marque : un seul bouton qui ouvre TOUT ce qu'il y a à renseigner.
          Posé sous « Connecter Claude » : c'est le même esprit — ce que l'IA sait de toi. -->
@@ -9933,6 +9915,18 @@ function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', s
   subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
+// 🔌 « Connecter Claude » — la section vivait dépliée dans « Mon compte » et y
+// prenait toute la place. Elle a sa propre modale ; l'état de la clé est rechargé
+// à l'ouverture, comme le faisait l'affichage inline.
+function openMcpModal(){
+  const m = document.getElementById('mcpModal'); if(!m) return;
+  m.style.display = 'grid';
+  try{ mcpKeyRefresh(); }catch(_){}
+}
+function closeMcpModal(){
+  const m = document.getElementById('mcpModal'); if(m) m.style.display = 'none';
+}
+
 function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender();
   clearInterval(_mzPreviewTimer); _mzPreviewTimer=setInterval(()=>{ _mzPreviewI=(_mzPreviewI+1)%8; mzPreviewRender(); }, 420); }
 function mzAdvClose(){ const m=document.getElementById('mzAdvModal'); if(m) m.style.display='none';
@@ -24362,6 +24356,56 @@ window.mPreviewClose=function(){
   if(gr&&window._mPrevHome){ if(window._mPrevNext&&window._mPrevNext.parentNode===window._mPrevHome) window._mPrevHome.insertBefore(gr,window._mPrevNext); else window._mPrevHome.appendChild(gr); }
 };
 </script>
+    <!-- 🔌 Modale « Connecter Claude » — sortie de la modale « Mon compte », où elle
+         écrasait tout le reste. Contenu identique, aucun élément perdu : les mêmes
+         id sont conservés pour que mcpKeyCreate / mcpKeyRevoke / mcpConfirmToggle
+         continuent de fonctionner sans changement. -->
+    <div id="mcpModal" onclick="if(event.target===this)closeMcpModal()" style="display:none;position:fixed;inset:0;z-index:9895;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
+      <div class="card" style="width:100%;max-width:560px;max-height:84vh;overflow-y:auto;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;margin:2px 0 18px">
+          <div class="row gap12">
+            <div style="width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 01-12 0z"/><path d="M12 18v4"/></svg>
+            </div>
+            <div class="col" style="line-height:1.25">
+              <h3 class="display" style="font-size:22px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:8px">Connecter Claude <span class="tag-beta">BÊTA</span></h3>
+              <span class="faint" style="font-size:12.5px">Pro · Élite — génère avec tes crédits depuis Claude</span>
+            </div>
+          </div>
+          <button class="btn-quiet" onclick="closeMcpModal()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
+        </div>
+    <!-- ④ Connecter Claude -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <span class="eyebrow">④ Connecter Claude</span>
+      <span class="tag-beta">BÊTA</span>
+      <span class="mono" style="font-size:10px;letter-spacing:.08em;color:var(--text-3)">PRO · ÉLITE</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-3);line-height:1.6;margin:0 0 18px">
+      Génère tes images et vidéos AvatarAds directement depuis <b style="color:var(--text-2)">Claude</b> (claude.ai ou Claude Code), avec tes crédits. Génère ta clé, puis ajoute-la comme connecteur dans Claude.
+    </p>
+    <div id="mcpKeyStatus" class="card" style="padding:13px 15px;margin-bottom:18px;font-size:13px;color:var(--text-3)">Chargement…</div>
+    <div id="mcpKeyResult" style="display:none;margin-bottom:16px">
+      <div style="display:flex;gap:8px">
+        <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="field mono" style="flex:1;min-width:0;font-size:10.5px;padding:10px 12px">
+        <button class="btn btn-ghost btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;white-space:nowrap">📋 Copier</button>
+      </div>
+      <div class="mono" style="font-size:10px;color:#f59e0b;margin-top:6px">⚠️ Cette URL est affichée une seule fois — copie-la maintenant. C'est une clé personnelle : ne la partage pas.</div>
+    </div>
+    <label id="mcpConfirmRow" style="display:none;align-items:flex-start;gap:10px;margin-bottom:18px;cursor:pointer;width:100%;text-align:left">
+      <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
+      <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;margin-top:1px;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
+        <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </span>
+      <span style="font-size:12.5px;line-height:1.5;color:var(--text-3)">Claude doit demander <b style="color:var(--text-2)">confirmation avant chaque génération</b>, avec le coût en crédits (recommandé)</span>
+    </label>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button id="mcpKeyCreateBtn" class="btn btn-ghost" onclick="mcpKeyCreate()" style="flex:1">🔑 Générer ma clé</button>
+      <button id="mcpKeyRevokeBtn" class="btn btn-ghost" onclick="mcpKeyRevoke()" style="display:none;flex:0 0 auto;color:#FF6B6B;border-color:rgba(255,70,70,.25)">Révoquer</button>
+    </div>
+    <button class="btn btn-primary" onclick="openMcpTuto()" style="width:100%">📖 Voir le tuto — connecter ta clé à Claude</button>
+      </div>
+    </div>
+
     <!-- ⚙️ Modale « Paramètres avancés » — maquette montage-handoff, reprise au pixel -->
     <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:600px;max-height:84vh;overflow-y:auto;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
