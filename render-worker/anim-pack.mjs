@@ -25,7 +25,7 @@ export const ANIM_EMOJI_SET = {
 
 export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet']
+  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -287,6 +287,21 @@ export function animHtml(name, s, W, H, vs) {
         </div>
       </div>`
     }
+    case 'countup': {
+      // LE CHIFFRE QUI DEFILE. Axel : « une animation 0 a 3 millions de vues pour
+      // "ca cartonne", pareil de 0 a 8000 € quand on parle d'argent ». La valeur
+      // vient de ce qu'il DIT (extraite de la transcription cote serveur), jamais
+      // inventee ici.
+      const val = String(s.value || '')
+      const unit = String(s.unit || '')
+      if (!val) return ''
+      const fs = Math.round(f.h * 0.30)
+      return box(`<div class="an-cu" id="${id}cu">
+        <span class="an-cun" id="${id}cun" style="font-size:${fs}px;color:${P.ink}">0</span>
+        ${unit ? `<span class="an-cuu" id="${id}cuu" style="font-size:${Math.round(fs * 0.34)}px;color:${P.acc}">${esc(unit)}</span>` : ''}
+        <span class="an-cub" id="${id}cub" style="background:${P.acc}"></span>
+      </div>`)
+    }
     case 'flow': {
       // A RELIE B RELIE C — le schema qu'Axel montre (Budget -> Leads -> Clients) :
       // des etapes reliees par des fleches qui se tracent l'une apres l'autre.
@@ -301,7 +316,7 @@ export function animHtml(name, s, W, H, vs) {
         const cy = Math.round(f.h * (0.16 + k * 0.33))
         h += `<span class="an-p an-nd" id="${id}n${k}" style="left:${cx - d / 2}px;top:${cy - d / 2}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.26)}px;background:${k === n - 1 ? P.acc : P.soft};border:3px solid ${k === n - 1 ? P.acc : P.line};display:flex;align-items:center;justify-content:center">
           <span class="an-p" style="position:relative;left:auto;top:auto;width:52%;height:14%;border-radius:99px;background:${k === n - 1 ? 'rgba(255,255,255,.9)' : P.line}"></span></span>`
-        if (labs[k]) h += `<span class="an-p an-lb" id="${id}t${k}" style="left:${cx - Math.round(f.w * 0.24)}px;top:${cy + d / 2 + 6}px;width:${Math.round(f.w * 0.48)}px;text-align:center;font-family:${SANS};font-weight:700;font-size:${fs}px;color:${P.ink}">${esc(String(labs[k]).slice(0, 14))}</span>`
+        if (labs[k]) h += `<span class="an-p an-lb" id="${id}t${k}" style="left:${cx - Math.round(f.w * 0.24)}px;top:${cy + d / 2 + 6}px;width:${Math.round(f.w * 0.48)}px;text-align:center;font-size:${fs}px;color:${P.ink}">${esc(String(labs[k]).slice(0, 14))}</span>`
         if (k < n - 1) {
           const nx = Math.round(f.w * ((k + 1) % 2 === 0 ? 0.30 : 0.70))
           const ny = Math.round(f.h * (0.16 + (k + 1) * 0.33))
@@ -629,6 +644,25 @@ export function animJs(name, s, r2) {
       tl.to('#${id}bx1', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${panAt});
       tl.fromTo('#${id}bx2', { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(panAt + panDur - 0.3)});` : '')
     }
+    case 'countup': {
+      const raw = String(s.value || '').replace(/[^0-9.]/g, '')
+      const target = parseFloat(raw) || 0
+      const dec = (String(s.value || '').split('.')[1] || '').length
+      const steps = 26
+      let js = inOut + `
+      tl.fromTo('#${id}cun', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2)', transformOrigin: '50% 60%' }, ${t0});
+      tl.fromTo('#${id}cuu', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.24, ease: 'power2.out' }, ${r2(t0 + 0.3)});
+      tl.fromTo('#${id}cub', { scaleX: 0 }, { scaleX: 1, duration: ${r2(Math.max(0.7, Math.min(dur - 0.7, 1.5)))}, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});`
+      // le defilement est ECRIT PAS A PAS : le rendu image par image doit etre
+      // reproductible, un compteur anime par onUpdate ne le serait pas.
+      const T = Math.max(0.7, Math.min(dur - 0.7, 1.5))
+      for (let k = 1; k <= steps; k++) {
+        const v = (target * Math.pow(k / steps, 0.62)).toFixed(dec)
+        const txt = Number(v).toLocaleString('fr-FR')
+        js += `\n      tl.set('#${id}cun', { textContent: ${JSON.stringify(txt)} }, ${r2(t0 + 0.2 + (k / steps) * T)});`
+      }
+      return js
+    }
     case 'flow':
       return inOut + `
       tl.fromTo('#${id}an .an-nd', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.34, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
@@ -735,10 +769,18 @@ export function animCss(W, H) {
       .an-e3 img { width: 100%; height: 100%; object-fit: contain; display: block;
         will-change: transform, opacity; }
       .an-stage { position: absolute; inset: 0; }
+      .an-cu { position: absolute; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: .12em; }
+      .an-cun { line-height: 1; font-variant-numeric: tabular-nums; font-weight: 900;
+        font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.03em; }
+      .an-cuu { font-weight: 800; letter-spacing: .02em;
+        font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      .an-cub { width: 34%; height: 6px; border-radius: 99px; margin-top: .35em; }
       /* le texte qui s'ecrit DANS le champ de l'app, au meme endroit que le cadre */
       /* MASQUE OPAQUE : la capture contient deja du texte dans le champ, il faut
          le couvrir avant d'ecrire par-dessus — et ecrire en BLANC, pas en noir
          (Axel : « l'ecriture est en noir donc on voit rien »). */
+      .an-lb { font-weight: 700; font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; }
       .an-3dtype { position: absolute; display: flex; align-items: center; gap: .35em;
         padding: 0 1.4%; font-family: "Inter", Helvetica, Arial, sans-serif; font-weight: 600;
         white-space: nowrap; overflow: hidden; background: #101319; color: #fff;

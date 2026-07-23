@@ -186,7 +186,10 @@ const TUTO: Record<string, Record<string, number[]>> = {
 const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express' }
 
 const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
-  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
+  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
+  // ces six-la existaient dans la banque de rendu mais manquaient ICI : le
+  // filtre serveur les rejetait, donc le modele ne pouvait jamais les utiliser.
+  'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -451,6 +454,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     images-ia  -> menu | photo-reel | pixar | fruit | ugc | format | prompt | generer
     express    -> menu | realiste | cartoon | portrait | duree | qualite | voix | ajouter | prompt | generer
   COUVRE CHAQUE ETAPE QU'IL DECRIT, dans l'ordre, sans en sauter : s'il enumere « tu vas dans Images IA, tu selectionnes photo reel, tu mets le format TikTok, tu decris ton image », cela fait QUATRE lignes (menu, photo-reel, format, prompt). Une etape decrite sans ligne, c'est un moment de la video ou l'on ne montre rien.
+  N'OUBLIE JAMAIS L'ETAPE "prompt" DE CHAQUE MODULE : c'est le moment ou l'on voit le texte s'ecrire dans le champ, avec le bruit du clavier. S'il decrit ce qu'il tape dans Images IA ET dans Express, il faut DEUX lignes prompt, une par module.
   QUATRIEME CHAMP, seulement sur une zone "prompt" : ce que l'utilisateur taperait dans le champ. Ecris-le court (moins de 60 caracteres) et dans SES mots — il s'ecrira lettre par lettre dans le vrai champ de l'app pendant qu'il parle, avec le bruit du clavier. Laisse vide sur toutes les autres zones.
   ATTENTION AU MOT EXACT : s'il dit « selectionner photo reel », la zone est photo-reel, pas fruit. Ne prends pas la case qui est deja selectionnee sur la capture, prends CELLE QU'IL NOMME.
   Une ligne par etape decrite, dans l'ordre du script. Si l'audio ne decrit AUCUNE manipulation dans l'outil, laisse la liste VIDE — ne montre jamais une interface pour meubler.
@@ -1203,12 +1207,17 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // 6 s sur un ecran fige, c'est long — Axel : « c'est dommage qu'il reste
       // autant de temps ». On tient 5 s quand du texte s'ecrit (il faut le lire),
       // 3,5 s sinon.
-      const end = r2(Math.min(start + (sh.text ? 5 : 3.5), nextT - 0.3, D - 0.4))
+      const nextIsPrompt = i + 1 < tutoShots.length && !!tutoShots[i + 1].text
+      // un plan « prompt » a besoin de ses 5 s pour qu'on lise le texte se taper :
+      // c'est son voisin qui se raccourcit, pas lui.
+      const room = sh.text ? Math.max(nextT, sh.t + 5.2) : (nextIsPrompt ? nextT : nextT)
+      const end = r2(Math.min(start + (sh.text ? 5 : 3.5), room - 0.3, D - 0.4))
       // Un plan doit rester lisible, mais Axel enchaine les etapes vite (« tu vas
       // dans Images IA, tu selectionnes photo reel, tu mets le format ») : un seuil
       // trop haut supprimait justement les etapes qu'il reprochait de ne pas voir.
       // 1,3 s suffit pour un simple cadre ; il en faut 3,2 quand du texte s'ecrit.
-      if (end <= start + (sh.text ? 3.2 : 1.3)) continue
+      if (!sh.text && end <= start + 1.3) continue
+      if (sh.text && end <= start + 2.0) continue
       const z = sh.z, z2 = sh.z2
       slides.push({
         type: 'card', layout: 'full', motif: '', anim: 'screen', emoji: '',
@@ -1221,6 +1230,11 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       } as unknown as typeof slides[number])
       usedAnims.add('screen')
     }
+    // COMPTEUR AUTOMATIQUE. Axel veut voir « 0 a 3 millions de vues » sur « ca
+    // cartonne » et « 0 a 8000 € » sur l'argent. Le modele ne le proposait jamais :
+    // on declenche donc nous-memes des qu'un mot de resultat chiffre est prononce
+    // ET qu'un nombre est reellement present a cet endroit de l'audio.
+    const CU_WORDS = ['million', 'millions', 'vues', 'euros', 'abonnes', 'cartonne', 'cartonnent', 'explose', 'explosent']
     const cand: { t: number; an: string }[] = []
     let lastT = -99
     for (const w of words) {
@@ -1230,15 +1244,42 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       if (w.start - lastT < TARGET) continue
       if (occupied(w.start)) continue
       // le modele a designe les mots forts (beats) : ils priment sur le lexique
-      const an = beatFor(w.text) || animForWord(w.text)
+      let an = beatFor(w.text) || animForWord(w.text)
+      if (CU_WORDS.includes(norm(w.text)) && !usedAnims.has('countup')) an = 'countup'
       if (!an || usedAnims.has(an)) continue
       usedAnims.add(an)
       lastT = w.start
       cand.push({ t: w.start, an })
     }
     const added: typeof slides = []
+    // LE CHIFFRE DU COMPTEUR VIENT DE CE QU'IL DIT. On lit les mots autour du point
+    // de pose : « trois millions de vues » -> 3000000 / vues, « huit mille euros »
+    // -> 8000 / €. Sans chiffre trouve, on retombe sur une autre animation.
+    const NUM: Record<string, number> = { un: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, vingt: 20, trente: 30, cinquante: 50, cent: 100, mille: 1000 }
+    const readNumber = (t: number) => {
+      const win = words.filter((w) => w.start >= t - 1.2 && w.start <= t + 2.2).map((w) => norm(w.text))
+      let n = 0
+      for (let i = 0; i < win.length; i++) {
+        const w = win[i]
+        const digits = w.replace(/[^0-9]/g, '')
+        if (digits && !n) n = parseInt(digits, 10)
+        else if (NUM[w] && !n) n = NUM[w]
+        if (n && (w === 'million' || w === 'millions')) n *= 1000000
+        if (n && (w === 'mille' || w === 'milliers')) n *= 1000
+      }
+      if (!n) return null
+      const unit = win.some((w) => w.includes('euro') || w.includes('€')) ? '€'
+        : win.some((w) => w.includes('vue')) ? 'vues'
+        : win.some((w) => w.includes('abonne')) ? 'abonnés' : ''
+      return { value: String(n), unit }
+    }
     for (let i = 0; i < cand.length; i++) {
       const nextT = i + 1 < cand.length ? cand[i + 1].t : D
+      let cuv: { value: string; unit: string } | null = null
+      if (cand[i].an === 'countup') {
+        cuv = readNumber(cand[i].t)
+        if (!cuv) { cand[i].an = 'grow' }   // rien de chiffre a montrer : on retombe
+      }
       // 0,3 s de respiration : a 0,05 s les animations se touchaient et l'oeil ne
       // voyait qu'un flux continu. Il faut un souffle entre deux.
       // Chaque animation tient jusqu'a la suivante (moins la respiration), plafonnee
@@ -1249,11 +1290,40 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       added.push({
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
         start: r2(cand[i].t), end, title: '', eyebrow: '', accent: '', sub: '',
-        center: '', value: '', unit: '', wide: false, options: [], items: [],
+        center: '', value: cuv ? cuv.value : '', unit: cuv ? cuv.unit : '',
+        wide: false, options: [], items: [],
       })
     }
     for (const a of added) {
       if (!slides.some((sl) => Math.abs(sl.start - a.start) < 0.7)) slides.push(a)
+    }
+
+    // LE COMPTEUR PASSE DEVANT. Axel veut voir « 0 -> 8000 € » quand il annonce son
+    // chiffre. Or ces moments-la sont justement les plus denses : une animation du
+    // modele s'y trouvait deja et le remplissage n'y touchait pas. Un resultat
+    // chiffre prononce a voix haute prime sur une illustration generique.
+    if (!slides.some((sl) => sl.anim === 'countup')) {
+      for (const w of words) {
+        if (w.start < 0.8 || w.start > D - 2.0) continue
+        if (!CU_WORDS.includes(norm(w.text))) continue
+        const num = readNumber(w.start)
+        if (!num) continue
+        const host = slides.find((sl) => w.start >= sl.start - 0.6 && w.start <= sl.end + 0.6)
+        if (host) {
+          host.anim = 'countup'; host.emoji = ''
+          ;(host as unknown as { value: string; unit: string }).value = num.value
+          ;(host as unknown as { value: string; unit: string }).unit = num.unit
+        } else {
+          slides.push({
+            type: 'card', layout: 'full', motif: '', anim: 'countup', emoji: '',
+            start: r2(w.start), end: r2(Math.min(w.start + 2.2, D - 0.5)),
+            title: '', eyebrow: '', accent: '', sub: '', center: '',
+            value: num.value, unit: num.unit, wide: false, options: [], items: [],
+          } as unknown as typeof slides[number])
+        }
+        slides.sort((x, y) => x.start - y.start)
+        break
+      }
     }
     slides.sort((x, y) => x.start - y.start)
 
