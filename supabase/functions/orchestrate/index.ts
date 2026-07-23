@@ -174,6 +174,16 @@ const EMOJIS = ['airplane', 'alarm_clock', 'bank', 'bar_chart', 'battery', 'beac
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
+// Catalogue des captures d'AvatarAds et des zones MESUREES sur chacune (fractions
+// de l'image). Le chef d'orchestre ne connait que les NOMS ; les coordonnees ne
+// sortent jamais du serveur, donc il ne peut pas inventer un cadrage faux.
+const TUTO: Record<string, Record<string, number[]>> = {
+  'images-ia': { fruit: [0.240, 0.409, 0.089, 0.087], format: [0.288, 0.668, 0.057, 0.078], prompt: [0.749, 0.818, 0.472, 0.121] },
+  'express': { menu: [0.086, 0.421, 0.150, 0.055], ajouter: [0.704, 0.536, 0.180, 0.120], prompt: [0.783, 0.761, 0.400, 0.110], generer: [0.886, 0.936, 0.150, 0.045] },
+  'generateur': { script: [0.500, 0.400, 0.500, 0.200], lancer: [0.860, 0.900, 0.180, 0.060] },
+}
+const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express', 'generateur': '03-generateur' }
+
 const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -187,7 +197,7 @@ const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'l
 const PLAN_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['sections', 'zooms', 'broll', 'beats', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
+  required: ['sections', 'zooms', 'broll', 'beats', 'tuto', 'sfx', 'hook', 'accents', 'music', 'slides', 'face', 'detected', 'avatarSegments', 'tone', 'beds'],
   properties: {
     // LIGNES COMPACTES "champ|champ|…" — le format exact est decrit dans le prompt
     // et re-etale en objets par expandPlan() juste apres la reponse.
@@ -195,6 +205,7 @@ const PLAN_SCHEMA = {
     zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
     broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end|fonctionnalite"
     beats: { type: 'array', items: { type: 'string' } },           // "mot|animation" — les mots forts
+    tuto: { type: 'array', items: { type: 'string' } },            // "mot|ecran|zone" — démo dans l'app
     sfx: { type: 'array', items: { type: 'string' } },             // "kind|t"
     beds: { type: 'array', items: { type: 'string' } },            // "name|t"
     avatarSegments: { type: 'array', items: { type: 'string' } },  // "start|end|format"
@@ -247,6 +258,7 @@ function expandPlan(raw: any): Plan {
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
     broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
     beats: arr(raw.beats).map((l) => { const [word, anim] = cut(l, 2); return { word, anim } }),
+    tuto: arr(raw.tuto).map((l) => { const [word, screen, zone] = cut(l, 3); return { word, screen, zone } }),
     sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
     beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
     avatarSegments: arr(raw.avatarSegments).map((l) => { const [a, b, format] = cut(l, 3); return { start: num(a), end: num(b), format } }),
@@ -275,6 +287,7 @@ type Plan = {
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
   broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
   beats?: { word: string; anim: string }[]
+  tuto?: { word: string; screen: string; zone: string }[]
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
@@ -388,6 +401,7 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
   broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
   beats[]          : "mot|animation"                    ex "viral|rocket"
+  tuto[]           : "mot|ecran|zone"                   ex "fruit|images-ia|fruit"
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
@@ -432,6 +446,11 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   LES MOTS FORTS, C'EST TOI QUI LES DESIGNES (champ "beats"). Relis le script mot a mot et sors la LISTE des mots qui appellent une image mentale — un objet, une action, un gain, un chiffre, une emotion. Pour chacun, ecris "mot|animation" avec le mot EXACTEMENT tel qu'il est prononce (une seule forme, sans article) et l'animation de la banque qui le dessine. Vise 15 a 25 lignes sur 45 secondes, dans l'ordre du script.
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
+  DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CETTE LISTE, rien d'autre :
+    images-ia  -> fruit | format | prompt
+    express    -> menu | ajouter | prompt | generer
+    generateur -> script | lancer
+  Une ligne par etape decrite, dans l'ordre du script. Si l'audio ne decrit AUCUNE manipulation dans l'outil, laisse la liste VIDE — ne montre jamais une interface pour meubler.
   COMBIEN ? BEAUCOUP PLUS QUE TU NE CROIS. Sur 30 secondes, vise 12 a 20 animations ; sur 45 secondes, 18 a 30. Une par phrase au minimum, et souvent une par GROUPE DE MOTS : "tu gagnes du temps" / "tu produis plus" / "tu touches plus de monde" = trois animations, pas une. Si tu en as pose moins de 10 sur 30 s, tu n'as pas fini : relis le script et cherche ce que chaque phrase MONTRE.
   CHAQUE BENEFICE A LA SIENNE. C'est la faute la plus frequente : il enumere ce que ca apporte et l'ecran ne bouge pas. Des qu'il dit un gain — du temps, de l'argent, de la simplicite, de la portee, de la qualite, de la liberte — cette seconde-la merite son animation.
   DENSITE — LE PLUS DYNAMIQUE POSSIBLE. Une video virale illustre presque en permanence : les gens comprennent mieux avec des images. Tu peux couvrir JUSQU'A 99% de la duree d'animations, il n'y a AUCUN quota a respecter et aucun espacement a tenir. La seule limite est la PERTINENCE : chaque animation doit illustrer ce qui est dit A CET INSTANT. Deux regles fermes : jamais deux fois la MEME animation dans une video, et jamais une animation qui ne correspond pas au sens (mieux vaut un blanc qu'un contresens).
@@ -638,8 +657,13 @@ Analyse d'abord la video, puis genere le plan de montage.`,
       model: CLAUDE_MODEL,
       max_tokens: 16000,
       thinking: { type: 'adaptive' },
+      // effort BAS : 88 % des tokens produits etaient du raisonnement interne
+      // (11 999 sur 13 581 mesures), ce qui faisait depasser le budget de 150 s de
+      // la fonction — 3 generations sur 4 echouaient en timeout. Le placement, la
+      // cadence et les verrous sont deterministes cote serveur : le modele n a plus
+      // qu a designer les mots forts, ce qui ne demande pas une longue deliberation.
       output_config: {
-        effort: 'medium',
+        effort: 'low',
         format: { type: 'json_schema', schema: PLAN_SCHEMA },
       },
       system,
@@ -1126,6 +1150,42 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       if (k.length < 3) return ''
       return beatMap.get(k) || ''
     }
+    // ECRANS DE DEMO : le modele designe (mot, ecran, zone) ; le serveur retrouve le
+    // timing du mot dans la transcription et applique le cadrage MESURE. Deux zones
+    // du meme ecran trop rapprochees (< 1,2 s) deviennent un seul plan avec travelling
+    // — deux plans separes n'y tiendraient pas et l'un des deux serait jete.
+    const tutoShots: { t: number; screen: string; z: number[]; z2?: number[] }[] = []
+    for (const tu of plan.tuto || []) {
+      const screen = String(tu.screen || '')
+      const zone = String(tu.zone || '')
+      const rect = TUTO[screen] && TUTO[screen][zone]
+      if (!rect) continue
+      const k = norm(String(tu.word || ''))
+      if (k.length < 3) continue
+      const w = words.find((x) => norm(x.text) === k && !tutoShots.some((sh) => Math.abs(sh.t - x.start) < 0.05))
+      if (!w) continue
+      const prev = tutoShots[tutoShots.length - 1]
+      if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 1.2) prev.z2 = rect
+      else tutoShots.push({ t: w.start, screen, z: rect })
+    }
+    for (let i = 0; i < tutoShots.length; i++) {
+      const sh = tutoShots[i]
+      const start = r2(Math.max(0.2, sh.t - 0.15))
+      const nextT = i + 1 < tutoShots.length ? tutoShots[i + 1].t - 0.15 : D
+      const end = r2(Math.min(start + 6, nextT - 0.3, D - 0.4))
+      if (end <= start + 0.6) continue
+      const z = sh.z, z2 = sh.z2
+      slides.push({
+        type: 'card', layout: 'full', motif: '', anim: 'screen', emoji: '',
+        screen: TUTO_FILE[sh.screen] || '', start, end,
+        screenZoom: 2.1, screenX: z[0], screenY: z[1],
+        boxX: z[0], boxY: z[1], boxW: z[2], boxH: z[3],
+        ...(z2 ? { screenZoom2: 2.1, screenX2: z2[0], screenY2: z2[1], boxX2: z2[0], boxY2: z2[1], boxW2: z2[2], boxH2: z2[3] } : {}),
+        title: '', eyebrow: '', accent: '', sub: '', center: '', value: '', unit: '',
+        wide: false, options: [], items: [],
+      } as unknown as typeof slides[number])
+      usedAnims.add('screen')
+    }
     const cand: { t: number; an: string }[] = []
     let lastT = -99
     for (const w of words) {
@@ -1223,7 +1283,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // donc alignes par construction, il n'y a plus rien a filtrer ici)
   }
 
-  return { sections, zooms, broll: cleanBroll, beats: plan.beats || [], sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
+  return { sections, zooms, broll: cleanBroll, beats: plan.beats || [], tuto: plan.tuto || [], sfx: sfxOnEvent, hook, accents, music, slides, face, detected, avatarSegments, tone, beds }
 }
 
 // ---------- sous-titres mot-a-mot (texte exact + accents) ----------
