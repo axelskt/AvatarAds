@@ -2733,8 +2733,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <span class="label" style="margin:0">Corrections rapides</span>
             </div>
             <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-            <button id="imgMakeRealBtn" class="btn row gap8" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);color:var(--text);font-weight:700;font-size:13px">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Rendre réaliste / +qualité</button>
+            <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;padding:11px 14px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+              <span style="display:flex;flex-direction:column;line-height:1.25;text-align:left">
+                <b style="font-size:13.5px;font-weight:700">Améliorer en 4K</b>
+                <span id="imgMakeRealCost" class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.04em">5 cr · Pro · Élite</span>
+              </span>
+            </button>
           </div>
 
           <!-- FORMAT -->
@@ -5472,9 +5477,9 @@ const CREDIT_COSTS = {
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
   // surtout jamais au-dessus d'un Montage IA, sinon le barème devient illisible.
   imgUpscale4K: 5,
-  // ✨ « Rendre réaliste » via Nano Banana Pro 2K (img2img). Coût Google 0,134 $
-  // ≈ 0,12 € → 3 crédits = ~0,25 € encaissés, même palier que medium.
-  imgRealistic: 3,
+  // ✨ « Améliorer en 4K » (ex « Rendre réaliste ») via Nano Banana Pro 4K (img2img).
+  // Réservé Pro/Élite. Coût Google 0,24 $ ≈ 0,22 € → 5 crédits = ~0,41 € encaissés.
+  imgRealistic: 5,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
   // 6 et non 2 : mesuré en usage réel, le chef d'orchestre consomme nettement plus
   // d'API que l'estimation initiale (transcription + plan + reprises). Les tarifs
@@ -8047,18 +8052,24 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
-// « Rendre réaliste / Améliorer la qualité » — 1 clic, via Nano Banana Pro 2K (img2img).
-// gpt-image lissait la peau (rendu « plastique ») : c'est justement le bouton où la
-// texture réelle compte le plus. Nano Banana garde identité/pose/décor et ajoute le
-// vrai grain. Repli automatique sur gpt-image si Google échoue → le bouton marche
-// toujours. Le toast dit quel moteur a tourné, pour diagnostiquer d'un coup d'œil.
+// « Améliorer en 4K » (ex « Rendre réaliste ») — 1 clic, via Nano Banana Pro 4K (img2img).
+// Réservé Pro/Élite. gpt-image lissait la peau (rendu « plastique ») : c'est justement
+// le bouton où la texture réelle compte le plus. Nano Banana garde identité/pose/décor,
+// ajoute le vrai grain ET monte en 4K. Repli gpt-image si Google échoue → le bouton
+// marche toujours. Le toast dit quel moteur a tourné, pour diagnostiquer d'un coup d'œil.
 async function _imgMakeRealistic(btn){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  const _plan = (currentMember?.plan || 'free').toLowerCase();
+  if(!['pro','elite','byok','developer'].includes(_plan)){
+    toast('🔒 « Améliorer en 4K » est réservé aux plans Pro et Élite');
+    try{ showPaywall(); }catch(_){}
+    return;
+  }
   if(!_imgRefFile){ toast('⚠️ Importe d\'abord l\'image à corriger'); return; }
   creditsFlowBegin();
-  if(!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'rendre réaliste'))) return;
+  if(!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'améliorer en 4K'))) return;
   const orig = btn ? btn.innerHTML : null;
-  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Rendu réaliste… (~30s)'; }
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Amélioration 4K… (~30s)'; }
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
   try{
     const session=(await sb.auth.getSession()).data.session;
@@ -8071,24 +8082,24 @@ async function _imgMakeRealistic(btn){
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
-    _imgProgStart('Rendu réaliste… (~30s)');
+    _imgProgStart('Amélioration 4K… (~30s)');
     let url, engine='Nano Banana Pro';
     try{
-      url = await _nbEdit(token, dataUrl, _IMG_REALISM_EDIT, aspect, '2K');
+      url = await _nbEdit(token, dataUrl, _IMG_REALISM_EDIT, aspect, '4K');
     }catch(e){
       // Repli gpt-image : moins réaliste, mais on ne laisse jamais l'user sans rien.
       engine='gpt-image';
-      console.warn('Nano Banana Pro indispo (rendre réaliste), repli gpt-image :', e);
+      console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
       const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
       url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
     }
     _imgMonthIncrement();
     _imgShowSingle(url, dispFmt);
-    _imgSaveHistory(url, 'Réaliste', dispFmt);
+    _imgSaveHistory(url, '4K', dispFmt);
     _imgRenderHistory();
     creditsFlowDone();
-    toast('✨ Rendu réaliste — '+engine);
-  }catch(e){ await creditsFlowRefund('le rendu réaliste a échoué'); toast('⚠️ '+(e.message||e)); }
+    toast('✨ Amélioré en 4K — '+engine);
+  }catch(e){ await creditsFlowRefund('l\'amélioration 4K a échoué'); toast('⚠️ '+(e.message||e)); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
@@ -8114,6 +8125,12 @@ function _imgRunCorrection(idx, btn){
   _imgDoEdit(full, btn, (p.spin||'Correction…'), p.label, p.fmt);
 }
 
+// Sous-ligne de coût du bouton « Améliorer en 4K » — lue depuis la constante,
+// donc si CREDIT_COSTS.imgRealistic change, le bouton suit (dynamique).
+function _imgSyncRealCost(){
+  const el = document.getElementById('imgMakeRealCost');
+  if(el) el.textContent = CREDIT_COSTS.imgRealistic + ' cr · Pro · Élite';
+}
 function _imgSetMode(m){
   _imgMode = m;
   const corr = m==='correct';
@@ -8126,7 +8143,7 @@ function _imgSetMode(m){
   showFlex('imgCorrectPresetsSection', corr);// corrections rapides (correction only) — carte extensible
   showFlex('imgStyleSection', !corr);        // style visuel (génération only) — carte extensible
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
-  if(corr) _imgRenderCorrectPresets();
+  if(corr){ _imgRenderCorrectPresets(); _imgSyncRealCost(); }
   _imgInitSuggestions();
   // Composer : bouton image de référence — bordure/label selon le mode
   const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
@@ -8638,20 +8655,10 @@ async function _imgGenerateFluxKontext(token, prompt, refFile, size){
 }
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
-  window._imgGenEngine = 'gpt-image';
   // Styles réalistes (Photo Réel / UGC) → Flux raw SI moteur flux, sinon gpt-image (prompt brut)
+  // (Test Nano Banana 2.5 Flash retiré : rendu trop lissé/plastique — gpt-image medium repris.)
   if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _IMG_REALISTIC_ENGINE==='flux'){
     return await _imgGenerateFlux(token, enhancedPrompt, size, _imgFluxTier());
-  }
-  // 🧪 TEST — Premium (qualité medium) sur les styles réalistes → Nano Banana 2.5 Flash.
-  // Réversible : supprimer ce bloc = retour gpt-image medium. Repli gpt-image si l'appel
-  // Google échoue, pour ne jamais bloquer la génération.
-  if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _imgEffectiveQuality()==='medium'){
-    try{
-      const url = await _nbGenerate(token, enhancedPrompt, _NB_FMT_ASPECT[size]||'9:16', ['gemini-2.5-flash-image','gemini-2.5-flash-image-preview'], null);
-      window._imgGenEngine = 'Nano Banana 2.5 Flash';
-      return url;
-    }catch(e){ console.warn('Nano Banana 2.5 indispo (Premium), repli gpt-image :', e); }
   }
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
@@ -8805,24 +8812,6 @@ async function _nbRefine4K(token, dataUrl, aspect){
 }
 // Correspondance format app → aspect ratio Nano Banana.
 const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
-// Génération texte→image via Nano Banana (pas d'image d'entrée). `models` peut
-// être un tableau de candidats (le vrai id GA vs -preview) essayés dans l'ordre.
-async function _nbGenerate(token, prompt, aspect, models, size){
-  let lastErr='';
-  for(const model of (Array.isArray(models)?models:[models])){
-    const path='/v1beta/models/'+model+':generateContent';
-    const call=async(payload)=>{ const r=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(payload)}); return r.json(); };
-    const cfg={ aspectRatio: aspect, ...(size?{imageSize:size}:{}) };
-    let d=await call({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:cfg} });
-    if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name/i.test(JSON.stringify(d.error))){
-      d=await call({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{responseModalities:['TEXT','IMAGE']} });
-    }
-    if(d?.error){ lastErr=d.error.message||JSON.stringify(d.error); if(/not found|does not exist|unsupported|not supported/i.test(lastErr)) continue; throw new Error(lastErr); }
-    const b64=_nbExtractImage(d); if(b64) return 'data:image/jpeg;base64,'+b64;
-    lastErr='aucune image renvoyée';
-  }
-  throw new Error(lastErr);
-}
 
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
