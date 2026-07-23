@@ -178,7 +178,9 @@ const MOODS = ['intense', 'dynamique', 'chill']
 // de l'image). Le chef d'orchestre ne connait que les NOMS ; les coordonnees ne
 // sortent jamais du serveur, donc il ne peut pas inventer un cadrage faux.
 const TUTO: Record<string, Record<string, number[]>> = {
-  'images-ia': { fruit: [0.240, 0.409, 0.089, 0.087], format: [0.288, 0.668, 0.057, 0.078], prompt: [0.749, 0.818, 0.472, 0.121] },
+  // 'photo-reel' est mesure sur la capture : meme colonne que 'fruit', une ligne
+  // au-dessus (Axel disait « selectionner photo reel » et on encadrait Fruit).
+  'images-ia': { 'photo-reel': [0.240, 0.309, 0.089, 0.087], fruit: [0.240, 0.409, 0.089, 0.087], format: [0.288, 0.668, 0.057, 0.078], prompt: [0.749, 0.818, 0.472, 0.121] },
   'express': { menu: [0.086, 0.421, 0.150, 0.055], ajouter: [0.704, 0.536, 0.180, 0.120], prompt: [0.783, 0.761, 0.400, 0.110], generer: [0.886, 0.936, 0.150, 0.045] },
   'generateur': { script: [0.500, 0.400, 0.500, 0.200], lancer: [0.860, 0.900, 0.180, 0.060] },
 }
@@ -258,7 +260,7 @@ function expandPlan(raw: any): Plan {
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
     broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
     beats: arr(raw.beats).map((l) => { const [word, anim] = cut(l, 2); return { word, anim } }),
-    tuto: arr(raw.tuto).map((l) => { const [word, screen, zone] = cut(l, 3); return { word, screen, zone } }),
+    tuto: arr(raw.tuto).map((l) => { const [word, screen, zone, text] = cut(l, 4); return { word, screen, zone, text } }),
     sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
     beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
     avatarSegments: arr(raw.avatarSegments).map((l) => { const [a, b, format] = cut(l, 3); return { start: num(a), end: num(b), format } }),
@@ -287,7 +289,7 @@ type Plan = {
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
   broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
   beats?: { word: string; anim: string }[]
-  tuto?: { word: string; screen: string; zone: string }[]
+  tuto?: { word: string; screen: string; zone: string; text?: string }[]
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
   accents: string[]
@@ -401,7 +403,7 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
   broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
   beats[]          : "mot|animation"                    ex "viral|rocket"
-  tuto[]           : "mot|ecran|zone"                   ex "fruit|images-ia|fruit"
+  tuto[]           : "mot|ecran|zone|texte"             ex "decrire|images-ia|prompt|une banane musclee"
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
@@ -447,9 +449,11 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
   DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CETTE LISTE, rien d'autre :
-    images-ia  -> fruit | format | prompt
+    images-ia  -> photo-reel | fruit | format | prompt
     express    -> menu | ajouter | prompt | generer
     generateur -> script | lancer
+  QUATRIEME CHAMP, seulement sur une zone "prompt" : ce que l'utilisateur taperait dans le champ. Ecris-le court (moins de 60 caracteres) et dans SES mots — il s'ecrira lettre par lettre dans le vrai champ de l'app pendant qu'il parle, avec le bruit du clavier. Laisse vide sur toutes les autres zones.
+  ATTENTION AU MOT EXACT : s'il dit « selectionner photo reel », la zone est photo-reel, pas fruit. Ne prends pas la case qui est deja selectionnee sur la capture, prends CELLE QU'IL NOMME.
   Une ligne par etape decrite, dans l'ordre du script. Si l'audio ne decrit AUCUNE manipulation dans l'outil, laisse la liste VIDE — ne montre jamais une interface pour meubler.
   COMBIEN ? BEAUCOUP PLUS QUE TU NE CROIS. Sur 30 secondes, vise 12 a 20 animations ; sur 45 secondes, 18 a 30. Une par phrase au minimum, et souvent une par GROUPE DE MOTS : "tu gagnes du temps" / "tu produis plus" / "tu touches plus de monde" = trois animations, pas une. Si tu en as pose moins de 10 sur 30 s, tu n'as pas fini : relis le script et cherche ce que chaque phrase MONTRE.
   CHAQUE BENEFICE A LA SIENNE. C'est la faute la plus frequente : il enumere ce que ca apporte et l'ecran ne bouge pas. Des qu'il dit un gain — du temps, de l'argent, de la simplicite, de la portee, de la qualite, de la liberte — cette seconde-la merite son animation.
@@ -1154,7 +1158,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // timing du mot dans la transcription et applique le cadrage MESURE. Deux zones
     // du meme ecran trop rapprochees (< 1,2 s) deviennent un seul plan avec travelling
     // — deux plans separes n'y tiendraient pas et l'un des deux serait jete.
-    const tutoShots: { t: number; screen: string; z: number[]; z2?: number[] }[] = []
+    const tutoShots: { t: number; screen: string; z: number[]; z2?: number[]; text?: string }[] = []
     for (const tu of plan.tuto || []) {
       const screen = String(tu.screen || '')
       const zone = String(tu.zone || '')
@@ -1183,18 +1187,23 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // propose souvent plusieurs mots qui pointent vers la meme case.
       if (tutoShots.some((sh) => sh.screen === screen && (sh.z === rect || sh.z2 === rect))) continue
       if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 1.2) prev.z2 = rect
-      else tutoShots.push({ t: w.start, screen, z: rect })
+      else tutoShots.push({ t: w.start, screen, z: rect, text: zone.includes('prompt') ? String(tu.text || '').slice(0, 60) : '' })
     }
     for (let i = 0; i < tutoShots.length; i++) {
       const sh = tutoShots[i]
       const start = r2(Math.max(0.2, sh.t - 0.15))
       const nextT = i + 1 < tutoShots.length ? tutoShots[i + 1].t - 0.15 : D
-      const end = r2(Math.min(start + 6, nextT - 0.3, D - 0.4))
-      if (end <= start + 0.6) continue
+      // 6 s sur un ecran fige, c'est long — Axel : « c'est dommage qu'il reste
+      // autant de temps ». On tient 5 s quand du texte s'ecrit (il faut le lire),
+      // 3,5 s sinon.
+      const end = r2(Math.min(start + (sh.text ? 5 : 3.5), nextT - 0.3, D - 0.4))
+      // UN PLAN TROP COURT NE SERT A RIEN : sous 2,2 s on n'a pas le temps de lire
+      // ce qui est encadre. Mieux vaut sauter l'etape que la montrer une seconde.
+      if (end <= start + (sh.text ? 3.2 : 2.2)) continue
       const z = sh.z, z2 = sh.z2
       slides.push({
         type: 'card', layout: 'full', motif: '', anim: 'screen', emoji: '',
-        screen: TUTO_FILE[sh.screen] || '', start, end,
+        screen: TUTO_FILE[sh.screen] || '', screenText: sh.text || '', start, end,
         screenZoom: 2.1, screenX: z[0], screenY: z[1],
         boxX: z[0], boxY: z[1], boxW: z[2], boxH: z[3],
         ...(z2 ? { screenZoom2: 2.1, screenX2: z2[0], screenY2: z2[1], boxX2: z2[0], boxY2: z2[1], boxW2: z2[2], boxH2: z2[3] } : {}),

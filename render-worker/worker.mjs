@@ -278,6 +278,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     const kbSpots = [
       ...(plan.keyboard || []).map((k) => ({ start: k.t, end: k.t + (k.dur || 1.6) })),
       ...(plan.slides || []).filter((sl) => sl.anim === 'type').map((sl) => ({ start: sl.start, end: sl.end })),
+  // BRUIT DU CLAVIER quand le texte s'ecrit dans le champ de l'app (Axel : « le
+  // bruit du clavier doit se mettre et le texte doit s'ecrire dans la zone de
+  // texte d'avatarads en meme temps que l'audio »).
+  ...(plan.slides || []).filter((sl) => sl.anim === 'screen' && sl.screenText).map((sl) => ({ start: sl.start + 0.6, end: Math.min(sl.end - 0.2, sl.start + 0.6 + String(sl.screenText).length * 0.045) })),
     ]
     for (const sl of kbSpots) {
       const f = join(HERE, 'assets', 'sfx', 'mac-typing.mp3')
