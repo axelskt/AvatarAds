@@ -7833,17 +7833,10 @@ const _IMG_FORMATS = [
 const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
-// Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas.
-// Deux choses retirées volontairement par rapport à la version précédente :
-//  · le cadrage imposé (« taille, face caméra ») écrasait les gros plans demandés par l'user ;
-//  · l'interdiction de flou d'arrière-plan tuait la profondeur de champ, qui est LE signal
-//    « vraie photo » sur les plans serrés. On laisse l'objectif faire son travail.
-const _IMG_FLUX_TAIL = ', photographed on a Sony A7R V with an 85mm f/1.8 lens, natural depth of field with the subject in razor-sharp focus, un-retouched editorial photograph, real human skin with visible pores and micro-relief, fine vellus hair, uneven natural redness and small blemishes, individual eyebrow hairs and eyelashes, detailed iris with catchlights, realistic lip texture, natural facial asymmetry, hard directional light raking across the skin with bright specular micro-highlights and soft shadow falloff, true-to-life colors, straight out of camera, no retouching, no beauty filter, no skin smoothing, no plastic skin, no CGI, no AI look';
-// Moteur des styles réalistes SANS référence : 'gptimage' | 'flux' (Flux Ultra raw)
-// gpt-image lisse la peau — c'est l'origine du rendu « plastique ». Flux 1.1 Pro Ultra en
-// mode raw sort une image non retouchée à 4 MP (contre 1,5 MP), puis on l'upscale ×2.
-// Un seul mot à changer ici pour revenir en arrière.
-const _IMG_REALISTIC_ENGINE = 'flux';
+// Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
+const _IMG_FLUX_TAIL = ', professional photorealistic lifestyle photograph, the person looking directly at the camera, medium framing from the waist up (not a wide full-body shot), natural realistic skin with visible pores and subtle imperfections, natural facial asymmetry, authentic expression, no beauty filter, no plastic skin, no CGI look, shot on Sony A7R V 50mm lens at eye level, bright natural daylight, soft natural shadows, true-to-life colors, detailed sharp background (no heavy blur), ultra realistic commercial lifestyle photography, high detail';
+// Moteur des styles réalistes SANS référence : 'gptimage' | 'flux' (Flux Ultra)
+const _IMG_REALISTIC_ENGINE = 'gptimage';
 // Modèles gpt-image essayés dans l'ordre (gpt-image-2 récent → fallback gpt-image-1)
 const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
@@ -7883,11 +7876,7 @@ function _imgEffectiveQuality(){
 // Palier Flux dérivé du slider qualité : Rapide=éco (flux-dev) · Standard=pro · Max=ultra (flux-1.1-pro-ultra)
 function _imgFluxTier(){
   const q = _imgEffectiveQuality();
-  // 'ultra' est le SEUL palier qui accepte le mode raw (image non retouchée, 4 MP) —
-  // c'est précisément ce qui fait la différence sur la peau. Il coûte 0,06 $, soit le
-  // même prix que le gpt-image 'medium' qu'on payait avant : bascule neutre pour Pro/Élite.
-  // Free/Starter reste sur flux-dev, moins cher.
-  return q==='low' ? 'eco' : 'ultra';
+  return q==='high' ? 'ultra' : (q==='medium' ? 'pro' : 'eco');
 }
 // Qualité librement sélectionnable (Max inclus) — le paywall se déclenche uniquement à « Générer »
 function _imgPickQuality(id){ _imgQuality = id; _imgRenderQuality(); }
