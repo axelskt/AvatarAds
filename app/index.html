@@ -55,6 +55,13 @@ body{font-family:var(--font);color:var(--text);display:flex;flex-direction:colum
    Tokens déjà alignés. Classes à token complet → zéro collision avec
    les classes composées existantes (.sub-card, .bg-cat-btn, etc.)
    ════════════════════════════════════════════════════════════════════ */
+/* Un <button> n'hérite PAS de la couleur du texte : sans `color` explicite il tombe
+   sur le noir par défaut du navigateur — donc invisible sur nos fonds sombres.
+   C'est ce qui rendait « Paramètres avancés » illisible, et 20 autres boutons
+   étaient dans le même cas. Une règle de base vaut mieux que 21 rustines : les
+   styles en ligne et les classes (.btn, .btn-primary…) restent prioritaires. */
+button{color:var(--text)}
+
 /* typography helpers */
 .aa .mono,.mono{font-family:var(--mono)}
 .display{font-family:var(--display);letter-spacing:-.02em;line-height:.98}
