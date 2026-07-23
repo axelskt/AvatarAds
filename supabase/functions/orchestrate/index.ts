@@ -189,7 +189,7 @@ const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'cl
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
   // ces six-la existaient dans la banque de rendu mais manquaient ICI : le
   // filtre serveur les rejetait, donc le modele ne pouvait jamais les utiliser.
-  'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup']
+  'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result']
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -1345,6 +1345,51 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       }
     }
 
+    // LE RÉSULTAT APRÈS LA GÉNÉRATION. Axel : « dommage qu'on n'ait pas le résultat
+    // de l'Images IA ». Ancré sur le MOT, pas sur la présence d'un plan « Générer » :
+    // ce plan-là n'est pas toujours posé, alors que le mot, lui, est toujours dit.
+    // Même méthode que le logo, le compteur et l'entrée de module — les trois qui
+    // n'ont jamais raté.
+    if (!slides.some((sl) => sl.anim === 'result')) {
+      const GEN = ['genere', 'generes', 'generer', 'generation']
+      // ⚠️ APRES LA DEMO IMAGES IA, PAS AVANT. Le mot « généré » sert aussi ailleurs
+      // (« j'ai généré plus de huit mille euros ») : sans cette borne, l'image du
+      // resultat tombait sur la phrase sur l'argent.
+      const iaShots = slides.filter((sl) => sl.anim === 'screen'
+        && String((sl as unknown as { screen?: string }).screen || '').includes('imagesia'))
+      const after = iaShots.length ? Math.min(...iaShots.map((sl) => sl.start)) : Infinity
+      for (let i = 0; i < words.length; i++) {
+        if (!GEN.includes(norm(words[i].text))) continue
+        const t = words[i].start
+        if (t < after || t < 3 || t > D - 3.2) continue
+        // on laisse passer la fin de la phrase avant de montrer l'image
+        const start = r2(t + 1.0)
+        const nxt = slides.filter((sl) => sl.start > start).sort((a, b) => a.start - b.start)[0]
+        let end = r2(Math.min(start + 3.0, D - 0.4))
+        if (nxt && nxt.start - 0.3 < end) {
+          // le resultat prime : on raccourcit le voisin plutot que de renoncer
+          if (nxt.end - (end + 0.3) >= 0.9) nxt.start = r2(end + 0.3)
+          else end = r2(nxt.start - 0.3)
+        }
+        if (end - start < 1.6) continue
+        for (let k = slides.length - 1; k >= 0; k--) {
+          const sl = slides[k]
+          if (sl.end <= start || sl.start >= end) continue
+          if (sl.start < start) sl.end = r2(start - 0.2)
+          else sl.start = r2(end + 0.2)
+          if (sl.end - sl.start < 0.9) slides.splice(k, 1)
+        }
+        slides.push({
+          type: 'card', layout: 'full', motif: '', anim: 'result', emoji: '',
+          screen: '99-resultat', screenText: '', start, end,
+          title: '', eyebrow: '', accent: '', sub: '', center: '', value: '', unit: '',
+          wide: false, options: [], items: [],
+        } as unknown as typeof slides[number])
+        slides.sort((x, y) => x.start - y.start)
+        break
+      }
+    }
+
     // LE COMPTEUR PASSE DEVANT. Axel veut voir « 0 -> 8000 € » quand il annonce son
     // chiffre. Or ces moments-la sont justement les plus denses : une animation du
     // modele s'y trouvait deja et le remplissage n'y touchait pas. Un resultat
@@ -1449,6 +1494,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     {
       const prio = (sl: { anim?: string; screenText?: string }) => {
         if (sl.anim === 'screen' && sl.screenText) return 5   // le texte se tape + le clavier sonne
+        if (sl.anim === 'result') return 5                    // l'image produite : le vrai resultat
         if (sl.anim === 'logo') return 4                      // la marque est nommee
         if (sl.anim === 'countup') return 4                   // un chiffre est annonce
         if (sl.anim === 'screen') return 3                    // une etape de la demo
