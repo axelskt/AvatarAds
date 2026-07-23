@@ -2737,7 +2737,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               <span style="display:flex;flex-direction:column;line-height:1.25;text-align:left">
                 <b style="font-size:13.5px;font-weight:700">Améliorer en 4K</b>
-                <span id="imgMakeRealCost" class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.04em">5 cr · Pro · Élite</span>
+                <span id="imgMakeRealCost" class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.04em">5 cr</span>
               </span>
             </button>
           </div>
@@ -8129,7 +8129,7 @@ function _imgRunCorrection(idx, btn){
 // donc si CREDIT_COSTS.imgRealistic change, le bouton suit (dynamique).
 function _imgSyncRealCost(){
   const el = document.getElementById('imgMakeRealCost');
-  if(el) el.textContent = CREDIT_COSTS.imgRealistic + ' cr · Pro · Élite';
+  if(el) el.textContent = CREDIT_COSTS.imgRealistic + ' cr';
 }
 function _imgSetMode(m){
   _imgMode = m;
@@ -8885,6 +8885,9 @@ function _imgShowSingle(url, size){
   _imgProgStop();
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
+  // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
+  // En Correction, « Améliorer en 4K » fait déjà le même travail → on masque le doublon.
+  const up=document.getElementById('imgUpscaleBtn'); if(up) up.style.display = (_imgMode==='correct') ? 'none' : '';
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
   _imgIdleShow(false);
