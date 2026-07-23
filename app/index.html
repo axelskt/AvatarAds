@@ -7866,7 +7866,7 @@ function _imgQualityForPlan(){
   return 'low'; // Starter (et free) : qualité low uniquement — la Standard est l'upsell vers Pro
 }
 // ── Sélecteur de qualité (low/medium/high), plafonné par plan (high = Élite) ──
-let _imgQuality = null; // null → défaut selon plan
+let _imgQuality = 'medium'; // défaut = Premium (medium) ; le cap plan ramène Free/Starter à Standard
 const _IMG_QUALITIES = [
   { id:'low',    label:'Standard', sub:'éco' },
   { id:'medium', label:'Premium',  sub:'équilibré' },
@@ -7895,7 +7895,7 @@ function _imgPickQuality(id){ _imgQuality = id; _imgRenderQuality(); }
 function _imgSliderQuality(v){ _imgQuality = ['low','medium','high'][Number(v)] || 'low'; _imgRenderQuality(); }
 function _imgRenderQuality(){
   const g = document.getElementById('imgQualityGrid'); if(!g) return;
-  if(!_imgQuality) _imgQuality = 'medium'; // défaut = Standard (bon rapport qualité/prix sur gpt-image-2)
+  if(!_imgQuality) _imgQuality = 'medium'; // défaut = Premium (medium)
   const val = _IMG_Q_ORDER[_imgQuality];
   const pct = (val/2*100);
   g.style.display = 'block';
@@ -8019,7 +8019,7 @@ function _imgRenderCorrectPresets(){
 function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
 
 // ── « Rendre réaliste » en 1 clic (img2img) : garde la personne/pose/décor, ajoute la micro-texture réelle ──
-const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, framing, composition, clothing and background — do NOT change the scene or the layout. ONLY change the rendering so the image looks like a genuine real photograph taken with a real camera or phone, completely indistinguishable from a real photo and clearly NOT AI-generated. Add highly realistic skin with visible pores and natural skin texture, subtle freckles and tiny blemishes, fine peach fuzz on the face, natural skin-tone variation and slight redness, realistic under-eye texture; a natural detailed hairline with fine baby hairs and individual strands; realistic eyebrows, eyelashes and a detailed iris; natural lip texture with fine vertical lines; realistic skin detail on any visible body part (arms, hands, legs). Remove every plastic, waxy, airbrushed, over-smoothed, glossy or CGI look. Keep natural human imperfections and true-to-life colors. The final result must look like a real, unedited photograph.';
+const _IMG_REALISM_EDIT = 'Keep the EXACT same person, identity, face, pose, framing, composition, clothing and background — do NOT change the scene or the layout. ONLY change the rendering so the image looks like a genuine real photograph taken with a real camera or phone, completely indistinguishable from a real photo and clearly NOT AI-generated. Add highly realistic skin with visible pores and natural skin texture, subtle freckles and tiny blemishes, and clearly visible fine peach fuzz / vellus hair across the cheeks, jaw, upper lip and hairline edges catching the light for a natural soft fuzz, natural skin-tone variation and slight redness, realistic under-eye texture; a natural detailed hairline with fine baby hairs and individual strands; realistic eyebrows with individual hairs, fine individual eyelashes, and highly detailed eyes — a sharp iris with visible fibrous texture and radial striations, a subtle darker limbal ring, crisp catchlights, a moist reflective eye surface and natural waterline; natural lip texture with fine vertical lines; realistic skin detail on any visible body part (arms, hands, legs). Remove every plastic, waxy, airbrushed, over-smoothed, glossy or CGI look. Keep natural human imperfections and true-to-life colors. The final result must look like a real, unedited photograph.';
 
 // Cœur commun des corrections 1-clic (img2img) : prompt back-end détaillé envoyé directement à gpt-image.
 async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
@@ -8749,7 +8749,7 @@ async function _imgDownload(ev){
 // Tarif Google : 0,134 $ en 1K/2K · 0,24 $ en 4K. Trop cher pour chaque brouillon,
 // mais c'est exactement l'usage recommandé : une passe 4K sur une image qu'on garde.
 const _NB_MODEL = 'gemini-3-pro-image-preview';
-const _NB_REFINE_PROMPT = 'Re-render this exact photograph at maximum resolution and detail. Keep the identity, face, pose, framing, composition, colors and lighting strictly identical — change nothing about the content. Restore authentic photographic micro-detail: visible skin pores and micro-relief, fine vellus hair, individual eyebrow hairs and eyelashes, natural uneven skin tone with subtle redness and blemishes, catchlights in the iris, individual hair strands, fabric weave and material texture. No smoothing, no beauty filter, no airbrushing, no reinterpretation of the scene.';
+const _NB_REFINE_PROMPT = 'Re-render this exact photograph at maximum resolution and detail. Keep the identity, face, pose, framing, composition, colors and lighting strictly identical — change nothing about the content. Restore authentic photographic micro-detail: visible skin pores and micro-relief, and clearly visible fine vellus hair / peach fuzz across the cheeks, jaw, upper lip and hairline edges catching the light for a natural soft-focus fuzz. Render highly detailed eyes: a sharp iris with visible fibrous texture and radial striations, a subtle darker limbal ring, crisp catchlights, moist reflective eye surface, fine individual eyelashes and a natural waterline. Also: individual eyebrow hairs, natural uneven skin tone with subtle redness and tiny blemishes, individual hair strands, fabric weave and material texture. No smoothing, no beauty filter, no airbrushing, no reinterpretation of the scene.';
 // Google renvoie l'image en base64 ; le nom du champ a déjà bougé entre versions
 // d'API, donc on cherche la première charge utile plausible au lieu de parier dessus.
 function _nbExtractImage(d){
