@@ -2814,7 +2814,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- Actions -->
             <div style="padding:16px 18px">
-              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (HD)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE</span></button>
+              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (4K)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE</span></button>
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
               <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--border-3)'" onmouseout="this.style.borderColor='var(--border-2)'">🪄 Modifier cette image</button>
               <button onclick="_imgSaveToLibrary(this)" id="imgSaveLibBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Enregistrer dans la bibliothèque</button>
@@ -8677,6 +8677,61 @@ async function _imgDownload(ev){
   }catch(e){ try{ window.open(img.src,'_blank'); }catch(_){ toast('⚠️ Téléchargement impossible'); } }
 }
 
+// ── Nano Banana Pro (Gemini 3 Pro Image) ──
+// Le google-ai-proxy est un passe-plat générique (?path=), il sert déjà Imagen 4 et
+// Veo 3.1 → aucun travail backend pour ajouter ce modèle.
+// Tarif Google : 0,134 $ en 1K/2K · 0,24 $ en 4K. Trop cher pour chaque brouillon,
+// mais c'est exactement l'usage recommandé : une passe 4K sur une image qu'on garde.
+const _NB_MODEL = 'gemini-3-pro-image';
+const _NB_REFINE_PROMPT = 'Re-render this exact photograph at maximum resolution and detail. Keep the identity, face, pose, framing, composition, colors and lighting strictly identical — change nothing about the content. Restore authentic photographic micro-detail: visible skin pores and micro-relief, fine vellus hair, individual eyebrow hairs and eyelashes, natural uneven skin tone with subtle redness and blemishes, catchlights in the iris, individual hair strands, fabric weave and material texture. No smoothing, no beauty filter, no airbrushing, no reinterpretation of the scene.';
+// Google renvoie l'image en base64 ; le nom du champ a déjà bougé entre versions
+// d'API, donc on cherche la première charge utile plausible au lieu de parier dessus.
+function _nbExtractImage(d){
+  const seen = new Set();
+  const walk = (n, depth) => {
+    if(!n || depth > 8) return null;
+    if(typeof n === 'string') return n.length > 2000 ? n : null;
+    if(Array.isArray(n)){ for(const v of n){ const r = walk(v, depth+1); if(r) return r; } return null; }
+    if(typeof n !== 'object' || seen.has(n)) return null;
+    seen.add(n);
+    // chemins connus d'abord
+    for(const k of ['data','b64_json','bytesBase64Encoded','imageBytes']){
+      if(typeof n[k] === 'string' && n[k].length > 2000) return n[k];
+    }
+    for(const k of Object.keys(n)){ const r = walk(n[k], depth+1); if(r) return r; }
+    return null;
+  };
+  return walk(d, 0);
+}
+function _nbAspect(w, h){
+  if(!w || !h) return '9:16';
+  const r = w / h;
+  const cands = [['1:1',1],['9:16',0.5625],['16:9',1.7778],['3:4',0.75],['4:3',1.3333],['2:3',0.6667],['3:2',1.5]];
+  return cands.reduce((best,c)=> Math.abs(r-c[1]) < Math.abs(r-best[1]) ? c : best, cands[0])[0];
+}
+// Repasse une image existante en 4K via Nano Banana Pro. Renvoie une data URL.
+async function _nbRefine4K(token, dataUrl, aspect){
+  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
+  if(!m) throw new Error('Image illisible pour la passe 4K');
+  const res = await fetch(SUPABASE_URL + '/functions/v1/google-ai-proxy?path=/v1beta/interactions', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({
+      model: _NB_MODEL,
+      input: [
+        { type:'text',  text: _NB_REFINE_PROMPT },
+        { type:'image', mime_type: m[1], data: m[2] }
+      ],
+      response_format: { type:'image', mime_type:'image/jpeg', aspect_ratio: aspect, image_size:'4K' }
+    })
+  });
+  const d = await res.json();
+  if(d?.error) throw new Error(d.error.message || String(d.error));
+  const b64 = _nbExtractImage(d);
+  if(!b64) throw new Error('Aucune image renvoyée par Nano Banana Pro');
+  return 'data:image/jpeg;base64,' + b64;
+}
+
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('🔒 Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
@@ -8684,31 +8739,44 @@ async function _imgUpscaleHD(btn){
   if(!img||!img.src){ toast('⚠️ Génère une image d\'abord'); return; }
   _imgPrevSrc = img.src; // mémorise avant HD pour pouvoir revenir en arrière
   const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
-  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration HD… (~30s)';
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration 4K… (~30s)';
   try{
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
-    const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
-    const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
-    let d=await post({ image: img.src, scale_factor:2 });
-    if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur upscale'));
-    if(!d.url && d.id){
-      for(let i=0;i<45 && !d.url;i++){
-        await new Promise(r=>setTimeout(r,2500));
-        const p=await post({poll:d.id});
-        if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
-        if(p.status==='failed'||p.status==='canceled') throw new Error('Upscale échoué');
-        if(p.url) d.url=p.url;
-      }
+    // L'image affichée peut être une URL distante → on la repasse en data URL d'abord.
+    let src = img.src;
+    if(!/^data:/.test(src)){
+      const resp=await fetch(src); const blob=await resp.blob();
+      src = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);});
     }
-    if(!d.url) throw new Error('Délai dépassé — réessaie');
-    // Conversion en data URL (les URLs Replicate expirent ~1h → persistance bibliothèque)
-    let finalUrl = d.url;
-    try{ const resp=await fetch(d.url); const blob=await resp.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }catch(e){}
+    let finalUrl = null;
+    try{
+      finalUrl = await _nbRefine4K(token, src, _nbAspect(img.naturalWidth, img.naturalHeight));
+    }catch(e){
+      // Repli sur Clarity : moins de détail restauré, mais on ne laisse pas l'user sans rien.
+      console.warn('Nano Banana Pro indisponible, repli Clarity :', e);
+      const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
+      const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+      let d=await post({ image: src, scale_factor:2 });
+      if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur upscale'));
+      if(!d.url && d.id){
+        for(let i=0;i<45 && !d.url;i++){
+          await new Promise(r=>setTimeout(r,2500));
+          const p=await post({poll:d.id});
+          if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
+          if(p.status==='failed'||p.status==='canceled') throw new Error('Upscale échoué');
+          if(p.url) d.url=p.url;
+        }
+      }
+      if(!d.url) throw new Error('Délai dépassé — réessaie');
+      finalUrl = d.url;
+      // Les URLs Replicate expirent ~1h → data URL pour la persistance bibliothèque
+      try{ const r2=await fetch(d.url); const b2=await r2.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(b2);}); }catch(e2){}
+    }
     img.src=finalUrl; _imgIsHD=true;
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
-    toast('✨ Détails restaurés en HD');
+    toast('✨ Détails restaurés en 4K');
   }catch(e){ toast('⚠️ '+(e.message||e)); }
   finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
 }
