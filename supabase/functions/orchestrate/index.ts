@@ -174,19 +174,16 @@ const EMOJIS = ['airplane', 'alarm_clock', 'bank', 'bar_chart', 'battery', 'beac
 const BED_NAMES = ['grave', 'tension', 'montee']
 const SECTION_ROLES = ['hook', 'benefice', 'preuve', 'cta', 'outro']
 const MOODS = ['intense', 'dynamique', 'chill']
-// Catalogue des captures d'AvatarAds et des zones MESUREES sur chacune (fractions
-// de l'image). Le chef d'orchestre ne connait que les NOMS ; les coordonnees ne
-// sortent jamais du serveur, donc il ne peut pas inventer un cadrage faux.
+// Captures d'AvatarAds et zones MESUREES sur la page elle-meme (script
+// render-worker/recapture.cjs), pas estimees a l'oeil sur l'image. Les captures
+// sont prises dans l'etat qu'Axel a valide : champs VIDES et « Photo Reel » +
+// 9:16 selectionnes. Le chef d'orchestre ne connait que les NOMS — les
+// coordonnees ne sortent jamais du serveur, un cadrage invente est impossible.
 const TUTO: Record<string, Record<string, number[]>> = {
-  // 'photo-reel' est mesure sur la capture : meme colonne que 'fruit', une ligne
-  // au-dessus (Axel disait « selectionner photo reel » et on encadrait Fruit).
-  'images-ia': { 'photo-reel': [0.240, 0.309, 0.089, 0.087], fruit: [0.240, 0.409, 0.089, 0.087], format: [0.288, 0.668, 0.057, 0.078], prompt: [0.749, 0.818, 0.472, 0.121] },
-  // 'ajouter' etait a cote : l'icone « Ajoute tes images » est mesuree a 0,833/0,274
-  // sur la capture (Axel : « l'ajout d'avatar zoom sur n'importe quoi »).
-  'express': { menu: [0.086, 0.421, 0.150, 0.055], ajouter: [0.833, 0.300, 0.150, 0.160], prompt: [0.783, 0.761, 0.400, 0.110], generer: [0.886, 0.936, 0.150, 0.045] },
-  'generateur': { script: [0.500, 0.400, 0.500, 0.200], lancer: [0.860, 0.900, 0.180, 0.060] },
+  'images-ia': { 'menu': [0.288, 0.117, 0.209, 0.059], 'photo-reel': [0.240, 0.311, 0.089, 0.087], 'pixar': [0.336, 0.311, 0.089, 0.087], 'fruit': [0.240, 0.409, 0.089, 0.087], 'ugc': [0.336, 0.409, 0.089, 0.087], 'format': [0.288, 0.666, 0.057, 0.078], 'prompt': [0.749, 0.818, 0.472, 0.121], 'generer': [0.896, 0.923, 0.177, 0.062] },
+  'express': { 'menu': [0.290, 0.133, 0.210, 0.084], 'realiste': [0.242, 0.272, 0.091, 0.071], 'cartoon': [0.338, 0.272, 0.091, 0.071], 'portrait': [0.242, 0.501, 0.091, 0.065], 'duree': [0.290, 0.620, 0.210, 0.075], 'qualite': [0.290, 0.743, 0.210, 0.122], 'voix': [0.290, 0.918, 0.187, 0.067], 'ajouter': [0.501, 0.786, 0.146, 0.217], 'prompt': [0.786, 0.759, 0.394, 0.151], 'generer': [0.886, 0.936, 0.189, 0.076] },
 }
-const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express', 'generateur': '03-generateur' }
+const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express' }
 
 const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle']
@@ -451,9 +448,9 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
   DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CETTE LISTE, rien d'autre :
-    images-ia  -> photo-reel | fruit | format | prompt
-    express    -> menu | ajouter | prompt | generer
-    generateur -> script | lancer
+    images-ia  -> menu | photo-reel | pixar | fruit | ugc | format | prompt | generer
+    express    -> menu | realiste | cartoon | portrait | duree | qualite | voix | ajouter | prompt | generer
+  COUVRE CHAQUE ETAPE QU'IL DECRIT, dans l'ordre, sans en sauter : s'il enumere « tu vas dans Images IA, tu selectionnes photo reel, tu mets le format TikTok, tu decris ton image », cela fait QUATRE lignes (menu, photo-reel, format, prompt). Une etape decrite sans ligne, c'est un moment de la video ou l'on ne montre rien.
   QUATRIEME CHAMP, seulement sur une zone "prompt" : ce que l'utilisateur taperait dans le champ. Ecris-le court (moins de 60 caracteres) et dans SES mots — il s'ecrira lettre par lettre dans le vrai champ de l'app pendant qu'il parle, avec le bruit du clavier. Laisse vide sur toutes les autres zones.
   ATTENTION AU MOT EXACT : s'il dit « selectionner photo reel », la zone est photo-reel, pas fruit. Ne prends pas la case qui est deja selectionnee sur la capture, prends CELLE QU'IL NOMME.
   Une ligne par etape decrite, dans l'ordre du script. Si l'audio ne decrit AUCUNE manipulation dans l'outil, laisse la liste VIDE — ne montre jamais une interface pour meubler.
@@ -1188,7 +1185,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // l'identique. Une (ecran, zone) deja montree est ignoree — le modele
       // propose souvent plusieurs mots qui pointent vers la meme case.
       if (tutoShots.some((sh) => sh.screen === screen && (sh.z === rect || sh.z2 === rect))) continue
-      if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 1.2) prev.z2 = rect
+      if (prev && prev.screen === screen && !prev.z2 && w.start - prev.t < 2.0) prev.z2 = rect
       else tutoShots.push({ t: w.start, screen, z: rect, text: zone.includes('prompt') ? String(tu.text || '').slice(0, 60) : '' })
     }
     for (let i = 0; i < tutoShots.length; i++) {
@@ -1199,9 +1196,11 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // autant de temps ». On tient 5 s quand du texte s'ecrit (il faut le lire),
       // 3,5 s sinon.
       const end = r2(Math.min(start + (sh.text ? 5 : 3.5), nextT - 0.3, D - 0.4))
-      // UN PLAN TROP COURT NE SERT A RIEN : sous 2,2 s on n'a pas le temps de lire
-      // ce qui est encadre. Mieux vaut sauter l'etape que la montrer une seconde.
-      if (end <= start + (sh.text ? 3.2 : 2.2)) continue
+      // Un plan doit rester lisible, mais Axel enchaine les etapes vite (« tu vas
+      // dans Images IA, tu selectionnes photo reel, tu mets le format ») : un seuil
+      // trop haut supprimait justement les etapes qu'il reprochait de ne pas voir.
+      // 1,3 s suffit pour un simple cadre ; il en faut 3,2 quand du texte s'ecrit.
+      if (end <= start + (sh.text ? 3.2 : 1.3)) continue
       const z = sh.z, z2 = sh.z2
       slides.push({
         type: 'card', layout: 'full', motif: '', anim: 'screen', emoji: '',
