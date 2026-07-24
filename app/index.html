@@ -5199,7 +5199,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-24a-nettoyage-lot'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-24b-seuil-adaptatif'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -21462,9 +21462,11 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   const sr   = decoded.sampleRate;
   const data = decoded.getChannelData(0);
 
-  // Paramètres selon le niveau
+  // Paramètres selon le niveau — le niveau ne joue QUE sur les durées, plus sur
+  // le seuil : l'ancien seuil fixe « Avancé » (0.03) passait AU-DESSUS d'une voix
+  // enregistrée doucement (DJI gain bas) et la classait silence — vu par Axel :
+  // 26.5s coupées sur 52s en 62 morceaux, voix hachée.
   const isStrong  = _acLevel === 'strong';
-  const threshold = isStrong ? 0.03  : 0.015;  // RMS seuil (forte = + sensible)
   const minSilMs  = isStrong ? 180   : 350;    // durée mini silence à couper
   const keepMs    = isStrong ? 40    : 80;     // marge autour des mots
 
@@ -21472,13 +21474,22 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   const minSilSmp = Math.round(minSilMs/1000 * sr);
   const keepSmp   = Math.round(keepMs/1000  * sr);
 
-  // Classifier fenêtres
-  const voiced = [];
+  // RMS par fenêtre
+  const rmsArr = [];
   for(let i=0; i<data.length; i+=winSz){
     let rms=0; const end=Math.min(i+winSz,data.length);
     for(let j=i;j<end;j++) rms+=data[j]*data[j];
-    voiced.push(Math.sqrt(rms/(end-i)) >= threshold);
+    rmsArr.push(Math.sqrt(rms/(end-i)));
   }
+  // Seuil ADAPTATIF : plancher de bruit du fichier (20e centile) × marge, borné
+  // pour rester nettement sous le niveau de voix (90e centile). Un fichier doux
+  // comme un fichier fort trouvent chacun leur seuil juste.
+  const sorted = [...rmsArr].sort((a,b) => a-b);
+  const q = (p) => sorted[Math.min(sorted.length-1, Math.floor(p*sorted.length))] || 0;
+  const noiseFloor = q(0.2);
+  const voiceLevel = Math.max(q(0.9), 0.01);
+  const threshold  = Math.min(Math.max(noiseFloor*3, isStrong ? 0.012 : 0.008), voiceLevel*0.35);
+  const voiced = rmsArr.map((r) => r >= threshold);
 
   // Construire segments à garder
   const keepSegs = [];
