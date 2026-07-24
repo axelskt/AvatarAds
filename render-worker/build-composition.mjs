@@ -98,31 +98,43 @@ export function buildComposition(plan, opts = {}) {
   // (440-600 px) : étirées sur une carte de 820 px elles sont floues, et surtout elles
   // ne montrent rien — un écran d'application ne se lit pas en 2 s. Ce style n'affiche
   // donc QUE des animations. Les autres styles gardent le b-roll.
-  const rawBroll = wordMode ? [] : (plan.broll || []).filter((b) => assetFiles[b.assetId])
+  // ⚠️ pas de `wordMode ? [] :` ici — ce ternaire jetait TOUTES les images
+  // utilisateur en mode « Mot par mot », alors que le style en fait son visuel
+  // principal (tout le bloc wordMode ci-dessous — fenêtres, moments forts — était
+  // du code mort). Vu par Axel : sa photo n'apparaissait jamais, remplacée par
+  // les animations génériques.
+  const rawBroll = (plan.broll || []).filter((b) => assetFiles[b.assetId])
     .slice().sort((a, b) => a.start - b.start)
   if (wordMode && rawBroll.length) {
+    // Une IMAGE utilisateur prime sur une animation générique : quand les deux
+    // tombent sur le même passage, l'animation recouvrait la photo (vu par Axel :
+    // le picto « avatar » s'affichait à la place de sa photo Bali). La règle du
+    // style : les images sont le visuel principal, les formes animées ne comblent
+    // que ce qui reste — on retire donc les scènes animées recouvertes.
+    for (let i = slides.length - 1; i >= 0; i--) {
+      const sl = slides[i]
+      if (sl.anim && rawBroll.some((b) => sl.start < b.end && sl.end > b.start)) slides.splice(i, 1)
+    }
     const busy = [...slides.filter((sl) => sl.anim).map((sl) => sl.start)].sort((a, b) => a - b)
     rawBroll.forEach((b, i) => {
       const nextVisual = Math.min(
         rawBroll[i + 1] ? rawBroll[i + 1].start : D,
         busy.find((t) => t > b.start) ?? D,
       )
-      b.end = Math.min(Math.max(b.end, Math.min(b.start + 4, nextVisual - 0.2)), D - 0.1)
-      if (b.end - b.start > 4.2) b.end = r2(b.start + 4.2)
+      // plancher 2.5s / plafond 3s (etait 4/4.2) : « reste trop longtemps » — Axel.
+      // Une carte plus courte suit mieux la voix ; le plancher evite juste le flash.
+      b.end = Math.min(Math.max(b.end, Math.min(b.start + 2.5, nextVisual - 0.2)), D - 0.1)
+      if (b.end - b.start > 3) b.end = r2(b.start + 3)
     })
   }
   // MOMENTS FORTS (#135) : deux fois dans la video, l'image passe au centre, plus
   // grande, en montant depuis le bas — puis disparait. Ca casse le rythme d'une page
   // blanche ou tout se ressemble. On prend les deux visuels les plus longs, espaces.
   const heroIds = new Set()
-  if (wordMode) {
-    const cand = rawBroll.map((b, i) => ({ i, b, len: b.end - b.start })).sort((x, y) => y.len - x.len)
-    for (const c of cand) {
-      if (heroIds.size >= 2) break
-      if ([...heroIds].some((j) => Math.abs(rawBroll[j].start - c.b.start) < D * 0.25)) continue
-      heroIds.add(c.i)
-    }
-  }
+  // « moments forts » desactives en mode word : l'image plein centre recouvrait le
+  // sous-titre — or ici le mot EST le contenu (Axel : « la photo cache les
+  // sous-titres, on ne voit pas le CTA »). La carte standard se pose au-dessus de
+  // la bande du mot : image ET texte restent lisibles.
   const brolls = rawBroll.map((b, i) => ({
     hero: heroIds.has(i),
     id: 'broll' + i,
