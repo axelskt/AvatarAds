@@ -3019,7 +3019,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- Upload audio standalone -->
-          <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFile(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;border-radius:16px;cursor:pointer;margin-bottom:18px;background:var(--panel-1)">
+          <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFiles(event.dataTransfer.files)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;border-radius:16px;cursor:pointer;margin-bottom:18px;background:var(--panel-1)">
             <div id="acDropContent" style="display:flex;flex-direction:column;align-items:center;gap:8px">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
               <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier audio ici</div>
@@ -3031,7 +3031,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="acFileName" style="font-size:13px;font-weight:700"></div>
             </div>
           </div>
-          <input type="file" id="acFileIn" accept="audio/*" style="display:none" onchange="_acHandleFile(this.files[0])">
+          <input type="file" id="acFileIn" accept="audio/*" multiple style="display:none" onchange="_acHandleFiles(this.files);this.value=''">
 
           <!-- Niveau de nettoyage -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -5199,7 +5199,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-20u-musique-off'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-24a-nettoyage-lot'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -21448,6 +21448,73 @@ function _acDrawWaveform(data, sr, keepSegs, totalLen){
   }
 }
 
+// ── Cœur du nettoyage (sans UI) : débruitage optionnel + coupe des silences.
+// Utilisé par l'analyse simple ET par le nettoyage par lot — une seule vérité.
+async function _acCleanCore(srcBlob, onAfterDenoise){
+  let working = srcBlob;
+  if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
+  if(onAfterDenoise) onAfterDenoise();
+  const arrBuf  = await working.arrayBuffer();
+  const ac      = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await ac.decodeAudioData(arrBuf);
+  await ac.close();
+
+  const sr   = decoded.sampleRate;
+  const data = decoded.getChannelData(0);
+
+  // Paramètres selon le niveau
+  const isStrong  = _acLevel === 'strong';
+  const threshold = isStrong ? 0.03  : 0.015;  // RMS seuil (forte = + sensible)
+  const minSilMs  = isStrong ? 180   : 350;    // durée mini silence à couper
+  const keepMs    = isStrong ? 40    : 80;     // marge autour des mots
+
+  const winSz    = Math.round(0.05 * sr);
+  const minSilSmp = Math.round(minSilMs/1000 * sr);
+  const keepSmp   = Math.round(keepMs/1000  * sr);
+
+  // Classifier fenêtres
+  const voiced = [];
+  for(let i=0; i<data.length; i+=winSz){
+    let rms=0; const end=Math.min(i+winSz,data.length);
+    for(let j=i;j<end;j++) rms+=data[j]*data[j];
+    voiced.push(Math.sqrt(rms/(end-i)) >= threshold);
+  }
+
+  // Construire segments à garder
+  const keepSegs = [];
+  let segStart = -1;
+  for(let w=0; w<voiced.length; w++){
+    if(voiced[w] && segStart<0) segStart = Math.max(0, w*winSz - keepSmp);
+    if(!voiced[w] && segStart>=0){
+      let silEnd=w;
+      while(silEnd<voiced.length && !voiced[silEnd]) silEnd++;
+      const silSmp=(silEnd-w)*winSz;
+      if(silSmp >= minSilSmp){
+        keepSegs.push({ start:segStart, end:Math.min(w*winSz+keepSmp, data.length) });
+        segStart=-1; w=silEnd-1;
+      }
+    }
+  }
+  if(segStart>=0) keepSegs.push({ start:segStart, end:data.length });
+  // Fallback : si rien trouvé, garder tout
+  if(!keepSegs.length) keepSegs.push({ start:0, end:data.length });
+
+  // Construire audio nettoyé
+  const nCh = decoded.numberOfChannels;
+  const totalSmp = keepSegs.reduce((s,seg)=>s+(seg.end-seg.start),0);
+  const offCtx = new OfflineAudioContext(nCh, totalSmp, sr);
+  let offset=0;
+  for(const seg of keepSegs){
+    const len=seg.end-seg.start;
+    const src=offCtx.createBufferSource();
+    src.buffer=decoded; src.connect(offCtx.destination);
+    src.start(offset/sr, seg.start/sr, len/sr);
+    offset+=len;
+  }
+  const cleanBuf = await offCtx.startRendering();
+  return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs };
+}
+
 async function _acAnalyze(){
   if(!_acAudioBlob){ toast('⚠️ Charge un fichier audio d\'abord'); return; }
   // 1 crédit fixe pour « Supprimer les silences » — le débruitage éventuel est inclus (0 crédit en plus)
@@ -21461,74 +21528,17 @@ async function _acAnalyze(){
 
   try {
     // #69 · débruitage d'abord si l'option « Supprimer les bruits de fond » est activée
-    if(_acDenoiseEnabled){
-      if(btn) btn.textContent = '⏳ Débruitage…';
-      _acAudioBlob = await denoiseAudioFile(_acAudioBlob);
-      if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_acAudioBlob);
-      if(btn) btn.textContent = '⏳ Analyse des silences…';
-    }
-    const arrBuf  = await _acAudioBlob.arrayBuffer();
-    const ac      = new (window.AudioContext || window.webkitAudioContext)();
-    const decoded = await ac.decodeAudioData(arrBuf);
-    await ac.close();
-
-    const sr   = decoded.sampleRate;
-    const data = decoded.getChannelData(0);
-
-    // Paramètres selon le niveau
-    const isStrong  = _acLevel === 'strong';
-    const threshold = isStrong ? 0.03  : 0.015;  // RMS seuil (forte = + sensible)
-    const minSilMs  = isStrong ? 180   : 350;    // durée mini silence à couper
-    const keepMs    = isStrong ? 40    : 80;     // marge autour des mots
-
-    const winSz    = Math.round(0.05 * sr);
-    const minSilSmp = Math.round(minSilMs/1000 * sr);
-    const keepSmp   = Math.round(keepMs/1000  * sr);
-
-    // Classifier fenêtres
-    const voiced = [];
-    for(let i=0; i<data.length; i+=winSz){
-      let rms=0; const end=Math.min(i+winSz,data.length);
-      for(let j=i;j<end;j++) rms+=data[j]*data[j];
-      voiced.push(Math.sqrt(rms/(end-i)) >= threshold);
-    }
-
-    // Construire segments à garder
-    const keepSegs = [];
-    let segStart = -1;
-    for(let w=0; w<voiced.length; w++){
-      if(voiced[w] && segStart<0) segStart = Math.max(0, w*winSz - keepSmp);
-      if(!voiced[w] && segStart>=0){
-        let silEnd=w;
-        while(silEnd<voiced.length && !voiced[silEnd]) silEnd++;
-        const silSmp=(silEnd-w)*winSz;
-        if(silSmp >= minSilSmp){
-          keepSegs.push({ start:segStart, end:Math.min(w*winSz+keepSmp, data.length) });
-          segStart=-1; w=silEnd-1;
-        }
-      }
-    }
-    if(segStart>=0) keepSegs.push({ start:segStart, end:data.length });
-    // Fallback : si rien trouvé, garder tout
-    if(!keepSegs.length) keepSegs.push({ start:0, end:data.length });
+    if(_acDenoiseEnabled && btn) btn.textContent = '⏳ Débruitage…';
+    const r = await _acCleanCore(_acAudioBlob, () => { if(btn) btn.textContent = '⏳ Analyse des silences…'; });
+    _acAudioBlob = r.working;
+    if(_acDenoiseEnabled && typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(_acAudioBlob);
+    const { decoded, cleanBuf, keepSegs } = r;
+    const isStrong = _acLevel === 'strong';
 
     // Dessiner la waveform avec segments supprimés
-    _acDrawWaveform(data, sr, keepSegs, data.length);
+    _acDrawWaveform(r.data, r.sr, keepSegs, r.data.length);
 
-    // Construire audio nettoyé
-    const nCh = decoded.numberOfChannels;
-    const totalSmp = keepSegs.reduce((s,seg)=>s+(seg.end-seg.start),0);
-    const offCtx = new OfflineAudioContext(nCh, totalSmp, sr);
-    let offset=0;
-    for(const seg of keepSegs){
-      const len=seg.end-seg.start;
-      const src=offCtx.createBufferSource();
-      src.buffer=decoded; src.connect(offCtx.destination);
-      src.start(offset/sr, seg.start/sr, len/sr);
-      offset+=len;
-    }
-    const cleanBuf = await offCtx.startRendering();
-    _acCleanBlob   = _audioBufferToWavBlob(cleanBuf);
+    _acCleanBlob   = r.blob;
     const removedS = Math.round((decoded.duration - cleanBuf.duration)*10)/10;
     const origS    = Math.round(decoded.duration);
     const cleanS   = Math.round(cleanBuf.duration);
@@ -21624,6 +21634,7 @@ function _acReset(){
   // Vider l'état
   _acAudioBlob  = null;
   _acCleanBlob  = null;
+  _acBatch      = null;
   // Reset UI
   const dropzone = document.getElementById('acDropzone');
   const fileInfo = document.getElementById('acFileInfo');
@@ -21659,6 +21670,141 @@ async function _acSendToGenerator(){
   goToStep(3);
   toast('✅ Audio nettoyé injecté dans le Générateur (étape Voix)');
 }
+
+// ── Nettoyage par LOT : plusieurs audios d'un coup ──────────────────────────
+// 1 fichier → flux classique inchangé ; plusieurs → file d'attente séquentielle,
+// 1 crédit par fichier (remboursé individuellement en cas d'échec), puis
+// téléchargement individuel ou ZIP au choix (case décochée par défaut).
+let _acBatch = null; // { items:[{file,outName,status,blob,removedS,cleanS,err}], running, zip }
+
+function _acHandleFiles(files){
+  const list = [...(files||[])].filter(f => f && (String(f.type).startsWith('audio') || /\.(wav|mp3|m4a|aac|ogg|flac)$/i.test(f.name)));
+  if(!list.length) return;
+  if(list.length === 1){ _acBatch = null; _acHandleFile(list[0]); return; }
+  _acBatch = {
+    items: list.map(f => ({ file:f, outName: f.name.replace(/\.[^.]+$/,'') + '-clean.wav', status:'attente', blob:null })),
+    running:false, zip:false,
+  };
+  document.getElementById('acDropContent').style.display = 'none';
+  document.getElementById('acFileInfo').style.display    = 'block';
+  document.getElementById('acFileName').textContent      = list.length + ' fichiers sélectionnés';
+  { const si=document.getElementById('acSourceInfo'); if(si) si.style.display='none'; }
+  const btn = document.getElementById('acAnalyzeBtn');
+  if(btn){ btn.disabled = true; btn.style.opacity = '.5'; } // le lot a son propre bouton
+  document.getElementById('acTip').style.display = 'none';
+  const ww = document.getElementById('acWaveWrap'); if(ww) ww.style.display = 'none';
+  _acBatchRender();
+}
+
+function _acBatchRender(){
+  const resEl = document.getElementById('acResult');
+  if(!resEl || !_acBatch) return;
+  const cost = (CREDIT_COSTS.audioClean || 1) * _acBatch.items.length;
+  const done = _acBatch.items.filter(i => i.status === 'ok').length;
+  const rows = _acBatch.items.map((it, i) => {
+    const ic  = it.status==='ok' ? '✅' : it.status==='erreur' ? '⚠️' : it.status==='cours' ? '⏳' : '🕐';
+    const sub = it.status==='ok' ? (it.cleanS + 's · −' + it.removedS + 's de silences')
+              : it.status==='erreur' ? (it.err || 'erreur') : it.status==='cours' ? 'nettoyage…' : 'en attente';
+    const dl  = it.status==='ok' ? '<button onclick="_acBatchDl('+i+')" style="padding:6px 11px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-family:var(--font);font-size:11.5px;font-weight:700;cursor:pointer;flex:0 0 auto">⬇</button>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:var(--surface)">'
+      + '<span style="flex:0 0 auto">'+ic+'</span>'
+      + '<span class="col" style="flex:1;min-width:0;line-height:1.35"><span style="font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+it.file.name.replace(/</g,'&lt;')+'</span>'
+      + '<span style="font-size:10.5px;font-family:var(--mono);color:var(--text3)">'+sub+'</span></span>'
+      + dl + '</div>';
+  }).join('');
+  const allDone = !_acBatch.running && done > 0;
+  const footer = _acBatch.running
+    ? '<div style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;padding:6px">⏳ '+done+'/'+_acBatch.items.length+' nettoyés…</div>'
+    : (allDone
+      ? '<label style="display:flex;align-items:center;gap:8px;padding:4px 2px 10px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" '+(_acBatch.zip?'checked':'')+' onchange="_acBatch.zip=this.checked" style="accent-color:var(--accent)">📦 Regrouper en un seul fichier ZIP</label>'
+        + '<button onclick="_acBatchDlAll()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Tout télécharger ('+done+' fichier'+(done>1?'s':'')+')</button>'
+        + '<button onclick="_acReset()" style="width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer">↺ Faire un autre nettoyage</button>'
+      : '<button onclick="_acBatchRun()" style="width:100%;padding:11px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer;margin-bottom:8px">🪄 Nettoyer les '+_acBatch.items.length+' fichiers · '+cost+' cr</button>'
+        + '<button onclick="_acReset()" style="width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer">↺ Annuler</button>');
+  resEl.innerHTML = '<div style="background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:10px;letter-spacing:.04em">NETTOYAGE PAR LOT — '+_acBatch.items.length+' FICHIERS</div>'
+    + rows + footer + '</div>';
+}
+
+async function _acBatchRun(){
+  if(!_acBatch || _acBatch.running) return;
+  _acBatch.running = true; _acBatchRender();
+  for(const it of _acBatch.items){
+    if(it.status === 'ok') continue;
+    it.status = 'cours'; _acBatchRender();
+    creditsFlowBegin();
+    if(!(await spendCreditsFor(CREDIT_COSTS.audioClean, 'audioclean'))){
+      it.status = 'erreur'; it.err = 'crédits insuffisants'; _acBatch.running = false; _acBatchRender(); return;
+    }
+    try {
+      const r = await _acCleanCore(it.file);
+      it.blob = r.blob;
+      it.removedS = Math.round((r.decoded.duration - r.cleanBuf.duration)*10)/10;
+      it.cleanS   = Math.round(r.cleanBuf.duration);
+      it.status = 'ok';
+      _libAutoSaveAudio(new File([it.blob], it.outName, { type:'audio/wav' }), it.outName.replace(/\.wav$/,''), it.cleanS + 's', '🪄');
+    } catch(e){
+      console.error('_acBatchRun:', it.file.name, e);
+      await creditsFlowRefund();
+      it.status = 'erreur'; it.err = String(e.message||e).slice(0,60);
+    }
+    _acBatchRender();
+  }
+  _acBatch.running = false; _acBatchRender();
+  const ok = _acBatch.items.filter(i=>i.status==='ok').length;
+  toast('✅ Lot terminé — '+ok+'/'+_acBatch.items.length+' audios nettoyés');
+}
+
+function _acBatchDl(i){
+  const it = _acBatch && _acBatch.items[i];
+  if(!it || !it.blob) return;
+  const url = URL.createObjectURL(it.blob);
+  const a = document.createElement('a'); a.href = url; a.download = it.outName; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+async function _acBatchDlAll(){
+  if(!_acBatch) return;
+  const done = _acBatch.items.filter(it => it.blob);
+  if(!done.length){ toast('⚠️ Aucun fichier nettoyé'); return; }
+  if(!_acBatch.zip){
+    // par défaut : chaque fichier individuellement (léger décalage pour ne pas être bloqué par le navigateur)
+    for(let i=0;i<done.length;i++){ setTimeout(() => _acBatchDl(_acBatch.items.indexOf(done[i])), i*350); }
+    return;
+  }
+  // ZIP « stockage » (sans compression — le WAV ne se compresse pas) écrit à la main : zéro dépendance
+  const enc = new TextEncoder(); const parts = []; const central = []; let offset = 0;
+  for(const it of done){
+    const nameU8 = enc.encode(it.outName);
+    const dataU8 = new Uint8Array(await it.blob.arrayBuffer());
+    const crc = _acZipCrc32(dataU8);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,dataU8.length,true); lh.setUint32(22,dataU8.length,true);
+    lh.setUint16(26,nameU8.length,true);
+    parts.push(lh.buffer, nameU8, dataU8);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,dataU8.length,true); ch.setUint32(24,dataU8.length,true);
+    ch.setUint16(28,nameU8.length,true); ch.setUint32(42,offset,true);
+    central.push(ch.buffer, nameU8);
+    offset += 30 + nameU8.length + dataU8.length;
+  }
+  const centralSize = central.reduce((s,b) => s + (b.byteLength || b.length), 0);
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true);
+  eocd.setUint16(8,done.length,true); eocd.setUint16(10,done.length,true);
+  eocd.setUint32(12,centralSize,true); eocd.setUint32(16,offset,true);
+  const zip = new Blob([...parts, ...central, eocd.buffer], { type:'application/zip' });
+  const url = URL.createObjectURL(zip);
+  const a = document.createElement('a'); a.href = url; a.download = 'audios-clean.zip'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+const _acZipCrcTable = (() => { const t = new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c; }
+  return t; })();
+function _acZipCrc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = _acZipCrcTable[(c ^ u8[i]) & 0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
 
 // ── Cartoon Module Voix ─────────────────────────────────────
 let _cartoonVoiceFile = null;
