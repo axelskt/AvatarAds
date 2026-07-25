@@ -2282,6 +2282,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button onclick="nav('library')" style="flex:1;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</button>
               </div>
               <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);border:1px solid rgba(255,143,94,.6);border-radius:12px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.25);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">🎼 Montage IA <span style="font-weight:600;font-size:12px;opacity:.78">— zooms, b-roll, musique &amp; sous-titres posés automatiquement</span></button>
+              <!-- 📤 Publier partout (#116) — cross-post Postiz, visible compte developer uniquement -->
+              <div id="postizWrap" style="display:none;margin-top:8px">
+                <button id="postizBtn" onclick="postizTogglePanel()" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--accent-line);border-radius:12px;color:var(--text);font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--accent-line)'">📤 Publier partout <span style="font-weight:600;font-size:11px;opacity:.65">FB · Insta · Threads · X · YouTube (dev)</span></button>
+                <div id="postizPanel" style="display:none;margin-top:8px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px">
+                  <div id="postizChannels" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:12.5px;font-family:var(--mono);color:var(--text2)">Chargement des canaux…</div>
+                  <textarea id="postizCaption" rows="3" placeholder="Légende de la publication (même texte partout ; tronquée auto pour X/Threads)…" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--font);font-size:13px;padding:9px;resize:vertical"></textarea>
+                  <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:8px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer">🚀 Publier maintenant</button>
+                  <div id="postizStatus" style="display:none;margin-top:7px;font-size:11.5px;font-family:var(--mono);color:var(--text2)"></div>
+                </div>
+              </div>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -5199,7 +5209,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-24b-seuil-adaptatif'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26a-publier-partout'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -17237,6 +17247,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     finalBlob = ffBlob;
   }
 
+  window._aaPublishBlob = finalBlob; // 📤 gardé pour « Publier partout » (#116)
+  _postizRefreshBtn();
   const url = URL.createObjectURL(finalBlob);
   results.composedUrl = url;
   document.getElementById('hedraVideo').src = url;
@@ -17250,6 +17262,71 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   a.href = url; a.download = 'avatarads-video-' + qCfg.label + '.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   resetBtn();
+}
+
+// ── 📤 Publier partout (#116, compte developer) — cross-post via Postiz ──────
+// Le MP4 final composé est gardé dans window._aaPublishBlob (posé à la fin de
+// composeVideo). Publication : upload du blob dans render-media (bucket privé,
+// chemin {uid}/postiz-*.mp4) → l'edge function postiz-publish le pousse vers
+// Postiz avec la clé API côté serveur (elle ne transite jamais par le client).
+const POSTIZ_FN = SUPABASE_URL + '/functions/v1/postiz-publish';
+let _postizChannels = null;
+function _aaIsDev(){ return !!(typeof currentMember!=='undefined' && currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner)); }
+function _postizRefreshBtn(){
+  const w = document.getElementById('postizWrap');
+  if(w) w.style.display = (_aaIsDev() && window._aaPublishBlob) ? 'block' : 'none';
+}
+async function _postizCall(payload){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) throw new Error('non connecté');
+  const r = await fetch(POSTIZ_FN, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token, 'apikey': SUPABASE_KEY }, body: JSON.stringify(payload) });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.detail || d.error || ('HTTP '+r.status));
+  return d;
+}
+async function postizTogglePanel(){
+  const p = document.getElementById('postizPanel');
+  const open = p.style.display === 'none';
+  p.style.display = open ? 'block' : 'none';
+  if(!open) return;
+  const box = document.getElementById('postizChannels');
+  if(!_postizChannels){
+    try {
+      box.textContent = 'Chargement des canaux…';
+      const d = await _postizCall({ action:'channels' });
+      _postizChannels = (d.channels||[]).filter(c=>!c.disabled);
+    } catch(e){ box.textContent = '✗ ' + e.message; _postizChannels = null; return; }
+  }
+  box.innerHTML = _postizChannels.map(c =>
+    '<label style="display:flex;align-items:center;gap:5px;padding:5px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer">'
+    + '<input type="checkbox" checked value="'+c.id+'" style="accent-color:var(--accent-2)">'
+    + (c.identifier||'') + ' · ' + (c.name||'') + '</label>').join('') || 'Aucun canal connecté';
+}
+async function postizPublish(btn){
+  const blob = window._aaPublishBlob;
+  if(!blob){ toast('⚠️ Compose d\'abord la vidéo (bouton ⬇ Télécharger)'); return; }
+  const caption = (document.getElementById('postizCaption').value||'').trim();
+  if(!caption){ toast('⚠️ Écris une légende avant de publier'); return; }
+  const ids = [...document.querySelectorAll('#postizChannels input:checked')].map(i=>i.value);
+  if(!ids.length){ toast('⚠️ Choisis au moins un réseau'); return; }
+  const st = document.getElementById('postizStatus');
+  btn.disabled = true; btn.textContent = '⏳ Publication…'; st.style.display='block';
+  try {
+    const { data:{ user } } = await sb.auth.getUser();
+    const path = user.id + '/postiz-' + Date.now() + '.mp4';
+    st.textContent = '1/2 · Envoi de la vidéo (' + (blob.size/1024/1024).toFixed(1) + ' Mo)…';
+    const up = await sb.storage.from('render-media').upload(path, blob, { contentType:'video/mp4', upsert:true });
+    if(up.error) throw new Error('upload : ' + up.error.message);
+    st.textContent = '2/2 · Publication sur ' + ids.length + ' réseau(x)…';
+    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids });
+    st.textContent = '✅ Publié : ' + (d.published||[]).join(', ');
+    toast('🚀 Publié sur ' + (d.published||[]).length + ' réseau(x) — vérifie le calendrier Postiz');
+  } catch(e){
+    st.textContent = '✗ ' + e.message;
+    toast('✗ Publication : ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 Publier maintenant';
+  }
 }
 
 // ── Extrait l'audio d'un fichier vidéo/audio → WAV léger pour Whisper ──
