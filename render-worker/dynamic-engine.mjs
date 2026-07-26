@@ -71,9 +71,14 @@ function buildPanels(plan, D) {
   }
   flush()
 
+  // SEULES les phrases avec un mot-clé deviennent un panneau. Les phrases de
+  // liaison tapées à l'écran étaient exactement « les trucs typiques » qu'Axel a
+  // refusés (7 captures) : la voix les porte, la scène précédente respire, point.
   const panels = [
     ...anims.map((a) => ({ kind: a.kind, t0: a.t0, t1: a.t1, slide: a.slide })),
-    ...phrases.map((ws) => ({ kind: 'typo', t0: r2(Math.max(0, ws[0].start - 0.12)), t1: r2(ws[ws.length - 1].end + 0.3), words: ws })),
+    ...phrases
+      .filter((ws) => ws.some((w) => w.accent || w.text.length >= 11))
+      .map((ws) => ({ kind: 'typo', t0: r2(Math.max(0, ws[0].start - 0.12)), t1: r2(ws[ws.length - 1].end + 0.3), words: ws })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const out = []
@@ -115,35 +120,22 @@ function buildPanels(plan, D) {
 function typoContent(id, p, tone, liveT0) {
   const ws = p.words
   const accIdx = ws.findIndex((w) => w.accent || w.text.length >= 11)
-  let html = '', js = '', sfx = []
-
-  if (accIdx >= 0) {
-    const acc = ws[accIdx]
-    const before = ws.slice(Math.max(0, accIdx - 2), accIdx).map((w) => w.text).join(' ')
-    const after = ws.slice(accIdx + 1, accIdx + 3).map((w) => w.text).join(' ')
-    const fz = fitSize(acc.text, 900, 84, 168)
-    const tAt = Math.max(liveT0, acc.start)
-    html = `<div class="stack">
-      ${before ? `<div id="${id}b4" style="font-size:52px;font-weight:600;color:${tone.mute};opacity:0">${esc(before)}</div>` : ''}
+  if (accIdx < 0) return { html: '', js: '', sfx: [] }   // sans mot-clé, pas de texte
+  const acc = ws[accIdx]
+  // le VERBE juste avant (1 mot max) + LE MOT — jamais de fragment de fin de
+  // phrase en dessous (« et je » orphelin = incompréhensible, retour d'Axel)
+  const before = accIdx > 0 ? ws[accIdx - 1].text : ''
+  const fz = fitSize(acc.text, 900, 84, 168)
+  const tAt = Math.max(liveT0, acc.start)
+  const html = `<div class="stack">
+      ${before ? `<div id="${id}b4" style="font-size:54px;font-weight:600;color:${tone.mute};opacity:0">${esc(before)}</div>` : ''}
       <div class="disp" id="${id}acc" style="font-size:${fz}px;color:${tone.ink};opacity:0;white-space:nowrap">${esc(acc.text)}</div>
-      ${after ? `<div id="${id}af" style="font-size:52px;font-weight:600;color:${tone.mute};opacity:0">${esc(after)}</div>` : ''}
     </div>`
-    if (before) js += `\n  tl.fromTo('#${id}b4',{y:-46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, ws[Math.max(0, accIdx - 2)].start))});`
-    js += `\n  tl.fromTo('#${id}acc',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.42,ease:'power4.out'},${r2(tAt)});`
-    js += `\n  tl.to('#${id}acc',{scale:1.05,duration:${r2(Math.max(0.3, p.t1 - tAt - 0.45))},ease:'none'},${r2(tAt + 0.42)});`
-    if (after) js += `\n  tl.fromTo('#${id}af',{y:46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, ws[accIdx + 1].start))});`
-    sfx.push({ kind: 'snap', t: r2(tAt), vol: 0.45 })
-  } else {
-    // typewriter : la phrase entière, un caractère à la fois entre le 1er et le
-    // dernier mot RÉELS — le texte finit d'apparaître quand la voix finit
-    const text = ws.map((w) => w.text).join(' ')
-    const tA = Math.max(liveT0, ws[0].start), tB = Math.max(tA + 0.5, ws[ws.length - 1].end)
-    const step = r2(Math.max(0.014, (tB - tA) / Math.max(1, text.length)))
-    html = `<div class="stack"><div id="${id}tw" style="font-size:60px;font-weight:600;color:${tone.ink};text-align:center;line-height:1.4;max-width:880px">${text.split('').map((c, ci) => `<span id="${id}c${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span style="display:inline-block;width:4px;height:56px;background:${ACC};vertical-align:-9px"></span></div></div>`
-    js = text.split('').map((c, ci) => `\n  tl.set('#${id}c${ci}',{opacity:1},${r2(tA + step * ci)});`).join('')
-    js += `\n  tl.fromTo('#${id}tw',{y:24},{y:-16,duration:${r2(Math.max(0.5, p.t1 - tA))},ease:'none'},${r2(tA)});`
-  }
-  return { html, js, sfx }
+  let js = ''
+  if (before) js += `\n  tl.fromTo('#${id}b4',{y:-46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, ws[accIdx - 1].start))});`
+  js += `\n  tl.fromTo('#${id}acc',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.42,ease:'power4.out'},${r2(tAt)});`
+  js += `\n  tl.to('#${id}acc',{scale:1.05,duration:${r2(Math.max(0.3, p.t1 - tAt - 0.45))},ease:'none'},${r2(tAt + 0.42)});`
+  return { html, js, sfx: [{ kind: 'snap', t: r2(tAt), vol: 0.45 }] }
 }
 
 // capture d'app : ENTIÈRE et CENTRÉE (Axel : « les frames sont coupées, on doit
@@ -333,10 +325,15 @@ export function buildDynamicComposition(plan, opts = {}) {
   // un CLIC peut légitimement se répéter vite (deux choix à 1s d'écart) ; c'est
   // le whoosh répété qui lasse — fenêtres anti-répétition par famille
   const minGap = (k) => (k === 'mouse-click' ? 0.6 : k === 'whoosh' || k === 'woosh' ? 2.5 : 2)
+  // 3 clics DIFFÉRENTS en rotation — « pas toujours les mêmes » (Axel)
+  const CLICKS = ['mouse-click', 'click', 'camera-click']
+  let clickIdx = 0
   for (const s of sfxAdd.sort((a, b) => a.t - b.t)) {
-    if (lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < minGap(s.kind)) continue
+    if (s.kind === 'mouse-click') { s.kind = CLICKS[clickIdx % CLICKS.length]; clickIdx++ }
+    const fam = CLICKS.includes(s.kind) ? 'click' : s.kind
+    if (lastByKind[fam] != null && s.t - lastByKind[fam] < minGap(s.kind === 'click' || CLICKS.includes(s.kind) ? 'mouse-click' : s.kind)) continue
     if (s.t - lastT < 0.2) continue
-    lastByKind[s.kind] = s.t; lastT = s.t
+    lastByKind[fam] = s.t; lastT = s.t
     sfxOut.push(s)
     if (sfxOut.length >= 18) break
   }

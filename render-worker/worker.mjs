@@ -293,7 +293,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       const dur = Math.max(0.6, Math.min(2.6, (sl.end - sl.start) - 0.4))
       const ms = Math.max(0, Math.round((sl.start + 0.15) * 1000))
       inputs.push('-stream_loop', '-1', '-i', f)
-      filters.push(`[${idx}:a]atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=${(SFX_VOL * 1.1).toFixed(3)}[kb${idx}]`)
+      // 0.3 et pas SFX_VOL×1.1 : à ~0.94 le lit de frappe pesait dans le loudnorm
+      // global qui BAISSAIT toute la piste — la voix d'Axel « se dégradait » à
+      // chaque passage tapé. La frappe est une texture, pas un premier plan.
+      filters.push(`[${idx}:a]atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=0.3[kb${idx}]`)
       mixIns.push(`[kb${idx}]`)
       idx++
     }

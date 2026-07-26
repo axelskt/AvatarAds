@@ -236,6 +236,24 @@ export const UI_SCENES = {
     return { html, js, sfx: [{ kind: 'mouse-click', t: sendAt, vol: 0.7 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
   },
 
+  // ── « avec cette qualité-là » : L'IMAGE plein cadre — la preuve, pas du texte ─
+  photo(id, t0, t1, tone, s) {
+    const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
+    const pw = 840, ph = 1180
+    const html = `
+      <div id="${id}fr" style="position:absolute;left:${(1080 - pw) / 2}px;top:340px;width:${pw}px;height:${ph}px;border-radius:38px;overflow:hidden;box-shadow:0 70px 160px rgba(13,13,18,.5);opacity:0">
+        <img id="${id}im" src="${file}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover" />
+      </div>
+      <div id="${id}tag" style="position:absolute;left:${(1080 - pw) / 2 + 34}px;top:${340 + ph - 118}px;height:76px;padding:0 34px;background:rgba(13,13,18,.55);border-radius:38px;display:flex;align-items:center;gap:14px;font-size:33px;font-weight:650;color:#fff;opacity:0;backdrop-filter:blur(6px)">
+        <span style="width:16px;height:16px;border-radius:50%;background:${ACC}"></span>100 % généré par IA</div>`
+    const js = `
+  tl.fromTo('#${id}fr',{y:340,scale:0.92,opacity:0,rotation:2},{y:0,scale:1,opacity:1,rotation:0,duration:0.55,ease:'power4.out'},${r2(t0)});
+  tl.fromTo('#${id}im',{scale:1.18},{scale:1,duration:${r2(Math.max(0.6, t1 - t0 - 0.3))},ease:'none'},${r2(t0 + 0.15)});
+  tl.fromTo('#${id}tag',{y:40,opacity:0},{y:0,opacity:1,duration:0.34,ease:'power3.out'},${r2(t0 + 0.5)});
+  tl.to('#${id}fr',{y:-24,duration:${r2(Math.max(0.4, t1 - t0 - 0.6))},ease:'none'},${r2(t0 + 0.55)});`
+    return { html, js, sfx: [{ kind: 'pop', t: r2(t0 + 0.05), vol: 0.55 }] }
+  },
+
   // ── CTA : la barre de commentaire TikTok — le mot se tape, on l'envoie ─────
   comment(id, t0, t1, tone, s) {
     const word = String(s.word || 'Avatar')
