@@ -262,10 +262,15 @@ export function animHtml(name, s, W, H, vs) {
       // sol, incline franchement — pas une carte posee sur du blanc. On sort donc
       // du fond clair du mode mot-a-mot sur toute la duree du plan.
       if (!s.screenFile) return ''
-      // L'ecran REMPLIT le cadre comme dans la reference : il deborde volontairement
-      // de chaque cote, et il est centre sur toute la hauteur de la video (pas sur la
-      // zone d'animation) — sinon il reste coince en haut avec du vide dessous.
-      const w = Math.round(W * 1.5)
+      // MOT-A-MOT : l'ecran REMPLIT le cadre comme dans la reference — il deborde
+      // volontairement de chaque cote et se centre sur toute la hauteur, sinon il
+      // reste coince en haut avec du vide dessous. Ce cadrage est valide, on n'y
+      // touche pas.
+      // TOUS LES AUTRES STYLES (apple, editorial, glass) : la vidéo occupe le bas du
+      // cadre. Un ecran calibre pour le plein cadre y debordait sur la video et se
+      // faisait couper a droite. Ici il tient dans la zone sure, au-dessus.
+      const wide = vs === 'word'
+      const w = wide ? Math.round(W * 1.5) : Math.round(f.h * 0.96 / 0.625)
       const h = Math.round(w * 0.625)
       const mkBox = (bx, by, bw, bh2, n) => (bw > 0 && bh2 > 0)
         ? `<span class="an-3dbox" id="${id}bx${n}" style="left:${((bx - bw / 2) * 100).toFixed(2)}%;top:${((by - bh2 / 2) * 100).toFixed(2)}%;width:${(bw * 100).toFixed(2)}%;height:${(bh2 * 100).toFixed(2)}%;border-color:${P.acc}"></span>`
@@ -280,7 +285,7 @@ export function animHtml(name, s, W, H, vs) {
         ? `<span class="an-3dtype" id="${id}tp" style="left:${((s.boxX - s.boxW / 2) * 100).toFixed(2)}%;top:${((s.boxY - s.boxH / 2) * 100).toFixed(2)}%;width:${(s.boxW * 100).toFixed(2)}%;height:${(s.boxH * 100).toFixed(2)}%;font-size:${Math.round(h * 0.030)}px"><span id="${id}tt"></span><i class="an-3dcar" style="background:${P.acc}"></i></span>`
         : ''
       return `<div class="an-stage" id="${id}rm">
-        <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${Math.round(H * 0.30 - h / 2)}px;width:${w}px;height:${h}px">
+        <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${wide ? Math.round(H * 0.30 - h / 2) : Math.round(f.y + (f.h - h) / 2)}px;width:${w}px;height:${h}px">
           <div class="an-3di">
             <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}${tz}</div>
           </div>
@@ -294,9 +299,12 @@ export function animHtml(name, s, W, H, vs) {
       // la reutiliser. L'image est FOURNIE (screenFile), jamais inventee ici.
       if (!s.screenFile) return ''
       // c'est le moment de recompense : l'image occupe le cadre, pas une vignette.
-      const ph = Math.round(H * 0.46)
+      // Même règle que pour `screen` : plein cadre en mot-à-mot, contenu dans la zone
+      // sûre partout ailleurs — sinon le tirage recouvre la vidéo au lieu de la coiffer.
+      const wideR = vs === 'word'
+      const ph = wideR ? Math.round(H * 0.46) : Math.round(f.h * 0.96)
       const pw = Math.round(ph * 0.6667)
-      return `<div class="an-stage"><div class="an-res" id="${id}rs" style="left:${Math.round((W - pw) / 2)}px;top:${Math.round(H * 0.30 - ph / 2)}px;width:${pw}px;height:${ph}px">
+      return `<div class="an-stage"><div class="an-res" id="${id}rs" style="left:${Math.round((W - pw) / 2)}px;top:${wideR ? Math.round(H * 0.30 - ph / 2) : Math.round(f.y + (f.h - ph) / 2)}px;width:${pw}px;height:${ph}px">
         <img src="${s.screenFile}" alt="" />
         <span class="an-res-flash" id="${id}fl"></span>
         <span class="an-res-save" id="${id}sv" style="background:${P.acc}">
@@ -624,10 +632,16 @@ export function animJs(name, s, r2) {
       // ce qui empechait la fonction d'etre pile au centre.
       const has2 = typeof s.screenX2 === 'number' && typeof s.screenY2 === 'number'
       const zs2 = typeof s.screenZoom2 === 'number' ? s.screenZoom2 : zs
-      const tx = ((0.5 - zx) * zs * 100).toFixed(2)
-      const ty = ((0.5 - zy) * zs * 100).toFixed(2)
-      const tx2 = has2 ? ((0.5 - s.screenX2) * zs2 * 100).toFixed(2) : tx
-      const ty2 = has2 ? ((0.5 - s.screenY2) * zs2 * 100).toFixed(2) : ty
+      // LA CAMERA NE SORT PAS DE L'IMAGE. A un zoom z, la fenetre visible fait 1/z de
+      // large : viser plus pres du bord que 1/(2z) fait deborder, et le conteneur
+      // apparaissait alors en aplat vide sur le cote (visible en visant le menu
+      // lateral, a x = 0.086). On ramene donc la cible dans les limites — le cadre de
+      // surbrillance, lui, reste sur la vraie zone.
+      const clamp = (v, z) => Math.min(1 - 1 / (2 * z), Math.max(1 / (2 * z), v))
+      const tx = ((0.5 - clamp(zx, zs)) * zs * 100).toFixed(2)
+      const ty = ((0.5 - clamp(zy, zs)) * zs * 100).toFixed(2)
+      const tx2 = has2 ? ((0.5 - clamp(s.screenX2, zs2)) * zs2 * 100).toFixed(2) : tx
+      const ty2 = has2 ? ((0.5 - clamp(s.screenY2, zs2)) * zs2 * 100).toFixed(2) : ty
       // le travelling occupe la seconde moitie de la scene
       const panAt = r2(t0 + Math.max(0.9, (dur - 0.5) * 0.5))
       const panDur = r2(Math.max(0.6, end - 0.25 - panAt))

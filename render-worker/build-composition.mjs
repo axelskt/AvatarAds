@@ -63,8 +63,14 @@ export function buildComposition(plan, opts = {}) {
   // sans la moindre animation.
   const fullDefs = wordMode ? [] : withIds(allSlides.filter(isFull), 'fs')
   const bannerDefs = wordMode ? [] : withIds(allSlides.filter(isBanner), 'fb')
+  // Une scène ILLUSTRÉE (anim : le logo, une capture encadrée, le résultat) n'a pas
+  // d'items texte — c'est son image qui parle. Le filtre « il faut des items » la
+  // jetait donc en silence dans tous les styles sauf mot-à-mot : le plan demandait
+  // le logo sur « avatarads.fr » et l'écran sur « Images IA », le rendu ne montrait
+  // que le gameplay. On garde toute scène qui porte une anim.
   const slides = wordMode ? allSlides
-    : allSlides.filter((s) => !isFull(s) && !isBanner(s) && Array.isArray(s.items) && s.items.length)
+    : allSlides.filter((s) => !isFull(s) && !isBanner(s)
+        && (s.anim || (Array.isArray(s.items) && s.items.length)))
   const SLIDE_H = Math.round(H * 0.45)
   const VIDEO_H = H - SLIDE_H
   const TR = 0.34 // durée de la transition full <-> split
@@ -247,8 +253,14 @@ export function buildComposition(plan, opts = {}) {
     : []
   const inEmoji = (t) => emojiDefs.some((e) => t >= e.start - 0.05 && t < e.start + e.dur)
 
+  // MODE PAGE (#135) : quand la base n'est pas une vraie prise de vue mais un aplat
+  // clair — la vidéo devient une page sur laquelle tout est dessiné, comme les
+  // références d'Axel (@dade.zs, @beingmayy), qui n'ont aucun plan filmé. Le
+  // sous-titre y est ENCRE : le blanc-sur-blanc du mode vidéo y est illisible.
+  const pageMode = !!plan.pageMode
+
   const caps = (plan.captions || []).map((c, i) => {
-    const cream = inFullScene(r2(c.start) + 0.05)
+    const cream = pageMode || inFullScene(r2(c.start) + 0.05)
     return {
       id: 'cap' + i,
       text: CASE(c.text),
