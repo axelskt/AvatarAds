@@ -218,21 +218,30 @@ export const UI_SCENES = {
   //    bouton flèche qui se presse à la fin — le prompt est le héros ───────────
   promptbar(id, t0, t1, tone, s) {
     const chars = String(s.text || '')
-    const tA = t0 + 0.5, tB = Math.max(tA + 1.0, t1 - 0.9)
+    // s.sendAt : caler l'ENVOI sur le mot qui le déclenche (« génère l'image ») —
+    // sinon l'appui glisse à la fin du panneau, après la phrase
+    const sendAt = r2(s.sendAt ? Math.min(t1 - 0.3, Math.max(t0 + 1.6, s.sendAt)) : Math.min(t1 - 0.3, Math.max(t0 + 1.5, t1 - 0.55)))
+    const tA = t0 + 0.5, tB = r2(Math.max(tA + 1.0, sendAt - 0.3))
     const step = r2((tB - tA) / Math.max(1, chars.length))
-    const sendAt = r2(Math.min(t1 - 0.3, tB + 0.35))
     const html = `
       <div id="${id}bar" style="position:absolute;left:110px;top:820px;width:860px;min-height:220px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:36px;padding:40px 46px 92px;box-sizing:border-box;font-size:40px;font-weight:500;line-height:1.45;color:${tone.ink};opacity:0;box-shadow:0 46px 120px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
         ${chars.split('').map((c, ci) => `<span id="${id}ch${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span>
         <div id="${id}snd" style="position:absolute;right:34px;bottom:26px;width:84px;height:84px;border-radius:24px;background:${ACC};display:flex;align-items:center;justify-content:center">
           <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
       </div>`
-    const js = `
+    let js = `
   tl.fromTo('#${id}bar',{y:180,opacity:0,scale:0.96},{y:0,opacity:1,scale:1,duration:0.5,ease:'power3.out'},${r2(t0)});` +
       chars.split('').map((c, ci) => `\n  tl.set('#${id}ch${ci}',{opacity:1},${r2(tA + step * ci)});`).join('') + `
   tl.to(['#${id}snd'],{scale:0.9,duration:0.08,ease:'power2.in'},${sendAt});
   tl.to(['#${id}snd'],{scale:1,duration:0.16,ease:'back.out(2.6)'},${r2(sendAt + 0.08)});
   tl.to('#${id}bar',{y:-20,duration:${r2(Math.max(0.4, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
+    // « génère l'image » : après l'appui, la caméra PLONGE sur le bouton d'envoi —
+    // le zoom devient la transition vers le panneau suivant (demande d'Axel)
+    if (s.zoomEnd) {
+      const zs = r2(Math.max(sendAt + 0.12, t1 - 0.6))
+      js += `
+  tl.to('#${id}bar',{scale:2.2,x:-460,y:-210,duration:${r2(Math.max(0.3, t1 - zs))},ease:'power2.in',transformOrigin:'86% 82%'},${zs});`
+    }
     return { html, js, sfx: [{ kind: 'ding', t: sendAt, vol: 0.5 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
   },
 
@@ -261,14 +270,14 @@ export const UI_SCENES = {
       <div class="disp" id="${id}n" style="position:absolute;left:0;right:0;top:${cy - 105}px;text-align:center;font-size:170px;color:${tone.ink};opacity:0">0</div>
       <div id="${id}u" style="position:absolute;left:0;right:0;top:${cy + R + 96}px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:42px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || 'SECONDES')}</div>`
     const js = `
-  var ${id}v = { n: 0, off: ${circ} };
+  var ${id}v = { n: 0, off: ${circ}, a: 0 };
   tl.fromTo('.${id}tk',{opacity:0},{opacity:0.6,duration:0.2,stagger:0.03,ease:'power1.out'},${r2(t0)});
-  tl.to(${id}v,{off:0,n:${val},duration:${countDur},ease:'power2.inOut',onUpdate:function(){
+  tl.to(${id}v,{off:0,n:${val},a:360,duration:${countDur},ease:'power2.inOut',onUpdate:function(){
     var rg=document.getElementById('${id}ring'); if(rg) rg.setAttribute('stroke-dashoffset', String(${id}v.off));
     var el=document.getElementById('${id}n'); if(el) el.textContent=String(Math.round(${id}v.n));
+    var nd=document.getElementById('${id}nd'); if(nd) nd.setAttribute('transform','rotate('+${id}v.a+' ${cx} ${cy})');
   }},${r2(t0 + 0.15)});
   tl.fromTo('#${id}n',{scale:0.82,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power2.out'},${r2(t0 + 0.12)});
-  tl.fromTo('#${id}nd',{rotation:0,transformOrigin:'${cx}px ${cy}px',svgOrigin:'${cx} ${cy}'},{rotation:360,duration:${countDur},ease:'power2.inOut'},${r2(t0 + 0.15)});
   tl.fromTo('#${id}u',{y:40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'circ.out'},${r2(t0 + 0.5)});
   tl.to('#${id}n',{scale:1.1,duration:${r2(Math.max(0.3, t1 - t0 - countDur - 0.3))},ease:'none'},${r2(t0 + 0.15 + countDur)});`
     return { html, js, sfx: [{ kind: 'timer', t: r2(t0 + 0.1), vol: 0.3 }, { kind: 'ding', t: r2(t0 + 0.15 + countDur), vol: 0.5 }] }
