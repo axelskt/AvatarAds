@@ -33,13 +33,42 @@ const json = (status: number, body: unknown) =>
 const postiz = (path: string, init: RequestInit = {}) =>
   fetch(POSTIZ_BASE + path, { ...init, headers: { Authorization: POSTIZ_KEY, ...(init.headers || {}) } })
 
+// ── Hashtags auto : Claude choisit les 3 meilleurs pour la portée ──
+// 1 hashtag large très recherché + 2 de niche, dans la langue de la description.
+// Best-effort : si l'appel échoue, on publie sans hashtags (jamais bloquant).
+const CLAUDE_MODEL = 'claude-sonnet-5'
+async function pickHashtags(caption: string): Promise<string> {
+  const key = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!key) return ''
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 60,
+        system: 'Tu optimises la portée de vidéos courtes (TikTok/Reels/Shorts) pour une audience francophone business en ligne / SaaS / IA. On te donne la description d\'une vidéo. Réponds UNIQUEMENT avec exactement 3 hashtags séparés par des espaces, rien d\'autre : 1 hashtag large à fort volume de recherche (ex: #businessenligne, #ia, #entrepreneur) + 2 hashtags de niche précis, collés au sujet exact de la vidéo. Langue des hashtags = langue de la description. Interdits : #fyp, #pourtoi, #foryou (vides de sens pour l\'algorithme).',
+        messages: [{ role: 'user', content: caption.slice(0, 1500) }],
+      }),
+    })
+    if (!r.ok) return ''
+    const d = await r.json()
+    const txt = String(d?.content?.[0]?.text || '')
+    return (txt.match(/#[\p{L}\p{N}_]+/gu) || []).slice(0, 3).join(' ')
+  } catch (_) { return '' }
+}
+
 // Contenu adapté par réseau : X et Threads ont des limites dures → on tronque
-// proprement plutôt que de laisser la publication échouer.
-function contentFor(identifier: string, caption: string): string {
+// la description proprement en PRÉSERVANT les hashtags (jamais coupés).
+function contentFor(identifier: string, caption: string, tags: string): string {
   const limits: Record<string, number> = { x: 270, threads: 480 }
+  const suffix = tags ? '\n\n' + tags : ''
   const max = limits[identifier]
-  if (!max || caption.length <= max) return caption
-  return caption.slice(0, max - 1).replace(/\s+\S*$/, '') + '…'
+  if (!max) return caption + suffix
+  const room = max - suffix.length
+  let base = caption
+  if (base.length > room) base = base.slice(0, Math.max(0, room - 1)).replace(/\s+\S*$/, '') + '…'
+  return base + suffix
 }
 
 // Réglages minimaux par réseau (YouTube exige un titre).
@@ -106,6 +135,9 @@ serve(async (req) => {
       : all.filter((c) => !c.disabled)
     if (!wanted.length) return json(400, { error: 'no_channels' })
 
+    // 3bis) hashtags auto (désactivables via hashtags:false)
+    const tags = body.hashtags === false ? '' : await pickHashtags(caption)
+
     // 4) publication immédiate
     const payload = {
       type: 'now',
@@ -115,7 +147,7 @@ serve(async (req) => {
       posts: wanted.map((c) => ({
         integration: { id: c.id },
         value: [{
-          content: contentFor(String(c.identifier || ''), caption),
+          content: contentFor(String(c.identifier || ''), caption, tags),
           image: [{ id: media.id, path: media.path }],
         }],
         group: '',
@@ -135,7 +167,7 @@ serve(async (req) => {
 
     let result: unknown = prText
     try { result = JSON.parse(prText) } catch { /* texte brut */ }
-    return json(200, { ok: true, published: wanted.map((c) => c.name), result })
+    return json(200, { ok: true, published: wanted.map((c) => c.name), hashtags: tags, result })
   }
 
   return json(400, { error: 'unknown_action' })
