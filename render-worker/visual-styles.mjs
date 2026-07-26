@@ -11,7 +11,7 @@
 //  editorial  · magazine blanc : cartes flottantes, profondeur de champ, sérif léger, trame de points
 //  word       · mot par mot : plein écran uni, UN mot énorme à la fois (type Thinks)
 
-export const VSTYLES = ['apple', 'glass', 'editorial', 'word']
+export const VSTYLES = ['apple', 'glass', 'editorial', 'word', 'dynamic']
 
 // Le conteneur de rendu n'embarque que fonts-liberation : sans ça « Archivo Black »,
 // « Inter » et les sérifs retombent tous sur Liberation Sans et les quatre styles se
