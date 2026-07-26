@@ -5255,7 +5255,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26h-video-nettoyage'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26i-ffmpeg-fix'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7092,37 +7092,24 @@ function initClipPicker() {
 }
 
 // ── FFMPEG.WASM — composition clip + audio ──────────────────────────────────
-let _ffmpegInstance = null;
-let _ffmpegLoaded   = false;
-
-async function _loadFfmpeg() {
-  if (_ffmpegLoaded) return _ffmpegInstance;
-  toast('⏳ Chargement ffmpeg…');
-  const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
-  const { fetchFile } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
-  _ffmpegInstance = new FFmpeg();
-  _ffmpegInstance._fetchFile = fetchFile;
-  await _ffmpegInstance.load({
-    coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
-  });
-  _ffmpegLoaded = true;
-  return _ffmpegInstance;
-}
+// #142 · l'ancien loader 0.12 (import ESM jsdelivr) créait un Worker cross-origin
+// → « Failed to construct Worker » en prod. Tout passe désormais par la stack
+// unifiée _loadFFmpeg (core single-thread dans notre Worker, définie plus bas).
 
 // Compose clip R2 + audioBlob → blob URL MP4
 async function _composeClipWithAudio(clipId, audioBlob) {
-  const ffmpeg = await _loadFfmpeg();
-  const fetchFile = ffmpeg._fetchFile;
+  await _loadFFmpeg();
+  const ff = _ffmpegInst;
   const clipUrl = _clipUrl(clipId); // segment aléatoire
   const maxDur  = _clipMaxDuration();
 
   toast('📥 Téléchargement du clip…');
-  await ffmpeg.writeFile('clip.mp4', await fetchFile(clipUrl));
-  await ffmpeg.writeFile('audio.wav', await fetchFile(audioBlob));
+  await ff.FS('writeFile', 'clip.mp4',  await window._ffFetchFile(clipUrl));
+  await ff.FS('writeFile', 'audio.wav', await window._ffFetchFile(audioBlob));
 
   toast('🎬 Composition vidéo…');
   // Coupe clip à maxDur, colle audio dessus (pas de son clip = -an déjà fait à la source)
-  await ffmpeg.exec([
+  await ff.run(
     '-i', 'clip.mp4',
     '-i', 'audio.wav',
     '-t', String(maxDur),
@@ -7131,9 +7118,10 @@ async function _composeClipWithAudio(clipId, audioBlob) {
     '-map', '0:v:0', '-map', '1:a:0',
     '-shortest',
     'output.mp4'
-  ]);
+  );
 
-  const data = await ffmpeg.readFile('output.mp4');
+  const data = await ff.FS('readFile', 'output.mp4');
+  try { await ff.FS('unlink', 'clip.mp4'); await ff.FS('unlink', 'audio.wav'); await ff.FS('unlink', 'output.mp4'); } catch(e){}
   return URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -11121,19 +11109,21 @@ function _mtScene(img, wav, fmt, modelId, segSec){
 async function _mtBuildBase(mp3File, durationSec){
   const clipId=(typeof _selectedClipId!=='undefined' && _selectedClipId) || 'minecraft_parkour';
   const url=_clipUrl(clipId) || _clipUrl('minecraft_parkour');
-  const ff=await _loadFfmpeg(); const fetchFile=ff._fetchFile;
-  await ff.writeFile('gp.mp4', await fetchFile(url));
-  await ff.writeFile('voice.mp3', await fetchFile(mp3File));
+  await _loadFFmpeg();                        // #142 · stack unifiée (core ST en Worker)
+  const ff=_ffmpegInst;
+  await ff.FS('writeFile','gp.mp4', await window._ffFetchFile(url));
+  await ff.FS('writeFile','voice.mp3', await window._ffFetchFile(mp3File));
   const D=Math.max(3, Math.ceil(durationSec)+1); // marge → le worker n'a jamais à tronquer
   // ⚡ REMUX, PAS DE RÉ-ENCODAGE VIDÉO : les clips sont déjà en 9:16 H.264, on se contente
   // de les boucler et d'y coller la voix (`-c:v copy`) → quelques secondes au lieu de
   // plusieurs MINUTES. Ré-encoder 1080×1920 dans ffmpeg.wasm bloquait la génération à 10 %.
   // La mise au format 1080×1920 30 fps est faite par le worker (ffmpeg natif, ~2 s).
-  await ff.exec(['-stream_loop','-1','-i','gp.mp4','-i','voice.mp3',
+  await ff.run('-stream_loop','-1','-i','gp.mp4','-i','voice.mp3',
     '-t', String(D),
     '-map','0:v:0','-map','1:a:0',
-    '-c:v','copy','-c:a','aac','-b:a','160k','-movflags','+faststart','base.mp4']);
-  const data=await ff.readFile('base.mp4');
+    '-c:v','copy','-c:a','aac','-b:a','160k','-movflags','+faststart','base.mp4');
+  const data=await ff.FS('readFile','base.mp4');
+  try{ await ff.FS('unlink','gp.mp4'); await ff.FS('unlink','voice.mp3'); await ff.FS('unlink','base.mp4'); }catch(e){}
   return new Blob([data.buffer], {type:'video/mp4'});
 }
 
@@ -13599,13 +13589,13 @@ async function analyzeSilences(){
       const ff = _ffmpegInst;
       const ext = (file.name.split('.').pop() || 'mov').toLowerCase();
       const inName = `sil_in.${ext}`;
-      try { ff.FS('unlink', inName); } catch(e){}
-      try { ff.FS('unlink', 'sil_out.wav'); } catch(e){}
-      ff.FS('writeFile', inName, new Uint8Array(arrayBuf));
+      try { await ff.FS('unlink', inName); } catch(e){}
+      try { await ff.FS('unlink', 'sil_out.wav'); } catch(e){}
+      await ff.FS('writeFile', inName, new Uint8Array(arrayBuf));
       await ff.run('-i', inName, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '1', 'sil_out.wav');
-      const wavData = ff.FS('readFile', 'sil_out.wav');
-      try { ff.FS('unlink', inName); } catch(e){}
-      try { ff.FS('unlink', 'sil_out.wav'); } catch(e){}
+      const wavData = await ff.FS('readFile', 'sil_out.wav');
+      try { await ff.FS('unlink', inName); } catch(e){}
+      try { await ff.FS('unlink', 'sil_out.wav'); } catch(e){}
       silenceAudioBuffer = await actx.decodeAudioData(wavData.buffer.slice(0));
     }
     actx.close();
@@ -13857,25 +13847,86 @@ function _triggerDownload(blob, filename){
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// ── FFmpeg.wasm — core SINGLE-THREAD dans un Worker (#142) ───────────────────
+// avatarads.fr (GitHub Pages) ne peut pas envoyer les en-têtes COOP/COEP →
+// pas de SharedArrayBuffer → le core multithread 0.11 plantait au load et TOUS
+// les exports FFmpeg échouaient SILENCIEUSEMENT en prod (gameplay synchro,
+// optimisation TikTok, base Montage IA, clip+audio). On charge désormais
+// @ffmpeg/core-st (single-thread : AUCUN SharedArrayBuffer requis), dans un
+// Worker à nous pour ne pas geler l'interface pendant les encodages.
+// Particularité du core ST : après un run, le runtime wasm a quitté → avant le
+// run suivant le worker recrée le core et REJOUE les fichiers d'entrée (cache
+// `inputs`). C'est aussi ce qui permet les 2 tentatives du gameplay synchro.
+// API : _ffmpegInst.run(...args) + _ffmpegInst.FS(méthode, nom, données) —
+// FS est désormais ASYNCHRONE (Worker oblige) : toujours `await`.
+const _FF_WORKER_SRC = `
+  self.document = { currentScript: { src: 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js' } }; // la glue lit document.currentScript au chargement
+  importScripts('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
+  let ff = null, ranOnce = false;
+  const inputs = new Map();
+  const mk = () => FFmpeg.createFFmpeg({ log:false, mainName:'main',
+    corePath:'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
+    progress:(p)=>{ try{ postMessage({kind:'prog', p}); }catch(e){} } });
+  const reset = async () => { try{ ff.exit(); }catch(_){} ff = mk(); await ff.load(); ranOnce = false;
+    for(const [n,b] of inputs) ff.FS('writeFile', n, b); };
+  const handle = async (m) => {
+    const { id, cmd, a } = m;
+    try {
+      if(cmd==='load'){ if(!ff){ ff = mk(); await ff.load(); } postMessage({id, ok:true}); }
+      else if(cmd==='write'){ if(ranOnce) await reset();
+        inputs.set(a.name, a.bytes); ff.FS('writeFile', a.name, a.bytes); postMessage({id, ok:true}); }
+      else if(cmd==='run'){ if(ranOnce) await reset();
+        await ff.run(...a.args); ranOnce = true; postMessage({id, ok:true}); }
+      else if(cmd==='read'){ const d = ff.FS('readFile', a.name); postMessage({id, ok:true, buf:d.buffer}, [d.buffer]); }
+      else if(cmd==='unlink'){ inputs.delete(a.name); try{ ff.FS('unlink', a.name); }catch(_){} postMessage({id, ok:true}); }
+    } catch(err){ postMessage({id, ok:false, error: String(err && err.message || err)}); }
+  };
+  let chain = Promise.resolve();       // FIFO strict : jamais deux commandes en parallèle
+  onmessage = (e) => { chain = chain.then(() => handle(e.data)); };
+`;
+let _ffWorker = null, _ffReqId = 0;
+const _ffPending = new Map();
+window._ffProgress = null;   // callback optionnel ({ratio}) pendant un run
+function _ffCall(cmd, a, transfer){
+  return new Promise((res, rej) => {
+    const id = ++_ffReqId; _ffPending.set(id, { res, rej });
+    _ffWorker.postMessage({ id, cmd, a }, transfer || []);
+  });
+}
 async function _loadFFmpeg(){
-  if(_ffmpegReady) return;
+  if(_ffmpegReady && _ffWorker) return;
   const statusEl = document.getElementById('silenceExportStatus');
-  if(statusEl){ statusEl.style.display='block'; statusEl.textContent='⏳ Chargement FFmpeg (~25 MB, une seule fois)...'; }
-  // Load ffmpeg.wasm v0.11.6 (no SharedArrayBuffer required)
-  await new Promise((resolve, reject) => {
-    if(window.FFmpeg){ resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
-    s.onload = resolve; s.onerror = reject;
-    document.head.appendChild(s);
-  });
-  const { createFFmpeg, fetchFile } = window.FFmpeg;
-  _ffmpegInst = createFFmpeg({
-    log: false,
-    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-  });
-  window._ffFetchFile = fetchFile;
-  await _ffmpegInst.load();
+  if(statusEl){ statusEl.style.display='block'; statusEl.textContent='⏳ Chargement FFmpeg (~30 MB, une seule fois)...'; }
+  _ffWorker = new Worker(URL.createObjectURL(new Blob([_FF_WORKER_SRC], { type:'text/javascript' })));
+  _ffWorker.onmessage = (e) => {
+    const d = e.data;
+    if(d.kind === 'prog'){ if(typeof window._ffProgress === 'function'){ try{ window._ffProgress(d.p || {}); }catch(_){} } return; }
+    const p = _ffPending.get(d.id); if(!p) return;
+    _ffPending.delete(d.id);
+    d.ok ? p.res(d) : p.rej(new Error(d.error));
+  };
+  _ffWorker.onerror = (e) => {
+    const err = new Error('FFmpeg worker : ' + (e.message || 'erreur'));
+    for(const p of _ffPending.values()) p.rej(err);
+    _ffPending.clear(); _ffmpegReady = false;
+    try{ _ffWorker.terminate(); }catch(_){} _ffWorker = null;
+  };
+  await _ffCall('load');
+  // même surface d'API qu'avant, mais tout passe par le Worker
+  _ffmpegInst = {
+    run: (...args) => _ffCall('run', { args }),
+    FS: async (method, name, data) => {
+      if(method === 'writeFile'){ const bytes = data instanceof Uint8Array ? data : new Uint8Array(data); return _ffCall('write', { name, bytes }, [bytes.buffer]); }
+      if(method === 'readFile'){ const r = await _ffCall('read', { name }); return new Uint8Array(r.buf); }
+      if(method === 'unlink')  return _ffCall('unlink', { name });
+      throw new Error('FS : méthode inconnue ' + method);
+    },
+  };
+  window._ffFetchFile = async (x) => {
+    if(x instanceof Uint8Array) return x;
+    if(x && typeof x.arrayBuffer === 'function') return new Uint8Array(await x.arrayBuffer());
+    return new Uint8Array(await (await fetch(x)).arrayBuffer());   // URL (clips R2…)
+  };
   _ffmpegReady = true;
   if(statusEl) statusEl.textContent = '';
 }
@@ -13888,9 +13939,9 @@ async function _runGameplayExport(gpFile, { returnBlob = false } = {}){
   await _loadFFmpeg();
   setStatus('⏳ Découpe du gameplay en cours...');
   const ff = _ffmpegInst;
-  try { ff.FS('unlink','gp_in.mp4'); } catch(e){}
-  try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
-  ff.FS('writeFile','gp_in.mp4', await window._ffFetchFile(gpFile));
+  try { await ff.FS('unlink','gp_in.mp4'); } catch(e){}
+  try { await ff.FS('unlink','gp_out.mp4'); } catch(e){}
+  await ff.FS('writeFile','gp_in.mp4', await window._ffFetchFile(gpFile));
   const segs = silenceKeepSegs;
 
   // Build filter_complex — try with audio first, fallback to video-only
@@ -13910,6 +13961,7 @@ async function _runGameplayExport(gpFile, { returnBlob = false } = {}){
   };
 
   let success = false;
+  window._ffProgress = (p) => { if(p && typeof p.ratio === 'number') setStatus('⏳ Découpe du gameplay… ' + Math.min(100, Math.round(p.ratio*100)) + '%'); };
 
   // Attempt 1: with audio
   try {
@@ -13923,7 +13975,7 @@ async function _runGameplayExport(gpFile, { returnBlob = false } = {}){
   } catch(e1){
     console.warn('FFmpeg avec audio échoué, tentative sans audio :', e1);
     // Attempt 2: video-only (gameplay sans piste audio)
-    try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
+    try { await ff.FS('unlink','gp_out.mp4'); } catch(e){}
     try {
       const fc = buildFC(false);
       await ff.run('-i','gp_in.mp4','-filter_complex',fc,
@@ -13932,16 +13984,18 @@ async function _runGameplayExport(gpFile, { returnBlob = false } = {}){
         '-movflags','+faststart','gp_out.mp4');
       success = true;
     } catch(e2){
+      window._ffProgress = null;
       console.error('FFmpeg video-only échoué :', e2);
       throw new Error('Erreur FFmpeg : ' + (e2.message || e2));
     }
   }
+  window._ffProgress = null;
 
   if(success){
-    const data = ff.FS('readFile','gp_out.mp4');
+    const data = await ff.FS('readFile','gp_out.mp4');
     const blob = new Blob([data.buffer], {type:'video/mp4'});
-    try { ff.FS('unlink','gp_in.mp4'); } catch(e){}
-    try { ff.FS('unlink','gp_out.mp4'); } catch(e){}
+    try { await ff.FS('unlink','gp_in.mp4'); } catch(e){}
+    try { await ff.FS('unlink','gp_out.mp4'); } catch(e){}
     if(returnBlob) return blob;
     _triggerDownload(blob, 'gameplay_synchro.mp4');
     setStatus('✓ Gameplay synchro téléchargé !', 'var(--green)');
@@ -17305,17 +17359,22 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       await _loadFFmpeg();
       const ff = _ffmpegInst;
       const inExt = isWebm ? 'webm' : 'mp4';
-      try { ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
-      try { ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
-      ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await mrBlob.arrayBuffer()));
-      await ff.run('-i','cfr_in.'+inExt,'-vf','fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2','-c:v','libx264','-preset','fast','-crf','22','-profile:v','main','-pix_fmt','yuv420p','-c:a','aac','-ar','44100','-b:a','128k','-movflags','+faststart','-y','cfr_out.mp4');
-      const outData = ff.FS('readFile', 'cfr_out.mp4');
+      // core single-thread (#142) : preset ultrafast pour compenser la vitesse,
+      // crf 22→20 + audio 160k pour compenser la qualité (#141)
+      window._ffProgress = (p) => { if(p && typeof p.ratio === 'number') setStage('Optimisation TikTok… ' + Math.min(100, Math.round(p.ratio*100)) + '%', 99); };
+      try { await ff.FS('unlink', 'cfr_in.' + inExt); } catch(e){}
+      try { await ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+      await ff.FS('writeFile', 'cfr_in.' + inExt, new Uint8Array(await mrBlob.arrayBuffer()));
+      await ff.run('-i','cfr_in.'+inExt,'-vf','fps=30,scale=trunc(iw/2)*2:trunc(ih/2)*2','-c:v','libx264','-preset','ultrafast','-crf','20','-profile:v','main','-pix_fmt','yuv420p','-c:a','aac','-ar','44100','-b:a','160k','-movflags','+faststart','-y','cfr_out.mp4');
+      window._ffProgress = null;
+      const outData = await ff.FS('readFile', 'cfr_out.mp4');
       if(!outData || outData.length < 10000) throw new Error('output trop petit : ' + (outData?.length || 0) + ' bytes');
       ffBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-      try { ff.FS('unlink', 'cfr_in.' + inExt); ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
+      try { await ff.FS('unlink', 'cfr_in.' + inExt); await ff.FS('unlink', 'cfr_out.mp4'); } catch(e){}
       toast('✅ Vidéo optimisée TikTok — yuv420p · 30fps · AAC 44.1kHz');
       window._lastComposedBlob = null;
     } catch(ffErr){
+      window._ffProgress = null;
       console.error('FFmpeg TikTok post-process failed:', ffErr);
       toast('⚠️ Optimisation TikTok ignorée (' + (ffErr.message||ffErr) + ') — vidéo composée utilisée');
       ffBlob = mrBlob;
@@ -20675,16 +20734,19 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
     setStage('Optimisation TikTok…',99);
     await _loadFFmpeg();
     const ff=_ffmpegInst, inExt=isWebm?'webm':'mp4';
-    try{ ff.FS('unlink','exp_in.'+inExt); }catch(_){}
-    try{ ff.FS('unlink','exp_out.mp4'); }catch(_){}
-    ff.FS('writeFile','exp_in.'+inExt,new Uint8Array(await blob.arrayBuffer()));
-    await ff.run('-i','exp_in.'+inExt,'-vf','fps=30','-c:v','libx264','-preset','fast','-crf','20','-c:a','aac','-ar','48000','-b:a','192k','-movflags','+faststart','-y','exp_out.mp4');
-    const out=ff.FS('readFile','exp_out.mp4');
+    // core single-thread (#142) : preset ultrafast (vitesse), crf 20 conservé
+    window._ffProgress = (p) => { if(p && typeof p.ratio === 'number') setStage('Optimisation TikTok… ' + Math.min(100, Math.round(p.ratio*100)) + '%', 99); };
+    try{ await ff.FS('unlink','exp_in.'+inExt); }catch(_){}
+    try{ await ff.FS('unlink','exp_out.mp4'); }catch(_){}
+    await ff.FS('writeFile','exp_in.'+inExt,new Uint8Array(await blob.arrayBuffer()));
+    await ff.run('-i','exp_in.'+inExt,'-vf','fps=30','-c:v','libx264','-preset','ultrafast','-crf','20','-c:a','aac','-ar','48000','-b:a','192k','-movflags','+faststart','-y','exp_out.mp4');
+    window._ffProgress = null;
+    const out=await ff.FS('readFile','exp_out.mp4');
     finalBlob=new Blob([out.buffer],{type:'video/mp4'});
-    try{ ff.FS('unlink','exp_in.'+inExt); }catch(_){}
-    try{ ff.FS('unlink','exp_out.mp4'); }catch(_){}
+    try{ await ff.FS('unlink','exp_in.'+inExt); }catch(_){}
+    try{ await ff.FS('unlink','exp_out.mp4'); }catch(_){}
     toast('✅ Optimisation TikTok OK');
-  } catch(e){ console.warn('Express FFmpeg failed:',e); }
+  } catch(e){ window._ffProgress = null; console.warn('Express FFmpeg failed:',e); }
 
   // ── 13. Download ──
   const url=URL.createObjectURL(finalBlob);
