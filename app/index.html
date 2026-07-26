@@ -3348,12 +3348,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION <span style="text-transform:none;letter-spacing:0">— même texte partout · tronquée auto pour X/Threads · sert de titre YouTube</span></div>
         <textarea id="postizCaption" rows="4" placeholder="Écris ta description / légende…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px;resize:vertical"></textarea>
 
-        <!-- hashtags auto (IA) -->
-        <label style="display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 13px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;font-size:12.5px;color:var(--text2);cursor:pointer;user-select:none">
-          <input type="checkbox" id="postizTags" checked style="accent-color:var(--accent-2)">
+        <!-- hashtags : fixes, modifiables, sauvegardés automatiquement -->
+        <div style="margin-top:16px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">HASHTAGS <span style="text-transform:none;letter-spacing:0">— ajoutés à la fin de chaque post · sauvegardés automatiquement</span></div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:8px;padding:0 13px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
-          <span><strong style="color:var(--text)">Hashtags automatiques</strong> — l'IA ajoute les 3 meilleurs (1 large + 2 de niche)</span>
-        </label>
+          <input id="postizTagsInput" placeholder="#viral #businessenligne #saas" oninput="try{localStorage.setItem('aa_pub_tags', this.value)}catch(e){}" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px 0">
+        </div>
 
         <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:14px;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3);display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Publier maintenant</button>
         <div id="postizStatus" style="display:none;margin-top:9px;font-size:11.5px;font-family:var(--mono);color:var(--text2);text-align:center"></div>
@@ -5248,7 +5248,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26d-logos-hashtags'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26e-hashtags-fixes'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -17331,6 +17331,9 @@ function _pubSetBlob(blob, label){
 }
 async function initPublishView(){
   if(!_aaIsDev()){ nav('generator'); return; }   // ceinture : l'entrée nav est déjà cachée
+  // hashtags sauvegardés (défaut = ceux d'Axel), modifiables n'importe quand
+  const ti = document.getElementById('postizTagsInput');
+  if(ti && !ti.value){ try{ ti.value = localStorage.getItem('aa_pub_tags') ?? '#viral #businessenligne #saas'; }catch(_){ ti.value = '#viral #businessenligne #saas'; } }
   // une vidéo attend déjà (compose du Générateur ou import Montage IA) → l'afficher
   const v = document.getElementById('pubVideo');
   if(window._aaPublishBlob && v && v.style.display === 'none') _pubSetBlob(window._aaPublishBlob, 'vidéo importée');
@@ -17397,7 +17400,7 @@ async function postizPublish(btn){
     const up = await sb.storage.from('render-media').upload(path, blob, { contentType:'video/mp4', upsert:true });
     if(up.error) throw new Error('upload : ' + up.error.message);
     st.textContent = '2/2 · Publication sur ' + ids.length + ' réseau(x)…';
-    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids, hashtags: document.getElementById('postizTags')?.checked !== false });
+    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids, tags: (document.getElementById('postizTagsInput')?.value||'').trim() });
     st.textContent = '✓ Publié : ' + (d.published||[]).join(', ') + (d.hashtags ? ' · ' + d.hashtags : '');
     toast('✓ Publié sur ' + (d.published||[]).length + ' réseau(x) — vérifie le calendrier Postiz');
   } catch(e){
