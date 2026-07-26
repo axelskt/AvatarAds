@@ -389,7 +389,7 @@ export const UI_SCENES = {
     const html = `
       <div id="${id}bar" style="position:absolute;left:110px;top:${BAR_Y}px;width:860px;height:${BAR_H}px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:66px;display:flex;align-items:center;gap:24px;padding:0 26px;box-sizing:border-box;opacity:0;box-shadow:0 40px 100px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
         <span style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,${ACC},#FFB03A);flex-shrink:0"></span>
-        <span style="font-size:40px;font-weight:500;color:${tone.ink};flex:1;text-align:left">${word.split('').map((c, ci) => `<span id="${id}w${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span></span>
+        <span style="font-size:40px;font-weight:500;color:${tone.ink};flex:1;text-align:center">${word.split('').map((c, ci) => `<span id="${id}w${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span></span>
         <span id="${id}snd" style="width:84px;height:84px;border-radius:50%;background:${ACC};display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></span>
       </div>`
@@ -403,7 +403,10 @@ export const UI_SCENES = {
     // (respiration), `in` pour le final (on finit dans le geste demandé).
     const zoom = s.zoom || ''
     if (zoom) {
-      const sc = zoom === 'in' ? 2.0 : 1.32
+      // 1.7 et pas 2.0 : le mot est centré dans la barre, donc à fort grossissement
+      // l'avatar et le bouton envoyer sortaient du cadre — or c'est justement eux
+      // qu'on veut voir avec le mot.
+      const sc = zoom === 'in' ? 1.22 : 1.15
       const dy = Math.round((960 - (BAR_Y + BAR_H / 2)) * (zoom === 'in' ? 1 : 0.55))
       const zAt = r2(Math.min(t1 - 0.35, tSend + 0.22))
       js += `
@@ -412,7 +415,13 @@ export const UI_SCENES = {
       js += `
   tl.to('#${id}bar',{y:-14,duration:${r2(Math.max(0.3, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
     }
-    return { html, js, sfx: [{ kind: 'mo-pop-1', t: tSend, vol: 0.5 }] }
+    // le mot du CTA s'écrit lettre par lettre : on entend la frappe, comme dans
+    // les barres de prompt — c'est le même geste, il doit sonner pareil
+    return {
+      html, js,
+      sfx: [{ kind: 'mo-pop-1', t: tSend, vol: 0.5 }],
+      keyboard: [{ t: r2(tA), dur: r2(step * word.length + 0.2) }],
+    }
   },
 
   // ── résultat : mockup téléphone, la vidéo joue (l'image fournie) ───────────
