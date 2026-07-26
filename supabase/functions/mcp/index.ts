@@ -39,6 +39,11 @@ const MCP_VOICES: Record<string, string> = {
 // Nettoyage audio (Voice Isolator ElevenLabs) : ~1 crédit / minute d'audio
 const CLEAN_COST_PER_MIN = 1
 const CLEAN_MAX_BYTES    = 15_000_000 // ~15 min de MP3 128 kbps
+// Montage IA via Claude (#125) : chef d'orchestre + rendu serveur (mêmes tarifs que l'app)
+const MONTAGE_PLAN_COST   = 6  // = montageIA (transcription Scribe + plan Claude)
+const MONTAGE_RENDER_COST = 2  // = montageRender (MP4 monté par le moteur de rendu)
+const MONTAGE_STYLES      = ['auto', 'apple', 'glass', 'dynamic', 'word']
+const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
@@ -176,7 +181,7 @@ function toolDefs(isOwner: boolean) {
     },
     {
       name: 'generate_video',
-      description: `Lance la génération d'une vidéo IA (Veo 3.1, audio inclus) à partir d'un prompt et optionnellement d'une image de départ. Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_video pour récupérer la vidéo (compte 1 à 3 minutes).`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (Veo 3.1, audio et dialogues inclus) à partir d'un prompt et optionnellement d'une image de départ. Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_video pour récupérer la vidéo (compte 1 à 3 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -236,6 +241,53 @@ function toolDefs(isOwner: boolean) {
       },
     },
     {
+      name: 'montage_ia',
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), puis le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max — ex. un audio nettoyé avec clean_audio." },
+          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel des slides : dynamic (motion design continu, défaut), apple (épuré clair), glass (liquid glass), word (mot par mot), auto (choisi par l'IA)." },
+          brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
+          script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
+          duration_seconds: { type: 'number', description: "Optionnel — durée exacte de l'audio en secondes (sinon estimée automatiquement)." },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
+        },
+        required: ['audio_url'],
+      },
+    },
+    {
+      name: 'check_montage',
+      description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
+      inputSchema: {
+        type: 'object',
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par montage_ia ou render_montage_plan.' } },
+        required: ['job_id'],
+      },
+    },
+    {
+      name: 'get_montage_plan',
+      description: "L'ÉDITEUR via Claude (lecture) : récupère le PLAN DE MONTAGE JSON d'un Montage IA (slides, textes, timings, zooms, bruitages, sous-titres). Modifie ce JSON puis appelle render_montage_plan pour re-rendre la vidéo ajustée. Gratuit.",
+      inputSchema: {
+        type: 'object',
+        properties: { job_id: { type: 'string', description: 'Le job_id du montage dont tu veux le plan.' } },
+        required: ['job_id'],
+      },
+    },
+    {
+      name: 'render_montage_plan',
+      description: `L'ÉDITEUR via Claude (rendu) : re-rend un Montage IA à partir d'un PLAN MODIFIÉ (obtenu via get_montage_plan puis ajusté : textes, timings, styles, coupes…). Réutilise l'audio du montage d'origine. Coût : ${MONTAGE_RENDER_COST} crédits. Retourne un nouveau job_id — appelle ensuite check_montage.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          job_id: { type: 'string', description: "Le job_id du montage D'ORIGINE (son audio est réutilisé)." },
+          plan: { type: 'string', description: 'Le plan de montage complet, en JSON (chaîne) — version modifiée de celui retourné par get_montage_plan.' },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
+        },
+        required: ['job_id', 'plan'],
+      },
+    },
+    {
       name: 'list_media',
       description: 'Liste les derniers médias (images et vidéos) générés via Claude sur ce compte, avec leurs URLs publiques.',
       inputSchema: { type: 'object', properties: {} },
@@ -265,7 +317,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo IA ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · vidéo avatar parlant ${AVATAR_COST_SEC} crédit/s (max ${AVATAR_MAX_SEC} s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min.
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · vidéo avatar parlant ${AVATAR_COST_SEC} crédit/s (max ${AVATAR_MAX_SEC} s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -389,6 +441,9 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
   const { data: stale } = await svc.from('mcp_jobs').select('*')
     .eq('user_id', userId).eq('status', 'running').lt('created_at', staleIso).limit(5)
   for (const job of stale || []) {
+    // les montages peuvent légitimement attendre (moteur de rendu hors ligne) :
+    // leur cycle de vie est géré par check_montage (annulation + remboursement à 2 h)
+    if (job.kind === 'montage') continue
     if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
 
     // ── Jobs avatar (Hedra) : op_name = ID de génération Hedra ──
@@ -771,6 +826,229 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   }
 }
 
+// ── Montage IA + Éditeur via Claude (#125) ──
+// Le chef d'orchestre (edge orchestrate) fait transcription + plan ; le rendu part
+// dans render_jobs, consommé par le moteur de rendu serveur. La mémoire de marque
+// n'est pas lue ici (l'appel interne passe avec la clé anon) — le brief la remplace.
+
+// Durée de l'audio : exacte pour un WAV (en-tête RIFF), estimée sinon.
+// Pas grave si approximative : le moteur de rendu recale plan.duration sur la durée réelle.
+function estimateAudioSeconds(bytes: Uint8Array, contentType: string): number {
+  if (bytes.length > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    const br = bytes[28] | (bytes[29] << 8) | (bytes[30] << 16) | (bytes[31] << 24)
+    if (br > 0) return (bytes.length - 44) / br
+  }
+  const bps = /mp4|m4a|aac/.test(contentType) ? 12_000 : 16_000 // M4A ~96 kbps, MP3 ~128 kbps
+  return bytes.length / bps
+}
+
+// Crée la paire (render_jobs + mcp_jobs) — op_name du mcp_job = id du render_job.
+async function createMontageJobs(
+  userId: string, plan: Record<string, unknown>, inputPath: string,
+  assets: unknown[], cost: number,
+): Promise<{ jobId: string } | string> {
+  const { data: rj, error } = await svc.from('render_jobs')
+    .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets })
+    .select('id').single()
+  if (error || !rj) return 'Erreur serveur à la création du job de rendu — crédits remboursés.'
+  const { data: mj, error: e2 } = await svc.from('mcp_jobs')
+    .insert({ user_id: userId, kind: 'montage', op_name: String(rj.id), credits_cost: cost })
+    .select('id').single()
+  if (e2 || !mj) {
+    // pas de suivi possible → on annule le rendu pour ne pas travailler dans le vide
+    await svc.from('render_jobs').update({ status: 'failed', error: 'suivi mcp indisponible' }).eq('id', rj.id)
+    return 'Erreur serveur au suivi du job — crédits remboursés.'
+  }
+  return { jobId: String(mj.id) }
+}
+
+async function runMontageIA(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
+  const audioUrl = String(args.audio_url || '').trim()
+  if (!audioUrl) return toolErr('Le paramètre "audio_url" est requis.')
+  const style = MONTAGE_STYLES.includes(String(args.style)) ? String(args.style) : 'dynamic'
+  const brief = String(args.brief || '').trim().slice(0, 700)
+  const script = String(args.script || '').trim().slice(0, 4000)
+  const got = await fetchUserFile(audioUrl, MONTAGE_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "l'audio (audio_url)")
+  if (typeof got === 'string') return toolErr(got)
+  const durEst = Math.min(180, Math.max(5,
+    Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)))
+  const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST
+  const userId = String(profile.id)
+
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost, `Montage IA ~${Math.round(durEst)} s (style ${style})`, 'montage_ia')
+  if (gate) return gate
+
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
+
+  // Le chef d'orchestre prend ~90 s : trop long pour un appel d'outil synchrone.
+  // On crée le job de suivi tout de suite et TOUT le travail part en tâche de fond
+  // (waitUntil) — check_montage suit la préparation puis le rendu.
+  const { data: mj, error: mjErr } = await svc.from('mcp_jobs')
+    .insert({ user_id: userId, kind: 'montage', credits_cost: cost }).select('id').single()
+  if (mjErr || !mj) {
+    await refundCredits(userId, cost)
+    return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
+  }
+  const mcpJob = { id: mj.id, credits_cost: cost }
+
+  bg((async () => {
+    try {
+      // 1) chef d'orchestre — clé anon : passe le gateway, sans lire la mémoire de marque
+      const ext = /wav/.test(got.contentType) ? 'wav' : /mp4|m4a|aac/.test(got.contentType) ? 'm4a' : 'mp3'
+      const fd = new FormData()
+      fd.append('audio', new File([got.bytes as unknown as BlobPart], 'audio.' + ext, { type: got.contentType }))
+      fd.append('duration', String(Math.round(durEst * 100) / 100))
+      if (script) fd.append('script', script)
+      if (brief) fd.append('brief', brief)
+      fd.append('options', JSON.stringify({ lang: 'fr' }))
+      const or = await fetch(`${SUPABASE_URL}/functions/v1/orchestrate`, {
+        method: 'POST', headers: { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY }, body: fd,
+      })
+      const od = await or.json().catch(() => ({}))
+      if (!or.ok || !od.ok || !od.plan) {
+        await failAndRefund(userId, mcpJob, `chef d'orchestre : ${od.error || 'HTTP ' + or.status}`)
+        return
+      }
+      const plan = od.plan as Record<string, unknown>
+      plan.duration = Math.round(durEst * 100) / 100 // le moteur recale sur la durée réelle
+      if (style !== 'auto') plan.slideStyle = style
+
+      // 2) l'audio devient l'entrée du rendu (le moteur gère l'absence de piste vidéo)
+      const inputPath = `${userId}/mcp-montage-${Date.now()}.${ext}`
+      const { error: upErr } = await svc.storage.from('render-media').upload(inputPath, got.bytes, { contentType: got.contentType })
+      if (upErr) { await failAndRefund(userId, mcpJob, "upload de l'audio : " + upErr.message); return }
+
+      // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
+      const { data: rj, error: rjErr } = await svc.from('render_jobs')
+        .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets: [] })
+        .select('id').single()
+      if (rjErr || !rj) { await failAndRefund(userId, mcpJob, 'création du job de rendu impossible'); return }
+      await svc.from('mcp_jobs').update({ op_name: String(rj.id), updated_at: new Date().toISOString() }).eq('id', mj.id)
+    } catch (e) {
+      await failAndRefund(userId, mcpJob, String((e as Error)?.message || e).slice(0, 200))
+    }
+  })())
+
+  return toolText(
+    `🎬 Montage IA lancé ! (~${Math.round(durEst)} s, style ${style}, −${cost} crédits)
+job_id : ${mj.id}
+Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend le MP4.
+Appelle check_montage avec ce job_id dans environ 2 minutes.
+💡 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
+}
+
+async function runCheckMontage(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  const jobId = String(args.job_id || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
+  const userId = String(profile.id)
+  const { data: job } = await svc.from('mcp_jobs').select('*')
+    .eq('id', jobId).eq('user_id', userId).eq('kind', 'montage').maybeSingle()
+  if (!job) return toolErr('Job montage introuvable sur ce compte.')
+  if (job.status === 'done') return toolText(`✅ Montage prêt !\nURL : ${job.result_url}`)
+  if (job.status === 'failed') return toolErr(`Rendu échoué : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+
+  // phase 1 (op_name vide) : le chef d'orchestre prépare encore le plan en tâche de fond
+  if (!job.op_name) {
+    if (Date.now() - new Date(job.created_at).getTime() > 20 * 60_000) {
+      await failAndRefund(userId, job, 'préparation du plan bloquée')
+      return toolErr('La préparation du plan est restée bloquée — crédits remboursés, relance montage_ia.')
+    }
+    return toolText('🧠 Le chef d\'orchestre transcrit et prépare le plan de montage — rappelle check_montage dans ~1 minute.')
+  }
+
+  const { data: rj } = await svc.from('render_jobs')
+    .select('status, output_url, error, created_at').eq('id', job.op_name).maybeSingle()
+  if (!rj) {
+    await failAndRefund(userId, job, 'job de rendu disparu')
+    return toolErr('Job de rendu introuvable — crédits remboursés.')
+  }
+  if (rj.status === 'failed') {
+    await failAndRefund(userId, job, rj.error || 'échec du rendu')
+    return toolErr(`Rendu échoué : ${rj.error || 'erreur inconnue'} — crédits remboursés.`)
+  }
+  if (rj.status === 'queued') {
+    // moteur de rendu hors ligne ? au-delà de 2 h en file → annulation + remboursement
+    if (Date.now() - new Date(rj.created_at).getTime() > 2 * 3600_000) {
+      await svc.from('render_jobs').update({ status: 'failed', error: 'moteur de rendu hors ligne' })
+        .eq('id', job.op_name).eq('status', 'queued')
+      await failAndRefund(userId, job, 'moteur de rendu hors ligne')
+      return toolErr('Le moteur de rendu est resté hors ligne plus de 2 h — crédits remboursés, réessaie plus tard.')
+    }
+    return toolText("⏳ En file d'attente du moteur de rendu — rappelle check_montage dans ~1 minute.")
+  }
+  if (rj.status === 'rendering') return toolText('🎬 Rendu en cours — rappelle check_montage dans ~1 minute.')
+  if (rj.status === 'done' && rj.output_url) {
+    // ré-héberge le MP4 en public (render-media est privé) — claim atomique anti-doublon
+    const dl = await svc.storage.from('render-media').download(String(rj.output_url))
+    if (dl.error || !dl.data) return toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
+    const bytes = new Uint8Array(await dl.data.arrayBuffer())
+    const url = await deliverVideo(userId, job, bytes)
+    return url
+      ? toolText(`✅ Montage prêt !\nURL : ${url}\n💡 Pour ajuster : get_montage_plan → modifie → render_montage_plan. Ou ouvre l'Éditeur sur ${APP_URL}`)
+      : toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
+  }
+  return toolText(`⏳ Statut : ${rj.status} — rappelle check_montage dans ~1 minute.`)
+}
+
+async function runGetMontagePlan(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  const jobId = String(args.job_id || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
+  const { data: job } = await svc.from('mcp_jobs').select('op_name')
+    .eq('id', jobId).eq('user_id', String(profile.id)).eq('kind', 'montage').maybeSingle()
+  if (!job) return toolErr('Job montage introuvable sur ce compte.')
+  const { data: rj } = await svc.from('render_jobs').select('plan').eq('id', job.op_name).maybeSingle()
+  if (!rj?.plan) return toolErr('Plan introuvable pour ce job.')
+  return toolText(
+    `Plan de montage du job ${jobId} (JSON). Modifie ce qu'il faut (textes, timings, slides, zooms, sfx…) en gardant la structure, puis appelle render_montage_plan avec le JSON complet :\n${JSON.stringify(rj.plan)}`)
+}
+
+async function runRenderMontagePlan(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
+  const jobId = String(args.job_id || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
+  let plan: unknown = args.plan
+  if (typeof plan === 'string') { try { plan = JSON.parse(plan) } catch { return toolErr('plan : JSON invalide.') } }
+  if (!plan || typeof plan !== 'object' || !Number((plan as Record<string, unknown>).duration)) {
+    return toolErr('plan invalide (champ duration manquant) — repars du JSON de get_montage_plan.')
+  }
+  if (Number((plan as Record<string, unknown>).duration) > 300) return toolErr('plan trop long (max 5 min).')
+
+  const userId = String(profile.id)
+  const { data: src } = await svc.from('mcp_jobs').select('op_name')
+    .eq('id', jobId).eq('user_id', userId).eq('kind', 'montage').maybeSingle()
+  if (!src) return toolErr("Job montage d'origine introuvable sur ce compte.")
+  const { data: srcRj } = await svc.from('render_jobs').select('input_video, assets')
+    .eq('id', src.op_name).maybeSingle()
+  if (!srcRj?.input_video) return toolErr("Audio du montage d'origine introuvable.")
+
+  const cost = MONTAGE_RENDER_COST
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost, 'nouveau rendu du plan modifié', 'render_montage_plan')
+  if (gate) return gate
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
+
+  let launched = false
+  try {
+    const made = await createMontageJobs(userId, plan as Record<string, unknown>, String(srcRj.input_video), srcRj.assets || [], cost)
+    if (typeof made === 'string') return toolErr(made)
+    launched = true
+    return toolText(
+      `🎬 Nouveau rendu lancé avec le plan modifié ! (−${cost} crédits)
+job_id : ${made.jobId}
+Appelle check_montage avec ce job_id dans 1 à 2 minutes.`)
+  } finally {
+    if (!launched) await refundCredits(userId, cost)
+  }
+}
+
 async function runListMedia(profile: Record<string, unknown>): Promise<ToolContent> {
   const userId = String(profile.id)
   const { data, error } = await svc.storage.from('mcp-media')
@@ -909,8 +1187,8 @@ serve(async (req) => {
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'AvatarAds', version: '1.3.0' },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) : génère des images (generate_image), des vidéos IA (generate_video puis check_video), des vidéos AVATAR PARLANT voix+lipsync (generate_avatar_video puis check_avatar_video) et nettoie l'audio (clean_audio) avec les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
+        serverInfo: { name: 'AvatarAds', version: '1.4.0' },
+        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
       })
     }
     if (method === 'ping') return rpcResult(id, {})
@@ -933,6 +1211,10 @@ serve(async (req) => {
       else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)
       else if (name === 'check_avatar_video') out = await runCheckAvatarVideo(profile, args)
       else if (name === 'clean_audio') out = await runCleanAudio(profile, args, ctx)
+      else if (name === 'montage_ia') out = await runMontageIA(profile, args, ctx)
+      else if (name === 'check_montage') out = await runCheckMontage(profile, args)
+      else if (name === 'get_montage_plan') out = await runGetMontagePlan(profile, args)
+      else if (name === 'render_montage_plan') out = await runRenderMontagePlan(profile, args, ctx)
       else if (name === 'list_media') out = await runListMedia(profile)
       else if (name === 'admin_find_user') out = await runAdminFindUser(profile, args)
       else return rpcError(id, -32602, `Outil inconnu : ${name}`)

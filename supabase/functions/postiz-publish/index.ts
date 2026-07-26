@@ -46,9 +46,13 @@ function contentFor(identifier: string, caption: string, tags: string): string {
   return base + suffix
 }
 
-// Réglages minimaux par réseau (YouTube exige un titre).
+// Réglages requis par réseau — Postiz VALIDE ces champs et rejette tout le batch
+// s'il en manque un (vu en prod : IG exige post_type, X exige who_can_reply_post).
 function settingsFor(identifier: string, title: string): Record<string, unknown> {
-  if (identifier === 'youtube') return { title: title.slice(0, 95) || 'AvatarAds', type: 'public' }
+  const id = identifier.toLowerCase()
+  if (id.includes('youtube')) return { title: title.slice(0, 95) || 'AvatarAds', type: 'public' }
+  if (id.includes('instagram')) return { post_type: 'post' } // Reel/feed, jamais story par défaut
+  if (id === 'x' || id.includes('twitter')) return { who_can_reply_post: 'everyone' }
   return {}
 }
 
