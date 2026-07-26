@@ -10095,7 +10095,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -10122,18 +10122,18 @@ const MZ_SIZE   = [['S','S'],['M','M'],['L','L']];
 const MZ_MUSIC  = [['none','Aucune'],['auto','Auto'],['intense','Intense'],['dynamic','Dynamique'],['chill','Chill']];
 const MZ_RHYTHM = [['auto','Auto'],['nerveux','Nerveux'],['pose','Posé']];
 const MZ_TRANS  = [['cut','Coupe nette'],['whip','Balayage rapide'],['fondu','Fondu doux']];
-const MZ_BROLL  = ['Aucune','Légère','Équilibrée','Dense'];
+const MZ_BROLL  = ['Aucune','Légère · ~30 %','Équilibrée · ~60 %','Dense · ~90 % · Recommandé'];
 const MZ_VSTYLE = [
   ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
   ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
 
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
-  ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'fond blanc, cartes produit flottantes avec profondeur de champ, typo legere dispersee'],
+  ['dynamic','Dynamique','motion design continu',['#101014','#FF5A36'],'Motion design continu type pub de studio : AUCUNE video source a l\'ecran, panneaux clair/sombre alternes par section, typographie GEANTE sur les mots cles (4-5x la taille des mots de liaison), transitions qui poussent (jamais de fondu), tout bouge en continu — objectif 95% du temps anime. Les images utilisateur et captures d\'ecran s\'integrent dans le flux comme des cartes qui traversent.'],
   ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
-  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:2, punch:true, sfx:true }; }
+  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true }; }
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
 // 🔌 « Connecter Claude » — la section vivait dépliée dans « Mon compte » et y
@@ -10249,7 +10249,7 @@ function _mtAdvDirectives(){
   if(a.rhythm==='nerveux') out.push('RYTHME : un changement visuel toutes les 2 a 3s.');
   if(a.rhythm==='pose')    out.push('RYTHME : un changement visuel toutes les 4 a 6s, on laisse respirer.');
   if(a.broll===0) out.push('B-ROLL : aucun (broll = []).');
-  if(a.broll===3) out.push('B-ROLL : dense, illustre le maximum de passages.');
+  if(a.broll===3) out.push('B-ROLL : dense — OBJECTIF DE COUVERTURE : un visuel (image, b-roll, slide ou animation) a l\'ecran pendant au moins 90% de la video. Aucun passage de plus de 2s sans rien.');
   if(a.punch===false) out.push('ZOOMS : aucun (zooms = []).');
   if(a.music==='none') out.push('MUSIQUE : aucune (music = null). Ce sont les BRUITAGES qui portent le rythme.');
   else if(a.music && a.music!=='auto') out.push('MUSIQUE : mood "'+(a.music==='dynamic'?'dynamique':a.music)+'" impose.');
@@ -24134,7 +24134,7 @@ function edAiApply(plan, toSource){
 
   const wantSubs=true; // l'IA renvoie captions=[] si la vidéo a déjà des sous-titres incrustés
   const caps=(plan.captions||[]).map(c=>({ text:String(c.text||''), start:remap(c.start), end:Math.max(remap(c.start)+0.1, remap(c.end)), accent:!!c.accent })).filter(c=>c.text);
-  const _softCase = ['apple','editorial','word'].includes((_mt.adv||{}).vstyle);
+  const _softCase = ['apple','editorial','word','dynamic'].includes((_mt.adv||{}).vstyle);
   _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', softCase:_softCase, words:caps } : null;
 
   // 🎵 musique de fond choisie par l'IA (volume ducké sous la voix)
@@ -25265,8 +25265,8 @@ window.mPreviewClose=function(){
         </div>
 
         <div style="margin-bottom:22px">
-          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Images d'illustration (b-roll)</div><span class="mono" id="mzBrollLbl" style="font-size:12px;color:var(--accent-2)">Équilibrée</span></div>
-          <input type="range" id="mzBroll" class="ed-range" min="0" max="3" step="1" value="2" oninput="mzAdvSet('broll',+this.value)" style="width:100%">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Images d'illustration (b-roll)</div><span class="mono" id="mzBrollLbl" style="font-size:12px;color:var(--accent-2)">Dense · ~90 % · Recommandé</span></div>
+          <input type="range" id="mzBroll" class="ed-range" min="0" max="3" step="1" value="3" oninput="mzAdvSet('broll',+this.value)" style="width:100%">
           <p class="faint" style="font-size:11px;margin-top:8px">Quantité d'images/clips ajoutés par-dessus ta voix pour illustrer tes propos.</p>
         </div>
 
