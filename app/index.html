@@ -3028,8 +3028,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFiles(event.dataTransfer.files)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;border-radius:16px;cursor:pointer;margin-bottom:18px;background:var(--panel-1)">
             <div id="acDropContent" style="display:flex;flex-direction:column;align-items:center;gap:8px">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-              <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier audio ici</div>
-              <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP3 · WAV · M4A · OGG</div>
+              <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton audio ou ta vidéo ici</div>
+              <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP3 · WAV · M4A · OGG — MP4 · MOV</div>
+              <div class="faint" style="font-size:11px;max-width:280px;text-align:center;line-height:1.5">Avec une vidéo, l'image est coupée aux mêmes instants que l'audio</div>
               <button onclick="event.stopPropagation();document.getElementById('acFileIn').click()" style="margin-top:8px;padding:10px 26px;background:rgba(255,90,31,.07);border:1px solid rgba(255,90,31,.45);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,90,31,.16)'" onmouseout="this.style.background='rgba(255,90,31,.07)'">Parcourir</button>
             </div>
             <div id="acFileInfo" style="display:none;flex-direction:column;align-items:center;gap:6px">
@@ -3037,7 +3038,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="acFileName" style="font-size:13px;font-weight:700"></div>
             </div>
           </div>
-          <input type="file" id="acFileIn" accept="audio/*" multiple style="display:none" onchange="_acHandleFiles(this.files);this.value=''">
+          <input type="file" id="acFileIn" accept="audio/*,video/mp4,video/quicktime,video/*" multiple style="display:none" onchange="_acHandleFiles(this.files);this.value=''">
 
           <!-- Niveau de nettoyage -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -5254,7 +5255,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26g-presets-cta'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26h-video-nettoyage'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10712,17 +10713,38 @@ function _mtDropFill(dropId, lblId, subId, label){
   const lbl=document.getElementById(lblId); if(lbl) lbl.textContent=label;
   const sub=document.getElementById(subId); if(sub) sub.style.display='none';
 }
-function mtSetMp3(f){
+async function mtSetMp3(f){
   if(!f) return; _mt.mp3 = f; _mt.mp3Dur = 0;
   _mtDropFill('mtAudioDrop', 'mtMp3Name', 'mtAudioSub', f.name);
-  try{
-    const u=URL.createObjectURL(f), a=new Audio();
+  const _measure = (file) => { try{
+    const u=URL.createObjectURL(file), a=new Audio();
     a.onloadedmetadata=()=>{ _mt.mp3Dur=isFinite(a.duration)?a.duration:0; URL.revokeObjectURL(u); _mtUpdateCost(); };
     a.onerror=()=>{ URL.revokeObjectURL(u); };
     a.src=u;
-  }catch(_){}
+  }catch(_){} };
+  _measure(f);
   _mtUpdateCost();
-  toast('🎙 Audio chargé — il portera la vidéo');
+  toast('🎙 Audio chargé — nettoyage automatique en cours…');
+
+  // #68c · l'audio passe TOUJOURS par le nettoyage standard (débruitage + silences)
+  // avant le montage : plus besoin de faire un aller-retour par le module dédié.
+  // Gratuit (RNNoise + analyse locale), inclus dans le coût du montage.
+  const lbl = document.getElementById('mtMp3Name');
+  try {
+    const _lvl = _acLevel, _dn = _acDenoiseEnabled;
+    _acLevel = 'normal'; _acDenoiseEnabled = true;        // niveau standard, jamais « Avancé »
+    let r;
+    try { r = await _acCleanCore(f); } finally { _acLevel = _lvl; _acDenoiseEnabled = _dn; }
+    const removed = Math.round((r.decoded.duration - r.cleanBuf.duration) * 10) / 10;
+    _mt.mp3 = new File([r.blob], f.name.replace(/\.[^.]+$/, '') + '-clean.wav', { type:'audio/wav' });
+    _measure(_mt.mp3);
+    if(lbl) lbl.textContent = f.name + (removed > 0.2 ? ' · nettoyé −' + removed + 's' : ' · nettoyé');
+    toast(removed > 0.2 ? '✨ Audio nettoyé — ' + removed + 's de silences retirés' : '✨ Audio nettoyé');
+  } catch(e){
+    console.warn('mtSetMp3 auto-clean:', e);   // jamais bloquant : on garde l'audio d'origine
+    if(lbl) lbl.textContent = f.name;
+    toast('🎙 Audio chargé (nettoyage auto indisponible)');
+  }
 }
 // 🧑 avatar optionnel : il parle le MP3 en lipsync (pipeline Hedra du Générateur, 1 cr/s)
 function mtSetAvatar(f){
@@ -21527,13 +21549,28 @@ function initAudioCleanView(){
   }
 }
 
-function _acHandleFile(file){
+async function _acHandleFile(file){
   if(!file) return;
-  _acAudioBlob = file;
+  // #68b · une vidéo est acceptée : on garde le MP4 de côté et on travaille sur sa piste audio
+  const isVid = String(file.type).startsWith('video') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+  _acVideoFile = null; _acVideoBlob = null; _acKeepSegsSec = null;
+  let audioFile = file;
+  if(isVid){
+    try {
+      toast('🎬 Vidéo détectée — extraction de la piste audio…');
+      audioFile    = await _acExtractAudioWav(file);
+      _acVideoFile = file;
+    } catch(e){
+      console.error('_acExtractAudioWav:', e);
+      toast('⚠️ Piste audio illisible dans cette vidéo — réessaie avec un MP4 standard');
+      return;
+    }
+  }
+  _acAudioBlob = audioFile;
   document.getElementById('acDropContent').style.display = 'none';
   document.getElementById('acFileInfo').style.display    = 'block';
-  document.getElementById('acFileName').textContent      = file.name;
-  document.getElementById('acSourceLabel').textContent   = '📂 ' + file.name;
+  document.getElementById('acFileName').textContent      = file.name + (isVid ? ' · vidéo' : '');
+  document.getElementById('acSourceLabel').textContent   = (isVid ? '🎬 ' : '📂 ') + file.name;
   { const si=document.getElementById('acSourceInfo'); if(si) si.style.display='block'; } // visible seulement avec un fichier
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
@@ -21637,6 +21674,111 @@ function _acDrawWaveform(data, sr, keepSegs, totalLen){
 
 // ── Cœur du nettoyage (sans UI) : débruitage optionnel + coupe des silences.
 // Utilisé par l'analyse simple ET par le nettoyage par lot — une seule vérité.
+// ── Vidéo dans le Nettoyage audio (#68b) ─────────────────────────────────────
+// On accepte un MP4 : on en extrait l'audio (qualité native, aucun rééchantillonnage),
+// on le nettoie normalement, puis on recoupe la VIDÉO aux mêmes instants et on
+// remonte l'audio nettoyé dessus → un MP4 propre, image et son synchro.
+let _acVideoFile  = null;   // la vidéo source, si l'entrée était une vidéo
+let _acVideoBlob  = null;   // le MP4 nettoyé une fois produit
+let _acKeepSegsSec = null;  // segments gardés, en secondes
+
+// Piste audio d'un fichier vidéo → WAV pleine qualité (decodeAudioData lit le MP4)
+async function _acExtractAudioWav(file){
+  const ac  = new (window.AudioContext || window.webkitAudioContext)();
+  const dec = await ac.decodeAudioData(await file.arrayBuffer());
+  await ac.close();
+  return new File([_audioBufferToWavBlob(dec)], file.name.replace(/\.[^.]+$/, '') + '.wav', { type:'audio/wav' });
+}
+
+// Recoupe la vidéo aux segments gardés + colle l'audio nettoyé.
+// ⚠️ PAS de FFmpeg.wasm ici : il exige SharedArrayBuffer, indisponible sur
+// avatarads.fr (GitHub Pages ne peut pas envoyer les en-têtes COOP/COEP, donc
+// `crossOriginIsolated === false`). On rejoue donc la vidéo segment par segment
+// dans un canvas et on ré-encode avec MediaRecorder — la même mécanique que
+// l'export du Générateur, qui tourne déjà chez tout le monde.
+// Résolution native conservée, débit vidéo généreux (#141).
+async function _acCutVideo(videoFile, segsSec, cleanWav, onProgress){
+  const url = URL.createObjectURL(videoFile);
+  const vid = document.createElement('video');
+  vid.src = url; vid.playsInline = true; vid.muted = true;   // le son d'origine ne doit pas fuir
+  try {
+    await new Promise((res, rej) => { vid.onloadedmetadata = res; vid.onerror = () => rej(new Error('vidéo illisible')); vid.load(); });
+    const W = vid.videoWidth || 1080, H = vid.videoHeight || 1920;
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // audio = le WAV nettoyé, joué en continu dans le flux d'enregistrement
+    if(onProgress) onProgress('Préparation…');
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === 'suspended') await actx.resume();
+    const abuf = await actx.decodeAudioData(await cleanWav.arrayBuffer());
+    const dest = actx.createMediaStreamDestination();
+    const srcNode = actx.createBufferSource(); srcNode.buffer = abuf; srcNode.connect(dest);
+
+    const vstream = canvas.captureStream(30);
+    const stream  = new MediaStream([...vstream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+    const mimes = ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=h264,opus','video/webm;codecs=vp9,opus','video/webm'];
+    let mime = ''; for(const m of mimes){ if(MediaRecorder.isTypeSupported(m)){ mime = m; break; } }
+    if(!mime) throw new Error('encodeur vidéo non supporté sur ce navigateur');
+
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000, audioBitsPerSecond: 192_000 });
+    const chunks = []; rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(res => { rec.onstop = res; });
+
+    const total = segsSec.reduce((s,x) => s + (x.end - x.start), 0);
+    let done = 0;
+    rec.start(); srcNode.start();
+
+    // chaque segment est rejoué à vitesse réelle → la durée totale colle à l'audio nettoyé
+    for(const seg of segsSec){
+      vid.currentTime = seg.start;
+      await new Promise(res => { const t = setTimeout(res, 4000); vid.onseeked = () => { clearTimeout(t); res(); }; });
+      await vid.play().catch(()=>{});
+      // Dessin piloté par un timer (et non requestAnimationFrame, qui est gelé
+      // quand l'onglet passe en arrière-plan → la découpe restait bloquée).
+      // Garde-fou : on n'attend jamais plus du double de la durée du segment.
+      await new Promise(res => {
+        const deadline = Date.now() + (seg.end - seg.start) * 2000 + 5000;
+        const iv = setInterval(() => {
+          ctx.drawImage(vid, 0, 0, W, H);
+          if(vid.currentTime >= seg.end || vid.ended || Date.now() > deadline){ clearInterval(iv); res(); }
+        }, 1000/30);
+      });
+      vid.pause();
+      done += (seg.end - seg.start);
+      if(onProgress) onProgress('Découpe ' + Math.round(done/total*100) + '%');
+    }
+
+    rec.stop(); await stopped;
+    try { srcNode.stop(); } catch(_){}
+    try { await actx.close(); } catch(_){}
+    const blob = new Blob(chunks, { type: mime });
+    if(blob.size < 10000) throw new Error('sortie vidéo vide');
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// Bouton « vidéo nettoyée » — lance la découpe à la demande (FFmpeg = lourd)
+async function _acExportVideo(btn){
+  if(!_acVideoFile || !_acKeepSegsSec || !_acCleanBlob){ toast('⚠️ Lance d\'abord l\'analyse'); return; }
+  const label = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; }
+  const setTxt = (m) => { if(btn) btn.textContent = '⏳ ' + m; };
+  try {
+    setTxt('Chargement…');
+    _acVideoBlob = await _acCutVideo(_acVideoFile, _acKeepSegsSec, _acCleanBlob, setTxt);
+    _triggerDownload(_acVideoBlob, 'video_nettoyee.mp4');
+    toast('✓ Vidéo nettoyée téléchargée — image et son coupés aux mêmes instants');
+    if(btn){ btn.innerHTML = '✓ Vidéo nettoyée téléchargée'; }
+    const _nm = 'Vidéo nettoyée ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    try { _libAutoSaveVideo && _libAutoSaveVideo(new File([_acVideoBlob], _nm + '.mp4', { type:'video/mp4' }), _nm); } catch(_){}
+  } catch(e){
+    console.error('_acExportVideo:', e);
+    toast('⚠️ Découpe vidéo : ' + String(e.message||e).slice(0,90));
+    if(btn){ btn.innerHTML = label; }
+  } finally { if(btn) btn.disabled = false; }
+}
+
 async function _acCleanCore(srcBlob, onAfterDenoise){
   let working = srcBlob;
   if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
@@ -21737,6 +21879,8 @@ async function _acAnalyze(){
     _acDrawWaveform(r.data, r.sr, keepSegs, r.data.length);
 
     _acCleanBlob   = r.blob;
+    // #68b · mêmes instants de coupe pour la vidéo (segments convertis en secondes)
+    _acKeepSegsSec = keepSegs.map(s => ({ start: s.start / r.sr, end: s.end / r.sr }));
     const removedS = Math.round((decoded.duration - cleanBuf.duration)*10)/10;
     const origS    = Math.round(decoded.duration);
     const cleanS   = Math.round(cleanBuf.duration);
@@ -21755,7 +21899,8 @@ async function _acAnalyze(){
           <div id="acProgFill" style="height:100%;width:0%;background:#fff;border-radius:99px;transition:width .1s linear"></div>
         </div>
         <button id="acPlayBtn" onclick="_acTogglePlay(this)" style="width:100%;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter l'audio nettoyé</button>
-        <button onclick="_acDownload()" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
+        ${_acVideoFile ? '<button onclick="_acExportVideo(this)" style="width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">⬇ Télécharger la vidéo nettoyée (MP4)</button>' : ''}
+        <button onclick="_acDownload()" style="width:100%;padding:10px;background:${_acVideoFile ? 'var(--bg4)' : 'var(--green)'};border:${_acVideoFile ? '1px solid var(--border2)' : 'none'};border-radius:8px;color:${_acVideoFile ? 'var(--text2)' : '#fff'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⬇ Télécharger audio_nettoye.wav</button>
         <button onclick="_acSendToGenerator()" style="width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;margin-bottom:6px">→ Utiliser dans le Générateur</button>
         <button onclick="_acReset()" style="width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">↺ Faire un autre nettoyage</button>
       </div>`;
@@ -21833,6 +21978,7 @@ function _acReset(){
   _acAudioBlob  = null;
   _acCleanBlob  = null;
   _acBatch      = null;
+  _acVideoFile  = null; _acVideoBlob = null; _acKeepSegsSec = null;  // #68b
   // Reset UI
   const dropzone = document.getElementById('acDropzone');
   const fileInfo = document.getElementById('acFileInfo');
@@ -21876,7 +22022,7 @@ async function _acSendToGenerator(){
 let _acBatch = null; // { items:[{file,outName,status,blob,removedS,cleanS,err}], running, zip }
 
 function _acHandleFiles(files){
-  const list = [...(files||[])].filter(f => f && (String(f.type).startsWith('audio') || /\.(wav|mp3|m4a|aac|ogg|flac)$/i.test(f.name)));
+  const list = [...(files||[])].filter(f => f && (String(f.type).startsWith('audio') || String(f.type).startsWith('video') || /\.(wav|mp3|m4a|aac|ogg|flac|mp4|mov|webm|m4v)$/i.test(f.name)));
   if(!list.length) return;
   if(list.length === 1){ _acBatch = null; _acHandleFile(list[0]); return; }
   _acBatch = {
@@ -21935,7 +22081,9 @@ async function _acBatchRun(){
       it.status = 'erreur'; it.err = 'crédits insuffisants'; _acBatch.running = false; _acBatchRender(); return;
     }
     try {
-      const r = await _acCleanCore(it.file);
+      // #68b · en lot, une vidéo est acceptée : on ne nettoie que sa piste audio (sortie .wav)
+      const _isVid = String(it.file.type).startsWith('video') || /\.(mp4|mov|webm|m4v)$/i.test(it.file.name);
+      const r = await _acCleanCore(_isVid ? await _acExtractAudioWav(it.file) : it.file);
       it.blob = r.blob;
       it.removedS = Math.round((r.decoded.duration - r.cleanBuf.duration)*10)/10;
       it.cleanS   = Math.round(r.cleanBuf.duration);
