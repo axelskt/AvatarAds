@@ -236,6 +236,27 @@ export const UI_SCENES = {
     return { html, js, sfx: [{ kind: 'mouse-click', t: sendAt, vol: 0.7 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
   },
 
+  // ── CTA : la barre de commentaire TikTok — le mot se tape, on l'envoie ─────
+  comment(id, t0, t1, tone, s) {
+    const word = String(s.word || 'Avatar')
+    const tA = t0 + 0.35, step = 0.09
+    const tSend = r2(Math.min(t1 - 0.25, tA + step * word.length + 0.45))
+    const html = `
+      <div id="${id}bar" style="position:absolute;left:110px;top:1150px;width:860px;height:132px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:66px;display:flex;align-items:center;gap:24px;padding:0 26px;box-sizing:border-box;opacity:0;box-shadow:0 40px 100px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
+        <span style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,${ACC},#FFB03A);flex-shrink:0"></span>
+        <span style="font-size:40px;font-weight:500;color:${tone.ink};flex:1;text-align:left">${word.split('').map((c, ci) => `<span id="${id}w${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span></span>
+        <span id="${id}snd" style="width:84px;height:84px;border-radius:50%;background:${ACC};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></span>
+      </div>`
+    const js = `
+  tl.fromTo('#${id}bar',{y:150,opacity:0,scale:0.94},{y:0,opacity:1,scale:1,duration:0.46,ease:'power3.out'},${r2(t0)});` +
+      word.split('').map((c, ci) => `\n  tl.set('#${id}w${ci}',{opacity:1},${r2(tA + step * ci)});`).join('') + `
+  tl.to('#${id}snd',{scale:0.88,duration:0.08,ease:'power2.in'},${tSend});
+  tl.to('#${id}snd',{scale:1,duration:0.18,ease:'back.out(2.8)'},${r2(tSend + 0.08)});
+  tl.to('#${id}bar',{y:-14,duration:${r2(Math.max(0.3, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
+    return { html, js, sfx: [{ kind: 'mouse-click', t: tSend, vol: 0.75 }] }
+  },
+
   // ── résultat : mockup téléphone, la vidéo joue (l'image fournie) ───────────
   phone(id, t0, t1, tone, s) {
     const file = s.screen ? 'tuto/' + s.screen + '.png' : ''

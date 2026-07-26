@@ -52,12 +52,21 @@ function buildPanels(plan, D) {
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
   const free = words.filter((w) => !inAnim(w.start))
 
+  // découpe en phrases : au silence, ou À LA PONCTUATION dès que la clause est
+  // assez longue — jamais en plein milieu d'une proposition (les « phrases
+  // coupées où on ne comprend rien » venaient des caps bruts 8 mots / 3.4 s)
   const phrases = []
   let cur = []
   const flush = () => { if (cur.length) { phrases.push(cur); cur = [] } }
+  const endsClause = (w) => /[.,!?…]$/.test(w.text)
   for (const w of free) {
     const last = cur[cur.length - 1]
-    if (last && (w.start - last.end > 0.45 || w.start - cur[0].start > 3.4 || cur.length >= 8)) flush()
+    if (last && (
+      w.start - last.end > 0.55 ||
+      (endsClause(last) && cur.length >= 4) ||
+      w.start - cur[0].start > 4.2 ||
+      cur.length >= 10
+    )) flush()
     cur.push(w)
   }
   flush()
@@ -72,7 +81,9 @@ function buildPanels(plan, D) {
     const prev = out[out.length - 1]
     if (prev && p.t0 < prev.t0 + 0.6) {
       if (p.kind === 'typo' && prev.kind === 'typo') { prev.words.push(...(p.words || [])); continue }
-      if (p.kind === 'typo') continue                 // une phrase coincée contre une scène : la scène gagne
+      // une phrase coincée contre une scène : on ne la JETTE plus (ça amputait la
+      // fin des phrases) — on la garde si elle a de la matière et de la place
+      if (p.kind === 'typo' && ((p.words || []).length <= 2 || p.t1 - (prev.t0 + 0.6) < 0.5)) continue
       p.t0 = r2(prev.t0 + 0.6)
     }
     out.push(p)
@@ -80,7 +91,22 @@ function buildPanels(plan, D) {
   if (!out.length) return out
   out[0].t0 = 0
   for (let i = 0; i < out.length; i++) out[i].t1 = r2(i < out.length - 1 ? out[i + 1].t0 : D)
-  return out
+
+  // FUSION des scènes courtes voisines : deux panneaux de <1.35 s qui se poussent
+  // à la chaîne, « on n'a même pas le temps de voir que ça change déjà » (Axel).
+  // Elles partagent désormais UN panneau (même fond) avec un relais interne doux.
+  const merged = []
+  const shortish = (x) => (x.t1 - x.t0) < 1.35 && (x.kind === 'ui' || x.kind === 'screen')
+  for (const p of out) {
+    const prev = merged[merged.length - 1]
+    if (prev && shortish(p) && (prev.kind === 'multi' || shortish(prev)) && p.t1 - (prev.kind === 'multi' ? prev.subs[0].t0 : prev.t0) < 4.2) {
+      if (prev.kind !== 'multi') merged[merged.length - 1] = { kind: 'multi', t0: prev.t0, t1: p.t1, subs: [prev, p] }
+      else { prev.subs.push(p); prev.t1 = p.t1 }
+      continue
+    }
+    merged.push(p)
+  }
+  return merged
 }
 
 // ── 2 · CONTENU D'UN PANNEAU TYPO : une seule déclaration ───────────────────
@@ -118,6 +144,36 @@ function typoContent(id, p, tone, liveT0) {
     js += `\n  tl.fromTo('#${id}tw',{y:24},{y:-16,duration:${r2(Math.max(0.5, p.t1 - tA))},ease:'none'},${r2(tA)});`
   }
   return { html, js, sfx }
+}
+
+// capture d'app : ENTIÈRE et CENTRÉE (Axel : « les frames sont coupées, on doit
+// bien voir la page ») — elle tient dans la largeur, la caméra ne fait qu'un
+// léger travelling vers la zone nommée, sans jamais sortir du cadre
+function screenContent(id, s, tone, liveT0, t1, W) {
+  const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
+  const dur = r2(t1 - liveT0)
+  const cw = 980, ch = Math.round(cw / 1.6)
+  const cx = Math.round((W - cw) / 2), cy = 620
+  const z = Math.min(1.45, Math.max(1.1, (s.screenZoom || 1.6) * 0.75))
+  const cl = (v) => Math.min(1 - 1 / (2 * z), Math.max(1 / (2 * z), v ?? 0.5))
+  const tx = r2((0.5 - cl(s.screenX)) * z * cw), ty = r2((0.5 - cl(s.screenY)) * z * ch)
+  const bw = Math.round((s.boxW || 0.2) * cw * 1.08), bh = Math.round((s.boxH || 0.1) * ch * 1.3)
+  const bx = Math.round((s.boxX || 0.5) * cw - bw / 2), by = Math.round((s.boxY || 0.5) * ch - bh / 2)
+  const html = `
+        <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
+          <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.4)">
+            <div id="${id}ci" style="position:absolute;inset:0">
+              <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
+              <div id="${id}bx" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;border:4px solid ${ACC};border-radius:14px;opacity:0"></div>
+            </div>
+          </div>
+        </div>`
+  const js = `
+  tl.fromTo('#${id}cw',{y:220,opacity:0,scale:0.94},{y:0,opacity:1,scale:1,duration:0.48,ease:'power3.out'},${liveT0});
+  tl.fromTo('#${id}ci',{scale:1,x:0,y:0},{scale:${z},x:${tx},y:${ty},duration:${r2(Math.max(0.5, dur * 0.65))},ease:'power2.inOut'},${r2(liveT0 + 0.35)});
+  tl.fromTo('#${id}bx',{scale:1.5,opacity:0},{scale:1,opacity:1,duration:0.36,ease:'back.out(1.6)'},${r2(liveT0 + 0.55)});
+  tl.to('#${id}cw',{y:-20,duration:${r2(Math.max(0.4, dur - 0.5))},ease:'none'},${r2(liveT0 + 0.5)});`
+  return { html, js, sfx: [{ kind: 'mouse-click', t: r2(liveT0 + 0.55), vol: 0.7 }] }
 }
 
 // ── 3 · GÉNÉRATION ──────────────────────────────────────────────────────────
@@ -195,31 +251,29 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.fromTo('#${id}un',{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:0.34,ease:'power3.inOut'},${r2(liveT0 + 0.36)});`
 
     } else if (p.kind === 'screen') {
-      // capture réelle, COURTE : elle situe le module, les scènes UI font le reste
-      const s = p.slide
-      const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
-      const cw = 1560, ch = Math.round(cw / 1.6)
-      const cx = Math.round((W - cw) / 2), cy = 560
-      const z = Math.min(2.4, Math.max(1.2, s.screenZoom || 1.6))
-      const cl = (v) => Math.min(1 - 1 / (2 * z), Math.max(1 / (2 * z), v ?? 0.5))
-      const tx = r2((0.5 - cl(s.screenX)) * z * cw), ty = r2((0.5 - cl(s.screenY)) * z * ch)
-      const bw = Math.round((s.boxW || 0.2) * cw * 1.08), bh = Math.round((s.boxH || 0.1) * ch * 1.3)
-      const bx = Math.round((s.boxX || 0.5) * cw - bw / 2), by = Math.round((s.boxY || 0.5) * ch - bh / 2)
-      inner += `
-        <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
-          <div style="position:absolute;inset:0;border-radius:30px;overflow:hidden;box-shadow:0 50px 130px rgba(13,13,18,.4)">
-            <div id="${id}ci" style="position:absolute;inset:0">
-              <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
-              <div id="${id}bx" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;border:5px solid ${ACC};border-radius:16px;opacity:0"></div>
-            </div>
-          </div>
-        </div>`
-      pjs += `
-  tl.fromTo('#${id}cw',{x:${Math.round(W * 0.7)},opacity:0,rotation:2},{x:0,opacity:1,rotation:0,duration:0.5,ease:'power3.out'},${liveT0});
-  tl.fromTo('#${id}ci',{scale:1.04,x:0,y:0},{scale:${z},x:${tx},y:${ty},duration:${r2(Math.max(0.5, dur * 0.6))},ease:'power2.inOut'},${r2(liveT0 + 0.3)});
-  tl.fromTo('#${id}bx',{scale:1.5,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'back.out(1.6)'},${r2(liveT0 + 0.55)});
-  tl.to('#${id}cw',{y:-24,duration:${r2(Math.max(0.4, dur - 0.5))},ease:'none'},${r2(liveT0 + 0.5)});`
-      sfxAdd.push({ kind: 'mouse-click', t: r2(liveT0 + 0.55), vol: 0.7 })
+      const sc = screenContent(id, p.slide, tone, liveT0, t1, W)
+      inner += sc.html; pjs += sc.js; sfxAdd.push(...sc.sfx)
+
+    } else if (p.kind === 'multi') {
+      // plusieurs actions courtes dans UN panneau : relais interne doux (l'ancien
+      // contenu monte et s'efface, le nouveau monte à sa place) au lieu d'une
+      // poussée plein cadre toutes les secondes
+      p.subs.forEach((sub, k) => {
+        const sid = id + 's' + k
+        const subLive = k === 0 ? liveT0 : r2(sub.t0 + 0.06)
+        const sc = sub.kind === 'screen'
+          ? screenContent(sid, sub.slide, tone, subLive, sub.t1, W)
+          : uiScene(sub.slide.ui, sid, subLive, sub.t1, tone, sub.slide)
+        if (!sc) return
+        inner += `<div id="${sid}wr" style="position:absolute;inset:0;${k > 0 ? 'opacity:0' : ''}">${sc.html}</div>`
+        pjs += sc.js
+        sfxAdd.push(...(sc.sfx || [])); kbAdd.push(...(sc.keyboard || []))
+        if (k > 0) {
+          pjs += `
+  tl.to('#${id}s${k - 1}wr',{y:-140,autoAlpha:0,duration:0.3,ease:'power2.inOut'},${r2(sub.t0 - 0.06)});
+  tl.fromTo('#${sid}wr',{y:150,autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'power3.out'},${r2(sub.t0)});`
+        }
+      })
 
     } else if (p.kind === 'result') {
       const s = p.slide
@@ -227,19 +281,24 @@ export function buildDynamicComposition(plan, opts = {}) {
       if (sc) { inner += sc.html; pjs += sc.js }
 
     } else if (p.kind === 'punch') {
+      // CTA redessiné : le verbe en haut, LE MOT à taper en géant, et la barre de
+      // commentaire TikTok qui le tape puis l'envoie — on montre le geste demandé
       const s = p.slide
       const txt = (s.items && s.items[0] && s.items[0].text) || s.title || ''
       const tAt = Math.max(liveT0, (s.items && s.items[0] && s.items[0].t) || liveT0)
-      const fz = fitSize(txt, W - 170, 66, 140)
-      inner += `<div class="stack">
-        <div class="disp" id="${id}tx" style="font-size:${fz}px;color:${tone.ink};text-align:center;line-height:1.08;opacity:0;max-width:${W - 140}px">${esc(txt)}</div>
-        <div id="${id}un" style="width:420px;height:14px;background:${ACC}"></div></div>`
-      const holdS = r2(tAt + 0.8), cycle = 1.4
-      const reps = Math.max(0, Math.floor((t1 - holdS) / cycle) - 1)
+      const m = txt.match(/^(\S+)\s+(.+)$/)                   // « Commente » + « Avatar »
+      const verb = m ? m[1] : '', word = m ? m[2] : txt
+      const kw = word.replace(/[«»\s]/g, '') || 'Avatar'
+      const fz = fitSize(word, W - 170, 84, 150)
+      inner += `
+        <div id="${id}vb" style="position:absolute;left:0;right:0;top:640px;text-align:center;font-size:56px;font-weight:600;color:${tone.mute};opacity:0">${esc(verb)}</div>
+        <div class="disp" id="${id}tx" style="position:absolute;left:0;right:0;top:730px;text-align:center;font-size:${fz}px;color:${tone.ink};line-height:1.06;opacity:0">${esc(word)}</div>`
       pjs += `
+  tl.fromTo('#${id}vb',{y:-40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, tAt - 0.15))});
   tl.fromTo('#${id}tx',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.48,ease:'power4.out'},${r2(tAt)});
-  tl.fromTo('#${id}un',{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:0.4,ease:'power3.inOut'},${r2(tAt + 0.32)});
-  tl.to('#${id}tx',{scale:1.03,duration:${r2(cycle / 2)},ease:'sine.inOut',yoyo:true,repeat:${reps}},${holdS});`
+  tl.to('#${id}tx',{scale:1.04,duration:${r2(Math.max(0.4, (t1 - tAt - 0.5) / 2))},ease:'sine.inOut',yoyo:true,repeat:1},${r2(tAt + 0.55)});`
+      const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw })
+      if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])) }
       sfxAdd.push({ kind: 'pop', t: r2(tAt), vol: 0.6 })
     }
 
