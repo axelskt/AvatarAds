@@ -3332,8 +3332,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="pubDrop" onclick="document.getElementById('pubFile').click()" ondragover="event.preventDefault()" ondrop="event.preventDefault();var f=event.dataTransfer.files[0];if(f)_pubSetBlob(f,f.name)" style="border:1.5px dashed var(--border-2);border-radius:14px;padding:26px;text-align:center;cursor:pointer;background:var(--surface-2);transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)'">
           <div id="pubDropEmpty">
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-            <div style="font-size:13.5px;font-weight:700">Dépose ton MP4 ici (ou clique)</div>
-            <div class="muted" style="font-size:11.5px;margin-top:5px">Depuis le Montage IA, le bouton « Publier partout » importe la vidéo finale directement ici.</div>
+            <div style="font-size:13.5px;font-weight:700">Importe ta vidéo</div>
+            <div class="muted" style="font-size:11.5px;margin-top:5px">Glisse ton MP4 ici ou clique</div>
           </div>
           <video id="pubVideo" controls playsinline style="display:none;width:100%;max-height:300px;border-radius:10px;background:#000" onclick="event.stopPropagation()"></video>
           <div id="pubVideoMeta" class="muted" style="display:none;font-size:11px;font-family:var(--mono);margin-top:7px"></div>
@@ -3345,7 +3345,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div id="postizChannels" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12.5px;font-family:var(--mono);color:var(--text2)">Chargement des canaux…</div>
 
         <!-- description (sert aussi de titre YouTube) -->
-        <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION <span style="text-transform:none;letter-spacing:0">— même texte partout · tronquée auto pour X/Threads · sert de titre YouTube</span></div>
+        <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION</div>
         <textarea id="postizCaption" rows="4" placeholder="Écris ta description / légende…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px;resize:vertical"></textarea>
 
         <!-- hashtags : fixes, modifiables, sauvegardés automatiquement -->
@@ -5248,7 +5248,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26e-hashtags-fixes'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26f-textes-epures'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
