@@ -3341,12 +3341,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">RÉSEAUX</div>
         <div id="postizChannels" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12.5px;font-family:var(--mono);color:var(--text2)">Chargement des canaux…</div>
 
-        <!-- titre (YouTube) -->
-        <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">TITRE <span style="text-transform:none;letter-spacing:0">— utilisé par YouTube (100 car. max)</span></div>
-        <input id="postizTitle" maxlength="100" placeholder="Titre de la vidéo…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px">
-
-        <!-- description -->
-        <div style="margin-top:14px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION <span style="text-transform:none;letter-spacing:0">— même texte partout · tronquée auto pour X/Threads</span></div>
+        <!-- description (sert aussi de titre YouTube) -->
+        <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION <span style="text-transform:none;letter-spacing:0">— même texte partout · tronquée auto pour X/Threads · sert de titre YouTube</span></div>
         <textarea id="postizCaption" rows="4" placeholder="Écris ta description / légende…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px;resize:vertical"></textarea>
 
         <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:14px;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3)">🚀 Publier maintenant</button>
@@ -5242,7 +5238,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26b-module-publier'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26c-titre-auto-youtube'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -17356,7 +17352,6 @@ async function postizPublish(btn){
   const blob = window._aaPublishBlob;
   if(!blob){ toast('⚠️ Ajoute d\'abord une vidéo (dépose un MP4 ou importe depuis le Montage IA)'); return; }
   const caption = (document.getElementById('postizCaption').value||'').trim();
-  const title   = (document.getElementById('postizTitle')?.value||'').trim();
   if(!caption){ toast('⚠️ Écris une description avant de publier'); return; }
   const ids = [...document.querySelectorAll('#postizChannels input:checked')].map(i=>i.value);
   if(!ids.length){ toast('⚠️ Choisis au moins un réseau'); return; }
@@ -17369,7 +17364,7 @@ async function postizPublish(btn){
     const up = await sb.storage.from('render-media').upload(path, blob, { contentType:'video/mp4', upsert:true });
     if(up.error) throw new Error('upload : ' + up.error.message);
     st.textContent = '2/2 · Publication sur ' + ids.length + ' réseau(x)…';
-    const d = await _postizCall({ action:'publish', videoPath: path, caption, title, integrations: ids });
+    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids });
     st.textContent = '✅ Publié : ' + (d.published||[]).join(', ');
     toast('🚀 Publié sur ' + (d.published||[]).length + ' réseau(x) — vérifie le calendrier Postiz');
   } catch(e){
