@@ -3346,6 +3346,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- description (sert aussi de titre YouTube) -->
         <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION</div>
+        <!-- presets CTA « commente le mot-clé → DM » : verbe aléatoire à chaque clic -->
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="_pubPreset('SITE')" style="flex:1;padding:8px 0;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border)'">SITE</button>
+          <button onclick="_pubPreset('AVATAR')" style="flex:1;padding:8px 0;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border)'">AVATAR</button>
+          <button onclick="_pubPreset('GO')" style="flex:1;padding:8px 0;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border)'">GO</button>
+        </div>
         <textarea id="postizCaption" rows="4" placeholder="Écris ta description / légende…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px;resize:vertical"></textarea>
 
         <!-- hashtags : fixes, modifiables, sauvegardés automatiquement -->
@@ -5248,7 +5254,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26f-textes-epures'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26g-presets-cta'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -17375,6 +17381,17 @@ function _pubPaintChannels(){
     + '<span>' + (c.name||c.identifier||'') + '</span>'
     + '<svg class="pubChk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="transition:opacity .15s"><path d="M20 6L9 17l-5-5"/></svg>'
     + '</label>').join('') || '<span class="muted">Aucun canal connecté</span>';
+}
+// preset CTA « commente {mot} → je t'envoie tout en DM » — verbe tiré au sort
+function _pubPreset(k){
+  const T = [
+    'Commente "{K}" et je t\'envoie tout en privé ! 📩',
+    'Mets "{K}" en commentaire et je t\'envoie tout en privé ! 📩',
+    'Marque "{K}" en commentaire et je t\'envoie tout en privé ! 📩',
+  ];
+  const ta = document.getElementById('postizCaption');
+  ta.value = T[Math.floor(Math.random()*T.length)].replace('{K}', k);
+  ta.focus();
 }
 async function _postizCall(payload){
   const { data:{ session } } = await sb.auth.getSession();
