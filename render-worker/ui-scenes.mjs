@@ -233,7 +233,45 @@ export const UI_SCENES = {
   tl.to(['#${id}snd'],{scale:0.9,duration:0.08,ease:'power2.in'},${sendAt});
   tl.to(['#${id}snd'],{scale:1,duration:0.16,ease:'back.out(2.6)'},${r2(sendAt + 0.08)});
   tl.to('#${id}bar',{y:-20,duration:${r2(Math.max(0.4, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: sendAt, vol: 0.7 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
+    return { html, js, sfx: [{ kind: 'ding', t: sendAt, vol: 0.5 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
+  },
+
+  // ── hook « 30 secondes » : un CHRONOMÈTRE animé — anneau qui se trace,
+  //    aiguille qui balaie, chiffre qui compte. Du motion design, pas du texte. ──
+  timer(id, t0, t1, tone, s) {
+    const val = parseInt(String(s.value || '30').replace(/\D/g, ''), 10) || 30
+    const cx = 540, cy = 900, R = 300
+    const circ = Math.round(2 * Math.PI * R)
+    const countDur = r2(Math.min(1.3, t1 - t0 - 0.5))
+    const ticks = Array.from({ length: 12 }, (_, k) => {
+      const a = (k / 12) * 2 * Math.PI - Math.PI / 2
+      const x1 = cx + Math.cos(a) * (R + 34), y1 = cy + Math.sin(a) * (R + 34)
+      const x2 = cx + Math.cos(a) * (R + 58), y2 = cy + Math.sin(a) * (R + 58)
+      return `<line class="${id}tk" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${tone.mute}" stroke-width="7" stroke-linecap="round" opacity="0"/>`
+    }).join('')
+    const html = `
+      <svg style="position:absolute;left:0;top:0;width:1080px;height:1920px" viewBox="0 0 1080 1920">
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${tone.dark ? '#26262E' : '#EDE4DC'}" stroke-width="16"/>
+        <circle id="${id}ring" cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${ACC}" stroke-width="16"
+          stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" transform="rotate(-90 ${cx} ${cy})"/>
+        ${ticks}
+        <g id="${id}nd"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R + 46}" stroke="${tone.ink}" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="20" fill="${ACC}"/></g>
+      </svg>
+      <div class="disp" id="${id}n" style="position:absolute;left:0;right:0;top:${cy - 105}px;text-align:center;font-size:170px;color:${tone.ink};opacity:0">0</div>
+      <div id="${id}u" style="position:absolute;left:0;right:0;top:${cy + R + 96}px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:42px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || 'SECONDES')}</div>`
+    const js = `
+  var ${id}v = { n: 0, off: ${circ} };
+  tl.fromTo('.${id}tk',{opacity:0},{opacity:0.6,duration:0.2,stagger:0.03,ease:'power1.out'},${r2(t0)});
+  tl.to(${id}v,{off:0,n:${val},duration:${countDur},ease:'power2.inOut',onUpdate:function(){
+    var rg=document.getElementById('${id}ring'); if(rg) rg.setAttribute('stroke-dashoffset', String(${id}v.off));
+    var el=document.getElementById('${id}n'); if(el) el.textContent=String(Math.round(${id}v.n));
+  }},${r2(t0 + 0.15)});
+  tl.fromTo('#${id}n',{scale:0.82,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power2.out'},${r2(t0 + 0.12)});
+  tl.fromTo('#${id}nd',{rotation:0,transformOrigin:'${cx}px ${cy}px',svgOrigin:'${cx} ${cy}'},{rotation:360,duration:${countDur},ease:'power2.inOut'},${r2(t0 + 0.15)});
+  tl.fromTo('#${id}u',{y:40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'circ.out'},${r2(t0 + 0.5)});
+  tl.to('#${id}n',{scale:1.1,duration:${r2(Math.max(0.3, t1 - t0 - countDur - 0.3))},ease:'none'},${r2(t0 + 0.15 + countDur)});`
+    return { html, js, sfx: [{ kind: 'timer', t: r2(t0 + 0.1), vol: 0.3 }, { kind: 'ding', t: r2(t0 + 0.15 + countDur), vol: 0.5 }] }
   },
 
   // ── « avec cette qualité-là » : L'IMAGE plein cadre — la preuve, pas du texte ─
@@ -251,7 +289,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}im',{scale:1.18},{scale:1,duration:${r2(Math.max(0.6, t1 - t0 - 0.3))},ease:'none'},${r2(t0 + 0.15)});
   tl.fromTo('#${id}tag',{y:40,opacity:0},{y:0,opacity:1,duration:0.34,ease:'power3.out'},${r2(t0 + 0.5)});
   tl.to('#${id}fr',{y:-24,duration:${r2(Math.max(0.4, t1 - t0 - 0.6))},ease:'none'},${r2(t0 + 0.55)});`
-    return { html, js, sfx: [{ kind: 'pop', t: r2(t0 + 0.05), vol: 0.55 }] }
+    return { html, js, sfx: [{ kind: 'camera-shutter', t: r2(t0 + 0.08), vol: 0.45 }] }
   },
 
   // ── CTA : la barre de commentaire TikTok — le mot se tape, on l'envoie ─────
@@ -272,7 +310,7 @@ export const UI_SCENES = {
   tl.to('#${id}snd',{scale:0.88,duration:0.08,ease:'power2.in'},${tSend});
   tl.to('#${id}snd',{scale:1,duration:0.18,ease:'back.out(2.8)'},${r2(tSend + 0.08)});
   tl.to('#${id}bar',{y:-14,duration:${r2(Math.max(0.3, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: tSend, vol: 0.75 }] }
+    return { html, js, sfx: [{ kind: 'ding', t: tSend, vol: 0.5 }] }
   },
 
   // ── résultat : mockup téléphone, la vidéo joue (l'image fournie) ───────────
