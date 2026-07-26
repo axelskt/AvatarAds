@@ -325,17 +325,21 @@ export function buildDynamicComposition(plan, opts = {}) {
   // un CLIC peut légitimement se répéter vite (deux choix à 1s d'écart) ; c'est
   // le whoosh répété qui lasse — fenêtres anti-répétition par famille
   const minGap = (k) => (k === 'mouse-click' ? 0.6 : k === 'whoosh' || k === 'woosh' ? 2.5 : 2)
-  // 3 clics DIFFÉRENTS en rotation — « pas toujours les mêmes » (Axel)
-  const CLICKS = ['mouse-click', 'click', 'camera-click']
-  let clickIdx = 0
+  // LE BON SON POUR LA SCÈNE (chaque scène déclare le sien : clic pour un bouton,
+  // ding pour un envoi, obturateur pour une photo, tic-tac pour le chrono…) — et
+  // si le même son devait rejouer trop vite, on le remplace par son jumeau au
+  // lieu de marteler l'identique (retour d'Axel : « varier, pas toujours le même »)
+  // fenêtre d'ÉCHANGE (2.4s) : le même son qui reviendrait vite devient son jumeau,
+  // puis le jumeau du jumeau — quatre clics de suite deviennent clic/click/obturateur.
+  // fenêtre de COUPE (minGap) : en dessous, on saute carrément.
+  const TWIN = { 'mouse-click': 'click', click: 'camera-click', 'camera-click': 'mouse-click', pop: 'snap', snap: 'pop', ding: 'success', success: 'ding' }
   for (const s of sfxAdd.sort((a, b) => a.t - b.t)) {
-    if (s.kind === 'mouse-click') { s.kind = CLICKS[clickIdx % CLICKS.length]; clickIdx++ }
-    const fam = CLICKS.includes(s.kind) ? 'click' : s.kind
-    if (lastByKind[fam] != null && s.t - lastByKind[fam] < minGap(s.kind === 'click' || CLICKS.includes(s.kind) ? 'mouse-click' : s.kind)) continue
+    for (let k = 0; k < 2 && lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < 2.4 && TWIN[s.kind]; k++) s.kind = TWIN[s.kind]
+    if (lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < minGap(s.kind)) continue
     if (s.t - lastT < 0.2) continue
-    lastByKind[fam] = s.t; lastT = s.t
+    lastByKind[s.kind] = s.t; lastT = s.t
     sfxOut.push(s)
-    if (sfxOut.length >= 18) break
+    if (sfxOut.length >= 22) break
   }
   plan.sfx = sfxOut
   if (kbAdd.length) plan.keyboard = [...(plan.keyboard || []), ...kbAdd]
