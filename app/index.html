@@ -3319,6 +3319,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <!-- ══ 🪄 MONTAGE IA — ta vidéo virale de A à Z (module chef d'orchestre) ══ -->
     <!-- ═══════════ 📤 PUBLIER (#116) — cross-post Postiz · module compte developer ═══════════ -->
     <div class="view" id="v-publish">
+      <!-- .lib-view : la .view est overflow:hidden, c'est CE conteneur qui défile
+           (même patron que Bibliothèque/Nettoyage). Sans lui, la page était figée. -->
+      <div class="lib-view" style="width:100%">
       <div style="max-width:640px;margin:0 auto;width:100%;padding-bottom:40px">
         <div style="text-align:center;margin-bottom:24px">
           <div style="width:54px;height:54px;margin:10px auto 14px;border-radius:16px;background:var(--accent-soft);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center">
@@ -3363,6 +3366,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:14px;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3);display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Publier maintenant</button>
         <div id="postizStatus" style="display:none;margin-top:9px;font-size:11.5px;font-family:var(--mono);color:var(--text2);text-align:center"></div>
+      </div>
       </div>
     </div>
 
