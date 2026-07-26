@@ -18,6 +18,8 @@
 const r2 = (n) => Math.round(n * 100) / 100
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const ACC = '#FF5A36'
+// géométrie de la barre de commentaire — le zoom du CTA s'y réfère
+const BAR_Y = 1150, BAR_H = 132
 
 const CURSOR = (id) => `<svg id="${id}cur" viewBox="0 0 24 24" style="position:absolute;left:0;top:0;width:54px;height:54px;opacity:0"><path d="M5 3l14 8-6 1.5L10.5 19z" fill="#fff" stroke="#0D0D12" stroke-width="1.4"/></svg>`
 
@@ -385,18 +387,31 @@ export const UI_SCENES = {
     const tA = t0 + 0.35, step = 0.09
     const tSend = r2(Math.min(t1 - 0.25, tA + step * word.length + 0.45))
     const html = `
-      <div id="${id}bar" style="position:absolute;left:110px;top:1150px;width:860px;height:132px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:66px;display:flex;align-items:center;gap:24px;padding:0 26px;box-sizing:border-box;opacity:0;box-shadow:0 40px 100px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
+      <div id="${id}bar" style="position:absolute;left:110px;top:${BAR_Y}px;width:860px;height:${BAR_H}px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:66px;display:flex;align-items:center;gap:24px;padding:0 26px;box-sizing:border-box;opacity:0;box-shadow:0 40px 100px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
         <span style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,${ACC},#FFB03A);flex-shrink:0"></span>
         <span style="font-size:40px;font-weight:500;color:${tone.ink};flex:1;text-align:left">${word.split('').map((c, ci) => `<span id="${id}w${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span></span>
         <span id="${id}snd" style="width:84px;height:84px;border-radius:50%;background:${ACC};display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></span>
       </div>`
-    const js = `
+    let js = `
   tl.fromTo('#${id}bar',{y:150,opacity:0,scale:0.94},{y:0,opacity:1,scale:1,duration:0.46,ease:'power3.out'},${r2(t0)});` +
       word.split('').map((c, ci) => `\n  tl.set('#${id}w${ci}',{opacity:1},${r2(tA + step * ci)});`).join('') + `
   tl.to('#${id}snd',{scale:0.88,duration:0.08,ease:'power2.in'},${tSend});
-  tl.to('#${id}snd',{scale:1,duration:0.18,ease:'back.out(2.8)'},${r2(tSend + 0.08)});
+  tl.to('#${id}snd',{scale:1,duration:0.18,ease:'back.out(2.8)'},${r2(tSend + 0.08)});`
+    // ZOOM SUR LA BARRE après l'envoi : elle monte au centre et grossit, on voit
+    // l'avatar à gauche et le bouton envoyer à droite. `soft` pour le premier CTA
+    // (respiration), `in` pour le final (on finit dans le geste demandé).
+    const zoom = s.zoom || ''
+    if (zoom) {
+      const sc = zoom === 'in' ? 2.0 : 1.32
+      const dy = Math.round((960 - (BAR_Y + BAR_H / 2)) * (zoom === 'in' ? 1 : 0.55))
+      const zAt = r2(Math.min(t1 - 0.35, tSend + 0.22))
+      js += `
+  tl.to('#${id}bar',{scale:${sc},y:${dy},duration:${r2(Math.max(0.45, t1 - zAt))},ease:'power2.inOut',transformOrigin:'50% 50%'},${zAt});`
+    } else {
+      js += `
   tl.to('#${id}bar',{y:-14,duration:${r2(Math.max(0.3, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
+    }
     return { html, js, sfx: [{ kind: 'mo-pop-1', t: tSend, vol: 0.5 }] }
   },
 

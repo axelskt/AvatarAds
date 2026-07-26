@@ -305,7 +305,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // passages tapés, donc sans boucle le son s'arrêtait au bout de 2 s pendant
       // que le texte continuait de s'écrire (« le bruitage du clavier doit rester
       // tout le long », Axel). aloop=-1 le répète, atrim coupe à la bonne durée.
-      filters.push(`[${idx}:a]aloop=loop=-1:size=2e9,atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=0.3[kb${idx}]`)
+      filters.push(`[${idx}:a]aloop=loop=-1:size=2e9,atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.12).toFixed(2)}:d=0.12,adelay=${ms}|${ms},volume=0.45[kb${idx}]`)
       mixIns.push(`[kb${idx}]`)
       idx++
     }
