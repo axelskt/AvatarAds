@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { uiScene } from './ui-scenes.mjs'
+import { deriveDynamicSlides } from './dynamic-derive.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -174,6 +175,10 @@ export function buildDynamicComposition(plan, opts = {}) {
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
   const logoFile = opts.logoFile || ''
+  // #148 : un plan venu de l'orchestrateur n'a AUCUNE scène ui (le serveur reste
+  // générique) — on les dérive ici depuis la voix. Un plan écrit à la main qui en
+  // contient déjà garde la priorité, la dérivation ne s'exécute pas.
+  if (!(plan.slides || []).some((s) => s.anim === 'ui')) deriveDynamicSlides(plan, opts)
   const panels = buildPanels(plan, D)
   const PUSH = 0.42
   const DIRS = ['right', 'bottom', 'right', 'top']
