@@ -245,7 +245,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     let idx = 2
 
     if (baseHasAudio) {
-      filters.push(`[1:a]apad=whole_dur=${plan.duration}[voice]`)
+      // LA VOIX EST NORMALISÉE SEULE, et pas dans le mix. Avant, loudnorm tournait
+      // sur le mélange final : chaque bruitage ajoutait de l'énergie, loudnorm
+      // rabaissait TOUT pour tenir la cible, et la voix d'Axel plongeait sous le
+      // bruitage. Ici elle est calée à -14 LUFS une fois pour toutes, en amont ;
+      // les bruitages viennent PAR-DESSUS sans jamais la faire bouger.
+      filters.push(`[1:a]apad=whole_dur=${plan.duration},loudnorm=I=-14:TP=-2:LRA=9[voice]`)
       mixIns.push('[voice]')
     }
 
@@ -296,7 +301,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // 0.3 et pas SFX_VOL×1.1 : à ~0.94 le lit de frappe pesait dans le loudnorm
       // global qui BAISSAIT toute la piste — la voix d'Axel « se dégradait » à
       // chaque passage tapé. La frappe est une texture, pas un premier plan.
-      filters.push(`[${idx}:a]atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=0.3[kb${idx}]`)
+      // aloop AVANT atrim : le fichier de frappe est plus court que la plupart des
+      // passages tapés, donc sans boucle le son s'arrêtait au bout de 2 s pendant
+      // que le texte continuait de s'écrire (« le bruitage du clavier doit rester
+      // tout le long », Axel). aloop=-1 le répète, atrim coupe à la bonne durée.
+      filters.push(`[${idx}:a]aloop=loop=-1:size=2e9,atrim=0:${dur.toFixed(2)},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0, dur - 0.3).toFixed(2)}:d=0.3,adelay=${ms}|${ms},volume=0.3[kb${idx}]`)
       mixIns.push(`[kb${idx}]`)
       idx++
     }
@@ -331,7 +340,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // le fil, et le spectateur scrolle au lieu de monter le son. loudnorm ramene la
       // sonie integree a -14 LUFS avec un vrai pic a -1,5 dBTP (pas d'ecretage).
       // Sortie en STEREO : une piste mono est repliee au centre par certains lecteurs.
-      filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0,loudnorm=I=-13:TP=-1.5:LRA=11,aformat=channel_layouts=stereo[aout]`)
+      // Plus de loudnorm sur le MIX (c'est lui qui faisait plonger la voix sous les
+      // bruitages) : la voix arrive déjà à -14 LUFS, les bruitages sont posés à
+      // leur volume, et un simple limiteur retient les crêtes sans toucher aux
+      // niveaux relatifs. La sonie plateforme est donc portée par la voix seule.
+      filters.push(`${mixIns.join('')}amix=inputs=${mixIns.length}:duration=first:normalize=0,alimiter=limit=0.89:level=disabled,aformat=channel_layouts=stereo[aout]`)
       console.log(`▶ mix audio (${mixIns.length} pistes)…`)
       execFileSync('ffmpeg', [
         '-v', 'error', '-y', ...inputs,

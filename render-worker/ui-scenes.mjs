@@ -59,7 +59,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}btn',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.44,ease:'back.out(1.7)'},${r2(t0 + 0.55)});
   ${cursorClick(id, '#' + id + 'btn', bx + bw / 2 + 40, by + bh / 2 + 8, tClick - 0.5, tClick)}
   tl.to('#${id}c',{y:-22,duration:${r2(Math.max(0.4, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: r2(tClick), vol: 0.8 }] }
+    return { html, js, sfx: [{ kind: 'mo-tap-1', t: r2(tClick), vol: 0.8 }] }
   },
 
   // ── « Générer la clé et copie-la » : bouton → clé → toast Copié ────────────
@@ -80,7 +80,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}key',{x:-40,opacity:0},{x:0,opacity:1,duration:0.4,ease:'power3.out'},${r2(tClick + 0.2)});
   tl.fromTo('#${id}toast',{y:60,scale:0.8,opacity:0},{y:0,scale:1,opacity:1,duration:0.4,ease:'back.out(1.8)'},${r2(Math.min(t1 - 0.4, tClick + 0.9))});
   tl.to('#${id}c',{y:-20,duration:${r2(Math.max(0.4, t1 - t0 - 0.4))},ease:'none'},${r2(t0 + 0.4)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: r2(tClick), vol: 0.8 }, { kind: 'success', t: r2(Math.min(t1 - 0.4, tClick + 0.9)), vol: 0.55 }] }
+    return { html, js, sfx: [{ kind: 'mo-tap-1', t: r2(tClick), vol: 0.8 }, { kind: 'mo-impact-1', t: r2(Math.min(t1 - 0.4, tClick + 0.9)), vol: 0.55 }] }
   },
 
   // ── « Claude est connecté à AvatarAds » : deux pastilles reliées + check ───
@@ -100,7 +100,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}ln',{scaleX:0,transformOrigin:'center'},{scaleX:1,duration:0.4,ease:'power3.inOut'},${r2(t0 + 0.5)});
   tl.fromTo('#${id}ck',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.44,ease:'back.out(2)'},${r2(t0 + 0.85)});
   tl.to(['#${id}a','#${id}b'],{y:-18,duration:${r2(Math.max(0.4, t1 - t0 - 0.6))},ease:'none'},${r2(t0 + 0.6)});`
-    return { html, js, sfx: [{ kind: 'success', t: r2(t0 + 0.85), vol: 0.6 }] }
+    return { html, js, sfx: [{ kind: 'mo-impact-1', t: r2(t0 + 0.85), vol: 0.6 }] }
   },
 
   // ── « importe ton fichier » : le fichier GLISSE dans la dropzone ───────────
@@ -153,7 +153,7 @@ export const UI_SCENES = {
   ${cursorClick(id, '#' + id + 'btn', 570, 1190, tCut - 0.45, tCut)}
   tl.to('.${id}sil',{scaleY:0.05,autoAlpha:0,duration:0.3,ease:'power2.in'},${r2(tCut + 0.15)});${moves}
   tl.to('.${id}live',{scale:1.04,duration:${r2(Math.max(0.3, t1 - t0 - 2.2))},ease:'none'},${r2(t0 + 2.1)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: r2(tCut), vol: 0.8 }, { kind: 'snap', t: r2(tCut + 0.35), vol: 0.6 }] }
+    return { html, js, sfx: [{ kind: 'mo-tap-1', t: r2(tCut), vol: 0.8 }, { kind: 'snap', t: r2(tCut + 0.35), vol: 0.6 }] }
   },
 
   // ── « en un clic » : UN bouton, le clic, la coche — rien d'autre ───────────
@@ -169,7 +169,7 @@ export const UI_SCENES = {
   ${cursorClick(id, '#' + id + 'btn', 590, 962, tClick - 0.42, tClick)}
   tl.fromTo('#${id}rg',{scale:0.75,opacity:0.9},{scale:1.5,opacity:0,duration:0.44,ease:'power2.out'},${r2(tClick + 0.02)});
   tl.to('#${id}btn',{scale:1.035,duration:0.4,ease:'sine.inOut',yoyo:true,repeat:1},${r2(tClick + 0.3)});`
-    return { html, js, sfx: [{ kind: 'mouse-click', t: r2(tClick), vol: 0.8 }] }
+    return { html, js, sfx: [{ kind: 'mo-tap-1', t: r2(tClick), vol: 0.8 }] }
   },
 
   // ── « choisis un style, des sous-titres, une musique » : pills qui popent ──
@@ -211,7 +211,7 @@ export const UI_SCENES = {
   tl.to('${sel}',{borderColor:'${ACC}',duration:0.18},${r2(tPick)});
   tl.to('${sel}',{scale:1.06,y:-14,duration:0.3,ease:'back.out(1.8)'},${r2(tPick + 0.1)});
   tl.to(${JSON.stringify(items.map((_, k) => '#' + id + 'k' + k).filter((_, k) => k !== selIdx))},{autoAlpha:0.35,scale:0.94,duration:0.3,ease:'power2.inOut'},${r2(tPick + 0.1)});`
-    return { html: html + CURSOR(id), js, sfx: [{ kind: 'mouse-click', t: r2(tPick), vol: 0.8 }] }
+    return { html: html + CURSOR(id), js, sfx: [{ kind: 'mo-tap-1', t: r2(tPick), vol: 0.8 }] }
   },
 
   // ── barre de prompt (référence @saasservices17) : la phrase SE TAPE, caret,
@@ -242,7 +242,85 @@ export const UI_SCENES = {
       js += `
   tl.to('#${id}bar',{scale:2.2,x:-460,y:-210,duration:${r2(Math.max(0.3, t1 - zs))},ease:'power2.in',transformOrigin:'86% 82%'},${zs});`
     }
-    return { html, js, sfx: [{ kind: 'ding', t: sendAt, vol: 0.5 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
+    return { html, js, sfx: [{ kind: 'mo-pop-1', t: sendAt, vol: 0.5 }], keyboard: [{ t: r2(tA), dur: r2(tB - tA) }] }
+  },
+
+  // ── « rends-toi sur avatarads.fr » : un NAVIGATEUR — l'URL se tape dans la
+  //    barre, la page arrive, puis la caméra plonge sur le bouton demandé ───────
+  browser(id, t0, t1, tone, s) {
+    const url = String(s.url || 'avatarads.fr')
+    const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
+    const W = 1000, H = 690, X = (1080 - W) / 2, Y = 560
+    const tType = t0 + 0.35, tGo = r2(tType + 0.09 * url.length + 0.2)
+    // cible du zoom final : le bouton « Commencer » en haut à droite du site
+    const zx = s.zoomX ?? 0.885, zy = s.zoomY ?? 0.146, zf = s.zoomTo || 2.8
+    const tZoom = r2(s.zoomAt ? Math.max(tGo + 0.5, s.zoomAt) : Math.max(tGo + 0.6, t1 - 1.2))
+    const html = `
+      <div id="${id}win" style="position:absolute;left:${X}px;top:${Y}px;width:${W}px;height:${H}px;background:${tone.dark ? '#17171E' : '#FFFFFF'};border-radius:28px;overflow:hidden;box-shadow:0 60px 150px rgba(13,13,18,.45);opacity:0">
+        <div style="position:absolute;left:0;top:0;width:100%;height:96px;background:${tone.dark ? '#1F1F27' : '#F2F2F5'};display:flex;align-items:center;gap:16px;padding:0 28px;box-sizing:border-box">
+          ${['#FF5F57', '#FEBC2E', '#28C840'].map((c) => `<span style="width:20px;height:20px;border-radius:50%;background:${c}"></span>`).join('')}
+          <span style="flex:1;height:56px;margin-left:18px;border-radius:28px;background:${tone.dark ? '#0E0E13' : '#FFFFFF'};display:flex;align-items:center;padding:0 26px;font-family:'JetBrains Mono',monospace;font-size:28px;color:${tone.ink}">
+            ${url.split('').map((c, i) => `<span id="${id}u${i}" style="opacity:0">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:3px;height:32px;background:${ACC};margin-left:2px"></span>
+          </span>
+        </div>
+        <div id="${id}vp" style="position:absolute;left:0;top:96px;width:${W}px;height:${H - 96}px;overflow:hidden;background:${tone.dark ? '#0E0E13' : '#fff'}">
+          <img id="${id}pg" src="${file}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:0" />
+        </div>
+      </div>`
+    let js = `
+  tl.fromTo('#${id}win',{y:220,scale:0.94,opacity:0},{y:0,scale:1,opacity:1,duration:0.5,ease:'power3.out'},${r2(t0)});` +
+      url.split('').map((c, i) => `\n  tl.set('#${id}u${i}',{opacity:1},${r2(tType + 0.09 * i)});`).join('') + `
+  tl.fromTo('#${id}pg',{opacity:0,y:60},{opacity:1,y:0,duration:0.42,ease:'power3.out'},${tGo});`
+    // la page glisse doucement puis la caméra PLONGE sur le bouton — c'est la
+    // transition vers la suite (« un zoom sur le bouton plutôt », Axel)
+    // ZOOM SUR LE BOUTON, calcul exact. On agrandit l'IMAGE (pas le cadre) depuis
+    // son coin haut-gauche, puis on la translate pour amener le point visé au
+    // centre du viewport : tx = centre − position_du_point×échelle. Zoomer le
+    // cadre lui-même (ancienne version) déplaçait aussi la fenêtre du navigateur,
+    // et la cible finissait hors champ.
+    const imgH = Math.round(W * (1800 / 2880))     // la capture fait 2880×1800
+    const vpH = H - 96
+    const tx = r2(W / 2 - zx * W * zf)
+    const ty = r2(vpH / 2 - zy * imgH * zf)
+    js += `
+  tl.to('#${id}win',{y:-16,duration:${r2(Math.max(0.4, tZoom - tGo))},ease:'none'},${r2(tGo + 0.3)});
+  tl.fromTo('#${id}pg',{scale:1,x:0,y:0,transformOrigin:'0 0'},{scale:${zf},x:${tx},y:${ty},duration:${r2(Math.max(0.5, t1 - tZoom))},ease:'power2.inOut'},${tZoom});`
+    return { html, js, sfx: [{ kind: 'mo-pop-1', t: tGo, vol: 0.45 }], keyboard: [{ t: r2(tType), dur: r2(tGo - tType) }] }
+  },
+
+  // ── « des millions de vues » : les compteurs sociaux qui s'emballent ────────
+  views(id, t0, t1, tone, s) {
+    const rows = [
+      { icon: 'M12 21s-7-4.6-9.5-8.2C.6 9.7 2.6 6 6 6c2 0 3.4 1 4 2.2C10.6 7 12 6 14 6c3.4 0 5.4 3.7 3.5 6.8C15 16.4 12 21 12 21z', v: 128400, lab: '' },
+      { icon: 'M21 11.5a8.4 8.4 0 01-9 8.4 8.6 8.6 0 01-4-.9L3 20l1.1-4.4a8.4 8.4 0 1116.9-4.1z', v: 9260, lab: '' },
+      { icon: 'M14 9V5l8 7-8 7v-4C6 15 3 18 2 21c0-6 3-10.5 12-12z', v: 41800, lab: '' },
+    ]
+    const big = parseInt(String(s.value || '2400000').replace(/\D/g, ''), 10) || 2400000
+    const cD = r2(Math.min(1.5, t1 - t0 - 0.4))
+    const html = `
+      <div class="stack" style="gap:26px">
+        <div class="disp" id="${id}big" style="font-size:190px;color:${tone.ink};opacity:0;line-height:1">0</div>
+        <div id="${id}lab" style="font-family:'JetBrains Mono',monospace;font-size:40px;letter-spacing:.28em;color:${ACC};opacity:0">VUES</div>
+        <div style="display:flex;gap:34px;margin-top:26px">
+          ${rows.map((r, k) => `<div id="${id}r${k}" style="display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0">
+            <span style="width:104px;height:104px;border-radius:50%;background:${tone.dark ? '#1C1C24' : '#FFFFFF'};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(13,13,18,${tone.dark ? '.5' : '.12'})">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="${ACC}"><path d="${r.icon}"/></svg></span>
+            <span id="${id}n${k}" style="font-size:34px;font-weight:700;color:${tone.ink}">0</span></div>`).join('')}
+        </div>
+      </div>`
+    const fmt = (n) => (n >= 1000000 ? (n / 1000000).toFixed(1).replace('.0', '') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'K' : String(n))
+    let js = `
+  var ${id}v = { b: 0${rows.map((r, k) => `, n${k}: 0`).join('')} };
+  tl.fromTo('#${id}big',{scale:0.72,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'back.out(1.5)'},${r2(t0)});
+  tl.to(${id}v,{b:${big}${rows.map((r, k) => `, n${k}:${r.v}`).join('')},duration:${cD},ease:'power2.out',onUpdate:function(){
+    var f=function(n){return n>=1000000?(n/1000000).toFixed(1).replace('.0','')+'M':n>=1000?Math.round(n/1000)+'K':String(Math.round(n))};
+    var e=document.getElementById('${id}big'); if(e) e.textContent=f(${id}v.b);
+    ${rows.map((r, k) => `var e${k}=document.getElementById('${id}n${k}'); if(e${k}) e${k}.textContent=f(${id}v.n${k});`).join('\n    ')}
+  }},${r2(t0 + 0.1)});
+  tl.fromTo('#${id}lab',{y:40,opacity:0},{y:0,opacity:1,duration:0.3,ease:'circ.out'},${r2(t0 + 0.32)});` +
+      rows.map((r, k) => `\n  tl.fromTo('#${id}r${k}',{y:70,scale:0.7,opacity:0},{y:0,scale:1,opacity:1,duration:0.4,ease:'back.out(1.7)'},${r2(t0 + 0.4 + k * 0.11)});`).join('') + `
+  tl.to('#${id}big',{scale:1.09,duration:${r2(Math.max(0.3, t1 - t0 - cD - 0.2))},ease:'none'},${r2(t0 + 0.1 + cD)});`
+    return { html, js, sfx: [{ kind: 'mo-impact-1', t: r2(t0 + 0.1 + cD), vol: 0.5 }] }
   },
 
   // ── hook « 30 secondes » : un CHRONOMÈTRE animé — anneau qui se trace,
@@ -280,7 +358,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}n',{scale:0.82,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power2.out'},${r2(t0 + 0.12)});
   tl.fromTo('#${id}u',{y:40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'circ.out'},${r2(t0 + 0.5)});
   tl.to('#${id}n',{scale:1.1,duration:${r2(Math.max(0.3, t1 - t0 - countDur - 0.3))},ease:'none'},${r2(t0 + 0.15 + countDur)});`
-    return { html, js, sfx: [{ kind: 'timer', t: r2(t0 + 0.1), vol: 0.3 }, { kind: 'ding', t: r2(t0 + 0.15 + countDur), vol: 0.5 }] }
+    return { html, js, sfx: [{ kind: 'mo-tick-1', t: r2(t0 + 0.1), vol: 0.3 }, { kind: 'mo-pop-1', t: r2(t0 + 0.15 + countDur), vol: 0.5 }] }
   },
 
   // ── « avec cette qualité-là » : L'IMAGE plein cadre — la preuve, pas du texte ─
@@ -298,7 +376,7 @@ export const UI_SCENES = {
   tl.fromTo('#${id}im',{scale:1.18},{scale:1,duration:${r2(Math.max(0.6, t1 - t0 - 0.3))},ease:'none'},${r2(t0 + 0.15)});
   tl.fromTo('#${id}tag',{y:40,opacity:0},{y:0,opacity:1,duration:0.34,ease:'power3.out'},${r2(t0 + 0.5)});
   tl.to('#${id}fr',{y:-24,duration:${r2(Math.max(0.4, t1 - t0 - 0.6))},ease:'none'},${r2(t0 + 0.55)});`
-    return { html, js, sfx: [{ kind: 'camera-shutter', t: r2(t0 + 0.08), vol: 0.45 }] }
+    return { html, js, sfx: [{ kind: 'mo-swipe-1', t: r2(t0 + 0.08), vol: 0.45 }] }
   },
 
   // ── CTA : la barre de commentaire TikTok — le mot se tape, on l'envoie ─────
@@ -319,7 +397,7 @@ export const UI_SCENES = {
   tl.to('#${id}snd',{scale:0.88,duration:0.08,ease:'power2.in'},${tSend});
   tl.to('#${id}snd',{scale:1,duration:0.18,ease:'back.out(2.8)'},${r2(tSend + 0.08)});
   tl.to('#${id}bar',{y:-14,duration:${r2(Math.max(0.3, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
-    return { html, js, sfx: [{ kind: 'ding', t: tSend, vol: 0.5 }] }
+    return { html, js, sfx: [{ kind: 'mo-pop-1', t: tSend, vol: 0.5 }] }
   },
 
   // ── résultat : mockup téléphone, la vidéo joue (l'image fournie) ───────────
