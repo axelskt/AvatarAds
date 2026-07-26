@@ -290,7 +290,8 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.fromTo('#${id}tx',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.48,ease:'power4.out'},${r2(tAt)});
   tl.to('#${id}tx',{scale:1.04,duration:${r2(Math.max(0.4, (t1 - tAt - 0.5) / 2))},ease:'sine.inOut',yoyo:true,repeat:1},${r2(tAt + 0.55)});`
       const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw, zoom: 'in' })
-      if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])) }
+      // …et sa frappe : sans ce kbAdd, le mot du CTA s'écrivait en silence
+      if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])); kbAdd.push(...(sc.keyboard || [])) }
       sfxAdd.push({ kind: 'mo-impact-2', t: r2(tAt), vol: 0.6 })
     }
 

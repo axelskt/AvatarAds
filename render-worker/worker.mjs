@@ -295,7 +295,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     for (const sl of kbSpots) {
       const f = join(HERE, 'assets', 'sfx', 'mac-typing.mp3')
       if (!existsSync(f)) continue
-      const dur = Math.max(0.6, Math.min(2.6, (sl.end - sl.start) - 0.4))
+      // PAS DE PLAFOND. Il y en avait un à 2,6 s, hérité de l'époque où la frappe
+      // n'était pas bouclée : sur un prompt de 7 s le son s'arrêtait au tiers et
+      // le texte continuait de s'écrire en silence (c'est ce qu'Axel entendait
+      // entre 15 s et 22 s). La boucle gère maintenant n'importe quelle durée.
+      const dur = Math.max(0.6, (sl.end - sl.start) - 0.15)
       const ms = Math.max(0, Math.round((sl.start + 0.15) * 1000))
       inputs.push('-stream_loop', '-1', '-i', f)
       // 0.3 et pas SFX_VOL×1.1 : à ~0.94 le lit de frappe pesait dans le loudnorm
