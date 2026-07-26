@@ -1,0 +1,27 @@
+# Config Supabase CLI — AvatarAds (guvwgiejzkiodghywpwj)
+#
+# verify_jwt = false UNIQUEMENT pour les fonctions appelées SANS jeton Supabase :
+#   - mcp            : la clé personnelle est dans l'URL (connecteurs claude.ai)
+#   - whop-webhook   : appelé par Whop (signature vérifiée dans la fonction)
+#   - lemonsqueezy-webhook : idem, signature interne
+#   - email-unsub    : lien cliqué depuis un e-mail (token propre dans l'URL)
+#   - auth-otp       : PRÉ-authentification (l'utilisateur n'a pas encore de session)
+# ⚠️ Sans ces entrées, un simple `functions deploy` remet verify_jwt=true et CASSE
+# ces fonctions en silence (vécu le 27/07/2026 sur mcp).
+
+project_id = "guvwgiejzkiodghywpwj"
+
+[functions.mcp]
+verify_jwt = false
+
+[functions.whop-webhook]
+verify_jwt = false
+
+[functions.lemonsqueezy-webhook]
+verify_jwt = false
+
+[functions.email-unsub]
+verify_jwt = false
+
+[functions.auth-otp]
+verify_jwt = false

@@ -20,6 +20,7 @@ import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
+import { deriveDynamicSlides } from './dynamic-derive.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
@@ -83,7 +84,15 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     const baseOut = join(proj, 'media', 'base.mp4')
     let baseW = 0, baseH = 0
     try { const d = ffprobe(basePath, 'stream=width,height').split(','); baseW = parseInt(d[0], 10) || 0; baseH = parseInt(d[1], 10) || 0 } catch (_) { /* probe optionnel */ }
-    if (baseW === 1080 && baseH === 1920) copyFileSync(basePath, baseOut)
+    if (!baseW) {
+      // job AUDIO SEUL (Montage IA via MCP : pas de clip filmé) → fond noir 1080×1920,
+      // les slides du plan couvrent l'écran de toute façon (style dynamic & co)
+      console.log('▶ base sans piste vidéo (audio seul) → fond noir 1080×1920')
+      execFileSync('ffmpeg', ['-v', 'error', '-y',
+        '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:r=30', '-i', basePath,
+        '-shortest', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21',
+        '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', baseOut])
+    } else if (baseW === 1080 && baseH === 1920) copyFileSync(basePath, baseOut)
     else {
       console.log(`▶ base ${baseW}×${baseH} → 1080×1920 (ffmpeg natif)…`)
       try {
@@ -187,6 +196,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     }
 
     // captures du tuto pour le mode presentation 3D (#135)
+    // ⚠️ dériver AVANT de lister les captures : la dérivation #148 ajoute des scènes
+    // ui avec screen:'site-home' & co — sans ça leurs images ne sont jamais copiées
+    // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
+    if (plan.slideStyle === 'dynamic') { try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) } }
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
