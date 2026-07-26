@@ -5255,7 +5255,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-07-26i-ffmpeg-fix'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-07-26j-biblio-fullres'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -18234,7 +18234,8 @@ function renderLibrary(){
         _src: 'img', _idx: i, fav: !!img.fav,
         type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
         style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
-        imgUrl: img.url, date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
+        imgUrl: img.url, idbKey: img.idbKey || null,
+        date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
       }));
     } catch(e){}
   }
@@ -18282,7 +18283,7 @@ function renderLibrary(){
     if(v.type==='image'){
       return `<div class="vid-card" style="cursor:pointer" onclick="_libImgAction('open',${v._idx})">
         <div class="vid-thumb" style="background:${v.bg};overflow:hidden;padding:0">
-          <img src="${v.imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
+          <img src="${v.imgUrl}" ${v.idbKey?`data-libfull="${v.idbKey}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
           <div class="vid-overlay"></div>
           <div class="vid-badge">${v.style}</div>
           ${_delBtn('img', v._idx)}
@@ -18349,6 +18350,27 @@ function renderLibrary(){
 
   // Charger thumbnails vidéo + waveforms audio en arrière-plan (non bloquant)
   setTimeout(() => _loadLibThumbnails(), 50);
+  // Images : remplacer les miniatures 512px par la PLEINE résolution (IndexedDB)
+  setTimeout(() => _libSwapFullImages(), 60);
+}
+
+// La grille affiche d'abord la miniature 512px (localStorage, synchrone) — parfait
+// pour l'aperçu instantané mais PIXELISÉ sur les grandes cartes Retina. Dès le
+// rendu fini, on remplace chaque miniature par l'image pleine résolution stockée
+// dans IndexedDB (non bloquant). Les blob: URLs du passage précédent sont révoquées.
+let _libFullUrls = [];
+async function _libSwapFullImages(){
+  _libFullUrls.forEach(u => { try{ URL.revokeObjectURL(u); }catch(_){} });
+  _libFullUrls = [];
+  const imgs = document.querySelectorAll('#libGrid img[data-libfull]');
+  for(const el of imgs){
+    const key = el.getAttribute('data-libfull');
+    if(!key) continue;
+    try {
+      const e = await _idbLoad(key);
+      if(e && e.blob){ const u = URL.createObjectURL(e.blob); _libFullUrls.push(u); el.src = u; }
+    } catch(_){}
+  }
 }
 
 function toggleLibFav(src, idx){
