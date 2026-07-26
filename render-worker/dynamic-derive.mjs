@@ -6,12 +6,18 @@
 // mesurées, sections, beats). Cette couche transforme ce plan en scènes UI —
 // exactement le travail fait à la main pour la VSL d'Axel, devenu déterministe :
 //   · les plans d'écran « prompt » (texte tapé) → barre de prompt + zoom d'envoi
-//   · les zones de choix (photo-réel, format…) → cartes `pick` sous le curseur
 //   · des DÉCLENCHEURS sur les mots de la voix (patrons français de ses scripts) :
 //     avatarads.fr → navigateur, « commente X » → barre de commentaire,
 //     « importe/ajoute ton… » → dropzone, « supprimer les silences » → onde,
 //     « un clic » → bouton, « génère la clé » → keycopy, « connecté à » → connect,
 //     « millions de vues » → compteurs, « N secondes » en hook → chrono.
+//
+// ⚠️ PRIORITÉ INVERSÉE (#148b, appris sur le premier vrai plan orchestrateur) :
+// les scènes dérivées de la VOIX sont la colonne vertébrale — ce sont les slides
+// serveur (type/target/network/steps/flow…) qui se rognent autour, jamais
+// l'inverse. L'ancienne version rognait les scènes UI contre un plan dense →
+// chrono/prompt/upload rejetés + chevauchements + panneaux vides. Règle d'or du
+// style : UNE chose à l'écran ; tout slide serveur réduit sous 0,8 s est jeté.
 //
 // Pourquoi ici et pas dans l'edge function : pas de redéploiement risqué (la
 // grammaire stricte a déjà mis le module à l'arrêt une fois), testable en local
@@ -41,16 +47,13 @@ function findAny(words, forms, from = 0) {
   return null
 }
 
-// zones de choix de l'app : (écran, zone) → la scène `pick` correspondante
-const PICKS = {
-  'photo-reel': { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 0 },
-  pixar: { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 1 },
-  ugc: { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 2 },
-  fruit: { choices: ['Photo réaliste', 'Fruit', 'Mascotte'], sel: 1 },
-  realiste: { choices: ['Réaliste', 'Cartoon 3D'], sel: 0 },
-  cartoon: { choices: ['Réaliste', 'Cartoon 3D'], sel: 1 },
-  format: { choices: ['1:1', '9:16', '16:9'], sel: 1, ratio: true },
-  portrait: { choices: ['Portrait 9:16', 'Paysage 16:9'], sel: 0, ratio: true },
+// « trente secondes » se dit en LETTRES dans les scripts — parseInt n'y voit rien
+const FR_NUMS = { un: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8,
+  neuf: 9, dix: 10, quinze: 15, vingt: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60 }
+const numOf = (t) => {
+  const d = parseInt(String(t).replace(/\D/g, ''), 10)
+  if (d > 0) return d
+  return FR_NUMS[norm(t)] || 0
 }
 
 export function deriveDynamicSlides(plan, opts = {}) {
@@ -65,33 +68,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
   const taken = []        // fenêtres occupées, pour ne jamais superposer deux scènes
   const overlaps = (a, b) => taken.some((w) => a < w[1] - 0.05 && b > w[0] + 0.05)
   const claim = (a, b) => { taken.push([a, b]) }
+  const consumed = new Set() // slides serveur transformées (promptbar…) → à retirer
 
-  // ── 1 · les slides `screen` du serveur : prompt → promptbar, choix → pick ──
-  const srcSlides = (plan.slides || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
-  for (const sl of srcSlides) {
-    if (sl.anim !== 'screen') continue
-    const a = r2(sl.start), b = r2(sl.end)
-    if (sl.screenText) {
-      // envoi calé sur « génère/générer » s'il est prononcé dans la foulée
-      const gen = findAny(words, ['genere', 'generes', 'generer', 'génère'],
-        words.findIndex((w) => w.start >= a))
-      out.push({ anim: 'ui', ui: 'promptbar', text: String(sl.screenText), zoomEnd: true,
-        ...(gen && gen.start > a + 1.2 && gen.start < b + 2 ? { sendAt: r2(gen.start) } : {}),
-        start: a, end: b })
-      claim(a, b); continue
-    }
-    // zone de choix connue → scène pick, sinon la capture reste telle quelle
-    const zone = Object.keys(PICKS).find((z) =>
-      (sl.boxX != null) && sl.screen && String(sl.screenZone || sl.zone || '').includes(z))
-    // le serveur ne transmet pas le nom de zone : on la retrouve par le MOT du plan
-    out.push({ ...sl, start: a, end: b })
-    claim(a, b)
-  }
-
-  // ── 2 · déclencheurs sur la voix (patrons de ses scripts, haute précision) ──
-  // Une scène qui déborde sur une fenêtre déjà prise est ROGNÉE, pas jetée :
-  // « ajouter ton image » (24,9 s) précède le prompt Express (26,8 s) de 2 s —
-  // rejeter la scène au lieu de la raccourcir faisait disparaître l'upload.
+  // Une scène qui déborde sur une fenêtre déjà prise est ROGNÉE, pas jetée —
+  // mais seulement contre les AUTRES scènes dérivées (la voix prime le serveur).
   const add = (slide, a, b) => {
     for (const w of taken) {
       if (a < w[0] && b > w[0]) b = w[0] - 0.05          // déborde sur le début d'une fenêtre
@@ -102,9 +82,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
     claim(a, b); return true
   }
 
-  // « N secondes/minutes » dans les 6 premières secondes → chrono
+  // ── 1 · LA VOIX D'ABORD : les déclencheurs haute précision de ses scripts ──
+
+  // « N secondes/minutes » dans les 6 premières secondes → chrono (chiffres OU lettres)
   for (let j = 0; j < words.length && words[j].start < 6; j++) {
-    const v = parseInt(words[j].text.replace(/\D/g, ''), 10)
+    const v = numOf(words[j].text)
     const nx = words[j + 1] ? norm(words[j + 1].text) : ''
     if (v > 0 && v <= 120 && (nx.startsWith('second') || nx.startsWith('minute'))) {
       add({ anim: 'ui', ui: 'timer', value: String(v), unit: nx.startsWith('minute') ? 'MINUTES' : 'SECONDES' },
@@ -137,7 +119,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (!w) break
     const kw = String(w.text).replace(/[«»".,!?]/g, '').trim()
     if (!kw || kw.length > 14) continue
-    const isFinal = c.start > D - 8     // le CTA de fin garde son panneau punch (le moteur y met déjà comment)
+    const isFinal = c.start > D - 8     // le CTA de fin a son propre panneau punch (§ 3)
     if (isFinal) continue
     add({ anim: 'ui', ui: 'comment', word: kw, zoom: 'soft' },
       Math.max(0, c.start - 0.1), Math.min(D, c.end + 2.6))
@@ -191,11 +173,25 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
-  // ── 2b · CTA final : si le serveur n'a pas émis de punch, on le synthétise
+  // ── 2 · les slides `screen` à texte tapé du serveur → barre de prompt ──
+  const srcSlides = (plan.slides || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
+  for (const sl of srcSlides) {
+    if (sl.anim !== 'screen' || !sl.screenText) continue
+    const a = r2(sl.start), b = r2(sl.end)
+    // envoi calé sur « génère/générer » s'il est prononcé dans la foulée
+    const gen = findAny(words, ['genere', 'generes', 'generer', 'génère'],
+      words.findIndex((w) => w.start >= a))
+    if (add({ anim: 'ui', ui: 'promptbar', text: String(sl.screenText), zoomEnd: true,
+      ...(gen && gen.start > a + 1.2 && gen.start < b + 2 ? { sendAt: r2(gen.start) } : {}) }, a, b)) {
+      consumed.add(sl)
+    }
+  }
+
+  // ── 3 · CTA final : si aucun punch serveur ne COUVRE la fin, on le synthétise
   // depuis le dernier « commente/écris X » — le moteur y greffe la barre de
   // commentaire et sa frappe tout seul
-  const hasPunch = (plan.slides || []).some((s) => s.type === 'punch')
-  if (!hasPunch) {
+  const hasEndPunch = (plan.slides || []).some((s) => s.type === 'punch' && (s.end || 0) > D - 3)
+  if (!hasEndPunch) {
     let last = null, fi = 0
     for (;;) {
       const c = findAny(words, ['commente', 'commentes', 'ecris', 'écris'], fi)
@@ -219,13 +215,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
-  // ── 3 · fusion : les dérivées remplacent les slides serveur qu'elles recouvrent ──
-  const derived = out.filter((s) => s.anim === 'ui')
-  const kept = (plan.slides || []).filter((sl) => {
-    if (sl.anim !== 'screen' && sl.anim !== 'type') return true
-    const covered = derived.some((d) => d.start < (sl.end || 0) - 0.1 && d.end > (sl.start || 0) + 0.1)
-    return !covered
-  })
-  plan.slides = [...kept.filter((s) => !out.includes(s)), ...out.filter((s) => s.anim === 'ui' || s.type === 'punch')]
-    .sort((a, b) => (a.start || 0) - (b.start || 0))
+  // ── 4 · fusion : le serveur s'écarte des scènes dérivées, pas l'inverse ──
+  // Chaque slide serveur chevauchant une dérivée est ROGNÉ à sa partie libre ;
+  // sous 0,8 s (ou coincé entre deux dérivées) il est JETÉ — une chose à l'écran.
+  const kept = []
+  for (const sl of srcSlides) {
+    if (consumed.has(sl)) continue
+    let a = r2(sl.start || 0), b = r2(sl.end || 0)
+    for (const d of out) {
+      if (b <= d.start + 0.05 || a >= d.end - 0.05) continue   // pas de contact
+      const headroom = d.start - a                              // partie libre avant la scène
+      const tailroom = b - d.end                                // partie libre après
+      if (headroom >= tailroom) b = r2(d.start - 0.05)
+      else a = r2(d.end + 0.05)
+    }
+    if (b - a < 0.8) continue
+    if (out.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
+    kept.push(a === sl.start && b === sl.end ? sl : { ...sl, start: a, end: b })
+  }
+  plan.slides = [...kept, ...out].sort((a, b) => (a.start || 0) - (b.start || 0))
 }
