@@ -493,17 +493,24 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#${a.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${a.start});
       tl.to('#${a.id}', { autoAlpha: 0, duration: 0.12, ease: 'power1.in' }, ${r2(a.start + a.dur - 0.12)});`).join('')
 
+  // AMPLITUDE DU MOUVEMENT — la règle est : si on remarque le mouvement plus que le
+  // mot, le mouvement est trop grand. Le rebond passe donc de back.out(2.6) à 1.8 et
+  // le départ de 0.72 à 0.86 : l'œil enregistre l'apparition sans quitter le texte
+  // pour regarder l'effet. Le TIMING, lui, ne bouge pas — c'est lui qui fait le
+  // travail (le mot arrive avec la voix, le cerveau n'a rien à réconcilier).
   const capsJs = caps.map((c) => (wordMode ? `
-      tl.fromTo('#${c.id}', { scale: 0.72 }, { scale: 1, duration: ${r2(Math.min(0.16, c.dur))}, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${c.start});` : `
-      tl.fromTo('#${c.id}', { scale: 1.14 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
+      tl.fromTo('#${c.id}', { scale: 0.86 }, { scale: 1, duration: ${r2(Math.min(0.16, c.dur))}, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${c.start});` : `
+      tl.fromTo('#${c.id}', { scale: 1.09 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
   ).join('')
 
-  // L'emoji fait un TOUR RAPIDE sur lui-même en apparaissant : c'est ce qui le fait
-  // lire comme une animation et pas comme une image posée. Sortie en contre-rotation.
+  // L'emoji s'inscrit d'un quart de tour, pas d'un tour complet : à -430° on suivait
+  // la toupie au lieu de lire le symbole, et l'entrée depuis scale 0.2 ajoutait une
+  // deuxième distance à parcourir. Même logique que pour les mots — moins d'ampleur,
+  // même lisibilité.
   const emojiJs = emojiDefs.map((e) => `
-      tl.fromTo('#${e.id} img', { scale: 0.2, autoAlpha: 0, rotation: -430 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.42, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${e.start});
-      tl.to('#${e.id} img', { scale: 1.08, duration: ${r2(Math.max(0.3, e.dur - 0.56))}, ease: 'sine.inOut' }, ${r2(e.start + 0.42)});
-      tl.to('#${e.id} img', { scale: 0.7, autoAlpha: 0, rotation: 40, duration: 0.14, ease: 'power2.in' }, ${r2(e.start + e.dur - 0.14)});`).join('')
+      tl.fromTo('#${e.id} img', { scale: 0.55, autoAlpha: 0, rotation: -25 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.42, ease: 'back.out(1.5)', transformOrigin: '50% 50%' }, ${e.start});
+      tl.to('#${e.id} img', { scale: 1.05, duration: ${r2(Math.max(0.3, e.dur - 0.56))}, ease: 'sine.inOut' }, ${r2(e.start + 0.42)});
+      tl.to('#${e.id} img', { scale: 0.82, autoAlpha: 0, rotation: 10, duration: 0.14, ease: 'power2.in' }, ${r2(e.start + e.dur - 0.14)});`).join('')
   // CHAQUE ANIMATION EST ISOLEE. Une seule erreur dans le JS d'une animation cassait
   // TOUTE la timeline : les tweens suivants n'etaient jamais ajoutes (leurs elements
   // restaient visibles, figes) et les precedents restaient bloques a opacity 0 par le
@@ -555,7 +562,7 @@ export function buildComposition(plan, opts = {}) {
       const c = s.items[0]
       const t = r2(Math.max(c.t, s.start + 0.08))
       js += `
-      tl.fromTo('#${c.id}', { scale: 0.75, autoAlpha: 0, rotation: -4 }, { scale: 1, autoAlpha: 1, rotation: -1.5, duration: 0.3, ease: 'back.out(2.2)' }, ${t});`
+      tl.fromTo('#${c.id}', { scale: 0.88, autoAlpha: 0, rotation: -3 }, { scale: 1, autoAlpha: 1, rotation: -1.5, duration: 0.3, ease: 'back.out(1.6)' }, ${t});`
     }
     if (s.title) js += `
       tl.fromTo('#${s.id} .sl-title', { autoAlpha: 0 }, { autoAlpha: 0.6, duration: 0.2, ease: 'power1.out' }, ${r2(s.start + 0.05)});`
@@ -735,7 +742,7 @@ ${hookJs}
 ${capsJs}${hasCta ? `
 ${ctaWords.map((w) => `
       tl.set('#${w.id}', { autoAlpha: 0 }, 0);
-      tl.fromTo('#${w.id}', { autoAlpha: 0, y: 14, scale: 0.9 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.22, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(Math.max(ctaStart, w.t))});`).join('')}
+      tl.fromTo('#${w.id}', { autoAlpha: 0, y: 10, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.22, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${r2(Math.max(ctaStart, w.t))});`).join('')}
       tl.to('#ctablk span', { scale: 1.04, duration: ${r2(Math.max(0.6, D - ctaStart - 0.4))}, ease: 'sine.inOut' }, ${r2(ctaStart + 0.3)});` : ''}
 ${flashJs}
 ${avatarJs}
