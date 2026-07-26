@@ -263,7 +263,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       if (!existsSync(f)) continue
       inputs.push('-i', f)
       const ms = Math.max(0, Math.round(s.t * 1000))
-      filters.push(`[${idx}:a]adelay=${ms}|${ms},volume=${SFX_VOL}[s${idx}]`)
+      // s.vol : le moteur dynamique baisse ses sons de ponctuation (une poussée
+      // s'entend à moitié, un clic à peine) — un bruitage plein volume sur chaque
+      // geste rendait la piste répétitive et écrasait la voix.
+      filters.push(`[${idx}:a]adelay=${ms}|${ms},volume=${typeof s.vol === 'number' ? s.vol : SFX_VOL}[s${idx}]`)
       mixIns.push(`[s${idx}]`)
       idx++
     }
