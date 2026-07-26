@@ -28,11 +28,14 @@
 const r2 = (n) => Math.round(n * 100) / 100
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
 
-// fenêtre de recherche : suite de mots normalisés → { start, end, i } du premier mot
+// fenêtre de recherche : suite de mots normalisés → { start, end, i } du premier mot.
+// Un token long (≥5) matche aussi en PRÉFIXE : « qualité-là. » (→ qualitela)
+// doit répondre au motif « qualite » — les suffixes collés ne cassent pas la détection.
 function findSeq(words, pattern, from = 0) {
   const toks = pattern.split(/\s+/).map(norm).filter(Boolean)
+  const eq = (n, tk) => n === tk || (tk.length >= 5 && n.startsWith(tk))
   for (let j = from; j + toks.length <= words.length; j++) {
-    if (toks.every((tk, m) => norm(words[j + m].text) === tk)) {
+    if (toks.every((tk, m) => eq(norm(words[j + m].text), tk))) {
       return { start: words[j].start, end: words[j + toks.length - 1].end, i: j }
     }
   }
@@ -54,6 +57,18 @@ const numOf = (t) => {
   const d = parseInt(String(t).replace(/\D/g, ''), 10)
   if (d > 0) return d
   return FR_NUMS[norm(t)] || 0
+}
+
+// zones de choix de l'app : mot prononcé → cartes `pick` correspondantes
+const PICKS = {
+  'photo-reel': { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 0 },
+  pixar: { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 1 },
+  ugc: { choices: ['Photo réaliste', 'Pixar 3D', 'UGC réel'], sel: 2 },
+  fruit: { choices: ['Photo réaliste', 'Fruit', 'Mascotte'], sel: 1 },
+  realiste: { choices: ['Réaliste', 'Cartoon 3D'], sel: 0 },
+  cartoon: { choices: ['Réaliste', 'Cartoon 3D'], sel: 1 },
+  format: { choices: ['1:1', '9:16', '16:9'], sel: 1, ratio: true },
+  portrait: { choices: ['Portrait 9:16', 'Paysage 16:9'], sel: 0, ratio: true },
 }
 
 export function deriveDynamicSlides(plan, opts = {}) {
@@ -95,6 +110,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
+  // « avec cette qualité-là » → la photo témoin plein écran (montrer le résultat au hook)
+  {
+    const hit = findSeq(words, 'cette qualite')
+    if (hit) add({ anim: 'ui', ui: 'photo', screen: 'hook-qualite' },
+      Math.max(0, hit.start - 0.55), Math.min(D, hit.end + 0.45))
+  }
+
   // le site : « avatarads.fr » (ou tout mot en .fr/.com) → navigateur, zoom sur
   // le « commencer/cliquer » qui suit
   for (let j = 0; j < words.length; j++) {
@@ -123,6 +145,64 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (isFinal) continue
     add({ anim: 'ui', ui: 'comment', word: kw, zoom: 'soft' },
       Math.max(0, c.start - 0.1), Math.min(D, c.end + 2.6))
+  }
+
+  // « sélectionne Photo Réel(le) / Pixar / format » → cartes de choix sous le curseur
+  {
+    const zones = [
+      { pat: ['photo reelle', 'photo reel', 'photo realiste'], k: 'photo-reel' },
+      { pat: ['pixar'], k: 'pixar' },
+      { pat: ['format'], k: 'format' },
+      { pat: ['portrait'], k: 'portrait' },
+    ]
+    // les choix s'enchaînent souvent (« Photo Réel, le format… ») : chaque pick
+    // s'arrête au début du suivant pour que les DEUX vivent (v5 en avait deux)
+    const hits = []
+    for (const z of zones) {
+      let hit = null
+      for (const p of z.pat) { hit = findSeq(words, p); if (hit) break }
+      if (hit) hits.push({ ...hit, k: z.k })
+    }
+    hits.sort((a, b) => a.start - b.start)
+    for (let h = 0; h < hits.length; h++) {
+      const hit = hits[h]
+      const cfg = PICKS[hit.k]
+      const cap = h + 1 < hits.length ? hits[h + 1].start - 0.41 : Infinity
+      add({ anim: 'ui', ui: 'pick', choices: cfg.choices, sel: cfg.sel,
+        ...(cfg.ratio ? { ratio: true } : {}), pickAt: r2(hit.end + 0.15) },
+        Math.max(0, hit.start - 0.35), Math.min(D, Math.min(hit.end + 0.7, cap)))
+    }
+  }
+
+  // « décrire l'image / j'ai mis que je voulais … » → la barre de prompt TAPE ce qui
+  // est DIT (le visuel EST le mot), envoi calé sur « tu génères »
+  {
+    const trig = findAny(words, ['decrire', 'decris'], 0)
+    if (trig) {
+      // dernier marqueur de citation dans les ~14 mots qui suivent le verbe
+      let qi = -1
+      for (let j = trig.i; j < Math.min(trig.i + 14, words.length); j++) {
+        if (['voulais', 'veux', 'genre', 'mis'].includes(norm(words[j].text))) qi = j
+      }
+      const gen = findAny(words, ['genere', 'generes', 'generer'], trig.i + 1)
+      if (qi >= 0 && qi + 1 < words.length) {
+        const stopI = Math.min(gen ? gen.i : qi + 19, words.length)
+        const toks = []
+        for (let j = qi + 1; j < stopI && toks.length < 18; j++) {
+          if (toks.length && words[j].start - words[j - 1].end > 0.9) break // fin de phrase
+          toks.push(String(words[j].text))
+        }
+        // queue propre : liaisons et ponctuation ne se tapent pas dans un prompt
+        while (toks.length && ['puis', 'ensuite', 'et', 'tu', 'alors', 'donc', 'la'].includes(norm(toks[toks.length - 1]))) toks.pop()
+        const text = toks.join(' ').replace(/\s+/g, ' ').trim().replace(/[.,;:!?]+$/, '')
+        if (toks.length >= 3) {
+          add({ anim: 'ui', ui: 'promptbar', zoomEnd: true, text,
+            ...(gen ? { sendAt: r2(gen.start) } : {}) },
+            Math.max(0, trig.start - 0.25),
+            Math.min(D, gen ? gen.end + 1.3 : words[Math.max(qi + toks.length, qi + 1)].end + 1.5))
+        }
+      }
+    }
   }
 
   // import de fichier : « importe/ajoute ton/tes audio|image|vidéo|fichier|clip »
@@ -154,6 +234,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
         Math.max(0, hit.start - 0.2), Math.min(D, hit.end + o.pad))
       break
     }
+  }
+
+  // « et voilà » → l'image RÉSULTAT plein écran (montrer le résultat, pas l'interface)
+  {
+    const hit = findSeq(words, 'et voila')
+    if (hit) add({ anim: 'result', screen: '99-resultat' },
+      Math.max(0, hit.start - 0.1), Math.min(D, hit.end + 1.55))
   }
 
   // « style / sous-titres / musique / images » énumérés → pills d'options
