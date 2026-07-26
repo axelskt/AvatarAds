@@ -14,6 +14,7 @@ import {
   styleCss, styleExtraJs, scatterStyle, wordFontSize, WORD_FIT_JS, WORD_ACCENT, wordMotif, wordMotifJs,
 } from './visual-styles.mjs'
 import { ANIMS, animHtml, animJs, animCss } from './anim-pack.mjs'
+import { buildDynamicComposition } from './dynamic-engine.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -22,6 +23,9 @@ const OK = '#22c55e'
 const KO = '#ef4444'
 
 export function buildComposition(plan, opts = {}) {
+  // « Dynamique » (#147) est un moteur à part : chaîne de panneaux qui se poussent,
+  // pas des scènes posées sur une base. Il émet son propre document complet.
+  if (plan.slideStyle === 'dynamic') return buildDynamicComposition(plan, opts)
   const W = opts.width || 1080
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
