@@ -3064,9 +3064,31 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
+          <!-- ══ DÉRUSH IA (#151) — bégaiements, reprises, « euh » (Pro / Élite) ══ -->
+          <div onclick="_acToggleDerush()" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;margin-bottom:12px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:11px">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+              <div>
+                <div style="font-size:13.5px;font-weight:700">Dérush IA <span style="font-size:9px;font-family:var(--mono);letter-spacing:.06em;color:var(--accent-2);border:1px solid var(--accent-line);border-radius:5px;padding:1.5px 5px;vertical-align:2px;margin-left:4px">PRO · ÉLITE</span></div>
+                <div style="font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:1px">Coupe les « euh », bégaiements et reprises — tu valides chaque coupe</div>
+              </div>
+            </div>
+            <div id="acDerushSwitch" style="width:40px;height:23px;background:var(--surface-3);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+              <div id="acDerushThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.7"></div>
+            </div>
+          </div>
+
           <button id="acAnalyzeBtn" class="btn" onclick="_acAnalyze()" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 34px -8px var(--accent-glow)">
             🪄 Supprimer les silences automatiquement · 1 crédit
           </button>
+
+          <!-- ══ Coupes proposées par le dérush : l'IA PROPOSE, l'utilisateur DÉCIDE ══ -->
+          <div id="acDerushPanel" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:14px 15px">
+            <div style="font-size:12.5px;font-weight:800;margin-bottom:2px">✂️ Coupes proposées</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Décoche ce que tu veux garder — rien n'est coupé sans toi</div>
+            <div id="acDerushList" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
+            <button id="acDerushApply" onclick="_acDerushApply(this)" style="width:100%;margin-top:12px;padding:11px;background:var(--green);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">Appliquer le dérush</button>
+          </div>
 
           <!-- Waveform avec segments supprimés -->
           <div id="acWaveWrap" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative">
@@ -21683,6 +21705,141 @@ function _acToggleDenoise(){
   if(_acDenoiseEnabled) toast('🎧 Bruits de fond activé — appliqué avec la suppression des silences');
 }
 
+// ══ DÉRUSH IA (#151) — bégaiements, reprises, « euh » (Pro / Élite) ══
+// Principe de confiance : l'IA PROPOSE chaque coupe, l'utilisateur DÉCIDE (une
+// coupe silencieuse d'un passage voulu ruinerait la confiance pour toujours).
+// Les « euh » et les reprises sont objectifs → détectés ; le « pas intéressant »
+// est un jugement → jamais coupé automatiquement.
+let _acDerushEnabled = false;
+let _acDerushCuts    = [];        // [{start,end,label,kind,keep}] — secondes SOURCE
+const _DERUSH_FILLERS = new Set(['euh','heu','hum','hmm','hem','mmh','hein']);
+
+function _acToggleDerush(){
+  const m = currentMember || {};
+  const ok = ['pro','elite','developer'].includes(String(m.plan||'').toLowerCase()) || !!m.is_owner;
+  if(!ok && !_acDerushEnabled){
+    toast('🔒 Dérush IA — réservé aux plans Pro et Élite');
+    try{ openPaywall && openPaywall('pro'); }catch(_){ /* pas de paywall dispo */ }
+    return;
+  }
+  _acDerushEnabled = !_acDerushEnabled;
+  const sw = document.getElementById('acDerushSwitch'), th = document.getElementById('acDerushThumb');
+  if(sw) sw.style.background = _acDerushEnabled ? 'var(--accent)' : 'var(--surface-3)';
+  if(th){ th.style.left = _acDerushEnabled ? '20px' : '3px'; th.style.opacity = _acDerushEnabled ? '1' : '.7'; }
+  if(_acDerushEnabled) toast('✂️ Dérush IA activé — les coupes te seront proposées après l\'analyse');
+  else { const p=document.getElementById('acDerushPanel'); if(p) p.style.display='none'; }
+}
+
+const _derushNorm = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9']/g,'');
+
+// Détection sur les MOTS Scribe (bornes en secondes source) :
+// 1. tics — un mot de la liste, seul ;
+// 2. reprises — la MÊME suite de mots (≥3, tolérance 20 %) qui réapparaît dans
+//    les 6 s : on coupe la PREMIÈRE version (la ratée), on garde la dernière.
+function _derushDetect(words){
+  const cuts = [];
+  for(const w of words){
+    if(_DERUSH_FILLERS.has(_derushNorm(w.text)))
+      cuts.push({ start: Math.max(0, w.start - 0.05), end: w.end + 0.05, label: '« ' + w.text + ' »', kind: 'euh' });
+  }
+  const N = words.length, nw = words.map(w => _derushNorm(w.text));
+  const isFill = nw.map(n => _DERUSH_FILLERS.has(n));
+  let i = 0;
+  while(i < N - 2){
+    let best = null;
+    // n ≥ 3 en général ; n = 2 accepté seulement pour le bégaiement pur
+    // (« tu vas euh tu vas ») : les mots entre les deux occurrences sont des tics
+    for(let n = Math.min(12, Math.floor((N - i) / 2)); n >= 2 && !best; n--){
+      for(let j = i + 1; j <= Math.min(i + n + 6, N - n); j++){
+        if(words[j].start - words[i].end > 6) break;
+        let same = 0;
+        for(let m = 0; m < n; m++) if(nw[i + m] === nw[j + m]) same++;
+        const okShort = n >= 3 || (j - (i + n) <= 2 && Array.from({length: j - i - n}, (_, g) => isFill[i + n + g]).every(Boolean));
+        if(same >= Math.ceil(n * 0.8) && okShort){ best = { j, n }; break; }
+      }
+    }
+    if(best){
+      const shown = words.slice(i, Math.min(i + best.n, i + 6)).map(w => w.text).join(' ');
+      cuts.push({ start: Math.max(0, words[i].start - 0.04), end: Math.max(words[i].start, words[best.j].start - 0.02),
+        label: 'reprise : « ' + shown + (best.n > 6 ? '…' : '') + ' »', kind: 'reprise' });
+      i = best.j;
+    } else i++;
+  }
+  cuts.sort((a,b) => a.start - b.start);
+  const merged = [];
+  for(const c of cuts){
+    const p = merged[merged.length - 1];
+    if(p && c.start <= p.end + 0.05) p.end = Math.max(p.end, c.end);
+    else merged.push({ ...c, keep: true });
+  }
+  return merged;
+}
+
+// transcription (edge function dédiée, Scribe garde les « euh ») puis proposition
+async function _acDerushRun(){
+  try{
+    const fd = new FormData();
+    fd.append('audio', _acAudioBlob, 'audio.wav');
+    const r = await fetch(SUPABASE_URL + '/functions/v1/derush-transcribe', { method:'POST', headers: await getAuthHeader(), body: fd });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !Array.isArray(d.words)) throw new Error(d.error || ('transcribe ' + r.status));
+    _acDerushCuts = _derushDetect(d.words);
+    const panel = document.getElementById('acDerushPanel'), list = document.getElementById('acDerushList');
+    if(!panel || !list) return;
+    if(!_acDerushCuts.length){ panel.style.display='block'; list.innerHTML = '<div class="faint" style="font-size:12px">Aucun bégaiement ni reprise détecté — ton audio est déjà propre 👌</div>'; document.getElementById('acDerushApply').style.display='none'; return; }
+    document.getElementById('acDerushApply').style.display='block';
+    list.innerHTML = _acDerushCuts.map((c, k) => `
+      <label style="display:flex;align-items:center;gap:9px;padding:7px 9px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">
+        <input type="checkbox" checked onchange="_acDerushCuts[${k}].keep=this.checked" style="accent-color:var(--accent)">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.label.replace(/</g,'&lt;')}</span>
+        <span class="mono faint" style="font-size:10px;flex-shrink:0">${c.start.toFixed(1)}s · −${(c.end-c.start).toFixed(1)}s</span>
+      </label>`).join('');
+    panel.style.display = 'block';
+    toast('✂️ ' + _acDerushCuts.length + ' coupe(s) proposée(s) — à toi de valider');
+  }catch(e){
+    console.error('_acDerushRun:', e);
+    toast('⚠️ Dérush : transcription impossible (' + (e.message||'erreur') + ')');
+  }
+}
+
+// applique les coupes VALIDÉES : keepSegs = (segments silences) − (coupes dérush),
+// puis reconstruit l'audio depuis le buffer débruité — la vidéo suit toute seule
+// (_acExportVideo lit _acKeepSegsSec).
+function _acSubtractRanges(keep, cuts){
+  let segs = keep.slice();
+  for(const c of cuts){
+    const next = [];
+    for(const s of segs){
+      if(c.end <= s.start || c.start >= s.end){ next.push(s); continue; }
+      if(c.start > s.start + 0.06) next.push({ start: s.start, end: c.start });
+      if(c.end < s.end - 0.06) next.push({ start: c.end, end: s.end });
+    }
+    segs = next;
+  }
+  return segs.filter(s => s.end - s.start > 0.08);
+}
+
+async function _acDerushApply(btn){
+  const cuts = (_acDerushCuts || []).filter(c => c.keep !== false);
+  if(!cuts.length){ toast('Aucune coupe cochée'); return; }
+  if(!_acDenoisedBuf || !Array.isArray(_acKeepSegsSec) || !_acKeepSegsSec.length){ toast('⚠️ Lance d\'abord l\'analyse'); return; }
+  if(btn){ btn.disabled = true; btn.textContent = '✂️ Découpe en cours…'; }
+  try{
+    const finalKeep = _acSubtractRanges(_acKeepSegsSec, cuts);
+    const buf = await _reconstructAudio(_acDenoisedBuf, finalKeep);
+    _acCleanBlob = _encodeWAV(buf);
+    _acKeepSegsSec = finalKeep;                      // la découpe VIDÉO suit les mêmes instants
+    const cutS = cuts.reduce((a,c) => a + (c.end - c.start), 0);
+    if(btn){ btn.textContent = '✓ Dérush appliqué — −' + cutS.toFixed(1) + 's'; }
+    const pb = document.getElementById('acPlayBtn'); if(pb) pb.textContent = '▶ Écouter l\'audio dérushé';
+    toast('✂️ Dérush appliqué : ' + cuts.length + ' coupe(s), −' + cutS.toFixed(1) + 's');
+  }catch(e){
+    console.error('_acDerushApply:', e);
+    if(btn){ btn.disabled = false; btn.textContent = 'Appliquer le dérush'; }
+    toast('⚠️ Dérush : échec de la découpe');
+  }
+}
+
 
 let _acCleanBlob = null;
 let _acLevel     = 'normal'; // 'normal' | 'strong'
@@ -21768,6 +21925,7 @@ function _acDrawWaveform(data, sr, keepSegs, totalLen){
 let _acVideoFile  = null;   // la vidéo source, si l'entrée était une vidéo
 let _acVideoBlob  = null;   // le MP4 nettoyé une fois produit
 let _acKeepSegsSec = null;  // segments gardés, en secondes
+let _acDenoisedBuf = null;  // #151 : buffer débruité complet, source du dérush
 
 // Piste audio d'un fichier vidéo → WAV pleine qualité (decodeAudioData lit le MP4)
 async function _acExtractAudioWav(file){
@@ -21874,6 +22032,7 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   const ac      = new (window.AudioContext || window.webkitAudioContext)();
   const decoded = await ac.decodeAudioData(arrBuf);
   await ac.close();
+  _acDenoisedBuf = decoded;   // #151 : le dérush redécoupe ce buffer (débruité, non coupé)
 
   const sr   = decoded.sampleRate;
   const data = decoded.getChannelData(0);
@@ -21994,6 +22153,7 @@ async function _acAnalyze(){
     if(tipEl) tipEl.style.display = 'none';
     if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
     toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
+    if(_acDerushEnabled) _acDerushRun();   // #151 : propose les coupes une fois l'analyse posée
     // Sauvegarde auto dans la Bibliothèque
     if(_acCleanBlob){
       const _nm = 'Audio nettoyé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
