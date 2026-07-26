@@ -135,7 +135,7 @@ function typoContent(id, p, tone, liveT0) {
   if (before) js += `\n  tl.fromTo('#${id}b4',{y:-46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, ws[accIdx - 1].start))});`
   js += `\n  tl.fromTo('#${id}acc',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.42,ease:'power4.out'},${r2(tAt)});`
   js += `\n  tl.to('#${id}acc',{scale:1.05,duration:${r2(Math.max(0.3, p.t1 - tAt - 0.45))},ease:'none'},${r2(tAt + 0.42)});`
-  return { html, js, sfx: [{ kind: 'snap', t: r2(tAt), vol: 0.45 }] }
+  return { html, js, sfx: [{ kind: 'mo-pop-3', t: r2(tAt), vol: 0.45 }] }
 }
 
 // capture d'app : ENTIÈRE et CENTRÉE (Axel : « les frames sont coupées, on doit
@@ -291,7 +291,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.to('#${id}tx',{scale:1.04,duration:${r2(Math.max(0.4, (t1 - tAt - 0.5) / 2))},ease:'sine.inOut',yoyo:true,repeat:1},${r2(tAt + 0.55)});`
       const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw })
       if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])) }
-      sfxAdd.push({ kind: 'pop', t: r2(tAt), vol: 0.6 })
+      sfxAdd.push({ kind: 'mo-impact-2', t: r2(tAt), vol: 0.6 })
     }
 
     html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${tone.bg};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
@@ -310,7 +310,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.to('#pn${i - 1}',{${Object.entries(to).map(([k, v]) => `${k}:${v}`).join(',')},duration:${PUSH},ease:'power2.inOut'},${t0});
   tl.set('#pn${i - 1}',{autoAlpha:0},${r2(t0 + PUSH + 0.04)});`
       if (p.kind !== 'typo' && t0 - lastWhoosh > 2.5) {
-        sfxAdd.push({ kind: whooshFlip ? 'woosh' : 'whoosh', t: r2(Math.max(0, t0 - 0.05)), vol: 0.42 })
+        sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.42 })
         lastWhoosh = t0; whooshFlip = !whooshFlip
       }
     }
@@ -324,7 +324,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   const sfxOut = []
   // un CLIC peut légitimement se répéter vite (deux choix à 1s d'écart) ; c'est
   // le whoosh répété qui lasse — fenêtres anti-répétition par famille
-  const minGap = (k) => (k === 'mouse-click' ? 0.6 : k === 'whoosh' || k === 'woosh' ? 2.5 : 2)
+  const minGap = (k) => (k === 'mo-tap-1' ? 0.6 : k === 'mo-whoosh-1' || k === 'mo-swipe-2' ? 2.2 : 2)
   // LE BON SON POUR LA SCÈNE (chaque scène déclare le sien : clic pour un bouton,
   // ding pour un envoi, obturateur pour une photo, tic-tac pour le chrono…) — et
   // si le même son devait rejouer trop vite, on le remplace par son jumeau au
@@ -332,7 +332,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   // fenêtre d'ÉCHANGE (2.4s) : le même son qui reviendrait vite devient son jumeau,
   // puis le jumeau du jumeau — quatre clics de suite deviennent clic/click/obturateur.
   // fenêtre de COUPE (minGap) : en dessous, on saute carrément.
-  const TWIN = { 'mouse-click': 'click', click: 'camera-click', 'camera-click': 'mouse-click', pop: 'snap', snap: 'pop', ding: 'success', success: 'ding' }
+  const TWIN = { 'mo-tap-1':'mo-pop-3', 'mo-pop-3':'mo-tick-1', 'mo-tick-1':'mo-tap-1', 'mo-pop-1':'mo-pop-2', 'mo-pop-2':'mo-pop-1', 'mo-impact-1':'mo-impact-2', 'mo-impact-2':'mo-impact-3' }
   for (const s of sfxAdd.sort((a, b) => a.t - b.t)) {
     for (let k = 0; k < 2 && lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < 2.4 && TWIN[s.kind]; k++) s.kind = TWIN[s.kind]
     if (lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < minGap(s.kind)) continue
