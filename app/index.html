@@ -3082,12 +3082,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             🪄 Supprimer les silences automatiquement · 1 crédit
           </button>
 
-          <!-- ══ Coupes proposées par le dérush : l'IA PROPOSE, l'utilisateur DÉCIDE ══ -->
+          <!-- ══ Coupes du dérush : appliquées d'office, chaque case décochée restaure le passage ══ -->
           <div id="acDerushPanel" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:14px 15px">
-            <div style="font-size:12.5px;font-weight:800;margin-bottom:2px">✂️ Coupes proposées</div>
-            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Décoche ce que tu veux garder — rien n'est coupé sans toi</div>
+            <div style="font-size:12.5px;font-weight:800;margin-bottom:2px">✂️ Coupes appliquées</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Appliquées automatiquement — décoche une coupe pour restaurer le passage</div>
             <div id="acDerushList" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
-            <button id="acDerushApply" onclick="_acDerushApply(this)" style="width:100%;margin-top:12px;padding:11px;background:var(--green);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">Appliquer le dérush</button>
+            <button id="acDerushApply" onclick="_acDerushApply(this)" style="display:none;width:100%;margin-top:12px;padding:11px;background:var(--green);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">Appliquer le dérush</button>
           </div>
 
           <!-- Waveform avec segments supprimés -->
@@ -21712,6 +21712,7 @@ function _acToggleDenoise(){
 // est un jugement → jamais coupé automatiquement.
 let _acDerushEnabled = false;
 let _acDerushCuts    = [];        // [{start,end,label,kind,keep}] — secondes SOURCE
+let _acKeepSegsBase  = null;      // segments AVANT dérush : décocher une coupe repart de là
 const _DERUSH_FILLERS = new Set(['euh','heu','hum','hmm','hem','mmh','hein']);
 
 function _acToggleDerush(){
@@ -21726,7 +21727,7 @@ function _acToggleDerush(){
   const sw = document.getElementById('acDerushSwitch'), th = document.getElementById('acDerushThumb');
   if(sw) sw.style.background = _acDerushEnabled ? 'var(--accent)' : 'var(--surface-3)';
   if(th){ th.style.left = _acDerushEnabled ? '20px' : '3px'; th.style.opacity = _acDerushEnabled ? '1' : '.7'; }
-  if(_acDerushEnabled) toast('✂️ Dérush IA activé — les coupes te seront proposées après l\'analyse');
+  if(_acDerushEnabled) toast('✂️ Dérush IA activé — euh, bégaiements et reprises seront coupés automatiquement');
   else { const p=document.getElementById('acDerushPanel'); if(p) p.style.display='none'; }
 }
 
@@ -21784,18 +21785,19 @@ async function _acDerushRun(){
     const d = await r.json().catch(() => ({}));
     if(!r.ok || !Array.isArray(d.words)) throw new Error(d.error || ('transcribe ' + r.status));
     _acDerushCuts = _derushDetect(d.words);
+    _acKeepSegsBase = null;                 // nouvelle détection = nouvelle base de segments
     const panel = document.getElementById('acDerushPanel'), list = document.getElementById('acDerushList');
     if(!panel || !list) return;
-    if(!_acDerushCuts.length){ panel.style.display='block'; list.innerHTML = '<div class="faint" style="font-size:12px">Aucun bégaiement ni reprise détecté — ton audio est déjà propre 👌</div>'; document.getElementById('acDerushApply').style.display='none'; return; }
-    document.getElementById('acDerushApply').style.display='block';
+    if(!_acDerushCuts.length){ panel.style.display='block'; list.innerHTML = '<div class="faint" style="font-size:12px">Aucun bégaiement ni reprise détecté — ton audio est déjà propre 👌</div>'; return; }
+    // décocher une coupe ré-applique aussitôt (depuis la base) : le passage revient
     list.innerHTML = _acDerushCuts.map((c, k) => `
       <label style="display:flex;align-items:center;gap:9px;padding:7px 9px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">
-        <input type="checkbox" checked onchange="_acDerushCuts[${k}].keep=this.checked" style="accent-color:var(--accent)">
+        <input type="checkbox" checked onchange="_acDerushCuts[${k}].keep=this.checked;_acDerushApply(null)" style="accent-color:var(--accent)">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.label.replace(/</g,'&lt;')}</span>
         <span class="mono faint" style="font-size:10px;flex-shrink:0">${c.start.toFixed(1)}s · −${(c.end-c.start).toFixed(1)}s</span>
       </label>`).join('');
     panel.style.display = 'block';
-    toast('✂️ ' + _acDerushCuts.length + ' coupe(s) proposée(s) — à toi de valider');
+    await _acDerushApply(null);             // l'IA décide : coupes appliquées d'office
   }catch(e){
     console.error('_acDerushRun:', e);
     toast('⚠️ Dérush : transcription impossible (' + (e.message||'erreur') + ')');
@@ -21821,18 +21823,21 @@ function _acSubtractRanges(keep, cuts){
 
 async function _acDerushApply(btn){
   const cuts = (_acDerushCuts || []).filter(c => c.keep !== false);
-  if(!cuts.length){ toast('Aucune coupe cochée'); return; }
   if(!_acDenoisedBuf || !Array.isArray(_acKeepSegsSec) || !_acKeepSegsSec.length){ toast('⚠️ Lance d\'abord l\'analyse'); return; }
   if(btn){ btn.disabled = true; btn.textContent = '✂️ Découpe en cours…'; }
   try{
-    const finalKeep = _acSubtractRanges(_acKeepSegsSec, cuts);
+    // toujours repartir des segments d'AVANT dérush : décocher restaure vraiment
+    if(!_acKeepSegsBase) _acKeepSegsBase = _acKeepSegsSec.slice();
+    const finalKeep = cuts.length ? _acSubtractRanges(_acKeepSegsBase, cuts) : _acKeepSegsBase.slice();
     const buf = await _reconstructAudio(_acDenoisedBuf, finalKeep);
     _acCleanBlob = _encodeWAV(buf);
     _acKeepSegsSec = finalKeep;                      // la découpe VIDÉO suit les mêmes instants
     const cutS = cuts.reduce((a,c) => a + (c.end - c.start), 0);
-    if(btn){ btn.textContent = '✓ Dérush appliqué — −' + cutS.toFixed(1) + 's'; }
+    if(btn){ btn.disabled = false; btn.textContent = '✓ Dérush appliqué — −' + cutS.toFixed(1) + 's'; }
     const pb = document.getElementById('acPlayBtn'); if(pb) pb.textContent = '▶ Écouter l\'audio dérushé';
-    toast('✂️ Dérush appliqué : ' + cuts.length + ' coupe(s), −' + cutS.toFixed(1) + 's');
+    toast(cuts.length
+      ? '✂️ Dérush : ' + cuts.length + ' coupe(s) appliquée(s), −' + cutS.toFixed(1) + 's — décoche pour restaurer'
+      : '↩️ Toutes les coupes restaurées');
   }catch(e){
     console.error('_acDerushApply:', e);
     if(btn){ btn.disabled = false; btn.textContent = 'Appliquer le dérush'; }
