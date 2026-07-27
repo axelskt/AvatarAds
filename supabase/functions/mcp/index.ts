@@ -44,6 +44,14 @@ const MONTAGE_PLAN_COST   = 6  // = montageIA (transcription Scribe + plan Claud
 const MONTAGE_RENDER_COST = 2  // = montageRender (MP4 monté par le moteur de rendu)
 const MONTAGE_STYLES      = ['auto', 'apple', 'glass', 'dynamic', 'word']
 const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
+// OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
+const OMNI_COST_SEC = 5
+const FAL_OMNI_PATH = 'fal-ai/bytedance/omnihuman/v1.5'
+const FAL_QUEUE     = 'https://queue.fal.run'
+const FAL_KEY = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET']
+  .map((n) => Deno.env.get(n)).find(Boolean) ?? ''
+const falFetch = (path: string, init?: RequestInit) =>
+  fetch(`${FAL_QUEUE}/${path}`, { ...init, headers: { Authorization: `Key ${FAL_KEY}`, ...(init?.headers || {}) } })
 const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
@@ -242,12 +250,13 @@ function toolDefs(isOwner: boolean) {
     },
     {
       name: 'lipsync_video',
-      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale (Hedra Character-3). Coût : 1 crédit/seconde (durée de l'audio, max 60 s), débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
+      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux moteurs : omnihuman (ByteDance OmniHuman 1.5 via fal — le plus réaliste, ${OMNI_COST_SEC} crédits/s, défaut) ou hedra (Character-3, 1 crédit/s). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
           image_url: { type: 'string', description: "URL publique de la photo de l'avatar (PNG/JPEG/WebP)." },
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
+          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `omnihuman (défaut, le plus réaliste, ${OMNI_COST_SEC} cr/s) ou hedra (1 cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
@@ -761,6 +770,35 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   if (job.status === 'done') return toolText(`✅ Vidéo avatar prête !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
+  // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
+  if (String(job.op_name || '').startsWith('fal:')) {
+    const reqId = String(job.op_name).slice(4)
+    const st = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}/status`)
+    if (!st.ok) return toolText('⏳ Toujours en cours — rappelle check_avatar_video dans ~30 secondes.')
+    const sd = await st.json().catch(() => ({}))
+    const s = String(sd.status || '').toUpperCase()
+    if (s === 'IN_QUEUE' || s === 'IN_PROGRESS' || !s) {
+      return toolText(`⏳ OmniHuman ${s === 'IN_QUEUE' ? 'en file' : 'en cours'} — rappelle check_avatar_video dans ~30 secondes.`)
+    }
+    if (s !== 'COMPLETED') {
+      await failAndRefund(userId, job, `fal ${s}`)
+      return toolErr(`Génération échouée (fal : ${s}). Les ${job.credits_cost} crédits ont été remboursés.`)
+    }
+    const rr = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}`)
+    const rd = rr.ok ? await rr.json().catch(() => ({})) : {}
+    const vu = rd?.video?.url || rd?.video_url || ''
+    if (!vu) {
+      await failAndRefund(userId, job, 'video_missing')
+      return toolErr('Clip terminé mais introuvable côté fal — crédits remboursés.')
+    }
+    const vres = await fetch(vu).catch(() => null)
+    if (!vres || !vres.ok) return toolText('⏳ Presque prêt — rappelle check_avatar_video dans quelques secondes.')
+    const url = await deliverVideo(userId, job, new Uint8Array(await vres.arrayBuffer()))
+    return url
+      ? toolText(`✅ Clip OmniHuman prêt !\nURL : ${url}`)
+      : toolText('⏳ Presque prêt — rappelle check_avatar_video dans quelques secondes.')
+  }
+
   // Poll Hedra jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
   let videoUrl = ''
   let lastProgress = 0
@@ -856,20 +894,64 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   const aud = await fetchUserFile(audioUrl, 15_000_000, /^(audio\/|application\/octet-stream)/, "l'audio (audio_url)")
   if (typeof aud === 'string') return toolErr(aud)
 
+  const engine = String(args.engine || 'omnihuman') === 'hedra' ? 'hedra' : 'omnihuman'
+  if (engine === 'omnihuman' && !FAL_KEY) return toolErr('OmniHuman indisponible (clé fal absente des secrets).')
   const secs = Math.ceil(Math.max(1, estimateAudioSeconds(aud.bytes, aud.contentType)))
   if (secs > 60) return toolErr(`Segment audio trop long (~${secs} s) : 60 secondes maximum par clip lipsync.`)
-  const cost = secs // 1 crédit/seconde (lipsync seul, pas de TTS)
+  const cost = engine === 'omnihuman' ? secs * OMNI_COST_SEC : secs
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${secs} s × 1), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
-  const gate = await preSpendGate(profile, ctx, args, cost, `clip lipsync ~${secs} s (${aspect})`, 'lipsync_video')
+  const gate = await preSpendGate(profile, ctx, args, cost, `clip lipsync ~${secs} s (${engine}, ${aspect})`, 'lipsync_video')
   if (gate) return gate
 
   const bal = await spendCredits(userId, cost)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
+
+  // ── OmniHuman 1.5 (fal) : file d'attente, on garde le request_id préfixé
+  //    « fal: » pour que check_avatar_video sache où poller.
+  if (engine === 'omnihuman') {
+    let launchedO = false
+    try {
+      const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
+      const stamp = `${userId}/omni-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      const upI = await svc.storage.from('mcp-media').upload(`${stamp}.png`, img.bytes, { contentType: img.contentType, upsert: true })
+      const upA = await svc.storage.from('mcp-media').upload(`${stamp}.${ext}`, aud.bytes, { contentType: aud.contentType, upsert: true })
+      if (upI.error || upA.error) return toolErr('Upload vers le stockage échoué — crédits remboursés.')
+      const pub = (p: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${p}`
+
+      const sub = await falFetch(FAL_OMNI_PATH, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: pub(`${stamp}.png`),
+          audio_url: pub(`${stamp}.${ext}`),
+          resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
+          prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise lip-sync matching every syllable and pause, clear articulation, static background, no camera movement',
+        }),
+      })
+      if (!sub.ok) {
+        const t = await sub.text().catch(() => '')
+        return toolErr(`OmniHuman ${sub.status}${t ? ' — ' + t.slice(0, 140) : ''} — crédits remboursés.`)
+      }
+      const sd = await sub.json().catch(() => ({}))
+      const reqId = sd.request_id || sd.requestId
+      if (!reqId) return toolErr("OmniHuman n'a pas retourné d'identifiant — crédits remboursés.")
+
+      const { data: job, error } = await svc.from('mcp_jobs')
+        .insert({ user_id: userId, kind: 'avatar', op_name: 'fal:' + reqId, credits_cost: cost }).select('id').single()
+      if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés.')
+      launchedO = true
+      return toolText(
+        `🎬 Lipsync OmniHuman lancé ! (~${secs} s, ${aspect}, −${cost} crédits)
+job_id : ${job.id}
+Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 minutes).`)
+    } finally {
+      if (!launchedO) await refundCredits(userId, cost)
+    }
+  }
 
   let launched = false
   try {
@@ -1232,6 +1314,17 @@ serve(async (req) => {
     return await handleKeyManagement(req)
   }
 
+  // ── Découverte OAuth : on répond 404, PAS 405 ──
+  // Les connecteurs claude.ai sondent /.well-known/oauth-* avant de parler MCP.
+  // Un 405 (« méthode non autorisée ») laisse croire que la ressource EXISTE :
+  // le client enchaîne alors sur l'inscription dynamique (RFC 7591) et échoue
+  // avec « Impossible de s'inscrire auprès du service de connexion ». Un 404
+  // dit clairement « pas d'OAuth ici » → le client accepte l'URL à clé.
+  if (url.pathname.includes('/.well-known/')) {
+    return new Response(JSON.stringify({ error: 'not_found' }),
+      { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } })
+  }
+
   // Streamable HTTP sans état : pas de flux SSE côté GET
   if (req.method === 'GET') return json(405, { error: 'method_not_allowed' })
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
@@ -1279,7 +1372,18 @@ serve(async (req) => {
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'AvatarAds', version: '1.4.0' },
+        // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
+        // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
+        serverInfo: {
+          name: 'AvatarAds',
+          title: 'AvatarAds',
+          version: '1.4.1',
+          websiteUrl: 'https://avatarads.fr',
+          icons: [
+            { src: 'https://avatarads.fr/favicon.svg', mimeType: 'image/svg+xml' },
+            { src: 'https://avatarads.fr/assets/avatarads-logo.png', mimeType: 'image/png', sizes: ['512x512'] },
+          ],
+        },
         instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
       })
     }
