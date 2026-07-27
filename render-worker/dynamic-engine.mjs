@@ -125,13 +125,27 @@ function buildPanels(plan, D) {
 // dessus). Pas d'accent → la phrase courte se TAPE au centre, caret orange.
 function typoContent(id, p, tone, liveT0) {
   const ws = p.words
-  let accIdx = ws.findIndex((w) => w.accent || w.text.length >= 11)
+  // Mots que la voix porte déjà et qui ne VEULENT RIEN DIRE à l'écran — Axel :
+  // « "sélectionner" écrit en sous-titres ne sert à rien », « "finir
+  // l'animation" pareil inutile ». Un slam doit être un mot qu'on retient.
+  const WEAK = new Set(['selectionner', 'selectionne', 'finir', 'aller', 'faire', 'mettre',
+    'obtenir', 'obtiens', 'vouloir', 'veux', 'donner', 'prendre', 'passer', 'commencer',
+    'continuer', 'utiliser', 'cliquer', 'ensuite', 'apres', 'maintenant', 'vraiment',
+    'simplement', 'juste', 'genre', 'sinon', 'aussi', 'meme', 'toujours', 'quelque',
+    'quelques', 'plusieurs', 'beaucoup', 'pendant', 'depuis', 'chaque'])
+  const clean = (t) => String(t).replace(/[«»"'.,!?…()]/g, '')
+  const strong = (w) => {
+    const n = clean(w.text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return n.length >= 5 && !WEAK.has(n)
+  }
+  let accIdx = ws.findIndex((w) => (w.accent || w.text.length >= 11) && strong(w))
   // JAMAIS de panneau typo NU (vu sur Cartoon 15 : blobs vides pendant 1-2 s) —
-  // sans accent, le mot le plus CHARGÉ de la phrase (≥5 lettres) fait le slam
+  // sans accent, le mot le plus CHARGÉ de la phrase fait le slam
   if (accIdx < 0) {
     let best = -1, bestLen = 4
     for (let i = 0; i < ws.length; i++) {
-      const L = String(ws[i].text).replace(/[«»"'.,!?…()]/g, '').length
+      if (!strong(ws[i])) continue
+      const L = clean(ws[i].text).length
       if (L > bestLen) { best = i; bestLen = L }
     }
     accIdx = best
@@ -323,9 +337,15 @@ export function buildDynamicComposition(plan, opts = {}) {
       }
 
     } else if (p.kind === 'punch') {
-      // CTA redessiné : le verbe en haut, LE MOT à taper en géant, et la barre de
-      // commentaire TikTok qui le tape puis l'envoie — on montre le geste demandé
+      // CTA : le verbe en haut, LE MOT à taper en géant, et la barre de
+      // commentaire TikTok qui le tape puis l'envoie — on montre le geste demandé.
+      // ⚠️ La barre de commentaire n'apparaît QUE sur le VRAI CTA (slide.cta).
+      // Les cartes `punch` de l'orchestrateur (« CONTRATS À MILLIERS D'EUROS »)
+      // passaient par ici et se retrouvaient présentées comme un commentaire —
+      // Axel : « SIGNENT est présenté comme le mettre en commentaire alors que
+      // ce n'est pas l'objectif ».
       const s = p.slide
+      const isCta = !!s.cta
       const txt = (s.items && s.items[0] && s.items[0].text) || s.title || ''
       const tAt = Math.max(liveT0, (s.items && s.items[0] && s.items[0].t) || liveT0)
       const m = txt.match(/^(\S+)\s+(.+)$/)                   // « Commente » + « Avatar »
@@ -339,9 +359,11 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.fromTo('#${id}vb',{y:-40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, tAt - 0.15))});
   tl.fromTo('#${id}tx',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.48,ease:'power4.out'},${r2(tAt)});
   tl.to('#${id}tx',{scale:1.04,duration:${r2(Math.max(0.4, (t1 - tAt - 0.5) / 2))},ease:'sine.inOut',yoyo:true,repeat:1},${r2(tAt + 0.55)});`
-      const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw, zoom: 'in' })
-      // …et sa frappe : sans ce kbAdd, le mot du CTA s'écrivait en silence
-      if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])); kbAdd.push(...(sc.keyboard || [])) }
+      if (isCta) {
+        const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw, zoom: 'in' })
+        // …et sa frappe : sans ce kbAdd, le mot du CTA s'écrivait en silence
+        if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])); kbAdd.push(...(sc.keyboard || [])) }
+      }
       sfxAdd.push({ kind: 'mo-impact-2', t: r2(tAt), vol: 0.6 })
     }
 
