@@ -31,20 +31,53 @@ const MUSIC_BY_MOOD = { intense: 'music-2.mp3', dynamique: 'music-1.mp3', chill:
 // Volumes revus a la baisse (~-6 dB) : la musique couvrait la voix et ecrasait les
 // bruitages, qui portent bien mieux le rythme. Elle n'est plus active par defaut.
 const MUSIC_VOL_BY_MOOD = { intense: 0.045, dynamique: 0.065, chill: 0.075 }
-const MUSIC_VOL_EXTRA = 0.06 // titres ajoutés (assets/music/<mood>-N.mp3) : normalise-les à ~-14 LUFS
+const MUSIC_VOL_EXTRA = 0.06 // repli si la sonie d'un titre est illisible
+// niveau CIBLE de la musique de fond, en LUFS. La voix est calée à -14 : à -30
+// le lit se sent sans jamais disputer la parole. Chaque titre de la
+// bibliothèque est mesuré et ramené ici, sinon les plus forts écrasent tout.
+const MUSIC_TARGET_LUFS = -30
 
 // banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
 // entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
 function pickMusic(mood, seed) {
   const dir = join(HERE, 'assets', 'music')
+  // BIBLIOTHÈQUE (assets/music/lib) : les instrumentaux sans parole d'Axel. Ce
+  // sont des morceaux ENTIERS de 2 à 5 min — on ne veut donc pas toujours leur
+  // intro. On tire un morceau ET un point de départ quelconque dans le morceau,
+  // et le mix coupe à la fin de la vidéo (afade en sortie, déjà en place).
+  // Le tirage est pseudo-aléatoire mais DÉTERMINISTE (graine = durée de la
+  // vidéo) : deux rendus du même montage donnent la même musique, sinon un
+  // re-rendu changerait la bande-son sans prévenir.
+  try {
+    const lib = readdirSync(join(dir, 'lib')).filter((f) => f.endsWith('.mp3'))
+    if (lib.length) {
+      const s = Math.abs(Math.round(seed * 1000))
+      const f = lib.sort()[s % lib.length]
+      const file = join(dir, 'lib', f)
+      let dur = 0
+      try { dur = parseFloat(ffprobe(file, 'format=duration')) || 0 } catch (_) { /* durée inconnue */ }
+      // on démarre n'importe où, mais en gardant de quoi couvrir la vidéo sans
+      // reboucler : au pire on repart du début
+      const room = Math.max(0, dur - (seed + 2))
+      const start = room > 1 ? Math.round((((s * 7919) % 9973) / 9973) * room * 100) / 100 : 0
+      // NIVEAU MESURÉ, pas un volume au jugé. Les 8 titres vont de -8,3 à
+      // -14,3 LUFS : à volume fixe, l'un passerait 6 dB au-dessus de l'autre.
+      // On mesure et on ramène chacun à MUSIC_TARGET_LUFS — un lit constant,
+      // toujours à la même distance sous la voix (elle est à -14 LUFS).
+      const lufs = loudnessOf(file)
+      const vol = lufs == null ? MUSIC_VOL_EXTRA
+        : Math.min(0.5, Math.max(0.02, Math.pow(10, (MUSIC_TARGET_LUFS - lufs) / 20)))
+      return { file, vol: Math.round(vol * 1000) / 1000, start, name: f.replace(/\.mp3$/, ''), lufs }
+    }
+  } catch (_) { /* pas de bibliothèque */ }
   let pool = []
   try { pool = readdirSync(dir).filter((f) => f.startsWith(mood + '-') && f.endsWith('.mp3')) } catch (_) { /* dossier absent */ }
   if (pool.length) {
     const f = pool[Math.abs(Math.floor(seed * 100)) % pool.length]
-    return { file: join(dir, f), vol: MUSIC_VOL_EXTRA }
+    return { file: join(dir, f), vol: MUSIC_VOL_EXTRA, start: 0 }
   }
   const base = MUSIC_BY_MOOD[mood]
-  return base ? { file: join(dir, base), vol: MUSIC_VOL_BY_MOOD[mood] || 0.12 } : null
+  return base ? { file: join(dir, base), vol: MUSIC_VOL_BY_MOOD[mood] || 0.12, start: 0 } : null
 }
 const SFX_VOL = 0.85
 // largeur minimale d'une image de b-roll : la carte fait 76 % de 1080 px ≈ 820 px.
@@ -308,10 +341,16 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     const mood = plan.music && plan.music.mood
     const pick = mood ? pickMusic(mood, plan.duration || 1) : null
     if (pick && existsSync(pick.file)) {
+      // départ QUELCONQUE dans le morceau (pick.start) : ce sont des titres
+      // entiers, on ne veut pas toujours entendre la même intro. -ss avant -i
+      // fait le saut au décodage ; la boucle couvre le cas où le reste du
+      // morceau serait plus court que la vidéo, et l'afade coupe à la fin.
+      if (pick.start > 0) inputs.push('-ss', String(pick.start))
       inputs.push('-stream_loop', '-1', '-i', pick.file)
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},volume=${pick.vol},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[mus]`)
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2[mus]`)
       mixIns.push('[mus]')
       idx++
+      console.log(`▶ musique : ${pick.name || 'preset'} à partir de ${(pick.start || 0).toFixed(0)} s`)
     }
 
     for (const s of plan.sfx || []) {
