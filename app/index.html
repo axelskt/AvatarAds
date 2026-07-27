@@ -3386,6 +3386,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <input id="postizTagsInput" placeholder="#viral #businessenligne #saas" oninput="try{localStorage.setItem('aa_pub_tags', this.value)}catch(e){}" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px 0">
         </div>
 
+        <!-- #150 · quand publier : tout de suite, ou programmé (Postiz type schedule) -->
+        <div style="margin-top:14px;font-size:11px;font-family:var(--mono);letter-spacing:.08em;color:var(--text3)">QUAND</div>
+        <div style="display:flex;gap:8px;margin-top:7px;align-items:center;flex-wrap:wrap">
+          <button id="pubWhenNow" onclick="_pubSetWhen('now')" style="padding:9px 16px;background:var(--accent);border:1.5px solid var(--accent);border-radius:20px;color:#fff;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer">Maintenant</button>
+          <button id="pubWhenLater" onclick="_pubSetWhen('later')" style="padding:9px 16px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer">⏰ Programmer</button>
+          <input id="pubWhenDate" type="datetime-local" style="display:none;padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;color-scheme:dark">
+        </div>
         <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:14px;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3);display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Publier maintenant</button>
         <div id="postizStatus" style="display:none;margin-top:9px;font-size:11.5px;font-family:var(--mono);color:var(--text2);text-align:center"></div>
       </div>
@@ -17507,6 +17514,26 @@ async function _postizCall(payload){
   if(!r.ok) throw new Error(d.detail || d.error || ('HTTP '+r.status));
   return d;
 }
+// #150 · « Maintenant » ou « Programmer » — le choix pilote schedule_at côté fonction
+let _pubWhen = 'now';
+function _pubSetWhen(mode){
+  _pubWhen = mode;
+  const now = document.getElementById('pubWhenNow'), later = document.getElementById('pubWhenLater');
+  const dt = document.getElementById('pubWhenDate'), go = document.getElementById('postizGoBtn');
+  const on = (b) => { b.style.background='var(--accent)'; b.style.borderColor='var(--accent)'; b.style.color='#fff'; };
+  const off = (b) => { b.style.background='var(--surface-2)'; b.style.borderColor='var(--border)'; b.style.color='var(--text2)'; };
+  if(mode === 'later'){
+    on(later); off(now); dt.style.display='inline-block';
+    if(!dt.value){ // défaut : demain 18 h (heure locale), au format datetime-local
+      const d = new Date(Date.now() + 86400000); d.setHours(18, 0, 0, 0);
+      dt.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + 'T18:00';
+    }
+    if(go) go.lastChild.textContent = 'Programmer la publication';
+  } else {
+    on(now); off(later); dt.style.display='none';
+    if(go) go.lastChild.textContent = 'Publier maintenant';
+  }
+}
 async function postizPublish(btn){
   const blob = window._aaPublishBlob;
   if(!blob){ toast('⚠️ Ajoute d\'abord une vidéo (dépose un MP4 ou importe depuis le Montage IA)'); return; }
@@ -17514,23 +17541,42 @@ async function postizPublish(btn){
   if(!caption){ toast('⚠️ Écris une description avant de publier'); return; }
   const ids = [...document.querySelectorAll('#postizChannels input:checked')].map(i=>i.value);
   if(!ids.length){ toast('⚠️ Choisis au moins un réseau'); return; }
+  // programmation : date locale du champ → ISO, jamais dans le passé
+  let scheduleAt = null;
+  if(_pubWhen === 'later'){
+    const v = document.getElementById('pubWhenDate')?.value;
+    if(!v){ toast('⚠️ Choisis la date et l\'heure de publication'); return; }
+    const when = new Date(v);
+    if(isNaN(when.getTime()) || when.getTime() < Date.now() + 2*60000){ toast('⚠️ La date doit être dans le futur (au moins 2 min)'); return; }
+    scheduleAt = when.toISOString();
+  }
   const st = document.getElementById('postizStatus');
-  btn.disabled = true; btn.textContent = '⏳ Publication…'; st.style.display='block';
+  btn.disabled = true; btn.textContent = scheduleAt ? '⏳ Programmation…' : '⏳ Publication…'; st.style.display='block';
   try {
     const { data:{ user } } = await sb.auth.getUser();
     const path = user.id + '/postiz-' + Date.now() + '.mp4';
     st.textContent = '1/2 · Envoi de la vidéo (' + (blob.size/1024/1024).toFixed(1) + ' Mo)…';
     const up = await sb.storage.from('render-media').upload(path, blob, { contentType:'video/mp4', upsert:true });
     if(up.error) throw new Error('upload : ' + up.error.message);
-    st.textContent = '2/2 · Publication sur ' + ids.length + ' réseau(x)…';
-    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids, tags: (document.getElementById('postizTagsInput')?.value||'').trim() });
-    st.textContent = '✓ Publié : ' + (d.published||[]).join(', ') + (d.hashtags ? ' · ' + d.hashtags : '');
-    toast('✓ Publié sur ' + (d.published||[]).length + ' réseau(x) — vérifie le calendrier Postiz');
+    st.textContent = '2/2 · ' + (scheduleAt ? 'Programmation' : 'Publication') + ' sur ' + ids.length + ' réseau(x)…';
+    const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids,
+      tags: (document.getElementById('postizTagsInput')?.value||'').trim(),
+      ...(scheduleAt ? { schedule_at: scheduleAt } : {}) });
+    if(d.scheduled_at){
+      const lbl = new Date(d.scheduled_at).toLocaleString('fr-FR', { dateStyle:'medium', timeStyle:'short' });
+      st.textContent = '⏰ Programmé le ' + lbl + ' : ' + (d.published||[]).join(', ');
+      toast('⏰ Publication programmée le ' + lbl + ' sur ' + (d.published||[]).length + ' réseau(x)');
+    } else {
+      st.textContent = '✓ Publié : ' + (d.published||[]).join(', ') + (d.hashtags ? ' · ' + d.hashtags : '');
+      toast('✓ Publié sur ' + (d.published||[]).length + ' réseau(x) — vérifie le calendrier Postiz');
+    }
   } catch(e){
     st.textContent = '✗ ' + e.message;
     toast('✗ Publication : ' + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = '🚀 Publier maintenant';
+    btn.disabled = false;
+    btn.textContent = '';
+    btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>' + (_pubWhen === 'later' ? 'Programmer la publication' : 'Publier maintenant');
   }
 }
 // écran final du Montage IA → importe le MP4 monté directement dans le module 📤
