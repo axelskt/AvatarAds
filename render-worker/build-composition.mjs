@@ -335,11 +335,39 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip emo" id="${e.id}" data-start="${e.start}" data-duration="${e.dur}" data-track-index="5"><img src="${e.file}" alt="" /></div>`).join('')
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
+  // UNE SCÈNE PLEIN CADRE QUI PORTE UNE ANIMATION EST RENDUE PAR L'ANIMATION.
+  // Le chef d'orchestre pose TOUTES ses scènes animées et toutes ses captures
+  // d'application en `layout: 'full'`. Elles partaient donc dans scene-pack, dont
+  // bodyHtml ne connaît que ses propres types (nodes, bars, kpi…) : une `card`
+  // animée y tombait dans le `default: punch`, et comme la règle « une animation
+  // plutôt qu'un mot au hasard » lui avait vidé ses items, elle ne rendait
+  // RIEN. D'où le style apple entièrement vide — que des sous-titres sur blanc,
+  // pas une animation, pas une capture. Le moteur dynamique, lui, n'était pas
+  // touché : il a sa propre dérivation et ne passe jamais par ici.
+  // `.fslide` est en inset:0, donc plein écran : les coordonnées W×H du pack
+  // d'animations tombent juste, sans transform de rattrapage.
+  const animFull = (s) => ANIMS.includes(s.anim)
+  const withFiles = (s) => ({ ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' })
   const fullHtml = fullDefs.map((s) => `
-      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${fullSlideHtml(s, W, H, vs)}</div>`).join('')
+      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${
+    animFull(s) ? animHtml(s.anim, withFiles(s), W, H, vs) : fullSlideHtml(s, W, H, vs)}</div>`).join('')
   const bannersHtml = bannerDefs.map((s) => `
       <div class="clip fbanner" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="11">${bannerHtml(s, vs)}</div>`).join('')
-  const fullJs = fullDefs.map((s) => fullSlideJs(s, H)).join('')
+  // fullSlideJs anime les éléments de scene-pack (barres, nœuds, compteurs) : il
+  // n'a rien à animer ici. On garde son fondu d'entrée/sortie — c'est lui qui
+  // fait apparaître et disparaître la scène — et le pack fait le reste.
+  const fullFadeJs = (s) => {
+    const t0 = r2(s.start), end = r2(s.start + s.dur)
+    return `
+      tl.fromTo('#${s.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${t0});
+      tl.to('#${s.id}', { autoAlpha: 0, duration: 0.2, ease: 'power1.in' }, ${r2(end - 0.24)});
+      tl.set('#${s.id}', { autoAlpha: 0 }, ${end});`
+  }
+  const fullJs = fullDefs.map((s) => (animFull(s)
+    ? fullFadeJs(s) + `
+      try {${animJs(s.anim, withFiles(s), r2)}
+      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }`
+    : fullSlideJs(s, H))).join('')
   const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
   // ── slides motion design (zone haute pendant les périodes split) ──────────
@@ -711,7 +739,7 @@ export function buildComposition(plan, opts = {}) {
 ${slideCss}
 ${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
 ${vs ? fontFaceCss() + styleCss(vs, W, H, SLIDE_H) : ''}
-${slideDefs.some((s) => s.anim) ? animCss(W, H) : ''}
+${(slideDefs.some((s) => s.anim) || fullDefs.some(animFull)) ? animCss(W, H) : ''}
     </style>
   </head>
   <body${vs ? ` class="vs-${vs}"` : ''}>
