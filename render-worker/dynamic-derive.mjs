@@ -547,6 +547,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const kw = w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : ''
       if (kw && kw.length <= 14) {
         const verb = norm(words[last.i].text).startsWith('ecris') ? 'Écris' : 'Commente'
+        // LE MOT À COMMENTER EST TOUJOURS EN CAPITALES. C'est une consigne qu'on
+        // donne au spectateur : elle doit se lire d'un coup d'œil et se recopier
+        // sans hésiter sur la casse (Axel : « faut que ça soit toujours en
+        // majuscule le mot »).
+        const KW = kw.toLocaleUpperCase('fr-FR')
         const a = Math.max(last.start - 0.1, D - 5)
         // LE CTA GARDE LA FIN. J'avais essayé de le faire céder pour atteindre
         // 100 % des scènes du chef d'orchestre ; Axel, en voyant le résultat :
@@ -562,7 +567,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
           if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
         }
         out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
-          items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, last.start)) }],
+          items: [{ text: `${verb} « ${KW} »`, t: r2(Math.max(a + 0.3, last.start)) }],
           start: r2(a), end: r2(D - 0.1) })
         claim(a, D)
       }
