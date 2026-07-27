@@ -426,6 +426,21 @@ export function buildDynamicComposition(plan, opts = {}) {
       const sc = uiScene('phone', id, liveT0, t1, tone, s)
       if (sc) { inner += sc.html; pjs += sc.js }
 
+    } else if (p.kind === 'media') {
+      // LE MÉDIA DE L'UTILISATEUR, PLEIN ÉCRAN. Ce style n'en affichait aucun :
+      // `plan.broll` n'était lu que par le chemin classique. Sa vidéo montre le
+      // RÉSULTAT — c'est le visuel le plus fort dont on dispose, il occupe donc
+      // tout le panneau, sans cadre ni carte qui le rétrécirait.
+      const src = String(p.slide.src || '')
+      const vid = /\.(mp4|mov|webm|m4v)$/i.test(src)
+      if (vid) {
+        inner += `<video id="${id}md" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="8" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+      } else {
+        // une image fixe respire : un lent zoom avant, sinon le plan paraît figé
+        inner += `<div id="${id}md" style="position:absolute;left:-4%;top:-4%;width:108%;height:108%;background:url('${esc(src)}') center/cover"></div>`
+        pjs += `\n  tl.fromTo('#${id}md',{scale:1},{scale:1.08,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+      }
+
     } else if (p.kind === 'avclip') {
       // #149 · le VISAGE plein écran : clip lipsync si fourni (muet, calé sur la
       // voix qui continue), sinon la photo avatar en zoom lent — « les viewers
