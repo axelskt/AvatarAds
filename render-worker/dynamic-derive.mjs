@@ -185,6 +185,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // le moteur dynamique les rejoue au clic, avec curseur et cadrage — une version
   // strictement plus riche de ce que le serveur sait exprimer.
   const consumedByPlan = new Set()
+  let placeServerText = () => {}
 
   // ── 0 · LE HOOK EST UN VISAGE ───────────────────────────────────────────────
   // Une vidéo face caméra s'ouvre sur celui qui parle, pas sur une forme. La
@@ -248,20 +249,25 @@ export function deriveDynamicSlides(plan, opts = {}) {
         consumedByPlan.add(sl); placedAnim++
       }
     }
-    // …puis ses cartes de texte, dans ce qu'il reste de libre. Elles gardent la
-    // règle validée par Axel : un mot affiché est un mot réellement prononcé.
-    let placedText = 0
-    for (const sl of srv) {
-      if (consumedByPlan.has(sl) || isAnim(sl)) continue
-      if (sl.anim === 'screen' || sl.anim === 'ui') continue    // §1/§2 les rejouent au clic
-      const its = (sl.items || []).filter((it) => it && it.text)
-      if (!its.length && !sl.title) continue
-      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.5)
-      if (add(sl, a, b)) { consumedByPlan.add(sl); placedText++ }
+    // SES CARTES DE TEXTE PASSENT APRÈS LES DÉMOS D'INTERFACE (§1/§2). Posées ici,
+    // elles réservaient les fenêtres des visites guidées de l'app : sur Cartoon 15,
+    // les cinq captures cliquées d'Images IA et d'Express disparaissaient au profit
+    // de deux cartes « IMAGE IA » et « EXPRESS ». Or une démo au clic — curseur,
+    // cadre, texte tapé — montre infiniment plus qu'un mot posé sur un fond.
+    placeServerText = () => {
+      let n = 0
+      for (const sl of srv) {
+        if (consumedByPlan.has(sl) || isAnim(sl)) continue
+        if (sl.anim === 'screen' || sl.anim === 'ui') continue
+        const its = (sl.items || []).filter((it) => it && it.text)
+        if (!its.length && !sl.title) continue
+        const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.5)
+        if (add(sl, a, b)) { consumedByPlan.add(sl); n++ }
+      }
+      const tot = srv.length, anims = srv.filter(isAnim).length
+      console.log(`▶ chef d'orchestre : ${placedAnim}/${anims} animations + ${n} carte(s) de texte`
+        + ` = ${placedAnim + n}/${tot} de ses scènes posées`)
     }
-    const tot = srv.length, anims = srv.filter(isAnim).length
-    console.log(`▶ chef d'orchestre : ${placedAnim}/${anims} animations + ${placedText} carte(s) de texte`
-      + ` = ${placedAnim + placedText}/${tot} de ses scènes posées`)
   }
 
   // ── 1 · LES TABLES LOCALES : elles ne comblent plus que les trous ────────────
@@ -528,6 +534,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
       consumed.add(sl)
     }
   }
+
+  // …et MAINTENANT ses cartes de texte, dans ce que les démos ont laissé libre.
+  placeServerText()
 
   // ── 3 · CTA final : si aucun punch serveur ne COUVRE la fin, on le synthétise
   // depuis le dernier « commente/écris X » — le moteur y greffe la barre de

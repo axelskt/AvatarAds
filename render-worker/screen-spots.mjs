@@ -1,71 +1,112 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// OÙ SE TROUVE CHAQUE ÉLÉMENT NOMMÉ, DANS CHAQUE CAPTURE DE L'APP.
+// OÙ SE TROUVE CHAQUE ÉLÉMENT NOMMÉ, DANS CHAQUE CAPTURE.
 //
-// Sans cette carte, la scène `screen` posait son cadre orange à la position par
-// défaut (0.5 / 0.5) : au milieu de la capture, donc sur du vide. Axel :
-// « quand je dis image IA il met un rectangle sur une page noire… il ne
-// sélectionne pas ce que je dis », « quand je dis décrire l'image il montre le
-// format, y'a aucune logique ».
+// Sans cette carte, la scène `screen` posait son cadre à la position par défaut
+// (0.5 / 0.5) : au milieu de la capture, donc sur du vide. Axel : « quand je dis
+// image IA il met un rectangle sur une page noire… il ne sélectionne pas ce que
+// je dis ».
 //
-// Coordonnées NORMALISÉES sur l'image (centre + taille), mesurées à la main sur
-// les PNG de assets/tuto (2880 × 1800). Elles sont indépendantes de la taille de
-// rendu : le moteur les multiplie par la largeur du cadre de capture.
+// ⚠️ CETTE CARTE N'EST PLUS ÉCRITE À LA MAIN. Elle l'a été, et elle avait deux
+// défauts mortels : elle ne valait que pour AvatarAds, et elle se périmait à
+// chaque changement d'interface (#145). Les coordonnées viennent maintenant de
+// `assets/tuto/screens.json`, produit par `harvest-screens.mjs` qui lit la
+// position RÉELLE de chaque bouton dans le DOM de l'app et prend la capture dans
+// la même page — l'image et les cadres ne peuvent plus diverger.
+// Pour régénérer : `node render-worker/harvest-screens.mjs`.
 //
-// Clés génériques, communes à tous les modules — la voix parle de « format », de
-// « décrire », de « générer », pas de « div #promptbar » :
-//   menu · style · format · duree · qualite · upload · prompt · generate · result
-// Un module n'expose que ce qu'il a ; un mot sans point d'ancrage est ignoré
-// (mieux vaut pas de cadre qu'un cadre au mauvais endroit).
+// DEUX FAÇONS DE VISER, et c'est la seconde qui compte pour l'avenir :
+//   · spotOf(écran, 'generate')       — un rôle SÉMANTIQUE, pour nos propres
+//     scripts (« il génère l'image ») ;
+//   · spotForWords(écran, mots)       — les mots PRONONCÉS confrontés aux
+//     libellés lus à l'écran. Générique : ça marche sur les captures de
+//     n'importe quel utilisateur, sans qu'on ait rien à déclarer.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// La barre latérale est IDENTIQUE sur toutes les captures : une seule colonne,
-// dix entrées à hauteur fixe. On la décrit une fois.
-const menu = (y) => ({ x: 0.086, y, w: 0.157, h: 0.046 })
-export const MENU_Y = {
-  generateur: 0.128,
-  bibliotheque: 0.175,
-  imagesia: 0.223,
-  enregistreur: 0.271,
-  nettoyage: 0.318,
-  express: 0.422,
-  montageia: 0.470,
-  editeur: 0.518,
-  parrainage: 0.565,
-  publier: 0.613,
+import { readFileSync, existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const FILE = join(HERE, 'assets', 'tuto', 'screens.json')
+
+/** @type {Record<string, { zones: {name:string,label:string,x:number,y:number,w:number,h:number}[] }>} */
+export const SCREENS = existsSync(FILE) ? JSON.parse(readFileSync(FILE, 'utf8')) : {}
+
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD')
+  .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+
+// ── LES RÔLES SÉMANTIQUES ───────────────────────────────────────────────────
+// La voix parle de « format », de « décrire », de « générer » — pas de
+// « bouton-generer-l-image ». Chaque rôle est une liste de motifs cherchés dans
+// le LIBELLÉ de la zone, du plus précis au plus large. Le premier qui répond
+// gagne ; aucun ne répond → pas de cadre (mieux vaut rien qu'un cadre au hasard).
+const ROLES = {
+  style:    [/photo reel/, /^realiste/, /pixar/, /^ugc/, /mascotte/, /^studio$/, /^fruit$/],
+  format:   [/^9 16$/, /portrait/, /paysage/, /^1 1$/, /^16 9$/],
+  duree:    [/duree/, /^\d+ ?s$/],
+  qualite:  [/720p/, /1080p/, /premium/, /^4k$/, /qualite/],
+  upload:   [/ajoute tes images/, /ajouter/, /importe/, /image de reference/, /depuis la bibliotheque/],
+  prompt:   [/decris/, /ecris/, /prompt/, /que tu veux/, /ton script/],
+  generate: [/generer l image/, /generer la video/, /^generer/, /creer ma video/, /^commencer$/],
+  cle:      [/generer ma cle/, /^copie ta cle/, /^ma cle/],
+  connect:  [/connecteurs/, /connecter claude/, /ouvrir claude/],
+  compte:   [/^mon compte$/],
+  result:   [/telecharger/, /enregistrer dans la bibliotheque/, /utiliser en avatar/],
 }
 
-export const SPOTS = {
-  '01-imagesia': {
-    menu:     menu(MENU_Y.imagesia),
-    style:    { x: 0.240, y: 0.312, w: 0.093, h: 0.082 },   // carte « Photo Réel »
-    format:   { x: 0.288, y: 0.668, w: 0.060, h: 0.078 },   // 9:16
-    qualite:  { x: 0.288, y: 0.796, w: 0.208, h: 0.070 },
-    upload:   { x: 0.461, y: 0.864, w: 0.084, h: 0.230 },   // image de référence
-    prompt:   { x: 0.748, y: 0.812, w: 0.472, h: 0.122 },
-    generate: { x: 0.899, y: 0.920, w: 0.175, h: 0.066 },   // « Générer l'image »
-    result:   { x: 0.700, y: 0.392, w: 0.400, h: 0.300 },
-  },
-  '02-express': {
-    menu:     menu(MENU_Y.express),
-    style:    { x: 0.242, y: 0.272, w: 0.093, h: 0.072 },   // « Réaliste »
-    format:   { x: 0.242, y: 0.498, w: 0.093, h: 0.068 },   // « Portrait 9:16 »
-    duree:    { x: 0.290, y: 0.614, w: 0.208, h: 0.062 },
-    qualite:  { x: 0.242, y: 0.756, w: 0.093, h: 0.058 },
-    upload:   { x: 0.500, y: 0.770, w: 0.150, h: 0.243 },   // « Ajoute tes images »
-    prompt:   { x: 0.784, y: 0.740, w: 0.398, h: 0.183 },
-    generate: { x: 0.886, y: 0.934, w: 0.194, h: 0.066 },   // « Générer la vidéo »
-    result:   { x: 0.700, y: 0.345, w: 0.560, h: 0.330 },
-  },
-  // Les autres captures n'exposent pour l'instant que leur entrée de menu : la
-  // barre latérale est mesurée, leur intérieur ne l'est pas encore. Un mot qui
-  // n'a pas d'ancrage ici ne produit simplement pas d'étape (jamais de cadre au
-  // hasard). À compléter en même temps que #145 (refaire les captures).
-  '03-generateur':     { menu: menu(MENU_Y.generateur) },
-  '04-montageia':      { menu: menu(MENU_Y.montageia) },
-  '05-bibliotheque':   { menu: menu(MENU_Y.bibliotheque) },
-  '06-nettoyage-audio': { menu: menu(MENU_Y.nettoyage) },
-  '07-enregistreur':   { menu: menu(MENU_Y.enregistreur) },
-  '08-parrainage':     { menu: menu(MENU_Y.parrainage) },
+// `menu` ne se résout pas par motif : c'est l'entrée QUI CORRESPOND À L'ÉCRAN.
+// Une liste de motifs renvoyait « Générateur » sur la capture d'Images IA —
+// le premier motif de la liste gagnait, pas le bon.
+const MENU_LABEL = {
+  '01-imagesia': /^images ia$/, '02-express': /^express$/, '03-generateur': /^generateur$/,
+  '04-montageia': /^montage ia/, '05-bibliotheque': /^bibliotheque$/,
+  '06-nettoyage-audio': /^nettoyage audio$/, '07-enregistreur': /^enregistreur$/,
+  '08-parrainage': /^parrainage$/, '09-cartoon': /^cartoon/, '10-mon-compte': /^mon compte$/,
 }
 
-export const spotOf = (screen, name) => (SPOTS[screen] || {})[name] || null
+const zonesOf = (screen) => (SCREENS[screen] || {}).zones || []
+const box = (z) => (z ? { x: z.x, y: z.y, w: z.w, h: z.h, label: z.label } : null)
+
+/** Le rôle sémantique → la zone qui l'incarne sur cet écran. */
+export const spotOf = (screen, role) => {
+  if (role === 'menu') {
+    const p = MENU_LABEL[screen]
+    return p ? box(zonesOf(screen).find((z) => p.test(norm(z.label)))) : null
+  }
+  const pats = ROLES[role]
+  if (!pats) return null
+  const zs = zonesOf(screen)
+  for (const p of pats) {
+    const hit = zs.find((z) => p.test(norm(z.label)))
+    if (hit) return box(hit)
+  }
+  return null
+}
+
+/**
+ * LES MOTS PRONONCÉS → LA ZONE QU'ILS DÉSIGNENT.
+ * C'est le chemin générique, celui qui vaut pour les captures de n'importe quel
+ * utilisateur : on ne déclare rien, on compare ce qu'il DIT à ce qui est ÉCRIT
+ * sur son écran. « tu vas dans connecter Claude » trouve le libellé « Connecter
+ * Claude » sans qu'on ait eu à prévoir ce module.
+ * Un seul mot commun ne suffit pas : « la » ou « ton » ferait n'importe quoi.
+ */
+export const spotForWords = (screen, words) => {
+  const said = words.map(norm).filter((w) => w.length >= 4)
+  if (!said.length) return null
+  let best = null, bestScore = 0
+  for (const z of zonesOf(screen)) {
+    const toks = norm(z.label).split(' ').filter((t) => t.length >= 4)
+    if (!toks.length) continue
+    let hits = 0
+    for (const t of toks) if (said.some((w) => w === t || (t.length >= 5 && w.startsWith(t)) || (w.length >= 5 && t.startsWith(w)))) hits++
+    // proportion du libellé retrouvée dans la voix — un libellé court et
+    // entièrement prononcé bat un libellé long à moitié reconnu
+    const score = hits / toks.length
+    if (hits && score > bestScore) { bestScore = score; best = z }
+  }
+  return bestScore >= 0.5 ? box(best) : null
+}
+
+/** Toutes les zones d'un écran, pour l'Éditeur (correction manuelle, #159). */
+export const zonesFor = (screen) => zonesOf(screen).slice()
