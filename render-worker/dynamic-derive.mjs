@@ -73,6 +73,11 @@ const PICKS = {
   portrait: { choices: ['Portrait 9:16', 'Paysage 16:9'], sel: 0, ratio: true },
 }
 
+// SYNCHRO : un visuel doit arriver juste AVANT le mot qu'il illustre — 0,15 s,
+// le temps que l'œil l'attrape. Au-delà il tombe sur le mot de liaison d'avant
+// (Axel : les scènes démarraient sur « dans », « le », « et », « qu'à »).
+const LEAD = 0.15
+
 export function deriveDynamicSlides(plan, opts = {}) {
   if (plan.slideStyle !== 'dynamic') return
   const words = (plan.captions || [])
@@ -107,7 +112,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const nx = words[j + 1] ? norm(words[j + 1].text) : ''
     if (v > 0 && v <= 120 && (nx.startsWith('second') || nx.startsWith('minute'))) {
       add({ anim: 'ui', ui: 'timer', value: String(v), unit: nx.startsWith('minute') ? 'MINUTES' : 'SECONDES' },
-        Math.max(0, words[j].start - 0.15), Math.min(D, words[j + 1].end + 1.6))
+        Math.max(0, words[j].start - LEAD), Math.min(D, words[j + 1].end + 1.6))
       break
     }
   }
@@ -116,7 +121,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const hit = findSeq(words, 'cette qualite')
     if (hit) add({ anim: 'ui', ui: 'photo', screen: 'hook-qualite' },
-      Math.max(0, hit.start - 0.55), Math.min(D, hit.end + 0.45))
+      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 0.45))
   }
 
   // le site : « avatarads.fr » (ou tout mot en .fr/.com) → navigateur, zoom sur
@@ -126,7 +131,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const isUrl = /(fr|com|io|app)$/.test(t) && (t.includes('avatarads') || String(words[j].text).includes('.'))
     if (!isUrl) continue
     const click = findAny(words, ['commencer', 'cliquer', 'clique', 'commence'], j + 1)
-    const a = Math.max(0, words[j].start - 0.9)
+    const a = Math.max(0, words[j].start - LEAD)
     const b = click ? Math.min(D, click.end + 1.1) : Math.min(D, words[j].end + 3.2)
     add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home',
       zoomX: 0.885, zoomY: 0.146, zoomTo: 3.0, ...(click ? { zoomAt: r2(click.start) } : {}) }, a, b)
@@ -146,7 +151,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const isFinal = c.start > D - 8     // le CTA de fin a son propre panneau punch (§ 3)
     if (isFinal) continue
     add({ anim: 'ui', ui: 'comment', word: kw, zoom: 'soft' },
-      Math.max(0, c.start - 0.1), Math.min(D, c.end + 2.6))
+      Math.max(0, c.start - LEAD), Math.min(D, c.end + 2.6))
   }
 
   // « sélectionne Photo Réel(le) / Pixar / format » → cartes de choix sous le curseur
@@ -172,7 +177,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const cap = h + 1 < hits.length ? hits[h + 1].start - 0.41 : Infinity
       add({ anim: 'ui', ui: 'pick', choices: cfg.choices, sel: cfg.sel,
         ...(cfg.ratio ? { ratio: true } : {}), pickAt: r2(hit.end + 0.15) },
-        Math.max(0, hit.start - 0.35), Math.min(D, Math.min(hit.end + 0.7, cap)))
+        Math.max(0, hit.start - LEAD), Math.min(D, Math.min(hit.end + 0.7, cap)))
     }
   }
 
@@ -227,7 +232,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       for (const p of m.pat) { hit = findSeq(words, p); if (hit) break }
       if (!hit) continue
       add({ anim: 'screen', screen: m.screen, screenZoom: 1.5, screenX: 0.5, screenY: 0.4 },
-        Math.max(0, hit.start - 0.35), Math.min(D, hit.end + 2.2))
+        Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 2.2))
     }
   }
 
@@ -236,14 +241,37 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const hit = findSeq(words, 'premier avatar') || findSeq(words, 'ton avatar')
     if (hit) add({ anim: 'ui', ui: 'photo', screen: 'lena' },
-      Math.max(0, hit.start - 0.5), Math.min(D, hit.end + 1.8))
+      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.8))
+  }
+
+  // ── L'ANIMATION EST LE MOT (#146) ──
+  // L'orchestrateur choisissait l'animation « au feeling » : on se retrouvait
+  // avec une cible pendant qu'il parle de pros, un interrupteur sur « outils ».
+  // Ici chaque animation est ancrée sur un mot qui la JUSTIFIE. Les anims
+  // serveur non ancrées sont écartées plus bas (§4) — mieux vaut un slam.
+  {
+    const VOICE_ANIMS = [
+      { w: ['marque', 'marques', 'client', 'clients', 'communaute', 'audience', 'abonnes'], anim: 'network' },
+      { w: ['euros', 'argent', 'contrat', 'contrats', 'prix', 'paye', 'payer', 'gagner'],   anim: 'money' },
+      { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
+      { w: ['fake', 'faux', 'realisme', 'realiste', 'qualite'],                             anim: 'compare' },
+      { w: ['outils', 'outil', 'methode', 'technique', 'strategie'],                        anim: 'steps' },
+      { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
+      { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
+      { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
+    ]
+    for (const v of VOICE_ANIMS) {
+      const hit = findAny(words, v.w)
+      if (!hit) continue
+      add({ anim: v.anim }, Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.7))
+    }
   }
 
   // « poster sur les réseaux » → l'animation des réseaux (il ne se passait rien)
   {
     const hit = findSeq(words, 'poster sur les reseaux') || findSeq(words, 'sur les reseaux')
       || findAny(words, ['poster', 'publier'])
-    if (hit) add({ anim: 'engage' }, Math.max(0, hit.start - 0.25), Math.min(D, hit.end + 1.9))
+    if (hit) add({ anim: 'engage' }, Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.9))
   }
 
   // import de fichier : « importe/ajoute ton/tes audio|image|vidéo|fichier|clip »
@@ -256,7 +284,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const m = win.match(/audio|image|video|fichier|clip|photo/)
     if (!m) continue
     add({ anim: 'ui', ui: 'upload', file: /image|photo/.test(m[0]) ? 'image' : 'audio' },
-      Math.max(0, v.start - 0.1), Math.min(D, v.end + 2.2))
+      Math.max(0, v.start - LEAD), Math.min(D, v.end + 2.2))
   }
 
   // les scènes une-phrase : motif → scène directe
@@ -272,7 +300,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const hit = findSeq(words, p)
       if (!hit) continue
       add({ anim: 'ui', ui: o.ui, ...(o.value ? { value: o.value } : {}) },
-        Math.max(0, hit.start - 0.2), Math.min(D, hit.end + o.pad))
+        Math.max(0, hit.start - LEAD), Math.min(D, hit.end + o.pad))
       break
     }
   }
@@ -281,7 +309,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const hit = findSeq(words, 'et voila')
     if (hit) add({ anim: 'result', screen: '99-resultat' },
-      Math.max(0, hit.start - 0.1), Math.min(D, hit.end + 1.55))
+      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.55))
   }
 
   // « style / sous-titres / musique / images » énumérés → pills d'options
@@ -297,7 +325,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (opts_.length >= 3 && opts_[opts_.length - 1].t - opts_[0].t < 8) {
       add({ anim: 'ui', ui: 'options', options: opts_.map((o) => o.lab).slice(0, 4),
         itemAt: opts_.map((o) => r2(o.t)).slice(0, 4) },
-        Math.max(0, opts_[0].t - 0.2), Math.min(D, opts_[opts_.length - 1].t + 2.2))
+        Math.max(0, opts_[0].t - LEAD), Math.min(D, opts_[opts_.length - 1].t + 2.2))
     }
   }
 
@@ -424,6 +452,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   for (const sl of srcSlides) {
     if (consumed.has(sl)) continue
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) continue
+    // anim serveur SANS texte et non ancrée sur un mot → un slam dira mieux
+    // ce qui est dit (« les animations n'ont aucun rapport avec ce que je dis »)
+    if (sl.anim && sl.anim !== 'ui' && sl.anim !== 'screen' && !hasContent(sl)) continue
     let a = r2(sl.start || 0), b = r2(sl.end || 0)
     for (const d of blockers) {
       if (b <= d.start + 0.05 || a >= d.end - 0.05) continue   // pas de contact
@@ -457,5 +488,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // sinon : jeté — le précédent occupe déjà l'écran
     }
   }
-  plan.slides = [...flat, ...out].sort((a, b) => (a.start || 0) - (b.start || 0))
+  // ── 4c · ANTI-RÉPÉTITION : la même capture affichée 3 fois d'affilée (vu sur
+  // Cartoon 15 : 01-imagesia à 21,7 / 25,0 / 26,2 s) donne l'impression que la
+  // vidéo tourne en rond. Deux voisins qui montrent la MÊME chose n'en font
+  // qu'un, plus long — une idée = un plan.
+  const merged = []
+  for (const sl of [...flat, ...out].sort((a, b) => (a.start || 0) - (b.start || 0))) {
+    const prev = merged[merged.length - 1]
+    const same = prev && (
+      (sl.screen && prev.screen === sl.screen) ||
+      (!sl.screen && !prev.screen && sl.anim && prev.anim === sl.anim && sl.ui === prev.ui)
+    )
+    if (same && (sl.start || 0) - (prev.end || 0) < 2.2) { prev.end = Math.max(prev.end, sl.end); continue }
+    merged.push(sl)
+  }
+  plan.slides = merged
 }
