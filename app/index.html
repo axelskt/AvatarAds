@@ -7961,6 +7961,17 @@ const _IMG_FLUX_TAIL = ', professional photorealistic lifestyle photograph, the 
 // Moteur des styles réalistes SANS référence : 'gptimage' | 'flux' (Flux Ultra)
 const _IMG_REALISTIC_ENGINE = 'gptimage';
 // Modèles gpt-image essayés dans l'ordre (gpt-image-2 récent → fallback gpt-image-1)
+// Le proxy OpenAI renvoie ses propres erreurs en CHAÎNE ({"error":"Unauthorized —
+// session invalide ou expirée"}), là où l'API OpenAI renvoie un OBJET
+// ({"error":{"message":"..."}}). Le client ne lisait que `.message` : sur toute
+// erreur venue du proxy — session expirée en tête — il affichait « Erreur
+// correction » et le vrai motif disparaissait. Axel : « pourquoi ça met erreur
+// correction quand je demande ça ? » — la réponse était dans la réponse.
+function _imgErrText(err, fallback){
+  if(!err) return fallback;
+  if(typeof err === 'string') return err;
+  return err.message || err.error || err.code || fallback;
+}
 const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
@@ -8336,7 +8347,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     });
     const data = await res.json();
     if(data.error){
-      lastErr = data.error.message || 'Erreur correction';
+      lastErr = _imgErrText(data.error, 'Erreur correction');
       if(/model|not found|does not exist|unsupported/i.test(lastErr)) continue;
       throw new Error(lastErr);
     }
@@ -8794,7 +8805,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
     });
     const data = await res.json();
     if(data.error){
-      lastErr = data.error.message || 'Erreur génération';
+      lastErr = _imgErrText(data.error, 'Erreur génération');
       // modèle inconnu/non dispo → on tente le suivant ; autre erreur → on arrête
       if(/model|not found|does not exist|unsupported/i.test(lastErr)) continue;
       throw new Error(lastErr);
