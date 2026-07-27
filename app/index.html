@@ -3050,18 +3050,31 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </button>
           </div>
 
-          <!-- ══ DÉBRUITAGE (#69) — option combinée à « Supprimer les silences » ══ -->
-          <div onclick="_acToggleDenoise()" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;margin-bottom:12px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="display:flex;align-items:center;gap:11px">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg>
-              <div>
-                <div style="font-size:13.5px;font-weight:700">Supprimer les bruits de fond</div>
-                <div style="font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:1px">Inclus avec la suppression des silences · sans crédit en plus</div>
-              </div>
-            </div>
-            <div id="acDenoiseSwitch" style="width:40px;height:23px;background:var(--accent);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-              <div id="acDenoiseThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:20px;transition:all .25s;opacity:1"></div>
-            </div>
+          <!-- ══ #154 · CE QU'ON APPLIQUE — tout coché par défaut, choix mémorisé ══ -->
+          <div style="padding:13px 15px;margin-bottom:12px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px">
+            <div style="font-size:13.5px;font-weight:700;margin-bottom:2px">⚙️ Ce qu'on applique</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Décoche ce que tu ne veux pas — ton choix est retenu pour les prochaines fois</div>
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
+              <input type="checkbox" id="acOptSilences" checked onchange="_acSetOpt('silences',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700">Supprimer les silences</span>
+                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)">Les blancs et hésitations entre les phrases</span>
+              </span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
+              <input type="checkbox" id="acOptDenoise" checked onchange="_acSetOpt('denoise',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700">Enlever les bruits de fond</span>
+                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)" id="acDenoiseHint">Souffle, clim, clics — sans crédit en plus</span>
+              </span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
+              <input type="checkbox" id="acOptVoice" checked onchange="_acSetOpt('voice',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700">Améliorer la voix</span>
+                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)">Égaliseur + compresseur + niveau plateformes</span>
+              </span>
+            </label>
           </div>
 
           <!-- ══ DÉRUSH IA (#151) — bégaiements, reprises, « euh » (Pro / Élite) ══ -->
@@ -22113,7 +22126,8 @@ const _AC_VOICE_PRESETS = {
 
 async function _acMasterVoice(buf, presetKey){
   const P = _AC_VOICE_PRESETS[presetKey || _acVoicePreset];
-  if(!P || !buf || !buf.length) return buf;
+  // #154 · case « Améliorer la voix » décochée → on ne touche à rien
+  if(!P || !buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf;
   const sr = buf.sampleRate, ch = buf.numberOfChannels;
   const off = new OfflineAudioContext(ch, buf.length, sr);
   const src = off.createBufferSource(); src.buffer = buf;
@@ -22272,9 +22286,66 @@ function _acSetVoicePreset(key){
   try{ localStorage.setItem('aa_ac_voice', key); }catch(_){}
 }
 
+// ── #154 · Ce qu'on applique (mémorisé) ──
+const _acOpts = { silences: true, denoise: true, voice: true };
+try{
+  const _so = JSON.parse(localStorage.getItem('aa_ac_opts') || 'null');
+  if(_so && typeof _so === 'object') Object.assign(_acOpts, _so);
+}catch(_){}
+function _acSetOpt(key, val){
+  _acOpts[key] = !!val;
+  if(key === 'denoise') _acDenoiseEnabled = !!val;   // l'ancien drapeau suit
+  try{ localStorage.setItem('aa_ac_opts', JSON.stringify(_acOpts)); }catch(_){}
+}
+document.addEventListener('DOMContentLoaded', () => {
+  for(const k of ['silences','denoise','voice']){
+    const el = document.getElementById('acOpt' + k[0].toUpperCase() + k.slice(1));
+    if(el) el.checked = _acOpts[k];
+  }
+  _acDenoiseEnabled = _acOpts.denoise;
+});
+
+// ── #154 · Le fichier a-t-il DÉJÀ un réducteur de bruit ? ──
+// Le DJI Mic (et les micros USB modernes) débruitent à l'enregistrement, souvent
+// sans qu'on le sache. Repasser un 2e débruitage crée des artefacts — c'est ce
+// qui rendait la voix dure une fois le niveau remonté. Signature d'un fichier
+// déjà traité : plancher de bruit anormalement bas et/ou écart voix/fond énorme
+// (un enregistrement BRUT plafonne vers -50 dB de plancher).
+function _acDetectDenoised(buf){
+  const d = buf.getChannelData(0), sr = buf.sampleRate;
+  const win = Math.round(sr * 0.05);
+  const rms = [];
+  for(let i = 0; i < d.length; i += win){
+    let s = 0; const e = Math.min(i + win, d.length);
+    for(let j = i; j < e; j++) s += d[j] * d[j];
+    rms.push(Math.sqrt(s / Math.max(1, e - i)));
+  }
+  if(rms.length < 20) return false;
+  const sorted = [...rms].sort((a, b) => a - b);
+  const floor = sorted[Math.floor(sorted.length * 0.10)] || 1e-9;
+  const voice = sorted[Math.floor(sorted.length * 0.90)] || 1e-9;
+  const floorDb = 20 * Math.log10(Math.max(floor, 1e-9));
+  const ratio   = 20 * Math.log10(voice / Math.max(floor, 1e-9));
+  return floorDb < -65 || ratio > 55;
+}
+
 async function _acCleanCore(srcBlob, onAfterDenoise){
   let working = srcBlob;
-  if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
+  // auscultation AVANT tout traitement : inutile (et nuisible) de débruiter
+  // un fichier qui l'est déjà
+  let alreadyClean = false;
+  try{
+    const pc = new (window.AudioContext || window.webkitAudioContext)();
+    const pb = await pc.decodeAudioData(await srcBlob.arrayBuffer());
+    alreadyClean = _acDetectDenoised(pb);
+    await pc.close();
+  }catch(_){}
+  if(alreadyClean && _acDenoiseEnabled){
+    toast('🎙️ Réducteur de bruit déjà présent dans ce fichier (micro DJI, etc.) — on ne le repasse pas');
+    const h = document.getElementById('acDenoiseHint');
+    if(h) h.textContent = 'Déjà débruité à la source — étape ignorée';
+  }
+  if(_acDenoiseEnabled && !alreadyClean) working = await denoiseAudioFile(working);
   if(onAfterDenoise) onAfterDenoise();
   const arrBuf  = await working.arrayBuffer();
   const ac      = new (window.AudioContext || window.webkitAudioContext)();
@@ -22332,6 +22403,8 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   if(segStart>=0) keepSegs.push({ start:segStart, end:data.length });
   // Fallback : si rien trouvé, garder tout
   if(!keepSegs.length) keepSegs.push({ start:0, end:data.length });
+  // #154 · case « Supprimer les silences » décochée → on garde tout le fichier
+  if(!_acOpts.silences){ keepSegs.length = 0; keepSegs.push({ start:0, end:data.length }); }
 
   // Construire audio nettoyé
   const nCh = decoded.numberOfChannels;
