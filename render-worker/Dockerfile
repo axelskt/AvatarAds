@@ -1,5 +1,9 @@
-# render-worker — Node 20 + ffmpeg (Chrome headless installé par la CLI hyperframes au 1er rendu)
-FROM node:20-bookworm-slim
+# render-worker — Node 22 + ffmpeg (Chrome headless installé par la CLI hyperframes au 1er rendu)
+#
+# Node 22 et pas 20 : @supabase/supabase-js ≥ 2.110 utilise le WebSocket NATIF
+# pour son client realtime. Sous Node 20 il n'existe pas et la boucle de poll
+# meurt au démarrage — « Node.js detected but native WebSocket not found ».
+FROM node:22-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg ca-certificates fonts-liberation \
