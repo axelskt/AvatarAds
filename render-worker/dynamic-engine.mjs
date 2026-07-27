@@ -19,6 +19,7 @@
 
 import { uiScene } from './ui-scenes.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
+import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -291,6 +292,20 @@ export function buildDynamicComposition(plan, opts = {}) {
       const sc = uiScene('phone', id, liveT0, t1, tone, s)
       if (sc) { inner += sc.html; pjs += sc.js }
 
+    } else if (p.kind !== 'punch' && ANIMS.includes(p.kind)) {
+      // PACK D'ANIMATIONS SÉMANTIQUES (#147 — « des animations plutôt que des
+      // mots ») : le plan a choisi une anim qui ILLUSTRE la phrase (network,
+      // target, grow, money…). Plein panneau, palette adaptée au tone, temps
+      // absolus — le pack est déjà seek-safe.
+      const s = { ...p.slide, id, start: liveT0, dur: Math.max(0.8, t1 - liveT0) }
+      const ah = animHtml(p.kind, s, W, H, tone.dark ? 'dynamic' : 'word')
+      if (ah) {
+        // frame() du pack vise le haut (au-dessus des sous-titres du mode
+        // classique) : ici pas de sous-titres → on recentre et on grossit
+        inner += `<div style="position:absolute;inset:0;transform:translateY(${Math.round(H * 0.17)}px) scale(1.22);transform-origin:50% 38%">${ah}</div>`
+        pjs += animJs(p.kind, s, r2)
+      }
+
     } else if (p.kind === 'punch') {
       // CTA redessiné : le verbe en haut, LE MOT à taper en géant, et la barre de
       // commentaire TikTok qui le tape puis l'envoie — on montre le geste demandé
@@ -372,6 +387,7 @@ export function buildDynamicComposition(plan, opts = {}) {
 <style>
   body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${DARK.bg}; font-family:'Inter',sans-serif; }
   .pnl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; overflow:hidden; }
+  ${animCss(W, H)}
   .pin { position:absolute; inset:0; }
   .disp { font-family:'Archivo Black',sans-serif; letter-spacing:-.01em; }
   .stack { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column;
