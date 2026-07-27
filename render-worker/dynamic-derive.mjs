@@ -207,6 +207,45 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
+  // ── LE MODULE NOMMÉ EST À L'ÉCRAN (#146) ──
+  // « tu vas aller dans Images IA » → la capture d'Images IA, pas la page
+  // d'accueil. Axel : « quand je dis tu vas aller dans image IA la frame doit
+  // changer sur image IA, là il reste sur la LP ».
+  {
+    const MODULES = [
+      { pat: ['image ia', 'images ia'], screen: '01-imagesia' },
+      { pat: ['express'],               screen: '02-express' },
+      { pat: ['generateur'],            screen: '03-generateur' },
+      { pat: ['montage ia'],            screen: '04-montageia' },
+      { pat: ['bibliotheque'],          screen: '05-bibliotheque' },
+      { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
+      { pat: ['enregistreur'],          screen: '07-enregistreur' },
+      { pat: ['parrainage'],            screen: '08-parrainage' },
+    ]
+    for (const m of MODULES) {
+      let hit = null
+      for (const p of m.pat) { hit = findSeq(words, p); if (hit) break }
+      if (!hit) continue
+      add({ anim: 'screen', screen: m.screen, screenZoom: 1.5, screenX: 0.5, screenY: 0.4 },
+        Math.max(0, hit.start - 0.35), Math.min(D, hit.end + 2.2))
+    }
+  }
+
+  // « ton premier avatar » → on MONTRE l'avatar obtenu (Axel : « mets l'image
+  // de Léna plutôt »), pas une carte de texte
+  {
+    const hit = findSeq(words, 'premier avatar') || findSeq(words, 'ton avatar')
+    if (hit) add({ anim: 'ui', ui: 'photo', screen: 'lena' },
+      Math.max(0, hit.start - 0.5), Math.min(D, hit.end + 1.8))
+  }
+
+  // « poster sur les réseaux » → l'animation des réseaux (il ne se passait rien)
+  {
+    const hit = findSeq(words, 'poster sur les reseaux') || findSeq(words, 'sur les reseaux')
+      || findAny(words, ['poster', 'publier'])
+    if (hit) add({ anim: 'engage' }, Math.max(0, hit.start - 0.25), Math.min(D, hit.end + 1.9))
+  }
+
   // import de fichier : « importe/ajoute ton/tes audio|image|vidéo|fichier|clip »
   from = 0
   for (let k = 0; k < 3; k++) {
@@ -283,7 +322,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   if (!hasEndPunch) {
     let last = null, fi = 0
     for (;;) {
-      const c = findAny(words, ['commente', 'commentes', 'ecris', 'écris'], fi)
+      // « commande » : Scribe transcrit souvent « commente » ainsi — sans ça le
+      // CTA final n'était pas détecté du tout (« le CTA pas ouf », Axel)
+      const c = findAny(words, ['commente', 'commentes', 'ecris', 'écris', 'commande', 'commandes'], fi)
       if (!c) break
       last = c; fi = c.i + 1
     }
@@ -295,8 +336,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const a = Math.max(last.start - 0.1, D - 6)
         // le CTA final est PRIORITAIRE : toute scène qui déborde dessus est rognée
         // (les compteurs de vues s'arrêtent quand le punch arrive, pas l'inverse)
-        for (const s of out) if ((s.end || 0) > a + 0.05) s.end = r2(Math.max(s.start + 0.8, a - 0.05))
-        out.push({ type: 'punch', layout: 'full', eyebrow: 'Pour finir', title: '',
+        for (let i = out.length - 1; i >= 0; i--) {
+          const s = out[i]
+          if ((s.end || 0) <= a + 0.05) continue
+          s.end = r2(a - 0.05)
+          if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
+        }
+        out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
           items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, last.start)) }],
           start: r2(a), end: r2(D - 0.1) })
         claim(a, D)
@@ -308,27 +354,57 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // l'avant-CTA — 3 fenêtres posées dans les ZONES LIBRES (jamais sur une scène).
   // Les clips lipsync (av0.mp4…) sont fournis par l'app/MCP ; sans clip, le
   // moteur affiche la photo avatar avec un zoom lent — le visage tient l'écran.
+  // Les fenêtres venues de l'orchestrateur peuvent couvrir 15-30 s d'un coup
+  // (héritage du mode classique où l'avatar EST la vidéo). En Dynamique le
+  // visage est une RESPIRATION : 6,5 s max par fenêtre, 40 % du temps au total.
+  if ((plan.avatarSegments || []).length) {
+    const MAXW = 6.5
+    let budget = D * 0.4
+    const clamped = []
+    for (const w of plan.avatarSegments.slice().sort((a, b) => a.start - b.start)) {
+      if (budget <= 1) break
+      let a = r2(w.start)
+      let b = r2(Math.min(w.end ?? w.start + MAXW, w.start + MAXW, w.start + budget))
+      // le visage ne passe JAMAIS par-dessus une scène déjà posée : il se
+      // décale ou se raccourcit (sinon l'avatar recouvrait le navigateur)
+      for (const t of taken) {
+        if (a < t[0] && b > t[0]) b = r2(t[0] - 0.05)
+        if (a >= t[0] && a < t[1]) a = r2(t[1] + 0.05)
+      }
+      if (b - a < 1.5 || overlaps(a, b)) continue
+      clamped.push({ start: a, end: b })
+      claim(a, b)
+      budget -= b - a
+    }
+    plan.avatarSegments = clamped
+  }
   if (!(plan.avatarSegments || []).length) {
     const busy = out.map((s) => [s.start, s.end]).sort((a, b) => a[0] - b[0])
     const freeGaps = []
     let cur = 0
-    for (const [a, b] of busy) { if (a - cur >= 3.2) freeGaps.push([cur, a]); cur = Math.max(cur, b) }
-    if (D - cur >= 3.2) freeGaps.push([cur, D])
+    for (const [a, b] of busy) { if (a - cur >= 2.6) freeGaps.push([cur, a]); cur = Math.max(cur, b) }
+    if (D - cur >= 2.6) freeGaps.push([cur, D])
     const avWins = []
     const takeGap = (pred, maxLen) => {
       const g = freeGaps.filter(pred).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0]
       if (!g) return null
       const w = { start: r2(g[0]), end: r2(Math.min(g[1], g[0] + maxLen)) }
       g[0] = w.end + 0.05
-      if (g[1] - g[0] < 3.2) freeGaps.splice(freeGaps.indexOf(g), 1)
+      if (g[1] - g[0] < 2.6) freeGaps.splice(freeGaps.indexOf(g), 1)
       return w
     }
-    const hook = takeGap((g) => g[0] < 1.5, 6.5)        // le hook : visage direct
-    if (hook) avWins.push(hook)
-    const mid = takeGap((g) => g[0] > D * 0.25 && g[0] < D * 0.72, 6.0)
-    if (mid) avWins.push(mid)
-    const pre = takeGap((g) => g[1] > D - 12 && g[0] > D * 0.6, 5.5) // avant le CTA
-    if (pre) avWins.push(pre)
+    // 3 à 4 fenêtres (« 3-4 vidéos de l'avatar ») : hook, deux temps forts, avant-CTA
+    const slots = [
+      (g) => g[0] < 1.5,                                 // le hook : visage direct
+      (g) => g[0] > D * 0.22 && g[0] < D * 0.5,
+      (g) => g[0] >= D * 0.45 && g[0] < D * 0.75,
+      (g) => g[1] > D - 13 && g[0] > D * 0.6,            // avant le CTA
+    ]
+    for (const pred of slots) {
+      if (avWins.length >= 4) break
+      const w = takeGap(pred, 6.5)
+      if (w) avWins.push(w)
+    }
     plan.avatarSegments = avWins.sort((a, b) => a.start - b.start)
     for (const w of avWins) claim(w.start, w.end)
   }
