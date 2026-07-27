@@ -32,6 +32,7 @@ export function deriveClassicSlides(plan) {
   if (!words.length || !(plan.slides || []).length) return
 
   const slides = plan.slides
+  const D = r2(plan.duration || (words[words.length - 1].end + 0.5))
   // mots prononcés dans une fenêtre (avec la même anticipation que le dynamique :
   // un visuel arrive juste AVANT son mot)
   const inWin = (a, b) => words.filter((w) => w.start >= a - LEAD - 0.3 && w.start <= b + 0.2)
@@ -105,15 +106,37 @@ export function deriveClassicSlides(plan) {
     }
     return null
   }
-  let recut = 0, dropped = 0
+  // Axel, après un premier essai où je me contentais de corriger QUEL mot
+  // s'affichait : « la règle un mot affiché c'est non, on priorise les
+  // animations plutôt que les séquences où y'a 1 mot au hasard ». Corriger le
+  // mot ne suffisait pas — un plan qui ne montre qu'un mot ne montre rien.
+  // Ordre de préférence, donc : (1) une animation ancrée sur ce qui est dit,
+  // (2) à défaut, la carte SI ses mots sont réellement prononcés, (3) sinon rien.
+  const anchorFor = (a, b) => VOICE_ANIMS.find((v) => words.some((w) =>
+    v.w.includes(norm(w.text)) && w.start >= a - LEAD - 0.2 && w.start <= b - 0.25))
+  let recut = 0, dropped = 0, toAnim = 0
   const kept = []
   for (const sl of slides) {
     const its = (sl.items || []).filter((it) => it && it.text)
     const isText = (!sl.anim || sl.anim === '') && (its.length || sl.title)
     if (!isText) { kept.push(sl); continue }
     const a = r2(sl.start || 0), b = r2(sl.end ?? (sl.start || 0) + 2)
+
+    // (1) une animation illustre-t-elle ce qui est dit ici ? elle passe devant.
+    //     Seul le CTA final est protégé : lui, son mot EST le message.
+    const isFinalCta = sl.cta || b > D - 3.5
+    const v = anchorFor(a, b)
+    if (v && !isFinalCta) {
+      sl.anim = v.anim
+      sl.items = []; sl.title = ''
+      if (v.photo) sl.photo = v.photo
+      if (v.photo || v.assets) sl.assets = v.assets || [v.photo]
+      toAnim++; kept.push(sl); continue
+    }
+
+    // (2) pas d'animation : la carte ne survit que si la voix dit ses mots
     const cand = its.map((it) => ({ it, w: said(it.text, a, b) })).filter((x) => x.w)
-    if (its.length && !cand.length) { dropped++; continue }     // aucun de ses mots n'est dit
+    if (its.length && !cand.length) { dropped++; continue }
     if (!its.length && sl.title && !said(sl.title, a, b)) { dropped++; continue }
     if (cand.length) {
       const best = cand.sort((x, y) => x.w.start - y.w.start)[0]
@@ -165,8 +188,9 @@ export function deriveClassicSlides(plan) {
   }
 
   plan.slides = kept
-  if (framed || dropped || recut || reanim) {
-    console.log(`▶ style ${plan.slideStyle || 'auto'} : ${framed} capture(s) cadrée(s) sur l'élément nommé · `
-      + `${recut} slam(s) recalé(s) · ${dropped} carte(s) hors-sujet retirée(s) · ${reanim} animation(s) réancrée(s)`)
+  if (framed || dropped || recut || reanim || toAnim) {
+    console.log(`▶ style ${plan.slideStyle || 'auto'} : ${toAnim} carte(s) de texte remplacée(s) par une animation · `
+      + `${dropped} carte(s) hors-sujet retirée(s) · ${recut} slam(s) recalé(s) · `
+      + `${reanim} animation(s) réancrée(s) · ${framed} capture(s) cadrée(s) en repli`)
   }
 }
