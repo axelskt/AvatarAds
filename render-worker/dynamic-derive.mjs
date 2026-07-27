@@ -318,7 +318,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     if (b - a < 0.8) continue
     if (out.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
-    kept.push(a === sl.start && b === sl.end ? sl : { ...sl, start: a, end: b })
+    kept.push(a === sl.start && b === sl.end ? { ...sl } : { ...sl, start: a, end: b })
   }
-  plan.slides = [...kept, ...out].sort((a, b) => (a.start || 0) - (b.start || 0))
+
+  // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur
+  // list, checklist sur type…) : hérité du mode classique où les cartes flottent
+  // sur la vidéo. En dynamic, UNE chose à l'écran — le contenu TITRÉ gagne sur
+  // l'animation anonyme, le perdant est rogné (jeté sous 0,8 s).
+  const strong = (s) => !!(s.title || s.text || (s.items && s.items.length))
+  kept.sort((a, b) => (a.start || 0) - (b.start || 0))
+  const flat = []
+  for (const sl of kept) {
+    const last = flat[flat.length - 1]
+    if (!last || (sl.start || 0) >= (last.end || 0) - 0.05) { flat.push(sl); continue }
+    if (strong(sl) && !strong(last)) {
+      last.end = r2(Math.max(last.start + 0.05, sl.start - 0.05))
+      if (last.end - last.start < 0.8) flat.pop()
+      flat.push(sl)
+    } else {
+      const a = r2((last.end || 0) + 0.05)
+      if ((sl.end || 0) - a >= 0.8) flat.push({ ...sl, start: a })
+      // sinon : jeté — le précédent occupe déjà l'écran
+    }
+  }
+  plan.slides = [...flat, ...out].sort((a, b) => (a.start || 0) - (b.start || 0))
 }

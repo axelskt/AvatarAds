@@ -5,9 +5,10 @@
 //
 //   POST { action:'channels' }
 //        → { channels: [{ id, name, identifier, picture, disabled }] }
-//   POST { action:'publish', videoPath, caption, title?, integrations?:[ids] }
+//   POST { action:'publish', videoPath, caption, title?, integrations?:[ids], schedule_at? }
 //        videoPath : chemin dans le bucket privé render-media (doit commencer par l'uid)
-//        → télécharge le MP4, l'upload vers Postiz, publie « now » sur les canaux
+//        schedule_at : ISO 8601 optionnel (#150) → publication PROGRAMMÉE au lieu de « now »
+//        → télécharge le MP4, l'upload vers Postiz, publie/programme sur les canaux
 //
 // Auth : JWT utilisateur, réservé plan developer / is_owner (même règle que le MCP).
 
@@ -93,6 +94,15 @@ serve(async (req) => {
     if (!videoPath.startsWith(user.id + '/')) return json(400, { error: 'bad_path' }) // chacun ne publie que SES fichiers
     if (!caption) return json(400, { error: 'caption_required' })
 
+    // #150 · programmation : date future (≥ 2 min pour laisser l'upload finir, ≤ 1 an)
+    let when: Date | null = null
+    if (body.schedule_at) {
+      when = new Date(String(body.schedule_at))
+      if (isNaN(when.getTime())) return json(400, { error: 'bad_schedule_date' })
+      if (when.getTime() < Date.now() + 2 * 60_000) return json(400, { error: 'schedule_in_past' })
+      if (when.getTime() > Date.now() + 365 * 86_400_000) return json(400, { error: 'schedule_too_far' })
+    }
+
     // 1) le MP4 depuis le bucket privé
     const dl = await svc.storage.from('render-media').download(videoPath)
     if (dl.error || !dl.data) return json(400, { error: 'video_not_found', detail: dl.error?.message })
@@ -117,10 +127,10 @@ serve(async (req) => {
     // 3bis) hashtags : ceux d'Axel, envoyés par le client (champ sauvegardé) — max 8, format #mot
     const tags = (String(body.tags || '').match(/#[\p{L}\p{N}_]+/gu) || []).slice(0, 8).join(' ')
 
-    // 4) publication immédiate
+    // 4) publication immédiate — ou programmée si schedule_at est fourni
     const payload = {
-      type: 'now',
-      date: new Date().toISOString(),
+      type: when ? 'schedule' : 'now',
+      date: (when ?? new Date()).toISOString(),
       shortLink: false,
       tags: [],
       posts: wanted.map((c) => ({
@@ -146,7 +156,10 @@ serve(async (req) => {
 
     let result: unknown = prText
     try { result = JSON.parse(prText) } catch { /* texte brut */ }
-    return json(200, { ok: true, published: wanted.map((c) => c.name), hashtags: tags, result })
+    return json(200, {
+      ok: true, published: wanted.map((c) => c.name), hashtags: tags,
+      scheduled_at: when ? when.toISOString() : null, result,
+    })
   }
 
   return json(400, { error: 'unknown_action' })
