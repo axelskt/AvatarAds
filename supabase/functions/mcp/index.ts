@@ -47,6 +47,9 @@ const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 // OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
 const OMNI_COST_SEC = 5
 const FAL_OMNI_PATH = 'fal-ai/bytedance/omnihuman/v1.5'
+// ID d'APPLICATION fal (2 premiers segments) : c'est LUI qui sert au polling
+// de la file d'attente, pas le chemin complet du modèle.
+const FAL_OMNI_APP  = FAL_OMNI_PATH.split('/').slice(0, 2).join('/')
 const FAL_QUEUE     = 'https://queue.fal.run'
 const FAL_KEY = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET']
   .map((n) => Deno.env.get(n)).find(Boolean) ?? ''
@@ -773,8 +776,15 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
   if (String(job.op_name || '').startsWith('fal:')) {
     const reqId = String(job.op_name).slice(4)
-    const st = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}/status`)
-    if (!st.ok) return toolText('⏳ Toujours en cours — rappelle check_avatar_video dans ~30 secondes.')
+    // ⚠️ fal : on SOUMET sur le chemin complet du modèle
+    // (fal-ai/bytedance/omnihuman/v1.5) mais on POLLE sur l'ID d'APPLICATION,
+    // c'est-à-dire les deux premiers segments (fal-ai/bytedance). Avec le chemin
+    // complet le statut renvoie 404 : le clip était prêt chez fal et on répondait
+    // « toujours en cours » indéfiniment. On essaie l'app d'abord, chemin complet
+    // en repli (au cas où fal change de convention).
+    let st = await falFetch(`${FAL_OMNI_APP}/requests/${reqId}/status`)
+    if (!st.ok) st = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}/status`)
+    if (!st.ok) return toolText(`⏳ Statut fal indisponible (${st.status}) — rappelle check_avatar_video dans ~30 secondes.`)
     const sd = await st.json().catch(() => ({}))
     const s = String(sd.status || '').toUpperCase()
     if (s === 'IN_QUEUE' || s === 'IN_PROGRESS' || !s) {
@@ -784,7 +794,8 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
       await failAndRefund(userId, job, `fal ${s}`)
       return toolErr(`Génération échouée (fal : ${s}). Les ${job.credits_cost} crédits ont été remboursés.`)
     }
-    const rr = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}`)
+    let rr = await falFetch(`${FAL_OMNI_APP}/requests/${reqId}`)
+    if (!rr.ok) rr = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}`)
     const rd = rr.ok ? await rr.json().catch(() => ({})) : {}
     const vu = rd?.video?.url || rd?.video_url || ''
     if (!vu) {
