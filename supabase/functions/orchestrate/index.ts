@@ -185,11 +185,15 @@ const TUTO: Record<string, Record<string, number[]>> = {
 }
 const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express' }
 
-const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
-  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  // ces six-la existaient dans la banque de rendu mais manquaient ICI : le
-  // filtre serveur les rejetait, donc le modele ne pouvait jamais les utiliser.
-  'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result']
+// <<< ANIM-BANK:LIST — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
+const ANIMS = [
+  'screen', 'result', 'phone', 'split', 'avatar', 'faceless', 'voice', 'cut',
+  'type', 'logo', 'tools', 'sign', 'post', 'upload', 'money', 'wallet',
+  'countup', 'clock', 'calendar', 'grow', 'views', 'engage', 'swipe', 'network',
+  'rocket', 'stack', 'funnel', 'bars2', 'idea', 'steps', 'flow', 'orbit',
+  'list', 'target', 'search', 'compare', 'swap', 'toggle', 'check', 'lock'
+]
+// <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
 
 // ⚠️ AUCUN enum dans PLAN_SCHEMA. Le mode strict d'Anthropic compile le schema en
@@ -446,7 +450,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   Laisse "" quand le mot prononce n'evoque VRAIMENT rien de visuel (un connecteur, une transition) : une forme decorative qui ne correspond a rien casse la video. Mais ne laisse pas l'ecran vide plus de 3s d'affilee — s'il n'y a ni image ni animation qui colle, c'est que la scene ne devait pas exister : etends la scene voisine.
 - ANIMATION FABRIQUEE (champ "anim") — DECISIF quand aucune image ne colle : une capture d'ecran ne montre pas un CONCEPT. Le bouton "Split Screen" ne dit pas a quoi RESSEMBLE un split screen. Quand il parle d'une notion que les images fournies n'illustrent pas, DEMANDE une animation : elle est fabriquee pour toi, gratuitement, et elle montre l'idee.
 - REGLE DE FOND, VALABLE POUR TOUT VISUEL : une animation doit MONTRER quelque chose de CONCRET, un objet ou une action qu'on reconnait en un coup d'oeil. Si le spectateur ne peut pas dire en une seconde « c'est un billet », « c'est une fusee », « c'est un cadenas », l'animation ne sert a rien et il vaut mieux ne rien mettre. Une forme abstraite, un rectangle qui bouge, un motif decoratif : ca ne montre RIEN. Ne place jamais un visuel juste pour occuper l'ecran.
-- EMOJI 3D (champ "emoji", une valeur par scene) — LE VOCABULAIRE UNIVERSEL. L'emoji REMPLACE le mot a l'ecran pendant qu'il est affiche : un seul element a la fois, jamais l'emoji ET le sous-titre. C'est le geste de reference (Thinks) : il dit « un SaaS », un vieil ordinateur apparait ; il dit « de l'argent », un billet apparait ; il dit « le cerveau », un cerveau.
+- PAS D'EMOJI. Le champ "emoji" existe encore dans le schema pour compatibilite : laisse-le TOUJOURS vide. Axel : « oublie les emoji, focus animations avec pas ou tres peu de texte ». Un emoji est une image posee ; une animation dure, elle occupe le cadre et elle raconte. Il n'y a donc qu'un seul vocabulaire visuel dans cette video : la banque d'ANIMATIONS ci-dessous.
   LES MOTS FORTS, C'EST TOI QUI LES DESIGNES (champ "beats"). Relis le script mot a mot et sors la LISTE des mots qui appellent une image mentale — un objet, une action, un gain, un chiffre, une emotion. Pour chacun, ecris "mot|animation" avec le mot EXACTEMENT tel qu'il est prononce (une seule forme, sans article) et l'animation de la banque qui le dessine. Vise 15 a 25 lignes sur 45 secondes, dans l'ordre du script.
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
@@ -462,50 +466,51 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   CHAQUE BENEFICE A LA SIENNE. C'est la faute la plus frequente : il enumere ce que ca apporte et l'ecran ne bouge pas. Des qu'il dit un gain — du temps, de l'argent, de la simplicite, de la portee, de la qualite, de la liberte — cette seconde-la merite son animation.
   DENSITE — LE PLUS DYNAMIQUE POSSIBLE. Une video virale illustre presque en permanence : les gens comprennent mieux avec des images. Tu peux couvrir JUSQU'A 99% de la duree d'animations, il n'y a AUCUN quota a respecter et aucun espacement a tenir. La seule limite est la PERTINENCE : chaque animation doit illustrer ce qui est dit A CET INSTANT. Deux regles fermes : jamais deux fois la MEME animation dans une video, et jamais une animation qui ne correspond pas au sens (mieux vaut un blanc qu'un contresens).
   C'EST TOI QUI CHOISIS, PAS UNE LISTE DE MOTS. Tu comprends le SENS d'une phrase ; un mot-cle isole se trompe. « sans jamais montrer ton visage » n'appelle pas un cadenas parce qu'il y a « jamais » : ca appelle faceless. Lis la phrase entiere, demande-toi ce qu'elle MONTRE, et prends l'animation qui la dessine.
-  L'EMOJI EST UN REPLI RARE, PAS LE DEFAUT. La regle voulue est 99% d'ANIMATIONS et 1% d'emoji : une animation dure, elle occupe le cadre et elle raconte, la ou l'emoji n'est qu'une image posee. Cherche donc TOUJOURS une animation d'abord dans la liste ci-dessus — elle couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit. Ne prends un emoji que si AUCUNE animation ne colle, et au maximum une ou deux fois par video.
+  AUCUN REPLI EMOJI. Si aucune animation ne colle, tu ne mets RIEN et tu etends la scene voisine — jamais un emoji. La banque couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit, les outils, le contrat signe, la publication.
   Rythme : 0,7 a 1,5s, jamais deux colles.
-  VALEURS AUTORISEES (toute autre valeur est jetee) :
-    airplane alarm_clock bank bar_chart battery beach_with_umbrella bell bookmark_tabs books brain bullseye bust_in_silhouette busts_in_silhouette
-    calendar camera chart_decreasing chart_increasing check_mark_button clapper_board coin credit_card cross_mark crown crystal_ball desktop_computer
-    direct_hit dollar_banknote envelope eyes fire floppy_disk gear gift glowing_star growing_heart hammer_and_wrench handshake headphone high_voltage
-    hourglass_done hundred_points key laptop light_bulb link locked loudspeaker magic_wand magnifying_glass_tilted_left megaphone memo microphone
-    mobile_phone money_bag money_with_wings movie_camera musical_note open_book package party_popper puzzle_piece question_mark rainbow
-    recycling_symbol red_exclamation_mark red_heart robot rocket scissors shopping_cart sparkles speaker_high_volume speech_balloon spiral_calendar
-    star stopwatch studio_microphone thinking_face trophy unlocked video_camera warning wrench
-    split   — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
-    voice   — une voix, un clonage vocal, un enregistrement, du son.
-    list    — une liste, une bibliotheque, un catalogue, "plus de X scripts / modeles / options".
-    grow    — une croissance, des vues qui montent, un resultat qui progresse.
-    compare — un avant/apres, deux options opposees, "au lieu de".
-    type    — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max).
-    phone   — le format final vertical, une video qui defile, "sur TikTok / Reels / Shorts".
-    clock   — la rapidite, le temps gagne, "en 30 secondes", "en 2 minutes".
-    avatar  — la creation d'un avatar, un personnage qui se genere, "ton premier avatar".
-    logo    — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. SI il prononce le NOM de la marque : le logo apparait avec un halo. Une seule fois dans la video, au premier passage.
-    money   — l'argent, un revenu, un prix, un cout, ce qui est gratuit.
-    idea    — une idee, une astuce, une methode, un declic, "le secret c'est...".
-    target  — un objectif, une cible, quelque chose de precis, "exactement".
-    lock    — la securite, l'acces reserve, ce qui se debloque, une cle.
-    search  — chercher, analyser, trouver, reperer.
-    rocket  — un lancement, un decollage, ce qui explose, devenir viral.
-    network — un reseau, une connexion, une communaute, des gens relies.
-    check   — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
-    swipe   — un fil qui defile, le scroll, "les gens scrollent", le feed.
-    views   — des vues qui grimpent, la portee, "X personnes t'ont vu".
-    engage  — des commentaires et des coeurs qui montent : l'engagement, les reactions.
-    calendar— une grille qui se remplit : publier regulierement, tous les jours, la constance.
-    upload  — une carte qui s'envole : publier, mettre en ligne, poster.
-    stack   — des videos qui s'empilent : le volume, produire en serie, "10 videos par jour".
-    swap    — une chose remplacee par une autre : "au lieu de", "a la place de", remplacer.
-    cut     — une timeline qu'on coupe : le montage, la decoupe, "on enleve les blancs".
-    steps   — 1, 2, 3 : une methode, "il te suffit de", les etapes.
-    toggle  — un interrupteur qui s'allume : activer, "en un clic", ca se met en marche.
-    flow    — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour "tu fais X, ca te donne Y, et Y te rapporte Z".
-    funnel  — un entonnoir : beaucoup entrent, peu ressortent.
-    orbit   — un centre et des satellites : tout part d'un seul outil.
-    bars2   — deux colonnes comparees : le avant/apres chiffre.
-    wallet  — un portefeuille qui se remplit : ce que ca rapporte.
-    faceless— l'anonymat : "sans montrer ton visage", "sans camera", "personne ne sait que c'est toi". Une tete dont les yeux se font masquer.
+  LA BANQUE D'ANIMATIONS — c'est le SEUL vocabulaire visuel. Toute autre valeur est jetee par le serveur.
+// <<< ANIM-BANK:PROMPT — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
+    screen   — une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil.
+    result   — le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne ».
+    phone    — le format final vertical, une video qui defile, « sur TikTok / Reels / Shorts ».
+    split    — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
+    avatar   — la creation d'un avatar, un personnage qui se genere, « ton premier avatar ».
+    faceless — l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer.
+    voice    — une voix, un clonage vocal, un enregistrement, du son.
+    cut      — une timeline qu'on coupe : le montage, la decoupe, « on enleve les blancs ».
+    type     — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max).
+    logo     — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage.
+    tools    — LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils.
+    sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
+    post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
+    upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer.
+    money    — l'argent, un revenu, un prix, un cout, ce qui est gratuit.
+    wallet   — un portefeuille qui se remplit : ce que ca rapporte.
+    countup  — UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans "value" et l'unite dans "unit".
+    clock    — la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes ».
+    calendar — une grille qui se remplit : publier regulierement, tous les jours, la constance.
+    grow     — une croissance, des vues qui montent, un resultat qui progresse.
+    views    — des vues qui grimpent, la portee, « X personnes t'ont vu ».
+    engage   — des commentaires et des coeurs qui montent : l'engagement, les reactions.
+    swipe    — un fil qui defile, le scroll, « les gens scrollent », le feed.
+    network  — un reseau, une connexion, une communaute, des gens relies.
+    rocket   — un lancement, un decollage, ce qui explose, devenir viral.
+    stack    — des videos qui s'empilent : le volume, produire en serie, « 10 videos par jour ».
+    funnel   — un entonnoir : beaucoup entrent, peu ressortent.
+    bars2    — deux colonnes comparees : le avant/apres chiffre.
+    idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
+    steps    — 1, 2, 3 : une methode, « il te suffit de », les etapes.
+    flow     — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z ».
+    orbit    — un centre et des satellites : tout part d'un seul outil.
+    list     — une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options ».
+    target   — un objectif, une cible, quelque chose de precis, « exactement ».
+    search   — chercher, analyser, trouver, reperer.
+    compare  — un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide.
+    swap     — une chose remplacee par une autre : « au lieu de », « a la place de », remplacer.
+    toggle   — un interrupteur qui s'allume : activer, « en un clic », ca se met en marche.
+    check    — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
+    lock     — la securite, l'acces reserve, ce qui se debloque, une cle.
+// <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
   ETAPE 2 · CHAQUE MOMENT FORT RECOIT SON VISUEL. Sans exception : c'est exactement la que le spectateur decroche s'il ne voit rien. Par defaut une ANIMATION. Tu ne deliberes pas pour savoir SI le moment merite un visuel — il en a un ; tu deliberes seulement pour savoir LEQUEL.
@@ -1145,13 +1150,34 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       speaker_high_volume: 'voice', gear: 'toggle', hammer_and_wrench: 'toggle', wrench: 'toggle',
       magic_wand: 'toggle', sparkles: 'toggle', recycling_symbol: 'swap', scissors: 'cut',
     }
+    // PLUS AUCUN EMOJI DANS LE PLAN FINAL. Axel : « oublie les emoji, focus
+    // animations avec pas ou tres peu de texte ». Ce qui a survecu a la passe
+    // ci-dessus est traduit par sa propre correspondance — c'est l'intention du
+    // modele, autant la respecter — et a defaut efface.
+    let emoConv = 0, emoDrop = 0
+    for (const sl of slides) {
+      if (!sl.emoji) continue
+      const a = EMO2ANIM[sl.emoji]
+      if (!sl.anim && a && !usedAnims.has(a)) { sl.anim = a; usedAnims.add(a); emoConv++ }
+      else emoDrop++
+      sl.emoji = ''
+    }
+
     const beatMap = new Map<string, string>()
+    // JOURNAL DES REJETS. Sur Cartoon 15, 7 beats sur 15 etaient jetes en
+    // silence (le modele repondait avec des noms d'EMOJI) et rien ne le disait.
+    // Un plan rate doit se voir dans les logs, pas dans la video.
+    const beatBad: string[] = []
     for (const b of plan.beats || []) {
       const k = norm(String(b.word || ''))
       const raw = String(b.anim || '')
       const a = ANIMS.includes(raw) ? raw : (EMO2ANIM[raw] || '')
       if (k.length >= 3 && a && !beatMap.has(k)) beatMap.set(k, a)
+      else if (raw && !a) beatBad.push(`${b.word}|${raw}`)
     }
+    console.log(`▶ chef d'orchestre : ${beatMap.size}/${(plan.beats || []).length} beats retenus`
+      + (beatBad.length ? ` · REJETES (hors banque) : ${beatBad.join(', ')}` : '')
+      + (emoConv || emoDrop ? ` · emoji : ${emoConv} converti(s), ${emoDrop} efface(s)` : ''))
     const beatFor = (t: string) => {
       const k = norm(t)
       if (k.length < 3) return ''

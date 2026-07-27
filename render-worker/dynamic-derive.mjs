@@ -168,7 +168,47 @@ export function deriveDynamicSlides(plan, opts = {}) {
     claim(a, b); return s
   }
 
-  // ── 1 · LA VOIX D'ABORD : les déclencheurs haute précision de ses scripts ──
+  // ── 0 · LE CHEF D'ORCHESTRE PASSE EN PREMIER ────────────────────────────────
+  // Il était purement et simplement ignoré. §4 contenait une ligne qui jetait
+  // TOUTE animation serveur sans texte — or une scène d'animation n'a JAMAIS de
+  // texte, c'est son principe : l'animation EST le visuel. Cent pour cent de ses
+  // propositions tombaient là. Ensuite mes tables de mots-clés (§1) réservaient
+  // les fenêtres restantes. Mesuré sur Cartoon 15 : 0 de ses 18 scènes dans la
+  // vidéo finale, tout venait de listes écrites à la main pour le vocabulaire
+  // d'AvatarAds. Sur l'audio d'une autre marque, ces listes ne trouvent rien.
+  //
+  // Il choisit maintenant, et mes tables ne comblent plus que ce qu'il a laissé
+  // vide. C'est ce qui rend le montage indépendant du vocabulaire : lui LIT la
+  // phrase, une liste de mots-clés ne fait que la reconnaître.
+  //
+  // Les captures (`screen`) et les scènes d'interface (`ui`) restent pour §1/§2 :
+  // le moteur dynamique les rejoue au clic, avec curseur et cadrage — une version
+  // strictement plus riche de ce que le serveur sait exprimer.
+  const consumedByPlan = new Set()
+  {
+    // certaines animations ont besoin d'un visuel : le comparatif veut un vrai
+    // visage, `tools` veut le logo. Le serveur ne connaît pas ces fichiers.
+    const NEEDS = {}
+    for (const v of VOICE_ANIMS) {
+      if (v.photo || v.assets) NEEDS[v.anim] = { ...(v.photo ? { photo: v.photo } : {}), assets: v.assets || [v.photo] }
+    }
+    const srv = (plan.slides || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
+    let placed = 0
+    for (const sl of srv) {
+      const an = String(sl.anim || '')
+      if (!an || an === 'screen' || an === 'ui' || !ANIMS.includes(an)) continue
+      if (sl.title || sl.text || (sl.items || []).length) continue   // scène titrée : §4 la traite
+      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
+      if (add({ ...sl, ...(NEEDS[an] || {}) }, a, b)) { consumedByPlan.add(sl); placed++ }
+    }
+    if (placed) console.log(`▶ chef d'orchestre : ${placed}/${srv.length} scènes posées en premier`)
+  }
+
+  // ── 1 · LES TABLES LOCALES : elles ne comblent plus que les trous ────────────
+  // Déclencheurs haute précision, écrits pour les scripts d'Axel. Ils gardent
+  // leur valeur (ils connaissent les modules d'AvatarAds, ce que le serveur
+  // ignore) mais ils ne PASSENT PLUS DEVANT : `add()` refuse toute fenêtre déjà
+  // réservée ci-dessus.
 
   // « N secondes/minutes » dans les 6 premières secondes → chrono (chiffres OU lettres)
   for (let j = 0; j < words.length && words[j].start < 6; j++) {
@@ -566,12 +606,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
 
   const kept = []
   const blockers = [...out, ...avWinsAll]
+  let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0
   for (const sl of srcSlides) {
-    if (consumed.has(sl)) continue
-    if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) continue
-    // anim serveur SANS texte et non ancrée sur un mot → un slam dira mieux
-    // ce qui est dit (« les animations n'ont aucun rapport avec ce que je dis »)
-    if (sl.anim && sl.anim !== 'ui' && sl.anim !== 'screen' && !hasContent(sl)) continue
+    if (consumed.has(sl) || consumedByPlan.has(sl)) continue
+    if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) { dropUnrenderable++; continue }
+    // ⚠️ ICI se trouvait la ligne qui jetait TOUTE animation serveur sans texte.
+    // Comme une scène d'animation n'en a jamais — l'animation EST le visuel —
+    // elle supprimait la totalité des propositions du chef d'orchestre, et mes
+    // tables locales fabriquaient la vidéo entière. Ces scènes sont maintenant
+    // posées en premier, en §0.
     let a = r2(sl.start || 0), b = r2(sl.end || 0)
     for (const d of blockers) {
       if (b <= d.start + 0.05 || a >= d.end - 0.05) continue   // pas de contact
@@ -580,16 +623,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (headroom >= tailroom) b = r2(d.start - 0.05)
       else a = r2(d.end + 0.05)
     }
-    if (b - a < 0.8) continue
-    if (blockers.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
+    if (b - a < 0.8) { dropCollide++; continue }
+    if (blockers.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) { dropCollide++; continue }
 
     let slide = { ...sl, start: a, end: b }
     // carte purement textuelle (pas d'animation à rendre) → elle doit coller
     if (!sl.anim || sl.anim === '') {
       const its = (sl.items || []).filter((it) => it && it.text)
       const cand = its.map((it) => ({ it, w: said(it.text, a, b) })).filter((x) => x.w)
-      if (its.length && !cand.length) continue                  // aucun de ses mots n'est dit : elle dégage
-      if (!its.length && sl.title && !said(sl.title, a, b)) continue
+      if (its.length && !cand.length) { dropUnsaid++; continue }  // aucun de ses mots n'est dit : elle dégage
+      if (!its.length && sl.title && !said(sl.title, a, b)) { dropUnsaid++; continue }
       if (cand.length) {
         const best = cand.sort((x, y) => x.w.start - y.w.start)[0]
         slide.items = [{ ...best.it, t: r2(best.w.start) }]      // le slam tombe PILE sur le mot
@@ -600,6 +643,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
     }
     kept.push(slide)
+  }
+  // JOURNAL. Ces rejets étaient silencieux : un plan entièrement jeté ressemblait
+  // à un plan appliqué. Maintenant chaque scène écartée dit pourquoi.
+  if (dropUnrenderable || dropCollide || dropUnsaid) {
+    console.log(`▶ scènes serveur écartées : ${dropUnrenderable} non rendables · `
+      + `${dropCollide} en collision · ${dropUnsaid} dont aucun mot n'est prononcé`)
   }
 
   // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur

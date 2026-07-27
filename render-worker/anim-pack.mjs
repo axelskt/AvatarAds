@@ -23,12 +23,11 @@ export const ANIM_EMOJI_SET = {
   check: ['check_mark_button', 'hundred_points'],
 }
 
-export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
-  'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result',
-  // #147 · « les animations n'ont aucun rapport avec ce que je dis » :
-  // signer un contrat, les outils eux-mêmes, publier sur les plateformes
-  'sign', 'tools', 'post']
+// La liste vient de anim-bank.mjs, seule source de vérité : cette constante
+// avait divergé de celle de l'orchestrateur (sign/tools/post ajoutées ici,
+// jamais déclarées là-bas — le modèle ne pouvait donc pas les demander).
+export { ANIM_NAMES as ANIMS } from './anim-bank.mjs'
+import { ANIM_NAMES as ANIMS } from './anim-bank.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
