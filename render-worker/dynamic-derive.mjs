@@ -186,6 +186,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // strictement plus riche de ce que le serveur sait exprimer.
   const consumedByPlan = new Set()
 
+  // ── 0 · LE HOOK EST UN VISAGE ───────────────────────────────────────────────
+  // Une vidéo face caméra s'ouvre sur celui qui parle, pas sur une forme. La
+  // fenêtre avatar du début était calculée en §3b, DANS LES ZONES LIBRES : les
+  // animations du chef d'orchestre l'occupaient déjà et le hook sautait — Axel,
+  // sur Cartoon 16 : « le hook je le vois plutôt en split screen avec Alex en
+  // bas ». Elle est donc réservée en premier, avant tout le reste.
+  let hookWin = null
+  {
+    const s0 = (plan.avatarSegments || [])[0]
+    if (s0 && (s0.start || 0) < 0.6) {
+      const a = r2(s0.start || 0)
+      const b = r2(Math.min(s0.end ?? a + 4, a + 6.5, D))
+      if (b - a >= 1.2) { hookWin = { start: a, end: b }; claim(a, b) }
+    }
+  }
+
   // ── 0a · LES MÉDIAS DE L'UTILISATEUR PASSENT AVANT TOUT ─────────────────────
   // Le moteur dynamique ignorait purement et simplement `plan.broll` : ses
   // images et ses vidéos n'entraient JAMAIS dans ce style (le b-roll vidéo de
@@ -563,8 +579,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
   if ((plan.avatarSegments || []).length) {
     const MAXW = 6.5
     let budget = D * 0.4
-    const clamped = []
+    // la fenêtre du hook a déjà été réservée en §0 : on la garde telle quelle
+    const clamped = hookWin ? [hookWin] : []
+    if (hookWin) budget -= hookWin.end - hookWin.start
     for (const w of plan.avatarSegments.slice().sort((a, b) => a.start - b.start)) {
+      if (hookWin && (w.start || 0) < 0.6) continue
       if (budget <= 1) break
       let a = r2(w.start)
       let b = r2(Math.min(w.end ?? w.start + MAXW, w.start + MAXW, w.start + budget))
@@ -734,6 +753,37 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (same && (sl.start || 0) - (prev.end || 0) < 2.2) { prev.end = Math.max(prev.end, sl.end); continue }
     merged.push(sl)
   }
+  // ── 5 · LE HOOK EN SPLIT ────────────────────────────────────────────────────
+  // Axel : « le hook je le vois plutôt en split screen avec Alex en bas et le
+  // logo Claude qui pop », puis « quand je dis "je t'explique à la fin de la
+  // vidéo", revenir en format 9:16 jusqu'à la vidéo ». Le split dit le SUJET
+  // (l'outil dont il parle) en même temps que QUI parle, sans une ligne de
+  // texte ; dès qu'il passe à l'annonce, le visage reprend tout l'écran.
+  {
+    const BRANDS = ['claude', 'chatgpt', 'gpt', 'midjourney', 'canva', 'notion', 'figma',
+      'veo', 'sora', 'runway', 'elevenlabs', 'capcut', 'shopify', 'stripe', 'zapier', 'n8n']
+    const segs = plan.avatarSegments || []
+    const first = segs[0]
+    if (first && (first.start || 0) < 0.6 && !first.duo) {
+      const early = words.filter((w) => w.start < Math.min(4, first.end ?? 4))
+      const hit = early.find((w) => BRANDS.includes(norm(w.text)))
+      if (hit) {
+        // le retour au plein cadre : le moment où il ARRÊTE de parler de l'outil
+        // pour s'adresser au spectateur
+        const back = words.find((w) => w.start > hit.end
+          && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text)))
+        const cut = r2(Math.min(first.end ?? 4, back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2))
+        const brand = String(hit.text).replace(/[.,!?«»"]/g, '').trim()
+        if (cut > (first.start || 0) + 0.8) {
+          segs.splice(0, 1,
+            { ...first, end: cut, duo: { brand } },
+            ...((first.end ?? 0) - cut > 0.6 ? [{ ...first, start: cut }] : []))
+          console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
+        }
+      }
+    }
+  }
+
   // BILAN RÉEL, pas le bilan de bonne volonté. §0 peut « poser » une scène qu'un
   // traitement ultérieur reprend (le CTA final rogne tout ce qui déborde sur lui).
   // On compte donc ce qui ARRIVE dans la vidéo, en repartant des scènes d'origine.
