@@ -193,15 +193,39 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (v.photo || v.assets) NEEDS[v.anim] = { ...(v.photo ? { photo: v.photo } : {}), assets: v.assets || [v.photo] }
     }
     const srv = (plan.slides || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
-    let placed = 0
-    for (const sl of srv) {
+    const isAnim = (sl) => {
       const an = String(sl.anim || '')
-      if (!an || an === 'screen' || an === 'ui' || !ANIMS.includes(an)) continue
-      if (sl.title || sl.text || (sl.items || []).length) continue   // scène titrée : §4 la traite
-      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
-      if (add({ ...sl, ...(NEEDS[an] || {}) }, a, b)) { consumedByPlan.add(sl); placed++ }
+      return an && an !== 'screen' && an !== 'ui' && ANIMS.includes(an)
     }
-    if (placed) console.log(`▶ chef d'orchestre : ${placed}/${srv.length} scènes posées en premier`)
+    // TOUTES SES ANIMATIONS, D'ABORD, SANS EXCEPTION. Axel : « je veux 100 % de
+    // ses scènes ». Elles passent avant tout le reste — y compris avant ses
+    // propres cartes de section, qui sont de longues bannières héritées du mode
+    // classique (une seule couvre parfois 12 s et cinq animations). Sur un écran
+    // qui ne montre qu'une chose à la fois, c'est l'animation qui gagne.
+    let placedAnim = 0
+    for (const sl of srv) {
+      if (!isAnim(sl)) continue
+      const an = String(sl.anim)
+      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
+      // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste
+      if (add({ ...sl, title: '', text: '', items: [], ...(NEEDS[an] || {}) }, a, b)) {
+        consumedByPlan.add(sl); placedAnim++
+      }
+    }
+    // …puis ses cartes de texte, dans ce qu'il reste de libre. Elles gardent la
+    // règle validée par Axel : un mot affiché est un mot réellement prononcé.
+    let placedText = 0
+    for (const sl of srv) {
+      if (consumedByPlan.has(sl) || isAnim(sl)) continue
+      if (sl.anim === 'screen' || sl.anim === 'ui') continue    // §1/§2 les rejouent au clic
+      const its = (sl.items || []).filter((it) => it && it.text)
+      if (!its.length && !sl.title) continue
+      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.5)
+      if (add(sl, a, b)) { consumedByPlan.add(sl); placedText++ }
+    }
+    const tot = srv.length, anims = srv.filter(isAnim).length
+    console.log(`▶ chef d'orchestre : ${placedAnim}/${anims} animations + ${placedText} carte(s) de texte`
+      + ` = ${placedAnim + placedText}/${tot} de ses scènes posées`)
   }
 
   // ── 1 · LES TABLES LOCALES : elles ne comblent plus que les trous ────────────
@@ -487,19 +511,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const kw = w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : ''
       if (kw && kw.length <= 14) {
         const verb = norm(words[last.i].text).startsWith('ecris') ? 'Écris' : 'Commente'
-        const a = Math.max(last.start - 0.1, D - 6)
-        // le CTA final est PRIORITAIRE : toute scène qui déborde dessus est rognée
-        // (les compteurs de vues s'arrêtent quand le punch arrive, pas l'inverse)
-        for (let i = out.length - 1; i >= 0; i--) {
-          const s = out[i]
-          if ((s.end || 0) <= a + 0.05) continue
-          s.end = r2(a - 0.05)
-          if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
+        let a = Math.max(last.start - 0.1, D - 6)
+        // LE CTA NE MANGE PLUS SES SCÈNES. Il était prioritaire et rognait tout
+        // ce qui débordait sur lui : sur Cartoon 16, il avalait `engage` et
+        // `money`, les deux dernières propositions du chef d'orchestre. Axel :
+        // « je veux 100 % de ses scènes ». Le CTA se contente donc de la fin
+        // LIBRE — et s'il n'y a pas la place, il n'existe pas : la vidéo se
+        // termine sur ce que le chef d'orchestre a prévu, ce qui est très bien.
+        for (const [s, e] of taken) if (e > a && s < D) a = Math.max(a, r2(e + 0.05))
+        if (D - 0.1 - a >= 1.2) {
+          out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
+            items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, Math.min(last.start, D - 1.2))) }],
+            start: r2(a), end: r2(D - 0.1) })
+          claim(a, D)
+        } else {
+          console.log(`▶ CTA final écarté : la fin est déjà occupée par le chef d'orchestre`)
         }
-        out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
-          items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, last.start)) }],
-          start: r2(a), end: r2(D - 0.1) })
-        claim(a, D)
       }
     }
   }
@@ -684,6 +711,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
     )
     if (same && (sl.start || 0) - (prev.end || 0) < 2.2) { prev.end = Math.max(prev.end, sl.end); continue }
     merged.push(sl)
+  }
+  // BILAN RÉEL, pas le bilan de bonne volonté. §0 peut « poser » une scène qu'un
+  // traitement ultérieur reprend (le CTA final rogne tout ce qui déborde sur lui).
+  // On compte donc ce qui ARRIVE dans la vidéo, en repartant des scènes d'origine.
+  {
+    const key = (s) => `${s.anim || ''}|${s.screen || ''}`
+    const want = srcSlides.filter((s) => s.anim && s.anim !== 'ui')
+    const got = new Set(merged.map(key))
+    const lost = want.filter((s) => !got.has(key(s)))
+    console.log(`▶ au final : ${want.length - lost.length}/${want.length} des scènes du chef d'orchestre dans la vidéo`
+      + (lost.length ? ` · absorbées : ${lost.map((s) => `${s.anim}@${s.start}s`).join(', ')}` : ''))
   }
   plan.slides = merged
 }
