@@ -136,7 +136,10 @@ export const VOICE_ANIMS = [
 ]
 
 export function deriveDynamicSlides(plan, opts = {}) {
-  if (plan.slideStyle !== 'dynamic') return
+  // apple partage ce moteur (cf. build-composition) : sans lui ouvrir la porte
+  // ici, il recevait le plan BRUT — 19 panneaux au lieu de 14, captures non
+  // pilotées, animations non ancrées. La peau était claire, la matière non.
+  if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple') return
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(c.end) }))

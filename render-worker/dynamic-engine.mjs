@@ -28,11 +28,26 @@ const DARK  = { bg: '#0E0E13', ink: '#F5F5F6', mute: '#8B8B94', dark: true }
 const LIGHT = { bg: '#FFF7F2', ink: '#141418', mute: '#6E6E73', dark: false }
 const ACC   = '#FF5A36'
 
+// ── APPLE ────────────────────────────────────────────────────────────────────
+// Axel, en voyant le style apple rendu par le chemin classique : « c'est pas du
+// tout le rendu que je veux, je veux que le modèle ressemble principalement à la
+// v18 ». Apple n'est donc PAS un autre moteur : c'est CE moteur, habillé clair.
+// Même composition — panneaux plein écran qui se poussent, captures pilotées au
+// clic, animations ancrées sur le mot — mais deux tons clairs qui alternent au
+// lieu du noir/crème, sur la palette iOS de sa référence (@beingmayy).
+const AP_A  = { bg: '#F2F2F7', ink: '#1D1D1F', mute: '#6E6E73', dark: false }
+const AP_B  = { bg: '#FFFFFF', ink: '#1D1D1F', mute: '#86868B', dark: false }
+const isApple = (plan) => plan.slideStyle === 'apple'
+
 // halos du fond : la « respiration » des références — de GROS dégradés radiaux
 // qui dérivent lentement. Déterministes (position/phase par index de panneau).
 const BLOBS = {
   light: ['#FFD3BC', '#FFC0CF', '#FFE7AE'],
   dark:  ['#2E1E33', '#33201B', '#182337'],
+  // apple : les dégradés iOS — bleu, violet, rose — beaucoup plus lavés, sinon
+  // ils tachent un fond blanc au lieu de le faire respirer.
+  ap_a:  ['#D7E6FF', '#E4DAFF', '#FFDCE8'],
+  ap_b:  ['#DCEBFF', '#FFE2D5', '#E2F0FF'],
 }
 
 const CHAR_W = 0.66
@@ -320,9 +335,12 @@ export function buildDynamicComposition(plan, opts = {}) {
   const kbAdd = []
   let lastWhoosh = 0, whooshFlip = false
 
+  const ap = isApple(plan)
   panels.forEach((p, i) => {
-    const tone = i % 2 === 0 ? DARK : LIGHT
-    const blobs = i % 2 === 0 ? BLOBS.dark : BLOBS.light
+    // apple garde l'alternance (c'est elle qui donne le rythme d'un panneau à
+    // l'autre) mais entre deux CLAIRS : gris iOS puis blanc.
+    const tone = ap ? (i % 2 === 0 ? AP_A : AP_B) : (i % 2 === 0 ? DARK : LIGHT)
+    const blobs = ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
     const id = 'pn' + i
     const t0 = p.t0, t1 = p.t1, dur = r2(t1 - t0)
     const liveT0 = i === 0 ? 0.05 : r2(t0 + 0.12)
@@ -431,7 +449,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       // target, grow, money…). Plein panneau, palette adaptée au tone, temps
       // absolus — le pack est déjà seek-safe.
       const s = { ...p.slide, id, start: liveT0, dur: Math.max(0.8, t1 - liveT0) }
-      const ah = animHtml(p.kind, s, W, H, tone.dark ? 'dynamic' : 'word')
+      const ah = animHtml(p.kind, s, W, H, ap ? 'apple' : tone.dark ? 'dynamic' : 'word')
       if (ah) {
         // frame() du pack vise le haut (au-dessus des sous-titres du mode
         // classique) : ici pas de sous-titres → on recentre et on grossit
@@ -537,11 +555,14 @@ export function buildDynamicComposition(plan, opts = {}) {
 <meta charset="UTF-8" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <style>
-  body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${DARK.bg}; font-family:'Inter',sans-serif; }
+  body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${ap ? AP_A.bg : DARK.bg}; font-family:'Inter',sans-serif; }
   .pnl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; overflow:hidden; }
   ${animCss(W, H)}
   .pin { position:absolute; inset:0; }
-  .disp { font-family:'Archivo Black',sans-serif; letter-spacing:-.01em; }
+  /* le mot affiché : Archivo Black tape fort, c'est l'identité du dynamique.
+     Apple n'écrit jamais aussi gras — SF Pro Display, donc Inter 800 très serré. */
+  .disp { font-family:${ap ? `'Inter',sans-serif; font-weight:800; letter-spacing:-.035em`
+    : `'Archivo Black',sans-serif; letter-spacing:-.01em`}; }
   .stack { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column;
            justify-content:center; align-items:center; gap:34px; padding:0 70px; box-sizing:border-box; }
 </style>

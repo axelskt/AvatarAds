@@ -24,7 +24,8 @@ import { ANIMS } from './anim-pack.mjs'
 const r2 = (n) => Math.round(n * 100) / 100
 
 export function deriveClassicSlides(plan) {
-  if (!plan || plan.slideStyle === 'dynamic') return          // le dynamique a sa propre dérivation
+  // dynamique ET apple ont leur propre dérivation (même moteur)
+  if (!plan || plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') return
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(c.end) }))
