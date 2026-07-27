@@ -253,13 +253,13 @@ function toolDefs(isOwner: boolean) {
     },
     {
       name: 'lipsync_video',
-      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux moteurs : omnihuman (ByteDance OmniHuman 1.5 via fal — le plus réaliste, ${OMNI_COST_SEC} crédits/s, défaut) ou hedra (Character-3, 1 crédit/s). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
+      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux moteurs : hedra (Character-3, 1 crédit/s, défaut) ou omnihuman (ByteDance OmniHuman 1.5 via fal, ${OMNI_COST_SEC} crédits/s, plus haute résolution). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
           image_url: { type: 'string', description: "URL publique de la photo de l'avatar (PNG/JPEG/WebP)." },
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
-          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `omnihuman (défaut, le plus réaliste, ${OMNI_COST_SEC} cr/s) ou hedra (1 cr/s).` },
+          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `hedra (défaut, 1 cr/s) ou omnihuman (${OMNI_COST_SEC} cr/s, 1088×1920).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
@@ -905,7 +905,11 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   const aud = await fetchUserFile(audioUrl, 15_000_000, /^(audio\/|application\/octet-stream)/, "l'audio (audio_url)")
   if (typeof aud === 'string') return toolErr(aud)
 
-  const engine = String(args.engine || 'omnihuman') === 'hedra' ? 'hedra' : 'omnihuman'
+  // Défaut HEDRA (test comparatif du 27/07/2026 : à image et audio identiques, il
+  // tient mieux le visage et coûte 5× moins cher). OmniHuman reste dispo en
+  // explicite — son rendu figé venait au moins en partie de NOTRE prompt, qui
+  // lui demandait « no camera movement » sans jamais demander de gestuelle.
+  const engine = String(args.engine || 'hedra') === 'omnihuman' ? 'omnihuman' : 'hedra'
   if (engine === 'omnihuman' && !FAL_KEY) return toolErr('OmniHuman indisponible (clé fal absente des secrets).')
   const secs = Math.ceil(Math.max(1, estimateAudioSeconds(aud.bytes, aud.contentType)))
   if (secs > 60) return toolErr(`Segment audio trop long (~${secs} s) : 60 secondes maximum par clip lipsync.`)
@@ -940,7 +944,9 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           image_url: pub(`${stamp}.png`),
           audio_url: pub(`${stamp}.${ext}`),
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
-          prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise lip-sync matching every syllable and pause, clear articulation, static background, no camera movement',
+          // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
+          // qualité entre les deux moteurs porte sur deux consignes différentes.
+          prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
         }),
       })
       if (!sub.ok) {
@@ -972,25 +978,37 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     const imageId = await hedraUploadAsset('image', 'avatar.jpg', img.bytes, img.contentType)
     if (!imageId) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
 
-    const genRes = await hedraFetch('/generations', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'video',
-        ai_model_id: HEDRA_MODEL_ID,
-        audio_id: audioId,
-        start_keyframe_id: imageId,
-        generated_video_inputs: {
-          text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
-          aspect_ratio: aspect,
-          character_orientation: 'video',
-          resolution: '720p',
-        },
-      }),
-    })
-    if (!genRes.ok) {
-      const err = await genRes.text().catch(() => '')
-      return toolErr(`Lancement Hedra échoué (${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
+    // RÉSOLUTION : on demande la plus haute d'abord. Character-3 était figé à 720p
+    // en dur ; si le compte/modèle accepte mieux, autant le prendre — sinon l'API
+    // refuse et on retombe sur 720p sans que l'utilisateur ne voie rien.
+    let genRes: Response | null = null
+    let hedraLaunchErr = ''
+    let usedRes = ''
+    for (const res of ['1080p', '720p']) {
+      genRes = await hedraFetch('/generations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'video',
+          ai_model_id: HEDRA_MODEL_ID,
+          audio_id: audioId,
+          start_keyframe_id: imageId,
+          generated_video_inputs: {
+            text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+            aspect_ratio: aspect,
+            character_orientation: 'video',
+            resolution: res,
+          },
+        }),
+      })
+      if (genRes.ok) { usedRes = res; break }
+      hedraLaunchErr = `${genRes.status} — ${(await genRes.text().catch(() => '')).slice(0, 160)}`
+      console.log(`hedra ${res} refusé : ${hedraLaunchErr}`)
+      if (genRes.status < 400 || genRes.status >= 500) break   // pas une erreur de validation
     }
+    if (!genRes || !genRes.ok) {
+      return toolErr(`Lancement Hedra échoué (${hedraLaunchErr}) — crédits remboursés.`)
+    }
+    console.log(`hedra : résolution retenue ${usedRes}`)
     const gen = await genRes.json().catch(() => ({}))
     if (!gen.id) return toolErr("Hedra n'a pas retourné d'ID de génération — crédits remboursés.")
 
