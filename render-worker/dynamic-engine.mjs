@@ -465,18 +465,28 @@ export function buildDynamicComposition(plan, opts = {}) {
         // la moitié haute, son visage la moitié basse — on comprend le sujet ET
         // qui parle en une seconde, sans une ligne de texte.
         const half = Math.round(H / 2)
-        const tw = Math.round(W * 0.46), tr = Math.round(tw * 0.24)
-        const tx = Math.round((W - tw) / 2), ty = Math.round((half - tw) / 2)
-        inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;background:${tone.dark ? '#17171C' : '#F0EEE6'}"></div>
-        <div class="an-p" id="${id}bt" style="left:${tx}px;top:${ty}px;width:${tw}px;height:${tw}px;border-radius:${tr}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 70px rgba(0,0,0,.4)">
-          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(tw * 0.24)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
+        // LA MOITIÉ HAUTE : la vidéo de marque quand il y en a une. Axel avait
+        // fabriqué une animation Veo (les deux logos qui s'affrontent) et je
+        // l'avais laissée de côté : « je t'ai envoyé la vidéo à mettre en split
+        // screen en haut, tu ne l'as pas mise ». Une pastille dessinée ne fait
+        // pas le poids contre son animation.
+        if (duo.src) {
+          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
+            <video id="${id}bt" class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
+          pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out'},${liveT0});`
+        } else {
+          const tw = Math.round(W * 0.46), tr = Math.round(tw * 0.24)
+          const tx = Math.round((W - tw) / 2), ty = Math.round((half - tw) / 2)
+          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;background:${tone.dark ? '#17171C' : '#F0EEE6'}"></div>
+          <div class="an-p" id="${id}bt" style="left:${tx}px;top:${ty}px;width:${tw}px;height:${tw}px;border-radius:${tr}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 70px rgba(0,0,0,.4)">
+            <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(tw * 0.24)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
+          pjs += `\n  tl.fromTo('#${id}bt',{scale:0.2,rotation:-12,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.5,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(liveT0 + 0.12)});`
+          pjs += `\n  tl.to('#${id}bt',{scale:1.05,duration:${r2(Math.max(0.6, t1 - liveT0 - 0.7))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(liveT0 + 0.62)});`
+        }
         const bot = src
           ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
           : `<div style="width:100%;height:100%;background:url('tuto/hook-qualite.png') center 22%/cover"></div>`
         inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
-        // le logo POP : c'est lui l'information du hook
-        pjs += `\n  tl.fromTo('#${id}bt',{scale:0.2,rotation:-12,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.5,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(liveT0 + 0.12)});`
-        pjs += `\n  tl.to('#${id}bt',{scale:1.05,duration:${r2(Math.max(0.6, t1 - liveT0 - 0.7))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(liveT0 + 0.62)});`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
       } else if (src) {
         // CADRAGE DE LA PHOTO, INTACT. J'avais recadré serré pour cacher une main
