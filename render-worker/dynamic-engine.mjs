@@ -414,13 +414,12 @@ export function buildDynamicComposition(plan, opts = {}) {
       // ont un visuel de visage », le panneau tient l'écran sans texte
       const src = (opts.avatarClips || {})['av' + p.slide.i]
       if (src) {
-        // CADRAGE SERRÉ SUR LE VISAGE. Le lipsync invente le mouvement à partir
-        // d'UNE photo : les mains sont ce qu'il rate le plus (Axel, sur la v15 :
-        // « je n'avais pas vu la main à droite, les gens font attention à ces
-        // détails »). On recadre au-dessus de la ligne des mains — le défaut ne
-        // peut plus apparaître, et un plan serré est de toute façon la norme du
-        // format vertical. transform-origin haut : le visage reste à sa place.
-        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover;transform:scale(1.62);transform-origin:50% 26%"></video>`
+        // CADRAGE DE LA PHOTO, INTACT. J'avais recadré serré pour cacher une main
+        // ratée par le lipsync — mauvaise réponse : ça masquait aussi les gestes,
+        // et Axel les veut (« ça animé c'était bien, ça rajoute un truc de parler
+        // avec les mains »). Le défaut se corrige à la source, dans le prompt
+        // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
+        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
         inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('tuto/hook-qualite.png') center/cover"></div>`
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`

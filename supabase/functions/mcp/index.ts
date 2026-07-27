@@ -732,7 +732,7 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
       ai_model_id: HEDRA_MODEL_ID,
       audio_id: audioId,
       generated_video_inputs: {
-        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion, natural expressive hand gestures while speaking, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
         aspect_ratio: aspect,
         character_orientation: 'video',
         // 1080p natif : Character-3 le rend sans surcoût (7 crédits Hedra par
@@ -949,7 +949,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
           // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
           // qualité entre les deux moteurs porte sur deux consignes différentes.
-          prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+          prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion, natural expressive hand gestures while speaking, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
         }),
       })
       if (!sub.ok) {
@@ -996,7 +996,7 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
           audio_id: audioId,
           start_keyframe_id: imageId,
           generated_video_inputs: {
-            text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+            text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion, natural expressive hand gestures while speaking, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
             aspect_ratio: aspect,
             character_orientation: 'video',
             resolution: res,
