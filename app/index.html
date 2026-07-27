@@ -3078,7 +3078,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
 
-          <button id="acAnalyzeBtn" class="btn" onclick="_acAnalyze()" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 34px -8px var(--accent-glow)">
+          <!-- ══ #153 · Mastering voix : EQ paramétrique + compresseur monobande ══ -->
+          <div style="margin-top:16px">
+            <div style="font-size:11px;font-family:var(--mono);letter-spacing:.08em;color:var(--text3)">🎚️ VOIX — ÉGALISEUR + COMPRESSEUR</div>
+            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:3px">Traitement studio : plus d'épaisseur, plus de présence, niveau constant</div>
+            <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
+              <button id="acVoice_off"     onclick="_acSetVoicePreset('off')"     style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Aucun</button>
+              <button id="acVoice_natural" onclick="_acSetVoicePreset('natural')" style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Naturel</button>
+              <button id="acVoice_podcast" onclick="_acSetVoicePreset('podcast')" style="flex:1;min-width:78px;padding:9px 10px;background:var(--accent);border:1.5px solid var(--accent);border-radius:20px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Podcast</button>
+              <button id="acVoice_punch"   onclick="_acSetVoicePreset('punch')"   style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Punchy</button>
+            </div>
+          </div>
+
+          <button id="acAnalyzeBtn" class="btn" onclick="_acAnalyze()" style="width:100%;margin-top:14px;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 34px -8px var(--accent-glow)">
             🪄 Supprimer les silences automatiquement · 1 crédit
           </button>
 
@@ -21877,7 +21889,7 @@ async function _acDerushApply(btn){
     // toujours repartir des segments d'AVANT dérush : décocher restaure vraiment
     if(!_acKeepSegsBase) _acKeepSegsBase = _acKeepSegsSec.slice();
     const finalKeep = cuts.length ? _acSubtractRanges(_acKeepSegsBase, cuts) : _acKeepSegsBase.slice();
-    const buf = await _reconstructAudio(_acDenoisedBuf, finalKeep);
+    const buf = await _acMasterVoice(await _reconstructAudio(_acDenoisedBuf, finalKeep));
     _acCleanBlob = _encodeWAV(buf);
     _acKeepSegsSec = finalKeep;                      // la découpe VIDÉO suit les mêmes instants
     const cutS = cuts.reduce((a,c) => a + (c.end - c.start), 0);
@@ -22077,6 +22089,120 @@ async function _acExportVideo(btn){
   } finally { if(btn) btn.disabled = false; }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 🎚️ MASTERING VOIX (#153) — l'équivalent de la chaîne « voix podcast » de
+// Premiere Pro / Adobe Podcast, 100 % dans le navigateur (Web Audio, offline,
+// zéro appel API). Le débruitage enlève ce qui gêne ; ICI on rend la voix
+// VIVANTE : coupe-bas, égaliseur paramétrique, dé-esseur 2 bandes, compresseur
+// monobande (l'épaisseur), limiteur, puis calage du niveau.
+//
+// Appliqué APRÈS la coupe des silences : compresser avant remonterait le
+// plancher de bruit et fausserait le seuil adaptatif de détection.
+// ─────────────────────────────────────────────────────────────────────────────
+let _acVoicePreset = 'podcast';   // 'off' | 'natural' | 'podcast' | 'punch'
+const _AC_VOICE_PRESETS = {
+  off: null,
+  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
+  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
+  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
+};
+
+async function _acMasterVoice(buf, presetKey){
+  const P = _AC_VOICE_PRESETS[presetKey || _acVoicePreset];
+  if(!P || !buf || !buf.length) return buf;
+  const sr = buf.sampleRate, ch = buf.numberOfChannels;
+  const off = new OfflineAudioContext(ch, buf.length, sr);
+  const src = off.createBufferSource(); src.buffer = buf;
+
+  // 1 · COUPE-BAS : gronde de pièce, clim, souffle de plosives
+  const hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = P.hp; hp.Q.value = 0.7;
+
+  // 2 · ÉGALISEUR PARAMÉTRIQUE : on creuse le « carton » (200-400 Hz), on avance
+  //     la présence (intelligibilité), on ajoute l'air (le côté « beau micro »)
+  const mud  = off.createBiquadFilter(); mud.type  = 'peaking';   mud.frequency.value  = P.mud.f;  mud.gain.value  = P.mud.g;  mud.Q.value  = P.mud.q;
+  const pres = off.createBiquadFilter(); pres.type = 'peaking';   pres.frequency.value = P.pres.f; pres.gain.value = P.pres.g; pres.Q.value = P.pres.q;
+  const air  = off.createBiquadFilter(); air.type  = 'highshelf'; air.frequency.value  = P.air.f;  air.gain.value  = P.air.g;
+
+  // 3 · DÉ-ESSEUR : Web Audio n'a pas d'entrée sidechain — on sépare en deux
+  //     bandes et on ne compresse QUE les aigus (les « S » qui sifflent), puis
+  //     on resomme. Sans ça, la remontée de présence rend la voix agressive.
+  const SPLIT = 6000;
+  const lowB = off.createBiquadFilter(); lowB.type = 'lowpass';  lowB.frequency.value = SPLIT;
+  const hiB  = off.createBiquadFilter(); hiB.type  = 'highpass'; hiB.frequency.value  = SPLIT;
+  const dess = off.createDynamicsCompressor();
+  dess.threshold.value = P.deess; dess.ratio.value = 6; dess.attack.value = 0.001; dess.release.value = 0.05; dess.knee.value = 6;
+  const sum = off.createGain();
+
+  // 4 · COMPRESSEUR MONOBANDE : l'épaisseur — les mots faibles remontent, les
+  //     attaques sont tenues, la voix « colle » au micro d'un bout à l'autre
+  const comp = off.createDynamicsCompressor();
+  comp.threshold.value = P.comp.th; comp.ratio.value = P.comp.ratio;
+  comp.attack.value = P.comp.att;   comp.release.value = P.comp.rel; comp.knee.value = 6;
+  const makeup = off.createGain(); makeup.gain.value = Math.pow(10, (Math.abs(P.comp.th) * 0.18) / 20);
+
+  // 5 · LIMITEUR de sécurité : jamais de saturation en sortie
+  const lim = off.createDynamicsCompressor();
+  lim.threshold.value = -1.5; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; lim.knee.value = 0;
+
+  src.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air);
+  air.connect(lowB); lowB.connect(sum);          // bande grave/médium intacte
+  air.connect(hiB);  hiB.connect(dess); dess.connect(sum);   // aigus dé-essés
+  sum.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
+  src.start(0);
+
+  const out = await off.startRendering();
+  return _acNormalizeLoudness(out, P.target);
+}
+
+// Calage du niveau : médiane RMS des zones PARLÉES (les silences ne comptent
+// pas), puis garde-fou de crête à -1 dBFS. Deux enregistrements différents
+// sortent au même volume perçu — comme un vrai master.
+function _acNormalizeLoudness(buf, targetDb){
+  const d = buf.getChannelData(0);
+  const win = Math.round(buf.sampleRate * 0.4);
+  const blocks = [];
+  for(let i = 0; i < d.length; i += win){
+    let s = 0; const e = Math.min(i + win, d.length);
+    for(let j = i; j < e; j++) s += d[j] * d[j];
+    blocks.push(Math.sqrt(s / Math.max(1, e - i)));
+  }
+  const spoken = blocks.filter((b) => b > 0.02).sort((a, b) => a - b);
+  if(!spoken.length) return buf;
+  const med = spoken[Math.floor(spoken.length * 0.5)];
+  if(!med) return buf;
+  let gain = Math.pow(10, (targetDb - 20 * Math.log10(med)) / 20);
+  let peak = 0; for(let i = 0; i < d.length; i++){ const a = Math.abs(d[i]); if(a > peak) peak = a; }
+  gain = Math.min(gain, 0.891 / Math.max(peak, 1e-6));   // -1 dBFS max
+  if(Math.abs(gain - 1) < 0.02) return buf;
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const chd = buf.getChannelData(c);
+    for(let i = 0; i < chd.length; i++) chd[i] *= gain;
+  }
+  return buf;
+}
+
+// restaure le choix précédent au chargement (une fois le DOM prêt)
+try{
+  const _sv = localStorage.getItem('aa_ac_voice');
+  if(_sv && _AC_VOICE_PRESETS.hasOwnProperty(_sv)) {
+    _acVoicePreset = _sv;
+    document.addEventListener('DOMContentLoaded', () => _acSetVoicePreset(_sv));
+  }
+}catch(_){}
+
+function _acSetVoicePreset(key){
+  _acVoicePreset = key;
+  for(const k of ['off','natural','podcast','punch']){
+    const b = document.getElementById('acVoice_' + k);
+    if(!b) continue;
+    const on = k === key;
+    b.style.background   = on ? 'var(--accent)' : 'var(--surface-2)';
+    b.style.borderColor  = on ? 'var(--accent)' : 'var(--border)';
+    b.style.color        = on ? '#fff' : 'var(--text2)';
+  }
+  try{ localStorage.setItem('aa_ac_voice', key); }catch(_){}
+}
+
 async function _acCleanCore(srcBlob, onAfterDenoise){
   let working = srcBlob;
   if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
@@ -22150,7 +22276,9 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
     src.start(offset/sr, seg.start/sr, len/sr);
     offset+=len;
   }
-  const cleanBuf = await offCtx.startRendering();
+  const rawClean = await offCtx.startRendering();
+  // #153 · mastering voix APRÈS la coupe (compresser avant fausserait le seuil)
+  const cleanBuf = await _acMasterVoice(rawClean);
   return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs };
 }
 
