@@ -120,8 +120,18 @@ function buildPanels(plan, D) {
 // dessus). Pas d'accent → la phrase courte se TAPE au centre, caret orange.
 function typoContent(id, p, tone, liveT0) {
   const ws = p.words
-  const accIdx = ws.findIndex((w) => w.accent || w.text.length >= 11)
-  if (accIdx < 0) return { html: '', js: '', sfx: [] }   // sans mot-clé, pas de texte
+  let accIdx = ws.findIndex((w) => w.accent || w.text.length >= 11)
+  // JAMAIS de panneau typo NU (vu sur Cartoon 15 : blobs vides pendant 1-2 s) —
+  // sans accent, le mot le plus CHARGÉ de la phrase (≥5 lettres) fait le slam
+  if (accIdx < 0) {
+    let best = -1, bestLen = 4
+    for (let i = 0; i < ws.length; i++) {
+      const L = String(ws[i].text).replace(/[«»"'.,!?…()]/g, '').length
+      if (L > bestLen) { best = i; bestLen = L }
+    }
+    accIdx = best
+  }
+  if (accIdx < 0) return { html: '', js: '', sfx: [] }   // purs mots de liaison : la scène d'avant respire
   const acc = ws[accIdx]
   // le VERBE juste avant (1 mot max) + LE MOT — jamais de fragment de fin de
   // phrase en dessous (« et je » orphelin = incompréhensible, retour d'Axel)
@@ -133,7 +143,11 @@ function typoContent(id, p, tone, liveT0) {
       <div class="disp" id="${id}acc" style="font-size:${fz}px;color:${tone.ink};opacity:0;white-space:nowrap">${esc(acc.text)}</div>
     </div>`
   let js = ''
-  if (before) js += `\n  tl.fromTo('#${id}b4',{y:-46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${r2(Math.max(liveT0, ws[accIdx - 1].start))});`
+  // le petit mot gris n'arrive jamais SEUL plus de 0,9 s avant le slam (écran
+  // « sont » perdu au milieu du vide = exactement ce qu'Axel a refusé)
+  const b4At = before ? r2(Math.max(liveT0,
+    acc.start - ws[accIdx - 1].start > 0.9 ? acc.start - 0.45 : ws[accIdx - 1].start)) : 0
+  if (before) js += `\n  tl.fromTo('#${id}b4',{y:-46,opacity:0},{y:0,opacity:1,duration:0.32,ease:'power3.out'},${b4At});`
   js += `\n  tl.fromTo('#${id}acc',{scale:1.5,opacity:0,filter:'blur(14px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.42,ease:'power4.out'},${r2(tAt)});`
   js += `\n  tl.to('#${id}acc',{scale:1.05,duration:${r2(Math.max(0.3, p.t1 - tAt - 0.45))},ease:'none'},${r2(tAt + 0.42)});`
   return { html, js, sfx: [{ kind: 'mo-pop-3', t: r2(tAt), vol: 0.45 }] }
