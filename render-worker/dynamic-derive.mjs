@@ -26,6 +26,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS } from './anim-pack.mjs'
+import { spotOf } from './screen-spots.mjs'
+
+// L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
+// « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
+// partout (Axel : « mets cet avatar dans le hook et comme avatar principal »).
+const AVATAR_MAIN = 'hook-qualite'
 
 const r2 = (n) => Math.round(n * 100) / 100
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
@@ -94,14 +100,18 @@ export function deriveDynamicSlides(plan, opts = {}) {
 
   // Une scène qui déborde sur une fenêtre déjà prise est ROGNÉE, pas jetée —
   // mais seulement contre les AUTRES scènes dérivées (la voix prime le serveur).
+  // Renvoie la scène RÉELLEMENT posée (fenêtre déjà rognée) ou null : l'appelant
+  // peut ainsi recaler son contenu — les étapes d'une démo qui tomberaient hors
+  // du panneau sont écartées au lieu de s'afficher dans le vide.
   const add = (slide, a, b) => {
     for (const w of taken) {
       if (a < w[0] && b > w[0]) b = w[0] - 0.05          // déborde sur le début d'une fenêtre
       if (a >= w[0] && a < w[1]) a = w[1] + 0.05          // commence dans une fenêtre
     }
-    if (b - a < 0.8 || overlaps(a, b)) return false
-    out.push({ ...slide, start: r2(a), end: r2(b) })
-    claim(a, b); return true
+    if (b - a < 0.8 || overlaps(a, b)) return null
+    const s = { ...slide, start: r2(a), end: r2(b) }
+    out.push(s)
+    claim(a, b); return s
   }
 
   // ── 1 · LA VOIX D'ABORD : les déclencheurs haute précision de ses scripts ──
@@ -154,7 +164,104 @@ export function deriveDynamicSlides(plan, opts = {}) {
       Math.max(0, c.start - LEAD), Math.min(D, c.end + 2.6))
   }
 
-  // « sélectionne Photo Réel(le) / Pixar / format » → cartes de choix sous le curseur
+  // « et voilà » → l'image RÉSULTAT plein écran. Posée AVANT les démos : c'est
+  // elle qui borne la fin d'une démo, pas l'inverse (« quand tu génères l'image,
+  // fais une animation de clic puis MONTRE le résultat », Axel).
+  {
+    const hit = findSeq(words, 'et voila') || findSeq(words, 'et la')
+    if (hit) {
+      // …mais elle rend la main dès qu'il enchaîne (« t'as plus qu'à POSTER ») :
+      // sinon le résultat mange l'animation des plateformes qui vient après
+      const nxt = findAny(words, ['poster', 'publier', 'partager'], hit.i + 1)
+      add({ anim: 'result', screen: '99-resultat' }, Math.max(0, hit.start - 0.3),
+        Math.min(D, Math.min(hit.end + 1.9, nxt ? nxt.start - 0.2 : Infinity)))
+    }
+  }
+
+  // ── LA CAPTURE EST PILOTÉE, PAS CONTEMPLÉE (#146) ──
+  // « tu vas aller dans Images IA, sélectionner Photo Réelle, le format que tu
+  // veux, décrire l'image, générer » = CINQ gestes sur la MÊME page. On produit
+  // donc une démo : la capture du module, et un clic au bon endroit à chaque mot.
+  // Avant, le cadre orange se posait au centre par défaut — sur du vide.
+  {
+    const MODULES = [
+      { pat: ['image ia', 'images ia'], screen: '01-imagesia' },
+      { pat: ['express'],               screen: '02-express' },
+      { pat: ['generateur'],            screen: '03-generateur' },
+      { pat: ['montage ia'],            screen: '04-montageia' },
+      { pat: ['bibliotheque'],          screen: '05-bibliotheque' },
+      { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
+      { pat: ['enregistreur'],          screen: '07-enregistreur' },
+      { pat: ['parrainage'],            screen: '08-parrainage' },
+    ]
+    // mot prononcé → élément de l'interface (positions dans screen-spots.mjs)
+    const STEP_WORDS = [
+      { spot: 'style',    w: ['photo', 'reelle', 'reel', 'realiste', 'pixar', 'cartoon', 'ugc', 'mascotte', 'style', 'studio'] },
+      { spot: 'format',   w: ['format', 'portrait', 'paysage', 'vertical', 'horizontal'] },
+      { spot: 'duree',    w: ['duree'] },
+      { spot: 'qualite',  w: ['qualite', 'premium'] },
+      { spot: 'upload',   w: ['ajouter', 'ajoute', 'importer', 'importe', 'reference'] },
+      { spot: 'prompt',   w: ['decrire', 'decris', 'ecrire', 'ecris', 'prompt', 'description'] },
+      { spot: 'generate', w: ['genere', 'generes', 'generer', 'lance', 'lancer'] },
+    ]
+    // « générer » n'est un clic sur le bouton que s'il porte sur un objet de
+    // l'app (« génère L'IMAGE ») — pas dans « générer DES millions de vues ».
+    const GEN_OBJ = ['image', 'limage', 'video', 'lavideo', 'animation', 'lanimation', 'la', 'le', 'ma', 'ta', 'ton']
+    // ce qui se tape dans le champ quand la voix ne cite rien : la propre
+    // suggestion de l'app, donc un prompt crédible plutôt qu'un texte inventé
+    const PROMPT_SAMPLE = {
+      '01-imagesia': 'Entrepreneur en studio moderne, face caméra',
+      '02-express': 'Il présente son outil face caméra, ton punchy',
+    }
+    const hits = []
+    for (const m of MODULES) {
+      let hit = null
+      for (const p of m.pat) { hit = findSeq(words, p); if (hit) break }
+      if (hit) hits.push({ ...hit, screen: m.screen })
+    }
+    hits.sort((a, b) => a.start - b.start)
+    hits.forEach((h, hi) => {
+      const stopI = hi + 1 < hits.length ? hits[hi + 1].i : words.length
+      const steps = []
+      const menuSpot = spotOf(h.screen, 'menu')
+      if (menuSpot) steps.push({ t: r2(Math.max(0, h.start - LEAD)), spot: menuSpot })
+      const used = new Set(['menu'])
+      let lastEnd = h.end
+      for (let j = h.i + 1; j < stopI && words[j].start < h.start + 8; j++) {
+        const n = norm(words[j].text)
+        const sw = STEP_WORDS.find((x) => !used.has(x.spot) && x.w.includes(n))
+        if (!sw) continue
+        if (sw.spot === 'generate' && !GEN_OBJ.includes(words[j + 1] ? norm(words[j + 1].text) : '')) continue
+        const sp = spotOf(h.screen, sw.spot)
+        if (!sp) continue
+        used.add(sw.spot)
+        steps.push({ t: r2(Math.max(0, words[j].start - LEAD)), spot: sp,
+          ...(sw.spot === 'prompt' ? { type: PROMPT_SAMPLE[h.screen] || 'Décris ce que tu veux…' } : {}) })
+        lastEnd = words[j + 1] ? words[j + 1].end : words[j].end
+        if (sw.spot === 'generate') { lastEnd = words[j + 1] ? words[j + 1].end : words[j].end; break }
+      }
+      if (!steps.length) return
+      const a = Math.max(0, steps[0].t - 0.05)
+      const b = Math.min(D, Math.min(lastEnd + 0.85, h.start + 9))
+      const sl = add({ anim: 'screen', screen: h.screen }, a, b)
+      // une étape hors du panneau posé (fenêtre rognée) ne s'affiche pas
+      if (sl) sl.steps = steps.filter((st) => st.t >= sl.start - 0.02 && st.t < sl.end - 0.3)
+    })
+  }
+
+  // « ton premier avatar » → on MONTRE l'avatar, pas une carte de texte.
+  // Le même visage que le hook : c'est SON avatar, il doit être reconnaissable.
+  // APRÈS la démo : le visage arrive quand le clic sur « Générer » a eu lieu,
+  // il ne mange pas la fin du parcours dans l'app.
+  {
+    const hit = findSeq(words, 'premier avatar') || findSeq(words, 'ton avatar')
+    if (hit) add({ anim: 'ui', ui: 'photo', screen: AVATAR_MAIN },
+      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.8))
+  }
+
+  // « sélectionne Photo Réel(le) / Pixar / format » → cartes de choix sous le
+  // curseur. Après les démos : quand la vraie capture montre déjà le geste, la
+  // carte abstraite ne sert plus à rien et sa fenêtre est déjà prise.
   {
     const zones = [
       { pat: ['photo reelle', 'photo reel', 'photo realiste'], k: 'photo-reel' },
@@ -212,50 +319,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
-  // ── LE MODULE NOMMÉ EST À L'ÉCRAN (#146) ──
-  // « tu vas aller dans Images IA » → la capture d'Images IA, pas la page
-  // d'accueil. Axel : « quand je dis tu vas aller dans image IA la frame doit
-  // changer sur image IA, là il reste sur la LP ».
-  {
-    const MODULES = [
-      { pat: ['image ia', 'images ia'], screen: '01-imagesia' },
-      { pat: ['express'],               screen: '02-express' },
-      { pat: ['generateur'],            screen: '03-generateur' },
-      { pat: ['montage ia'],            screen: '04-montageia' },
-      { pat: ['bibliotheque'],          screen: '05-bibliotheque' },
-      { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
-      { pat: ['enregistreur'],          screen: '07-enregistreur' },
-      { pat: ['parrainage'],            screen: '08-parrainage' },
-    ]
-    for (const m of MODULES) {
-      let hit = null
-      for (const p of m.pat) { hit = findSeq(words, p); if (hit) break }
-      if (!hit) continue
-      add({ anim: 'screen', screen: m.screen, screenZoom: 1.5, screenX: 0.5, screenY: 0.4 },
-        Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 2.2))
-    }
-  }
-
-  // « ton premier avatar » → on MONTRE l'avatar obtenu (Axel : « mets l'image
-  // de Léna plutôt »), pas une carte de texte
-  {
-    const hit = findSeq(words, 'premier avatar') || findSeq(words, 'ton avatar')
-    if (hit) add({ anim: 'ui', ui: 'photo', screen: 'lena' },
-      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.8))
-  }
-
   // ── L'ANIMATION EST LE MOT (#146) ──
   // L'orchestrateur choisissait l'animation « au feeling » : on se retrouvait
   // avec une cible pendant qu'il parle de pros, un interrupteur sur « outils ».
   // Ici chaque animation est ancrée sur un mot qui la JUSTIFIE. Les anims
   // serveur non ancrées sont écartées plus bas (§4) — mieux vaut un slam.
   {
+    // `pad` : jusqu'où l'animation tient l'écran après le mot. Une phrase longue
+    // (« signent des contrats à plusieurs milliers d'euros ») a besoin de tenir
+    // toute la clause, sinon un mot seul vient la couper au milieu.
     const VOICE_ANIMS = [
+      { w: ['signent', 'signe', 'signer', 'contrat', 'contrats'],                           anim: 'sign', pad: 2.4 },
       { w: ['marque', 'marques', 'client', 'clients', 'communaute', 'audience', 'abonnes'], anim: 'network' },
-      { w: ['euros', 'argent', 'contrat', 'contrats', 'prix', 'paye', 'payer', 'gagner'],   anim: 'money' },
+      { w: ['euros', 'argent', 'prix', 'paye', 'payer', 'gagner'],                          anim: 'money' },
       { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
-      { w: ['fake', 'faux', 'realisme', 'realiste', 'qualite'],                             anim: 'compare' },
-      { w: ['outils', 'outil', 'methode', 'technique', 'strategie'],                        anim: 'steps' },
+      // « fake » / « réalisme » : on MONTRE la différence sur un vrai visage —
+      // deux rectangles de couleur ne disent rien (Axel : « quand je dis fake
+      // ça met ça, ça ne correspond pas à ce que je veux »)
+      { w: ['fake', 'faux', 'realisme', 'realiste'],                       anim: 'compare', pad: 2.1, photo: AVATAR_MAIN },
+      // « les bons outils » → les outils EUX-MÊMES : AvatarAds puis Claude
+      { w: ['outils', 'outil', 'methode', 'technique', 'strategie'], anim: 'tools', pad: 2.0, assets: ['logo-avatarads'] },
       { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
       { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
       { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
@@ -263,15 +346,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const v of VOICE_ANIMS) {
       const hit = findAny(words, v.w)
       if (!hit) continue
-      add({ anim: v.anim }, Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.7))
+      add({ anim: v.anim, ...(v.photo ? { photo: v.photo } : {}),
+        ...(v.photo || v.assets ? { assets: v.assets || [v.photo] } : {}) },
+        Math.max(0, hit.start - LEAD), Math.min(D, hit.end + (v.pad || 1.7)))
     }
   }
 
-  // « poster sur les réseaux » → l'animation des réseaux (il ne se passait rien)
+  // « poster sur les réseaux » → les PLATEFORMES qui reçoivent la vidéo. Avant :
+  // des bulles de commentaire et des cœurs — Axel : « tu montres une animation
+  // de message… aucun rapport ».
   {
     const hit = findSeq(words, 'poster sur les reseaux') || findSeq(words, 'sur les reseaux')
       || findAny(words, ['poster', 'publier'])
-    if (hit) add({ anim: 'engage' }, Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.9))
+    if (hit) add({ anim: 'post' }, Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 2.0))
   }
 
   // import de fichier : « importe/ajoute ton/tes audio|image|vidéo|fichier|clip »
@@ -303,13 +390,6 @@ export function deriveDynamicSlides(plan, opts = {}) {
         Math.max(0, hit.start - LEAD), Math.min(D, hit.end + o.pad))
       break
     }
-  }
-
-  // « et voilà » → l'image RÉSULTAT plein écran (montrer le résultat, pas l'interface)
-  {
-    const hit = findSeq(words, 'et voila')
-    if (hit) add({ anim: 'result', screen: '99-resultat' },
-      Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.55))
   }
 
   // « style / sous-titres / musique / images » énumérés → pills d'options
@@ -438,6 +518,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
   const avWinsAll = plan.avatarSegments || []
 
+  // ── 3c · PAS DE MOT SEUL ENTRE DEUX ANIMATIONS ──
+  // Un trou de 0,6 s entre deux scènes devient un panneau de texte : un mot
+  // apparaît, disparaît, ne montre rien. Axel : « priorise les animations à la
+  // place des sous-titres seuls qui ne veulent rien dire, qui ne montrent rien ».
+  // La scène en cours tient donc l'écran jusqu'à la suivante quand le trou est
+  // trop court pour qu'une phrase entière y tienne.
+  {
+    const chain = [...out, ...avWinsAll].sort((a, b) => (a.start || 0) - (b.start || 0))
+    for (let i = 0; i < chain.length - 1; i++) {
+      const gap = (chain[i + 1].start || 0) - (chain[i].end || 0)
+      if (gap > 0 && gap < 1.6) chain[i].end = r2((chain[i + 1].start || 0) - 0.02)
+    }
+    const last = chain[chain.length - 1]
+    if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2) last.end = r2(D)
+  }
+
   // ── 4 · fusion : le serveur s'écarte des scènes dérivées, pas l'inverse ──
   // Chaque slide serveur chevauchant une dérivée est ROGNÉ à sa partie libre ;
   // sous 0,8 s (ou coincé entre deux dérivées) il est JETÉ — une chose à l'écran.
@@ -447,6 +543,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // le moteur ne sait vraiment pas rendre (panneau vide garanti sinon).
   const RENDERABLE = new Set([...ANIMS, 'ui', 'screen', 'result', 'countup', 'logo', ''])
   const hasContent = (s) => !!(s.title || s.text || (s.items && s.items.length))
+
+  // UN MOT AFFICHÉ EST UN MOT PRONONCÉ. L'orchestrateur pose ses cartes de texte
+  // sur des fenêtres approximatives : « SIGNENT » restait à l'écran pendant
+  // « …ceux qui maîtrisent le réalisme ». On ne garde donc l'item que si la voix
+  // le dit VRAIMENT dans la fenêtre — et on recale le slam sur ce mot exact.
+  const wordsIn = (a, b) => words.filter((w) => w.start >= a - 0.45 && w.start <= b + 0.25)
+  const said = (txt, a, b) => {
+    const toks = String(txt || '').split(/[\s,/·]+/).map(norm).filter((t) => t.length >= 4)
+    if (!toks.length) return null
+    for (const w of wordsIn(a, b)) {
+      const n = norm(w.text)
+      if (toks.some((t) => n === t || (t.length >= 5 && n.startsWith(t)) || (n.length >= 5 && t.startsWith(n)))) return w
+    }
+    return null
+  }
+
   const kept = []
   const blockers = [...out, ...avWinsAll]
   for (const sl of srcSlides) {
@@ -465,7 +577,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     if (b - a < 0.8) continue
     if (blockers.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
-    kept.push(a === sl.start && b === sl.end ? { ...sl } : { ...sl, start: a, end: b })
+
+    let slide = { ...sl, start: a, end: b }
+    // carte purement textuelle (pas d'animation à rendre) → elle doit coller
+    if (!sl.anim || sl.anim === '') {
+      const its = (sl.items || []).filter((it) => it && it.text)
+      const cand = its.map((it) => ({ it, w: said(it.text, a, b) })).filter((x) => x.w)
+      if (its.length && !cand.length) continue                  // aucun de ses mots n'est dit : elle dégage
+      if (!its.length && sl.title && !said(sl.title, a, b)) continue
+      if (cand.length) {
+        const best = cand.sort((x, y) => x.w.start - y.w.start)[0]
+        slide.items = [{ ...best.it, t: r2(best.w.start) }]      // le slam tombe PILE sur le mot
+        slide.title = best.it.text
+        // …et le panneau ne s'ouvre pas une seconde AVANT le mot : sinon on
+        // regarde un fond vide en attendant que le texte arrive
+        slide.start = r2(Math.max(slide.start, Math.min(best.w.start - 0.45, slide.end - 0.85)))
+      }
+    }
+    kept.push(slide)
   }
 
   // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur
