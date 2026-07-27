@@ -305,9 +305,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ── 4 · fusion : le serveur s'écarte des scènes dérivées, pas l'inverse ──
   // Chaque slide serveur chevauchant une dérivée est ROGNÉ à sa partie libre ;
   // sous 0,8 s (ou coincé entre deux dérivées) il est JETÉ — une chose à l'écran.
+  //
+  // ⚠️ Les ANIMS GÉNÉRIQUES du pack classique (check, voice, phone, network,
+  // target, toggle…) n'existent pas dans le moteur Dynamique : elles rendaient
+  // des PANNEAUX VIDES de 1 à 2,5 s (vu sur l'audio Cartoon 15 — la moitié de
+  // la vidéo). On les JETTE : leurs fenêtres deviennent des slams de mots-clés,
+  // que le moteur génère tout seul sur les zones sans scène.
+  const GENERIC_ANIMS = new Set(['check', 'voice', 'phone', 'network', 'target', 'toggle',
+    'grow', 'avatar', 'list', 'type', 'steps', 'engage', 'views', 'pulse', 'wave', 'count'])
+  const hasContent = (s) => !!(s.title || s.text || (s.items && s.items.length))
   const kept = []
   for (const sl of srcSlides) {
     if (consumed.has(sl)) continue
+    if (GENERIC_ANIMS.has(sl.anim) && !hasContent(sl)) continue
     let a = r2(sl.start || 0), b = r2(sl.end || 0)
     for (const d of out) {
       if (b <= d.start + 0.05 || a >= d.end - 0.05) continue   // pas de contact
