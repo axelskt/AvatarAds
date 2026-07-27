@@ -67,7 +67,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: s.anim === 'ui' ? 'ui' : (s.anim || 'punch'), t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
@@ -339,8 +339,13 @@ export function buildDynamicComposition(plan, opts = {}) {
   panels.forEach((p, i) => {
     // apple garde l'alternance (c'est elle qui donne le rythme d'un panneau à
     // l'autre) mais entre deux CLAIRS : gris iOS puis blanc.
-    const tone = ap ? (i % 2 === 0 ? AP_A : AP_B) : (i % 2 === 0 ? DARK : LIGHT)
-    const blobs = ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
+    // un MÉDIA de l'utilisateur est toujours posé sur un fond CLAIR : Axel voulait
+    // « la vidéo posée, qui ne prend pas tout l'écran, avec un fond blanc
+    // derrière ». Sur un panneau sombre la carte se fondait dans le fond.
+    const media = p.kind === 'media'
+    const tone = media ? (ap ? AP_B : LIGHT) : ap ? (i % 2 === 0 ? AP_A : AP_B) : (i % 2 === 0 ? DARK : LIGHT)
+    const blobs = media ? (ap ? BLOBS.ap_b : BLOBS.light)
+      : ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
     const id = 'pn' + i
     const t0 = p.t0, t1 = p.t1, dur = r2(t1 - t0)
     const liveT0 = i === 0 ? 0.05 : r2(t0 + 0.12)
@@ -427,26 +432,53 @@ export function buildDynamicComposition(plan, opts = {}) {
       if (sc) { inner += sc.html; pjs += sc.js }
 
     } else if (p.kind === 'media') {
-      // LE MÉDIA DE L'UTILISATEUR, PLEIN ÉCRAN. Ce style n'en affichait aucun :
-      // `plan.broll` n'était lu que par le chemin classique. Sa vidéo montre le
-      // RÉSULTAT — c'est le visuel le plus fort dont on dispose, il occupe donc
-      // tout le panneau, sans cadre ni carte qui le rétrécirait.
+      // LE MÉDIA DE L'UTILISATEUR, POSÉ SUR LA PAGE. Ce style n'en affichait
+      // aucun : `plan.broll` n'était lu que par le chemin classique. Je l'avais
+      // d'abord mis plein cadre ; Axel : « la vidéo de la fille je la vois
+      // plutôt posée, qui ne prend pas tout l'écran, avec un fond blanc
+      // derrière ». Une carte flottante à coins ronds, avec son ombre portée :
+      // on voit que c'est un RÉSULTAT montré, pas la vidéo elle-même.
       const src = String(p.slide.src || '')
       const vid = /\.(mp4|mov|webm|m4v)$/i.test(src)
+      const cw = Math.round(W * 0.74), ch = Math.round(cw * 16 / 9)
+      const cx = Math.round((W - cw) / 2), cy = Math.round((H - ch) / 2)
+      const rad = Math.round(cw * 0.075)
+      const card = (body) => `<div class="an-p" id="${id}md" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rad}px;overflow:hidden;box-shadow:0 40px 90px -20px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.06)">${body}</div>`
       if (vid) {
-        inner += `<video id="${id}md" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="8" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+        inner += card(`<video id="${id}mv" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`)
       } else {
-        // une image fixe respire : un lent zoom avant, sinon le plan paraît figé
-        inner += `<div id="${id}md" style="position:absolute;left:-4%;top:-4%;width:108%;height:108%;background:url('${esc(src)}') center/cover"></div>`
-        pjs += `\n  tl.fromTo('#${id}md',{scale:1},{scale:1.08,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+        inner += card(`<img src="${esc(src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`)
       }
+      // elle ARRIVE : sans ça la carte est déjà là quand le panneau s'ouvre
+      pjs += `\n  tl.fromTo('#${id}md',{yPercent:8,scale:0.94,autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:0.42,ease:'back.out(1.5)',transformOrigin:'50% 50%'},${liveT0});`
+      sfxAdd.push({ kind: 'mo-pop-2', t: r2(liveT0 + 0.05), vol: 0.55 })
 
     } else if (p.kind === 'avclip') {
       // #149 · le VISAGE plein écran : clip lipsync si fourni (muet, calé sur la
       // voix qui continue), sinon la photo avatar en zoom lent — « les viewers
       // ont un visuel de visage », le panneau tient l'écran sans texte
       const src = (opts.avatarClips || {})['av' + p.slide.i]
-      if (src) {
+      const duo = p.slide.duo
+      if (duo) {
+        // HOOK EN SPLIT (Axel : « le hook je le vois plutôt en split screen avec
+        // Alex en bas et le logo Claude qui pop »). L'outil dont il parle occupe
+        // la moitié haute, son visage la moitié basse — on comprend le sujet ET
+        // qui parle en une seconde, sans une ligne de texte.
+        const half = Math.round(H / 2)
+        const tw = Math.round(W * 0.46), tr = Math.round(tw * 0.24)
+        const tx = Math.round((W - tw) / 2), ty = Math.round((half - tw) / 2)
+        inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;background:${tone.dark ? '#17171C' : '#F0EEE6'}"></div>
+        <div class="an-p" id="${id}bt" style="left:${tx}px;top:${ty}px;width:${tw}px;height:${tw}px;border-radius:${tr}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 70px rgba(0,0,0,.4)">
+          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(tw * 0.24)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
+        const bot = src
+          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          : `<div style="width:100%;height:100%;background:url('tuto/hook-qualite.png') center 22%/cover"></div>`
+        inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
+        // le logo POP : c'est lui l'information du hook
+        pjs += `\n  tl.fromTo('#${id}bt',{scale:0.2,rotation:-12,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.5,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(liveT0 + 0.12)});`
+        pjs += `\n  tl.to('#${id}bt',{scale:1.05,duration:${r2(Math.max(0.6, t1 - liveT0 - 0.7))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(liveT0 + 0.62)});`
+        sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
+      } else if (src) {
         // CADRAGE DE LA PHOTO, INTACT. J'avais recadré serré pour cacher une main
         // ratée par le lipsync — mauvaise réponse : ça masquait aussi les gestes,
         // et Axel les veut (« ça animé c'était bien, ça rajoute un truc de parler
