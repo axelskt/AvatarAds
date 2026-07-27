@@ -486,34 +486,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     plan.avatarSegments = clamped
   }
-  if (!(plan.avatarSegments || []).length) {
-    const busy = out.map((s) => [s.start, s.end]).sort((a, b) => a[0] - b[0])
+  // …et s'il n'en reste presque rien (l'orchestrateur n'en propose souvent QU'UNE,
+  // le hook), on complète dans les trous libres : « 3-4 vidéos de l'avatar »
+  // demandées pour #149. Un visage vaut mieux qu'un mot seul à l'écran.
+  const avCovered = (plan.avatarSegments || []).reduce((n, w) => n + (w.end - w.start), 0)
+  if (avCovered < D * 0.18) {
+    const busy = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
+      .sort((a, b) => a[0] - b[0])
     const freeGaps = []
     let cur = 0
     for (const [a, b] of busy) { if (a - cur >= 2.6) freeGaps.push([cur, a]); cur = Math.max(cur, b) }
     if (D - cur >= 2.6) freeGaps.push([cur, D])
+    // Les plus GRANDS trous d'abord, espacés d'au moins 6 s pour que le visage
+    // revienne ponctuer la vidéo au lieu de se coller à lui-même. (Les créneaux
+    // fixes d'avant rataient un trou de 4,3 s pour 0,16 s d'écart au seuil.)
     const avWins = []
-    const takeGap = (pred, maxLen) => {
-      const g = freeGaps.filter(pred).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0]
-      if (!g) return null
-      const w = { start: r2(g[0]), end: r2(Math.min(g[1], g[0] + maxLen)) }
-      g[0] = w.end + 0.05
-      if (g[1] - g[0] < 2.6) freeGaps.splice(freeGaps.indexOf(g), 1)
-      return w
+    let room = D * 0.4 - avCovered                       // 40 % de visage au maximum
+    const placed = (plan.avatarSegments || []).map((w) => w.start)
+    for (const g of freeGaps.slice().sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))) {
+      if (avWins.length + (plan.avatarSegments || []).length >= 4 || room < 1.6) break
+      if (g[1] - g[0] < 2.0) continue
+      if (placed.some((t) => Math.abs(t - g[0]) < 6)) continue
+      const len = Math.min(4.5, room, g[1] - g[0])
+      avWins.push({ start: r2(g[0]), end: r2(g[0] + len) })
+      placed.push(g[0]); room -= len
     }
-    // 3 à 4 fenêtres (« 3-4 vidéos de l'avatar ») : hook, deux temps forts, avant-CTA
-    const slots = [
-      (g) => g[0] < 1.5,                                 // le hook : visage direct
-      (g) => g[0] > D * 0.22 && g[0] < D * 0.5,
-      (g) => g[0] >= D * 0.45 && g[0] < D * 0.75,
-      (g) => g[1] > D - 13 && g[0] > D * 0.6,            // avant le CTA
-    ]
-    for (const pred of slots) {
-      if (avWins.length >= 4) break
-      const w = takeGap(pred, 6.5)
-      if (w) avWins.push(w)
-    }
-    plan.avatarSegments = avWins.sort((a, b) => a.start - b.start)
+    // FUSION, pas remplacement : la fenêtre du hook venue du plan reste
+    plan.avatarSegments = [...(plan.avatarSegments || []), ...avWins].sort((a, b) => a.start - b.start)
     for (const w of avWins) claim(w.start, w.end)
   }
   const avWinsAll = plan.avatarSegments || []

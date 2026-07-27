@@ -214,11 +214,26 @@ function screenContent(id, s, tone, liveT0, t1, W) {
       const bd = Math.max(2, Math.round(6 / sh.z))
       const tIn = r2(Math.max(liveT0, st.t))
       const tOut = r2(Math.min(t1 - 0.05, k + 1 < steps.length ? Math.max(tIn + 0.35, steps[k + 1].t - 0.22) : t1))
+      // Le texte tapé doit avoir la taille du texte DE L'APP, pas celle du cadre :
+      // calé sur la hauteur du champ il sortait de la boîte et se superposait au
+      // placeholder de la capture (« ici sur le screen ça ne fait pas très beau »).
+      // Il est donc dimensionné sur la largeur de la capture — la même échelle que
+      // l'interface — et un fond opaque masque le texte d'origine avant d'écrire.
+      const fs = Math.max(8, Math.round(cw * 0.0115))
+      const padX = Math.round(fs * 1.1)
+      const tall = bh > fs * 3.4                          // vraie zone de texte → on écrit en HAUT
+      const maxW = Math.max(20, bw - padX * 2 - bd * 2)
+      const tw = Math.min(maxW, Math.round(String(st.type || '').length * fs * 0.52))
       boxes += `<div id="${id}b${k}" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;` +
         `border:${bd}px solid ${ACC};border-radius:${Math.max(6, Math.round(16 / sh.z))}px;` +
         `box-shadow:0 0 0 ${Math.round(600 / sh.z)}px rgba(10,10,14,.42);opacity:0">` +
-        (st.type ? `<div id="${id}t${k}" style="position:absolute;left:${Math.round(bh * 0.22)}px;top:50%;transform:translateY(-50%);` +
-          `width:0;overflow:hidden;white-space:nowrap;font-size:${Math.round(bh * 0.26)}px;color:#F2F2F4;font-family:'Inter',sans-serif">${esc(st.type)}</div>` : '') +
+        (st.type
+          ? `<div id="${id}m${k}" style="position:absolute;inset:0;border-radius:${Math.max(4, Math.round(12 / sh.z))}px;background:#0F0F16;opacity:0"></div>` +
+            `<div id="${id}t${k}" style="position:absolute;left:${padX}px;${tall ? `top:${Math.round(fs * 1.1)}px` : 'top:50%;transform:translateY(-50%)'};` +
+            `width:0;overflow:hidden;white-space:nowrap;font-size:${fs}px;line-height:1.25;color:#EDEDF2;font-family:'Inter',sans-serif">${esc(st.type)}</div>` +
+            `<div id="${id}c${k}" style="position:absolute;left:${padX}px;${tall ? `top:${Math.round(fs * 1.1)}px` : `top:50%;margin-top:${-Math.round(fs * 0.6)}px`};` +
+            `width:${Math.max(1, Math.round(fs * 0.09))}px;height:${Math.round(fs * 1.2)}px;background:${ACC};opacity:0"></div>`
+          : '') +
         `</div>`
       // caméra : elle part vers l'étape juste avant que le mot tombe
       if (k > 0) {
@@ -227,8 +242,12 @@ function screenContent(id, s, tone, liveT0, t1, W) {
       js2 += `\n  tl.fromTo('#${id}b${k}',{scale:1.35,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(1.8)'},${tIn});`
       js2 += `\n  tl.to('#${id}b${k}',{opacity:0,duration:0.22,ease:'power1.in'},${tOut});`
       if (st.type) {
-        const tw = r2(Math.max(0.5, Math.min(1.5, tOut - tIn - 0.25)))
-        js2 += `\n  tl.to('#${id}t${k}',{width:${Math.round(bw - bh * 0.44)},duration:${tw},ease:'none'},${r2(tIn + 0.14)});`
+        const td = r2(Math.max(0.5, Math.min(1.5, tOut - tIn - 0.25)))
+        js2 += `\n  tl.to('#${id}m${k}',{opacity:1,duration:0.16,ease:'power1.out'},${r2(tIn + 0.06)});`
+        js2 += `\n  tl.to('#${id}t${k}',{width:${tw},duration:${td},ease:'none'},${r2(tIn + 0.16)});`
+        js2 += `\n  tl.to('#${id}c${k}',{opacity:1,duration:0.1},${r2(tIn + 0.16)});`
+        js2 += `\n  tl.to('#${id}c${k}',{x:${tw},duration:${td},ease:'none'},${r2(tIn + 0.16)});`
+        js2 += `\n  tl.to('#${id}c${k}',{opacity:0.15,duration:0.28,repeat:3,yoyo:true,ease:'steps(1)'},${r2(tIn + 0.16 + td)});`
       }
       // curseur : il VA sur l'élément puis appuie — le geste que la voix décrit
       js2 += `\n  tl.to('#${id}cu',{x:${sh.sx},y:${sh.sy},duration:0.34,ease:'power2.inOut'},${r2(Math.max(liveT0, tIn - 0.3))});`
