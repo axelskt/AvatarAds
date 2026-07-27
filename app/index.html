@@ -11052,7 +11052,7 @@ async function _mtHedraScene(imageFile, audioWav, format, modelId){
   // 3) génération (aspect_ratio par format)
   const ar = format==='paysage' ? '16:9' : '9:16';
   const g=await hPost('/generations',{ type:'video', ai_model_id:modelId, audio_id:aId, start_keyframe_id:iId,
-    generated_video_inputs:{ text_prompt:'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects still', aspect_ratio:ar, character_orientation:'video', resolution:'720p' } });
+    generated_video_inputs:{ text_prompt:'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects still', aspect_ratio:ar, character_orientation:'video', resolution:'1080p' } });
   if(!g.ok){ const t=await g.text(); throw new Error('Hedra génération '+g.status+' '+t.slice(0,80)); }
   const gId=(await g.json()).id; if(!gId) throw new Error('Hedra : pas d\'id de génération');
   // 4) polling (jusqu'à 6 min)
@@ -15981,7 +15981,7 @@ async function callHedra(audioBlob){
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
         aspect_ratio: aspectRatio,
         character_orientation: 'video',
-        resolution: '720p'
+        resolution: '1080p'
       }
     };
     if(imageId) genBody.start_keyframe_id = imageId;
@@ -21585,7 +21585,7 @@ async function _cartoonSeedanceGenerate(animPrompt, progTxt){
     generated_video_inputs: {
       text_prompt: animPrompt,
       aspect_ratio: '9:16',
-      resolution: '720p',
+      resolution: '1080p',
       duration_ms: (window._cartoonSeedanceDur || 5000)
     }
   };

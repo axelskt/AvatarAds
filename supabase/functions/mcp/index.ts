@@ -735,7 +735,10 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
         aspect_ratio: aspect,
         character_orientation: 'video',
-        resolution: '720p',
+        // 1080p natif : Character-3 le rend sans surcoût (7 crédits Hedra par
+        // seconde quelle que soit la définition, grille du 27/07/2026). Le 720p
+        // était arbitraire — il bridait toutes les vidéos avatar du produit.
+        resolution: '1080p',
       },
     }
     if (imageId) genBody.start_keyframe_id = imageId
