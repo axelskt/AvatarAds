@@ -248,7 +248,8 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // apple partage le moteur du dynamique (cf. build-composition) : il partage
     // donc aussi sa dérivation, pas celle des styles posés sur une base.
     if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') {
-      try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) }
+      // assetFiles : sans lui la dérivation ne voit pas les médias de l'utilisateur
+      try { deriveDynamicSlides(plan, { assetFiles }) } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot

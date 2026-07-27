@@ -185,6 +185,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // le moteur dynamique les rejoue au clic, avec curseur et cadrage — une version
   // strictement plus riche de ce que le serveur sait exprimer.
   const consumedByPlan = new Set()
+
+  // ── 0a · LES MÉDIAS DE L'UTILISATEUR PASSENT AVANT TOUT ─────────────────────
+  // Le moteur dynamique ignorait purement et simplement `plan.broll` : ses
+  // images et ses vidéos n'entraient JAMAIS dans ce style (le b-roll vidéo de
+  // #111 n'avait été branché que sur le chemin classique). Axel, sur Cartoon 16 :
+  // « quand je parle de la qualité image / vidéo, ajoute cette vidéo en fond ».
+  // Sa vidéo montre le résultat ; aucune animation fabriquée ne fait mieux que
+  // ça. Elle passe donc devant, y compris devant le chef d'orchestre.
+  {
+    const files = opts.assetFiles || {}
+    let n = 0
+    for (const b of (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))) {
+      const src = files[b.assetId]
+      if (!src) continue
+      const a = r2(b.start || 0), e = r2(b.end ?? a + 3)
+      if (add({ anim: 'media', src, assetId: b.assetId, hero: !!b.hero }, a, e)) n++
+    }
+    if (n) console.log(`▶ ${n} média(s) de l'utilisateur posé(s) en fond`)
+  }
+
   {
     // certaines animations ont besoin d'un visuel : le comparatif veut un vrai
     // visage, `tools` veut le logo. Le serveur ne connaît pas ces fichiers.
@@ -511,22 +531,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const kw = w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : ''
       if (kw && kw.length <= 14) {
         const verb = norm(words[last.i].text).startsWith('ecris') ? 'Écris' : 'Commente'
-        let a = Math.max(last.start - 0.1, D - 6)
-        // LE CTA NE MANGE PLUS SES SCÈNES. Il était prioritaire et rognait tout
-        // ce qui débordait sur lui : sur Cartoon 16, il avalait `engage` et
-        // `money`, les deux dernières propositions du chef d'orchestre. Axel :
-        // « je veux 100 % de ses scènes ». Le CTA se contente donc de la fin
-        // LIBRE — et s'il n'y a pas la place, il n'existe pas : la vidéo se
-        // termine sur ce que le chef d'orchestre a prévu, ce qui est très bien.
-        for (const [s, e] of taken) if (e > a && s < D) a = Math.max(a, r2(e + 0.05))
-        if (D - 0.1 - a >= 1.2) {
-          out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
-            items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, Math.min(last.start, D - 1.2))) }],
-            start: r2(a), end: r2(D - 0.1) })
-          claim(a, D)
-        } else {
-          console.log(`▶ CTA final écarté : la fin est déjà occupée par le chef d'orchestre`)
+        const a = Math.max(last.start - 0.1, D - 5)
+        // LE CTA GARDE LA FIN. J'avais essayé de le faire céder pour atteindre
+        // 100 % des scènes du chef d'orchestre ; Axel, en voyant le résultat :
+        // « CTA à revoir, là y'a besoin de texte pour le CTA pour mettre le mot,
+        // comme on avait fait dans v18 ». Le mot à commenter EST l'appel à
+        // l'action — c'est le seul endroit de la vidéo où le texte prime sur
+        // l'animation. La règle des 100 % vaut donc pour le CORPS de la vidéo,
+        // pas pour ses cinq dernières secondes.
+        for (let i = out.length - 1; i >= 0; i--) {
+          const s = out[i]
+          if ((s.end || 0) <= a + 0.05) continue
+          s.end = r2(a - 0.05)
+          if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
         }
+        out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
+          items: [{ text: `${verb} « ${kw} »`, t: r2(Math.max(a + 0.3, last.start)) }],
+          start: r2(a), end: r2(D - 0.1) })
+        claim(a, D)
       }
     }
   }
