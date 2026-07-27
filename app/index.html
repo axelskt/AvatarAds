@@ -3328,7 +3328,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             <span id="mExpDurVal">6 s</span> <span id="mExpDurChev" style="color:var(--text-3);font-size:11px">⌄</span>
           </button>
+          <!-- VOIX : le mobile n'avait AUCUN contrôle de voix — « Pas de voix »
+               (et Gemini / ElevenLabs / import) étaient injoignables au téléphone -->
+          <button id="mExpVoiceBtn" onclick="_mExpVoiceTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
+            <svg id="mExpVoiceIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7"/></svg>
+            <span id="mExpVoiceVal">Voix</span> <span style="color:var(--text-3);font-size:11px">⌄</span>
+          </button>
         </div>
+        <div id="mExpVoicePop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)"></div>
         <div id="mExpQualPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;gap:6px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
           <button onclick="_expPickQual('720p');_mExpQualTog();_mExpSync()" id="mExpQual720" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">720p · rapide</button>
           <button onclick="_expPickQual('1080p');_mExpQualTog();_mExpSync()" id="mExpQual1080" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">1080p · dès 8 s</button>
@@ -19368,9 +19375,11 @@ const EXP_VOICES = [
   { id:'gemini', name:'Gemini TTS',         desc:'voix générée · 11 timbres' },
   { id:'eleven', name:'ElevenLabs',         desc:'Voice Design + presets' },
   { id:'import', name:'Importer une voix',  desc:'MP3 · WAV · M4A · MP4' },
+  { id:'none',   name:'Pas de voix',        desc:'vidéo muette · tu ajoutes le son après' },
 ];
 // Icônes SVG par mode de voix
 const _EXP_VOICE_ICON = {
+  none:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>',
   native:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
   gemini:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>',
   eleven:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7M19 5.5a8 8 0 0 1 0 13"/></svg>',
@@ -19515,7 +19524,8 @@ function _expLoadVoiceFile(file){
 }
 // Génère la voix selon le mode choisi → renvoie un Blob audio (ou null pour native)
 async function _expBuildVoice(){
-  if(window._expVoice==='native') return null;
+  // « Pas de voix » : Veo tourne sans audio, on ne génère RIEN — la vidéo sort muette
+  if(window._expVoice==='native' || window._expVoice==='none') return null;
   if(window._expVoice==='import'){
     if(!window._expVoiceBlob) throw new Error('Importe un fichier voix d\'abord');
     return window._expVoiceBlob;
@@ -19736,7 +19746,7 @@ async function expressCreate(){
 
     // 0) Voix personnalisée (Gemini / ElevenLabs / import) → générée d'abord
     let voiceBlob=null;
-    if(window._expVoice!=='native'){
+    if(window._expVoice!=='native' && window._expVoice!=='none'){
       setP(4,'🎙 Préparation de la voix…');
       voiceBlob = await _expBuildVoice();
     }
@@ -19802,7 +19812,8 @@ async function expressCreate(){
         _usedAudio = false;
         startResp = await _startVeo(_veoModel, false);
         if(!startResp.ok){ const e2=await startResp.json().catch(()=>({})); throw new Error(e2?.error?.message||('HTTP '+startResp.status)); }
-        try{ if(!voiceBlob && prompt){ setP(Math.max(p,20),'🎙 Génération de la voix…'); voiceBlob = await _expTtsFallback(prompt); window._expVoiceBlob = voiceBlob; } }catch(_){}
+        // …sauf si l'user a demandé « Pas de voix » : on ne lui en fabrique pas une
+        try{ if(window._expVoice!=='none' && !voiceBlob && prompt){ setP(Math.max(p,20),'🎙 Génération de la voix…'); voiceBlob = await _expTtsFallback(prompt); window._expVoiceBlob = voiceBlob; } }catch(_){}
       } else { throw new Error(msg); }
     }
     const { name:opName } = await startResp.json();
@@ -25513,6 +25524,29 @@ window._mExpQualTog=function(){
   p.style.display=open?'none':'flex';
   var d=document.getElementById('mExpDurPop'); if(d) d.style.display='none';
   var f=document.getElementById('mExpFmtPop'); if(f) f.style.display='none';
+  var v=document.getElementById('mExpVoicePop'); if(v) v.style.display='none';
+};
+/* VOIX (mobile) : la même liste que le bureau, en feuille au-dessus de la barre.
+   Sans elle, « Pas de voix » n'existait que sur grand écran. */
+window._mExpVoiceTog=function(){
+  var p=document.getElementById('mExpVoicePop'); if(!p) return;
+  var open=p.style.display!=='none';
+  ['mExpDurPop','mExpFmtPop','mExpQualPop'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
+  if(open){ p.style.display='none'; return; }
+  p.innerHTML=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).map(function(v){
+    var on=(window._expVoice===v.id);
+    return '<button onclick="_mExpPickVoice(\''+v.id+'\')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;margin-bottom:4px;border:none;border-radius:10px;background:'+(on?'var(--surface-2)':'transparent')+';color:'+(on?'var(--text)':'var(--text-3)')+';font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">'
+      + '<span style="flex-shrink:0;display:flex;color:'+(on?'var(--accent-2)':'var(--text-3)')+'">'+((typeof _EXP_VOICE_ICON!=='undefined'&&_EXP_VOICE_ICON[v.id])||'')+'</span>'
+      + '<span style="flex:1;min-width:0"><span style="display:block">'+v.name+'</span><span style="display:block;font-size:11px;font-weight:400;color:var(--text-3);margin-top:1px">'+v.desc+'</span></span>'
+      + (on?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':'')
+      + '</button>';
+  }).join('');
+  p.style.display='block';
+};
+window._mExpPickVoice=function(id){
+  if(typeof _expPickVoice==='function') _expPickVoice(id);
+  var p=document.getElementById('mExpVoicePop'); if(p) p.style.display='none';
+  _mExpSync();
 };
 function _mExpFill(el,v){
   var mn=+el.min||0, mx=+el.max||5;
@@ -25566,6 +25600,14 @@ window._mExpSync=function(){
     q720.style.background=is1080?'transparent':'var(--surface-2)'; q720.style.color=is1080?'var(--text-3)':'var(--text)';
     q1080.style.background=is1080?'var(--surface-2)':'transparent'; q1080.style.color=is1080?'var(--text)':'var(--text-3)';
   }
+  var vId=(window._expVoice||'native');
+  var vMeta=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).find(function(x){return x.id===vId;});
+  var vv=document.getElementById('mExpVoiceVal');
+  /* libellés courts : la pilule fait ~1/4 de la largeur de l'écran */
+  var SHORT={ native:'Auto', gemini:'Gemini', eleven:'Eleven', import:'Import', none:'Muet' };
+  if(vv) vv.textContent=SHORT[vId]||(vMeta?vMeta.name:'Voix');
+  var vi=document.getElementById('mExpVoiceIcon');
+  if(vi) vi.innerHTML=(vId==='none') ? '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M17 9l4 6M21 9l-4 6"/>' : '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7"/>';
   var mp=document.getElementById('mExpPrompt'), dp=document.getElementById('expPrompt');
   if(mp&&dp&&document.activeElement!==mp&&dp.value!==mp.value) mp.value=dp.value;
 };
