@@ -172,34 +172,113 @@ function typoContent(id, p, tone, liveT0) {
   return { html, js, sfx: [{ kind: 'mo-pop-3', t: r2(tAt), vol: 0.45 }] }
 }
 
-// capture d'app : ENTIÈRE et CENTRÉE (Axel : « les frames sont coupées, on doit
-// bien voir la page ») — elle tient dans la largeur, la caméra ne fait qu'un
-// léger travelling vers la zone nommée, sans jamais sortir du cadre
+// LA CAPTURE EST PILOTÉE, PAS CONTEMPLÉE.
+//
+// Avant : la capture s'affichait, la caméra dérivait vaguement et un cadre orange
+// se posait au CENTRE par défaut — donc sur du vide. Axel : « quand je dis image
+// IA il met un rectangle sur une page noire… il ne sélectionne pas ce que je
+// dis », « quand je dis décrire l'image il montre le format, y'a aucune logique ».
+//
+// Maintenant la scène reçoit des ÉTAPES (`s.steps`), une par chose nommée dans la
+// voix, avec la position mesurée de l'élément (screen-spots.mjs). À chaque étape :
+// la caméra va dessus, le curseur arrive, il clique, le cadre se pose PILE sur
+// l'élément. Le prompt, lui, se tape dans son champ. C'est une démo, pas une
+// image fixe — et tout est calé sur le mot prononcé.
 function screenContent(id, s, tone, liveT0, t1, W) {
   const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
   const dur = r2(t1 - liveT0)
   const cw = 980, ch = Math.round(cw / 1.6)
   const cx = Math.round((W - cw) / 2), cy = 620
+  const steps = (s.steps || []).filter((st) => st && st.spot).sort((a, b) => a.t - b.t)
+
+  // — cadrage d'une étape : l'élément occupe ~42 % de la largeur visible, et la
+  //   caméra reste toujours à l'intérieur de l'image (jamais de bord vide)
+  const shot = (sp) => {
+    const z = Math.min(3.1, Math.max(1.35, 0.42 / Math.max(0.04, sp.w)))
+    const cl = (v, span) => Math.min(1 - span, Math.max(span, v))
+    const px = cl(sp.x, 1 / (2 * z)), py = cl(sp.y, 1 / (2 * z))
+    return { z, tx: r2(-(px - 0.5) * cw * z), ty: r2(-(py - 0.5) * ch * z),
+      // où l'élément apparaît À L'ÉCRAN une fois la caméra posée (pour le curseur)
+      sx: r2(cw / 2 + (sp.x - px) * cw * z), sy: r2(ch / 2 + (sp.y - py) * ch * z) }
+  }
+
+  let boxes = '', js2 = ''
+  const sfx = []
+  if (steps.length) {
+    const first = shot(steps[0].spot)
+    steps.forEach((st, k) => {
+      const sp = st.spot
+      const sh = shot(sp)
+      const bw = Math.round(sp.w * cw), bh = Math.round(sp.h * ch)
+      const bx = Math.round(sp.x * cw - bw / 2), by = Math.round(sp.y * ch - bh / 2)
+      const bd = Math.max(2, Math.round(6 / sh.z))
+      const tIn = r2(Math.max(liveT0, st.t))
+      const tOut = r2(Math.min(t1 - 0.05, k + 1 < steps.length ? Math.max(tIn + 0.35, steps[k + 1].t - 0.22) : t1))
+      boxes += `<div id="${id}b${k}" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;` +
+        `border:${bd}px solid ${ACC};border-radius:${Math.max(6, Math.round(16 / sh.z))}px;` +
+        `box-shadow:0 0 0 ${Math.round(600 / sh.z)}px rgba(10,10,14,.42);opacity:0">` +
+        (st.type ? `<div id="${id}t${k}" style="position:absolute;left:${Math.round(bh * 0.22)}px;top:50%;transform:translateY(-50%);` +
+          `width:0;overflow:hidden;white-space:nowrap;font-size:${Math.round(bh * 0.26)}px;color:#F2F2F4;font-family:'Inter',sans-serif">${esc(st.type)}</div>` : '') +
+        `</div>`
+      // caméra : elle part vers l'étape juste avant que le mot tombe
+      if (k > 0) {
+        js2 += `\n  tl.to('#${id}ci',{scale:${sh.z},x:${sh.tx},y:${sh.ty},duration:0.46,ease:'power2.inOut'},${r2(Math.max(liveT0, tIn - 0.34))});`
+      }
+      js2 += `\n  tl.fromTo('#${id}b${k}',{scale:1.35,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(1.8)'},${tIn});`
+      js2 += `\n  tl.to('#${id}b${k}',{opacity:0,duration:0.22,ease:'power1.in'},${tOut});`
+      if (st.type) {
+        const tw = r2(Math.max(0.5, Math.min(1.5, tOut - tIn - 0.25)))
+        js2 += `\n  tl.to('#${id}t${k}',{width:${Math.round(bw - bh * 0.44)},duration:${tw},ease:'none'},${r2(tIn + 0.14)});`
+      }
+      // curseur : il VA sur l'élément puis appuie — le geste que la voix décrit
+      js2 += `\n  tl.to('#${id}cu',{x:${sh.sx},y:${sh.sy},duration:0.34,ease:'power2.inOut'},${r2(Math.max(liveT0, tIn - 0.3))});`
+      js2 += `\n  tl.to('#${id}cu',{scale:0.82,duration:0.09,ease:'power2.in'},${tIn});`
+      js2 += `\n  tl.to('#${id}cu',{scale:1,duration:0.16,ease:'back.out(3)'},${r2(tIn + 0.09)});`
+      js2 += `\n  tl.fromTo('#${id}rp${k}',{scale:0.3,opacity:0.55},{scale:2.2,opacity:0,duration:0.5,ease:'power2.out'},${tIn});`
+      sfx.push({ kind: st.type ? 'mo-pop-1' : 'mo-tap-1', t: r2(tIn), vol: 0.8 })
+    })
+    // les ondes de clic vivent hors de l'image zoomée : taille constante
+    const ripples = steps.map((_, k) =>
+      `<div id="${id}rp${k}" style="position:absolute;left:-46px;top:-46px;width:92px;height:92px;border-radius:50%;background:${ACC};opacity:0"></div>`).join('')
+    js2 = `
+  tl.fromTo('#${id}cw',{y:200,opacity:0,scale:0.95},{y:0,opacity:1,scale:1,duration:0.44,ease:'power3.out'},${liveT0});
+  tl.set('#${id}ci',{scale:${first.z},x:${first.tx},y:${first.ty}},${liveT0});
+  tl.set('#${id}cu',{x:${first.sx},y:${r2(first.sy + 180)}},${liveT0});
+  tl.fromTo('#${id}cu',{opacity:0},{opacity:1,duration:0.2},${r2(liveT0 + 0.2)});` + js2
+    const html = `
+        <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
+          <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.45)">
+            <div id="${id}ci" style="position:absolute;inset:0">
+              <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
+              ${boxes}
+            </div>
+            <div id="${id}cu" style="position:absolute;left:0;top:0;width:0;height:0;opacity:0">
+              ${ripples}
+              <svg viewBox="0 0 24 24" width="52" height="52" style="position:absolute;left:-4px;top:-2px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))">
+                <path d="M5 2l14 9.2-6.4 1.1L15 19.6l-2.9 1.2-2.5-6.6L5 18.6z" fill="#FFFFFF" stroke="#141418" stroke-width="1.2"/></svg>
+            </div>
+          </div>
+        </div>`
+    return { html, js: js2, sfx }
+  }
+
+  // — pas d'étapes : ancien comportement (léger travelling, pas de cadre au hasard)
   const z = Math.min(1.45, Math.max(1.1, (s.screenZoom || 1.6) * 0.75))
   const cl = (v) => Math.min(1 - 1 / (2 * z), Math.max(1 / (2 * z), v ?? 0.5))
   const tx = r2((0.5 - cl(s.screenX)) * z * cw), ty = r2((0.5 - cl(s.screenY)) * z * ch)
-  const bw = Math.round((s.boxW || 0.2) * cw * 1.08), bh = Math.round((s.boxH || 0.1) * ch * 1.3)
-  const bx = Math.round((s.boxX || 0.5) * cw - bw / 2), by = Math.round((s.boxY || 0.5) * ch - bh / 2)
   const html = `
         <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
           <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.4)">
             <div id="${id}ci" style="position:absolute;inset:0">
               <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
-              <div id="${id}bx" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;border:4px solid ${ACC};border-radius:14px;opacity:0"></div>
             </div>
           </div>
         </div>`
   const js = `
   tl.fromTo('#${id}cw',{y:220,opacity:0,scale:0.94},{y:0,opacity:1,scale:1,duration:0.48,ease:'power3.out'},${liveT0});
   tl.fromTo('#${id}ci',{scale:1,x:0,y:0},{scale:${z},x:${tx},y:${ty},duration:${r2(Math.max(0.5, dur * 0.65))},ease:'power2.inOut'},${r2(liveT0 + 0.35)});
-  tl.fromTo('#${id}bx',{scale:1.5,opacity:0},{scale:1,opacity:1,duration:0.36,ease:'back.out(1.6)'},${r2(liveT0 + 0.55)});
   tl.to('#${id}cw',{y:-20,duration:${r2(Math.max(0.4, dur - 0.5))},ease:'none'},${r2(liveT0 + 0.5)});`
-  return { html, js, sfx: [{ kind: 'mouse-click', t: r2(liveT0 + 0.55), vol: 0.7 }] }
+  return { html, js, sfx: [{ kind: 'mo-swipe-1', t: r2(liveT0 + 0.1), vol: 0.5 }] }
 }
 
 // ── 3 · GÉNÉRATION ──────────────────────────────────────────────────────────
@@ -334,6 +413,17 @@ export function buildDynamicComposition(plan, opts = {}) {
         // classique) : ici pas de sous-titres → on recentre et on grossit
         inner += `<div style="position:absolute;inset:0;transform:translateY(${Math.round(H * 0.17)}px) scale(1.22);transform-origin:50% 38%">${ah}</div>`
         pjs += animJs(p.kind, s, r2)
+        // SON = ACTION, aussi pour les animations : elles arrivaient en SILENCE
+        // (« y'a même plus de bruitage », Axel). Chacune sonne comme ce qu'elle
+        // montre — un tampon claque, un post part, un compteur monte.
+        const AN_SFX = { sign: ['mo-impact-1', 0.75, 0.95], tools: ['mo-pop-2', 0.6, 0.15],
+          post: ['mo-swipe-1', 0.6, 0.6], compare: ['mo-impact-3', 0.6, 0.2],
+          grow: ['mo-riser-1', 0.5, 0.15], money: ['mo-pop-1', 0.6, 0.2],
+          network: ['mo-pop-2', 0.55, 0.2], clock: ['mo-tick-1', 0.5, 0.15],
+          target: ['mo-impact-1', 0.6, 0.25], idea: ['mo-pop-3', 0.6, 0.2] }
+        const a = AN_SFX[p.kind] || ['mo-pop-3', 0.5, 0.15]
+        sfxAdd.push({ kind: a[0], t: r2(liveT0 + a[2]), vol: a[1] })
+        if (p.kind === 'post') sfxAdd.push({ kind: 'mo-pop-1', t: r2(liveT0 + 1.05), vol: 0.65 })
       }
 
     } else if (p.kind === 'punch') {
@@ -383,7 +473,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.to('#pn${i - 1}',{${Object.entries(to).map(([k, v]) => `${k}:${v}`).join(',')},duration:${PUSH},ease:'power2.inOut'},${t0});
   tl.set('#pn${i - 1}',{autoAlpha:0},${r2(t0 + PUSH + 0.04)});`
       if (p.kind !== 'typo' && t0 - lastWhoosh > 2.5) {
-        sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.42 })
+        sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.55 })
         lastWhoosh = t0; whooshFlip = !whooshFlip
       }
     }
@@ -412,7 +502,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     if (s.t - lastT < 0.2) continue
     lastByKind[s.kind] = s.t; lastT = s.t
     sfxOut.push(s)
-    if (sfxOut.length >= 22) break
+    if (sfxOut.length >= 34) break
   }
   plan.sfx = sfxOut
   if (kbAdd.length) plan.keyboard = [...(plan.keyboard || []), ...kbAdd]

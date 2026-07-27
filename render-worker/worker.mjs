@@ -13,7 +13,7 @@
 //       télécharge les entrées du storage, rend, uploade le MP4, marque done.
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
@@ -61,6 +61,18 @@ const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args[i +
 function sh(cmd, cwd) { execSync(cmd, { cwd, stdio: 'inherit' }) }
 function ffprobe(file, entries) {
   return execFileSync('ffprobe', ['-v', 'error', '-show_entries', entries, '-of', 'csv=p=0', file]).toString().trim()
+}
+
+// sonie intégrée d'un fichier (LUFS) — sert à savoir combien il MANQUE, plutôt
+// que de laisser loudnorm re-traiter une voix déjà masterisée par l'app.
+function loudnessOf(file) {
+  try {
+    const r = spawnSync('ffmpeg', ['-nostdin', '-hide_banner', '-i', file, '-map', '0:a:0',
+      '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], { encoding: 'utf8' })
+    const hits = [...String(r.stderr || '').matchAll(/I:\s*(-?\d+(?:\.\d+)?)\s*LUFS/g)]
+    const v = hits.length ? parseFloat(hits[hits.length - 1][1]) : NaN
+    return Number.isFinite(v) ? v : null
+  } catch (_) { return null }
 }
 
 // ── cœur : job (dossier local) → MP4 final ──
@@ -201,6 +213,9 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
     if (plan.slideStyle === 'dynamic') { try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) } }
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
+    // une animation peut avoir besoin d'images (le visage du comparatif fake/réel,
+    // le logo dans « les bons outils ») : elles le déclarent dans `assets`
+    for (const sl of plan.slides || []) for (const a of sl.assets || []) wantedScreens.add(a)
     // #149 · fenêtres avatar SANS clips lipsync → la photo avatar sert de fallback
     if ((plan.avatarSegments || []).length && !existsSync(join(jobDir, 'avatar'))) wantedScreens.add('hook-qualite')
     if (wantedScreens.size) {
@@ -260,12 +275,28 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     let idx = 2
 
     if (baseHasAudio) {
-      // LA VOIX EST NORMALISÉE SEULE, et pas dans le mix. Avant, loudnorm tournait
-      // sur le mélange final : chaque bruitage ajoutait de l'énergie, loudnorm
-      // rabaissait TOUT pour tenir la cible, et la voix d'Axel plongeait sous le
-      // bruitage. Ici elle est calée à -14 LUFS une fois pour toutes, en amont ;
-      // les bruitages viennent PAR-DESSUS sans jamais la faire bouger.
-      filters.push(`[1:a]apad=whole_dur=${plan.duration},loudnorm=I=-14:TP=-2:LRA=9[voice]`)
+      // LA VOIX EST NORMALISÉE SEULE, et pas dans le mix : un loudnorm sur le
+      // mélange rabaissait TOUT dès qu'on ajoutait un bruitage.
+      //
+      // …mais on ne la re-comprime pas non plus. Le nettoyage audio de l'app la
+      // livre déjà masterisée (EQ + compresseur + limiteur, -14 LUFS) ; repasser
+      // loudnorm par-dessus lui reprenait ~3 dB à chaque rendu — la vidéo sortait
+      // à -17,6 LUFS, plus faible que le reste du fil, et les bruitages semblaient
+      // avoir disparu avec elle. On MESURE donc sa sonie et on applique le gain
+      // statique qui manque, sans toucher à sa dynamique.
+      //
+      // Une source BRUTE (dictaphone, clip filmé sans nettoyage) reste confiée à
+      // loudnorm : elle a besoin d'être recalée en dynamique, pas seulement en
+      // gain. Le raccourci ne s'applique qu'à une voix déjà dans la cible (±2,5 dB).
+      const lufs = loudnessOf(basePath)
+      const gain = lufs == null ? null : -14 - lufs
+      if (gain != null && Math.abs(gain) <= 2.5) {
+        console.log(`▶ voix déjà masterisée (${lufs.toFixed(1)} LUFS) → gain ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} dB, pas de re-compression`)
+        filters.push(`[1:a]apad=whole_dur=${plan.duration}${Math.abs(gain) > 0.2 ? `,volume=${gain.toFixed(2)}dB` : ''}[voice]`)
+      } else {
+        if (lufs != null) console.log(`▶ voix brute (${lufs.toFixed(1)} LUFS) → loudnorm`)
+        filters.push(`[1:a]apad=whole_dur=${plan.duration},loudnorm=I=-14:TP=-2:LRA=9[voice]`)
+      }
       mixIns.push('[voice]')
     }
 

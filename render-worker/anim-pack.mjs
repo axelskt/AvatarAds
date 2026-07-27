@@ -25,7 +25,10 @@ export const ANIM_EMOJI_SET = {
 
 export const ANIMS = ['split', 'voice', 'list', 'grow', 'compare', 'type', 'phone', 'clock', 'avatar', 'logo', 'faceless', 'money', 'idea', 'target', 'lock', 'search', 'rocket', 'network', 'check',
   'swipe', 'views', 'engage', 'calendar', 'upload', 'stack', 'swap', 'cut', 'steps', 'toggle',
-  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result']
+  'screen', 'flow', 'funnel', 'orbit', 'bars2', 'wallet', 'countup', 'result',
+  // #147 · « les animations n'ont aucun rapport avec ce que je dis » :
+  // signer un contrat, les outils eux-mêmes, publier sur les plateformes
+  'sign', 'tools', 'post']
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -116,11 +119,89 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'compare': {
-      // deux blocs, l'un tombe et l'autre monte : un avant/après
-      const cw = Math.round(f.w * 0.42)
+      const cw = Math.round(f.w * 0.44), ch = f.h
+      const rd = Math.round(cw * 0.12)
+      // AVEC un visage (s.photo), on montre la VRAIE différence : la même image
+      // dégradée/glitchée à gauche, nette à droite. Axel : « quand je dis fake ça
+      // met ça » — deux rectangles de couleur ne veulent rien dire.
+      if (s.photo) {
+        const src = `tuto/${s.photo}.png`
+        const badge = (ok) => `<span style="position:absolute;right:${Math.round(cw * 0.07)}px;top:${Math.round(cw * 0.07)}px;width:${Math.round(cw * 0.24)}px;height:${Math.round(cw * 0.24)}px;border-radius:50%;background:${ok ? '#22C55E' : '#FF3B30'};display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.4)">
+          <svg viewBox="0 0 24 24" width="58%" height="58%">${ok
+            ? '<path d="M5 12.6l4.4 4.4L19 7.4" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'
+            : '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>'}</svg></span>`
+        const tag = (txt, col) => `<span style="position:absolute;left:50%;transform:translateX(-50%);bottom:${Math.round(cw * 0.08)}px;padding:${Math.round(cw * 0.05)}px ${Math.round(cw * 0.13)}px;border-radius:99px;background:${col};color:#fff;font-family:'Archivo Black',sans-serif;font-size:${Math.round(cw * 0.13)}px;letter-spacing:.02em;white-space:nowrap">${txt}</span>`
+        const card = (k, inner) => `<div class="an-p" id="${id}c${k}" style="left:${k === 1 ? 0 : f.w - cw}px;top:0;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#141418;box-shadow:0 30px 70px rgba(0,0,0,.45)">${inner}</div>`
+        return box(
+          card(1, `<img src="${src}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover;filter:saturate(.28) contrast(1.75) brightness(.82) blur(1.5px)"/>
+            <span id="${id}gl" style="position:absolute;left:3%;top:0;width:100%;height:100%;background:url('${src}') center/cover;opacity:.42;mix-blend-mode:screen;filter:hue-rotate(150deg) saturate(3)"></span>
+            <span style="position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(0,0,0,.30) 0 3px,rgba(0,0,0,0) 3px 8px)"></span>
+            ${badge(false)}${tag('FAKE', '#FF3B30')}`) +
+          card(2, `<img src="${src}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover"/>
+            ${badge(true)}${tag('RÉEL', '#22C55E')}`))
+      }
+      // sans visage : deux blocs, l'un tombe et l'autre monte — un avant/après
       return box(
         `<div class="an-p" id="${id}c1" style="left:0;top:0;width:${cw}px;height:100%;background:${P.soft};border:2px solid ${P.line};border-radius:${Math.round(f.h * 0.08)}px"></div>` +
         `<div class="an-p" id="${id}c2" style="left:${f.w - cw}px;top:0;width:${cw}px;height:100%;background:${P.acc};border-radius:${Math.round(f.h * 0.08)}px"></div>`)
+    }
+    case 'sign': {
+      // « ceux qui SIGNENT des CONTRATS » : un contrat, une signature qui
+      // s'écrit sous le stylo, un tampon qui claque. Un sac de billets ne dit
+      // pas « contrat » — la signature, si.
+      const dw = Math.round(f.w * 0.62), dh = Math.round(f.h * 0.9)
+      const dx = Math.round((f.w - dw) / 2), dy = Math.round((f.h - dh) / 2)
+      const pad = Math.round(dw * 0.11)
+      const line = (k, wpc) => `<span style="position:absolute;left:${pad}px;top:${Math.round(dh * (0.16 + k * 0.085))}px;width:${Math.round((dw - pad * 2) * wpc)}px;height:${Math.round(dh * 0.028)}px;border-radius:99px;background:rgba(20,20,24,.16)"></span>`
+      const sigW = Math.round(dw * 0.56), sigX = pad, sigY = Math.round(dh * 0.66)
+      return box(`<div class="an-p" id="${id}dc" style="left:${dx}px;top:${dy}px;width:${dw}px;height:${dh}px;border-radius:${Math.round(dw * 0.06)}px;background:#FAF8F5;box-shadow:0 34px 80px rgba(0,0,0,.45)">
+        <span style="position:absolute;left:${pad}px;top:${Math.round(dh * 0.07)}px;width:${Math.round(dw * 0.34)}px;height:${Math.round(dh * 0.045)}px;border-radius:99px;background:${P.acc}"></span>
+        ${line(0, 1)}${line(1, 0.92)}${line(2, 0.98)}${line(3, 0.74)}${line(4, 0.88)}
+        <svg id="${id}sg" viewBox="0 0 200 60" style="position:absolute;left:${sigX}px;top:${sigY}px;width:${sigW}px;height:${Math.round(sigW * 0.3)}px;overflow:visible">
+          <path id="${id}sp" d="M4 44 C 26 6, 40 8, 46 30 C 52 52, 64 52, 72 28 C 80 4, 96 6, 100 34 C 104 56, 122 50, 136 26 C 150 2, 176 10, 196 26"
+            fill="none" stroke="#141418" stroke-width="6" stroke-linecap="round"/></svg>
+        <span style="position:absolute;left:${sigX}px;top:${sigY + Math.round(sigW * 0.31)}px;width:${sigW}px;height:3px;background:rgba(20,20,24,.22)"></span>
+        <span id="${id}pn" style="position:absolute;left:${sigX}px;top:${sigY - Math.round(sigW * 0.16)}px;width:${Math.round(dw * 0.045)}px;height:${Math.round(dh * 0.3)}px;border-radius:${Math.round(dw * 0.02)}px;background:linear-gradient(180deg,#2B2B33,#0E0E13);transform:rotate(22deg);transform-origin:50% 100%"></span>
+        <span id="${id}st" style="position:absolute;right:${pad}px;bottom:${Math.round(dh * 0.07)}px;padding:${Math.round(dh * 0.022)}px ${Math.round(dw * 0.06)}px;border:${Math.max(3, Math.round(dw * 0.014))}px solid #22C55E;border-radius:${Math.round(dw * 0.03)}px;color:#22C55E;font-family:'Archivo Black',sans-serif;font-size:${Math.round(dh * 0.062)}px;transform:rotate(-11deg);opacity:0">SIGNÉ</span>
+      </div>`)
+    }
+    case 'tools': {
+      // « les bons OUTILS » : les outils eux-mêmes, pas trois ronds numérotés.
+      const td = Math.round(Math.min(f.w * 0.36, f.h * 0.62))
+      const gap = Math.round(td * 0.34)
+      const x0 = Math.round((f.w - (td * 2 + gap)) / 2), y0 = Math.round((f.h - td) / 2)
+      const r = Math.round(td * 0.24)
+      return box(`
+        <div class="an-p" id="${id}t1" style="left:${x0}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
+          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+        <div class="an-p" id="${id}t2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 26px 60px rgba(0,0,0,.45)">
+          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(td * 0.26)}px;color:#D97757;letter-spacing:-.02em">Claude</span></div>
+        <span id="${id}pl" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.round(gap * 0.5)}px;height:${Math.max(4, Math.round(gap * 0.09))}px;margin-left:${-Math.round(gap * 0.25)}px;margin-top:${-Math.round(gap * 0.045)}px;border-radius:99px;background:${P.ink};opacity:0"></span>
+        <span id="${id}pv" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.max(4, Math.round(gap * 0.09))}px;height:${Math.round(gap * 0.5)}px;margin-left:${-Math.round(gap * 0.045)}px;margin-top:${-Math.round(gap * 0.25)}px;border-radius:99px;background:${P.ink};opacity:0"></span>`)
+    }
+    case 'post': {
+      // « POSTER SUR LES RÉSEAUX » : la vidéo part vers les plateformes et
+      // chacune valide. Avant : des bulles de commentaire — « aucun rapport ».
+      const td = Math.round(f.w * 0.19), gap = Math.round(td * 0.36)
+      const tot = td * 3 + gap * 2, x0 = Math.round((f.w - tot) / 2)
+      const glyph = [
+        // note de musique · appareil photo · lecture
+        '<path d="M9 18.2a2.6 2.6 0 102.6 2.6V7.4l6.4-1.6v9.1a2.6 2.6 0 102.6 2.6V2.5L9 4.9z" fill="#fff"/>',
+        '<rect x="3.6" y="5.4" width="16.8" height="13.6" rx="4.2" fill="none" stroke="#fff" stroke-width="2.1"/><circle cx="12" cy="12.2" r="3.5" fill="none" stroke="#fff" stroke-width="2.1"/>',
+        '<path d="M9.4 7.6l8 4.6-8 4.6z" fill="#fff"/>',
+      ]
+      const bg = ['#0E0E13', 'linear-gradient(135deg,#F9A03F,#E1306C 55%,#833AB4)', '#E62117']
+      let h = ''
+      for (let k = 0; k < 3; k++) {
+        h += `<div class="an-p an-pt" id="${id}p${k}" style="left:${x0 + k * (td + gap)}px;top:0;width:${td}px;height:${td}px;border-radius:${Math.round(td * 0.28)}px;background:${bg[k]};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(0,0,0,.4)">
+          <svg viewBox="0 0 24 24" width="52%" height="52%">${glyph[k]}</svg>
+          <span id="${id}k${k}" style="position:absolute;right:${-Math.round(td * 0.1)}px;bottom:${-Math.round(td * 0.1)}px;width:${Math.round(td * 0.42)}px;height:${Math.round(td * 0.42)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0">
+            <svg viewBox="0 0 24 24" width="62%" height="62%"><path d="M5 12.6l4.4 4.4L19 7.4" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>`
+      }
+      const vw = Math.round(f.w * 0.24), vh = Math.round(vw * 1.62)
+      h += `<div class="an-p" id="${id}vd" style="left:${Math.round((f.w - vw) / 2)}px;top:${f.h - vh}px;width:${vw}px;height:${vh}px;border-radius:${Math.round(vw * 0.13)}px;background:linear-gradient(160deg,${P.acc},#7A3BFF);box-shadow:0 26px 60px rgba(0,0,0,.45)">
+        <span style="position:absolute;left:50%;top:50%;margin:-${Math.round(vw * 0.11)}px 0 0 -${Math.round(vw * 0.09)}px;width:0;height:0;border-left:${Math.round(vw * 0.24)}px solid rgba(255,255,255,.92);border-top:${Math.round(vw * 0.14)}px solid transparent;border-bottom:${Math.round(vw * 0.14)}px solid transparent"></span></div>`
+      return box(h)
     }
     case 'type': {
       // du texte qui s'écrit, avec le curseur : un script qui se rédige tout seul
@@ -570,7 +651,41 @@ export function animJs(name, s, r2) {
     case 'compare':
       return inOut + `
       tl.fromTo('#${id}c1', { y: 0, autoAlpha: 0 }, { y: 24, autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, ${t0});
-      tl.fromTo('#${id}c2', { y: 0, autoAlpha: 0 }, { y: -24, autoAlpha: 1, duration: 0.45, ease: 'back.out(1.6)' }, ${r2(t0 + 0.15)});`
+      tl.fromTo('#${id}c2', { y: 0, autoAlpha: 0 }, { y: -24, autoAlpha: 1, duration: 0.45, ease: 'back.out(1.6)' }, ${r2(t0 + 0.15)});
+      tl.fromTo('#${id}gl', { x: '-3%' }, { x: '5%', duration: 0.28, repeat: 3, yoyo: true, ease: 'steps(2)' }, ${r2(t0 + 0.3)});`
+    case 'sign': {
+      // la signature s'écrit SOUS le stylo qui avance, puis le tampon claque.
+      // Le trait est révélé par son propre dash : longueur lue à l'exécution,
+      // donc juste quelle que soit la taille de rendu.
+      const wr = r2(Math.min(0.95, Math.max(0.5, dur * 0.45)))   // durée d'écriture
+      // le stylo parcourt la largeur de la signature = 0.56/0.045 fois sa propre
+      // largeur (mêmes ratios que le HTML ci-dessus)
+      return inOut + `
+      tl.fromTo('#${id}dc', { y: 40, scale: 0.94, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.4, ease: 'back.out(1.5)', transformOrigin: '50% 50%' }, ${t0});
+      (function(){ var p = document.getElementById('${id}sp');
+        if (p && p.getTotalLength) { var L = p.getTotalLength();
+          p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L; } })();
+      tl.to('#${id}sp', { strokeDashoffset: 0, duration: ${wr}, ease: 'power1.inOut' }, ${r2(t0 + 0.34)});
+      tl.fromTo('#${id}pn', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16 }, ${r2(t0 + 0.28)});
+      tl.fromTo('#${id}pn', { xPercent: 0 }, { xPercent: 1180, duration: ${wr}, ease: 'power1.inOut' }, ${r2(t0 + 0.34)});
+      tl.to('#${id}pn', { autoAlpha: 0, duration: 0.18 }, ${r2(t0 + 0.34 + wr)});
+      tl.fromTo('#${id}st', { scale: 2.4, opacity: 0, rotation: -34 }, { scale: 1, opacity: 1, rotation: -11, duration: 0.3, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.44 + wr)});`
+    }
+    case 'tools':
+      // les deux outils se rejoignent, le + apparaît entre eux
+      return inOut + `
+      tl.fromTo('#${id}t1', { xPercent: -60, rotation: -10, autoAlpha: 0 }, { xPercent: 0, rotation: 0, autoAlpha: 1, duration: 0.42, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}t2', { xPercent: 60, rotation: 10, autoAlpha: 0 }, { xPercent: 0, rotation: 0, autoAlpha: 1, duration: 0.42, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.16)});
+      tl.fromTo(['#${id}pl', '#${id}pv'], { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.26, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.52)});
+      tl.to(['#${id}t1', '#${id}t2'], { scale: 1.06, duration: ${r2(Math.max(0.5, dur - 0.9))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.72)});`
+    case 'post':
+      // la vidéo monte vers les plateformes, chacune valide à son tour
+      return inOut + `
+      tl.fromTo('#${id}an .an-pt', { y: -30, scale: 0.7, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.09, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}vd', { yPercent: 45, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'power3.out' }, ${r2(t0 + 0.16)});
+      tl.to('#${id}vd', { yPercent: -118, scale: 0.3, autoAlpha: 0, duration: 0.52, ease: 'power2.in', transformOrigin: '50% 0%' }, ${r2(t0 + 0.56)});
+      tl.fromTo(['#${id}k0', '#${id}k1', '#${id}k2'], { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.24, stagger: 0.15, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + 1.0)});
+      tl.to('#${id}an .an-pt', { scale: 1.12, duration: 0.18, stagger: 0.15, yoyo: true, repeat: 1, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 1.0)});`
     case 'type':
       return inOut + `
       (function(){ var el = document.querySelector('#${id}t'), cur = document.querySelector('#${id}cur');
