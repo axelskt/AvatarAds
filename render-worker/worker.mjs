@@ -21,6 +21,7 @@ import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
+import { deriveClassicSlides } from './classic-derive.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
@@ -212,6 +213,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // ui avec screen:'site-home' & co — sans ça leurs images ne sont jamais copiées
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
     if (plan.slideStyle === 'dynamic') { try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) } }
+    // …et les styles classiques (apple, editorial, glass, word) reçoivent les
+    // mêmes corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
+    // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
+    else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
     // une animation peut avoir besoin d'images (le visage du comparatif fake/réel,
     // le logo dans « les bons outils ») : elles le déclarent dans `assets`
