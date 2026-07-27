@@ -32,6 +32,10 @@ import { spotOf } from './screen-spots.mjs'
 // « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
 // partout (Axel : « mets cet avatar dans le hook et comme avatar principal »).
 const AVATAR_MAIN = 'hook-qualite'
+// …à ne pas confondre avec l'avatar OBTENU : « et là tu obtiens ton premier
+// avatar » montre le résultat d'Images IA, pas le visage qui parle depuis le
+// hook. Deux images distinctes, deux rôles distincts.
+const AVATAR_RESULT = 'lena'
 
 const r2 = (n) => Math.round(n * 100) / 100
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
@@ -249,13 +253,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     })
   }
 
-  // « ton premier avatar » → on MONTRE l'avatar, pas une carte de texte.
-  // Le même visage que le hook : c'est SON avatar, il doit être reconnaissable.
-  // APRÈS la démo : le visage arrive quand le clic sur « Générer » a eu lieu,
-  // il ne mange pas la fin du parcours dans l'app.
+  // « ton premier avatar » → on MONTRE l'avatar OBTENU (le résultat d'Images IA),
+  // pas une carte de texte ni le visage du hook. APRÈS la démo : il arrive quand
+  // le clic sur « Générer » a eu lieu, il ne mange pas la fin du parcours.
   {
     const hit = findSeq(words, 'premier avatar') || findSeq(words, 'ton avatar')
-    if (hit) add({ anim: 'ui', ui: 'photo', screen: AVATAR_MAIN },
+    if (hit) add({ anim: 'ui', ui: 'photo', screen: AVATAR_RESULT, assets: [AVATAR_RESULT] },
       Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 1.8))
   }
 
