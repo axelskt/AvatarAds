@@ -813,9 +813,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
           && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text)))
         const cut = r2(Math.min(first.end ?? 4, back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2))
         const brand = String(hit.text).replace(/[.,!?«»"]/g, '').trim()
+        // une vidéo de marque déclarée `hook` remplace la pastille dessinée
+        const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
+        const src = hk ? (opts.assetFiles || {})[hk.assetId] : ''
         if (cut > (first.start || 0) + 0.8) {
           segs.splice(0, 1,
-            { ...first, end: cut, duo: { brand } },
+            { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) } },
             ...((first.end ?? 0) - cut > 0.6 ? [{ ...first, start: cut }] : []))
           console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
         }
