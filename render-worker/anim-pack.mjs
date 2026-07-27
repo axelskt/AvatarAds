@@ -39,7 +39,11 @@ export function animPalette(vs) {
     ink: light ? '#111111' : '#FFFFFF',
     soft: light ? 'rgba(17,17,17,.10)' : 'rgba(255,255,255,.14)',
     line: light ? 'rgba(17,17,17,.20)' : 'rgba(255,255,255,.28)',
-    acc: vs === 'apple' ? '#0071E3' : vs === 'editorial' ? '#111111' : WORD_SHAPES[0],
+    // apple gardait le bleu iOS — mais l'accent de la marque est orange, et
+    // TOUTES les captures d'application le sont : deux animations sur trois
+    // viraient au bleu à côté d'un cadre de sélection orange. La signature Apple
+    // vient des fonds clairs, des dégradés et de la typo, pas de son bleu.
+    acc: vs === 'apple' ? '#FF5A36' : vs === 'editorial' ? '#111111' : WORD_SHAPES[0],
     acc2: vs === 'apple' ? '#6E6E73' : WORD_SHAPES[1],
   }
 }

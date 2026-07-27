@@ -245,9 +245,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // ⚠️ dériver AVANT de lister les captures : la dérivation #148 ajoute des scènes
     // ui avec screen:'site-home' & co — sans ça leurs images ne sont jamais copiées
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
-    if (plan.slideStyle === 'dynamic') { try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) } }
-    // …et les styles classiques (apple, editorial, glass, word) reçoivent les
-    // mêmes corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
+    // apple partage le moteur du dynamique (cf. build-composition) : il partage
+    // donc aussi sa dérivation, pas celle des styles posés sur une base.
+    if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') {
+      try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) }
+    }
+    // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
+    // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
     else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))

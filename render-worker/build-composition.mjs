@@ -25,7 +25,13 @@ const KO = '#ef4444'
 export function buildComposition(plan, opts = {}) {
   // « Dynamique » (#147) est un moteur à part : chaîne de panneaux qui se poussent,
   // pas des scènes posées sur une base. Il émet son propre document complet.
-  if (plan.slideStyle === 'dynamic') return buildDynamicComposition(plan, opts)
+  // APPLE PASSE PAR LE MÊME MOTEUR. Il vivait ici, en scènes posées sur la base :
+  // captures minuscules et inclinées, un mot en bas de page. Axel, en comparant à
+  // la v18 : « c'est pas du tout le rendu que je veux, je veux que le modèle
+  // ressemble principalement à la v18 ». Apple devient donc une PEAU du moteur
+  // dynamique (deux tons clairs qui alternent, accent iOS, Inter 800 au lieu
+  // d'Archivo Black) — même composition, même montée en puissance.
+  if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') return buildDynamicComposition(plan, opts)
   const W = opts.width || 1080
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
