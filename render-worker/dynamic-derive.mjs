@@ -101,9 +101,16 @@ export const MODULES = [
   { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
   { pat: ['enregistreur'],          screen: '07-enregistreur' },
   { pat: ['parrainage'],            screen: '08-parrainage' },
+  // #129 · le tuto « connecter le MCP » : deux écrans de plus, récoltés comme
+  // les autres. « mon compte tout en bas » puis « connecter Cloud » — Scribe
+  // transcrit systématiquement « Claude » en « Cloud », donc les deux formes.
+  { pat: ['mon compte'],            screen: '10-mon-compte' },
+  { pat: ['connecter cloud', 'connecter claude', 'connecte claude'], screen: '11-connecter-claude' },
 ]
 // mot prononcé → élément de l'interface (positions dans screen-spots.mjs)
 export const STEP_WORDS = [
+  { spot: 'cle',      w: ['cle', 'generer', 'genere', 'copie', 'copies'] },
+  { spot: 'connect',  w: ['connecteurs', 'connecteur', 'connecter', 'connecte'] },
   { spot: 'style',    w: ['photo', 'reelle', 'reel', 'realiste', 'pixar', 'cartoon', 'ugc', 'mascotte', 'style', 'studio'] },
   { spot: 'format',   w: ['format', 'portrait', 'paysage', 'vertical', 'horizontal'] },
   { spot: 'duree',    w: ['duree'] },
@@ -186,6 +193,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // strictement plus riche de ce que le serveur sait exprimer.
   const consumedByPlan = new Set()
   let placeServerText = () => {}
+  let placeServerAnims = () => {}
+  let placeLocalAnims = () => {}
 
   // ── 0 · LE HOOK EST UN VISAGE ───────────────────────────────────────────────
   // Une vidéo face caméra s'ouvre sur celui qui parle, pas sur une forme. La
@@ -234,19 +243,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const an = String(sl.anim || '')
       return an && an !== 'screen' && an !== 'ui' && ANIMS.includes(an)
     }
-    // TOUTES SES ANIMATIONS, D'ABORD, SANS EXCEPTION. Axel : « je veux 100 % de
-    // ses scènes ». Elles passent avant tout le reste — y compris avant ses
-    // propres cartes de section, qui sont de longues bannières héritées du mode
-    // classique (une seule couvre parfois 12 s et cinq animations). Sur un écran
-    // qui ne montre qu'une chose à la fois, c'est l'animation qui gagne.
+    // TOUTES SES ANIMATIONS, SANS EXCEPTION. Axel : « je veux 100 % de ses
+    // scènes ». Elles passent avant ses propres cartes de section — de longues
+    // bannières héritées du mode classique, dont une seule couvre parfois 12 s
+    // et cinq animations. Sur un écran qui ne montre qu'une chose à la fois,
+    // c'est l'animation qui gagne.
+    //
+    // MAIS APRÈS LES DÉMOS D'INTERFACE (§1). Le partage est net : le chef
+    // d'orchestre sait proposer une ANIMATION, il ne sait pas proposer une
+    // visite guidée de l'app — curseur, cadre sur le bouton nommé, texte tapé.
+    // Sur Cartoon 16 il posait `network` sur « connecter » et `lock` sur
+    // « la clé », là où Axel voulait l'écran : « il faut qu'il aille sur
+    // AvatarAds montrer connecter Claude ». Une vraie capture bat une forme.
     let placedAnim = 0
-    for (const sl of srv) {
-      if (!isAnim(sl)) continue
-      const an = String(sl.anim)
-      const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
-      // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste
-      if (add({ ...sl, title: '', text: '', items: [], ...(NEEDS[an] || {}) }, a, b)) {
-        consumedByPlan.add(sl); placedAnim++
+    placeServerAnims = () => {
+      for (const sl of srv) {
+        if (!isAnim(sl) || consumedByPlan.has(sl)) continue
+        const an = String(sl.anim)
+        const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
+        // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste
+        if (add({ ...sl, title: '', text: '', items: [], ...(NEEDS[an] || {}) }, a, b)) {
+          consumedByPlan.add(sl); placedAnim++
+        }
       }
     }
     // SES CARTES DE TEXTE PASSENT APRÈS LES DÉMOS D'INTERFACE (§1/§2). Posées ici,
@@ -454,7 +472,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // avec une cible pendant qu'il parle de pros, un interrupteur sur « outils ».
   // Ici chaque animation est ancrée sur un mot qui la JUSTIFIE. Les anims
   // serveur non ancrées sont écartées plus bas (§4) — mieux vaut un slam.
-  {
+  // …mais elles ne comblent que ce que le chef d'orchestre a laissé vide : c'est
+  // LUI qui choisit les animations, mes tables ne sont qu'un filet (cf. §0).
+  placeLocalAnims = () => {
     for (const v of VOICE_ANIMS) {
       const hit = findAny(words, v.w)
       if (!hit) continue
@@ -535,7 +555,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
-  // …et MAINTENANT ses cartes de texte, dans ce que les démos ont laissé libre.
+  // L'ORDRE DE PRIORITÉ, une fois les démos d'interface posées :
+  //   1. ce que le chef d'orchestre a choisi (il lit la phrase)
+  //   2. mes tables de mots-clés (elles ne font que reconnaître)
+  //   3. ses cartes de texte, dans ce qu'il reste
+  placeServerAnims()
+  placeLocalAnims()
   placeServerText()
 
   // ── 3 · CTA final : si aucun punch serveur ne COUVRE la fin, on le synthétise
