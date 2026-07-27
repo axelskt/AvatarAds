@@ -241,6 +241,20 @@ function toolDefs(isOwner: boolean) {
       },
     },
     {
+      name: 'lipsync_video',
+      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale (Hedra Character-3). Coût : 1 crédit/seconde (durée de l'audio, max 60 s), débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          image_url: { type: 'string', description: "URL publique de la photo de l'avatar (PNG/JPEG/WebP)." },
+          audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
+          aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
+          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
+        },
+        required: ['image_url', 'audio_url'],
+      },
+    },
+    {
       name: 'montage_ia',
       description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), puis le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
@@ -826,6 +840,80 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   }
 }
 
+// ── Lipsync sur audio existant (#149, brique avatar du Montage IA) ──
+// Réutilise la chaîne Hedra du Générateur, mais SANS TTS : l'audio est la vraie
+// voix de l'utilisateur (un segment découpé du montage). check_avatar_video
+// assure le suivi (même kind 'avatar' dans mcp_jobs).
+async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
+  if (!HEDRA_API_KEY) return toolErr('Lipsync indisponible (configuration serveur incomplète).')
+  const imageUrl = String(args.image_url || '').trim()
+  const audioUrl = String(args.audio_url || '').trim()
+  if (!imageUrl || !audioUrl) return toolErr('image_url et audio_url sont requis.')
+  const aspect = ['1:1', '16:9'].includes(String(args.aspect_ratio)) ? String(args.aspect_ratio) : '9:16'
+
+  const img = await fetchUserFile(imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (image_url)")
+  if (typeof img === 'string') return toolErr(img)
+  const aud = await fetchUserFile(audioUrl, 15_000_000, /^(audio\/|application\/octet-stream)/, "l'audio (audio_url)")
+  if (typeof aud === 'string') return toolErr(aud)
+
+  const secs = Math.ceil(Math.max(1, estimateAudioSeconds(aud.bytes, aud.contentType)))
+  if (secs > 60) return toolErr(`Segment audio trop long (~${secs} s) : 60 secondes maximum par clip lipsync.`)
+  const cost = secs // 1 crédit/seconde (lipsync seul, pas de TTS)
+  const userId = String(profile.id)
+
+  if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${secs} s × 1), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  const gate = await preSpendGate(profile, ctx, args, cost, `clip lipsync ~${secs} s (${aspect})`, 'lipsync_video')
+  if (gate) return gate
+
+  const bal = await spendCredits(userId, cost)
+  if (bal === null) return toolErr('Erreur crédits — réessaie.')
+  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
+
+  let launched = false
+  try {
+    const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
+    const audioId = await hedraUploadAsset('audio', 'segment.' + ext, aud.bytes, aud.contentType)
+    if (!audioId) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
+    const imageId = await hedraUploadAsset('image', 'avatar.jpg', img.bytes, img.contentType)
+    if (!imageId) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
+
+    const genRes = await hedraFetch('/generations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'video',
+        ai_model_id: HEDRA_MODEL_ID,
+        audio_id: audioId,
+        start_keyframe_id: imageId,
+        generated_video_inputs: {
+          text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+          aspect_ratio: aspect,
+          character_orientation: 'video',
+          resolution: '720p',
+        },
+      }),
+    })
+    if (!genRes.ok) {
+      const err = await genRes.text().catch(() => '')
+      return toolErr(`Lancement Hedra échoué (${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
+    }
+    const gen = await genRes.json().catch(() => ({}))
+    if (!gen.id) return toolErr("Hedra n'a pas retourné d'ID de génération — crédits remboursés.")
+
+    const { data: job, error } = await svc.from('mcp_jobs')
+      .insert({ user_id: userId, kind: 'avatar', op_name: String(gen.id), credits_cost: cost }).select('id').single()
+    if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
+    launched = true
+    return toolText(
+      `🎬 Lipsync lancé ! (~${secs} s, ${aspect}, −${cost} crédits)
+job_id : ${job.id}
+Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 minutes).`)
+  } finally {
+    if (!launched) await refundCredits(userId, cost)
+  }
+}
+
 // ── Montage IA + Éditeur via Claude (#125) ──
 // Le chef d'orchestre (edge orchestrate) fait transcription + plan ; le rendu part
 // dans render_jobs, consommé par le moteur de rendu serveur. La mémoire de marque
@@ -1215,6 +1303,7 @@ serve(async (req) => {
       else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)
       else if (name === 'check_avatar_video') out = await runCheckAvatarVideo(profile, args)
       else if (name === 'clean_audio') out = await runCleanAudio(profile, args, ctx)
+      else if (name === 'lipsync_video') out = await runLipsyncVideo(profile, args, ctx)
       else if (name === 'montage_ia') out = await runMontageIA(profile, args, ctx)
       else if (name === 'check_montage') out = await runCheckMontage(profile, args)
       else if (name === 'get_montage_plan') out = await runGetMontagePlan(profile, args)
