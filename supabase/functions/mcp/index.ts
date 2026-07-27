@@ -870,8 +870,12 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   const script = String(args.script || '').trim().slice(0, 4000)
   const got = await fetchUserFile(audioUrl, MONTAGE_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "l'audio (audio_url)")
   if (typeof got === 'string') return toolErr(got)
-  const durEst = Math.min(180, Math.max(5,
-    Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)))
+  const durRaw = Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)
+  // format court assumé : au-delà de 90 s le montage perd son rythme (et coûte cher à rendre)
+  if (durRaw > 90.5) {
+    return toolErr(`Audio trop long (~${Math.round(durRaw)} s) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.`)
+  }
+  const durEst = Math.max(5, durRaw)
   const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST
   const userId = String(profile.id)
 
