@@ -38,12 +38,12 @@ const AVATAR_MAIN = 'hook-qualite'
 const AVATAR_RESULT = 'lena'
 
 const r2 = (n) => Math.round(n * 100) / 100
-const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+export const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
 
 // fenêtre de recherche : suite de mots normalisés → { start, end, i } du premier mot.
 // Un token long (≥5) matche aussi en PRÉFIXE : « qualité-là. » (→ qualitela)
 // doit répondre au motif « qualite » — les suffixes collés ne cassent pas la détection.
-function findSeq(words, pattern, from = 0) {
+export function findSeq(words, pattern, from = 0) {
   const toks = pattern.split(/\s+/).map(norm).filter(Boolean)
   const eq = (n, tk) => n === tk || (tk.length >= 5 && n.startsWith(tk))
   for (let j = from; j + toks.length <= words.length; j++) {
@@ -54,7 +54,7 @@ function findSeq(words, pattern, from = 0) {
   return null
 }
 // premier mot (parmi plusieurs formes) après `from`
-function findAny(words, forms, from = 0) {
+export function findAny(words, forms, from = 0) {
   for (let j = from; j < words.length; j++) {
     const n = norm(words[j].text)
     if (forms.some((f) => n === norm(f))) return { start: words[j].start, end: words[j].end, i: j }
@@ -86,7 +86,54 @@ const PICKS = {
 // SYNCHRO : un visuel doit arriver juste AVANT le mot qu'il illustre — 0,15 s,
 // le temps que l'œil l'attrape. Au-delà il tombe sur le mot de liaison d'avant
 // (Axel : les scènes démarraient sur « dans », « le », « et », « qu'à »).
-const LEAD = 0.15
+export const LEAD = 0.15
+
+// ── LE VOCABULAIRE PARTAGÉ ──────────────────────────────────────────────────
+// Ces tables décrivent CE QUE LA VOIX DÉSIGNE, pas comment on le dessine : elles
+// valent donc pour le style Dynamique comme pour les styles classiques (apple,
+// editorial, glass), qui les consomment via classic-derive.mjs.
+export const MODULES = [
+  { pat: ['image ia', 'images ia'], screen: '01-imagesia' },
+  { pat: ['express'],               screen: '02-express' },
+  { pat: ['generateur'],            screen: '03-generateur' },
+  { pat: ['montage ia'],            screen: '04-montageia' },
+  { pat: ['bibliotheque'],          screen: '05-bibliotheque' },
+  { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
+  { pat: ['enregistreur'],          screen: '07-enregistreur' },
+  { pat: ['parrainage'],            screen: '08-parrainage' },
+]
+// mot prononcé → élément de l'interface (positions dans screen-spots.mjs)
+export const STEP_WORDS = [
+  { spot: 'style',    w: ['photo', 'reelle', 'reel', 'realiste', 'pixar', 'cartoon', 'ugc', 'mascotte', 'style', 'studio'] },
+  { spot: 'format',   w: ['format', 'portrait', 'paysage', 'vertical', 'horizontal'] },
+  { spot: 'duree',    w: ['duree'] },
+  { spot: 'qualite',  w: ['qualite', 'premium'] },
+  { spot: 'upload',   w: ['ajouter', 'ajoute', 'importer', 'importe', 'reference'] },
+  { spot: 'prompt',   w: ['decrire', 'decris', 'ecrire', 'ecris', 'prompt', 'description'] },
+  { spot: 'generate', w: ['genere', 'generes', 'generer', 'lance', 'lancer'] },
+]
+// « générer » n'est un clic sur le bouton que s'il porte sur un objet de
+// l'app (« génère L'IMAGE ») — pas dans « générer DES millions de vues ».
+export const GEN_OBJ = ['image', 'limage', 'video', 'lavideo', 'animation', 'lanimation', 'la', 'le', 'ma', 'ta', 'ton']
+// ce qui se tape dans le champ quand la voix ne cite rien : la propre
+// suggestion de l'app, donc un prompt crédible plutôt qu'un texte inventé
+export const PROMPT_SAMPLE = {
+  '01-imagesia': 'Entrepreneur en studio moderne, face caméra',
+  '02-express': 'Il présente son outil face caméra, ton punchy',
+}
+// mot prononcé → animation qui l'ILLUSTRE. `pad` = combien de temps elle tient
+// l'écran après le mot (une clause longue a besoin de plus qu'un mot isolé).
+export const VOICE_ANIMS = [
+  { w: ['signent', 'signe', 'signer', 'contrat', 'contrats'],                           anim: 'sign', pad: 2.4 },
+  { w: ['marque', 'marques', 'client', 'clients', 'communaute', 'audience', 'abonnes'], anim: 'network' },
+  { w: ['euros', 'argent', 'prix', 'paye', 'payer', 'gagner'],                          anim: 'money' },
+  { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
+  { w: ['fake', 'faux', 'realisme', 'realiste'],                       anim: 'compare', pad: 2.1, photo: 'hook-qualite' },
+  { w: ['outils', 'outil', 'methode', 'technique', 'strategie'], anim: 'tools', pad: 2.0, assets: ['logo-avatarads'] },
+  { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
+  { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
+  { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
+]
 
 export function deriveDynamicSlides(plan, opts = {}) {
   if (plan.slideStyle !== 'dynamic') return
@@ -188,35 +235,6 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // donc une démo : la capture du module, et un clic au bon endroit à chaque mot.
   // Avant, le cadre orange se posait au centre par défaut — sur du vide.
   {
-    const MODULES = [
-      { pat: ['image ia', 'images ia'], screen: '01-imagesia' },
-      { pat: ['express'],               screen: '02-express' },
-      { pat: ['generateur'],            screen: '03-generateur' },
-      { pat: ['montage ia'],            screen: '04-montageia' },
-      { pat: ['bibliotheque'],          screen: '05-bibliotheque' },
-      { pat: ['nettoyage audio'],       screen: '06-nettoyage-audio' },
-      { pat: ['enregistreur'],          screen: '07-enregistreur' },
-      { pat: ['parrainage'],            screen: '08-parrainage' },
-    ]
-    // mot prononcé → élément de l'interface (positions dans screen-spots.mjs)
-    const STEP_WORDS = [
-      { spot: 'style',    w: ['photo', 'reelle', 'reel', 'realiste', 'pixar', 'cartoon', 'ugc', 'mascotte', 'style', 'studio'] },
-      { spot: 'format',   w: ['format', 'portrait', 'paysage', 'vertical', 'horizontal'] },
-      { spot: 'duree',    w: ['duree'] },
-      { spot: 'qualite',  w: ['qualite', 'premium'] },
-      { spot: 'upload',   w: ['ajouter', 'ajoute', 'importer', 'importe', 'reference'] },
-      { spot: 'prompt',   w: ['decrire', 'decris', 'ecrire', 'ecris', 'prompt', 'description'] },
-      { spot: 'generate', w: ['genere', 'generes', 'generer', 'lance', 'lancer'] },
-    ]
-    // « générer » n'est un clic sur le bouton que s'il porte sur un objet de
-    // l'app (« génère L'IMAGE ») — pas dans « générer DES millions de vues ».
-    const GEN_OBJ = ['image', 'limage', 'video', 'lavideo', 'animation', 'lanimation', 'la', 'le', 'ma', 'ta', 'ton']
-    // ce qui se tape dans le champ quand la voix ne cite rien : la propre
-    // suggestion de l'app, donc un prompt crédible plutôt qu'un texte inventé
-    const PROMPT_SAMPLE = {
-      '01-imagesia': 'Entrepreneur en studio moderne, face caméra',
-      '02-express': 'Il présente son outil face caméra, ton punchy',
-    }
     const hits = []
     for (const m of MODULES) {
       let hit = null
@@ -328,24 +346,6 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // Ici chaque animation est ancrée sur un mot qui la JUSTIFIE. Les anims
   // serveur non ancrées sont écartées plus bas (§4) — mieux vaut un slam.
   {
-    // `pad` : jusqu'où l'animation tient l'écran après le mot. Une phrase longue
-    // (« signent des contrats à plusieurs milliers d'euros ») a besoin de tenir
-    // toute la clause, sinon un mot seul vient la couper au milieu.
-    const VOICE_ANIMS = [
-      { w: ['signent', 'signe', 'signer', 'contrat', 'contrats'],                           anim: 'sign', pad: 2.4 },
-      { w: ['marque', 'marques', 'client', 'clients', 'communaute', 'audience', 'abonnes'], anim: 'network' },
-      { w: ['euros', 'argent', 'prix', 'paye', 'payer', 'gagner'],                          anim: 'money' },
-      { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
-      // « fake » / « réalisme » : on MONTRE la différence sur un vrai visage —
-      // deux rectangles de couleur ne disent rien (Axel : « quand je dis fake
-      // ça met ça, ça ne correspond pas à ce que je veux »)
-      { w: ['fake', 'faux', 'realisme', 'realiste'],                       anim: 'compare', pad: 2.1, photo: AVATAR_MAIN },
-      // « les bons outils » → les outils EUX-MÊMES : AvatarAds puis Claude
-      { w: ['outils', 'outil', 'methode', 'technique', 'strategie'], anim: 'tools', pad: 2.0, assets: ['logo-avatarads'] },
-      { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
-      { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
-      { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
-    ]
     for (const v of VOICE_ANIMS) {
       const hit = findAny(words, v.w)
       if (!hit) continue
