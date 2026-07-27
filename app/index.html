@@ -22099,12 +22099,16 @@ async function _acExportVideo(btn){
 // Appliqué APRÈS la coupe des silences : compresser avant remonterait le
 // plancher de bruit et fausserait le seuil adaptatif de détection.
 // ─────────────────────────────────────────────────────────────────────────────
+// `target` = LUFS visés (norme ITU-R BS.1770). −14 LUFS est la cible commune
+// TikTok / Instagram / YouTube : en dessous la vidéo sonne faible face aux
+// autres, au-dessus les plateformes rabaissent (et on aurait écrasé la
+// dynamique pour rien).
 let _acVoicePreset = 'podcast';   // 'off' | 'natural' | 'podcast' | 'punch'
 const _AC_VOICE_PRESETS = {
   off: null,
-  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
-  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
-  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
+  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -15 },
+  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -14 },
+  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -13 },
 };
 
 async function _acMasterVoice(buf, presetKey){
@@ -22151,33 +22155,82 @@ async function _acMasterVoice(buf, presetKey){
   src.start(0);
 
   const out = await off.startRendering();
-  return _acNormalizeLoudness(out, P.target);
+  // Calage LUFS puis VRAI limiteur — dans cet ordre : on monte au niveau
+  // plateforme, et le limiteur rattrape les crêtes que ce gain fait dépasser.
+  const lufs = await _acMeasureLUFS(out);
+  if(isFinite(lufs)){
+    const g = Math.min(4, Math.pow(10, (P.target - lufs) / 20));   // +12 dB max
+    if(Math.abs(g - 1) > 0.02){
+      for(let c = 0; c < out.numberOfChannels; c++){
+        const chd = out.getChannelData(c);
+        for(let i = 0; i < chd.length; i++) chd[i] *= g;
+      }
+    }
+  }
+  return _acLimitPeaks(out, 0.84);   // plafond -1,5 dBFS
 }
 
-// Calage du niveau : médiane RMS des zones PARLÉES (les silences ne comptent
-// pas), puis garde-fou de crête à -1 dBFS. Deux enregistrements différents
-// sortent au même volume perçu — comme un vrai master.
-function _acNormalizeLoudness(buf, targetDb){
-  const d = buf.getChannelData(0);
-  const win = Math.round(buf.sampleRate * 0.4);
-  const blocks = [];
-  for(let i = 0; i < d.length; i += win){
-    let s = 0; const e = Math.min(i + win, d.length);
-    for(let j = i; j < e; j++) s += d[j] * d[j];
-    blocks.push(Math.sqrt(s / Math.max(1, e - i)));
+// ── Mesure de loudness ITU-R BS.1770 (le vrai LUFS des plateformes) ──
+// Pondération K (2 filtres) + moyenne quadratique par blocs de 400 ms avec
+// double gating (absolu -70 LUFS, relatif -10 LU). Remplace l'approximation
+// RMS : deux voix de timbres différents sortent vraiment au même niveau perçu.
+async function _acMeasureLUFS(buf){
+  const sr = buf.sampleRate;
+  const off = new OfflineAudioContext(1, buf.length, sr);
+  const src = off.createBufferSource(); src.buffer = buf;
+  const shelf = off.createBiquadFilter();   // étage 1 : tête/torse
+  shelf.type = 'highshelf'; shelf.frequency.value = 1681.97; shelf.gain.value = 3.99; shelf.Q.value = 0.7071;
+  const hp = off.createBiquadFilter();      // étage 2 : RLB
+  hp.type = 'highpass'; hp.frequency.value = 38.13; hp.Q.value = 0.5003;
+  src.connect(shelf); shelf.connect(hp); hp.connect(off.destination); src.start(0);
+  const k = (await off.startRendering()).getChannelData(0);
+
+  const blk = Math.round(sr * 0.4), hop = Math.round(blk / 4);   // 400 ms, 75 % de recouvrement
+  const ms = [];
+  for(let i = 0; i + blk <= k.length; i += hop){
+    let s = 0; for(let j = i; j < i + blk; j++) s += k[j] * k[j];
+    ms.push(s / blk);
   }
-  const spoken = blocks.filter((b) => b > 0.02).sort((a, b) => a - b);
-  if(!spoken.length) return buf;
-  const med = spoken[Math.floor(spoken.length * 0.5)];
-  if(!med) return buf;
-  let gain = Math.pow(10, (targetDb - 20 * Math.log10(med)) / 20);
-  let peak = 0; for(let i = 0; i < d.length; i++){ const a = Math.abs(d[i]); if(a > peak) peak = a; }
-  gain = Math.min(gain, 0.891 / Math.max(peak, 1e-6));   // -1 dBFS max
-  if(Math.abs(gain - 1) < 0.02) return buf;
-  for(let c = 0; c < buf.numberOfChannels; c++){
-    const chd = buf.getChannelData(c);
-    for(let i = 0; i < chd.length; i++) chd[i] *= gain;
+  if(!ms.length) return -Infinity;
+  const L = (m) => -0.691 + 10 * Math.log10(Math.max(m, 1e-12));
+  const abs = ms.filter((m) => L(m) > -70);                      // porte absolue
+  if(!abs.length) return -Infinity;
+  const mean1 = abs.reduce((a, b) => a + b, 0) / abs.length;
+  const rel = abs.filter((m) => L(m) > L(mean1) - 10);            // porte relative
+  if(!rel.length) return L(mean1);
+  return L(rel.reduce((a, b) => a + b, 0) / rel.length);
+}
+
+// ── VRAI limiteur à lookahead (échantillon par échantillon) ──
+// Le DynamicsCompressorNode de Web Audio n'est pas un limiteur : il laisse
+// passer les transitoires ~1 ms, qui dépassaient 1.0 et se faisaient ÉCRÊTER
+// par l'encodeur WAV — c'est la saturation entendue par Axel. Ici on calcule
+// l'enveloppe de crête et on baisse le gain AVANT le pic, avec relâche douce.
+function _acLimitPeaks(buf, ceiling = 0.84, lookMs = 4, relMs = 80){
+  const sr = buf.sampleRate, n = buf.length;
+  const look = Math.max(1, Math.round(sr * lookMs / 1000));
+  const rel  = Math.max(1, Math.round(sr * relMs  / 1000));
+  const chs = [];
+  for(let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+
+  const gain = new Float32Array(n).fill(1);
+  let need = false;
+  for(let i = 0; i < n; i++){
+    let m = 0; for(const d of chs){ const a = Math.abs(d[i]); if(a > m) m = a; }
+    if(m > ceiling){ gain[i] = ceiling / m; need = true; }
   }
+  if(!need) return buf;
+  // lookahead : la baisse est anticipée sur `look` échantillons (rampe douce)
+  for(let i = n - 2; i >= 0; i--){
+    const g = gain[i + 1] + (1 - gain[i + 1]) / look;
+    if(g < gain[i]) gain[i] = g;
+  }
+  // relâche : on remonte progressivement, jamais d'à-coup
+  for(let i = 1; i < n; i++){
+    const g = gain[i - 1] + 1 / rel;
+    if(gain[i] > g) gain[i] = g;
+  }
+  for(const d of chs) for(let i = 0; i < n; i++) d[i] *= gain[i];
   return buf;
 }
 
