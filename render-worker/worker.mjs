@@ -201,6 +201,8 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
     if (plan.slideStyle === 'dynamic') { try { deriveDynamicSlides(plan) } catch (e) { console.warn('dérivation:', e.message) } }
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
+    // #149 · fenêtres avatar SANS clips lipsync → la photo avatar sert de fallback
+    if ((plan.avatarSegments || []).length && !existsSync(join(jobDir, 'avatar'))) wantedScreens.add('hook-qualite')
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
       for (const name of wantedScreens) {

@@ -304,6 +304,36 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
+  // ── 3b · FENÊTRES AVATAR (#149) : le visage porte le hook, un moment fort et
+  // l'avant-CTA — 3 fenêtres posées dans les ZONES LIBRES (jamais sur une scène).
+  // Les clips lipsync (av0.mp4…) sont fournis par l'app/MCP ; sans clip, le
+  // moteur affiche la photo avatar avec un zoom lent — le visage tient l'écran.
+  if (!(plan.avatarSegments || []).length) {
+    const busy = out.map((s) => [s.start, s.end]).sort((a, b) => a[0] - b[0])
+    const freeGaps = []
+    let cur = 0
+    for (const [a, b] of busy) { if (a - cur >= 3.2) freeGaps.push([cur, a]); cur = Math.max(cur, b) }
+    if (D - cur >= 3.2) freeGaps.push([cur, D])
+    const avWins = []
+    const takeGap = (pred, maxLen) => {
+      const g = freeGaps.filter(pred).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0]
+      if (!g) return null
+      const w = { start: r2(g[0]), end: r2(Math.min(g[1], g[0] + maxLen)) }
+      g[0] = w.end + 0.05
+      if (g[1] - g[0] < 3.2) freeGaps.splice(freeGaps.indexOf(g), 1)
+      return w
+    }
+    const hook = takeGap((g) => g[0] < 1.5, 6.5)        // le hook : visage direct
+    if (hook) avWins.push(hook)
+    const mid = takeGap((g) => g[0] > D * 0.25 && g[0] < D * 0.72, 6.0)
+    if (mid) avWins.push(mid)
+    const pre = takeGap((g) => g[1] > D - 12 && g[0] > D * 0.6, 5.5) // avant le CTA
+    if (pre) avWins.push(pre)
+    plan.avatarSegments = avWins.sort((a, b) => a.start - b.start)
+    for (const w of avWins) claim(w.start, w.end)
+  }
+  const avWinsAll = plan.avatarSegments || []
+
   // ── 4 · fusion : le serveur s'écarte des scènes dérivées, pas l'inverse ──
   // Chaque slide serveur chevauchant une dérivée est ROGNÉ à sa partie libre ;
   // sous 0,8 s (ou coincé entre deux dérivées) il est JETÉ — une chose à l'écran.
@@ -314,11 +344,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
   const RENDERABLE = new Set([...ANIMS, 'ui', 'screen', 'result', 'countup', 'logo', ''])
   const hasContent = (s) => !!(s.title || s.text || (s.items && s.items.length))
   const kept = []
+  const blockers = [...out, ...avWinsAll]
   for (const sl of srcSlides) {
     if (consumed.has(sl)) continue
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) continue
     let a = r2(sl.start || 0), b = r2(sl.end || 0)
-    for (const d of out) {
+    for (const d of blockers) {
       if (b <= d.start + 0.05 || a >= d.end - 0.05) continue   // pas de contact
       const headroom = d.start - a                              // partie libre avant la scène
       const tailroom = b - d.end                                // partie libre après
@@ -326,7 +357,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       else a = r2(d.end + 0.05)
     }
     if (b - a < 0.8) continue
-    if (out.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
+    if (blockers.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) continue
     kept.push(a === sl.start && b === sl.end ? { ...sl } : { ...sl, start: a, end: b })
   }
 

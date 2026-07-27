@@ -46,10 +46,14 @@ function buildPanels(plan, D) {
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(Math.max(c.start + 0.08, c.end)), accent: !!c.accent }))
     .sort((a, b) => a.start - b.start)
 
-  const anims = (plan.slides || [])
-    .filter((s) => s.anim || s.type === 'punch')
-    .map((s) => ({ kind: s.anim === 'ui' ? 'ui' : (s.anim || 'punch'), t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s }))
-    .sort((a, b) => a.t0 - b.t0)
+  const anims = [
+    ...(plan.slides || [])
+      .filter((s) => s.anim || s.type === 'punch')
+      .map((s) => ({ kind: s.anim === 'ui' ? 'ui' : (s.anim || 'punch'), t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
+    // #149 · fenêtres AVATAR : le visage plein écran entre les animations
+    ...(plan.avatarSegments || [])
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i } })),
+  ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
   const free = words.filter((w) => !inAnim(w.start))
@@ -291,6 +295,18 @@ export function buildDynamicComposition(plan, opts = {}) {
       const s = p.slide
       const sc = uiScene('phone', id, liveT0, t1, tone, s)
       if (sc) { inner += sc.html; pjs += sc.js }
+
+    } else if (p.kind === 'avclip') {
+      // #149 · le VISAGE plein écran : clip lipsync si fourni (muet, calé sur la
+      // voix qui continue), sinon la photo avatar en zoom lent — « les viewers
+      // ont un visuel de visage », le panneau tient l'écran sans texte
+      const src = (opts.avatarClips || {})['av' + p.slide.i]
+      if (src) {
+        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+      } else {
+        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('tuto/hook-qualite.png') center/cover"></div>`
+        pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+      }
 
     } else if (p.kind !== 'punch' && ANIMS.includes(p.kind)) {
       // PACK D'ANIMATIONS SÉMANTIQUES (#147 — « des animations plutôt que des
