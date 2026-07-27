@@ -211,6 +211,27 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
+    // UNE FENÊTRE AVATAR NE DURE PAS PLUS LONGTEMPS QUE SON CLIP. Le plan décrit
+    // les moments où le visage parle ; le clip lipsync, lui, fait la durée qu'il
+    // fait. Quand la fenêtre est plus longue, le moteur de rendu compte des
+    // images qui n'existent pas et refuse le rendu :
+    //   « Video "pn0av" captured 97 of expected 195 frames … aborting render ».
+    // On borne donc chaque segment sur la durée réelle du clip correspondant.
+    if ((plan.avatarSegments || []).length && Object.keys(avatarClips).length) {
+      plan.avatarSegments = plan.avatarSegments.map((w, i) => {
+        const src = avatarClips['av' + i]
+        if (!src) return w
+        let dur = 0
+        try {
+          dur = Number(String(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
+            'format=duration', '-of', 'csv=p=0', join(proj, src)])).trim()) || 0
+        } catch (_) { return w }
+        const end = Math.min(w.end ?? (w.start + dur), w.start + dur)
+        if (end < (w.end ?? 0) - 0.05) console.log(`▶ fenêtre avatar ${i} bornée à ${end.toFixed(2)}s (durée du clip)`)
+        return { ...w, end }
+      }).filter((w) => (w.end - w.start) >= 0.6)
+    }
+
     // polices embarquées (#131) : les styles visuels les référencent en 'fonts/*.woff2'.
     // Copiées dans le projet plutôt que servies par un CDN — un rendu ne doit jamais
     // dépendre du réseau pour sa typographie.
