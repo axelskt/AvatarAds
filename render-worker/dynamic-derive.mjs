@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS } from './anim-pack.mjs'
-import { spotOf } from './screen-spots.mjs'
+import { spotOf, zoneNamed } from './screen-spots.mjs'
 
 // L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
 // « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
@@ -260,15 +260,44 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // qui dispose des minutages, mes MODULES ne font que reconnaître des mots.
     // Sans ça, ses 6 captures du tuto MCP se faisaient manger par mes visites
     // guidées locales — 4 sur 6 absorbées.
+    // SA VISITE GUIDÉE, REJOUÉE AU CLIC. Le serveur pose une capture par étape,
+    // sans `steps` : le moteur affichait donc l'écran ENTIER, en petit. Axel :
+    // « il faut faire les zooms ». On reconstruit les étapes depuis `plan.tuto`
+    // — chacune calée sur l'instant EXACT où le mot est prononcé, ce qui règle
+    // la synchro en même temps que le cadrage.
     const guided = (plan.tuto || []).length >= 2
     let placedScreens = 0
     if (guided) {
-      for (const sl of srv) {
-        if (sl.anim !== 'screen' || !sl.screen) continue
-        const a = r2(sl.start || 0), b = r2(sl.end ?? a + 2.5)
-        if (add({ ...sl }, a, b)) { consumedByPlan.add(sl); placedScreens++ }
+      for (const sl of srv) if (sl.anim === 'screen') consumedByPlan.add(sl)   // les siennes cèdent la place
+      // chaque étape retrouve son mot dans la transcription
+      const steps = []
+      for (const t of plan.tuto) {
+        const zone = zoneNamed(t.screen, t.zone)
+        if (!zone) continue
+        const hit = findSeq(words, String(t.word || '')) || findAny(words, [String(t.word || '')])
+        if (!hit) continue
+        steps.push({ screen: t.screen, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
+          spot: zone, ...(t.text ? { type: String(t.text) } : {}) })
       }
-      if (placedScreens) console.log(`▶ visite guidée du chef d'orchestre : ${placedScreens} capture(s)`)
+      steps.sort((a, b) => a.t - b.t)
+      // on regroupe les étapes CONSÉCUTIVES sur le même écran : un panneau par
+      // écran visité, la caméra s'y déplace d'un élément à l'autre
+      let i = 0
+      while (i < steps.length) {
+        let j = i
+        while (j + 1 < steps.length && steps[j + 1].screen === steps[i].screen) j++
+        const a = r2(Math.max(0, steps[i].t - 0.05))
+        const b = r2(Math.min(D, steps[j].end + (steps[j].type ? 1.6 : 0.9)))
+        const sl = add({ anim: 'screen', screen: steps[i].screen }, a, b)
+        if (sl) {
+          sl.steps = steps.slice(i, j + 1)
+            .filter((st) => st.t >= sl.start - 0.02 && st.t < sl.end - 0.25)
+            .map(({ t, spot, type }) => ({ t, spot, ...(type ? { type } : {}) }))
+          if (sl.steps.length) placedScreens++
+        }
+        i = j + 1
+      }
+      if (placedScreens) console.log(`▶ visite guidée : ${placedScreens} écran(s), ${steps.length} étape(s) au clic`)
     }
 
     let placedAnim = 0
