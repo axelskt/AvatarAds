@@ -207,7 +207,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
   const isAnimPanel = (s) => Boolean(s.anim) && s.anim !== 'ui' && s.anim !== 'screen' && s.anim !== 'result'
   const add = (slide, a, b) => {
     ;[a, b] = fit(a, b)
-    const floor = isAnimPanel(slide) ? 1.25 : 0.8
+    // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
+    // sportif » — laisse 0,4 s par mot : au plancher commun, les deux dernieres
+    // photos disparaissaient et l'enumeration retombait sur du texte. Une photo
+    // vue 0,4 s sur SON mot vaut mieux qu'une photo juste, jetee.
+    const floor = slide.anim === 'media' ? 0.35 : isAnimPanel(slide) ? 1.25 : 0.8
     if (b - a < floor) {
       if (isAnimPanel(slide) && b - a > 0.2) console.log(`▶ ${slide.anim} écarté : ${r2(b - a)}s, trop court pour être vu`)
       return null
@@ -264,14 +268,60 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ça. Elle passe donc devant, y compris devant le chef d'orchestre.
   {
     const files = opts.assetFiles || {}
-    let n = 0
-    for (const b of (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))) {
+    let n = 0, med = 0
+    // ── UNE ÉNUMÉRATION = UN PANNEAU, PAS TROIS ────────────────────────────────
+    // « Homme, femme, coach sportif » : trois mots en 1,3 s. Une photo par mot
+    // donnerait des panneaux de 0,3 s — plus courts que la transition elle-même
+    // (0,42 s), donc jamais vus, et le moteur les écartait un par un. La bonne
+    // lecture d'une énumération, c'est de TOUT montrer en même temps et
+    // d'allumer chaque photo sur SON mot. Le visuel reste le mot, et il tient.
+    const brut = (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))
+      .filter((b) => files[b.assetId])
+    const paquets = []
+    for (const b of brut) {
+      const p = paquets[paquets.length - 1]
+      if (p && b.start - p[0].start < 2.5 && b.start - p[p.length - 1].start < 1.2) p.push(b)
+      else paquets.push([b])
+    }
+    for (const grp of paquets) {
+      if (grp.length < 2) continue
+      // LE PANNEAU S'OUVRE AVANT LE PREMIER MOT. La transition de ce moteur dure
+      // 0,42 s : ouvert PILE sur « Homme », le panneau glisse encore quand le mot
+      // est déjà passé, et les trois allumages arrivaient un demi-temps en retard.
+      // Il entre donc pendant le silence qui précède, et le premier mot tombe sur
+      // un panneau déjà en place.
+      const a = r2(Math.max(0, grp[0].start - 0.6))
+      const e = r2(Math.max(grp[grp.length - 1].end, a + 2.2))
+      const items = grp.map((b) => ({ src: files[b.assetId], assetId: b.assetId, t: r2(b.start) }))
+      if (add({ anim: 'medias', items, count: items.length }, a, e)) {
+        for (const b of grp) b.__pose = true
+        n += grp.length
+        console.log(`▶ énumération : ${grp.length} photos sur un seul panneau (${a}→${e}s)`)
+      }
+    }
+    for (const b of brut) {
+      if (b.__pose) continue
       const src = files[b.assetId]
       if (!src) continue
       const a = r2(b.start || 0), e = r2(b.end ?? a + 3)
+      // EN MÉDAILLON SUR LE VISAGE, PAS À LA PLACE DU VISAGE. Quand son média
+      // tombe pendant une fenêtre avatar — le hook, typiquement — le poser en
+      // panneau coupe la personne qui parle, et il se faisait de toute façon
+      // repousser APRÈS la fenêtre : sa vidéo d'influenceuse arrivait 2 s après
+      // la phrase qui la nomme. Axel : « tu gardes l'avatar principal qui parle
+      // et tu ajoutes la vidéo en plus petit ». Elle s'accroche donc à la
+      // fenêtre au lieu de lui disputer l'écran.
+      const hote = (hookWin && a < hookWin.end - 0.3 && e > hookWin.start + 0.3) ? hookWin
+        : (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
+      if (hote) {
+        ;(hote.insets = hote.insets || []).push({ src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) })
+        med++
+        continue
+      }
       if (add({ anim: 'media', src, assetId: b.assetId, hero: !!b.hero }, a, e)) n++
     }
     if (n) console.log(`▶ ${n} média(s) de l'utilisateur posé(s) en fond`)
+    if (med) console.log(`▶ ${med} média(s) en médaillon sur l'avatar qui parle`)
   }
 
   {
@@ -878,7 +928,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
           s.end = r2(a - 0.05)
           if (s.end - s.start < 0.8) out.splice(i, 1)   // trop court : il dégage
         }
+        // …ET L'ADRESSE, AVEC LE LOGO. Axel : « dans le CTA quand je dis
+        // avatarads.fr tu ajoutes le logo AvatarAds ». Il dit DEUX choses dans
+        // ces cinq secondes — commente le mot, et va sur le site. La carte n'en
+        // montrait qu'une : l'adresse prononcée n'existait nulle part à l'écran.
+        const dom = words.slice(last.i, last.i + 14)
+          // on ne retire que la ponctuation de FIN : un nettoyage global mangeait
+          // le point du domaine (« avatarads.fr » → « avataradsfr »)
+          .map((w2) => String(w2.text).trim().replace(/^[«"']+|[«»"',!?]+$|\.$/g, ''))
+          .find((t) => /^[\w-]+\.(fr|com|io|net|co|app|ai|shop|store|org)$/i.test(t))
         out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
+          ...(dom ? { site: dom.toLowerCase() } : {}),
           items: [{ text: `${verb} « ${KW} »`, t: r2(Math.max(a + 0.3, last.start)) }],
           start: r2(a), end: r2(D - 0.1) })
         claim(a, D)
@@ -911,7 +971,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (a >= t[0] && a < t[1]) a = r2(t[1] + 0.05)
       }
       if (b - a < 1.5 || overlaps(a, b)) continue
-      clamped.push({ start: a, end: b })
+      // …avec ses médaillons : sans `...w` la fenêtre était recréée à vide et le
+      // média accroché en §0a disparaissait sans un mot.
+      clamped.push({ ...w, start: a, end: b })
       claim(a, b)
       budget -= b - a
     }
@@ -994,9 +1056,35 @@ export function deriveDynamicSlides(plan, opts = {}) {
     return null
   }
 
+  // ── UN MOT SEUL À L'ÉCRAN DOIT PORTER QUELQUE CHOSE ────────────────────────
+  // Axel, deux fois : « les mots comme "entièrement" tout seul non ! » puis
+  // « "vont" ». La réduction plus bas ramène une carte de texte à UN item —
+  // celui qui est réellement prononcé. Quand ce mot est un adverbe, un
+  // auxiliaire ou une préposition, l'écran affiche un mot creux en très gros :
+  // ni image, ni information, et on a perdu une seconde de vidéo. Le trou vaut
+  // mieux : la scène voisine s'étire dessus (§3c).
+  const CREUX = new Set([
+    'vont', 'vais', 'allez', 'allons', 'fait', 'faire', 'fais', 'font', 'peux', 'peut', 'pouvez',
+    'veux', 'veut', 'voulez', 'suis', 'sont', 'etes', 'etre', 'avoir', 'avez', 'avons',
+    'cette', 'celui', 'celle', 'ceux', 'celles', 'autre', 'autres', 'meme', 'memes',
+    'tout', 'toute', 'tous', 'toutes', 'plus', 'moins', 'tres', 'bien', 'juste', 'aussi',
+    'encore', 'deja', 'apres', 'avant', 'pour', 'avec', 'sans', 'dans', 'chez', 'vers',
+    'depuis', 'pendant', 'quand', 'comme', 'donc', 'alors', 'ensuite', 'puis', 'enfin',
+    'importe', 'peu', 'beaucoup', 'assez', 'trop', 'quelque', 'quelques', 'chaque',
+  ])
+  const motPlein = (txt) => {
+    const mots = String(txt || '').trim().split(/[\s,/·]+/).filter(Boolean)
+    if (mots.length !== 1) return true              // deux mots ou plus : c'est une idée
+    const n = norm(mots[0])
+    if (/\d/.test(n)) return true                   // un chiffre porte toujours
+    if (n.length < 4) return false                  // « et », « ton », « son »…
+    if (/ment$/.test(n)) return false               // entierement, simplement, vraiment…
+    return !CREUX.has(n)
+  }
+
   const kept = []
   const blockers = [...out, ...avWinsAll]
-  let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0
+  let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0, dropCreux = 0
   for (const sl of srcSlides) {
     if (consumed.has(sl) || consumedByPlan.has(sl)) continue
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) { dropUnrenderable++; continue }
@@ -1026,8 +1114,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const cand = its.map((it) => ({ it, w: said(it.text, a, b) })).filter((x) => x.w)
       if (its.length && !cand.length) { dropUnsaid++; continue }  // aucun de ses mots n'est dit : elle dégage
       if (!its.length && sl.title && !said(sl.title, a, b)) { dropUnsaid++; continue }
+      if (!its.length && sl.title && !motPlein(sl.title)) { dropCreux++; continue }
       if (cand.length) {
-        const best = cand.sort((x, y) => x.w.start - y.w.start)[0]
+        // le mot retenu doit PORTER quelque chose — sinon la carte dégage
+        const utiles = cand.filter((x) => motPlein(x.it.text))
+        if (!utiles.length) { dropCreux++; continue }
+        const best = utiles.sort((x, y) => x.w.start - y.w.start)[0]
         slide.items = [{ ...best.it, t: r2(best.w.start) }]      // le slam tombe PILE sur le mot
         slide.title = best.it.text
         // …et le panneau ne s'ouvre pas une seconde AVANT le mot : sinon on
@@ -1039,9 +1131,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
   // JOURNAL. Ces rejets étaient silencieux : un plan entièrement jeté ressemblait
   // à un plan appliqué. Maintenant chaque scène écartée dit pourquoi.
-  if (dropUnrenderable || dropCollide || dropUnsaid) {
+  if (dropUnrenderable || dropCollide || dropUnsaid || dropCreux) {
     console.log(`▶ scènes serveur écartées : ${dropUnrenderable} non rendables · `
-      + `${dropCollide} en collision · ${dropUnsaid} dont aucun mot n'est prononcé`)
+      + `${dropCollide} en collision · ${dropUnsaid} dont aucun mot n'est prononcé · `
+      + `${dropCreux} réduites à un mot creux`)
   }
 
   // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur

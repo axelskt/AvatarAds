@@ -68,7 +68,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: s.anim === 'ui' ? 'ui' : (s.anim || 'punch'), t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
@@ -361,10 +361,22 @@ export function buildDynamicComposition(plan, opts = {}) {
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
   const logoFile = opts.logoFile || ''
+  // LA PHOTO D'AVATAR VIENT DU JOB. Elle était en dur : `tuto/hook-qualite.png`,
+  // une photo de démo livrée avec le worker (un homme au bord d'une piscine). Sur
+  // la vidéo d'un client, elle mettait le visage d'un INCONNU en plein écran dès
+  // qu'une fenêtre avatar n'avait pas de clip lipsync. Le job fournit maintenant
+  // la sienne (`avatar.png`) ; la photo de démo ne sert plus qu'aux essais locaux.
+  const avatarStill = opts.avatarPhoto || 'tuto/hook-qualite.png'
   // #148 : un plan venu de l'orchestrateur n'a AUCUNE scène ui (le serveur reste
   // générique) — on les dérive ici depuis la voix. Un plan écrit à la main qui en
   // contient déjà garde la priorité, la dérivation ne s'exécute pas.
-  if (!(plan.slides || []).some((s) => s.anim === 'ui')) deriveDynamicSlides(plan, opts)
+  // UNE SEULE DÉRIVATION. Le test « aucune scène ui » se trompait quand la
+  // dérivation du worker n'en avait produit AUCUNE qui survive : elle repartait
+  // ici de zéro, sur un plan déjà transformé. Deux passes = deux résultats, et
+  // surtout les images demandées par la seconde (la capture du site dans le
+  // navigateur) n'étaient plus copiées — page blanche, 404 dans la console.
+  // Le worker pose maintenant une marque explicite.
+  if (!plan.__derive && !(plan.slides || []).some((s) => s.anim === 'ui')) deriveDynamicSlides(plan, opts)
   const panels = buildPanels(plan, D)
   const PUSH = 0.42
   const DIRS = ['right', 'bottom', 'right', 'top']
@@ -382,7 +394,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     // un MÉDIA de l'utilisateur est toujours posé sur un fond CLAIR : Axel voulait
     // « la vidéo posée, qui ne prend pas tout l'écran, avec un fond blanc
     // derrière ». Sur un panneau sombre la carte se fondait dans le fond.
-    const media = p.kind === 'media'
+    const media = p.kind === 'media' || p.kind === 'medias'
     const tone = media ? (ap ? AP_B : LIGHT) : ap ? (i % 2 === 0 ? AP_A : AP_B) : (i % 2 === 0 ? DARK : LIGHT)
     const blobs = media ? (ap ? BLOBS.ap_b : BLOBS.light)
       : ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
@@ -471,6 +483,37 @@ export function buildDynamicComposition(plan, opts = {}) {
       const sc = uiScene('phone', id, liveT0, t1, tone, s)
       if (sc) { inner += sc.html; pjs += sc.js }
 
+    } else if (p.kind === 'medias') {
+      // L'ÉNUMÉRATION EN PHOTOS. « Homme, femme, coach sportif » : les trois
+      // cartes sont là dès l'ouverture, en gris et rétrécies, et chacune se
+      // COLORE ET GRANDIT sur SON mot. On lit l'énumération entière d'un coup
+      // d'œil et on voit quand même le mot prononcé — ce qu'un panneau par mot
+      // ne pouvait pas faire à 0,3 s d'intervalle.
+      const its = (p.slide.items || []).slice(0, 4)
+      const n = its.length || 1
+      const gap = Math.round(W * 0.025)
+      const cw = Math.round((W * 0.9 - gap * (n - 1)) / n)
+      const ch = Math.round(cw * 16 / 9)
+      const x0 = Math.round((W - (cw * n + gap * (n - 1))) / 2)
+      const cy = Math.round((H - ch) / 2)
+      its.forEach((it, k) => {
+        const cid = id + 'ms' + k
+        const cx = x0 + k * (cw + gap)
+        const vid = /\.(mp4|mov|webm|m4v)$/i.test(String(it.src || ''))
+        const corps = vid
+          ? `<video class="clip" src="${esc(it.src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="${8 + k}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          : `<img src="${esc(it.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+        inner += `<div class="an-p" id="${cid}" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;overflow:hidden;box-shadow:0 26px 60px -18px rgba(0,0,0,.5)">${corps}</div>`
+        // arrivée en cascade à l'ouverture du panneau…
+        pjs += `\n  tl.fromTo('#${cid}',{yPercent:14,scale:0.9,autoAlpha:0},{yPercent:0,scale:0.88,autoAlpha:1,duration:0.34,ease:'power3.out',transformOrigin:'50% 50%'},${r2(liveT0 + k * 0.07)});`
+        pjs += `\n  tl.set('#${cid}',{filter:'grayscale(1) brightness(1.06)'},${liveT0});`
+        // …puis SON mot : elle passe en couleur et prend la place
+        const tw = Math.max(liveT0 + 0.1, Math.min(r2(it.t || liveT0), t1 - 0.2))
+        pjs += `\n  tl.to('#${cid}',{scale:1.1,filter:'grayscale(0) brightness(1)',duration:0.26,ease:'back.out(2)',transformOrigin:'50% 50%'},${tw});`
+        pjs += `\n  tl.to('#${cid}',{scale:0.96,duration:0.3,ease:'power2.out',transformOrigin:'50% 50%'},${r2(tw + 0.34)});`
+        sfxAdd.push({ kind: 'mo-pop-2', t: tw, vol: 0.5 })
+      })
+
     } else if (p.kind === 'media') {
       // LE MÉDIA DE L'UTILISATEUR, POSÉ SUR LA PAGE. Ce style n'en affichait
       // aucun : `plan.broll` n'était lu que par le chemin classique. Je l'avais
@@ -525,7 +568,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         }
         const bot = src
           ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
-          : `<div style="width:100%;height:100%;background:url('tuto/hook-qualite.png') center 22%/cover"></div>`
+          : `<div style="width:100%;height:100%;background:url('${esc(avatarStill)}') center 22%/cover"></div>`
         inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
       } else if (src) {
@@ -536,8 +579,30 @@ export function buildDynamicComposition(plan, opts = {}) {
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
         inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
-        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('tuto/hook-qualite.png') center/cover"></div>`
+        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(avatarStill)}') center/cover"></div>`
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+      }
+
+      // ── LE MÉDAILLON : SON MÉDIA POSÉ SUR L'AVATAR QUI PARLE ────────────────
+      // Axel, sur sa vidéo d'influenceuse : « tu vas garder l'avatar principal qui
+      // parle et tu vas ajouter la vidéo que je t'envoie, tu la mets en plus
+      // petit ». Le média volait la fenêtre entière — on perdait le visage qui
+      // porte le hook. Ici il devient une carte flottante en haut, l'avatar
+      // continue de parler dessous : on voit CE DONT il parle ET qui le dit.
+      for (const [k, ins] of (p.slide.insets || []).entries()) {
+        const iw = Math.round(W * 0.42), ih = Math.round(iw * 16 / 9)
+        const ix = Math.round(W - iw - W * 0.06), iy = Math.round(H * 0.11)
+        const iid = id + 'in' + k
+        const a = Math.max(liveT0, r2(ins.start)), b = Math.min(t1, r2(ins.end))
+        if (b - a < 0.3) continue
+        const isVid = /\.(mp4|mov|webm|m4v)$/i.test(String(ins.src || ''))
+        const corps = isVid
+          ? `<video id="${iid}v" class="clip" src="${esc(ins.src)}" data-start="${a}" data-duration="${r2(b - a)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          : `<img src="${esc(ins.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+        inner += `<div class="an-p" id="${iid}" style="left:${ix}px;top:${iy}px;width:${iw}px;height:${ih}px;border-radius:${Math.round(iw * 0.1)}px;overflow:hidden;box-shadow:0 30px 70px -14px rgba(0,0,0,.55),0 0 0 3px rgba(255,255,255,.85)">${corps}</div>`
+        pjs += `\n  tl.fromTo('#${iid}',{scale:0.6,rotation:-6,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.7)',transformOrigin:'50% 50%'},${a});`
+        pjs += `\n  tl.to('#${iid}',{scale:0.7,autoAlpha:0,duration:0.26,ease:'power2.in',transformOrigin:'50% 50%'},${r2(b - 0.26)});`
+        sfxAdd.push({ kind: 'mo-pop-2', t: r2(a + 0.05), vol: 0.5 })
       }
 
     } else if (p.kind !== 'punch' && ANIMS.includes(p.kind)) {
@@ -592,6 +657,15 @@ export function buildDynamicComposition(plan, opts = {}) {
         const sc = uiScene('comment', id, r2(tAt + 0.45), t1, tone, { word: kw, zoom: 'in' })
         // …et sa frappe : sans ce kbAdd, le mot du CTA s'écrivait en silence
         if (sc) { inner += sc.html; pjs += sc.js; sfxAdd.push(...(sc.sfx || [])); kbAdd.push(...(sc.keyboard || [])) }
+        // L'ADRESSE PRONONCÉE, AVEC LE LOGO. Il dit deux choses dans le CTA :
+        // commente le mot, et va sur le site. Seul le mot était à l'écran.
+        if (s.site) {
+          const ls = Math.round(H * 0.052)
+          inner += `<div class="an-p" id="${id}st" style="left:0;top:${Math.round(H * 0.205)}px;width:${W}px;display:flex;align-items:center;justify-content:center;gap:${Math.round(ls * 0.34)}px">
+            ${logoFile ? `<img src="${esc(logoFile)}" style="height:${ls}px;width:auto;display:block"/>` : ''}
+            <span style="font-family:'Archivo Black',sans-serif;font-size:${ls}px;color:${tone.ink};letter-spacing:-.02em">${esc(s.site)}</span></div>`
+          pjs += `\n  tl.fromTo('#${id}st',{y:${Math.round(H * 0.03)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${r2(Math.min(t1 - 0.5, tAt + 0.8))});`
+        }
       }
       sfxAdd.push({ kind: 'mo-impact-2', t: r2(tAt), vol: 0.6 })
     }
