@@ -214,9 +214,10 @@ const ANIMS = [
   'flow', 'orbit', 'list', 'target', 'search', 'compare', 'swap', 'toggle',
   'check', 'quality', 'hd', 'podium', 'star', 'speed', 'deadline', 'crowd',
   'viral', 'scrollstop', 'abtest', 'roi', 'free', 'plan', 'layers', 'badge',
-  'trend', 'template', 'record', 'lock', 'dropzone', 'render', 'subs', 'crop',
-  'silence', 'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'bulk',
-  'broll', 'checklist', 'countdown'
+  'trend', 'template', 'record', 'lock', 'dropzone', 'render', 'crop', 'silence',
+  'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'checklist', 'library',
+  'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice', 'settings',
+  'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -708,7 +709,6 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     lock     — la securite, l'acces reserve, ce qui se debloque, une cle.
     dropzone — UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes ».
     render   — UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner ».
-    subs     — DES SOUS-TITRES QUI S'ALLUMENT MOT PAR MOT sur un ecran vertical. « les sous-titres se mettent tout seuls », « le karaoke ».
     crop     — UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok ».
     silence  — UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush ».
     chat     — UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis ».
@@ -717,10 +717,22 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     bgswap   — LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage ».
     hook     — LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ».
     export   — UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges ».
-    bulk     — UNE SEULE PRISE AUDIO QUI SE DEMULTIPLIE EN PLUSIEURS VIDEOS. « un audio, dix videos », « en serie », « tu declines ».
-    broll    — UN VISUEL QUI PASSE PAR-DESSUS LE PLAN PRINCIPAL puis repart. « on met une image par-dessus », « le b-roll », « une illustration ».
     checklist— UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter ».
-    countdown— UN DECOMPTE 3, 2, 1 dans un cercle. « dans 3 secondes », « on decompte », « c'est parti dans ».
+    library  — UNE GRILLE DE VIGNETTES avec leurs titres, l'une d'elles ressort. « ta bibliotheque », « tous tes rushs », « ce que tu as deja ».
+    queue    — UNE FILE DE RENDUS qui se valident un par un, coche apres coche. « ca tourne en fond », « la file d'attente », « pendant ce temps ».
+    notif    — DES BANNIERES DE NOTIFICATION qui s'empilent sur l'ecran. « ca n'arrete pas de sonner », « les notifications tombent ».
+    comments — UN FIL DE COMMENTAIRES qui defile, avatars et coeurs. « les gens reagissent », « regarde les commentaires », « ils repondent ».
+    timeline — LA TIMELINE DU MONTAGE : piste video coupee, onde audio, sous-titres, la tete de lecture passe. « le montage », « je monte la video ».
+    results  — UNE RECHERCHE QUI S'ECRIT ET SES RESULTATS qui tombent. « tu cherches », « tu tapes ca et tu trouves », « les resultats ».
+    profile  — UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page ».
+    invoice  — UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis ».
+    settings — UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux ».
+    versus   — DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca ».
+    thumb    — UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues ».
+    leaderboard— UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres ».
+    pay      — UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ».
+    sales    — DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes ».
+    folder   — UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
