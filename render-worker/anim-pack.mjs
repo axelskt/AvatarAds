@@ -33,7 +33,13 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 // Palette : sombre sur clair pour les styles page blanche, l'inverse sinon.
 export function animPalette(vs) {
-  const light = vs === 'word' || vs === 'apple' || vs === 'editorial'
+  // L'ENCRE SUIT LE FOND, ELLE NE LE DEVINE PAS. `.fslide` — la scène plein cadre —
+  // est CRÈME par défaut (scene-pack.mjs) ; seuls `glass` et le moteur Dynamique
+  // peignent sombre. On listait pourtant les styles clairs un par un, si bien que
+  // « aucun style résolu » tombait dans le cas sombre : encre blanche sur fond
+  // crème, animation strictement invisible à l'écran. Le défaut doit donc être
+  // CLAIR, et seuls les deux fonds sombres font exception.
+  const light = vs !== 'glass' && vs !== 'dynamic'
   return {
     ink: light ? '#111111' : '#FFFFFF',
     soft: light ? 'rgba(17,17,17,.10)' : 'rgba(255,255,255,.14)',
@@ -204,8 +210,8 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <div class="an-p" id="${id}t1" style="left:${x0}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
           <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
-        <div class="an-p" id="${id}t2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 26px 60px rgba(0,0,0,.45)">
-          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(td * 0.26)}px;color:#D97757;letter-spacing:-.02em">Claude</span></div>
+        <div class="an-p" id="${id}t2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
+          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
         <span id="${id}pl" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.round(gap * 0.5)}px;height:${Math.max(4, Math.round(gap * 0.09))}px;margin-left:${-Math.round(gap * 0.25)}px;margin-top:${-Math.round(gap * 0.045)}px;border-radius:99px;background:${P.ink};opacity:0"></span>
         <span id="${id}pv" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.max(4, Math.round(gap * 0.09))}px;height:${Math.round(gap * 0.5)}px;margin-left:${-Math.round(gap * 0.045)}px;margin-top:${-Math.round(gap * 0.25)}px;border-radius:99px;background:${P.ink};opacity:0"></span>`)
     }
@@ -223,16 +229,11 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <div class="an-p" id="${id}qf" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w*0.045)}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.4)">${grid(9)}</div>
         <div class="an-p" id="${id}qs" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w*0.045)}px;overflow:hidden;clip-path:inset(0 100% 0 0)">${grid(0)}</div>
-        <span id="${id}ql" style="position:absolute;left:${x}px;top:${y - 8}px;width:3px;height:${h + 16}px;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.7)"></span>`)
-    }
-    case 'hd': {
-      // « EN 4K », « 1080p » : le badge claque sur l'image.
-      const lab = String((s.items || [])[0]?.text || '4K').toUpperCase().slice(0, 5)
-      const bw = Math.round(f.w * 0.44), bh = Math.round(bw * 0.42)
-      return box(`
-        <div class="an-p" id="${id}hb" style="left:${Math.round((f.w-bw)/2)}px;top:${Math.round((f.h-bh)/2)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh*0.24)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;box-shadow:0 22px 54px rgba(0,0,0,.45)">
-          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(bh*0.5)}px;color:#fff;letter-spacing:.02em">${esc(lab)}</span></div>
-        <span id="${id}hr" style="position:absolute;left:50%;top:50%;width:${bw}px;height:${bh}px;margin-left:${-bw/2}px;margin-top:${-bh/2}px;border-radius:${Math.round(bh*0.24)}px;border:3px solid ${P.acc};opacity:0"></span>`)
+        <span id="${id}ql" style="position:absolute;left:${x}px;top:${y - 8}px;width:3px;height:${h + 16}px;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.7)"></span>
+        <!-- Axel : « il manque un truc genre 4K ». Le balayage montrait la
+             différence sans jamais la NOMMER : la pastille se pose sur la moitié
+             nette, une fois le balayage terminé. -->
+        <span class="an-p" id="${id}qb" style="left:${x + w - Math.round(w * 0.3)}px;top:${y + h - Math.round(h * 0.34)}px;width:${Math.round(w * 0.22)}px;height:${Math.round(h * 0.22)}px;border-radius:${Math.round(h * 0.06)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.13)}px;color:#FFFFFF;letter-spacing:.02em;opacity:0;box-shadow:0 10px 26px rgba(0,0,0,.3)">${txt(0, '4K')}</span>`)
     }
     case 'podium': {
       // « LE MEILLEUR DU MARCHÉ » : trois marches, la nôtre monte en premier.
@@ -342,10 +343,16 @@ export function animHtml(name, s, W, H, vs) {
         </svg>`)
     }
     case 'free': {
-      // « c'est gratuit », « offert » : l'étiquette qui claque.
-      const w = Math.round(f.w * 0.6), h = Math.round(w * 0.34)
+      // « C'EST GRATUIT ». L'étiquette seule ne montrait rien : elle apparaissait,
+      // point. Ce qui fait l'effet, c'est la CHUTE — le prix affiché, le trait
+      // qui le barre, et GRATUIT qui prend sa place. On voit ce qu'on ne paie pas.
+      const w = Math.round(f.w * 0.62), h = Math.round(w * 0.34)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      const py = y - Math.round(h * 0.9)
       return box(`
-        <div class="an-p" id="${id}fr" style="left:${Math.round((f.w-w)/2)}px;top:${Math.round((f.h-h)/2)}px;width:${w}px;height:${h}px;border-radius:${Math.round(h*0.22)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);box-shadow:0 20px 48px rgba(0,0,0,.4)">
+        <span class="an-p" id="${id}fp" style="left:0;top:${py}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.52)}px;color:${P.ink};opacity:.55">${txt(0, '97 €')}</span>
+        <span class="an-p" id="${id}fb" style="left:${Math.round(f.w * 0.28)}px;top:${py + Math.round(h * 0.3)}px;width:${Math.round(f.w * 0.44)}px;height:${Math.max(5, Math.round(h * 0.07))}px;border-radius:99px;background:#E5484D;transform-origin:0% 50%"></span>
+        <div class="an-p" id="${id}fr" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(h*0.22)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);box-shadow:0 20px 48px rgba(0,0,0,.32)">
           <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(h*0.42)}px;color:#fff;letter-spacing:.04em">GRATUIT</span></div>`)
     }
     case 'plan': {
@@ -376,15 +383,49 @@ export function animHtml(name, s, W, H, vs) {
         <svg id="${id}bc" viewBox="0 0 24 24" style="position:absolute;left:${x + Math.round(sz*0.26)}px;top:${y + Math.round(sz*0.28)}px;width:${Math.round(sz*0.48)}px;height:${Math.round(sz*0.44)}px;fill:none;stroke:#fff;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 12.5l5.5 5.5L21 5"/></svg>`)
     }
     case 'trend': {
-      // « ça monte », « la tendance » : l'escalier + la flèche.
-      const w = Math.round(f.w * 0.74), h = Math.round(f.h * 0.62)
-      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
-      const n = 5, bw = Math.round(w / (n * 1.5))
-      return box(Array.from({ length: n }, (_, k) => {
-        const bh = Math.round(h * (0.24 + k * 0.19))
-        return `<div class="an-p an-tr" style="left:${x + k*Math.round(w/n)}px;top:${y + h - bh}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw*0.2)}px;background:${k===n-1?P.acc:P.soft};transform-origin:50% 100%;transform:scaleY(0)"></div>`
-      }).join('') + `
-        <svg id="${id}ta" viewBox="0 0 24 24" style="position:absolute;left:${x + w - Math.round(bw*1.6)}px;top:${y - Math.round(bw*0.4)}px;width:${Math.round(bw*1.5)}px;height:${Math.round(bw*1.5)}px;fill:none;stroke:${P.acc};stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0"><path d="M5 19L19 5M11 5h8v8"/></svg>`)
+      // « ÇA MONTE ». Axel : « une plus belle flèche, et pourquoi pas le produit
+      // de la personne ». La petite flèche d'icône en coin ne portait rien : on
+      // trace maintenant une VRAIE courbe qui grimpe, sa pointe est une flèche
+      // pleine, et la tuile du produit se pose au sommet — c'est SA marque qui
+      // monte, pas un graphique générique.
+      const w = Math.round(f.w * 0.82), h = Math.round(f.h * 0.5)
+      const x = Math.round((f.w - w) / 2), y = Math.round(f.h * 0.34)
+      const n = 6, bw = Math.round(w / (n * 1.7))
+      const bars = Array.from({ length: n }, (_, k) => {
+        const bh = Math.round(h * (0.16 + k * 0.15))
+        return `<div class="an-p an-tr" style="left:${x + k * Math.round(w / n)}px;top:${y + h - bh}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw * 0.24)}px;background:${k === n - 1 ? P.acc : P.soft};transform-origin:50% 100%;transform:scaleY(0)"></div>`
+      }).join('')
+      // la courbe suit le sommet des barres, la flèche est SA pointe
+      const pts = Array.from({ length: n }, (_, k) => [
+        x + k * Math.round(w / n) + Math.round(bw / 2),
+        y + h - Math.round(h * (0.16 + k * 0.15)) - Math.round(h * 0.06),
+      ])
+      const d = pts.map((p, k) => `${k ? 'L' : 'M'}${p[0]} ${p[1]}`).join(' ')
+      const tip = pts[n - 1], sz = Math.round(bw * 1.05)
+      // LA POINTE EST CALCULÉE, PAS PIVOTÉE. L'ancienne version posait un triangle
+      // droit puis le faisait tourner par `transform="rotate(...)"` — attribut SVG
+      // que le transformOrigin de GSAP écrasait au rendu : la flèche partait de
+      // travers, décrochée de la courbe. On construit donc ses trois sommets
+      // directement dans l'axe des deux derniers points : plus rien à faire tourner.
+      const prev = pts[n - 2]
+      const dx = tip[0] - prev[0], dy = tip[1] - prev[1]
+      const len = Math.hypot(dx, dy) || 1
+      const ux = dx / len, uy = dy / len          // direction de la courbe
+      const px = -uy, py = ux                     // sa perpendiculaire
+      const base = [tip[0] - ux * sz * 0.55, tip[1] - uy * sz * 0.55]
+      const tri = [
+        `${(tip[0] + ux * sz * 0.5).toFixed(1)},${(tip[1] + uy * sz * 0.5).toFixed(1)}`,
+        `${(base[0] + px * sz * 0.42).toFixed(1)},${(base[1] + py * sz * 0.42).toFixed(1)}`,
+        `${(base[0] - px * sz * 0.42).toFixed(1)},${(base[1] - py * sz * 0.42).toFixed(1)}`,
+      ].join(' ')
+      const tw = Math.round(f.w * 0.2)
+      return box(`${bars}
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">
+          <path id="${id}tl" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(5, Math.round(bw * 0.22))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+          <polygon id="${id}ta" points="${tri}" fill="${P.acc}" opacity="0"/></svg>
+        <div class="an-p" id="${id}tp" style="left:${Math.min(f.w - tw - 4, tip[0] - Math.round(tw * 0.1))}px;top:${Math.max(0, tip[1] - tw - Math.round(f.h * 0.12))}px;width:${tw}px;height:${tw}px;border-radius:${Math.round(tw * 0.24)}px;overflow:hidden;background:${P.soft};box-shadow:0 14px 32px rgba(0,0,0,.28);opacity:0">
+          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>
+        <span class="an-p" id="${id}tn" style="left:0;top:${Math.round(f.h * 0.12)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc};opacity:0">${txt(0, '+240 %')}</span>`)
     }
     case 'template': {
       // « pars d'un modèle », « duplique » : le gabarit se copie.
@@ -502,22 +543,6 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-feed" id="${id}fd">${card(2, P.acc)}${card(31, P.line)}${card(60, P.acc)}${card(89, P.line)}${card(118, P.acc)}</span>
       </div>`)
     }
-    case 'money': {
-      // Un compteur qui monte + des jetons qui s'empilent. Une SCÈNE, pas une icône :
-      // c'est le langage des animations d'origine (cadres, cartes, barres) qu'Axel a
-      // validées — un pictogramme isolé fait clipart.
-      const cw = Math.round(f.w * 0.54), ch = Math.round(f.h * 0.3)
-      const cx = Math.round((f.w - cw) / 2)
-      let coins = ''
-      for (let k = 0; k < 4; k++) {
-        const cd = Math.round(f.h * 0.13)
-        coins += `<span class="an-p an-coin" id="${id}c${k}" style="left:${Math.round(f.w / 2 - cd / 2 + (k - 1.5) * cd * 1.15)}px;top:${Math.round(f.h * 0.62)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${k % 2 ? P.acc : P.ink}"></span>`
-      }
-      return box(`<div class="an-p" id="${id}cd" style="left:${cx}px;top:${Math.round(f.h * 0.16)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(ch * 0.16)}px;background:${P.soft};border:2px solid ${P.line}">
-          <span class="an-p" style="left:8%;top:20%;width:34%;height:12%;border-radius:99px;background:${P.line}"></span>
-          <span class="an-p an-amt" id="${id}am" style="left:8%;top:44%;width:64%;height:30%;border-radius:${Math.round(ch * 0.08)}px;background:${P.acc}"></span>
-        </div>${coins}`)
-    }
     case 'idea': {
       // Des fragments qui convergent et forment un bloc net : l'idée qui se précise.
       const d = Math.round(f.h * 0.4), cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.46)
@@ -540,19 +565,6 @@ export function animHtml(name, s, W, H, vs) {
         </svg>
         <span class="an-p" id="${id}dot" style="left:${cx - Math.round(d * 0.11)}px;top:${cy - Math.round(d * 0.11)}px;width:${Math.round(d * 0.22)}px;height:${Math.round(d * 0.22)}px;border-radius:50%;background:${P.acc}"></span>`)
     }
-    case 'lock': {
-      // Un champ de saisie dont les caractères deviennent des points : c'est protégé.
-      const bw = Math.round(f.w * 0.6), bh = Math.round(f.h * 0.19)
-      const x = Math.round((f.w - bw) / 2), y = Math.round(f.h * 0.4)
-      let dots = ''
-      for (let k = 0; k < 5; k++) {
-        const dd = Math.round(bh * 0.3)
-        dots += `<span class="an-p an-dot" id="${id}d${k}" style="left:${x + Math.round(bw * 0.1) + k * Math.round(dd * 1.7)}px;top:${y + Math.round((bh - dd) / 2)}px;width:${dd}px;height:${dd}px;border-radius:50%;background:${P.ink}"></span>`
-      }
-      const sh = Math.round(bh * 0.7)
-      return box(`<span class="an-p" id="${id}bx" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.28)}px;background:${P.soft};border:2px solid ${P.line}"></span>${dots}
-        <span class="an-p" id="${id}sh" style="left:${x + bw - Math.round(sh * 1.5)}px;top:${y - Math.round(sh * 0.72)}px;width:${sh}px;height:${sh}px;border:${Math.round(sh * 0.17)}px solid ${P.acc};border-bottom:0;border-radius:${Math.round(sh * 0.5)}px ${Math.round(sh * 0.5)}px 0 0"></span>`)
-    }
     case 'search': {
       // Une barre de recherche qu'on remplit, puis des résultats qui tombent.
       const bw = Math.round(f.w * 0.66), bh = Math.round(f.h * 0.15)
@@ -561,18 +573,40 @@ export function animHtml(name, s, W, H, vs) {
       for (let k = 0; k < 3; k++) {
         rows += `<span class="an-p an-res" id="${id}r${k}" style="left:${x}px;top:${Math.round(f.h * 0.36 + k * bh * 1.24)}px;width:${Math.round(bw * (1 - k * 0.12))}px;height:${Math.round(bh * 0.72)}px;border-radius:${Math.round(bh * 0.2)}px;background:${k === 0 ? P.acc : P.soft}"></span>`
       }
-      return box(`<span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.13)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.soft};border:2px solid ${P.line}"></span>
-        <span class="an-p" id="${id}ty" style="left:${x + Math.round(bh * 0.5)}px;top:${Math.round(f.h * 0.13 + bh * 0.36)}px;width:4px;height:${Math.round(bh * 0.3)}px;border-radius:99px;background:${P.ink}"></span>${rows}`)
+      // Axel : « c'est le type d'animation où on peut ajouter quelque chose qui
+      // s'écrit avec le bruitage du clavier ». La barre restait vide avec un simple
+      // curseur : on ne savait pas ce qu'il cherchait. Le mot s'écrit maintenant
+      // lettre par lettre, et le worker pose le son de frappe sur cet intervalle.
+      const q = txt(0, 'HOOK VIRAL')
+      const qlet = q.split('').map((c) => `<span class="an-sl2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')
+      const loupe = `<svg viewBox="0 0 24 24" style="width:${Math.round(bh * 0.44)}px;height:${Math.round(bh * 0.44)}px;flex:none" fill="none" stroke="${P.line}" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>`
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.13)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.34)}px;box-sizing:border-box;gap:${Math.round(bh * 0.22)}px">
+          ${loupe}
+          <span id="${id}sq" style="font-family:${SANS};font-weight:800;font-size:${Math.round(bh * 0.36)}px;color:${P.ink};white-space:nowrap">${qlet}</span>
+          <span id="${id}ty" style="width:3px;height:${Math.round(bh * 0.38)}px;border-radius:99px;background:${P.acc}"></span></span>${rows}`)
     }
     case 'rocket': {
-      // Une courbe qui décolle avec sa traînée : la montée en flèche.
-      const w2 = Math.round(f.w * 0.62), h2 = Math.round(f.h * 0.56)
-      const x = Math.round((f.w - w2) / 2), y = Math.round(f.h * 0.2)
-      return box(`<svg width="${w2}" height="${h2}" viewBox="0 0 100 80" preserveAspectRatio="none" style="position:absolute;left:${x}px;top:${y}px">
+      // « ÇA DÉCOLLE ». Axel : « bof, tu peux améliorer avec un vrai cadrage et
+      // le logo/produit de la personne ». La courbe seule était abstraite — on
+      // pouvait la coller sur n'importe quel discours. Ici c'est SA tuile qui
+      // décolle : elle part du bas, suit la traînée, et la fumée reste derrière.
+      const w2 = Math.round(f.w * 0.78), h2 = Math.round(f.h * 0.62)
+      const x = Math.round((f.w - w2) / 2), y = Math.round(f.h * 0.16)
+      const tw = Math.round(f.w * 0.24)
+      // trois bouffées de fumée le long de la trajectoire
+      const puff = [0.18, 0.42, 0.66].map((t, k) => {
+        const px = x + Math.round(w2 * t * 0.9), py = y + h2 - Math.round(h2 * t * 1.05)
+        const d = Math.round(tw * (0.42 - k * 0.07))
+        return `<span class="an-p an-rk" style="left:${px}px;top:${py}px;width:${d}px;height:${d}px;border-radius:50%;background:${P.line};opacity:0"></span>`
+      }).join('')
+      return box(`
+        <svg width="${w2}" height="${h2}" viewBox="0 0 100 80" preserveAspectRatio="none" style="position:absolute;left:${x}px;top:${y}px">
           <path id="${id}tr" d="M4 76 C28 74 44 56 58 34 C68 18 78 8 96 4" fill="none" stroke="${P.acc}" stroke-width="7" stroke-linecap="round"
             stroke-dasharray="180" stroke-dashoffset="180" />
-        </svg>
-        <span class="an-p" id="${id}hd" style="left:${x + w2 - Math.round(f.h * 0.07)}px;top:${y - Math.round(f.h * 0.02)}px;width:${Math.round(f.h * 0.11)}px;height:${Math.round(f.h * 0.11)}px;border-radius:50%;background:${P.acc}"></span>`)
+        </svg>${puff}
+        <div class="an-p" id="${id}hd" style="left:${x + w2 - Math.round(tw * 0.75)}px;top:${y - Math.round(tw * 0.25)}px;width:${tw}px;height:${tw}px;border-radius:${Math.round(tw * 0.24)}px;overflow:hidden;background:${P.soft};box-shadow:0 16px 38px rgba(0,0,0,.28);opacity:0">
+          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>`)
     }
     case 'network': {
       // Des profils qui se relient : le réseau, la communauté.
@@ -707,12 +741,25 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'funnel': {
-      // un entonnoir : beaucoup entrent, peu ressortent
-      const w0 = Math.round(f.w * 0.62), hh = Math.round(f.h * 0.2)
+      // « BEAUCOUP ENTRENT, PEU RESSORTENT ». Trois barres de largeur décroissante
+      // ne montraient aucune PERTE : on lisait un escalier, pas un entonnoir. On
+      // met donc des points qui DESCENDENT étage par étage, et à chaque passage il
+      // en reste moins — c'est la chute du nombre qui raconte, pas la forme.
+      const w0 = Math.round(f.w * 0.7), hh = Math.round(f.h * 0.17)
+      const cnt = [txt(0, '1000'), txt(1, '240'), txt(2, '38')]
       let h = ''
       for (let k = 0; k < 3; k++) {
-        const ww = Math.round(w0 * (1 - k * 0.28))
-        h += `<span class="an-p an-fn" id="${id}f${k}" style="left:${Math.round((f.w - ww) / 2)}px;top:${Math.round(f.h * 0.12 + k * hh * 1.35)}px;width:${ww}px;height:${hh}px;border-radius:${Math.round(hh * 0.22)}px;background:${k === 2 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
+        const ww = Math.round(w0 * (1 - k * 0.26))
+        const lx = Math.round((f.w - ww) / 2), ly = Math.round(f.h * 0.1 + k * hh * 1.42)
+        h += `<span class="an-p an-fn" id="${id}f${k}" style="left:${lx}px;top:${ly}px;width:${ww}px;height:${hh}px;border-radius:${Math.round(hh * 0.24)}px;background:${k === 2 ? P.acc : P.soft};border:2px solid ${k === 2 ? P.acc : P.line};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(hh * 0.44)}px;color:${k === 2 ? '#FFFFFF' : P.ink}">${cnt[k]}</span>`
+        // les gouttes qui descendent d'un étage à l'autre : de moins en moins
+        if (k < 2) {
+          const n = k === 0 ? 5 : 3
+          for (let j = 0; j < n; j++) {
+            const dx = lx + Math.round(ww * (0.2 + j * 0.6 / Math.max(1, n - 1)))
+            h += `<span class="an-p an-fd${k}" style="left:${dx}px;top:${ly + hh + Math.round(hh * 0.1)}px;width:${Math.max(5, Math.round(f.w * 0.018))}px;height:${Math.max(5, Math.round(f.w * 0.018))}px;border-radius:50%;background:${P.acc};opacity:0"></span>`
+          }
+        }
       }
       return box(h)
     }
@@ -739,38 +786,6 @@ export function animHtml(name, s, W, H, vs) {
         h += `<span class="an-p an-b2" id="${id}b${k}" style="left:${x0 + k * (bw + gap)}px;top:${Math.round(f.h * 0.8) - hh}px;width:${bw}px;height:${hh}px;border-radius:${Math.round(bw * 0.18)}px ${Math.round(bw * 0.18)}px 0 0;background:${k === 1 ? P.acc : P.soft}"></span>`
       }
       return box(h)
-    }
-    case 'wallet': {
-      // un portefeuille qui se remplit de cartes : ce que ca rapporte
-      const ww = Math.round(f.w * 0.5), wh = Math.round(ww * 0.66)
-      const x = Math.round((f.w - ww) / 2), y = Math.round(f.h * 0.42)
-      let h = ''
-      for (let k = 0; k < 3; k++) {
-        h += `<span class="an-p an-cd" id="${id}c${k}" style="left:${x + Math.round(ww * 0.1) + k * Math.round(ww * 0.1)}px;top:${y - Math.round(wh * 0.42) - k * Math.round(wh * 0.13)}px;width:${Math.round(ww * 0.62)}px;height:${Math.round(wh * 0.5)}px;border-radius:${Math.round(wh * 0.08)}px;background:${k === 2 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
-      }
-      h += `<span class="an-p" id="${id}w" style="left:${x}px;top:${y}px;width:${ww}px;height:${wh}px;border-radius:${Math.round(wh * 0.16)}px;background:${P.ink}"></span>`
-      return box(h)
-    }
-    case 'swipe': {
-      // Un fil qui défile vite dans un téléphone : le scroll, le feed.
-      const pw = Math.round(f.h * 0.52), ph = f.h, px = Math.round((f.w - pw) / 2)
-      const ch = Math.round(ph * 0.26)
-      let cards = ''
-      for (let k = 0; k < 5; k++) {
-        cards += `<span class="an-p an-sw" id="${id}s${k}" style="left:6%;top:${k * Math.round(ch * 1.12)}px;width:88%;height:${ch}px;border-radius:${Math.round(ch * 0.14)}px;background:${k === 1 ? P.acc : P.soft}"></span>`
-      }
-      return box(`<div class="an-ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.14)}px;overflow:hidden">
-        <div class="an-p" id="${id}fd" style="left:0;top:0;width:100%;height:${Math.round(ch * 1.12 * 5)}px">${cards}</div></div>`)
-    }
-    case 'views': {
-      // Un compteur de vues qui grimpe, avec sa barre : la portée.
-      const bw = Math.round(f.w * 0.62), bh = Math.round(f.h * 0.16)
-      const x = Math.round((f.w - bw) / 2)
-      return box(`<span class="an-p" id="${id}pl" style="left:${Math.round(f.w / 2 - f.h * 0.11)}px;top:${Math.round(f.h * 0.1)}px;width:${Math.round(f.h * 0.22)}px;height:${Math.round(f.h * 0.22)}px;border-radius:50%;background:${P.acc}">
-          <svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M40 30 L72 50 L40 70 Z" fill="#FFF"/></svg></span>
-        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.46)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.soft}"></span>
-        <span class="an-p" id="${id}bar" style="left:${x}px;top:${Math.round(f.h * 0.46)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:${P.acc}"></span>
-        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.7)}px;width:${Math.round(bw * 0.42)}px;height:${Math.round(bh * 0.4)}px;border-radius:99px;background:${P.line}"></span>`)
     }
     case 'engage': {
       // Des bulles de commentaire et des cœurs qui montent : l'engagement.
@@ -799,20 +814,24 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'upload': {
-      // Une carte qui s'envole vers une barre : publier, mettre en ligne.
-      const cw = Math.round(f.w * 0.34), ch = Math.round(cw * 1.3)
-      return box(`<span class="an-p" style="left:${Math.round(f.w * 0.16)}px;top:${Math.round(f.h * 0.08)}px;width:${Math.round(f.w * 0.68)}px;height:${Math.round(f.h * 0.1)}px;border-radius:99px;background:${P.soft};border:2px dashed ${P.line}"></span>
-        <span class="an-p" id="${id}cd" style="left:${Math.round((f.w - cw) / 2)}px;top:${Math.round(f.h * 0.42)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.acc}"></span>
-        <span class="an-p" id="${id}ar" style="left:${Math.round(f.w / 2 - f.h * 0.035)}px;top:${Math.round(f.h * 0.26)}px;width:${Math.round(f.h * 0.07)}px;height:${Math.round(f.h * 0.12)}px;background:${P.ink};clip-path:polygon(50% 0,100% 55%,72% 55%,72% 100%,28% 100%,28% 55%,0 55%)"></span>`)
-    }
-    case 'stack': {
-      // Des vidéos qui s'empilent : le volume, produire en série.
-      const cw = Math.round(f.w * 0.42), ch = Math.round(cw * 1.42)
-      let h = ''
-      for (let k = 0; k < 4; k++) {
-        h += `<span class="an-p an-st" id="${id}s${k}" style="left:${Math.round((f.w - cw) / 2 + (k - 1.5) * cw * 0.22)}px;top:${Math.round((f.h - ch) / 2 + (k - 1.5) * ch * 0.06)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;background:${k === 3 ? P.acc : P.soft};border:2px solid ${P.line}"></span>`
-      }
-      return box(h)
+      // « ENVOIE TON FICHIER ». Axel : « bof, améliore ou supprime ». Une carte
+      // orange qui monte vers une barre en pointillés ne dit rien : ni ce qu'on
+      // envoie, ni que c'est parti. On montre donc un VRAI fichier — nom, format,
+      // poids — qui tombe dans la zone de dépôt, la barre de progression qui se
+      // remplit, et la coche qui valide. C'est le trajet complet en 1,5 s.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const zh = Math.round(f.h * 0.46), zy = Math.round(f.h * 0.34)
+      const cw = Math.round(w * 0.46), ch = Math.round(cw * 0.78)
+      return box(`
+        <span class="an-p" id="${id}uz" style="box-sizing:border-box;left:${x}px;top:${zy}px;width:${w}px;height:${zh}px;border-radius:${Math.round(f.w * 0.06)}px;border:${Math.max(3, Math.round(f.w * 0.008))}px dashed ${P.line};background:${P.soft}"></span>
+        <div class="an-p" id="${id}uc" style="left:${Math.round((f.w - cw) / 2)}px;top:${Math.round(f.h * 0.04)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.1)}px;background:#FFFFFF;box-shadow:0 18px 40px rgba(0,0,0,.22);overflow:hidden">
+          <span style="position:absolute;left:0;top:0;width:100%;height:${Math.round(ch * 0.3)}px;background:${P.acc}"></span>
+          <span style="position:absolute;left:8%;top:${Math.round(ch * 0.44)}px;width:70%;height:${Math.max(3, Math.round(ch * 0.07))}px;border-radius:99px;background:#11111133"></span>
+          <span style="position:absolute;left:8%;top:${Math.round(ch * 0.6)}px;width:46%;height:${Math.max(3, Math.round(ch * 0.06))}px;border-radius:99px;background:#11111122"></span>
+          <span style="position:absolute;left:8%;bottom:${Math.round(ch * 0.1)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(ch * 0.13)}px;color:#111111">${txt(0, 'MA-VIDEO.MP4')}</span></div>
+        <span class="an-p" id="${id}ub" style="left:${x + Math.round(w * 0.1)}px;top:${zy + zh - Math.round(f.h * 0.12)}px;width:${Math.round(w * 0.8)}px;height:${Math.round(f.h * 0.05)}px;border-radius:99px;background:${P.line};overflow:hidden;opacity:0">
+          <span id="${id}ubf" style="position:absolute;left:0;top:0;width:100%;height:100%;background:${P.acc};transform-origin:0% 50%;transform:scaleX(0)"></span></span>
+        <svg class="an-p" id="${id}uk" viewBox="0 0 24 24" style="left:${Math.round(f.w / 2 - f.h * 0.08)}px;top:${zy + Math.round(zh * 0.28)}px;width:${Math.round(f.h * 0.16)}px;height:${Math.round(f.h * 0.16)}px" fill="none" stroke="${P.acc}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" opacity="0"><path d="M4 13l5.5 5.5L20 6"/></svg>`)
     }
     case 'swap': {
       // Une chose remplacée par une autre : au lieu de, à la place.
@@ -947,9 +966,14 @@ export function animHtml(name, s, W, H, vs) {
       const bh = Math.round(f.h * 0.2), r = Math.round(bh * 0.42)
       const th = Math.max(3, Math.round(bh * 0.1))
       return box(`
-        <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.2)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.8)}px;height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc}">
-          <span style="position:absolute;left:9%;top:32%;width:72%;height:${th}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>
-          <span style="position:absolute;left:9%;top:56%;width:52%;height:${th}px;border-radius:99px;background:rgba(255,255,255,.7)"></span></div>
+        <!-- Axel : « chat pareil, on peut ajouter bruitage de clavier ». La question
+             ne doit pas apparaître d'un bloc : on l'ÉCRIT, et le son de frappe se
+             pose sur cet intervalle comme pour « search » et « comment ».
+             (Aucun accent grave ici : ce commentaire vit DANS un template literal.) -->
+        <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.2)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.8)}px;height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.28)}px;box-sizing:border-box">
+          <span id="${id}cqt" style="font-family:${SANS};font-weight:700;font-size:${Math.round(bh * 0.26)}px;color:#FFFFFF;line-height:1.25">${
+            txt(0, 'écris-moi un hook').split('').map((c) => `<span class="an-cq2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</span>
+          <span id="${id}cqc" style="width:2px;height:${Math.round(bh * 0.3)}px;background:#FFFFFF;border-radius:2px;margin-left:2px"></span></div>
         <div class="an-p" id="${id}ca" style="left:${x}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.86)}px;height:${Math.round(bh * 1.6)}px;border-radius:${r}px ${r}px ${r}px ${Math.round(r * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
           <span style="position:absolute;left:8%;top:13%;width:${Math.round(bh * 0.4)}px;height:${Math.round(bh * 0.4)}px">${claudeBurst('100%', P.acc)}</span>
           ${[0.46, 0.66, 0.84].map((t, k) => `<span class="an-p" id="${id}cl${k}" style="left:8%;top:${Math.round(bh * 1.6 * t)}px;width:${[78, 64, 42][k]}%;height:${th}px;border-radius:99px;background:${P.ink};opacity:.55;transform-origin:0% 50%"></span>`).join('')}</div>`)
@@ -1427,17 +1451,6 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" id="${id}dn2" style="left:${x}px;top:${Math.round(f.h * 0.42)}px;width:${w}px;height:${Math.round(f.h * 0.32)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.3)}px;color:${P.acc}">${txt(1, '49€')}</span>
         <span class="an-p" id="${id}dc" style="left:50%;margin-left:${-Math.round(f.w * 0.16)}px;top:${Math.round(f.h * 0.78)}px;width:${Math.round(f.w * 0.32)}px;height:${Math.round(f.h * 0.16)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.09)}px;color:#FFFFFF">${txt(2, '-50 %')}</span>`)
     }
-    case 'waitlist': {
-      // « la liste d'attente » : les inscrits s'ajoutent, le compteur grimpe.
-      const av = Math.round(f.h * 0.16), n = 6
-      const ov = Math.round(av * 0.62)
-      const tot = ov * (n - 1) + av, x0 = Math.round((f.w - tot) / 2)
-      let as = ''
-      for (let k = 0; k < n; k++) as += `<span class="an-p an-wl" id="${id}wl${k}" style="left:${x0 + k * ov}px;top:${Math.round(f.h * 0.26)}px;width:${av}px;height:${av}px;border-radius:50%;background:${k % 2 ? P.acc : P.line};border:3px solid ${P.soft};z-index:${n - k}"></span>`
-      return box(`${as}
-        <span class="an-p" id="${id}wc" style="left:0;top:${Math.round(f.h * 0.52)}px;width:100%;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.22)}px;color:${P.acc}">${txt(0, '1 248')}</span>
-        <span class="an-p" style="left:50%;margin-left:${-Math.round(f.w * 0.22)}px;top:${Math.round(f.h * 0.8)}px;width:${Math.round(f.w * 0.44)}px;height:${Math.max(4, Math.round(f.h * 0.03))}px;border-radius:99px;background:${P.ink};opacity:.34"></span>`)
-    }
     case 'music': {
       // « la musique de fond » : la piste arrive et son volume passe SOUS la voix.
       const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
@@ -1473,17 +1486,32 @@ export function animHtml(name, s, W, H, vs) {
     }
     // ── PAQUET 6 (#157) — la mécanique sociale : ce qui se passe AUTOUR du post.
     case 'keyword': {
-      // « commente le mot » : le commentaire part, le message prive arrive.
-      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
-      const ch = Math.round(f.h * 0.19), av = Math.round(ch * 0.56)
+      // « COMMENTE LE MOT X ». Axel : « on comprend pas très bien ». L'ancienne
+      // version posait le mot déjà écrit, une flèche, une bulle : trois symboles
+      // à décoder. On montre maintenant le GESTE — le champ de commentaire, le
+      // mot qui se TAPE lettre par lettre avec le curseur, puis la réponse qui
+      // arrive. C'est le mot lui-même qui est le visuel.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const ch = Math.round(f.h * 0.16), av = Math.round(ch * 0.6)
+      const mot = txt(0, 'HOOKS')
+      const lettres = mot.split('').map((c, k) =>
+        `<span class="an-kl" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')
+      // l'icône COMMENTAIRE remplace la pastille grise : on doit reconnaître d'un
+      // coup d'œil qu'on est dans un champ de commentaire, pas dans une recherche.
+      const bulle = `<svg viewBox="0 0 24 24" style="width:${av}px;height:${av}px;flex:none" fill="none" stroke="${P.acc}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.6 9.6 0 0 1-2.9-.4L3 21l1.5-4.6A8.3 8.3 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4Z"/></svg>`
       return box(`
-        <span class="an-p" id="${id}kc" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;width:${w}px;height:${ch}px;border-radius:${Math.round(ch * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
-          <span style="position:absolute;left:${Math.round(ch * 0.26)}px;top:${Math.round((ch - av) / 2)}px;width:${av}px;height:${av}px;border-radius:50%;background:${P.line}"></span>
-          <span id="${id}kw" style="position:absolute;left:${Math.round(ch * 0.95)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.34)}px;color:${P.acc}">${txt(0, 'HOOKS')}</span></span>
-        <svg class="an-p" id="${id}ka" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(f.h * 0.08)}px;top:${Math.round(f.h * 0.32)}px;width:${Math.round(f.h * 0.16)}px;height:${Math.round(f.h * 0.16)}px" fill="none" stroke="${P.acc}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M6 13l6 6 6-6"/></svg>
-        <span class="an-p" id="${id}km" style="left:${x}px;top:${Math.round(f.h * 0.56)}px;width:${w}px;height:${Math.round(f.h * 0.34)}px;border-radius:${Math.round(f.h * 0.09)}px;background:${P.acc};box-shadow:0 16px 36px rgba(0,0,0,.4)">
-          ${[0.2, 0.42].map((t, k) => `<span style="position:absolute;left:8%;top:${t * 100}%;width:${[74, 52][k]}%;height:${Math.max(3, Math.round(f.h * 0.02))}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>`).join('')}
-          <span style="position:absolute;left:8%;top:64%;width:56%;height:${Math.round(f.h * 0.1)}px;border-radius:99px;background:rgba(255,255,255,.95)"></span></span>`)
+        <span class="an-p" id="${id}kc" style="left:${x}px;top:${Math.round(f.h * 0.08)}px;width:${w}px;height:${ch}px;border-radius:${Math.round(ch * 0.5)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;padding:0 ${Math.round(ch * 0.3)}px;box-sizing:border-box;gap:${Math.round(ch * 0.26)}px">
+          ${bulle}
+          <span id="${id}kw" style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.42)}px;color:${P.acc};letter-spacing:.02em;white-space:nowrap">${lettres}</span>
+          <span id="${id}kr" style="width:${Math.max(3, Math.round(ch * 0.05))}px;height:${Math.round(ch * 0.46)}px;background:${P.acc};border-radius:2px"></span></span>
+        <span class="an-p" id="${id}kb" style="left:${x + w - Math.round(w * 0.3)}px;top:${Math.round(f.h * 0.08) + ch + Math.round(f.h * 0.03)}px;width:${Math.round(w * 0.3)}px;height:${Math.round(ch * 0.72)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(ch * 0.3)}px;color:#FFFFFF;opacity:0">ENVOYER</span>
+        <span class="an-p" id="${id}km" style="left:${x}px;top:${Math.round(f.h * 0.5)}px;width:${Math.round(w * 0.82)}px;height:${Math.round(f.h * 0.36)}px;border-radius:${Math.round(f.h * 0.07)}px;border-bottom-left-radius:${Math.round(f.h * 0.02)}px;background:${grad(150)};box-shadow:0 16px 36px rgba(0,0,0,.28);opacity:0">
+          <!-- Axel : « quand il envoie, PLAN disparaît de la zone de texte et se met
+               dans le message orange ». Le mot VOYAGE : c'est ce déplacement qui
+               raconte l'envoi, pas une bulle qui apparaît toute faite. -->
+          <span id="${id}kmw" style="position:absolute;left:9%;top:14%;font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.42)}px;color:#FFFFFF;letter-spacing:.02em;opacity:0">${mot}</span>
+          ${[0.42, 0.58].map((t, k) => `<span style="position:absolute;left:9%;top:${t * 100}%;width:${[76, 54][k]}%;height:${Math.max(3, Math.round(f.h * 0.018))}px;border-radius:99px;background:rgba(255,255,255,.85)"></span>`).join('')}
+          <span style="position:absolute;left:9%;top:74%;width:64%;height:${Math.round(f.h * 0.08)}px;border-radius:99px;background:rgba(255,255,255,.96)"></span></span>`)
     }
     case 'automation': {
       // « c'est automatique » : le declencheur, la condition, les deux branches.
@@ -1921,31 +1949,6 @@ export function animHtml(name, s, W, H, vs) {
         <svg class="an-p" id="${id}qs" viewBox="0 0 100 30" style="left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.85)}px;width:${Math.round(w * 0.44)}px;height:${Math.round(h * 0.1)}px" fill="none">
           <path d="M2 22C10 6 16 26 24 14s10 12 18 2 12 14 20 4 14 6 22-6" stroke="${P.ink}" stroke-width="3" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg></div>`)
     }
-    case 'flight': {
-      // VOYAGE — le billet : depart, arrivee, la ligne qui relie, le siege.
-      const w = Math.round(f.w * 0.88), h = Math.round(f.h * 0.56)
-      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
-      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
-        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">${txt(0, 'PAR')}</span>
-        <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">${txt(1, 'NYC')}</span>
-        <span style="position:absolute;left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.32)}px;width:${Math.round(w * 0.4)}px;height:2px;border-top:2px dashed ${P.line}"></span>
-        <svg class="an-p" id="${id}fp" viewBox="0 0 24 24" style="left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.22)}px;width:${Math.round(h * 0.2)}px;height:${Math.round(h * 0.2)}px" fill="${P.acc}"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
-        <span style="position:absolute;left:0;top:${Math.round(h * 0.52)}px;width:100%;height:2px;border-top:2px dashed ${P.line}"></span>
-        ${[[0.08, '08:20'], [0.4, '11:45'], [0.72, '14 B']].map(([lx, t]) => `<span class="an-p an-fl2" style="left:${Math.round(w * lx)}px;top:${Math.round(h * 0.66)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.11)}px;color:${P.ink};opacity:.7">${t}</span>`).join('')}
-        <span style="position:absolute;left:-${Math.round(h * 0.08)}px;top:${Math.round(h * 0.44)}px;width:${Math.round(h * 0.16)}px;height:${Math.round(h * 0.16)}px;border-radius:50%;background:${P.bgHole || 'rgba(0,0,0,.001)'};box-shadow:0 0 0 999px transparent"></span></div>`)
-    }
-    case 'saving': {
-      // FINANCES — l'epargne qui monte vers l'objectif.
-      const w = Math.round(f.w * 0.44), h = Math.round(f.h * 0.72)
-      const x = Math.round((f.w - w) / 2), y = Math.round(f.h * 0.24)
-      let ticks = ''
-      for (let k = 1; k < 5; k++) ticks += `<span style="position:absolute;left:0;top:${Math.round(h * k / 5)}px;width:26%;height:2px;background:${P.ink};opacity:.18"></span>`
-      return box(`
-        <span class="an-p" id="${id}svv" style="left:0;top:0;width:100%;height:${Math.round(f.h * 0.18)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '8 400€')}</span>
-        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.16)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">${ticks}
-          <span class="an-p an-sv" id="${id}sv" style="left:0;bottom:0;top:auto;width:100%;height:100%;background:${grad(180)};transform-origin:50% 100%"></span></span>
-        <span class="an-p" id="${id}svg" style="left:${x - Math.round(w * 0.12)}px;top:${y - Math.round(f.h * 0.02)}px;width:${Math.round(w * 1.24)}px;height:${Math.max(4, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>`)
-    }
     case 'cv': {
       // RECRUTEMENT — les candidatures, celle qu'on retient ressort.
       const cw = Math.round(f.w * 0.26), chh = Math.round(cw * 1.36), gp = Math.round(f.w * 0.05)
@@ -2224,11 +2227,293 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" id="${id}lph" style="left:${x}px;top:${y - Math.round(f.h * 0.03)}px;width:${Math.max(5, Math.round(w * 0.012))}px;height:${th + Math.round(f.h * 0.06)}px;border-radius:99px;background:${P.ink}"></span>
         <span class="an-p" id="${id}lpn" style="left:0;top:${y + Math.round(f.h * 0.16)}px;width:100%;height:${Math.round(f.h * 0.14)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.13)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '×3')}</span>`)
     }
-    default: { // clock — le temps qui passe, la rapidité
-      const d = Math.round(f.h * 0.82)
-      return box(`<div class="an-cl" id="${id}cl" style="left:${Math.round((f.w - d) / 2)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px;border:${Math.round(d * 0.07)}px solid ${P.line};border-radius:50%">
-        <span class="an-hand" id="${id}hd" style="height:${Math.round(d * 0.34)}px;background:${P.acc}"></span>
-      </div>`)
+    case 'framing': {
+      // « bien te cadrer » : le cadre se resserre sur le sujet, les tiers apparaissent.
+      const cx = Math.round(f.w / 2), hy = Math.round(f.h * 0.42), hr = Math.round(f.w * 0.13)
+      const gl = (x1, y1, x2, y2) => `<span class="an-p an-fg" style="left:${x1}px;top:${y1}px;width:${Math.max(2, x2 - x1)}px;height:${Math.max(2, y2 - y1)}px;background:${P.ink};opacity:.28"></span>`
+      const fw = Math.round(f.w * 0.86), fh = Math.round(f.h * 0.6)
+      const fx = Math.round((f.w - fw) / 2), fy = Math.round((f.h - fh) / 2)
+      return box(`
+        <span class="an-p" style="left:${cx - hr}px;top:${hy - hr}px;width:${2 * hr}px;height:${2 * hr}px;border-radius:50%;background:${P.acc}"></span>
+        <span class="an-p" style="left:${cx - Math.round(hr * 1.5)}px;top:${hy + hr}px;width:${Math.round(hr * 3)}px;height:${Math.round(hr * 2.2)}px;border-radius:${Math.round(hr * 0.8)}px ${Math.round(hr * 0.8)}px 0 0;background:${P.acc}"></span>
+        <span class="an-p" id="${id}fmb" style="box-sizing:border-box;left:${fx}px;top:${fy}px;width:${fw}px;height:${fh}px;border:${Math.max(4, Math.round(f.w * 0.012))}px solid ${P.ink};border-radius:${Math.round(f.w * 0.03)}px"></span>
+        ${gl(fx + Math.round(fw / 3), fy, fx + Math.round(fw / 3) + 2, fy + fh)}
+        ${gl(fx + Math.round(2 * fw / 3), fy, fx + Math.round(2 * fw / 3) + 2, fy + fh)}
+        ${gl(fx, fy + Math.round(fh / 3), fx + fw, fy + Math.round(fh / 3) + 2)}
+        ${gl(fx, fy + Math.round(2 * fh / 3), fx + fw, fy + Math.round(2 * fh / 3) + 2)}`)
+    }
+    case 'focus': {
+      // « c'est flou » : la même image, floue, qui devient nette d'un coup.
+      const w = Math.round(f.w * 0.8), hgt = Math.round(w * 1.1)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - hgt) / 2)
+      const inner = (blur) => `
+        <span style="position:absolute;inset:0;background:${P.soft};filter:blur(${blur}px)"></span>
+        <span style="position:absolute;left:50%;margin-left:${-Math.round(w * 0.17)}px;top:${Math.round(hgt * 0.18)}px;width:${Math.round(w * 0.34)}px;height:${Math.round(w * 0.34)}px;border-radius:50%;background:${P.acc};filter:blur(${blur}px)"></span>
+        <span style="position:absolute;left:50%;margin-left:${-Math.round(w * 0.27)}px;top:${Math.round(hgt * 0.55)}px;width:${Math.round(w * 0.54)}px;height:${Math.round(hgt * 0.32)}px;border-radius:${Math.round(w * 0.16)}px ${Math.round(w * 0.16)}px 0 0;background:${P.acc};filter:blur(${blur}px)"></span>`
+      const bk = Math.round(f.w * 0.06)
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${hgt}px;border-radius:${Math.round(w * 0.08)}px;overflow:hidden;background:${P.soft}">
+          <span class="an-p" id="${id}fcb" style="left:0;top:0;width:100%;height:100%">${inner(Math.round(w * 0.06))}</span>
+          <span class="an-p" id="${id}fcn" style="left:0;top:0;width:100%;height:100%;opacity:0">${inner(0)}</span></span>
+        <span class="an-p an-fcc" id="${id}fc1" style="left:${x - 6}px;top:${y - 6}px;width:${bk}px;height:${Math.max(4, Math.round(f.w * 0.011))}px;background:${P.acc}"></span>
+        <span class="an-p an-fcc" id="${id}fc2" style="left:${x + w - bk + 6}px;top:${y + hgt + 6}px;width:${bk}px;height:${Math.max(4, Math.round(f.w * 0.011))}px;background:${P.acc}"></span>`)
+    }
+    case 'clipping': {
+      // « ton son sature » : l'onde tape le plafond, rougit, puis rentre dans le cadre.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const ch = Math.round(f.h * 0.42), y = Math.round((f.h - ch) / 2)
+      let bars = ''
+      for (let k = 0; k < 30; k++) {
+        const over = k > 8 && k < 21
+        bars += `<span class="an-p an-cp" id="${id}cp${k}" style="left:${Math.round(w * 0.03) + k * Math.round(w * 0.032)}px;top:50%;width:${Math.max(3, Math.round(w * 0.014))}px;height:${Math.round(ch * (over ? 0.96 : 0.3 + 0.3 * Math.abs(Math.sin(k * 1.3))))}px;margin-top:${-Math.round(ch * (over ? 0.48 : 0.15 + 0.15 * Math.abs(Math.sin(k * 1.3))))}px;border-radius:99px;background:${over ? '#E5484D' : P.ink};opacity:${over ? 1 : .5};transform-origin:50% 50%"></span>`
+      }
+      const line = (top) => `<span class="an-p" style="left:${x}px;top:${top}px;width:${w}px;height:3px;background:#E5484D;opacity:.7"></span>`
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${ch}px;border-radius:${Math.round(f.w * 0.03)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">${bars}</span>
+        ${line(y + Math.round(ch * 0.04))}${line(y + Math.round(ch * 0.96))}
+        <span class="an-p" id="${id}cpw" style="left:0;top:${y + ch + Math.round(f.h * 0.05)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.05)}px;color:#E5484D">${txt(0, 'SATURE')}</span>`)
+    }
+    case 'lighting': {
+      // « eclaire-toi » : la lumière se pose sur le visage et l'ombre recule.
+      const cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.56), hr = Math.round(f.w * 0.17)
+      return box(`
+        <span class="an-p" id="${id}lgh" style="left:${cx - hr}px;top:${cy - hr}px;width:${2 * hr}px;height:${2 * hr}px;border-radius:50%;background:${P.line}"></span>
+        <span class="an-p" id="${id}lgb" style="left:${cx - Math.round(hr * 1.6)}px;top:${cy + hr}px;width:${Math.round(hr * 3.2)}px;height:${Math.round(hr * 2)}px;border-radius:${Math.round(hr * 0.9)}px ${Math.round(hr * 0.9)}px 0 0;background:${P.line}"></span>
+        <span class="an-p" id="${id}lgg" style="left:${cx - Math.round(f.w * 0.45)}px;top:${Math.round(f.h * 0.06)}px;width:${Math.round(f.w * 0.9)}px;height:${Math.round(f.h * 0.9)}px;border-radius:50%;background:radial-gradient(circle at 50% 30%, rgba(255,214,120,.85), rgba(255,214,120,0) 62%);opacity:0"></span>
+        <span class="an-p" id="${id}lgl" style="left:${Math.round(f.w * 0.12)}px;top:${Math.round(f.h * 0.1)}px;width:${Math.round(f.w * 0.2)}px;height:${Math.round(f.w * 0.2)}px;border-radius:${Math.round(f.w * 0.05)}px;background:${P.acc};transform-origin:50% 50%"></span>`)
+    }
+    case 'retake': {
+      // « je la refais » : la prise barrée part, la suivante arrive à sa place.
+      const w = Math.round(f.w * 0.66), hgt = Math.round(w * 1.35)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - hgt) / 2)
+      const card = (bg, label, col) => `
+        <span style="position:absolute;inset:0;border-radius:${Math.round(w * 0.1)}px;background:${bg};overflow:hidden"></span>
+        <span style="position:absolute;left:0;bottom:${Math.round(hgt * 0.08)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(w * 0.15)}px;color:${col}">${label}</span>`
+      return box(`
+        <span class="an-p" id="${id}rk1" style="left:${x}px;top:${y}px;width:${w}px;height:${hgt}px">${card(P.soft, txt(1, 'PRISE 1'), P.line)}
+          <span class="an-p" style="left:${Math.round(w * 0.08)}px;top:${Math.round(hgt * 0.48)}px;width:${Math.round(w * 0.84)}px;height:${Math.max(5, Math.round(w * 0.02))}px;background:#E5484D;transform:rotate(-14deg)"></span></span>
+        <span class="an-p" id="${id}rk2" style="left:${x}px;top:${y}px;width:${w}px;height:${hgt}px;opacity:0">${card(grad(160), txt(0, 'PRISE 2'), '#FFFFFF')}</span>`)
+    }
+    case 'caption': {
+      // « la description, les hashtags » : le texte s'écrit sous la vidéo avant de poster.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const vh = Math.round(f.h * 0.34)
+      const tags = ['#viral', '#astuce', '#ia']
+      const tg = tags.map((t, k) => `<span class="an-p an-cpt" style="left:${x + k * Math.round(w * 0.31)}px;top:${Math.round(f.h * 0.78)}px;padding:0 ${Math.round(w * 0.035)}px;height:${Math.round(f.h * 0.07)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.036)}px;color:#FFFFFF">${t}</span>`).join('')
+      const ln = (k, wd) => `<span class="an-p an-cpl" style="left:${x}px;top:${Math.round(f.h * (0.52 + k * 0.07))}px;width:${Math.round(w * wd)}px;height:${Math.round(f.h * 0.032)}px;border-radius:99px;background:${P.ink};opacity:.7;transform-origin:0% 50%"></span>`
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.1)}px;width:${w}px;height:${vh}px;border-radius:${Math.round(f.w * 0.05)}px;background:${grad(150)}"></span>
+        ${ln(0, 0.95)}${ln(1, 0.8)}${ln(2, 0.55)}
+        ${tg}`)
+    }
+    case 'preview': {
+      // « avant de poster » : le rendu final apparaît dans le fil, tel qu'il sera vu.
+      const pw = Math.round(f.h * 0.48), ph = Math.round(pw * 2), px = Math.round((f.w - pw) / 2)
+      const py = Math.round((f.h - ph) / 2), r = Math.round(pw * 0.14)
+      return box(`
+        <div class="an-p" id="${id}pvp" style="left:${px}px;top:${py}px;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${r}px;background:${P.soft};overflow:hidden">
+          <span class="an-p" id="${id}pvv" style="left:${Math.round(pw * 0.06)}px;top:${Math.round(ph * 0.14)}px;width:${Math.round(pw * 0.88)}px;height:${Math.round(ph * 0.56)}px;border-radius:${Math.round(pw * 0.08)}px;background:${grad(150)}"></span>
+          <span class="an-p an-pvl" style="left:${Math.round(pw * 0.06)}px;top:${Math.round(ph * 0.75)}px;width:${Math.round(pw * 0.7)}px;height:${Math.round(ph * 0.025)}px;border-radius:99px;background:${P.line}"></span>
+          <span class="an-p an-pvl" style="left:${Math.round(pw * 0.06)}px;top:${Math.round(ph * 0.81)}px;width:${Math.round(pw * 0.45)}px;height:${Math.round(ph * 0.025)}px;border-radius:99px;background:${P.line}"></span>
+        </div>
+        <span class="an-p" id="${id}pvb" style="left:${px + Math.round(pw * 0.2)}px;top:${py + ph - Math.round(f.h * 0.03)}px;width:${Math.round(pw * 0.6)}px;height:${Math.round(f.h * 0.08)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.038)}px;color:#FFFFFF">${txt(0, 'PUBLIER')}</span>`)
+    }
+    case 'spike': {
+      // « ca a explose » : la courbe plate décolle d'un coup, le chiffre suit.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const gy = Math.round(f.h * 0.72), gh = Math.round(f.h * 0.44)
+      const pts = [0.06, 0.08, 0.07, 0.1, 0.12, 0.34, 0.72, 1]
+      const d = pts.map((v, k) => `${k ? 'L' : 'M'}${x + Math.round(w * k / (pts.length - 1))} ${gy - Math.round(gh * v)}`).join(' ')
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${gy}px;width:${w}px;height:3px;background:${P.line}"></span>
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">
+          <path id="${id}spl" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(5, Math.round(w * 0.018))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
+        <span class="an-p" id="${id}spd" style="left:${x + w - Math.round(f.w * 0.05)}px;top:${gy - gh - Math.round(f.w * 0.05)}px;width:${Math.round(f.w * 0.1)}px;height:${Math.round(f.w * 0.1)}px;border-radius:50%;background:${P.acc}"></span>
+        <span class="an-p" id="${id}spn" style="left:0;top:${Math.round(f.h * 0.12)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.ink};transform-origin:50% 50%">${txt(0, '340K')}</span>`)
+    }
+    case 'brandeal': {
+      // « une marque m'a contacte » : la proposition arrive, le montant se pose.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const ch = Math.round(f.h * 0.3), y = Math.round(f.h * 0.22)
+      return box(`
+        <span class="an-p" id="${id}bdc" style="left:${x}px;top:${y}px;width:${w}px;height:${ch}px;border-radius:${Math.round(f.w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+          <span style="position:absolute;left:${Math.round(w * 0.06)}px;top:${Math.round(ch * 0.16)}px;width:${Math.round(ch * 0.3)}px;height:${Math.round(ch * 0.3)}px;border-radius:${Math.round(ch * 0.09)}px;background:${P.acc}"></span>
+          <span style="position:absolute;left:${Math.round(w * 0.28)}px;top:${Math.round(ch * 0.22)}px;width:${Math.round(w * 0.42)}px;height:${Math.round(ch * 0.09)}px;border-radius:99px;background:${P.line}"></span>
+          <span style="position:absolute;left:${Math.round(w * 0.28)}px;top:${Math.round(ch * 0.38)}px;width:${Math.round(w * 0.26)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line};opacity:.6"></span>
+          <span style="position:absolute;left:${Math.round(w * 0.06)}px;top:${Math.round(ch * 0.62)}px;width:${Math.round(w * 0.72)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line};opacity:.5"></span></span>
+        <span class="an-p" id="${id}bdm" style="left:${x + Math.round(w * 0.12)}px;top:${y + ch - Math.round(f.h * 0.045)}px;width:${Math.round(w * 0.76)}px;height:${Math.round(f.h * 0.15)}px;border-radius:${Math.round(f.w * 0.05)}px;background:${grad(150)};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.085)}px;color:#FFFFFF;transform-origin:50% 50%">${txt(0, '1500 €')}</span>`)
+    }
+    case 'mediakit': {
+      // « mon media-kit » : la fiche stats se compose, trois chiffres se posent.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const ch = Math.round(f.h * 0.62), y = Math.round((f.h - ch) / 2)
+      const vals = [txt(0, '84K'), txt(1, '2,1 M'), txt(2, '7,4 %')]
+      const labs = ['ABONNES', 'VUES / MOIS', 'ENGAGEMENT']
+      const rows = vals.map((v, k) => `
+        <span class="an-p an-mk" style="left:${Math.round(w * 0.07)}px;top:${Math.round(ch * (0.34 + k * 0.2))}px;width:${Math.round(w * 0.86)}px;height:${Math.round(ch * 0.16)}px;border-radius:${Math.round(f.w * 0.03)}px;background:${k === 0 ? P.acc : P.soft};border:2px solid ${k === 0 ? P.acc : P.line};display:flex;align-items:center;justify-content:space-between;padding:0 ${Math.round(w * 0.05)}px;box-sizing:border-box">
+          <span style="font-family:${SANS};font-weight:800;font-size:${Math.round(ch * 0.05)}px;letter-spacing:.06em;color:${k === 0 ? 'rgba(255,255,255,.85)' : P.line}">${labs[k]}</span>
+          <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.09)}px;color:${k === 0 ? '#FFFFFF' : P.ink}">${v}</span></span>`).join('')
+      return box(`
+        <span class="an-p" id="${id}mkc" style="left:${x}px;top:${y}px;width:${w}px;height:${ch}px;border-radius:${Math.round(f.w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+          <span style="position:absolute;left:${Math.round(w * 0.07)}px;top:${Math.round(ch * 0.08)}px;width:${Math.round(ch * 0.18)}px;height:${Math.round(ch * 0.18)}px;border-radius:50%;background:${P.acc}"></span>
+          <span style="position:absolute;left:${Math.round(w * 0.28)}px;top:${Math.round(ch * 0.13)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(ch * 0.05)}px;border-radius:99px;background:${P.line}"></span>
+          ${rows}</span>`)
+    }
+    case 'inventory': {
+      // « je suis en rupture » : le stock descend jusqu'à l'alerte, puis remonte.
+      const w = Math.round(f.w * 0.34), x = Math.round((f.w - w) / 2)
+      const ch = Math.round(f.h * 0.56), y = Math.round(f.h * 0.2)
+      return box(`
+        <span class="an-p" style="box-sizing:border-box;left:${x}px;top:${y}px;width:${w}px;height:${ch}px;border-radius:${Math.round(w * 0.14)}px;border:${Math.max(4, Math.round(w * 0.035))}px solid ${P.line};overflow:hidden">
+          <span class="an-p" id="${id}ivf" style="left:0;bottom:0;top:auto;width:100%;height:100%;background:${P.acc};transform-origin:50% 100%"></span></span>
+        <span class="an-p" id="${id}ivw" style="left:${x - Math.round(f.w * 0.06)}px;top:${y + Math.round(ch * 0.78)}px;width:${w + Math.round(f.w * 0.12)}px;height:4px;background:#E5484D;opacity:.75"></span>
+        <span class="an-p" id="${id}ivt" style="left:0;top:${y + ch + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.05)}px;color:${P.ink}">${txt(0, 'STOCK')}</span>`)
+    }
+    case 'stoploss': {
+      // « mon stop » : la bougie touche la ligne et la position se ferme.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const base = Math.round(f.h * 0.34), cw = Math.round(w * 0.09)
+      const hs = [0.9, 0.72, 0.78, 0.56, 0.4, 0.3]
+      const cd = hs.map((v, k) => `<span class="an-p an-sl" id="${id}sl${k}" style="left:${x + Math.round(w * 0.06) + k * Math.round(w * 0.16)}px;top:${base}px;width:${cw}px;height:${Math.round(f.h * 0.36 * v)}px;border-radius:${Math.round(cw * 0.2)}px;background:${k >= 4 ? '#E5484D' : P.ink};opacity:${k >= 4 ? 1 : .55};transform-origin:50% 0%"></span>`).join('')
+      const ly = base + Math.round(f.h * 0.36 * 0.42)
+      return box(`${cd}
+        <span class="an-p" id="${id}sll" style="left:${x}px;top:${ly}px;width:${w}px;height:4px;background:#E5484D;transform-origin:0% 50%"></span>
+        <span class="an-p" id="${id}slt" style="left:${x}px;top:${ly - Math.round(f.h * 0.075)}px;padding:0 ${Math.round(w * 0.03)}px;height:${Math.round(f.h * 0.06)}px;border-radius:99px;background:#E5484D;display:flex;align-items:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.033)}px;color:#FFFFFF">${txt(0, 'STOP')}</span>`)
+    }
+    case 'orderbook': {
+      // « le carnet » : les deux côtés se remplissent, l'écart se resserre.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.052), gp = Math.round(f.h * 0.012)
+      const mid = Math.round(f.h * 0.5)
+      let rows = ''
+      for (let k = 0; k < 5; k++) {
+        const wd = Math.round(w * (0.9 - k * 0.13))
+        rows += `<span class="an-p an-ob1" style="left:${x}px;top:${mid - Math.round(f.h * 0.05) - (k + 1) * (rh + gp)}px;width:${wd}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:#E5484D;opacity:.55;transform-origin:0% 50%"></span>`
+        rows += `<span class="an-p an-ob2" style="left:${x}px;top:${mid + Math.round(f.h * 0.05) + k * (rh + gp)}px;width:${wd}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${P.acc};opacity:.85;transform-origin:0% 50%"></span>`
+      }
+      return box(`${rows}
+        <span class="an-p" id="${id}obs" style="left:${x}px;top:${mid - Math.round(f.h * 0.035)}px;width:${w}px;height:${Math.round(f.h * 0.07)}px;border-radius:${Math.round(f.h * 0.02)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.04)}px;color:${P.ink}">${txt(0, 'SPREAD')}</span>`)
+    }
+    case 'deploy': {
+      // « je deploie » : les étapes défilent jusqu'au badge EN LIGNE.
+      const w = Math.round(f.w * 0.84), x = Math.round((f.w - w) / 2)
+      const sy = Math.round(f.h * 0.32), sh = Math.round(f.h * 0.09), gp = Math.round(f.h * 0.035)
+      const names = ['BUILD', 'TESTS', 'DEPLOY']
+      const st = names.map((n, k) => `
+        <span class="an-p an-dp" id="${id}dp${k}" style="left:${x}px;top:${sy + k * (sh + gp)}px;width:${w}px;height:${sh}px;border-radius:${Math.round(sh * 0.3)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;padding:0 ${Math.round(w * 0.06)}px;box-sizing:border-box;gap:${Math.round(w * 0.05)}px">
+          <span class="an-dpd" style="width:${Math.round(sh * 0.3)}px;height:${Math.round(sh * 0.3)}px;border-radius:50%;background:${P.line}"></span>
+          <span style="font-family:${SANS};font-weight:800;font-size:${Math.round(sh * 0.36)}px;letter-spacing:.08em;color:${P.ink}">${n}</span></span>`).join('')
+      return box(`${st}
+        <span class="an-p" id="${id}dpb" style="left:${x + Math.round(w * 0.18)}px;top:${sy + 3 * (sh + gp) + Math.round(f.h * 0.03)}px;width:${Math.round(w * 0.64)}px;height:${Math.round(f.h * 0.12)}px;border-radius:99px;background:${grad(150)};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.055)}px;color:#FFFFFF;opacity:0;transform-origin:50% 50%">${txt(0, 'EN LIGNE')}</span>`)
+    }
+    case 'uptime': {
+      // « jamais de panne » : la ligne de disponibilité se remplit jour après jour.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const n = 26, bw = Math.max(4, Math.round(w / (n * 1.6))), gp = Math.round((w - n * bw) / (n - 1))
+      const bh = Math.round(f.h * 0.24), y = Math.round(f.h * 0.44)
+      let bars = ''
+      for (let k = 0; k < n; k++) {
+        const bad = k === 17
+        bars += `<span class="an-p an-up" style="left:${x + k * (bw + gp)}px;top:${y}px;width:${bw}px;height:${bh}px;border-radius:99px;background:${bad ? '#E5484D' : P.acc};transform-origin:50% 100%"></span>`
+      }
+      return box(`${bars}
+        <span class="an-p" id="${id}upn" style="left:0;top:${Math.round(f.h * 0.18)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.13)}px;color:${P.ink};transform-origin:50% 50%">${txt(0, '99,98 %')}</span>
+        <span class="an-p" style="left:0;top:${y + bh + Math.round(f.h * 0.05)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.04)}px;letter-spacing:.1em;color:${P.line}">DISPONIBILITE</span>`)
+    }
+    case 'leads': {
+      // « ma liste grossit » : les prospects tombent un à un, le compteur monte.
+      const w = Math.round(f.w * 0.84), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.08), gp = Math.round(f.h * 0.022), y = Math.round(f.h * 0.42)
+      // Axel : « tu pourrais modifier en mettant différents avatars ». Quatre
+      // pastilles identiques ne montraient pas des GENS : c'était une liste. Chaque
+      // prospect a maintenant sa silhouette et sa couleur — on lit des personnes
+      // qui arrivent, pas des lignes qui s'empilent.
+      const teintes = [P.acc, '#3B82F6', '#22C55E', '#A855F7']
+      const tete = (col, d) => `<span style="position:relative;width:${d}px;height:${d}px;border-radius:50%;background:${col};flex:none;overflow:hidden">
+        <span style="position:absolute;left:50%;margin-left:${-Math.round(d * 0.16)}px;top:${Math.round(d * 0.2)}px;width:${Math.round(d * 0.32)}px;height:${Math.round(d * 0.32)}px;border-radius:50%;background:rgba(255,255,255,.9)"></span>
+        <span style="position:absolute;left:50%;margin-left:${-Math.round(d * 0.29)}px;top:${Math.round(d * 0.58)}px;width:${Math.round(d * 0.58)}px;height:${Math.round(d * 0.42)}px;border-radius:${Math.round(d * 0.29)}px ${Math.round(d * 0.29)}px 0 0;background:rgba(255,255,255,.9)"></span></span>`
+      let rows = ''
+      for (let k = 0; k < 4; k++) {
+        rows += `<span class="an-p an-ld" id="${id}ld${k}" style="left:${x}px;top:${y + k * (rh + gp)}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.3)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;padding:0 ${Math.round(w * 0.05)}px;box-sizing:border-box;gap:${Math.round(w * 0.04)}px;opacity:0">
+          ${tete(teintes[k], Math.round(rh * 0.56))}
+          <span style="flex:1;height:${Math.round(rh * 0.16)}px;border-radius:99px;background:${P.line};opacity:.6;max-width:${[70, 52, 78, 60][k]}%"></span></span>`
+      }
+      return box(`${rows}
+        <span class="an-p" id="${id}ldn" style="left:0;top:${Math.round(f.h * 0.16)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.16)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '312')}</span>`)
+    }
+    case 'comment': {
+      // « ÉCRIS-MOI EN COMMENTAIRE ». Axel : « une animation avec un clavier
+      // Apple pour commenter ». Le clavier iOS complet en bas, le champ au-dessus,
+      // et les touches qui s'enfoncent l'une après l'autre pendant que le mot
+      // s'écrit. C'est le geste que le spectateur doit reproduire, montré tel quel.
+      const rows = ['AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN']
+      const kw = Math.round(f.w / 11.6), kh = Math.round(kw * 1.32), gp = Math.round(kw * 0.14)
+      const kbTop = Math.round(f.h - (rows.length * (kh + gp) + Math.round(f.h * 0.02)))
+      let keys = '', n = 0
+      rows.forEach((r, ri) => {
+        const rowW = r.length * (kw + gp) - gp
+        const x0 = Math.round((f.w - rowW) / 2)
+        r.split('').forEach((c, ci) => {
+          // le voile d'accent est POSÉ ici, à opacité 0 : animJs ne connaît pas la
+          // palette (pas de `P`), il ne peut donc que le faire apparaître.
+          keys += `<span class="an-p an-kk" id="${id}kk${n}" style="left:${x0 + ci * (kw + gp)}px;top:${kbTop + ri * (kh + gp)}px;width:${kw}px;height:${kh}px;border-radius:${Math.round(kw * 0.22)}px;background:${P.soft};border:1px solid ${P.line};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:600;font-size:${Math.round(kw * 0.46)}px;color:${P.ink};overflow:hidden">${c}<span id="${id}kh${n++}" style="position:absolute;inset:0;background:${P.acc};opacity:0"></span></span>`
+        })
+      })
+      const mot = txt(0, 'PLAN')
+      const lettres = mot.split('').map((c) => `<span class="an-cl2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')
+      const fw2 = Math.round(f.w * 0.9), fx = Math.round((f.w - fw2) / 2)
+      const fh2 = Math.round(f.h * 0.15), fy = kbTop - fh2 - Math.round(f.h * 0.06)
+      return box(`${keys}
+        <span class="an-p" id="${id}cf" style="left:${fx}px;top:${fy}px;width:${fw2}px;height:${fh2}px;border-radius:${Math.round(fh2 * 0.5)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;padding:0 ${Math.round(fh2 * 0.34)}px;box-sizing:border-box;gap:${Math.round(fh2 * 0.2)}px">
+          <span style="width:${Math.round(fh2 * 0.56)}px;height:${Math.round(fh2 * 0.56)}px;border-radius:50%;background:${P.line};flex:none"></span>
+          <span id="${id}ct" style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(fh2 * 0.42)}px;color:${P.acc};white-space:nowrap">${lettres}</span>
+          <span id="${id}cc" style="width:${Math.max(3, Math.round(fh2 * 0.05))}px;height:${Math.round(fh2 * 0.46)}px;background:${P.acc};border-radius:2px"></span></span>`)
+    }
+    case 'share': {
+      // « PARTAGE » / « METS UN LIKE » — RÉSERVÉ AU CTA. La barre d'actions d'un
+      // post : le cœur se remplit et pulse, le compteur saute, la flèche de partage
+      // s'envole. On montre le geste demandé, pas une icône posée.
+      // Axel : « la capture est petite, mets un clic où on appuie dessus, et le
+      // logo partage d'Instagram plutôt que celui-là ». Les icônes occupaient 20 %
+      // de la hauteur : à l'écran d'un téléphone ça ne se voit pas. Elles montent à
+      // 42 %, la flèche générique devient l'avion en papier, et un doigt vient
+      // vraiment appuyer sur le cœur — c'est le geste demandé au spectateur.
+      const r = Math.round(Math.min(f.w * 0.19, f.h * 0.21))
+      const cy = Math.round(f.h * 0.46)
+      const lx1 = Math.round(f.w * 0.31), lx2 = Math.round(f.w * 0.69)
+      const ic = (id2, lx, path, fill, sw) => `<svg class="an-p" id="${id2}" viewBox="0 0 24 24" style="left:${lx - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px" fill="${fill}" stroke="${P.acc}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`
+      const heart = '<path d="M12 20.5 4.2 12.9a4.6 4.6 0 0 1 6.5-6.5l1.3 1.3 1.3-1.3a4.6 4.6 0 0 1 6.5 6.5Z"/>'
+      // l'avion en papier d'Instagram : le triangle plein et le pli marqué
+      const plane = '<path d="M22 2 11 13"/><path d="M22 2 15.5 22l-4.5-9-9-4.5Z"/>'
+      const fs = Math.round(r * 1.05)
+      return box(`
+        ${ic(id + 'sh1', lx1, heart, 'none', 1.7)}
+        ${ic(id + 'sh2', lx1, heart, P.acc, 1.7)}
+        ${ic(id + 'sh3', lx2, plane, 'none', 1.7)}
+        <span class="an-p" id="${id}shr" style="left:${lx1 - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px;border-radius:50%;border:${Math.max(4, Math.round(r * 0.13))}px solid ${P.acc};opacity:0"></span>
+        <span class="an-p" id="${id}shn" style="left:${lx1 - r}px;top:${cy + r + Math.round(f.h * 0.02)}px;width:${2 * r}px;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(r * 0.62)}px;color:${P.acc};opacity:0">${txt(0, '+1')}</span>
+        <!-- le doigt : une pastille sombre qui descend et s'écrase sur le cœur -->
+        <span class="an-p" id="${id}shf" style="left:${lx1 - Math.round(fs / 2) + Math.round(r * 0.34)}px;top:${cy - Math.round(fs / 2) + Math.round(r * 0.4)}px;width:${fs}px;height:${fs}px;border-radius:50%;background:${P.ink};opacity:0"></span>`)
+      // pas de libellé au-dessus : le geste se suffit à lui-même, et le sous-titre
+      // de la vidéo dit déjà ce qu'il faut faire.
+    }
+    default: { // clock — « en 2 minutes », « en 30 secondes »
+      // L'aiguille qui tourne dans un cercle vide illustrait « le temps », pas LE
+      // GAIN de temps. Un anneau qui se VIDE, avec la durée écrite au centre et
+      // l'ancienne durée barrée à côté, dit ce qu'on entend : c'était long, c'est
+      // devenu court. Le chiffre vient de l'audio.
+      const d = Math.round(Math.min(f.h * 0.78, f.w * 0.72))
+      const cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.46)
+      const rr = Math.round(d / 2), sw = Math.round(d * 0.09)
+      const C = 2 * Math.PI * (rr - sw / 2)
+      return box(`
+        <svg class="an-p" style="left:${cx - rr}px;top:${cy - rr}px;width:${d}px;height:${d}px" viewBox="0 0 ${d} ${d}" fill="none">
+          <circle cx="${rr}" cy="${rr}" r="${rr - sw / 2}" stroke="${P.line}" stroke-width="${sw}"/>
+          <circle id="${id}cl" cx="${rr}" cy="${rr}" r="${rr - sw / 2}" stroke="${P.acc}" stroke-width="${sw}" stroke-linecap="round"
+            stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 ${rr} ${rr})"/></svg>
+        <span class="an-p" id="${id}cn" style="left:0;top:${cy - Math.round(d * 0.14)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(d * 0.26)}px;color:${P.ink};transform-origin:50% 50%">${txt(0, '2 MIN')}</span>
+        <span class="an-p" id="${id}co" style="left:0;top:${cy + rr + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(d * 0.11)}px;color:${P.ink};opacity:0">
+          <span style="position:relative;opacity:.45">${txt(1, '3 HEURES')}<span id="${id}cb" style="position:absolute;left:0;top:50%;width:100%;height:${Math.max(3, Math.round(d * 0.014))}px;background:#E5484D;transform-origin:0% 50%;transform:scaleX(0)"></span></span></span>`)
     }
   }
 }
@@ -2303,12 +2588,9 @@ export function animJs(name, s, r2) {
       // la ligne suit le bord du révélé : sa course est lue au rendu, donc juste
       // quelle que soit la taille du cadre
       tl.to('#${id}ql',{x:(document.getElementById('${id}qf')||{}).offsetWidth||0,duration:${r2(Math.max(0.6, dur - 0.9))},ease:'power2.inOut'},${r2(t0 + 0.42)});
-      tl.to('#${id}ql',{autoAlpha:0,duration:0.2},${r2(t0 + 0.42 + Math.max(0.6, dur - 0.9))});`
-    case 'hd':
-      return inOut + `
-      tl.fromTo('#${id}hb',{scale:0.5,rotation:-8,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.4,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${t0});
-      tl.fromTo('#${id}hr',{scale:1,opacity:0.9},{scale:1.5,opacity:0,duration:0.6,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.3)});
-      tl.to('#${id}hb',{scale:1.05,duration:${r2(Math.max(0.4, dur - 0.8))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.45)});`
+      tl.to('#${id}ql',{autoAlpha:0,duration:0.2},${r2(t0 + 0.42 + Math.max(0.6, dur - 0.9))});
+      // la mention se pose UNE FOIS le balayage fini : elle nomme ce qu'on vient de voir
+      tl.fromTo('#${id}qb',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.42 + Math.max(0.6, dur - 0.9) - 0.15)});`
     case 'podium':
       return inOut + `
       tl.fromTo('#${id}pd1',{scaleY:0},{scaleY:1,duration:0.44,ease:'back.out(1.5)'},${t0});
@@ -2363,8 +2645,11 @@ export function animJs(name, s, r2) {
       tl.to('#${id}ro1',{scale:1.08,duration:${r2(Math.max(0.4, dur - 1.3))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 1.1)});`
     case 'free':
       return inOut + `
-      tl.fromTo('#${id}fr',{scale:0.3,rotation:-24,autoAlpha:0},{scale:1,rotation:-7,autoAlpha:1,duration:0.44,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${t0});
-      tl.to('#${id}fr',{rotation:-4,duration:${r2(Math.max(0.4, dur - 0.8))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.48)});`
+      tl.fromTo('#${id}fp',{y:-14,autoAlpha:0},{y:0,autoAlpha:0.55,duration:0.26,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}fb',{scaleX:0},{scaleX:1,duration:0.24,ease:'power3.inOut'},${r2(t0 + 0.32)});
+      tl.to('#${id}fp',{autoAlpha:0.28,duration:0.2},${r2(t0 + 0.5)});
+      tl.fromTo('#${id}fr',{scale:0.3,rotation:-24,autoAlpha:0},{scale:1,rotation:-7,autoAlpha:1,duration:0.44,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.5)});
+      tl.to('#${id}fr',{rotation:-4,duration:${r2(Math.max(0.4, dur - 1.3))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.98)});`
     case 'plan':
       return inOut + `
       tl.fromTo('#${id}pl0',{y:50,autoAlpha:0},{y:0,autoAlpha:1,duration:0.34,ease:'power3.out'},${t0});
@@ -2384,8 +2669,11 @@ export function animJs(name, s, r2) {
       tl.to('#${id}bg',{scale:1.07,duration:${r2(Math.max(0.4, dur - 1))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.75)});`
     case 'trend':
       return inOut + `
-      tl.fromTo('#${id}an .an-tr',{scaleY:0},{scaleY:1,duration:0.3,stagger:0.1,ease:'back.out(1.5)'},${t0});
-      tl.fromTo('#${id}ta',{scale:0.4,y:20,autoAlpha:0},{scale:1,y:0,autoAlpha:1,duration:0.34,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${r2(t0 + 0.6)});`
+      tl.fromTo('#${id}an .an-tr',{scaleY:0},{scaleY:1,duration:0.26,stagger:0.075,ease:'back.out(1.5)'},${t0});
+      tl.fromTo('#${id}tl',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.5,ease:'power2.out'},${r2(t0 + 0.3)});
+      tl.fromTo('#${id}ta',{autoAlpha:0},{autoAlpha:1,duration:0.2,ease:'power2.out'},${r2(t0 + 0.74)});
+      tl.fromTo('#${id}tp',{scale:0.5,y:${FH(id, 0.06)},autoAlpha:0},{scale:1,y:0,autoAlpha:1,duration:0.32,ease:'back.out(2.2)'},${r2(t0 + 0.86)});
+      tl.fromTo('#${id}tn',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.28,ease:'back.out(2.4)'},${r2(t0 + 0.92)});`
     case 'template':
       return inOut + `
       tl.fromTo('#${id}tp0',{scale:0.85,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(1.7)',transformOrigin:'50% 50%'},${t0});
@@ -2437,11 +2725,6 @@ export function animJs(name, s, r2) {
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
-    case 'money':
-      return inOut + `
-      tl.fromTo('#${id}cd', { scale: 0.85, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.7)' }, ${t0});
-      tl.fromTo('#${id}am', { scaleX: 0.15 }, { scaleX: 1, duration: 0.6, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});
-      tl.fromTo('#${id}an .an-coin', { yPercent: -120, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.42, stagger: 0.1, ease: 'bounce.out' }, ${r2(t0 + 0.34)});`
     case 'idea':
       return inOut + `
       tl.fromTo('#${id}an .an-bit', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.05, ease: 'power2.out', transformOrigin: '50% 50%' }, ${t0});
@@ -2452,19 +2735,18 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}dot', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
       tl.to('#${id}ring', { strokeDashoffset: 0, duration: ${r2(Math.max(0.6, dur - 0.7))}, ease: 'power2.inOut' }, ${r2(t0 + 0.16)});
       tl.to('#${id}dot', { scale: 1.35, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(end - 0.5)});`
-    case 'lock':
-      return inOut + `
-      tl.fromTo('#${id}bx', { scaleX: 0.6, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, ease: 'power3.out', transformOrigin: '50% 50%' }, ${t0});
-      tl.fromTo('#${id}an .an-dot', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.2, stagger: 0.08, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.24)});
-      tl.fromTo('#${id}sh', { yPercent: -50, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'bounce.out' }, ${r2(t0 + 0.62)});`
     case 'search':
       return inOut + `
-      tl.fromTo('#${id}ty', { scaleX: 0 }, { scaleX: 1, duration: 0.1, repeat: 5, yoyo: true, ease: 'none', transformOrigin: '0% 50%' }, ${t0});
-      tl.fromTo('#${id}an .an-res', { yPercent: -40, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.3, stagger: 0.1, ease: 'power2.out' }, ${r2(t0 + 0.5)});`
+      tl.fromTo('#${id}an .an-sl2', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, stagger: 0.055 }, ${t0});
+      tl.fromTo('#${id}ty', { autoAlpha: 1 }, { autoAlpha: 0.15, duration: 0.24, repeat: 4, yoyo: true }, ${t0});
+      tl.to('#${id}ty', { autoAlpha: 0, duration: 0.12 }, ${r2(t0 + 0.72)});
+      tl.fromTo('#${id}an .an-res', { yPercent: -40, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.3, stagger: 0.1, ease: 'power2.out' }, ${r2(t0 + 0.78)});`
     case 'rocket':
       return inOut + `
       tl.fromTo('#${id}tr', { strokeDashoffset: 180 }, { strokeDashoffset: 0, duration: ${r2(Math.max(0.6, dur - 0.6))}, ease: 'power2.inOut' }, ${t0});
-      tl.fromTo('#${id}hd', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + Math.max(0.4, dur - 0.8))});`
+      tl.fromTo('#${id}an .an-rk', { scale: 0.3, autoAlpha: 0 }, { scale: 1.15, autoAlpha: 0.5, duration: 0.4, stagger: 0.13, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(t0 + 0.2)});
+      tl.to('#${id}an .an-rk', { autoAlpha: 0, duration: 0.4, stagger: 0.13 }, ${r2(t0 + 0.6)});
+      tl.fromTo('#${id}hd', { x: ${FW(id, -0.5)}, y: ${FH(id, 0.5)}, scale: 0.4, autoAlpha: 0 }, { x: 0, y: 0, scale: 1, autoAlpha: 1, duration: ${r2(Math.max(0.5, dur - 0.7))}, ease: 'power2.out' }, ${t0});`
     case 'network':
       return inOut + `
       tl.fromTo('#${id}an .an-ln', { scaleX: 0 }, { scaleX: 1, duration: 0.3, stagger: 0.07, ease: 'power2.out', transformOrigin: '0% 50%' }, ${t0});
@@ -2560,7 +2842,11 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-ar', { scaleX: 0 }, { scaleX: 1, duration: 0.28, stagger: 0.34, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.3)});`
     case 'funnel':
       return inOut + `
-      tl.fromTo('#${id}an .an-fn', { scaleX: 0.2, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, stagger: 0.16, ease: 'back.out(1.6)', transformOrigin: '50% 50%' }, ${t0});`
+      tl.fromTo('#${id}an .an-fn', { scaleX: 0.2, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.28, stagger: 0.24, ease: 'back.out(1.6)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}an .an-fd0', { y: 0, autoAlpha: 0 }, { y: ${FH(id, 0.11)}, autoAlpha: 1, duration: 0.26, stagger: 0.03, ease: 'power1.in' }, ${r2(t0 + 0.24)});
+      tl.to('#${id}an .an-fd0', { autoAlpha: 0, duration: 0.12, stagger: 0.03 }, ${r2(t0 + 0.46)});
+      tl.fromTo('#${id}an .an-fd1', { y: 0, autoAlpha: 0 }, { y: ${FH(id, 0.11)}, autoAlpha: 1, duration: 0.26, stagger: 0.04, ease: 'power1.in' }, ${r2(t0 + 0.5)});
+      tl.to('#${id}an .an-fd1', { autoAlpha: 0, duration: 0.12, stagger: 0.04 }, ${r2(t0 + 0.72)});`
     case 'orbit':
       return inOut + `
       tl.fromTo('#${id}c', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});
@@ -2569,18 +2855,6 @@ export function animJs(name, s, r2) {
     case 'bars2':
       return inOut + `
       tl.fromTo('#${id}an .an-b2', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.5, stagger: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${t0});`
-    case 'wallet':
-      return inOut + `
-      tl.fromTo('#${id}w', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.8)', transformOrigin: '50% 100%' }, ${t0});
-      tl.fromTo('#${id}an .an-cd', { yPercent: 60, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.36, stagger: 0.12, ease: 'back.out(1.5)' }, ${r2(t0 + 0.24)});`
-    case 'swipe':
-      return inOut + `
-      tl.fromTo('#${id}fd', { yPercent: 0 }, { yPercent: -32, duration: ${r2(Math.max(0.7, dur - 0.4))}, ease: 'power2.inOut' }, ${t0});
-      tl.fromTo('#${id}an .an-sw', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, stagger: 0.05 }, ${t0});`
-    case 'views':
-      return inOut + `
-      tl.fromTo('#${id}pl', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
-      tl.fromTo('#${id}bar', { scaleX: 0.05 }, { scaleX: 1, duration: ${r2(Math.max(0.6, dur - 0.6))}, ease: 'power2.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.2)});`
     case 'engage':
       return inOut + `
       tl.fromTo('#${id}an .an-bub', { xPercent: -30, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.3, stagger: 0.12, ease: 'back.out(1.6)' }, ${t0});
@@ -2590,12 +2864,13 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-cell', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.22, stagger: 0.035, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, ${t0});`
     case 'upload':
       return inOut + `
-      tl.fromTo('#${id}cd', { yPercent: 25, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.3, ease: 'power2.out' }, ${t0});
-      tl.to('#${id}cd', { yPercent: -60, scale: 0.72, duration: ${r2(Math.max(0.5, dur - 0.7))}, ease: 'power2.inOut' }, ${r2(t0 + 0.36)});
-      tl.fromTo('#${id}ar', { yPercent: 30, autoAlpha: 0 }, { yPercent: -20, autoAlpha: 1, duration: 0.5, repeat: 2, ease: 'power1.out' }, ${r2(t0 + 0.3)});`
-    case 'stack':
-      return inOut + `
-      tl.fromTo('#${id}an .an-st', { yPercent: 30, autoAlpha: 0, rotation: -6 }, { yPercent: 0, autoAlpha: 1, rotation: 0, duration: 0.34, stagger: 0.11, ease: 'back.out(1.7)' }, ${t0});`
+      tl.fromTo('#${id}uz', { scale: 0.94, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}uc', { y: ${FH(id, -0.14)}, rotation: -7, autoAlpha: 0 }, { y: 0, rotation: 0, autoAlpha: 1, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.12)});
+      tl.to('#${id}uc', { y: ${FH(id, 0.4)}, scale: 0.78, duration: 0.42, ease: 'power2.in' }, ${r2(t0 + 0.46)});
+      tl.to('#${id}uc', { autoAlpha: 0, duration: 0.14 }, ${r2(t0 + 0.8)});
+      tl.fromTo('#${id}ub', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16 }, ${r2(t0 + 0.72)});
+      tl.to('#${id}ubf', { scaleX: 1, duration: 0.5, ease: 'power1.inOut' }, ${r2(t0 + 0.78)});
+      tl.fromTo('#${id}uk', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + 1.22)});`
     case 'swap':
       return inOut + `
       tl.fromTo('#${id}a', { scale: 1, autoAlpha: 1 }, { scale: 0.8, autoAlpha: 0.35, duration: 0.36, ease: 'power2.in', transformOrigin: '50% 50%' }, ${r2(t0 + 0.3)});
@@ -2662,9 +2937,12 @@ export function animJs(name, s, r2) {
       tl.to('#${id}sr',{xPercent:-40,duration:0.34,ease:'power3.inOut'},${r2(t0 + 0.8)});`
     case 'chat':
       return inOut + `
-      tl.fromTo('#${id}cq',{x:60,autoAlpha:0},{x:0,autoAlpha:1,duration:0.32,ease:'back.out(1.6)'},${t0});
-      tl.fromTo('#${id}ca',{x:-50,autoAlpha:0},{x:0,autoAlpha:1,duration:0.34,ease:'power3.out'},${r2(t0 + 0.36)});
-      tl.fromTo(['#${id}cl0','#${id}cl1','#${id}cl2'],{scaleX:0},{scaleX:1,duration:0.22,stagger:0.13,ease:'power2.out'},${r2(t0 + 0.6)});`
+      tl.fromTo('#${id}cq',{x:60,autoAlpha:0},{x:0,autoAlpha:1,duration:0.28,ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}an .an-cq2',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:0.035},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}cqc',{autoAlpha:1},{autoAlpha:0.1,duration:0.24,repeat:4,yoyo:true},${r2(t0 + 0.24)});
+      tl.to('#${id}cqc',{autoAlpha:0,duration:0.1},${r2(t0 + 0.86)});
+      tl.fromTo('#${id}ca',{x:-50,autoAlpha:0},{x:0,autoAlpha:1,duration:0.32,ease:'power3.out'},${r2(t0 + 0.9)});
+      tl.fromTo(['#${id}cl0','#${id}cl1','#${id}cl2'],{scaleX:0},{scaleX:1,duration:0.2,stagger:0.11,ease:'power2.out'},${r2(t0 + 1.1)});`
     case 'dashboard':
       return inOut + `
       tl.fromTo('#${id}dp',{scale:0.92,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(1.6)'},${t0});
@@ -2807,10 +3085,6 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}db',{scaleX:0},{scaleX:1,duration:0.26,ease:'power3.inOut'},${r2(t0 + 0.34)});
       tl.fromTo('#${id}dn2',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.36,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.5)});
       tl.fromTo('#${id}dc',{scale:0,rotation:-12,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.32,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.72)});`
-    case 'waitlist':
-      return inOut + `
-      tl.fromTo('#${id}an .an-wl',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,stagger:0.07,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${t0});
-      tl.fromTo('#${id}wc',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.36,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${r2(t0 + 0.42)});`
     case 'music':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.05,ease:'power2.out'},${t0});
@@ -2825,11 +3099,19 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}bp',{yPercent:110,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.42,ease:'power3.out'},${r2(t0 + 0.62)});`
     // ── PAQUET 6 (#157) ──
     case 'keyword':
+      // le mot se TAPE lettre par lettre, le curseur clignote, puis la réponse tombe
       return inOut + `
       tl.fromTo('#${id}kc',{y:-18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'power3.out'},${t0});
-      tl.fromTo('#${id}kw',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.28,ease:'back.out(2.8)',transformOrigin:'0% 50%'},${r2(t0 + 0.24)});
-      tl.fromTo('#${id}ka',{y:-12,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,ease:'power2.out'},${r2(t0 + 0.46)});
-      tl.fromTo('#${id}km',{y:26,scale:0.92,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.38,ease:'back.out(1.8)'},${r2(t0 + 0.6)});`
+      tl.fromTo('#${id}an .an-kl',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:0.055},${r2(t0 + 0.26)});
+      tl.fromTo('#${id}kr',{autoAlpha:1},{autoAlpha:0.15,duration:0.22,repeat:5,yoyo:true},${r2(t0 + 0.26)});
+      tl.to('#${id}kr',{autoAlpha:0,duration:0.12},${r2(t0 + 0.86)});
+      tl.fromTo('#${id}kb',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.22,ease:'back.out(2.6)'},${r2(t0 + 0.82)});
+      tl.to('#${id}kb',{scale:0.9,duration:0.1,yoyo:true,repeat:1},${r2(t0 + 1.02)});
+      // ENVOI : le mot QUITTE le champ et réapparaît dans la bulle
+      tl.to('#${id}kw',{autoAlpha:0,y:-10,duration:0.16,ease:'power2.in'},${r2(t0 + 1.1)});
+      tl.to('#${id}kb',{autoAlpha:0,duration:0.16},${r2(t0 + 1.1)});
+      tl.fromTo('#${id}km',{y:26,scale:0.92,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.36,ease:'back.out(1.8)'},${r2(t0 + 1.2)});
+      tl.fromTo('#${id}kmw',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,ease:'back.out(2.6)',transformOrigin:'0% 50%'},${r2(t0 + 1.36)});`
     case 'automation':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.2,ease:'power2.out'},${t0});
@@ -2960,16 +3242,6 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-qt',{scaleX:0,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.2,stagger:0.055,ease:'power2.out',transformOrigin:'0% 50%'},${r2(t0 + 0.2)});
       tl.fromTo('#${id}qtt',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)',transformOrigin:'100% 50%'},${r2(t0 + 0.6)});
       tl.fromTo('#${id}qs path',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.42,ease:'power2.out'},${r2(t0 + 0.72)});`
-    case 'flight':
-      return inOut + `
-      tl.fromTo('#${id}an .an-p',{y:18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.6)'},${t0});
-      tl.fromTo('#${id}fp',{x:0,autoAlpha:0},{x:${FW(id, 0.34)},autoAlpha:1,duration:${r2(Math.max(0.6, dur - 0.5))},ease:'power1.inOut'},${r2(t0 + 0.26)});
-      tl.fromTo('#${id}an .an-fl2',{y:10,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.08,ease:'power3.out'},${r2(t0 + 0.4)});`
-    case 'saving':
-      return inOut + `
-      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
-      tl.fromTo('#${id}sv',{scaleY:0},{scaleY:0.82,duration:${r2(Math.max(0.7, dur - 0.4))},ease:'power2.out'},${r2(t0 + 0.2)});
-      tl.fromTo('#${id}svv',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.34)});`
     case 'cv':
       return inOut + `
       tl.fromTo('#${id}an .an-cv',{y:20,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.1,ease:'back.out(1.8)'},${t0});
@@ -3067,10 +3339,119 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}lph',{x:0},{x:${FW(id, 0.88)},duration:0.44,repeat:2,ease:'none'},${r2(t0 + 0.28)});
       tl.to('#${id}lpa',{rotation:360,duration:0.44,repeat:2,ease:'none',transformOrigin:'50% 50%'},${r2(t0 + 0.28)});
       tl.fromTo('#${id}lpn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.8)'},${r2(t0 + 0.6)});`
+    case 'framing':
+      return inOut + `
+      tl.fromTo('#${id}fmb', { scale: 1.55, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.5, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}an .an-fg', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, stagger: 0.05 }, ${r2(t0 + 0.4)});`
+    case 'focus':
+      return inOut + `
+      tl.fromTo('#${id}fcn', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.28, ease: 'power2.inOut' }, ${r2(t0 + 0.42)});
+      tl.fromTo('#${id}an .an-fcc', { scaleX: 0.2, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.3, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(t0 + 0.4)});`
+    case 'clipping':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cp', { scaleY: 0.2 }, { scaleY: 1, duration: 0.3, stagger: 0.012, ease: 'power2.out' }, ${t0});
+      tl.to('#${id}an .an-cp', { scaleY: 0.55, duration: 0.34, ease: 'power2.inOut' }, ${r2(t0 + 0.72)});
+      tl.fromTo('#${id}cpw', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.24, ease: 'back.out(2)' }, ${r2(t0 + 0.34)});
+      tl.to('#${id}cpw', { autoAlpha: 0.25, duration: 0.3 }, ${r2(t0 + 0.8)});`
+    case 'lighting':
+      return inOut + `
+      tl.fromTo('#${id}lgl', { scale: 0.4, autoAlpha: 0, rotation: -25 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.34, ease: 'back.out(2)' }, ${t0});
+      tl.fromTo('#${id}lgg', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, ${r2(t0 + 0.3)});
+      tl.to(['#${id}lgh', '#${id}lgb'], { backgroundColor: '#FFD678', duration: 0.4, ease: 'power2.out' }, ${r2(t0 + 0.34)});`
+    case 'retake':
+      return inOut + `
+      tl.fromTo('#${id}rk1', { scale: 0.9, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'power2.out' }, ${t0});
+      tl.to('#${id}rk1', { x: ${FW(id, -1.1)}, rotation: -12, autoAlpha: 0, duration: 0.36, ease: 'power2.in' }, ${r2(t0 + 0.5)});
+      tl.fromTo('#${id}rk2', { x: ${FW(id, 1.1)}, autoAlpha: 1 }, { x: 0, duration: 0.4, ease: 'power3.out' }, ${r2(t0 + 0.58)});`
+    case 'caption':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cpl', { scaleX: 0 }, { scaleX: 1, duration: 0.26, stagger: 0.12, ease: 'power1.inOut' }, ${t0});
+      tl.fromTo('#${id}an .an-cpt', { scale: 0.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, stagger: 0.08, ease: 'back.out(2.4)' }, ${r2(t0 + 0.5)});`
+    case 'preview':
+      return inOut + `
+      tl.fromTo('#${id}pvp', { y: ${FH(id, 0.12)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.36, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}pvv', { scale: 0.82, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(1.7)' }, ${r2(t0 + 0.24)});
+      tl.fromTo('#${id}an .an-pvl', { scaleX: 0 }, { scaleX: 1, duration: 0.22, stagger: 0.08, ease: 'power1.out', transformOrigin: '0% 50%' }, ${r2(t0 + 0.42)});
+      tl.fromTo('#${id}pvb', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.4)' }, ${r2(t0 + 0.6)});`
+    case 'spike':
+      return inOut + `
+      tl.fromTo('#${id}spl', { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.62, ease: 'power2.in' }, ${t0});
+      tl.fromTo('#${id}spd', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(3)' }, ${r2(t0 + 0.6)});
+      tl.fromTo('#${id}spn', { scale: 0.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)' }, ${r2(t0 + 0.64)});`
+    case 'brandeal':
+      return inOut + `
+      tl.fromTo('#${id}bdc', { y: ${FH(id, -0.14)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.34, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}bdm', { scale: 0.55, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.4)' }, ${r2(t0 + 0.42)});`
+    case 'mediakit':
+      return inOut + `
+      tl.fromTo('#${id}mkc', { scale: 0.9, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}an .an-mk', { x: ${FW(id, -0.25)}, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.3, stagger: 0.11, ease: 'power2.out' }, ${r2(t0 + 0.22)});`
+    case 'inventory':
+      return inOut + `
+      tl.fromTo('#${id}ivf', { scaleY: 1 }, { scaleY: 0.18, duration: 0.6, ease: 'power2.in' }, ${t0});
+      tl.fromTo('#${id}ivw', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.16, ease: 'power2.out' }, ${r2(t0 + 0.55)});
+      tl.to('#${id}ivw', { autoAlpha: 0.3, duration: 0.14, repeat: 3, yoyo: true }, ${r2(t0 + 0.7)});
+      tl.to('#${id}ivf', { scaleY: 0.95, duration: 0.4, ease: 'back.out(1.6)' }, ${r2(t0 + 0.92)});`
+    case 'stoploss':
+      return inOut + `
+      tl.fromTo('#${id}an .an-sl', { scaleY: 0 }, { scaleY: 1, duration: 0.22, stagger: 0.07, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}sll', { scaleX: 0 }, { scaleX: 1, duration: 0.34, ease: 'power2.out' }, ${r2(t0 + 0.2)});
+      tl.fromTo('#${id}slt', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, ease: 'back.out(2.4)' }, ${r2(t0 + 0.52)});
+      tl.to('#${id}sll', { autoAlpha: 0.35, duration: 0.12, repeat: 3, yoyo: true }, ${r2(t0 + 0.66)});`
+    case 'orderbook':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ob1', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.26, stagger: 0.06, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}an .an-ob2', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.26, stagger: 0.06, ease: 'power2.out' }, ${r2(t0 + 0.1)});
+      tl.fromTo('#${id}obs', { scaleY: 1.5, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' }, ${r2(t0 + 0.5)});`
+    case 'deploy':
+      return inOut + `
+      tl.fromTo('#${id}an .an-dp', { x: ${FW(id, -0.2)}, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.26, stagger: 0.13, ease: 'power2.out' }, ${t0});
+      tl.to('#${id}dp0 .an-dpd', { backgroundColor: '#22C55E', duration: 0.16 }, ${r2(t0 + 0.36)});
+      tl.to('#${id}dp1 .an-dpd', { backgroundColor: '#22C55E', duration: 0.16 }, ${r2(t0 + 0.52)});
+      tl.to('#${id}dp2 .an-dpd', { backgroundColor: '#22C55E', duration: 0.16 }, ${r2(t0 + 0.68)});
+      tl.fromTo('#${id}dpb', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2.4)' }, ${r2(t0 + 0.76)});`
+    case 'uptime':
+      return inOut + `
+      tl.fromTo('#${id}an .an-up', { scaleY: 0 }, { scaleY: 1, duration: 0.2, stagger: 0.022, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}upn', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2.2)' }, ${r2(t0 + 0.5)});`
+    case 'leads':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ld', { y: ${FH(id, -0.1)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'back.out(1.8)' }, ${t0});
+      tl.fromTo('#${id}ldn', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)' }, ${r2(t0 + 0.2)});`
+    case 'comment': {
+      // chaque lettre du mot enfonce une touche : les deux sont synchronisées
+      const mot = ((s.items || [])[0] && String(s.items[0].text || '').trim()) || 'PLAN'
+      const rows = ['AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN']
+      const all = rows.join('')
+      const hits = mot.toUpperCase().split('').map((c) => all.indexOf(c)).filter((i) => i >= 0)
+      const press = hits.map((k, i) => `
+      tl.to('#${id}kk${k}',{scale:0.84,duration:0.06,yoyo:true,repeat:1,transformOrigin:'50% 50%'},${r2(t0 + 0.4 + i * 0.13)});
+      tl.to('#${id}kh${k}',{opacity:0.85,duration:0.06,yoyo:true,repeat:1},${r2(t0 + 0.4 + i * 0.13)});`).join('')
+      return inOut + `
+      tl.fromTo('#${id}an .an-kk',{y:${FH(id, 0.06)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.006,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}cf',{y:-14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.28,ease:'power3.out'},${r2(t0 + 0.18)});
+      tl.fromTo('#${id}an .an-cl2',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:0.13},${r2(t0 + 0.42)});
+      tl.fromTo('#${id}cc',{autoAlpha:1},{autoAlpha:0.15,duration:0.26,repeat:6,yoyo:true},${r2(t0 + 0.4)});${press}`
+    }
+    case 'share':
+      // le cœur se remplit et pulse, l'onde part, la flèche s'envole
+      return inOut + `
+      tl.fromTo(['#${id}sh1','#${id}sh3'],{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,stagger:0.1,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${t0});
+      // le doigt descend, appuie, et c'est CET appui qui remplit le cœur
+      tl.fromTo('#${id}shf',{y:${FH(id, 0.16)},scale:1.25,autoAlpha:0},{y:0,scale:1,autoAlpha:0.42,duration:0.32,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.3)});
+      tl.to('#${id}shf',{scale:0.82,duration:0.09,yoyo:true,repeat:1,transformOrigin:'50% 50%'},${r2(t0 + 0.6)});
+      tl.to('#${id}sh1',{scale:0.86,duration:0.09,yoyo:true,repeat:1,transformOrigin:'50% 50%'},${r2(t0 + 0.6)});
+      tl.to('#${id}shf',{autoAlpha:0,y:${FH(id, 0.1)},duration:0.26,ease:'power2.out'},${r2(t0 + 0.82)});
+      tl.fromTo('#${id}sh2',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.66)});
+      tl.fromTo('#${id}shr',{scale:0.6,autoAlpha:0.9},{scale:1.9,autoAlpha:0,duration:0.5,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.68)});
+      tl.fromTo('#${id}shn',{y:10,autoAlpha:0},{y:-6,autoAlpha:1,duration:0.3,ease:'back.out(2)'},${r2(t0 + 0.74)});
+      tl.to('#${id}sh3',{x:${FW(id, 0.18)},y:${FH(id, -0.08)},autoAlpha:0,duration:0.4,ease:'power2.in'},${r2(t0 + 0.96)});`
     default:
       return inOut + `
-      tl.fromTo('#${id}cl', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2)' }, ${t0});
-      tl.fromTo('#${id}hd', { rotation: 0 }, { rotation: 360, duration: ${dur}, ease: 'none', transformOrigin: '50% 100%' }, ${t0});`
+      tl.fromTo('#${id}cn', { scale: 0.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2.4)' }, ${t0});
+      tl.fromTo('#${id}cl', { strokeDashoffset: (i, el) => (el.getTotalLength ? el.getTotalLength() : 0) }, { strokeDashoffset: 0, duration: ${r2(Math.max(0.6, dur - 0.7))}, ease: 'power1.inOut' }, ${t0});
+      tl.fromTo('#${id}co', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.22 }, ${r2(t0 + 0.4)});
+      tl.fromTo('#${id}cb', { scaleX: 0 }, { scaleX: 1, duration: 0.26, ease: 'power3.inOut' }, ${r2(t0 + 0.56)});`
   }
 }
 

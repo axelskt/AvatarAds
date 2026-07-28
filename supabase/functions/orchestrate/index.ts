@@ -184,15 +184,17 @@ const TUTO: Record<string, Record<string, number[]>> = {
   '01-imagesia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'generation': [0.214, 0.184, 0.091, 0.037], 'correction': [0.305, 0.184, 0.091, 0.037], 'photo-reel-realiste': [0.216, 0.312, 0.08, 0.087], 'pixar-3d-toy-story': [0.302, 0.312, 0.08, 0.087], 'fruit-perso-fruit': [0.216, 0.41, 0.08, 0.087], 'ugc-reel-authentique': [0.302, 0.41, 0.08, 0.087], 'mascotte-de-marque': [0.216, 0.509, 0.08, 0.087], 'autre-style-libre': [0.302, 0.509, 0.08, 0.087], '1-1': [0.201, 0.668, 0.052, 0.077], '9-16': [0.259, 0.668, 0.052, 0.077], '16-9': [0.317, 0.668, 0.052, 0.077], 'standard': [0.203, 0.826, 0.056, 0.017], 'premium': [0.259, 0.826, 0.056, 0.017], '4k': [0.315, 0.826, 0.056, 0.017], '1': [0.206, 0.941, 0.054, 0.037], '2': [0.259, 0.941, 0.054, 0.037], '3': [0.313, 0.941, 0.054, 0.037], 'image-de-reference': [0.415, 0.867, 0.075, 0.23], 'decris-l-image-que-tu-veux-generer': [0.724, 0.813, 0.525, 0.121], 'ameliorer': [0.947, 0.783, 0.066, 0.039], 'entrepreneur-en-studio-moderne': [0.532, 0.921, 0.142, 0.033], 'face-cam-ugc-outdoor-micro-crav': [0.683, 0.921, 0.148, 0.033], 'generer-l-image-3-cr': [0.909, 0.921, 0.154, 0.068], '2200-9999-credits-images-ce-mois': [0.724, 0.975, 0.525, 0.014] },
   '02-express': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'realiste-avatar-reel': [0.218, 0.25, 0.082, 0.069], 'cartoon-3d-style-pixar': [0.304, 0.25, 0.082, 0.069], 'ugc-reel-selfie-authentique': [0.218, 0.329, 0.082, 0.069], 'studio-produit-pub': [0.304, 0.329, 0.082, 0.069], 'portrait-9-16': [0.218, 0.477, 0.082, 0.064], 'paysage-16-9': [0.304, 0.477, 0.082, 0.064], '720p': [0.218, 0.735, 0.082, 0.051], '1080pdes-8-s': [0.304, 0.735, 0.082, 0.051], 'voix-native-veo-audio-genere-avec-la-vid': [0.261, 0.895, 0.168, 0.066], 'gemini-tts-voix-generee-11-timbres': [0.261, 0.967, 0.168, 0.066], 'ajoute-tes-images-avatar-produit-perso': [0.451, 0.783, 0.131, 0.222], 'importer-depuis-la-bibliotheque': [0.451, 0.939, 0.131, 0.069], 'decris-ta-video-et-ce-que-le-perso-dit-a': [0.754, 0.756, 0.456, 0.167], 'ameliorer': [0.555, 0.869, 0.058, 0.033], 'face-camera': [0.625, 0.869, 0.071, 0.038], 'cartoon': [0.693, 0.869, 0.056, 0.038], 'fitness': [0.752, 0.869, 0.052, 0.038], 'produit': [0.808, 0.869, 0.052, 0.038], 'generer-la-video': [0.898, 0.935, 0.17, 0.077] },
   '03-generateur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], '1-produit': [0.21, 0.194, 0.046, 0.029], '2-avatar': [0.32, 0.194, 0.044, 0.029], '3-voix': [0.426, 0.194, 0.036, 0.029], '4-style': [0.528, 0.194, 0.038, 0.029], '5-generer': [0.637, 0.194, 0.049, 0.029], 'ex-dropacademy-funnelpro-monbusiness-ia': [0.424, 0.29, 0.475, 0.051], 'selectionner-un-hook-personne-ne-t-en-pa': [0.424, 0.479, 0.475, 0.051], 'le-hook-apparaitra-ici-ou-ecris-le-tien-': [0.424, 0.548, 0.475, 0.051], 'ecris-le-corps-de-ton-script-ici-le-hook': [0.424, 0.711, 0.475, 0.167], 'selectionner-un-cta-commente-plan-et-je-': [0.424, 0.874, 0.475, 0.051], 'continuer': [0.456, 0.958, 0.451, 0.049], 'tiktok': [0.76, 0.118, 0.038, 0.026], 'reels': [0.798, 0.118, 0.034, 0.026], 'facebook': [0.84, 0.118, 0.045, 0.026], 'youtube': [0.885, 0.118, 0.041, 0.026], 'linkedin': [0.931, 0.118, 0.045, 0.026], 'apercu-anime': [0.847, 0.166, 0.082, 0.036] },
-  '04-montageia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'gameplay-voix-ta-voix-ou-elevenlabs-sur-': [0.465, 0.276, 0.218, 0.081], 'ma-video-importe-ta-video-l-ia-la-monte-': [0.69, 0.276, 0.218, 0.081], 'importe-ta-voix-off-mp3-wav-m4a-l-ia-en-': [0.578, 0.412, 0.444, 0.093], 'ajoute-une-photo-d-avatar-sinon-100-game': [0.578, 0.552, 0.444, 0.093], 'https-ton-site-com': [0.464, 0.673, 0.216, 0.056], '0-8': [0.601, 0.678, 0.036, 0.064], 'parametres-avances-sous-titres-mot-par-m': [0.578, 0.773, 0.444, 0.076], 'ajouter-un-script-brief-dis-a-l-ia-ce-qu': [0.578, 0.894, 0.444, 0.076], 'creer-ma-video-6-credits': [0.578, 0.952, 0.475, 0.064] },
+  '04-montageia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'gameplay-voix-ta-voix-ou-elevenlabs-sur-': [0.465, 0.276, 0.218, 0.081], 'ma-video-importe-ta-video-l-ia-la-monte-': [0.69, 0.276, 0.218, 0.081], 'importe-ta-voix-off-mp3-wav-m4a-l-ia-en-': [0.578, 0.412, 0.444, 0.093], 'ajoute-une-photo-d-avatar-sinon-100-game': [0.578, 0.552, 0.444, 0.093], 'https-ton-site-com': [0.464, 0.673, 0.216, 0.056], '0-8': [0.601, 0.678, 0.036, 0.064], 'parametres-avances-sous-titres-mot-par-m': [0.578, 0.773, 0.444, 0.076], 'ajouter-un-script-brief-dis-a-l-ia-ce-qu': [0.578, 0.894, 0.444, 0.076], 'creer-ma-video-8-credits': [0.578, 0.952, 0.475, 0.064] },
   '05-bibliotheque': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'importer': [0.856, 0.118, 0.068, 0.041], 'nouvelle-video': [0.94, 0.118, 0.09, 0.039], 'toutes': [0.193, 0.212, 0.041, 0.037], 'videos': [0.234, 0.212, 0.041, 0.037], 'audio': [0.274, 0.212, 0.038, 0.037], 'images': [0.313, 0.212, 0.042, 0.037], 'importer-une-video-avatar-mp4-hedra-ou-v': [0.268, 0.591, 0.196, 0.675] },
-  '06-nettoyage-audio': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.394, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.477, 0.608, 0.193, 0.137], 'avance-traitement-renforce': [0.678, 0.608, 0.193, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.394, 0.069], 'nettoyer-mon-audio': [0.578, 0.82, 0.394, 0.064] },
+  '06-nettoyage-audio': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'nettoyer-mon-audio': [0.578, 0.82, 0.364, 0.064] },
   '07-enregistreur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'recmainbtn': [0.578, 0.41, 0.046, 0.082], 'importer-un-fichier-audio-video-mp4': [0.578, 0.519, 0.195, 0.051], 'ecouter': [0.398, 0.595, 0.088, 0.049], 'couper-ici': [0.491, 0.595, 0.088, 0.049], 'supprimer': [0.584, 0.595, 0.088, 0.049], 'remplacer': [0.677, 0.595, 0.088, 0.049], 'silences-on': [0.763, 0.595, 0.075, 0.049], 'wav': [0.365, 0.694, 0.058, 0.053], 'envoyer-vers-bibliotheque': [0.475, 0.694, 0.152, 0.053], 'utiliser-dans-le-generateur': [0.705, 0.694, 0.227, 0.053] },
   '08-parrainage': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'https-avatarads-iamanager-fr-ref-f0cae49': [0.539, 0.589, 0.29, 0.053], 'copier': [0.726, 0.589, 0.069, 0.053], 'twitter': [0.453, 0.659, 0.117, 0.052], 'facebook': [0.578, 0.659, 0.117, 0.056], 'tiktok': [0.702, 0.659, 0.117, 0.056] },
   '09-cartoon': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046] },
   '10-mon-compte': { 'axel': [0.5, 0.253, 0.256, 0.048], '33-6-00-00-00-00': [0.5, 0.347, 0.256, 0.056], 'definir-ou-changer-mon-mot-de-passe': [0.5, 0.447, 0.256, 0.059], 'nouveau-email-com': [0.5, 0.757, 0.256, 0.056], 'envoyer-le-lien-de-confirmation': [0.5, 0.888, 0.256, 0.059] },
   '11-connecter-claude': { 'generer-ma-cle': [0.284, 0.442, 0.172, 0.053], 'ouvrir-claude-connecteurs': [0.5, 0.442, 0.172, 0.053], 'commencer': [0.716, 0.442, 0.172, 0.053] },
   '12-connecter-claude-entree': { 'connecter-claude': [0.498, 0.655, 0.236, 0.077] },
+  '13-montage-avance': { 'mot-par-mot': [0.386, 0.452, 0.113, 0.041], 'karaoke': [0.495, 0.452, 0.098, 0.041], 'ligne-complete': [0.609, 0.452, 0.122, 0.041], 'punch': [0.372, 0.544, 0.084, 0.041], 'neon': [0.458, 0.544, 0.081, 0.041], 'auto': [0.542, 0.544, 0.079, 0.041], 'aucun': [0.628, 0.544, 0.085, 0.041], 'haut': [0.355, 0.636, 0.051, 0.041], 'centre': [0.414, 0.636, 0.058, 0.041], 'bas': [0.47, 0.636, 0.047, 0.041], 's': [0.533, 0.636, 0.051, 0.041], 'm': [0.589, 0.636, 0.054, 0.041], 'l': [0.645, 0.636, 0.051, 0.041], 'emoji-auto-sur-les-mots-cles-ajoutes-sur': [0.5, 0.711, 0.346, 0.068], 'auto-ia-choisit': [0.383, 0.881, 0.111, 0.117], 'apple-fond-clair-minimal': [0.5, 0.881, 0.111, 0.117], 'liquid-glass-verre-depoli-reflets': [0.618, 0.881, 0.111, 0.117] },
+  '14-audio-avance': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'aucun-original': [0.439, 0.846, 0.087, 0.072], 'naturel-equilibre': [0.531, 0.846, 0.087, 0.072], 'podcast-chaleureux': [0.624, 0.846, 0.087, 0.072], 'punchy-nerveux': [0.716, 0.846, 0.087, 0.072], 'supprimer-les-silences-coupe-les-blancs-': [0.578, 0.966, 0.364, 0.069] },
   '20-claude-menu': { 'menu-parametres': [0.085, 0.632, 0.151, 0.028] },
   '21-claude-parametres': { 'onglet-connecteurs': [0.28, 0.713, 0.103, 0.031] },
   '22-claude-connecteurs': { 'bouton-ajouter': [0.72, 0.115, 0.055, 0.034] },
@@ -209,22 +211,23 @@ const TUTO_FILE: Record<string, string> = new Proxy(
 const ANIMS = [
   'screen', 'result', 'phone', 'split', 'avatar', 'faceless', 'voice', 'cut',
   'type', 'logo', 'tools', 'copy', 'connect', 'sign', 'post', 'upload',
-  'money', 'wallet', 'countup', 'clock', 'calendar', 'grow', 'views', 'engage',
-  'swipe', 'network', 'rocket', 'stack', 'funnel', 'bars2', 'idea', 'steps',
-  'flow', 'orbit', 'list', 'target', 'search', 'compare', 'swap', 'toggle',
-  'check', 'quality', 'hd', 'podium', 'star', 'speed', 'deadline', 'crowd',
-  'viral', 'scrollstop', 'abtest', 'roi', 'free', 'plan', 'layers', 'badge',
-  'trend', 'template', 'record', 'lock', 'dropzone', 'render', 'crop', 'silence',
-  'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'checklist', 'library',
-  'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice', 'settings',
-  'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form',
-  'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount', 'waitlist',
+  'countup', 'clock', 'calendar', 'grow', 'engage', 'network', 'rocket', 'funnel',
+  'bars2', 'idea', 'steps', 'flow', 'orbit', 'list', 'target', 'search',
+  'compare', 'swap', 'toggle', 'check', 'quality', 'podium', 'star', 'speed',
+  'deadline', 'crowd', 'viral', 'scrollstop', 'abtest', 'roi', 'free', 'plan',
+  'layers', 'badge', 'trend', 'template', 'record', 'dropzone', 'render', 'crop',
+  'silence', 'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'checklist',
+  'library', 'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice',
+  'settings', 'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking',
+  'form', 'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount',
   'music', 'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag',
   'schedule', 'pin', 'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes',
   'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations',
-  'property', 'menu', 'weight', 'quote', 'flight', 'saving', 'liquid', 'magnet',
-  'explode', 'iceberg', 'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'transition',
-  'zoompunch', 'speedramp', 'substyle', 'trendsound', 'algorithm', 'loop', 'cv'
+  'property', 'menu', 'weight', 'quote', 'liquid', 'magnet', 'explode', 'iceberg',
+  'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'transition', 'zoompunch', 'speedramp',
+  'substyle', 'trendsound', 'algorithm', 'loop', 'cv', 'framing', 'focus', 'clipping',
+  'lighting', 'retake', 'caption', 'preview', 'spike', 'brandeal', 'mediakit', 'inventory',
+  'stoploss', 'orderbook', 'deploy', 'uptime', 'leads', 'comment', 'share'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -568,7 +571,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       0-8                            « 0/8 »
       parametres-avances-sous-titres-mot-par-m « Paramètres avancés · sous-titres mot-par-mot · musique auto »
       ajouter-un-script-brief-dis-a-l-ia-ce-qu « Ajouter un script / brief · Dis à l'IA ce que la vidéo doit  »
-      creer-ma-video-6-credits       « Créer ma vidéo — 6 crédits »
+      creer-ma-video-8-credits       « Créer ma vidéo — 8 crédits »
     05-bibliotheque
       importer                       « Importer »
       nouvelle-video                 « Nouvelle vidéo »
@@ -613,6 +616,35 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       commencer                      « Commencer »
     12-connecter-claude-entree
       connecter-claude               « Connecter Claude »
+    13-montage-avance
+      mot-par-mot                    « Mot par mot »
+      karaoke                        « Karaoké »
+      ligne-complete                 « Ligne complète »
+      punch                          « Punch »
+      neon                           « Néon »
+      auto                           « Auto »
+      aucun                          « Aucun »
+      haut                           « Haut »
+      centre                         « Centre »
+      bas                            « Bas »
+      s                              « S »
+      m                              « M »
+      l                              « L »
+      emoji-auto-sur-les-mots-cles-ajoutes-sur « Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps »
+      auto-ia-choisit                « Auto · IA choisit »
+      apple-fond-clair-minimal       « Apple · fond clair, minimal »
+      liquid-glass-verre-depoli-reflets « Liquid glass · verre dépoli, reflets »
+    14-audio-avance
+      glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m « Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco »
+      parcourir                      « Parcourir »
+      standard-nettoyage-automatique « Standard · nettoyage automatique »
+      avance-traitement-renforce     « Avancé · traitement renforcé »
+      parametres-avances-traitement-voix-silen « Paramètres avancés · Traitement voix, silences, qualité »
+      aucun-original                 « Aucun · original »
+      naturel-equilibre              « Naturel · équilibré »
+      podcast-chaleureux             « Podcast · chaleureux »
+      punchy-nerveux                 « Punchy · nerveux »
+      supprimer-les-silences-coupe-les-blancs- « Supprimer les silences · Coupe les blancs entre les phrases »
     20-claude-menu
       menu-parametres                « Paramètres »
     21-claude-parametres
@@ -662,7 +694,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
 // <<< ANIM-BANK:PROMPT — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
     screen   — une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil.
     result   — le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne ».
-    phone    — le format final vertical, une video qui defile, « sur TikTok / Reels / Shorts ».
+    phone    — UN DOIGT QUI FAIT DEFILER un telephone vertical, video apres video. UNIQUEMENT quand il parle de SCROLLER : « ils swipent », « tu scrolles », « il passe a la suivante », « dans le fil ». Pas pour dire simplement « sur TikTok ».
     split    — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
     avatar   — la creation d'un avatar, un personnage qui se genere, « ton premier avatar ».
     faceless — l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer.
@@ -676,18 +708,13 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
     post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
     upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer.
-    money    — l'argent, un revenu, un prix, un cout, ce qui est gratuit.
-    wallet   — un portefeuille qui se remplit : ce que ca rapporte.
     countup  — UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans "value" et l'unite dans "unit".
     clock    — la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes ».
     calendar — une grille qui se remplit : publier regulierement, tous les jours, la constance.
     grow     — une croissance, des vues qui montent, un resultat qui progresse.
-    views    — des vues qui grimpent, la portee, « X personnes t'ont vu ».
-    engage   — des commentaires et des coeurs qui montent : l'engagement, les reactions.
-    swipe    — un fil qui defile, le scroll, « les gens scrollent », le feed.
+    engage   — DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow.
     network  — un reseau, une connexion, une communaute, des gens relies.
     rocket   — un lancement, un decollage, ce qui explose, devenir viral.
-    stack    — des videos qui s'empilent : le volume, produire en serie, « 10 videos par jour ».
     funnel   — un entonnoir : beaucoup entrent, peu ressortent.
     bars2    — deux colonnes comparees : le avant/apres chiffre.
     idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
@@ -701,8 +728,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     swap     — une chose remplacee par une autre : « au lieu de », « a la place de », remplacer.
     toggle   — un interrupteur qui s'allume : activer, « en un clic », ca se met en marche.
     check    — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
-    quality  — LA MEME IMAGE, FLOUE PUIS NETTE, separees par une ligne qui balaie. « la meilleure qualite du marche », « c'est net », « regarde la difference ». On VOIT la difference au lieu de la lire.
-    hd       — UN BADGE DE QUALITE qui claque en grand : 4K, 1080p, HD. Mets la mention dans items[0].text. « en 4K », « qualite maximale ».
+    quality  — LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut.
     podium   — UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde ».
     star     — CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis ».
     speed    — UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse ».
@@ -712,14 +738,13 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     scrollstop— UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes ».
     abtest   — DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux ».
     roi      — CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 ».
-    free     — UNE ETIQUETTE GRATUIT qui claque en biais. « c'est gratuit », « offert », « sans payer ».
+    free     — UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce.
     plan     — TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan ».
     layers   — DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus ».
     badge    — UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie ».
-    trend    — UN ESCALIER DE BARRES qui montent + une fleche vers le haut. « ca monte », « la tendance », « de mieux en mieux ».
+    trend    — UNE COURBE QUI GRIMPE avec une grande fleche qui suit sa pente, et le produit de la personne pose au sommet. « ca monte », « la tendance », « de mieux en mieux ». Mets ce qui monte dans items[0].text (« +240 % »).
     template — UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois ».
     record   — LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son ».
-    lock     — la securite, l'acces reserve, ce qui se debloque, une cle.
     dropzone — UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes ».
     render   — UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner ».
     crop     — UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok ».
@@ -755,10 +780,9 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     upgrade  — UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ». Mets le nom du plan entendu dans items[0].text (« PRO », « ELITE »).
     storyboard— DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video ».
     discount — UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ». items[0].text = l'ancien prix, items[1].text = le nouveau, items[2].text = la remise.
-    waitlist — DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes ». Mets le nombre entendu dans items[0].text.
     music    — DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix ».
     bio      — UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio ».
-    keyword  — UN COMMENTAIRE AVEC LE MOT-CLE, et le message prive qui part. « commente le mot », « ecris-moi X en commentaire », « tape le mot ». Mets LE MOT-CLE qu'il demande de commenter dans items[0].text.
+    keyword  — UNE ZONE DE COMMENTAIRE OU LE MOT-CLE S'ECRIT lettre par lettre, puis le message prive arrive en reponse. « commente le mot X », « ecris-moi X », « tape X en commentaire ». Mets LE MOT EXACT qu'il demande dans items[0].text — c'est lui qu'on voit se taper.
     automation— UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul ».
     carousel — UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler ».
     poll     — UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis ».
@@ -784,8 +808,6 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     menu     — RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix ».
     weight   — SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats ». Mets le chiffre exact ENTENDU dans items[0].text (« -10 kg »).
     quote    — AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ». Mets le total entendu dans items[0].text.
-    flight   — VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a ». items[0].text = le depart, items[1].text = l'arrivee (codes de 3 lettres).
-    saving   — FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint ». Mets le montant entendu dans items[0].text.
     liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
     magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
     explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
@@ -803,6 +825,24 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     algorithm— UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant ».
     loop     — LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ». Mets le nombre de fois entendu dans items[0].text (« ×7 »).
     cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
+    framing  — TOURNAGE — LE CADRE QUI SE RESSERRE sur le sujet, la grille des tiers apparait. « bien te cadrer », « le cadrage », « recentre-toi ».
+    focus    — TOURNAGE — L'IMAGE FLOUE QUI DEVIENT NETTE d'un coup. « fais la mise au point », « c'est flou », « une image nette ».
+    clipping — TOURNAGE — L'ONDE QUI TAPE LE PLAFOND ET ROUGIT, puis redescend sous la ligne. « ton son sature », « c'est trop fort », « ca crache ».
+    lighting — TOURNAGE — LA LUMIERE QUI SE POSE sur le visage, l'ombre recule. « eclaire-toi », « la lumiere », « ne tourne pas dans le noir ».
+    retake   — TOURNAGE — LA PRISE RATEE BARREE QUI PART et la suivante qui arrive. « je la refais », « deuxieme prise », « rate ». Mets le numero entendu dans items[0].text (« PRISE 4 »).
+    caption  — PUBLICATION — LA DESCRIPTION ET LES HASHTAGS QUI S'ECRIVENT sous la video avant de poster. « la description », « les hashtags », « ce que tu ecris ».
+    preview  — PUBLICATION — LE RENDU FINAL QUI S'AFFICHE DANS LE FIL, tel qu'il sera vu. « avant de poster », « l'apercu », « ce que les gens voient ».
+    spike    — ANALYSE — LA COURBE PLATE QUI DECOLLE D'UN COUP avec son chiffre. « ca a explose », « le pic », « d'un coup ». Mets le chiffre entendu dans items[0].text (« 340K »).
+    brandeal — CREATEUR — UNE MARQUE QUI PROPOSE UN PARTENARIAT, le montant arrive dans le message. « une marque m'a contacte », « un partenariat », « ils me paient ». Mets le montant entendu dans items[0].text (« 1500 € »).
+    mediakit — CREATEUR — LA FICHE STATS QUI SE COMPOSE, trois chiffres qui se posent. « mon media-kit », « mes stats », « ce que j'envoie aux marques ». Mets les trois valeurs entendues dans items[0..2].text (« 84K ; 2,1 M ; 7,4 % »).
+    inventory— E-COM — LE STOCK QUI DESCEND jusqu'a l'alerte, puis se reapprovisionne. « je suis en rupture », « le stock », « je recommande ».
+    stoploss — TRADING — LA BOUGIE QUI TOUCHE LA LIGNE et la position qui se ferme. « mon stop », « je coupe la perte », « ca part contre moi ».
+    orderbook— TRADING — LE CARNET D'ORDRES QUI SE REMPLIT des deux cotes, l'ecart se resserre. « le carnet », « acheteurs et vendeurs », « le spread ».
+    deploy   — SAAS — LES ETAPES QUI DEFILENT jusqu'au badge EN LIGNE. « je deploie », « la mise en ligne », « c'est en prod ».
+    uptime   — SAAS — LA LIGNE DE DISPONIBILITE qui se remplit jour apres jour. « jamais de panne », « la dispo », « ca tourne tout le temps ». Mets le taux entendu dans items[0].text (« 99,98 % »).
+    leads    — SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »).
+    comment  — LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres.
+    share    — CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »).
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
@@ -1554,42 +1594,76 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // on declenche donc nous-memes des qu'un mot de resultat chiffre est prononce
     // ET qu'un nombre est reellement present a cet endroit de l'audio.
     const CU_WORDS = ['million', 'millions', 'vues', 'euros', 'abonnes', 'cartonne', 'cartonnent', 'explose', 'explosent']
-    const cand: { t: number; an: string; val: string }[] = []
-    let lastT = -99
+    const cand: { t: number; an: string; val: string; beat?: boolean }[] = []
+    // les slides nees d'un beat sont intouchables par les rattrapages qui suivent :
+    // le modele a ecoute la phrase, on ne lui reprend pas sa place.
+    const beatBorn = new Set<unknown>()
+    // LE CHOIX DU CHEF D'ORCHESTRE PASSE AVANT LE LEXIQUE. En un seul passage, le
+    // lexique gagnait par simple anteriorite : sur « en six MOIS j'ai PERDU dix
+    // kilos », `clock` se posait sur « mois » et mangeait l'espacement, donc le
+    // `weight` que le modele avait designe sur « perdu » — avec le « -10 kg »
+    // entendu — ne se posait jamais. Or c'est exactement l'inverse qu'on veut : le
+    // modele a ECOUTE la phrase, le lexique ne fait que reconnaitre un mot isole.
+    // On place donc d'abord tous les beats, puis le lexique comble ce qui reste.
+    // Le HOOK aussi merite ses animations : c'est la ou le spectateur decide de
+    // rester. On ne s'interdit plus que la toute premiere demi-seconde.
+    const inWindow = (t: number) => t >= 0.5 && t <= D - 0.9
+    const fits = (t: number) => !occupied(t) && !cand.some((c) => Math.abs(c.t - t) < TARGET)
+    // Deux tours : les beats qui portent un CHIFFRE d'abord. Entre « en six mois »
+    // et « j'ai perdu dix kilos » separes de 0,5 s, le premier arrive gagnait par
+    // simple anteriorite et on perdait le « -10 kg » — alors que c'est justement
+    // l'animation qui montre le resultat de la personne. Un calendrier generique ne
+    // vaut jamais le chiffre qu'elle vient d'annoncer.
+    for (const pass of [1, 2]) {
+      for (const w of words) {
+        if (!inWindow(w.start) || !fits(w.start)) continue
+        const beat = beatFor(w.text)
+        if (!beat || !beat.anim || usedAnims.has(beat.anim)) continue
+        if ((pass === 1) !== !!String(beat.value || '').trim()) continue
+        usedAnims.add(beat.anim)
+        // la VALEUR entendue voyage avec le mot : c'est elle qui s'affichera dans
+        // l'animation, a la place du chiffre d'exemple code en dur.
+        cand.push({ t: w.start, an: beat.anim, val: beat.value, beat: true })
+      }
+    }
     for (const w of words) {
-      // Le HOOK aussi merite ses animations : c'est la ou le spectateur decide de
-      // rester. On ne s'interdit plus que la toute premiere demi-seconde.
-      if (w.start < 0.5 || w.start > D - 0.9) continue
-      if (w.start - lastT < TARGET) continue
-      if (occupied(w.start)) continue
-      // le modele a designe les mots forts (beats) : ils priment sur le lexique
-      const beat = beatFor(w.text)
-      let an = (beat && beat.anim) || animForWord(w.text)
+      if (!inWindow(w.start) || !fits(w.start)) continue
+      let an = animForWord(w.text)
       if (CU_WORDS.includes(norm(w.text)) && !usedAnims.has('countup')) an = 'countup'
       if (!an || usedAnims.has(an)) continue
       usedAnims.add(an)
-      lastT = w.start
-      // la VALEUR entendue voyage avec le mot : c'est elle qui s'affichera dans
-      // l'animation, a la place du chiffre d'exemple code en dur.
-      const val = beat && beat.anim === an ? beat.value : ''
-      cand.push({ t: w.start, an, val })
+      cand.push({ t: w.start, an, val: '' })
     }
+    cand.sort((a, b) => a.t - b.t)
     const added: typeof slides = []
     // LE CHIFFRE DU COMPTEUR VIENT DE CE QU'IL DIT. On lit les mots autour du point
     // de pose : « trois millions de vues » -> 3000000 / vues, « huit mille euros »
     // -> 8000 / €. Sans chiffre trouve, on retombe sur une autre animation.
-    const NUM: Record<string, number> = { un: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, vingt: 20, trente: 30, cinquante: 50, cent: 100, mille: 1000 }
+    const NUM: Record<string, number> = {
+      un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10,
+      onze: 11, douze: 12, treize: 13, quatorze: 14, quinze: 15, seize: 16,
+      vingt: 20, vingts: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60,
+    }
+    // « cent » et « mille » MULTIPLIENT ce qui precede, ils ne le remplacent pas. En
+    // ne gardant que le premier nombre rencontre, « trois mille deux cents euros »
+    // s'affichait 3 000 alors qu'il dit 3 200 — un chiffre faux a l'ecran est pire
+    // que pas de chiffre du tout. On accumule donc a la francaise.
+    const SCALE: Record<string, number> = { cent: 100, cents: 100, mille: 1000, milliers: 1000, million: 1e6, millions: 1e6, milliard: 1e9, milliards: 1e9 }
     const readNumber = (t: number) => {
-      const win = words.filter((w) => w.start >= t - 1.2 && w.start <= t + 2.2).map((w) => norm(w.text))
-      let n = 0
-      for (let i = 0; i < win.length; i++) {
-        const w = win[i]
+      const win = words.filter((w) => w.start >= t - 1.2 && w.start <= t + 2.2)
+        .flatMap((w) => norm(w.text).split(/[^a-z0-9€%]+/).filter(Boolean))
+      let total = 0, cur = 0, seen = false
+      for (const w of win) {
         const digits = w.replace(/[^0-9]/g, '')
-        if (digits && !n) n = parseInt(digits, 10)
-        else if (NUM[w] && !n) n = NUM[w]
-        if (n && (w === 'million' || w === 'millions')) n *= 1000000
-        if (n && (w === 'mille' || w === 'milliers')) n *= 1000
+        if (digits) { cur += parseInt(digits, 10); seen = true; continue }
+        if (NUM[w] != null) { cur += NUM[w]; seen = true; continue }
+        const sc = SCALE[w]
+        if (sc) { seen = true; if (sc >= 1000) { total += (cur || 1) * sc; cur = 0 } else cur = (cur || 1) * sc; continue }
+        // « et » relie les dizaines (« soixante et onze ») : il ne coupe pas le nombre
+        if (w === 'et') continue
+        if (seen && total + cur) break   // le nombre est fini, la suite ne le concerne plus
       }
+      const n = total + cur
       if (!n) return null
       const unit = win.some((w) => w.includes('euro') || w.includes('€')) ? '€'
         : win.some((w) => w.includes('vue')) ? 'vues'
@@ -1600,9 +1674,20 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const nextT = i + 1 < cand.length ? cand[i + 1].t : D
       let cuv: { value: string; unit: string } | null = null
       if (cand[i].an === 'countup') {
-        cuv = readNumber(cand[i].t)
+        // LE CHIFFRE DU MODELE PASSE AVANT MA LECTURE. `readNumber` epelle les mots
+        // un par un et s'arrete au premier nombre : sur « trois mille deux cents
+        // euros » il affichait 3000 alors que le chef d'orchestre avait entendu
+        // 3200. Lui a lu la phrase entiere — quand il donne « 3200 ; € », c'est ca
+        // qu'on montre, et on ne retombe sur ma lecture que s'il n'a rien donne.
+        const parts = String(cand[i].val || '').split(';').map((s) => s.trim()).filter(Boolean)
+        const num = (parts[0] || '').replace(/[^0-9]/g, '')
+        if (num) { cuv = { value: num, unit: parts[1] || '' }; cand[i].val = '' }
+        else cuv = readNumber(cand[i].t)
         if (!cuv) { cand[i].an = 'grow' }   // rien de chiffre a montrer : on retombe
       }
+      // une animation qui ne sait pas afficher de texte ne doit pas trainer les
+      // items du beat : ils ne servent a rien et polluent le plan.
+      if (cand[i].an === 'grow') cand[i].val = ''
       // 0,3 s de respiration : a 0,05 s les animations se touchaient et l'oeil ne
       // voyait qu'un flux continu. Il faut un souffle entre deux.
       // Chaque animation tient jusqu'a la suivante (moins la respiration), plafonnee
@@ -1610,13 +1695,15 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // sans inventer d'animation qui ne correspondrait a rien.
       const end = r2(Math.min(cand[i].t + 4.0, nextT - 0.3, D - 0.4))
       if (end - cand[i].t < 0.55) continue
-      added.push({
+      const slide = {
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
         start: r2(cand[i].t), end, title: '', eyebrow: '', accent: '', sub: '',
         center: '', value: cuv ? cuv.value : '', unit: cuv ? cuv.unit : '',
         wide: false, options: [],
         items: String(cand[i].val || '').split(';').map((t) => t.trim()).filter(Boolean).map((text) => ({ text, t: 0, value: '', label: '' })),
-      })
+      }
+      if (cand[i].beat) beatBorn.add(slide)
+      added.push(slide)
     }
     for (const a of added) {
       if (!slides.some((sl) => Math.abs(sl.start - a.start) < 0.7)) slides.push(a)
@@ -1724,12 +1811,15 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         if (!CU_WORDS.includes(norm(w.text))) continue
         const num = readNumber(w.start)
         if (!num) continue
-        const host = slides.find((sl) => w.start >= sl.start - 0.6 && w.start <= sl.end + 0.6)
+        // on ne detourne QUE les slides generiques : celle qu'un beat a placee porte
+        // le mot exact du modele, la remplacer par un compteur donnait un « -10 kg »
+        // orphelin sous un chiffre qui n'avait rien a voir.
+        const host = slides.find((sl) => w.start >= sl.start - 0.6 && w.start <= sl.end + 0.6 && !beatBorn.has(sl))
         if (host) {
-          host.anim = 'countup'; host.emoji = ''
+          host.anim = 'countup'; host.emoji = ''; host.items = []
           ;(host as unknown as { value: string; unit: string }).value = num.value
           ;(host as unknown as { value: string; unit: string }).unit = num.unit
-        } else {
+        } else if (!slides.some((sl) => w.start >= sl.start - 0.6 && w.start <= sl.end + 0.6)) {
           slides.push({
             type: 'card', layout: 'full', motif: '', anim: 'countup', emoji: '',
             start: r2(w.start), end: r2(Math.min(w.start + 2.2, D - 0.5)),
@@ -1816,11 +1906,15 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // Resultat : la saisie Images IA disparaissait un coup sur deux. Une seule passe
     // tranche desormais, et l'ordre est ecrit noir sur blanc.
     {
-      const prio = (sl: { anim?: string; screenText?: string }) => {
+      const prio = (sl: { anim?: string; screenText?: string; items?: { text: string }[] }) => {
         if (sl.anim === 'screen' && sl.screenText) return 5   // le texte se tape + le clavier sonne
         if (sl.anim === 'result') return 5                    // l'image produite : le vrai resultat
         if (sl.anim === 'logo') return 4                      // la marque est nommee
         if (sl.anim === 'countup') return 4                   // un chiffre est annonce
+        // UNE ANIMATION QUI PORTE SES MOTS N'EST PLUS DE L'HABILLAGE. Le « -10 kg »
+        // ou le « 49 € » vient de ce que la personne dit : c'est aussi factuel qu'un
+        // compteur, et ca ne doit pas ceder devant une illustration generique.
+        if (sl.anim && sl.items && sl.items.some((it) => String(it.text || '').trim())) return 4
         if (sl.anim === 'screen') return 3                    // une etape de la demo
         return 1                                              // habillage
       }

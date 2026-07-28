@@ -22,7 +22,7 @@ export const BANK = [
   // ── le produit, l'écran, le résultat ──
   { name: 'screen',  desc: "une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil." },
   { name: 'result',  desc: "le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne »." },
-  { name: 'phone',   desc: "le format final vertical, une video qui defile, « sur TikTok / Reels / Shorts »." },
+  { name: 'phone',   desc: "UN DOIGT QUI FAIT DEFILER un telephone vertical, video apres video. UNIQUEMENT quand il parle de SCROLLER : « ils swipent », « tu scrolles », « il passe a la suivante », « dans le fil ». Pas pour dire simplement « sur TikTok »." },
   { name: 'split',   desc: "un split screen, deux choses cote a cote, un ecran qui se coupe en deux." },
   { name: 'avatar',  desc: "la creation d'un avatar, un personnage qui se genere, « ton premier avatar »." },
   { name: 'faceless', desc: "l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer." },
@@ -40,8 +40,6 @@ export const BANK = [
   { name: 'upload',  desc: "une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer." },
 
   // ── l'argent ──
-  { name: 'money',   desc: "l'argent, un revenu, un prix, un cout, ce qui est gratuit." },
-  { name: 'wallet',  desc: "un portefeuille qui se remplit : ce que ca rapporte." },
   { name: 'countup', desc: "UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans \"value\" et l'unite dans \"unit\"." },
 
   // ── le temps ──
@@ -50,12 +48,9 @@ export const BANK = [
 
   // ── la croissance, l'audience ──
   { name: 'grow',    desc: "une croissance, des vues qui montent, un resultat qui progresse." },
-  { name: 'views',   desc: "des vues qui grimpent, la portee, « X personnes t'ont vu »." },
-  { name: 'engage',  desc: "des commentaires et des coeurs qui montent : l'engagement, les reactions." },
-  { name: 'swipe',   desc: "un fil qui defile, le scroll, « les gens scrollent », le feed." },
+  { name: 'engage',  desc: "DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow." },
   { name: 'network', desc: "un reseau, une connexion, une communaute, des gens relies." },
   { name: 'rocket',  desc: "un lancement, un decollage, ce qui explose, devenir viral." },
-  { name: 'stack',   desc: "des videos qui s'empilent : le volume, produire en serie, « 10 videos par jour »." },
   { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent." },
   { name: 'bars2',   desc: "deux colonnes comparees : le avant/apres chiffre." },
 
@@ -74,8 +69,7 @@ export const BANK = [
   { name: 'toggle',  desc: "un interrupteur qui s'allume : activer, « en un clic », ca se met en marche." },
   { name: 'check',   desc: "c'est valide, c'est fait, ca marche, c'est simple, c'est inclus." },
   // ── PAQUET 1 (#157) — la qualité, le temps, la diffusion ──
-  { name: 'quality', desc: "LA MEME IMAGE, FLOUE PUIS NETTE, separees par une ligne qui balaie. « la meilleure qualite du marche », « c'est net », « regarde la difference ». On VOIT la difference au lieu de la lire." },
-  { name: 'hd',      desc: "UN BADGE DE QUALITE qui claque en grand : 4K, 1080p, HD. Mets la mention dans items[0].text. « en 4K », « qualite maximale »." },
+  { name: 'quality', desc: "LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut." },
   { name: 'podium',  desc: "UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde »." },
   { name: 'star',    desc: "CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis »." },
   { name: 'speed',   desc: "UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse »." },
@@ -87,14 +81,13 @@ export const BANK = [
 
   // ── PAQUET 2 (#157) — l'argent, l'outil, la methode ──
   { name: 'roi',     desc: "CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 »." },
-  { name: 'free',    desc: "UNE ETIQUETTE GRATUIT qui claque en biais. « c'est gratuit », « offert », « sans payer »." },
+  { name: 'free',    desc: "UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce." },
   { name: 'plan',    desc: "TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan »." },
   { name: 'layers',  desc: "DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus »." },
   { name: 'badge',   desc: "UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie »." },
-  { name: 'trend',   desc: "UN ESCALIER DE BARRES qui montent + une fleche vers le haut. « ca monte », « la tendance », « de mieux en mieux »." },
+  { name: 'trend',   desc: "UNE COURBE QUI GRIMPE avec une grande fleche qui suit sa pente, et le produit de la personne pose au sommet. « ca monte », « la tendance », « de mieux en mieux ». Mets ce qui monte dans items[0].text (« +240 % »)." },
   { name: 'template', desc: "UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois »." },
   { name: 'record',  desc: "LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son »." },
-  { name: 'lock',    desc: "la securite, l'acces reserve, ce qui se debloque, une cle." },
 
   // ── PAQUET 3 (#157) — le geste, pas l'icone ──
   // Axel a supprime douze animations du paquet 2 : cloche, couronne, cerveau,
@@ -145,12 +138,11 @@ export const BANK = [
   { name: 'upgrade', desc: "UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ». Mets le nom du plan entendu dans items[0].text (« PRO », « ELITE »)." },
   { name: 'storyboard', desc: "DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video »." },
   { name: 'discount', desc: "UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ». items[0].text = l'ancien prix, items[1].text = le nouveau, items[2].text = la remise." },
-  { name: 'waitlist', desc: "DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes ». Mets le nombre entendu dans items[0].text." },
   { name: 'music',   desc: "DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix »." },
   { name: 'bio',     desc: "UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio »." },
 
   // ── PAQUET 6 (#157) — la mecanique sociale : ce qui se passe AUTOUR du post ──
-  { name: 'keyword', desc: "UN COMMENTAIRE AVEC LE MOT-CLE, et le message prive qui part. « commente le mot », « ecris-moi X en commentaire », « tape le mot ». Mets LE MOT-CLE qu'il demande de commenter dans items[0].text." },
+  { name: 'keyword', desc: "UNE ZONE DE COMMENTAIRE OU LE MOT-CLE S'ECRIT lettre par lettre, puis le message prive arrive en reponse. « commente le mot X », « ecris-moi X », « tape X en commentaire ». Mets LE MOT EXACT qu'il demande dans items[0].text — c'est lui qu'on voit se taper." },
   { name: 'automation', desc: "UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul »." },
   { name: 'carousel', desc: "UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler »." },
   { name: 'poll',    desc: "UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis »." },
@@ -183,8 +175,6 @@ export const BANK = [
   // ── PAQUET 8 (#157) — la suite des domaines ──
   { name: 'weight',  desc: "SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats ». Mets le chiffre exact ENTENDU dans items[0].text (« -10 kg »)." },
   { name: 'quote',   desc: "AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ». Mets le total entendu dans items[0].text." },
-  { name: 'flight',  desc: "VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a ». items[0].text = le depart, items[1].text = l'arrivee (codes de 3 lettres)." },
-  { name: 'saving',  desc: "FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint ». Mets le montant entendu dans items[0].text." },
 
   // ── PAQUET 9 (#157) — LES METAPHORES PHYSIQUES ──
   // Axel a retire dix animations du paquet 8 : « l'idee est la mais pas le
@@ -224,6 +214,24 @@ export const BANK = [
   { name: 'algorithm', desc: "UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant »." },
   { name: 'loop',    desc: "LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ». Mets le nombre de fois entendu dans items[0].text (« ×7 »)." },
   { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
+  { name: 'framing', desc: "TOURNAGE — LE CADRE QUI SE RESSERRE sur le sujet, la grille des tiers apparait. « bien te cadrer », « le cadrage », « recentre-toi »." },
+  { name: 'focus',   desc: "TOURNAGE — L'IMAGE FLOUE QUI DEVIENT NETTE d'un coup. « fais la mise au point », « c'est flou », « une image nette »." },
+  { name: 'clipping', desc: "TOURNAGE — L'ONDE QUI TAPE LE PLAFOND ET ROUGIT, puis redescend sous la ligne. « ton son sature », « c'est trop fort », « ca crache »." },
+  { name: 'lighting', desc: "TOURNAGE — LA LUMIERE QUI SE POSE sur le visage, l'ombre recule. « eclaire-toi », « la lumiere », « ne tourne pas dans le noir »." },
+  { name: 'retake',  desc: "TOURNAGE — LA PRISE RATEE BARREE QUI PART et la suivante qui arrive. « je la refais », « deuxieme prise », « rate ». Mets le numero entendu dans items[0].text (« PRISE 4 »)." },
+  { name: 'caption', desc: "PUBLICATION — LA DESCRIPTION ET LES HASHTAGS QUI S'ECRIVENT sous la video avant de poster. « la description », « les hashtags », « ce que tu ecris »." },
+  { name: 'preview', desc: "PUBLICATION — LE RENDU FINAL QUI S'AFFICHE DANS LE FIL, tel qu'il sera vu. « avant de poster », « l'apercu », « ce que les gens voient »." },
+  { name: 'spike',   desc: "ANALYSE — LA COURBE PLATE QUI DECOLLE D'UN COUP avec son chiffre. « ca a explose », « le pic », « d'un coup ». Mets le chiffre entendu dans items[0].text (« 340K »)." },
+  { name: 'brandeal', desc: "CREATEUR — UNE MARQUE QUI PROPOSE UN PARTENARIAT, le montant arrive dans le message. « une marque m'a contacte », « un partenariat », « ils me paient ». Mets le montant entendu dans items[0].text (« 1500 € »)." },
+  { name: 'mediakit', desc: "CREATEUR — LA FICHE STATS QUI SE COMPOSE, trois chiffres qui se posent. « mon media-kit », « mes stats », « ce que j'envoie aux marques ». Mets les trois valeurs entendues dans items[0..2].text (« 84K ; 2,1 M ; 7,4 % »)." },
+  { name: 'inventory', desc: "E-COM — LE STOCK QUI DESCEND jusqu'a l'alerte, puis se reapprovisionne. « je suis en rupture », « le stock », « je recommande »." },
+  { name: 'stoploss', desc: "TRADING — LA BOUGIE QUI TOUCHE LA LIGNE et la position qui se ferme. « mon stop », « je coupe la perte », « ca part contre moi »." },
+  { name: 'orderbook', desc: "TRADING — LE CARNET D'ORDRES QUI SE REMPLIT des deux cotes, l'ecart se resserre. « le carnet », « acheteurs et vendeurs », « le spread »." },
+  { name: 'deploy',  desc: "SAAS — LES ETAPES QUI DEFILENT jusqu'au badge EN LIGNE. « je deploie », « la mise en ligne », « c'est en prod »." },
+  { name: 'uptime',  desc: "SAAS — LA LIGNE DE DISPONIBILITE qui se remplit jour apres jour. « jamais de panne », « la dispo », « ca tourne tout le temps ». Mets le taux entendu dans items[0].text (« 99,98 % »)." },
+  { name: 'leads',   desc: "SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »)." },
+  { name: 'comment', desc: "LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres." },
+  { name: 'share',   desc: "CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »)." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)

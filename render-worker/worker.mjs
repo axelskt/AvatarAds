@@ -308,6 +308,14 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     for (const sl of plan.slides || []) for (const a of sl.assets || []) wantedScreens.add(a)
     // #149 · fenêtres avatar SANS clips lipsync → la photo avatar sert de fallback
     if ((plan.avatarSegments || []).length && !existsSync(join(jobDir, 'avatar'))) wantedScreens.add('hook-qualite')
+    // LES IMAGES QU'UNE ANIMATION CHARGE ELLE-MÊME. `tools` et `connect` écrivent
+    // <img src="tuto/logo-…"> en dur dans leur HTML : elles ne passent donc ni par
+    // `screen` ni par `assets`, et la boucle ci-dessous ne les copiait jamais. Dans
+    // la vidéo finale on voyait deux tuiles vides avec l'icône d'image cassée — sur
+    // TOUS les rendus, pas seulement les tests. Le besoin est ici, à côté du code
+    // qui le crée, pour qu'une nouvelle animation à image ne le reperde pas.
+    const ANIM_IMAGES = { tools: ['logo-avatarads', 'logo-claude'], connect: ['logo-avatarads', 'logo-claude'] }
+    for (const sl of plan.slides || []) for (const n of ANIM_IMAGES[sl.anim] || []) wantedScreens.add(n)
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
       for (const name of wantedScreens) {

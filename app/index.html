@@ -21499,6 +21499,34 @@ async function _cartoonProxyFetch(path, options={}){
   });
 }
 
+// ── OÙ EST LA VIDÉO DANS LA RÉPONSE VEO ? ───────────────────────────────────
+// On testait quatre chemins écrits en dur (predictions[0], generateVideoResponse
+// .generatedSamples[0]…). Google a changé l'enveloppe — la vidéo arrive
+// maintenant sous `generatedVideos[0].video` — et l'opération se terminait donc
+// « done » avec une vidéo bel et bien produite, mais introuvable côté client :
+// c'est l'erreur « Vidéo terminée mais introuvable dans la réponse ». Facturée,
+// et perdue.
+// On ne devine plus la forme : on descend l'objet et on prend la première
+// donnée vidéo qu'on trouve, quel que soit le nom des étages. Une prochaine
+// version de l'API pourra encore bouger sans rien casser ici.
+function _veoPickVideo(resp){
+  let b64 = null, uri = null
+  const seen = new Set()
+  const walk = (node, depth) => {
+    if(!node || depth > 8 || typeof node !== 'object' || seen.has(node)) return
+    seen.add(node)
+    for(const [k, v] of Object.entries(node)){
+      if(typeof v === 'string' && v){
+        if(!b64 && /bytesbase64encoded|videobytes/i.test(k)) b64 = v
+        // une URI de vidéo : soit la clé le dit, soit on est dans un objet `video`
+        else if(!uri && /^(uri|videouri|gcsuri|url|downloaduri)$/i.test(k) && /^https?:|^gs:/i.test(v)) uri = v
+      } else if(v && typeof v === 'object') walk(v, depth + 1)
+    }
+  }
+  walk(resp, 0)
+  return { b64, uri: b64 ? null : uri }
+}
+
 // Attend la fin d'une opération Veo (jusqu'à 10 min) → { b64, uri, err }
 async function _veoAwaitOp(opName){
   let b64=null, uri=null, err=null;
@@ -21509,11 +21537,13 @@ async function _veoAwaitOp(opName){
     const pd=await pr.json();
     if(pd.done){
       if(pd.error){ err=pd.error.message||'Génération refusée par Google'; break; }
-      b64 = pd?.response?.predictions?.[0]?.bytesBase64Encoded
-         || pd?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
-      uri = b64 ? null : (pd?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
-         || pd?.response?.predictions?.[0]?.videoUri || pd?.response?.predictions?.[0]?.video?.uri || null);
-      if(!b64 && !uri) err='Vidéo terminée mais introuvable dans la réponse — réessaie';
+      ({ b64, uri } = _veoPickVideo(pd.response || pd));
+      if(!b64 && !uri){
+        // on log la FORME reçue : la prochaine fois qu'elle bouge, on saura où
+        // regarder au lieu de re-deviner.
+        try { console.warn('Veo — réponse sans vidéo, forme reçue :', JSON.stringify(pd.response || pd).slice(0, 1200)) } catch(e){}
+        err='Vidéo terminée mais introuvable dans la réponse — réessaie';
+      }
       break;
     }
   }
@@ -21687,11 +21717,12 @@ async function cartoonGenVideo(btn){
         const pollData = await pollResp.json();
         if(pollData.done){
           if(pollData.error){ opErr = pollData.error.message || 'Génération refusée par Google'; break; }
-          videoB64 = pollData?.response?.predictions?.[0]?.bytesBase64Encoded
-                  || pollData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded || null;
-          videoUri = videoB64 ? null : (pollData?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
-                  || pollData?.response?.predictions?.[0]?.videoUri || pollData?.response?.predictions?.[0]?.video?.uri || null);
-          if(!videoB64 && !videoUri) opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
+          // même extraction que l'Express : on ne devine plus les chemins
+          ({ b64: videoB64, uri: videoUri } = _veoPickVideo(pollData.response || pollData));
+          if(!videoB64 && !videoUri){
+            try { console.warn('Veo cartoon — réponse sans vidéo, forme reçue :', JSON.stringify(pollData.response || pollData).slice(0, 1200)) } catch(e){}
+            opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
+          }
           break;
         }
       }

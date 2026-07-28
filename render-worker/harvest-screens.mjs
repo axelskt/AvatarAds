@@ -49,6 +49,14 @@ const SCREENS = [
   { slug: '09-cartoon',          open: `nav('cartoon')` },
   { slug: '10-mon-compte',       open: `openAccountSettings()` },
   { slug: '11-connecter-claude', open: `openMcpModal()` },
+  // ── LES PANNEAUX AVANCÉS ────────────────────────────────────────────────
+  // Les captures ci-dessus montrent les panneaux REPLIÉS. Résultat : sur « tu
+  // ouvres les paramètres avancés et tu mets Podcast », la visite guidée pouvait
+  // zoomer sur la LIGNE « Paramètres avancés » mais jamais montrer ce qu'il y a
+  // dedans — l'écran n'existait pas dans le catalogue. On les récolte donc
+  // ouverts, avec leurs zones mesurées comme les autres.
+  { slug: '13-montage-avance',   open: `nav('montage'); mzAdvOpen()` },
+  { slug: '14-audio-avance',     open: `nav('audioclean'); _acToggleAdv()` },
 ]
 
 const chromeBin = () => {
