@@ -16,6 +16,22 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { BANK, ANIM_NAMES, bankPrompt } from './anim-bank.mjs'
 
+// GARDE-FOU. Le bloc genere atterrit DANS UN TEMPLATE LITERAL de l'orchestrateur
+// (`const styleBlock = ` ... `). Un backtick dans une description ferme donc la
+// chaine en plein milieu et l'edge function ne parse plus — c'est arrive avec
+// « `tools` ne fait que les poser », et ca casse le Montage IA en entier.
+// Une occurrence de ` ou de ${ arrete la synchro ici, avant d'ecrire.
+function assertNoBackticks(bank) {
+  const bad = bank.filter((b) => /[`]|\$\{/.test(b.desc)).map((b) => b.name)
+  if (bad.length) {
+    console.error('✗ description(s) avec un backtick ou ${ : ' + bad.join(', '))
+    console.error('  Le bloc va dans un template literal : remplace par « » ou des guillemets.')
+    process.exit(1)
+  }
+}
+
+assertNoBackticks(BANK)
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const TARGET = join(HERE, '..', 'supabase', 'functions', 'orchestrate', 'index.ts')
 
