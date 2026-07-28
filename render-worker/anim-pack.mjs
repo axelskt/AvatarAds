@@ -1702,8 +1702,12 @@ export function animHtml(name, s, W, H, vs) {
       let cs = ''
       for (let k = 0; k < 5; k++) cs += `<span class="an-p an-cl2" id="${id}cl2${k}" style="left:${x + k * (cd + gp)}px;top:${Math.round(f.h * 0.46)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${cols[k]};border:2px solid ${P.line}"></span>`
       return box(`${ss}${cs}
-        <span class="an-p" id="${id}szr" style="left:${x + 2 * (d + gp) - 5}px;top:${Math.round(f.h * 0.1) - 5}px;width:${d + 10}px;height:${d + 10}px;border-radius:${Math.round(d * 0.32)}px;border:4px solid ${P.acc};opacity:0"></span>
-        <span class="an-p" id="${id}clr" style="left:${x - 5}px;top:${Math.round(f.h * 0.46) - 5}px;width:${cd + 10}px;height:${cd + 10}px;border-radius:50%;border:4px solid ${P.ink};opacity:0"></span>
+        <!-- Le cadre de selection colle a la tuile AU PIXEL : sans box-sizing la
+             bordure s'AJOUTE a la largeur, l'anneau depassait de 8 px et sortait
+             decentre. Ici il est en border-box, decale de son epaisseur exacte :
+             son bord interieur epouse le bord de la tuile. -->
+        <span class="an-p" id="${id}szr" style="box-sizing:border-box;left:${x + 2 * (d + gp) - 4}px;top:${Math.round(f.h * 0.1) - 4}px;width:${d + 8}px;height:${d + 8}px;border-radius:${Math.round(d * 0.26) + 4}px;border:4px solid ${P.acc};opacity:0"></span>
+        <span class="an-p" id="${id}clr" style="box-sizing:border-box;left:${x - 4}px;top:${Math.round(f.h * 0.46) - 4}px;width:${cd + 8}px;height:${cd + 8}px;border-radius:50%;border:4px solid ${P.acc};opacity:0"></span>
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.74)}px;width:${w}px;height:${Math.round(f.h * 0.16)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.07)}px;color:#FFFFFF">Je commande</span>`)
     }
     case 'candles': {
@@ -1873,25 +1877,244 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(rs)
     }
-    case 'leads': {
-      // PROSPECTION — le pipeline : les fiches passent de colonne en colonne.
-      const cols = 3, gp = Math.round(f.w * 0.03)
-      const cw = Math.round((f.w * 0.94 - gp * (cols - 1)) / cols)
-      const x0 = Math.round((f.w - (cw * cols + gp * (cols - 1))) / 2)
-      const chh = Math.round(f.h * 0.14)
-      let cs = ''
-      const per = [2, 2, 1]
-      for (let c = 0; c < cols; c++) {
-        cs += `<span class="an-p" style="left:${x0 + c * (cw + gp)}px;top:0;width:${cw}px;height:${Math.round(f.h * 0.09)}px;border-radius:${Math.round(cw * 0.1)}px;background:${c === 2 ? P.acc : P.soft};display:flex;align-items:center;justify-content:center">
-          <span style="width:52%;height:${Math.max(3, Math.round(f.h * 0.02))}px;border-radius:99px;background:${c === 2 ? '#FFFFFF' : P.ink};opacity:${c === 2 ? .9 : .4}"></span></span>`
-        for (let r = 0; r < per[c]; r++) {
-          cs += `<span class="an-p an-ld2" id="${id}ld2${c}${r}" style="left:${x0 + c * (cw + gp)}px;top:${Math.round(f.h * 0.13) + r * (chh + Math.round(f.h * 0.03))}px;width:${cw}px;height:${chh}px;border-radius:${Math.round(cw * 0.1)}px;background:${P.soft};border:2px solid ${P.line}">
-            <span style="position:absolute;left:10%;top:22%;width:${Math.round(chh * 0.3)}px;height:${Math.round(chh * 0.3)}px;border-radius:50%;background:${P.line}"></span>
-            <span style="position:absolute;left:${Math.round(chh * 0.5)}px;top:26%;width:46%;height:${Math.max(3, Math.round(chh * 0.08))}px;border-radius:99px;background:${P.ink};opacity:.45"></span>
-            <span style="position:absolute;left:10%;top:64%;width:70%;height:${Math.max(3, Math.round(chh * 0.07))}px;border-radius:99px;background:${P.ink};opacity:.24"></span></span>`
-        }
+    // ── PAQUET 8 (#157) — la suite des domaines : sport, agence, formation,
+    // voyage, auto, finances perso, recrutement, evenementiel, equipe.
+    case 'program': {
+      // SPORT — le programme de la semaine, les seances qui se cochent.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.17), gp = Math.round(f.h * 0.04)
+      const y0 = Math.round((f.h - (4 * rh + 3 * gp)) / 2)
+      const days = ['LUN', 'MAR', 'JEU', 'SAM']
+      let rs = ''
+      for (let k = 0; k < 4; k++) {
+        const y = y0 + k * (rh + gp), bx = Math.round(rh * 0.5)
+        rs += `<span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.26)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.26)}px;top:${y + Math.round(rh * 0.3)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(rh * 0.24)}px;color:${P.ink};opacity:.45">${days[k]}</span>
+        <span class="an-p" style="left:${x + Math.round(rh * 1.2)}px;top:${y + Math.round(rh * 0.26)}px;width:${[44, 36, 50, 40][k]}%;height:${Math.max(4, Math.round(rh * 0.13))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 1.2)}px;top:${y + Math.round(rh * 0.56)}px;width:${[28, 24, 32, 26][k]}%;height:${Math.max(3, Math.round(rh * 0.1))}px;border-radius:99px;background:${P.ink};opacity:.26"></span>
+        <span class="an-p an-pg3" id="${id}pg3${k}" style="left:${x + w - bx - Math.round(rh * 0.28)}px;top:${y + Math.round((rh - bx) / 2)}px;width:${bx}px;height:${bx}px;border-radius:50%;background:${P.acc};display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>`
       }
-      return box(cs)
+      return box(rs)
+    }
+    case 'weight': {
+      // SPORT — la courbe qui DESCEND, avec le chiffre atteint.
+      const w = Math.round(f.w * 0.92), h = Math.round(f.h * 0.56)
+      const x = Math.round((f.w - w) / 2), y = Math.round(f.h * 0.34)
+      const pts = [0.92, 0.84, 0.86, 0.72, 0.66, 0.7, 0.52, 0.4, 0.28]
+      const d = pts.map((v, k) => `${k ? 'L' : 'M'}${x + Math.round(w * k / (pts.length - 1))} ${y + Math.round(h * (1 - v))}`).join(' ')
+      let grid = ''
+      for (let k = 1; k < 4; k++) grid += `<line x1="${x}" y1="${y + Math.round(h * k / 4)}" x2="${x + w}" y2="${y + Math.round(h * k / 4)}" stroke="${P.ink}" stroke-opacity=".12" stroke-width="1"/>`
+      return box(`
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">${grid}
+          <path id="${id}wl2" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(4, Math.round(w * 0.014))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
+        <span class="an-p" id="${id}wv" style="left:${x}px;top:${Math.round(f.h * 0.02)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.2)}px;color:${P.acc};transform-origin:0% 50%">-12 kg</span>
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.25)}px;width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(f.h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>`)
+    }
+    case 'macros': {
+      // SPORT / NUTRITION — les trois barres de macros qui se remplissent.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const bh = Math.round(f.h * 0.14), gp = Math.round(f.h * 0.1)
+      const y0 = Math.round((f.h - (3 * bh + 2 * gp)) / 2)
+      const vals = [[72, '#FF5A1F', '160 g'], [54, '#2F6BFF', '220 g'], [38, '#22C55E', '60 g']]
+      let rs = ''
+      vals.forEach(([pct, col, lab], k) => {
+        const y = y0 + k * (bh + gp)
+        rs += `<span class="an-p" style="left:${x}px;top:${y - Math.round(bh * 0.6)}px;width:${Math.round(w * 0.26)}px;height:${Math.max(4, Math.round(bh * 0.2))}px;border-radius:99px;background:${P.ink};opacity:.36"></span>
+        <span class="an-p" style="right:${Math.round((f.w - w) / 2)}px;left:auto;top:${y - Math.round(bh * 0.68)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(bh * 0.34)}px;color:${P.ink};opacity:.6">${lab}</span>
+        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${bh}px;border-radius:99px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+          <span class="an-p an-mc" id="${id}mc${k}" style="left:0;top:0;width:${pct}%;height:100%;border-radius:99px;background:${col};transform-origin:0% 50%"></span></span>`
+      })
+      return box(rs)
+    }
+    case 'quote': {
+      // AGENCE / ARTISAN — le devis : les lignes, le total, la signature.
+      const w = Math.round(f.w * 0.78), h = Math.round(f.h * 0.96)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      let ls = ''
+      for (let k = 0; k < 4; k++) {
+        const ly = Math.round(h * (0.2 + k * 0.11))
+        ls += `<span class="an-p an-qt" style="left:${Math.round(w * 0.09)}px;top:${ly}px;width:${[54, 42, 60, 38][k]}%;height:${Math.max(3, Math.round(h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        <span class="an-p an-qt" style="left:${Math.round(w * 0.7)}px;top:${ly}px;width:${Math.round(w * 0.21)}px;height:${Math.max(3, Math.round(h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.26"></span>`
+      }
+      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span style="position:absolute;left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.07)}px;width:${Math.round(w * 0.36)}px;height:${Math.max(5, Math.round(h * 0.034))}px;border-radius:99px;background:${P.acc}"></span>
+        ${ls}
+        <span style="position:absolute;left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.66)}px;width:${Math.round(w * 0.82)}px;height:2px;background:${P.line}"></span>
+        <span class="an-p" id="${id}qtt" style="right:${Math.round(w * 0.09)}px;left:auto;top:${Math.round(h * 0.71)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.1)}px;color:${P.acc}">2 400€</span>
+        <svg class="an-p" id="${id}qs" viewBox="0 0 100 30" style="left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.85)}px;width:${Math.round(w * 0.44)}px;height:${Math.round(h * 0.1)}px" fill="none">
+          <path d="M2 22C10 6 16 26 24 14s10 12 18 2 12 14 20 4 14 6 22-6" stroke="${P.ink}" stroke-width="3" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg></div>`)
+    }
+    case 'brief': {
+      // AGENCE — le brief client : les champs remplis et les pieces jointes.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const fh = Math.round(f.h * 0.15), gp = Math.round(f.h * 0.045)
+      let fs2 = ''
+      for (let k = 0; k < 3; k++) {
+        const y = k * (fh + gp)
+        fs2 += `<span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${fh}px;border-radius:${Math.round(fh * 0.26)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p an-bf" id="${id}bf${k}" style="left:${x + Math.round(fh * 0.3)}px;top:${y + Math.round(fh * 0.42)}px;width:${[56, 40, 70][k]}%;height:${Math.max(4, Math.round(fh * 0.15))}px;border-radius:99px;background:${P.ink};opacity:.45;transform-origin:0% 50%"></span>`
+      }
+      const ay = 3 * (fh + gp) + Math.round(f.h * 0.03)
+      let at = ''
+      for (let k = 0; k < 3; k++) at += `<span class="an-p an-bt" id="${id}bt${k}" style="left:${x + k * Math.round(w * 0.24)}px;top:${ay}px;width:${Math.round(w * 0.2)}px;height:${Math.round(f.h * 0.16)}px;border-radius:${Math.round(w * 0.04)}px;background:${k === 0 ? P.acc : P.line};opacity:${k === 0 ? 1 : .6}">
+        ${[0.24, 0.44, 0.64].map((t) => `<span style="position:absolute;left:16%;top:${t * 100}%;width:64%;height:${Math.max(2, Math.round(f.h * 0.008))}px;border-radius:99px;background:${k === 0 ? 'rgba(255,255,255,.8)' : P.ink};opacity:${k === 0 ? 1 : .3}"></span>`).join('')}</span>`
+      return box(fs2 + at)
+    }
+    case 'course': {
+      // FORMATION — les modules, celui d'apres se debloque.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.19), gp = Math.round(f.h * 0.045)
+      const y0 = Math.round((f.h - (4 * rh + 3 * gp)) / 2)
+      let rs = ''
+      for (let k = 0; k < 4; k++) {
+        const y = y0 + k * (rh + gp), done = k < 2, next = k === 2
+        const ic = Math.round(rh * 0.52)
+        rs += `<span class="an-p an-cr2" id="${id}cr2${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.26)}px;background:${next ? P.acc : P.soft};border:2px solid ${next ? P.acc : P.line}">
+          <span style="position:absolute;left:${Math.round(rh * 0.26)}px;top:${Math.round((rh - ic) / 2)}px;width:${ic}px;height:${ic}px;border-radius:${Math.round(ic * 0.28)}px;background:${next ? 'rgba(255,255,255,.9)' : done ? P.acc : P.line};display:flex;align-items:center;justify-content:center">
+            ${done ? `<svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg>`
+              : `<svg viewBox="0 0 24 24" width="54%" height="54%" fill="none" stroke="${next ? P.acc : P.ink}" stroke-opacity="${next ? 1 : .45}" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0"/></svg>`}</span>
+          <span style="position:absolute;left:${Math.round(rh * 0.95)}px;top:${Math.round(rh * 0.26)}px;width:${[46, 38, 52, 42][k]}%;height:${Math.max(4, Math.round(rh * 0.12))}px;border-radius:99px;background:${next ? '#FFFFFF' : P.ink};opacity:${next ? .9 : done ? .5 : .28}"></span>
+          <span style="position:absolute;left:${Math.round(rh * 0.95)}px;top:${Math.round(rh * 0.56)}px;width:${[30, 26, 34, 24][k]}%;height:${Math.max(3, Math.round(rh * 0.1))}px;border-radius:99px;background:${next ? '#FFFFFF' : P.ink};opacity:${next ? .55 : .2}"></span></span>`
+      }
+      return box(rs)
+    }
+    case 'certificate': {
+      // FORMATION — le certificat qui se delivre, avec son sceau.
+      const w = Math.round(f.w * 0.84), h = Math.round(w * 0.74)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      const sd = Math.round(h * 0.34)
+      return box(`<div class="an-p" id="${id}cf" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.04)}px;background:${P.soft};border:3px solid ${P.acc};overflow:hidden">
+        <span style="position:absolute;inset:${Math.round(h * 0.05)}px;border:2px solid ${P.line};border-radius:${Math.round(w * 0.025)}px"></span>
+        <span class="an-p an-cfl" style="left:50%;margin-left:${-Math.round(w * 0.24)}px;top:${Math.round(h * 0.18)}px;width:${Math.round(w * 0.48)}px;height:${Math.max(5, Math.round(h * 0.05))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        <span class="an-p an-cfl" style="left:50%;margin-left:${-Math.round(w * 0.3)}px;top:${Math.round(h * 0.34)}px;width:${Math.round(w * 0.6)}px;height:${Math.max(4, Math.round(h * 0.038))}px;border-radius:99px;background:${P.acc}"></span>
+        <span class="an-p an-cfl" style="left:50%;margin-left:${-Math.round(w * 0.19)}px;top:${Math.round(h * 0.46)}px;width:${Math.round(w * 0.38)}px;height:${Math.max(3, Math.round(h * 0.028))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>
+        <span class="an-p" id="${id}cfs" style="left:${Math.round(w * 0.68)}px;top:${Math.round(h * 0.58)}px;width:${sd}px;height:${sd}px;border-radius:50%;background:${P.acc};display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,.35)">
+          <svg viewBox="0 0 24 24" width="54%" height="54%" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>
+        <svg class="an-p" id="${id}cfg" viewBox="0 0 100 26" style="left:${Math.round(w * 0.12)}px;top:${Math.round(h * 0.68)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(h * 0.16)}px" fill="none">
+          <path d="M2 20C10 4 16 24 24 12s10 12 18 2 12 14 20 4 14 6 22-6" stroke="${P.ink}" stroke-width="3" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg></div>`)
+    }
+    case 'quiz': {
+      // FORMATION — la question, les reponses, la bonne qui passe au vert.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.16), gp = Math.round(f.h * 0.04)
+      const y0 = Math.round(f.h * 0.26)
+      let rs = ''
+      for (let k = 0; k < 4; k++) {
+        const y = y0 + k * (rh + gp), good = k === 2, bd = Math.round(rh * 0.5)
+        rs += `<span class="an-p an-qz" id="${id}qz${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
+          <span id="${id}qzb${k}" style="position:absolute;left:${Math.round(rh * 0.26)}px;top:${Math.round((rh - bd) / 2)}px;width:${bd}px;height:${bd}px;border-radius:50%;border:2px solid ${P.line}"></span>
+          <span style="position:absolute;left:${Math.round(rh * 1.0)}px;top:50%;transform:translateY(-50%);width:${[52, 38, 60, 44][k]}%;height:${Math.max(4, Math.round(rh * 0.14))}px;border-radius:99px;background:${P.ink};opacity:.42"></span></span>`
+      }
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;width:${Math.round(w * 0.86)}px;height:${Math.max(5, Math.round(f.h * 0.034))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.14)}px;width:${Math.round(w * 0.5)}px;height:${Math.max(4, Math.round(f.h * 0.028))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>
+        ${rs}`)
+    }
+    case 'flight': {
+      // VOYAGE — le billet : depart, arrivee, la ligne qui relie, le siege.
+      const w = Math.round(f.w * 0.88), h = Math.round(f.h * 0.56)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">PAR</span>
+        <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">NYC</span>
+        <span style="position:absolute;left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.32)}px;width:${Math.round(w * 0.4)}px;height:2px;border-top:2px dashed ${P.line}"></span>
+        <svg class="an-p" id="${id}fp" viewBox="0 0 24 24" style="left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.22)}px;width:${Math.round(h * 0.2)}px;height:${Math.round(h * 0.2)}px" fill="${P.acc}"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+        <span style="position:absolute;left:0;top:${Math.round(h * 0.52)}px;width:100%;height:2px;border-top:2px dashed ${P.line}"></span>
+        ${[[0.08, '08:20'], [0.4, '11:45'], [0.72, '14 B']].map(([lx, t]) => `<span class="an-p an-fl2" style="left:${Math.round(w * lx)}px;top:${Math.round(h * 0.66)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.11)}px;color:${P.ink};opacity:.7">${t}</span>`).join('')}
+        <span style="position:absolute;left:-${Math.round(h * 0.08)}px;top:${Math.round(h * 0.44)}px;width:${Math.round(h * 0.16)}px;height:${Math.round(h * 0.16)}px;border-radius:50%;background:${P.bgHole || 'rgba(0,0,0,.001)'};box-shadow:0 0 0 999px transparent"></span></div>`)
+    }
+    case 'car': {
+      // AUTOMOBILE — la fiche vehicule : photo, kilometrage, annee, prix.
+      const w = Math.round(f.w * 0.84), h = Math.round(f.h * 0.9)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      const iv = Math.round(h * 0.44)
+      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span class="an-p an-cr3" style="left:0;top:0;width:100%;height:${iv}px;background:${grad(150)}">
+          <span style="position:absolute;left:12%;top:44%;width:76%;height:26%;border-radius:${Math.round(w * 0.1)}px ${Math.round(w * 0.16)}px ${Math.round(w * 0.04)}px ${Math.round(w * 0.04)}px;background:rgba(255,255,255,.3)"></span>
+          <span style="position:absolute;left:24%;top:70%;width:${Math.round(w * 0.13)}px;height:${Math.round(w * 0.13)}px;border-radius:50%;background:rgba(0,0,0,.35)"></span>
+          <span style="position:absolute;right:24%;top:70%;width:${Math.round(w * 0.13)}px;height:${Math.round(w * 0.13)}px;border-radius:50%;background:rgba(0,0,0,.35)"></span></span>
+        <span class="an-p an-cr3" style="left:${Math.round(w * 0.08)}px;top:${iv + Math.round(h * 0.05)}px;width:${Math.round(w * 0.56)}px;height:${Math.max(4, Math.round(h * 0.032))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        ${['92 000 km', '2021'].map((t, k) => `<span class="an-p an-cr3" style="left:${Math.round(w * 0.08) + k * Math.round(w * 0.44)}px;top:${iv + Math.round(h * 0.14)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.028)}px;background:${P.line};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:700;font-size:${Math.round(h * 0.038)}px;color:${P.ink};opacity:.85">${t}</span>`).join('')}
+        <span class="an-p" id="${id}crp" style="left:${Math.round(w * 0.08)}px;top:${iv + Math.round(h * 0.28)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.1)}px;color:${P.acc}">18 900€</span></div>`)
+    }
+    case 'budget': {
+      // FINANCES — la repartition des depenses et ce qu'il reste.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.11), gp = Math.round(f.h * 0.055)
+      const y0 = Math.round(f.h * 0.34)
+      const rows = [[64, '#FF5A1F'], [42, '#2F6BFF'], [28, '#22C55E'], [16, '#A78BFA']]
+      let rs = ''
+      rows.forEach(([pct, col], k) => {
+        const y = y0 + k * (rh + gp)
+        rs += `<span class="an-p" style="left:${x}px;top:${y - Math.round(rh * 0.5)}px;width:${Math.round(w * 0.22)}px;height:${Math.max(3, Math.round(rh * 0.24))}px;border-radius:99px;background:${P.ink};opacity:.32"></span>
+        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:99px;background:${P.soft};overflow:hidden">
+          <span class="an-p an-bg2" id="${id}bg2${k}" style="left:0;top:0;width:${pct}%;height:100%;border-radius:99px;background:${col};transform-origin:0% 50%"></span></span>`
+      })
+      return box(`
+        <span class="an-p" style="left:${x}px;top:0;width:${Math.round(w * 0.26)}px;height:${Math.max(4, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        <span class="an-p" id="${id}bgv" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.ink};transform-origin:0% 50%">1 840€</span>
+        ${rs}`)
+    }
+    case 'saving': {
+      // FINANCES — l'epargne qui monte vers l'objectif.
+      const w = Math.round(f.w * 0.44), h = Math.round(f.h * 0.72)
+      const x = Math.round((f.w - w) / 2), y = Math.round(f.h * 0.24)
+      let ticks = ''
+      for (let k = 1; k < 5; k++) ticks += `<span style="position:absolute;left:0;top:${Math.round(h * k / 5)}px;width:26%;height:2px;background:${P.ink};opacity:.18"></span>`
+      return box(`
+        <span class="an-p" id="${id}svv" style="left:0;top:0;width:100%;height:${Math.round(f.h * 0.18)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:50% 50%">8 400€</span>
+        <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.16)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">${ticks}
+          <span class="an-p an-sv" id="${id}sv" style="left:0;bottom:0;top:auto;width:100%;height:100%;background:${grad(180)};transform-origin:50% 100%"></span></span>
+        <span class="an-p" id="${id}svg" style="left:${x - Math.round(w * 0.12)}px;top:${y - Math.round(f.h * 0.02)}px;width:${Math.round(w * 1.24)}px;height:${Math.max(4, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>`)
+    }
+    case 'cv': {
+      // RECRUTEMENT — les candidatures, celle qu'on retient ressort.
+      const cw = Math.round(f.w * 0.26), chh = Math.round(cw * 1.36), gp = Math.round(f.w * 0.05)
+      const x0 = Math.round((f.w - (3 * cw + 2 * gp)) / 2), y0 = Math.round((f.h - chh) / 2)
+      let cs = ''
+      for (let k = 0; k < 3; k++) {
+        const hot = k === 1
+        cs += `<span class="an-p an-cv" id="${id}cv${k}" style="left:${x0 + k * (cw + gp)}px;top:${y0}px;width:${cw}px;height:${chh}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.soft};border:2px solid ${hot ? P.acc : P.line};overflow:hidden">
+          <span style="position:absolute;left:50%;margin-left:${-Math.round(cw * 0.16)}px;top:${Math.round(chh * 0.08)}px;width:${Math.round(cw * 0.32)}px;height:${Math.round(cw * 0.32)}px;border-radius:50%;background:${hot ? P.acc : P.line}"></span>
+          ${[0.42, 0.53, 0.64, 0.75].map((t, j) => `<span style="position:absolute;left:12%;top:${t * 100}%;width:${[74, 58, 66, 44][j]}%;height:${Math.max(2, Math.round(chh * 0.025))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>`).join('')}</span>`
+      }
+      return box(`${cs}
+        <span class="an-p" id="${id}cvk" style="left:${x0 + (cw + gp) + Math.round(cw * 0.62)}px;top:${y0 - Math.round(chh * 0.1)}px;width:${Math.round(cw * 0.4)}px;height:${Math.round(cw * 0.4)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.35)">
+          <svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>`)
+    }
+    case 'ticket': {
+      // EVENEMENTIEL — le billet avec son code et les places restantes.
+      const w = Math.round(f.w * 0.82), h = Math.round(f.h * 0.62)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      const qd = Math.round(h * 0.42)
+      let cells = ''
+      for (let k = 0; k < 36; k++) {
+        if ((k * 7) % 5 > 2) continue
+        const c = Math.round(qd / 6)
+        cells += `<span style="position:absolute;left:${(k % 6) * c}px;top:${((k / 6) | 0) * c}px;width:${c}px;height:${c}px;background:#111111"></span>`
+      }
+      return box(`<div class="an-p" id="${id}tk" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span style="position:absolute;left:0;top:0;width:100%;height:${Math.round(h * 0.22)}px;background:${P.acc}"></span>
+        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.07)}px;width:${Math.round(w * 0.44)}px;height:${Math.max(4, Math.round(h * 0.045))}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>
+        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.32)}px;width:${qd}px;height:${qd}px;background:#FFFFFF;border-radius:${Math.round(qd * 0.08)}px;overflow:hidden">${cells}</span>
+        ${[0.34, 0.48, 0.62].map((t, k) => `<span style="position:absolute;left:${Math.round(w * 0.14) + qd}px;top:${Math.round(h * t)}px;width:${[46, 34, 40][k]}%;height:${Math.max(3, Math.round(h * 0.032))}px;border-radius:99px;background:${P.ink};opacity:.36"></span>`).join('')}
+        <span class="an-p" id="${id}tkl" style="left:${Math.round(w * 0.14) + qd}px;top:${Math.round(h * 0.76)}px;padding:${Math.round(h * 0.03)}px ${Math.round(h * 0.06)}px;border-radius:99px;background:#EF4444;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.06)}px;color:#FFFFFF">3 places</span></div>`)
+    }
+    case 'team': {
+      // EQUIPE — les membres, et celui qu'on ajoute.
+      const av = Math.round(f.h * 0.2), gp = Math.round(f.w * 0.05)
+      const n = 4, tot = n * av + (n - 1) * gp
+      const x0 = Math.round((f.w - tot) / 2), y0 = Math.round(f.h * 0.24)
+      let ms = ''
+      for (let k = 0; k < n; k++) {
+        const add = k === 3
+        ms += `<span class="an-p an-tm" id="${id}tm${k}" style="left:${x0 + k * (av + gp)}px;top:${y0}px;width:${av}px;height:${av}px;border-radius:50%;background:${add ? 'transparent' : P.line};border:${add ? `3px dashed ${P.acc}` : `3px solid ${P.soft}`};display:flex;align-items:center;justify-content:center">
+          ${add ? `<svg viewBox="0 0 24 24" width="46%" height="46%" fill="none" stroke="${P.acc}" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>` : ''}</span>
+        <span class="an-p an-tm" style="left:${x0 + k * (av + gp)}px;top:${y0 + av + Math.round(f.h * 0.05)}px;width:${av}px;height:${Math.max(3, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:${add ? .2 : .34}"></span>`
+      }
+      return box(`${ms}
+        <span class="an-p" id="${id}tmn" style="left:${x0 + 3 * (av + gp)}px;top:${y0}px;width:${av}px;height:${av}px;border-radius:50%;background:${P.acc};opacity:0"></span>`)
     }
     default: { // clock — le temps qui passe, la rapidité
       const d = Math.round(f.h * 0.82)
@@ -2618,10 +2841,80 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}an .an-mn',{x:-20,autoAlpha:0},{x:0,autoAlpha:1,duration:0.28,stagger:0.09,ease:'power3.out'},${t0});
       tl.to('#${id}mn1',{scale:1.05,duration:0.26,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'0% 50%'},${r2(t0 + 0.62)});`
-    case 'leads':
+    // ── PAQUET 8 (#157) ──
+    case 'program':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{x:-18,autoAlpha:0},{x:0,autoAlpha:1,duration:0.24,stagger:0.03,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}an .an-pg3',{scale:0},{scale:1,duration:0.24,stagger:0.14,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.4)});`
+    case 'weight':
+      return inOut + `
+      tl.fromTo('#${id}wl2',{strokeDashoffset:1},{strokeDashoffset:0,duration:${r2(Math.max(0.7, dur - 0.3))},ease:'power2.out'},${t0});
+      tl.fromTo('#${id}wv',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.4)});`
+    case 'macros':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:12,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.04,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}an .an-mc',{scaleX:0},{scaleX:1,duration:0.44,stagger:0.12,ease:'power2.out'},${r2(t0 + 0.26)});`
+    case 'quote':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}an .an-qt',{scaleX:0,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.2,stagger:0.055,ease:'power2.out',transformOrigin:'0% 50%'},${r2(t0 + 0.2)});
+      tl.fromTo('#${id}qtt',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)',transformOrigin:'100% 50%'},${r2(t0 + 0.6)});
+      tl.fromTo('#${id}qs path',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.42,ease:'power2.out'},${r2(t0 + 0.72)});`
+    case 'brief':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{y:14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.04,ease:'power3.out'},${t0});
-      tl.to('#${id}ld200',{x:()=>document.getElementById('${id}ld220').getBoundingClientRect().left-document.getElementById('${id}ld200').getBoundingClientRect().left,duration:0.44,ease:'power3.inOut'},${r2(t0 + 0.56)});`
+      tl.fromTo('#${id}an .an-bf',{scaleX:0},{scaleX:1,duration:0.26,stagger:0.13,ease:'steps(8)'},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}an .an-bt',{y:16,scale:0.7,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.28,stagger:0.09,ease:'back.out(2.2)'},${r2(t0 + 0.6)});`
+    case 'course':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cr2',{x:-20,autoAlpha:0},{x:0,autoAlpha:1,duration:0.26,stagger:0.08,ease:'power3.out'},${t0});
+      tl.to('#${id}cr22',{scale:1.05,duration:0.26,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'0% 50%'},${r2(t0 + 0.6)});`
+    case 'certificate':
+      return inOut + `
+      tl.fromTo('#${id}cf',{scale:0.86,rotation:-3,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.36,ease:'back.out(1.8)'},${t0});
+      tl.fromTo('#${id}an .an-cfl',{y:10,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.07,ease:'power3.out'},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}cfg path',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.4,ease:'power2.out'},${r2(t0 + 0.46)});
+      tl.fromTo('#${id}cfs',{scale:0,rotation:-24,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.34,ease:'back.out(2.8)',transformOrigin:'50% 50%'},${r2(t0 + 0.7)});`
+    case 'quiz':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.05,ease:'power3.out'},${t0});
+      tl.to('#${id}qz2',{backgroundColor:'${'#'}22C55E',borderColor:'${'#'}22C55E',duration:0.26,ease:'power2.out'},${r2(t0 + 0.62)});
+      tl.to('#${id}qzb2',{backgroundColor:'${'#'}FFFFFF',borderColor:'${'#'}FFFFFF',scale:1.2,duration:0.24,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.62)});
+      tl.to('#${id}qz2',{scale:1.04,duration:0.2,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'0% 50%'},${r2(t0 + 0.72)});`
+    case 'flight':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}fp',{x:0,autoAlpha:0},{x:${FW(id, 0.34)},autoAlpha:1,duration:${r2(Math.max(0.6, dur - 0.5))},ease:'power1.inOut'},${r2(t0 + 0.26)});
+      tl.fromTo('#${id}an .an-fl2',{y:10,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.08,ease:'power3.out'},${r2(t0 + 0.4)});`
+    case 'car':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:20,autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}an .an-cr3',{y:14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.26,stagger:0.07,ease:'power3.out'},${r2(t0 + 0.2)});
+      tl.fromTo('#${id}crp',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(2.6)',transformOrigin:'0% 50%'},${r2(t0 + 0.58)});`
+    case 'budget':
+      return inOut + `
+      tl.fromTo('#${id}bgv',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.4)'},${t0});
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.22,stagger:0.03,ease:'power2.out'},${r2(t0 + 0.16)});
+      tl.fromTo('#${id}an .an-bg2',{scaleX:0},{scaleX:1,duration:0.4,stagger:0.09,ease:'power2.out'},${r2(t0 + 0.28)});`
+    case 'saving':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}sv',{scaleY:0},{scaleY:0.82,duration:${r2(Math.max(0.7, dur - 0.4))},ease:'power2.out'},${r2(t0 + 0.2)});
+      tl.fromTo('#${id}svv',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.34)});`
+    case 'cv':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cv',{y:20,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.1,ease:'back.out(1.8)'},${t0});
+      tl.to('#${id}cv1',{y:${FH(id, -0.06)},scale:1.08,duration:0.32,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(t0 + 0.56)});
+      tl.fromTo('#${id}cvk',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.72)});`
+    case 'ticket':
+      return inOut + `
+      tl.fromTo('#${id}tk',{y:22,rotation:-3,autoAlpha:0},{y:0,rotation:0,autoAlpha:1,duration:0.36,ease:'back.out(1.8)'},${t0});
+      tl.fromTo('#${id}tkl',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(3)',transformOrigin:'0% 50%'},${r2(t0 + 0.5)});
+      tl.to('#${id}tkl',{scale:1.08,duration:0.22,yoyo:true,repeat:3,ease:'sine.inOut',transformOrigin:'0% 50%'},${r2(t0 + 0.8)});`
+    case 'team':
+      return inOut + `
+      tl.fromTo('#${id}an .an-tm',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,stagger:0.07,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${t0});
+      tl.fromTo('#${id}tmn',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.62)});`
     default:
       return inOut + `
       tl.fromTo('#${id}cl', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2)' }, ${t0});
