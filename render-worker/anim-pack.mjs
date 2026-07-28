@@ -48,6 +48,19 @@ export function animPalette(vs) {
 }
 
 // Cadre de travail : centré, dans la zone sûre, au-dessus du sous-titre.
+// LE SOLEIL DE CLAUDE, DESSINÉ — pour les PETITES tailles uniquement (la barre
+// de prompt, 46 px : le lettrage du vrai logo y serait illisible). Les tuiles,
+// elles, portent le vrai fichier `tuto/logo-claude.png` fourni par Axel.
+// Onze lames effilées qui convergent au centre,
+// bouts arrondis — sa marque, pas le mot « Claude » écrit en gras. Partagé avec
+// les scènes UI (la barre de prompt le porte, pour qu'on reconnaisse SON champ).
+// Un disque au centre en ferait une marguerite : les lames partent du point.
+export const claudeBurst = (size = '58%', color = '#D97757') => {
+  const rays = Array.from({ length: 11 }, (_, k) =>
+    `<path d="M0 2.2 L-2.6 22.8 A2.6 2.6 0 0 0 2.6 22.8 Z" transform="rotate(${((360 / 11) * k).toFixed(1)})"/>`).join('')
+  return `<svg viewBox="-28 -28 56 56" width="${size}" height="${size}" fill="${color}">${rays}</svg>`
+}
+
 function frame(W, H) {
   const w = Math.round(W * SAFE_CENTERED_W)
   // borné à 44 % de la hauteur : en dessous commence la bande du sous-titre
@@ -181,6 +194,51 @@ export function animHtml(name, s, W, H, vs) {
           <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(td * 0.26)}px;color:#D97757;letter-spacing:-.02em">Claude</span></div>
         <span id="${id}pl" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.round(gap * 0.5)}px;height:${Math.max(4, Math.round(gap * 0.09))}px;margin-left:${-Math.round(gap * 0.25)}px;margin-top:${-Math.round(gap * 0.045)}px;border-radius:99px;background:${P.ink};opacity:0"></span>
         <span id="${id}pv" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.max(4, Math.round(gap * 0.09))}px;height:${Math.round(gap * 0.5)}px;margin-left:${-Math.round(gap * 0.045)}px;margin-top:${-Math.round(gap * 0.25)}px;border-radius:99px;background:${P.ink};opacity:0"></span>`)
+    }
+    case 'copy': {
+      // « ET TU COPIES CETTE CLE » : la cle se copie et PART vers Claude.
+      // Axel : « quand je dis tu copies cette cle, tu peux faire une animation,
+      // ca fait la transition avec Claude ». Le plan precedent montrait le bouton
+      // « Ouvrir Claude » — un bouton ne dit pas qu'on emporte quelque chose.
+      // Couleurs EXPLICITES : la puce est une piece d'interface, pas un aplat de
+      // la palette. (P.ink est blanc sur ce style : le texte disparaissait.)
+      const kw = Math.round(Math.min(f.w * 0.84, f.h * 1.7))
+      const kh = Math.round(Math.min(kw * 0.17, f.h * 0.17))
+      const kx = Math.round((f.w - kw) / 2), ky = Math.round(f.h * 0.05)
+      const ph = Math.round(kh * 0.72)
+      const py = ky + kh + Math.round(f.h * 0.045)
+      const td = Math.round(Math.min(f.w * 0.36, f.h * 0.40))
+      const ty = Math.round(f.h - td)
+      return box(`
+        <div class="an-p" id="${id}k" style="left:${kx}px;top:${ky}px;width:${kw}px;height:${kh}px;border-radius:${Math.round(kh * 0.34)}px;background:#FFFFFF;display:flex;align-items:center;gap:${Math.round(kh * 0.28)}px;padding:0 ${Math.round(kh * 0.4)}px;box-sizing:border-box;box-shadow:0 22px 54px rgba(0,0,0,.42)">
+          <svg width="${Math.round(kh * 0.46)}" height="${Math.round(kh * 0.46)}" viewBox="0 0 24 24" fill="none" stroke="${P.acc}" stroke-width="2.3" stroke-linecap="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v4"/></svg>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:${Math.round(kh * 0.34)}px;color:#141418;letter-spacing:.02em;white-space:nowrap">sk-ava-••••-7X4F</span>
+        </div>
+        <span id="${id}cp" style="position:absolute;left:50%;top:${py}px;margin-left:${-Math.round(kw * 0.16)}px;width:${Math.round(kw * 0.32)}px;height:${ph}px;border-radius:99px;background:#22C55E;display:flex;align-items:center;justify-content:center;gap:${Math.round(ph * 0.22)}px;color:#fff;font-family:'Archivo Black',sans-serif;font-size:${Math.round(ph * 0.38)}px;opacity:0">
+          <svg width="${Math.round(ph * 0.4)}" height="${Math.round(ph * 0.4)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg>COPIÉ</span>
+        <div class="an-p" id="${id}cl" style="left:${Math.round((f.w - td) / 2)}px;top:${ty}px;width:${td}px;height:${td}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45));opacity:0">
+          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>`)
+    }
+    case 'connect': {
+      // « CLAUDE EST CONNECTÉ À AVATARADS » : les DEUX VRAIS logos et la prise
+      // qui s'enclenche entre eux. Axel : « à la fin Claude est connecté à
+      // AvatarAds, mets les vrais logos des deux ». `tools` les posait côte à
+      // côte avec un simple « + » et un mot « Claude » écrit à la main — ici la
+      // liaison EST le sujet : les deux blocs se rejoignent, le connecteur
+      // claque, le voyant passe au vert.
+      const td = Math.round(Math.min(f.w * 0.35, f.h * 0.6))
+      const gap = Math.round(td * 0.42)
+      const x0 = Math.round((f.w - (td * 2 + gap)) / 2), y0 = Math.round((f.h - td) / 2)
+      const r = Math.round(td * 0.24)
+      const cx = x0 + td + Math.round(gap / 2), cy = y0 + Math.round(td / 2)
+      return box(`
+        <div class="an-p" id="${id}c1" style="left:${x0}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
+          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+        <div class="an-p" id="${id}c2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45))">
+          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>
+        <span id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${gap}px;height:${Math.max(6, Math.round(td * 0.055))}px;margin-left:${-Math.round(gap / 2)}px;margin-top:${-Math.round(td * 0.0275)}px;border-radius:99px;background:${P.ink};transform-origin:50% 50%"></span>
+        <span id="${id}ck" style="position:absolute;left:${cx}px;top:${cy}px;width:${Math.round(td * 0.32)}px;height:${Math.round(td * 0.32)}px;margin-left:${-Math.round(td * 0.16)}px;margin-top:${-Math.round(td * 0.16)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0;box-shadow:0 12px 34px rgba(34,197,94,.5)">
+          <svg width="58%" height="58%" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg></span>`)
     }
     case 'post': {
       // « POSTER SUR LES RÉSEAUX » : la vidéo part vers les plateformes et
@@ -681,6 +739,25 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}t2', { xPercent: 60, rotation: 10, autoAlpha: 0 }, { xPercent: 0, rotation: 0, autoAlpha: 1, duration: 0.42, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.16)});
       tl.fromTo(['#${id}pl', '#${id}pv'], { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.26, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.52)});
       tl.to(['#${id}t1', '#${id}t2'], { scale: 1.06, duration: ${r2(Math.max(0.5, dur - 0.9))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.72)});`
+    case 'copy':
+      // la clé apparaît · « COPIÉ » claque · elle plonge dans Claude
+      return inOut + `
+      tl.fromTo('#${id}k',{y:-40,scale:0.9,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.36,ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}cp',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.4)});
+      tl.fromTo('#${id}cl',{scale:0.72,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${r2(t0 + 0.58)});
+      tl.to('#${id}cp',{autoAlpha:0,duration:0.18},${r2(t0 + 0.9)});
+      tl.to('#${id}k',{y:'+=300',scale:0.3,autoAlpha:0,duration:0.46,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.92)});
+      tl.to('#${id}cl',{scale:1.12,duration:0.2,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 1.3)});`
+    case 'connect':
+      // les deux blocs se rejoignent, le câble se tend, le voyant vert claque
+      return inOut + `
+      tl.fromTo('#${id}c1', { xPercent: -70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}c2', { xPercent: 70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, ${t0});
+      tl.fromTo('#${id}cw', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, ${r2(t0 + 0.38)});
+      tl.to(['#${id}c1', '#${id}c2'], { x: 0, duration: 0.14, ease: 'power2.in' }, ${r2(t0 + 0.56)});
+      tl.fromTo('#${id}ck', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.64)});
+      tl.to('#${id}cw', { autoAlpha: 0, duration: 0.16 }, ${r2(t0 + 0.68)});
+      tl.to(['#${id}c1', '#${id}c2'], { scale: 1.05, duration: ${r2(Math.max(0.5, dur - 1.0))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.8)});`
     case 'post':
       // la vidéo monte vers les plateformes, chacune valide à son tour
       return inOut + `

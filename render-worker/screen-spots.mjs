@@ -113,3 +113,16 @@ export const zoneNamed = (screen, name) => box(zonesOf(screen).find((z) => z.nam
 
 /** Toutes les zones d'un écran, pour l'Éditeur (correction manuelle, #159). */
 export const zonesFor = (screen) => zonesOf(screen).slice()
+
+/**
+ * La taille NATIVE de la capture, en pixels.
+ * Le moteur en a besoin pour poser l'image à sa vraie résolution : Chrome
+ * rastérise une image à sa taille de MISE EN PAGE, pas à sa taille après
+ * `transform: scale()`. Affichée sur 980 px puis agrandie 4 fois, elle était
+ * donc agrandie comme un bitmap — d'où le flou qu'Axel a vu sur les zooms,
+ * alors que la capture d'origine, elle, est nette.
+ */
+export const screenSize = (screen) => {
+  const s = SCREENS[screen] || {}
+  return { w: s.w || 0, h: s.h || 0 }
+}

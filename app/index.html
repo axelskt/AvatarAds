@@ -1809,7 +1809,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div style="display:flex;align-items:center;gap:10px;min-width:0">
                   <span style="font-size:16px;flex-shrink:0">🎼</span>
                   <div style="min-width:0">
-                    <div style="font-size:12.5px;font-weight:700">Montage IA après la génération <span style="font-weight:600;font-size:10.5px;font-family:var(--mono);color:var(--orange2)">+2 crédits</span></div>
+                    <div style="font-size:12.5px;font-weight:700">Montage IA après la génération <span style="font-weight:600;font-size:10.5px;font-family:var(--mono);color:var(--orange2)">+8 crédits</span></div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zooms, b-roll, musique &amp; sous-titres posés automatiquement, synchronisés sur ta voix</div>
                   </div>
                 </div>
@@ -3734,7 +3734,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="max-width:760px;margin:0 auto">
             <button id="mtGoBtn" onclick="montageGo()" class="btn btn-primary" style="width:100%;padding:17px;font-weight:800;font-size:17px;border-radius:16px">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-            <span id="mtGoLbl">Créer ma vidéo — 6 crédits</span>
+            <span id="mtGoLbl">Créer ma vidéo — 8 crédits</span>
             </button>
             <p id="mtCostNote" class="faint center" style="display:none;font-size:11.5px;line-height:1.5;margin-top:10px;max-width:520px;margin-inline:auto"></p>
           </div>
@@ -4338,7 +4338,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div class="card" style="padding:16px">
                 <div class="label" style="margin-bottom:10px">🎞 Export</div>
                 <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>Exporter MP4</button>
-                <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px">🎬 Rendu final serveur (split + slides) — 2 crédits</button>
+                <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px">🎬 Rendu final serveur (split + slides) — 4 crédits</button>
                 <div id="edSrvExportStatus" style="display:none;margin-top:7px;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5"></div>
                 <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
                 <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
@@ -5689,7 +5689,12 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 // ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
 // 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
 const CREDIT_COSTS = {
-  montageRender: 2,       // 🎬 rendu final serveur du Montage IA (MP4 monté par le worker)
+  // 4 et non 2 : le rendu serveur ne rejoue pas le plan à l'identique, c'est lui
+  // qui porte tout le travail visuel du moteur dynamique (zooms au pixel, visite
+  // guidée, animations). Il passe à 4 en même temps qu'on l'étoffe — il reste la
+  // relance BON MARCHÉ face aux 8 du chef d'orchestre : corriger ne coûte pas
+  // une nouvelle analyse (ni Claude, ni transcription).
+  montageRender: 4,       // 🎬 rendu final serveur du Montage IA (MP4 monté par le worker)
   avatarPerSec: 1,        // lipsync Hedra Character-3 (import MP3 : la voix est gratuite)
   voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
   expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
@@ -5703,10 +5708,12 @@ const CREDIT_COSTS = {
   // Réservé Pro/Élite. Coût Google 0,24 $ ≈ 0,22 € → 5 crédits = ~0,41 € encaissés.
   imgRealistic: 5,
   reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
-  // 6 et non 2 : mesuré en usage réel, le chef d'orchestre consomme nettement plus
-  // d'API que l'estimation initiale (transcription + plan + reprises). Les tarifs
+  // 8 et non 6 : mesuré, un montage coûte ~0,13 € d'API (≈ 0,11 € pour le seul
+  // appel Claude — 20 000 tokens d'entrée : prompt système, 6 à 8 images de la
+  // vidéo, transcript, mémoire de marque). À 8, la marge tient même sur le
+  // crédit le moins cher (Élite90, 0,068 €) : 0,55 € encaissés, ×4. Les tarifs
   // lipsync à la seconde ne bougent pas (avatarPerSec 1, omniPerSec 5).
-  montageIA: 6,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
+  montageIA: 8,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
   export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
   hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
@@ -10299,6 +10306,11 @@ const MZ_POS    = [['haut','Haut'],['centre','Centre'],['bas','Bas']];
 const MZ_SIZE   = [['S','S'],['M','M'],['L','L']];
 const MZ_MUSIC  = [['none','Aucune'],['auto','Auto'],['intense','Intense'],['dynamic','Dynamique'],['chill','Chill']];
 const MZ_RHYTHM = [['auto','Auto'],['nerveux','Nerveux'],['pose','Posé']];
+// Ce que l'avatar fait de son corps pendant qu'il parle (cf. _mtMotionPrompt).
+// « Vivant » n'est tenu que par OmniHuman, et seulement sur le hook et le CTA :
+// une scène est découpée en clips de 2 à 6 s, un élément qui traverse le fond
+// repartirait de zéro à chaque coupe.
+const MZ_MOTION = [['still','Figé'],['gestures','Gestes naturels'],['alive','Scène vivante']];
 const MZ_TRANS  = [['cut','Coupe nette'],['whip','Balayage rapide'],['fondu','Fondu doux']];
 const MZ_BROLL  = ['Aucune','Légère · ~30 %','Équilibrée · ~60 %','Dense · ~90 % · Recommandé'];
 const MZ_VSTYLE = [
@@ -10311,7 +10323,7 @@ const MZ_VSTYLE = [
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
-  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true }; }
+  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' }; }
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
 // 🔌 « Connecter Claude » — la section vivait dépliée dans « Mon compte » et y
@@ -10335,6 +10347,20 @@ function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) retu
   clearInterval(_mzPreviewTimer); _mzPreviewTimer=setInterval(()=>{ _mzPreviewI=(_mzPreviewI+1)%8; mzPreviewRender(); }, 420); }
 function mzAdvClose(){ const m=document.getElementById('mzAdvModal'); if(m) m.style.display='none';
   clearInterval(_mzPreviewTimer); _mzPreviewTimer=null; mzAdvSummary(); }
+// Le réglage « Scène vivante » ne vaut que pour OmniHuman : Character-3 garde le
+// fond figé quoi qu'on lui demande. Plutôt que de le griser (l'utilisateur ne
+// saurait pas pourquoi), on le dit — et on l'annonce aussi sur le hook/CTA.
+function _mzMotionHint(){
+  const el=document.getElementById('mzMotionHint'); if(!el) return;
+  const lvl=(_mt.adv&&_mt.adv.motion)||'gestures';
+  const omni=_mt.lipModel==='omnihuman';
+  el.textContent = lvl==='still'
+    ? "L'avatar reste immobile : seules les lèvres bougent."
+    : lvl==='alive'
+      ? (omni ? "Le décor respire — réservé au hook et au CTA (les scènes du milieu sont trop courtes)."
+              : "Character-3 garde le fond figé : passe sur OmniHuman pour que le décor bouge.")
+      : "Il parle avec les mains — mais seulement si ta photo d'avatar les montre.";
+}
 function mzAdvSet(k,v){ _mt.adv[k]=v; mzAdvRender(); }
 function mzAdvReset(){ _mt.adv=_mzDefaults(); mzAdvRender(); }
 
@@ -10378,7 +10404,7 @@ function mzAdvRender(){
   const a=_mt.adv;
   _mzSeg('mzSegAnim',MZ_ANIM,'subAnim'); _mzSeg('mzSegStyle',MZ_SUBST,'subStyle');
   _mzSeg('mzSegPos',MZ_POS,'subPos');    _mzSeg('mzSegSize',MZ_SIZE,'subSize');
-  _mzSeg('mzSegMusic',MZ_MUSIC,'music'); _mzSeg('mzSegRhythm',MZ_RHYTHM,'rhythm');
+  _mzSeg('mzSegMusic',MZ_MUSIC,'music'); _mzSeg('mzSegRhythm',MZ_RHYTHM,'rhythm'); _mzSeg('mzSegMotion',MZ_MOTION,'motion'); _mzMotionHint();
   _mzSeg('mzSegTrans',MZ_TRANS,'transitions');
   _mzToggle('mzTogEmoji','subEmoji','Emoji auto sur les mots-clés','🔥 💰 ✨ ajoutés sur les temps forts');
   _mzToggle('mzTogPunch','punch','Accent des temps forts','Zoom punch-in · shake · flash sur les beats');
@@ -10948,8 +10974,10 @@ function mtSetLipModel(m){
 }
 // estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
 // que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
-// pricing À LA SECONDE (Axel) : base montage 6 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
-// La base passe de 2 à 6 crédits : le chef d'orchestre consomme plus d'API que prévu.
+// pricing À LA SECONDE (Axel) : base montage 8 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
+// La base passe de 6 à 8 crédits (coût mesuré ~0,13 € d'API, dont 0,11 € pour Claude).
+// La RELANCE d'un rendu, elle, reste bon marché (montageRender) : elle ne rappelle ni
+// Claude ni la transcription — corriger ne doit jamais coûter une nouvelle analyse.
 // Les tarifs lipsync eux NE BOUGENT PAS (1 et 5 cr/s), comme convenu.
 // sur les scènes avatar (~30% de la durée), le reste habillé en hyperframes (1 cr/s)
 function _mtUpdateCost(){
@@ -11146,7 +11174,7 @@ async function _mtAvatarInFormat(target){
 }
 
 // génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
-async function _mtHedraScene(imageFile, audioWav, format, modelId){
+async function _mtHedraScene(imageFile, audioWav, format, modelId, role){
   const PROXY=SUPABASE_URL+'/functions/v1/hedra-proxy';
   const authHdr=await getAuthHeader();
   const byok=window._userHedraKey ? {'x-user-hedra-key':window._userHedraKey}:{};
@@ -11165,7 +11193,7 @@ async function _mtHedraScene(imageFile, audioWav, format, modelId){
   // 3) génération (aspect_ratio par format)
   const ar = format==='paysage' ? '16:9' : '9:16';
   const g=await hPost('/generations',{ type:'video', ai_model_id:modelId, audio_id:aId, start_keyframe_id:iId,
-    generated_video_inputs:{ text_prompt:'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects still', aspect_ratio:ar, character_orientation:'video', resolution:'1080p' } });
+    generated_video_inputs:{ text_prompt:_mtMotionPrompt('hedra', role), aspect_ratio:ar, character_orientation:'video', resolution:'1080p' } });
   if(!g.ok){ const t=await g.text(); throw new Error('Hedra génération '+g.status+' '+t.slice(0,80)); }
   const gId=(await g.json()).id; if(!gId) throw new Error('Hedra : pas d\'id de génération');
   // 4) polling (jusqu'à 6 min)
@@ -11189,7 +11217,7 @@ async function _mtHedraScene(imageFile, audioWav, format, modelId){
 // la photo et le segment audio dans render-media (privé) et on lui donne des liens signés
 // valables 1 h. La clé fal reste dans les secrets Supabase, jamais dans le navigateur.
 const FAL_OMNI = '/fal-ai/bytedance/omnihuman/v1.5';
-async function _mtOmniScene(imageFile, audioWav, format, segSec){
+async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const H=await getAuthHeader();
   const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
@@ -11214,7 +11242,7 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec){
     image_url: sI.data.signedUrl,
     audio_url: sA.data.signedUrl,
     resolution,
-    prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise lip-sync matching every syllable and pause, clear articulation, static background, no camera movement',
+    prompt: _mtMotionPrompt('omnihuman', role),
   });
   if(!sub.ok){ const t=await sub.text(); throw new Error('OmniHuman '+sub.status+' '+t.slice(0,120)); }
   const sd=await sub.json().catch(()=>({}));
@@ -11276,9 +11304,70 @@ function _mtStripFun(plan){
   plan.beds=[];
   return plan;
 }
+// ── CE QUE L'AVATAR FAIT DE SON CORPS PENDANT QU'IL PARLE ────────────────────
+// Les deux moteurs (Hedra Character-3, OmniHuman 1.5) acceptent un prompt texte,
+// et le nôtre leur INTERDISAIT tout mouvement : « static background, no camera
+// movement, background objects still ». C'était un garde-fou de l'époque où la
+// synchro labiale bavait ; ce n'est plus le sujet. Axel : « ça serait bien de
+// parler avec les mains… quelqu'un qui passe en arrière-plan, un chat qui passe
+// derrière ».
+//
+// TROIS CRANS, et une règle non négociable :
+//   figé      — l'ancien comportement, rien ne bouge.
+//   gestes    — (défaut) il parle avec les mains et décrit ce qu'il raconte.
+//   vivant    — la scène respire : un passant, un animal, une lumière qui change.
+//
+// ⚠️ LES MAINS NE S'INVENTENT PAS. Axel : « il faut parler avec les mains
+// SEULEMENT si l'image de base affiche des mains ». Un modèle à qui on demande
+// des gestes sur un portrait cadré au visage fabrique des doigts au bord du
+// cadre — c'est exactement le défaut qu'on a mis trois versions à faire
+// disparaître. On ne demande donc les mains que si on les VOIT (cf.
+// _mtDetectHands), et on exige leur intégrité dans tous les cas.
+//
+// ⚠️ « vivant » est réservé à OmniHuman ET aux segments longs (hook, CTA) : le
+// lipsync est découpé en scènes de 2 à 6 s, et un chat qui traverse repartirait
+// de zéro à chaque coupe. Sur Character-3, le fond reste de toute façon figé —
+// on ne promet pas ce que le moteur ne tient pas.
+function _mtMotionPrompt(engine, role){
+  const base = 'A person talking naturally to camera, UGC style, authentic, direct gaze, '
+    + 'precise lip-sync matching every syllable and pause of the audio, clear articulation';
+  const level = (_mt.adv && _mt.adv.motion) || 'gestures';
+  if(level === 'still') return base + ', still posture, static background, no camera movement, background objects still';
+
+  const hands = _mt.avatarHasHands
+    ? ', natural hand gestures that illustrate what is being said, hands anatomically correct with five fingers, no extra or fused fingers'
+    : ', natural head and shoulder movement, hands stay out of frame';
+  const alive = (level === 'alive' && engine === 'omnihuman' && (role === 'hook' || role === 'cta'))
+    ? ', the environment feels alive: subtle background life and gentle ambient motion, slow natural camera drift'
+    : ', static background, no camera movement';
+  return base + hands + alive + ', stable framing on the subject';
+}
+
+// Les mains sont-elles DANS le cadre de la photo ? Une seule question, une seule
+// fois par photo : la réponse est mémorisée tant qu'il ne change pas d'avatar.
+async function _mtDetectHands(imgFile){
+  const sig = (imgFile && (imgFile.name||'') + ':' + (imgFile.size||0)) || '';
+  if(_mt._handsSig === sig) return _mt.avatarHasHands;
+  _mt._handsSig = sig; _mt.avatarHasHands = false;
+  try{
+    const b64 = await new Promise((r,j)=>{ const fr=new FileReader(); fr.onload=()=>r(String(fr.result).split(',')[1]); fr.onerror=j; fr.readAsDataURL(imgFile); });
+    const resp = await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash:generateContent', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{ parts:[
+        { inline_data:{ mime_type: imgFile.type||'image/png', data: b64 } },
+        { text:'Are the person\'s hands visible in this photo? Answer with exactly one word: yes or no.' },
+      ]}]}),
+    });
+    const d = await resp.json();
+    const t = String(d?.candidates?.[0]?.content?.parts?.[0]?.text || '').toLowerCase();
+    _mt.avatarHasHands = t.includes('yes');
+  }catch(_){ /* dans le doute, pas de mains demandées */ }
+  return _mt.avatarHasHands;
+}
+
 // aiguillage : OmniHuman → fal.ai (1080p) · Character-3 → Hedra
-function _mtScene(img, wav, fmt, modelId, segSec){
-  return _mt.lipModel==='omnihuman' ? _mtOmniScene(img, wav, fmt, segSec) : _mtHedraScene(img, wav, fmt, modelId);
+function _mtScene(img, wav, fmt, modelId, segSec, role){
+  return _mt.lipModel==='omnihuman' ? _mtOmniScene(img, wav, fmt, segSec, role) : _mtHedraScene(img, wav, fmt, modelId, role);
 }
 
 // base gameplay 9:16 bouclée à la durée de l'audio + la voix en piste audio → Blob mp4
@@ -11407,8 +11496,11 @@ async function _mtSegmentedGenerate(){
       const s=segs[i]; const fmt = s.format==='paysage' ? 'paysage' : 'portrait';
       _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
       const img=await _mtAvatarInFormat(fmt);
+      await _mtDetectHands(img);   // mains dans le cadre ? une seule fois par photo
       const segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end);
-      clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0))));
+      // le rôle borne la « scène vivante » : seulement aux extrémités, jamais au milieu
+      const role = i===0 ? 'hook' : (i===segs.length-1 && (s.start||0) > dur*0.6 ? 'cta' : 'mid');
+      clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0)), role));
     }
 
     // 6) upload base + scènes (ordre = avatarSegments) + b-roll → render-media
@@ -22259,7 +22351,7 @@ const _AC_VOICE_PRESETS = {
   punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 9500,  g: 2.0 }, lp: 13000, deess: -8, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -13 },
 };
 
-async function _acMasterVoice(buf, presetKey){
+async function _acMasterVoice(buf, presetKey, opts){
   const P = _AC_VOICE_PRESETS[presetKey || _acVoicePreset];
   // #154 · case « Améliorer la voix » décochée → on ne touche à rien
   if(!P || !buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf;
@@ -22285,12 +22377,20 @@ async function _acMasterVoice(buf, presetKey){
   //     Un seul biquad (-12 dB/oct) ne suffisait pas : mesuré, il n'enlevait que
   //     0,8 dB au-dessus de 14 kHz. Trois étages en cascade = -36 dB/oct, la
   //     zone d'artefacts tombe vraiment.
-  const lpF = P.lp || 14000;
-  const lps = [0, 1, 2].map(() => {
+  //     ⚠️ MAIS SEULEMENT SUR UN AUDIO DÉBRUITÉ. C'est là que je m'étais
+  //     trompé : ce mur de brique était appliqué à TOUS les fichiers. Sur un
+  //     enregistrement propre (DJI Mic en 48 kHz), couper à 13,5 kHz avec une
+  //     pente de -36 dB/oct enlève tout l'air de la voix — Axel : « l'audio
+  //     enlève toute la qualité (j'ai mis voix podcast) ». Les résidus qu'on
+  //     voulait supprimer n'existent QUE quand un débruiteur est passé avant.
+  //     Sans débruitage : un seul étage très haut (18 kHz), inaudible.
+  const denoised = opts && opts.denoised
+  const lpF = denoised ? (P.lp || 14000) : 18000
+  const lps = (denoised ? [0, 1, 2] : [0]).map(() => {
     const f = off.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lpF; f.Q.value = 0.6; return f;
   });
-  lps[0].connect(lps[1]); lps[1].connect(lps[2]);
-  const lpIn = lps[0], lp = lps[2];
+  for (let i = 0; i < lps.length - 1; i++) lps[i].connect(lps[i + 1]);
+  const lpIn = lps[0], lp = lps[lps.length - 1];
 
   // 3 · DÉ-ESSEUR : Web Audio n'a pas d'entrée sidechain — on sépare en deux
   //     bandes et on ne compresse QUE les aigus (les « S » qui sifflent), puis
@@ -22652,7 +22752,9 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   }
   const rawClean = await offCtx.startRendering();
   // #153 · mastering voix APRÈS la coupe (compresser avant fausserait le seuil)
-  const cleanBuf = await _acMasterVoice(rawClean);
+  // `alreadyClean` = le fichier arrivait déjà débruité (micro DJI…), sinon on
+  // regarde si NOUS l'avons débruité. Dans les deux cas, plafond HF ; sinon non.
+  const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: alreadyClean || (_acDenoiseEnabled && !alreadyClean) });
   return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs };
 }
 
@@ -26022,6 +26124,8 @@ window.mPreviewClose=function(){
           <div><div class="mz-lbl">Rythme du montage</div><div class="seg" id="mzSegRhythm" style="width:100%;flex-wrap:wrap"></div></div>
           <div><div class="mz-lbl">Transitions entre les plans</div><div class="seg" id="mzSegTrans" style="width:100%;flex-wrap:wrap"></div>
             <p class="faint" style="font-size:11px;margin-top:7px">L'effet visuel à chaque changement de plan.</p></div>
+          <div id="mzMotionRow"><div class="mz-lbl">Mouvement de l'avatar</div><div class="seg" id="mzSegMotion" style="width:100%;flex-wrap:wrap"></div>
+            <p class="faint" style="font-size:11px;margin-top:7px" id="mzMotionHint">Les mains ne sont animées que si ta photo les montre.</p></div>
         </div>
 
         <div style="margin-bottom:22px">
