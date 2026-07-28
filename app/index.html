@@ -21509,6 +21509,17 @@ async function _cartoonProxyFetch(path, options={}){
 // On ne devine plus la forme : on descend l'objet et on prend la première
 // donnée vidéo qu'on trouve, quel que soit le nom des étages. Une prochaine
 // version de l'API pourra encore bouger sans rien casser ici.
+// Décrit la STRUCTURE d'une réponse sans en révéler le contenu : uniquement les
+// chemins de clés, sur trois niveaux. C'est ce qu'il faut pour savoir où chercher
+// la vidéo quand Google déplace son enveloppe, et rien de plus.
+function _veoForme(o, prof){
+  prof = prof || 0;
+  if(o === null || o === undefined) return String(o);
+  if(Array.isArray(o)) return o.length ? '[' + _veoForme(o[0], prof+1) + (o.length>1?' ×'+o.length:'') + ']' : '[]';
+  if(typeof o !== 'object') return typeof o;
+  if(prof >= 3) return '{…}';
+  return '{' + Object.keys(o).slice(0,8).map(function(k){ return k+':'+_veoForme(o[k], prof+1) }).join(',') + '}';
+}
 function _veoPickVideo(resp){
   let b64 = null, uri = null
   const seen = new Set()
@@ -21539,10 +21550,12 @@ async function _veoAwaitOp(opName){
       if(pd.error){ err=pd.error.message||'Génération refusée par Google'; break; }
       ({ b64, uri } = _veoPickVideo(pd.response || pd));
       if(!b64 && !uri){
-        // on log la FORME reçue : la prochaine fois qu'elle bouge, on saura où
-        // regarder au lieu de re-deviner.
-        try { console.warn('Veo — réponse sans vidéo, forme reçue :', JSON.stringify(pd.response || pd).slice(0, 1200)) } catch(e){}
-        err='Vidéo terminée mais introuvable dans la réponse — réessaie';
+        // LE MESSAGE PORTE LA FORME REÇUE. Un `console.warn` ne suffisait pas :
+        // la console d'Axel filtre sur « Erreurs », l'avertissement était donc
+        // invisible et l'erreur ne disait rien d'exploitable. La structure part
+        // maintenant dans le message lui-même — c'est la seule façon de savoir
+        // OÙ Google a déplacé la vidéo la prochaine fois.
+        err = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pd.response || pd);
       }
       break;
     }
@@ -21720,8 +21733,7 @@ async function cartoonGenVideo(btn){
           // même extraction que l'Express : on ne devine plus les chemins
           ({ b64: videoB64, uri: videoUri } = _veoPickVideo(pollData.response || pollData));
           if(!videoB64 && !videoUri){
-            try { console.warn('Veo cartoon — réponse sans vidéo, forme reçue :', JSON.stringify(pollData.response || pollData).slice(0, 1200)) } catch(e){}
-            opErr = 'Vidéo terminée mais introuvable dans la réponse — réessaie';
+            opErr = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pollData.response || pollData);
           }
           break;
         }

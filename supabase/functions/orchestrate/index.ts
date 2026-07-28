@@ -1349,7 +1349,16 @@ function animForWord(w: string): string {
 // Les filtres de GOUT (seuil de deliberation, garde-fou anti-invention, verrou des bruitages)
 // sautent en mode 'low' — c'est le seul moyen de voir ce que le chef d'orchestre PROPOSE
 // vraiment, sans mes reglages par-dessus.
+// Les plans de visite guidee refuses par validatePlan. Un accumulateur de module
+// plutot qu'un champ de plus sur le type Plan : ce n'est pas une donnee du plan,
+// c'est un compte rendu de ce qu'on a jete — et il doit remonter jusqu'a Axel.
+const TUTO_REFUS: string[] = []
+
 export function validatePlan(plan: Plan, duration: number, assetIds: string[], words: Word[] = [], brief = '', strict = true, brand = ''): Plan {
+  // les plans de visite guidee refuses remontent dans la reponse, comme les creux :
+  // un ecran demande qui n'existe pas ne doit plus disparaitre sans laisser de trace.
+  const tutoRejets: string[] = []
+  TUTO_REFUS.length = 0
   const D = duration
   const sections = (plan.sections || [])
     .map((s) => ({ ...s,
@@ -1758,10 +1767,21 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // dans le hook, et il n'en restait plus quand il presentait vraiment le module.
     let from = 0
     for (const tu of plan.tuto || []) {
-      const screen = String(tu.screen || '')
+      let screen = String(tu.screen || '')
       const zone = String(tu.zone || '')
+      // UN ÉCRAN INCONNU NE FAIT PLUS DISPARAÎTRE L'INTENTION. Le modèle demandait
+      // l'entrée du module Images IA avec `screen: "nav"` — un écran qui n'existe
+      // pas — et la ligne suivante supprimait le plan sans un mot : le moment
+      // devenait muet, et ni Axel ni moi ne pouvions savoir pourquoi. La barre
+      // latérale étant présente sur TOUTES les captures, une zone de navigation se
+      // retrouve ailleurs : on cherche donc le premier écran qui la porte.
+      if (!(TUTO[screen] && TUTO[screen][zone]) && zone) {
+        const secours = Object.keys(TUTO).find((s) => TUTO[s][zone])
+        if (secours) screen = secours
+      }
       const rect = TUTO[screen] && TUTO[screen][zone]
-      if (!rect) continue
+      if (!rect) { TUTO_REFUS.push(`« ${tu.word} » : écran « ${tu.screen} » / zone « ${zone} » introuvable`); continue }
+      tu.screen = screen
       // Le modele repond souvent par un GROUPE DE MOTS (« format TikTok »,
       // « decrire l'avatar ») alors que la transcription est mot a mot : chercher
       // une correspondance exacte ne trouvait presque rien. On cherche donc la
@@ -1857,13 +1877,30 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         cand.push({ t: w.start, an: beat.anim, val: beat.value, beat: true })
       }
     }
+    // ── LE LEXIQUE NE PLACE PLUS RIEN ──────────────────────────────────────────
+    // Axel, en regardant une vraie video : « les animations sont mises n'importe
+    // comment, rien n'est synchronise, rien n'a de logique ». Mesure sur le plan
+    // suivant : 10 animations sur 28 venaient d'ici — d'un automate qui se
+    // declenche sur le PREMIER mot croisant une de ses racines, sans savoir si ce
+    // mot compte. Et je venais d'aggraver le probleme en passant le lexique de 40
+    // a 431 racines : desormais presque chaque phrase en contient une, donc il
+    // tirait en continu sur des mots incidents. J'avais gagne de la COUVERTURE en
+    // perdant la JUSTESSE — l'inverse de ce qu'il demande depuis le debut.
+    //
+    // Le placement revient donc a qui comprend le sens : le modele, via `beats`,
+    // avec la transcription minutee sous les yeux. Ce qui reste nu est propose au
+    // rattrapage (2e passe), qui a le droit de repondre « ne mets rien ».
+    // Le lexique redevient ce que son propre commentaire annonce : un filet, pas
+    // un poseur. Il ne sert plus qu'a `animForWord` pour les emojis du modele.
+    //
+    // SEULE EXCEPTION, deterministe et demandee explicitement : le COMPTEUR. Quand
+    // un resultat chiffre est prononce ET qu'un nombre est reellement present a cet
+    // endroit, le chiffre qui defile EST le mot — aucune ambiguite possible.
     for (const w of words) {
       if (!inWindow(w.start) || !fits(w.start)) continue
-      let an = animForWord(w.text)
-      if (CU_WORDS.includes(norm(w.text)) && !usedAnims.has('countup')) an = 'countup'
-      if (!an || usedAnims.has(an)) continue
-      usedAnims.add(an)
-      cand.push({ t: w.start, an, val: '' })
+      if (!CU_WORDS.includes(norm(w.text)) || usedAnims.has('countup')) continue
+      usedAnims.add('countup')
+      cand.push({ t: w.start, an: 'countup', val: '' })
     }
     cand.sort((a, b) => a.t - b.t)
     const added: typeof slides = []
@@ -2389,7 +2426,9 @@ serve(async (req: Request) => {
       const trous: { start: number; end: number; dit: string }[] = []
       let curseur = 0
       const pousse = (a: number, b: number) => {
-        if (b - a < 2.0) return
+        // seuil abaisse : le lexique ne place plus, le rattrapage recupere donc
+        // tout ce qui depasse une seconde et demie.
+        if (b - a < 1.5) return
         const dit = fixedWords.filter((w) => w.start >= a && w.start < b).map((w) => w.text).join(' ').slice(0, 180)
         if (dit.split(' ').length >= 3) trous.push({ start: r2(a + 0.25), end: r2(b - 0.2), dit })
       }
@@ -2404,7 +2443,7 @@ serve(async (req: Request) => {
         // montre legitimement plusieurs ecrans. On n'interdit donc que la
         // REPETITION RAPPROCHEE : la meme animation a moins de 8 s d'intervalle.
         const posees = (plan.slides || []).filter((s) => s.anim).map((s) => ({ anim: s.anim as string, start: s.start }))
-        const propositions = await comblerTrous(trous.slice(0, 8), ANIMS, ANIM_CATALOGUE, rattrapage)
+        const propositions = await comblerTrous(trous.slice(0, 14), ANIMS, ANIM_CATALOGUE, rattrapage)
         for (const p of propositions) {
           const t = trous.find((h) => Math.abs(h.start - p.start) < 0.6)
           if (!t) { rattrapage.refus.push(`${p.start}s : creux introuvable a la pose`); continue }
@@ -2433,7 +2472,7 @@ serve(async (req: Request) => {
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
-      rattrapage,
+      rattrapage: { ...rattrapage, visiteGuideeRefusee: TUTO_REFUS.slice() },
       usage,
     })
   } catch (err) {

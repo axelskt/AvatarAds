@@ -335,7 +335,8 @@ export function buildComposition(plan, opts = {}) {
     ? `
       <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
-      <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
+      <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}"${
+    String(c.text || '').length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
 
   const emojiHtml = emojiDefs.map((e) => `
       <div class="clip emo" id="${e.id}" data-start="${e.start}" data-duration="${e.dur}" data-track-index="5"><img src="${e.file}" alt="" /></div>`).join('')
@@ -726,7 +727,13 @@ export function buildComposition(plan, opts = {}) {
         text-align: center; color: #fff;
         font: 900 ${subSize}px/1.1 "Arial Black", Arial, sans-serif;
         letter-spacing: 1px; will-change: transform; z-index: 8;
+        /* UN MOT LONG NE DOIT JAMAIS ÊTRE COUPÉ. « avatarads.fr » sortait du cadre
+           et s'affichait « atarads.fr » : le domaine de la marque, amputé, au
+           moment précis du CTA. Le mot rétrécit maintenant pour tenir — c'est
+           toujours mieux que de perdre des lettres. */
+        white-space: normal; overflow-wrap: anywhere;
       }
+      .cap[data-long] { font-size: ${Math.round(subSize * 0.72)}px; letter-spacing: 0; }
       /* sur une scène plein cadre (fond crème) : ombre portée au lieu du contour noir */
       /* variantes demandees dans « Parametres avances » (plan.capStyle) */
       .cap.st-neon { color: #FFFFFF; text-shadow: 0 0 12px #FF2FD0, 0 0 26px #7A2BFF, 0 3px 0 rgba(0,0,0,.5); }

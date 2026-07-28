@@ -45,7 +45,19 @@ export const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replac
 // doit répondre au motif « qualite » — les suffixes collés ne cassent pas la détection.
 export function findSeq(words, pattern, from = 0) {
   const toks = pattern.split(/\s+/).map(norm).filter(Boolean)
-  const eq = (n, tk) => n === tk || (tk.length >= 5 && n.startsWith(tk))
+  // LE PRÉFIXE NE SUFFIT PAS. Axel : « quand je dis formation il va dans le
+  // format ». `"formation".startsWith("format")` est vrai — le plan de visite
+  // guidée demandé sur « format » s'accrochait donc à « formation », prononcé
+  // dix-sept secondes plus tôt, et toute la visite partait en décalage. Le
+  // piège est général : « compte » attrape « compteur », « image » attrape
+  // « imaginer », « vue » attrape « vueltas ».
+  // On n'accepte plus qu'une VRAIE FLEXION en fin de mot — pluriel, féminin,
+  // conjugaison. « formats » passe, « formation » non. Se contenter de « deux
+  // caractères de plus » ne suffisait pas : « compteur » = « compte » + « ur »
+  // passait encore. La liste ci-dessous est fermée, donc sans surprise.
+  const FLEX = ['', 's', 'e', 'es', 'x', 'nt', 'z', 'r', 'ee', 'ees', 'ent']
+  const eq = (n, tk) => n === tk ||
+    (tk.length >= 5 && n.startsWith(tk) && FLEX.includes(n.slice(tk.length)))
   for (let j = from; j + toks.length <= words.length; j++) {
     if (toks.every((tk, m) => eq(norm(words[j + m].text), tk))) {
       return { start: words[j].start, end: words[j + toks.length - 1].end, i: j }
