@@ -119,8 +119,11 @@ window.__harvest = (view) => {
     // zones invisibles sur la capture, donc des cadres posés sur du vide.
     const hit = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2)
     if (!hit || (hit !== el && !el.contains(hit) && !hit.contains(el))) continue
-    const label = (el.getAttribute('aria-label') || el.value || el.placeholder || el.textContent || '')
-      .replace(/\\s+/g,' ').trim().slice(0,60)
+    // innerText et pas textContent : textContent concatene sans separateur et
+    // collait le titre a son sous-titre (« Photo Reelrealiste »). innerText
+    // respecte la mise en page, on garde la coupure comme un separateur lisible.
+    const raw = el.getAttribute('aria-label') || el.value || el.placeholder || el.innerText || el.textContent || ''
+    const label = String(raw).split(/\\n+/).map(t=>t.trim()).filter(Boolean).join(' · ').replace(/\\s+/g,' ').trim().slice(0,60)
     let name = slug(label) || slug(el.id) || slug((el.className||'').split(' ')[0])
     if (!name) continue
     let n = name, i = 2; while (seen.has(n)) n = name + '-' + (i++)

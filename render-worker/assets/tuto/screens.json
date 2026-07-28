@@ -91,7 +91,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -99,7 +99,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -115,7 +115,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -154,48 +154,48 @@
     "h": 0.0367
    },
    {
-    "name": "photo-reelrealiste",
-    "label": "Photo Réelréaliste",
+    "name": "photo-reel-realiste",
+    "label": "Photo Réel · réaliste",
     "x": 0.2158,
     "y": 0.3119,
     "w": 0.0803,
     "h": 0.0872
    },
    {
-    "name": "pixar-3dtoy-story",
-    "label": "Pixar 3DToy Story",
+    "name": "pixar-3d-toy-story",
+    "label": "Pixar 3D · Toy Story",
     "x": 0.3023,
     "y": 0.3119,
     "w": 0.0803,
     "h": 0.0872
    },
    {
-    "name": "fruitperso-fruit",
-    "label": "Fruitperso fruit",
+    "name": "fruit-perso-fruit",
+    "label": "Fruit · perso fruit",
     "x": 0.2158,
     "y": 0.4103,
     "w": 0.0803,
     "h": 0.0872
    },
    {
-    "name": "ugc-reelauthentique",
-    "label": "UGC Réelauthentique",
+    "name": "ugc-reel-authentique",
+    "label": "UGC Réel · authentique",
     "x": 0.3023,
     "y": 0.4103,
     "w": 0.0803,
     "h": 0.0872
    },
    {
-    "name": "mascottede-marque",
-    "label": "Mascottede marque",
+    "name": "mascotte-de-marque",
+    "label": "Mascotte · de marque",
     "x": 0.2158,
     "y": 0.5086,
     "w": 0.0803,
     "h": 0.0872
    },
    {
-    "name": "autrestyle-libre",
-    "label": "Autrestyle libre",
+    "name": "autre-style-libre",
+    "label": "Autre · style libre",
     "x": 0.3023,
     "y": 0.5086,
     "w": 0.0803,
@@ -274,8 +274,8 @@
     "h": 0.0367
    },
    {
-    "name": "1-3-image-de-reference",
-    "label": "1/3 Image de référence ✕",
+    "name": "image-de-reference",
+    "label": "Image de référence",
     "x": 0.415,
     "y": 0.8672,
     "w": 0.075,
@@ -314,8 +314,8 @@
     "h": 0.0333
    },
    {
-    "name": "generer-l-image3-cr",
-    "label": "Générer l'image3 cr",
+    "name": "generer-l-image-3-cr",
+    "label": "Générer l'image · 3 cr",
     "x": 0.9094,
     "y": 0.9205,
     "w": 0.1536,
@@ -415,7 +415,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -423,7 +423,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -439,7 +439,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -463,7 +463,7 @@
    },
    {
     "name": "realiste-avatar-reel",
-    "label": "Réaliste avatar réel",
+    "label": "Réaliste · avatar réel",
     "x": 0.2177,
     "y": 0.2504,
     "w": 0.0816,
@@ -471,7 +471,7 @@
    },
    {
     "name": "cartoon-3d-style-pixar",
-    "label": "Cartoon 3D style Pixar",
+    "label": "Cartoon 3D · style Pixar",
     "x": 0.3042,
     "y": 0.2504,
     "w": 0.0816,
@@ -479,7 +479,7 @@
    },
    {
     "name": "ugc-reel-selfie-authentique",
-    "label": "UGC réel selfie authentique",
+    "label": "UGC réel · selfie authentique",
     "x": 0.2177,
     "y": 0.3286,
     "w": 0.0816,
@@ -487,23 +487,23 @@
    },
    {
     "name": "studio-produit-pub",
-    "label": "Studio produit/pub",
+    "label": "Studio · produit/pub",
     "x": 0.3042,
     "y": 0.3286,
     "w": 0.0816,
     "h": 0.0693
    },
    {
-    "name": "portrait9-16",
-    "label": "📱 Portrait9:16",
+    "name": "portrait-9-16",
+    "label": "📱 · Portrait · 9:16",
     "x": 0.2177,
     "y": 0.4773,
     "w": 0.0816,
     "h": 0.0636
    },
    {
-    "name": "paysage16-9",
-    "label": "🖥 Paysage16:9",
+    "name": "paysage-16-9",
+    "label": "🖥 · Paysage · 16:9",
     "x": 0.3042,
     "y": 0.4773,
     "w": 0.0816,
@@ -527,31 +527,31 @@
    },
    {
     "name": "voix-native-veo-audio-genere-avec-la-vid",
-    "label": "Voix native (Veo)audio généré avec la vidéo",
+    "label": "Voix native (Veo) · audio généré avec la vidéo",
     "x": 0.2609,
     "y": 0.8953,
     "w": 0.1681,
     "h": 0.0658
    },
    {
-    "name": "gemini-ttsvoix-generee-11-timbres",
-    "label": "Gemini TTSvoix générée · 11 timbres",
+    "name": "gemini-tts-voix-generee-11-timbres",
+    "label": "Gemini TTS · voix générée · 11 timbres",
     "x": 0.2609,
     "y": 0.9666,
     "w": 0.1681,
     "h": 0.0658
    },
    {
-    "name": "ajoute-tes-imagesavatar-produit-perso",
-    "label": "Ajoute tes imagesavatar · produit · perso",
+    "name": "ajoute-tes-images-avatar-produit-perso",
+    "label": "Ajoute tes images · avatar · produit · perso",
     "x": 0.4506,
     "y": 0.7833,
     "w": 0.1313,
     "h": 0.2222
    },
    {
-    "name": "importer-depuisla-bibliotheque",
-    "label": "Importer depuisla bibliothèque",
+    "name": "importer-depuis-la-bibliotheque",
+    "label": "Importer depuis · la bibliothèque",
     "x": 0.4506,
     "y": 0.9389,
     "w": 0.1313,
@@ -699,7 +699,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -707,7 +707,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -723,7 +723,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -746,40 +746,40 @@
     "h": 0.0456
    },
    {
-    "name": "1produit",
-    "label": "1Produit",
+    "name": "1-produit",
+    "label": "1 · Produit",
     "x": 0.2097,
     "y": 0.1938,
     "w": 0.0457,
     "h": 0.0289
    },
    {
-    "name": "2avatar",
-    "label": "2Avatar",
+    "name": "2-avatar",
+    "label": "2 · Avatar",
     "x": 0.3201,
     "y": 0.1938,
     "w": 0.0435,
     "h": 0.0289
    },
    {
-    "name": "3voix",
-    "label": "3Voix",
+    "name": "3-voix",
+    "label": "3 · Voix",
     "x": 0.4255,
     "y": 0.1938,
     "w": 0.0357,
     "h": 0.0289
    },
    {
-    "name": "4style",
-    "label": "4Style",
+    "name": "4-style",
+    "label": "4 · Style",
     "x": 0.5281,
     "y": 0.1938,
     "w": 0.038,
     "h": 0.0289
    },
    {
-    "name": "5generer",
-    "label": "5Générer",
+    "name": "5-generer",
+    "label": "5 · Générer",
     "x": 0.6373,
     "y": 0.1938,
     "w": 0.0491,
@@ -795,7 +795,7 @@
    },
    {
     "name": "selectionner-un-hook-personne-ne-t-en-pa",
-    "label": "Sélectionner un hook... Personne ne t'en parle mais actuelle",
+    "label": "Sélectionner un hook... · Personne ne t'en parle mais actuel",
     "x": 0.4244,
     "y": 0.4785,
     "w": 0.475,
@@ -811,7 +811,7 @@
    },
    {
     "name": "ecris-le-corps-de-ton-script-ici-le-hook",
-    "label": "Écris le corps de ton script ici… Le hook et le CTA seront a",
+    "label": "Écris le corps de ton script ici… · Le hook et le CTA seront",
     "x": 0.4244,
     "y": 0.711,
     "w": 0.475,
@@ -819,7 +819,7 @@
    },
    {
     "name": "selectionner-un-cta-commente-plan-et-je-",
-    "label": "Sélectionner un CTA... Commente \"PLAN\" et je t'explique tout",
+    "label": "Sélectionner un CTA... · Commente \"PLAN\" et je t'explique to",
     "x": 0.4244,
     "y": 0.874,
     "w": 0.475,
@@ -967,7 +967,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -975,7 +975,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -991,7 +991,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -1015,7 +1015,7 @@
    },
    {
     "name": "gameplay-voix-ta-voix-ou-elevenlabs-sur-",
-    "label": "Gameplay + voix Ta voix (ou ElevenLabs) sur un clip gameplay",
+    "label": "Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl",
     "x": 0.4647,
     "y": 0.2755,
     "w": 0.2181,
@@ -1023,7 +1023,7 @@
    },
    {
     "name": "ma-video-importe-ta-video-l-ia-la-monte-",
-    "label": "Ma vidéo Importe ta vidéo, l'IA la monte façon créateur pro",
+    "label": "Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr",
     "x": 0.6903,
     "y": 0.2755,
     "w": 0.2181,
@@ -1031,7 +1031,7 @@
    },
    {
     "name": "importe-ta-voix-off-mp3-wav-m4a-l-ia-en-",
-    "label": "Importe ta voix off MP3 · WAV · M4A — l'IA en extrait les so",
+    "label": "Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les ",
     "x": 0.5775,
     "y": 0.4118,
     "w": 0.4437,
@@ -1039,7 +1039,7 @@
    },
    {
     "name": "ajoute-une-photo-d-avatar-sinon-100-game",
-    "label": "Ajoute une photo d'avatar Sinon 100% gameplay · 0 crédit lip",
+    "label": "Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l",
     "x": 0.5775,
     "y": 0.5519,
     "w": 0.4437,
@@ -1063,7 +1063,7 @@
    },
    {
     "name": "parametres-avances-sous-titres-mot-par-m",
-    "label": "Paramètres avancés sous-titres mot-par-mot · musique auto",
+    "label": "Paramètres avancés · sous-titres mot-par-mot · musique auto",
     "x": 0.5775,
     "y": 0.7731,
     "w": 0.4437,
@@ -1071,7 +1071,7 @@
    },
    {
     "name": "ajouter-un-script-brief-dis-a-l-ia-ce-qu",
-    "label": "Ajouter un script / brief Dis à l'IA ce que la vidéo doit di",
+    "label": "Ajouter un script / brief · Dis à l'IA ce que la vidéo doit ",
     "x": 0.5775,
     "y": 0.8942,
     "w": 0.4437,
@@ -1171,7 +1171,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -1179,7 +1179,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -1195,7 +1195,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -1267,7 +1267,7 @@
    },
    {
     "name": "importer-une-video-avatar-mp4-hedra-ou-v",
-    "label": "Importer une vidéo avatar MP4 Hedra ou vidéo existante → ajo",
+    "label": "Importer une vidéo avatar · MP4 Hedra ou vidéo existante → a",
     "x": 0.2681,
     "y": 0.5913,
     "w": 0.1963,
@@ -1359,7 +1359,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -1367,7 +1367,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -1383,7 +1383,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -1406,68 +1406,52 @@
     "h": 0.0456
    },
    {
-    "name": "glisse-ton-audio-ou-ta-video-ici-mp3-wav",
-    "label": "Glisse ton audio ou ta vidéo ici MP3 · WAV · M4A · OGG — MP4",
+    "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
+    "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
     "x": 0.5775,
-    "y": 0.354,
-    "w": 0.4012,
-    "h": 0.2511
+    "y": 0.3805,
+    "w": 0.3937,
+    "h": 0.2778
    },
    {
     "name": "parcourir",
     "label": "Parcourir",
     "x": 0.5775,
-    "y": 0.4118,
+    "y": 0.4382,
     "w": 0.0697,
     "h": 0.0444
    },
    {
-    "name": "standard",
-    "label": "🪄Standard",
-    "x": 0.4753,
-    "y": 0.549,
-    "w": 0.1969,
-    "h": 0.0989
+    "name": "standard-nettoyage-automatique",
+    "label": "Standard · nettoyage automatique",
+    "x": 0.4772,
+    "y": 0.6077,
+    "w": 0.1931,
+    "h": 0.1367
    },
    {
-    "name": "avance-pro",
-    "label": "🔊Avancé Pro+",
-    "x": 0.6797,
-    "y": 0.549,
-    "w": 0.1969,
-    "h": 0.0989
+    "name": "avance-traitement-renforce",
+    "label": "Avancé · traitement renforcé",
+    "x": 0.6778,
+    "y": 0.6077,
+    "w": 0.1931,
+    "h": 0.1367
    },
    {
-    "name": "on",
-    "label": "on",
-    "x": 0.3919,
-    "y": 0.7129,
-    "w": 0.01,
-    "h": 0.0178
-   },
-   {
-    "name": "on-2",
-    "label": "on",
-    "x": 0.3919,
-    "y": 0.7684,
-    "w": 0.01,
-    "h": 0.0178
-   },
-   {
-    "name": "on-3",
-    "label": "on",
-    "x": 0.3919,
-    "y": 0.824,
-    "w": 0.01,
-    "h": 0.0178
-   },
-   {
-    "name": "derush-ia-pro-elite-coupe-les-euh-begaie",
-    "label": "Dérush IA PRO · ÉLITE Coupe les « euh », bégaiements et repr",
+    "name": "parametres-avances-traitement-voix-silen",
+    "label": "Paramètres avancés · Traitement voix, silences, qualité",
     "x": 0.5775,
-    "y": 0.9145,
-    "w": 0.4012,
-    "h": 0.0678
+    "y": 0.7307,
+    "w": 0.3937,
+    "h": 0.0693
+   },
+   {
+    "name": "nettoyer-mon-audio",
+    "label": "Nettoyer mon audio",
+    "x": 0.5775,
+    "y": 0.8198,
+    "w": 0.3937,
+    "h": 0.0644
    }
   ]
  },
@@ -1555,7 +1539,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -1563,7 +1547,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -1579,7 +1563,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -1767,7 +1751,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -1775,7 +1759,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -1791,7 +1775,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
@@ -1939,7 +1923,7 @@
    },
    {
     "name": "montage-ia-beta",
-    "label": "Montage IA BÊTA",
+    "label": "Montage IA · BÊTA",
     "x": 0.0772,
     "y": 0.4694,
     "w": 0.1419,
@@ -1947,7 +1931,7 @@
    },
    {
     "name": "editeur-beta",
-    "label": "Éditeur BETA",
+    "label": "Éditeur · BETA",
     "x": 0.0772,
     "y": 0.5172,
     "w": 0.1419,
@@ -1963,7 +1947,7 @@
    },
    {
     "name": "publier-dev",
-    "label": "Publier DEV",
+    "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
     "w": 0.1419,
