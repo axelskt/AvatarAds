@@ -75,6 +75,16 @@ export function animHtml(name, s, W, H, vs) {
   const id = s.id
   const box = (inner) => `<div class="an" id="${id}an" style="left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px">${inner}</div>`
   const items = (s.items || []).map((it) => String(it.text || '')).filter(Boolean)
+  // ── LE CHIFFRE VIENT DE CE QUI EST DIT, PAS DU CODE ────────────────────────
+  // Axel : « si la personne dit qu'elle a perdu 10 kg, il faut que ce soit
+  // remplacé par -10 kg ». Trente-deux animations affichaient un littéral en
+  // dur — un montant, un pourcentage, une durée, un mot-clé. Chacune pouvait
+  // donc CONTREDIRE la voix, ce qui est pire que ne rien montrer.
+  // `txt(i, defaut)` lit items[i].text du plan et retombe sur la valeur d'exemple
+  // quand le chef d'orchestre n'a rien passé. `esc()` protège le HTML : ce texte
+  // vient du modèle, il ne doit jamais pouvoir injecter de balise.
+  const raw = (s.items || []).map((it) => String(it && it.text != null ? it.text : ''))
+  const txt = (i, def) => esc((raw[i] || '').trim() || def)
   // Dégradé de marque : l'accent EST la couleur, le dégradé n'est qu'un voile.
   // `acc2` vaut le bleu du set « word » hors style apple — les cartes pleines
   // partaient donc en orange → BLEU, à côté d'une interface entièrement orange.
@@ -990,7 +1000,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <span class="an-p" style="left:${x}px;top:${ty}px;width:${w}px;height:${th}px;border-radius:${Math.round(th * 0.26)}px;background:${P.soft};border:2px solid ${P.line}"></span>
         <span class="an-p" id="${id}hk" style="left:${x}px;top:${ty}px;width:${hw}px;height:${th}px;border-radius:${Math.round(th * 0.26)}px;background:${P.acc};transform-origin:0% 50%"></span>
-        <span class="an-p" id="${id}hl" style="left:${x}px;top:${Math.round(ty - f.h * 0.3)}px;width:${hw}px;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.21)}px;color:${P.acc}">3s</span>
+        <span class="an-p" id="${id}hl" style="left:${x}px;top:${Math.round(ty - f.h * 0.3)}px;width:${hw}px;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.21)}px;color:${P.acc}">${txt(0, '3s')}</span>
         <span class="an-p" id="${id}hc" style="left:${x}px;top:${Math.round(ty - f.h * 0.05)}px;width:${Math.max(4, Math.round(w * 0.009))}px;height:${Math.round(th + f.h * 0.1)}px;border-radius:99px;background:${P.ink}"></span>`)
     }
     case 'export': {
@@ -1142,7 +1152,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.05)}px;width:${av}px;height:${av}px;border-radius:50%;background:${P.acc};border:3px solid ${P.line}"></span>
         <span class="an-p" style="left:${x + av + Math.round(w * 0.05)}px;top:${Math.round(f.h * 0.1)}px;width:${Math.round(w * 0.34)}px;height:${Math.max(4, Math.round(f.h * 0.035))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
-        <span class="an-p" id="${id}pc" style="left:${x + av + Math.round(w * 0.05)}px;top:${Math.round(f.h * 0.19)}px;width:${Math.round(w * 0.46)}px;height:${Math.round(f.h * 0.13)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.12)}px;color:${P.acc};transform-origin:0% 50%">+12K</span>
+        <span class="an-p" id="${id}pc" style="left:${x + av + Math.round(w * 0.05)}px;top:${Math.round(f.h * 0.19)}px;width:${Math.round(w * 0.46)}px;height:${Math.round(f.h * 0.13)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.12)}px;color:${P.acc};transform-origin:0% 50%">${txt(0, '+12K')}</span>
         ${g}`)
     }
     case 'invoice': {
@@ -1160,7 +1170,7 @@ export function animHtml(name, s, W, H, vs) {
         <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.045)}px;width:${Math.round(w * 0.34)}px;height:${Math.max(3, Math.round(h * 0.028))}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>
         ${ls}
         <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.76)}px;width:${Math.round(w * 0.8)}px;height:2px;background:${P.line}"></span>
-        <span class="an-p" id="${id}it" style="left:${Math.round(w * 0.5)}px;top:${Math.round(h * 0.82)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(h * 0.13)}px;display:flex;align-items:center;justify-content:flex-end;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.11)}px;color:${P.acc}">490€</span></div>`)
+        <span class="an-p" id="${id}it" style="left:${Math.round(w * 0.5)}px;top:${Math.round(h * 0.82)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(h * 0.13)}px;display:flex;align-items:center;justify-content:flex-end;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.11)}px;color:${P.acc}">${txt(0, '490€')}</span></div>`)
     }
     case 'settings': {
       // « tu règles » : les interrupteurs basculent l'un après l'autre.
@@ -1209,10 +1219,10 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;inset:0;background:${grad(140)};opacity:.85"></span>
           <span class="an-p" id="${id}tp2" style="left:50%;top:50%;width:${pd}px;height:${pd}px;margin-left:${-Math.round(pd / 2)}px;margin-top:${-Math.round(pd / 2)}px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center">
             <svg viewBox="0 0 24 24" width="46%" height="46%" fill="#111111"><path d="M8 5l11 7-11 7z"/></svg></span>
-          <span style="position:absolute;right:${Math.round(h * 0.08)}px;bottom:${Math.round(h * 0.08)}px;padding:${Math.round(h * 0.045)}px ${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.07)}px;background:rgba(0,0,0,.66);font-family:${SANS};font-weight:700;font-size:${Math.round(h * 0.11)}px;color:#FFFFFF">0:28</span>
+          <span style="position:absolute;right:${Math.round(h * 0.08)}px;bottom:${Math.round(h * 0.08)}px;padding:${Math.round(h * 0.045)}px ${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.07)}px;background:rgba(0,0,0,.66);font-family:${SANS};font-weight:700;font-size:${Math.round(h * 0.11)}px;color:#FFFFFF">${txt(1, '0:28')}</span>
         </div>
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.05) + h + Math.round(f.h * 0.07)}px;width:${Math.round(w * 0.86)}px;height:${Math.max(4, Math.round(f.h * 0.035))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
-        <span class="an-p" id="${id}tv" style="left:${x}px;top:${Math.round(f.h * 0.05) + h + Math.round(f.h * 0.15)}px;width:${Math.round(w * 0.6)}px;height:${Math.round(f.h * 0.12)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.1)}px;color:${P.acc};transform-origin:0% 50%">1,2M</span>`)
+        <span class="an-p" id="${id}tv" style="left:${x}px;top:${Math.round(f.h * 0.05) + h + Math.round(f.h * 0.15)}px;width:${Math.round(w * 0.6)}px;height:${Math.round(f.h * 0.12)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.1)}px;color:${P.acc};transform-origin:0% 50%">${txt(0, '1,2M')}</span>`)
     }
     case 'leaderboard': {
       // « passer devant » : le classement, et ta ligne remonte à la première place.
@@ -1237,7 +1247,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.08)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
         <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.1)}px;width:${Math.round(w * 0.46)}px;height:${Math.max(4, Math.round(h * 0.028))}px;border-radius:99px;background:${P.ink};opacity:.45"></span>
         <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.19)}px;width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.26"></span>
-        <span style="position:absolute;right:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.13)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.085)}px;color:${P.ink}">49€</span>
+        <span style="position:absolute;right:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.13)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.085)}px;color:${P.ink}">${txt(0, '49€')}</span>
         <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.32)}px;width:${Math.round(w * 0.8)}px;height:${Math.round(h * 0.16)}px;border-radius:${Math.round(h * 0.045)}px;background:${P.line};overflow:hidden">
           <span style="position:absolute;left:${Math.round(w * 0.06)}px;top:50%;transform:translateY(-50%);width:${Math.round(w * 0.14)}px;height:${Math.round(h * 0.06)}px;border-radius:${Math.round(h * 0.015)}px;background:${P.acc}"></span>
           <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:50%;transform:translateY(-50%);width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:.4"></span></span>
@@ -1250,7 +1260,7 @@ export function animHtml(name, s, W, H, vs) {
       const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
       const rh = Math.round(f.h * 0.21), gp = Math.round(f.h * 0.05)
       const y0 = Math.round(f.h * 0.06)
-      const amts = ['+49€', '+129€', '+49€']
+      const amts = [txt(0, '+49€'), txt(1, '+129€'), txt(2, '+49€')]
       let rs = ''
       for (let k = 0; k < 3; k++) {
         const y = y0 + k * (rh + gp), av = Math.round(rh * 0.54)
@@ -1390,7 +1400,7 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" style="left:${Math.round(w * 0.1) + Math.round(rh * 0.86)}px;top:${ry + Math.round(rh * 0.24)}px;width:${[54, 44, 62, 38][k]}%;height:${Math.max(3, Math.round(rh * 0.18))}px;border-radius:99px;background:${P.ink};opacity:.42"></span>`
       }
       return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.08)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
-        <span class="an-p" id="${id}uh" style="left:0;top:0;width:100%;height:${Math.round(h * 0.26)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.12)}px;color:#FFFFFF">PRO</span>
+        <span class="an-p" id="${id}uh" style="left:0;top:0;width:100%;height:${Math.round(h * 0.26)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.12)}px;color:#FFFFFF">${txt(0, 'PRO')}</span>
         ${rs}</div>`)
     }
     case 'storyboard': {
@@ -1412,10 +1422,10 @@ export function animHtml(name, s, W, H, vs) {
       // « moins cinquante pour cent » : l'ancien prix se barre, le nouveau tombe.
       const w = Math.round(f.w * 0.8), x = Math.round((f.w - w) / 2)
       return box(`
-        <span class="an-p" id="${id}do" style="left:${x}px;top:${Math.round(f.h * 0.1)}px;width:${w}px;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.2)}px;color:${P.ink};opacity:.42">99€</span>
+        <span class="an-p" id="${id}do" style="left:${x}px;top:${Math.round(f.h * 0.1)}px;width:${w}px;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.2)}px;color:${P.ink};opacity:.42">${txt(0, '99€')}</span>
         <span class="an-p" id="${id}db" style="left:${Math.round(f.w * 0.3)}px;top:${Math.round(f.h * 0.22)}px;width:${Math.round(f.w * 0.4)}px;height:${Math.max(5, Math.round(f.h * 0.02))}px;border-radius:99px;background:${P.acc};transform-origin:0% 50%"></span>
-        <span class="an-p" id="${id}dn2" style="left:${x}px;top:${Math.round(f.h * 0.42)}px;width:${w}px;height:${Math.round(f.h * 0.32)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.3)}px;color:${P.acc}">49€</span>
-        <span class="an-p" id="${id}dc" style="left:50%;margin-left:${-Math.round(f.w * 0.16)}px;top:${Math.round(f.h * 0.78)}px;width:${Math.round(f.w * 0.32)}px;height:${Math.round(f.h * 0.16)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.09)}px;color:#FFFFFF">-50 %</span>`)
+        <span class="an-p" id="${id}dn2" style="left:${x}px;top:${Math.round(f.h * 0.42)}px;width:${w}px;height:${Math.round(f.h * 0.32)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.3)}px;color:${P.acc}">${txt(1, '49€')}</span>
+        <span class="an-p" id="${id}dc" style="left:50%;margin-left:${-Math.round(f.w * 0.16)}px;top:${Math.round(f.h * 0.78)}px;width:${Math.round(f.w * 0.32)}px;height:${Math.round(f.h * 0.16)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.09)}px;color:#FFFFFF">${txt(2, '-50 %')}</span>`)
     }
     case 'waitlist': {
       // « la liste d'attente » : les inscrits s'ajoutent, le compteur grimpe.
@@ -1425,7 +1435,7 @@ export function animHtml(name, s, W, H, vs) {
       let as = ''
       for (let k = 0; k < n; k++) as += `<span class="an-p an-wl" id="${id}wl${k}" style="left:${x0 + k * ov}px;top:${Math.round(f.h * 0.26)}px;width:${av}px;height:${av}px;border-radius:50%;background:${k % 2 ? P.acc : P.line};border:3px solid ${P.soft};z-index:${n - k}"></span>`
       return box(`${as}
-        <span class="an-p" id="${id}wc" style="left:0;top:${Math.round(f.h * 0.52)}px;width:100%;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.22)}px;color:${P.acc}">1 248</span>
+        <span class="an-p" id="${id}wc" style="left:0;top:${Math.round(f.h * 0.52)}px;width:100%;height:${Math.round(f.h * 0.24)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.22)}px;color:${P.acc}">${txt(0, '1 248')}</span>
         <span class="an-p" style="left:50%;margin-left:${-Math.round(f.w * 0.22)}px;top:${Math.round(f.h * 0.8)}px;width:${Math.round(f.w * 0.44)}px;height:${Math.max(4, Math.round(f.h * 0.03))}px;border-radius:99px;background:${P.ink};opacity:.34"></span>`)
     }
     case 'music': {
@@ -1469,7 +1479,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <span class="an-p" id="${id}kc" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;width:${w}px;height:${ch}px;border-radius:${Math.round(ch * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
           <span style="position:absolute;left:${Math.round(ch * 0.26)}px;top:${Math.round((ch - av) / 2)}px;width:${av}px;height:${av}px;border-radius:50%;background:${P.line}"></span>
-          <span id="${id}kw" style="position:absolute;left:${Math.round(ch * 0.95)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.34)}px;color:${P.acc}">HOOKS</span></span>
+          <span id="${id}kw" style="position:absolute;left:${Math.round(ch * 0.95)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch * 0.34)}px;color:${P.acc}">${txt(0, 'HOOKS')}</span></span>
         <svg class="an-p" id="${id}ka" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(f.h * 0.08)}px;top:${Math.round(f.h * 0.32)}px;width:${Math.round(f.h * 0.16)}px;height:${Math.round(f.h * 0.16)}px" fill="none" stroke="${P.acc}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M6 13l6 6 6-6"/></svg>
         <span class="an-p" id="${id}km" style="left:${x}px;top:${Math.round(f.h * 0.56)}px;width:${w}px;height:${Math.round(f.h * 0.34)}px;border-radius:${Math.round(f.h * 0.09)}px;background:${P.acc};box-shadow:0 16px 36px rgba(0,0,0,.4)">
           ${[0.2, 0.42].map((t, k) => `<span style="position:absolute;left:8%;top:${t * 100}%;width:${[74, 52][k]}%;height:${Math.max(3, Math.round(f.h * 0.02))}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>`).join('')}
@@ -1649,7 +1659,7 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;left:50%;top:50%;width:${Math.round(w * 0.34)}px;height:${Math.round(w * 0.34)}px;margin-left:${-Math.round(w * 0.17)}px;margin-top:${-Math.round(w * 0.17)}px;border-radius:${Math.round(w * 0.08)}px;background:rgba(255,255,255,.28)"></span></span>
         <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.06)}px;width:${Math.round(w * 0.66)}px;height:${Math.max(4, Math.round(h * 0.032))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
         <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.12)}px;width:${Math.round(w * 0.42)}px;height:${Math.max(3, Math.round(h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>
-        <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.19)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">39€</span>
+        <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.19)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">${txt(0, '39€')}</span>
         <span class="an-p" id="${id}pdb" style="left:${Math.round(w * 0.09)}px;top:${h - Math.round(h * 0.17)}px;width:${Math.round(w * 0.82)}px;height:${Math.round(h * 0.11)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.05)}px;color:#FFFFFF">Ajouter au panier</span></div>`)
     }
     case 'cart': {
@@ -1669,7 +1679,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`${rs}
         <span class="an-p" style="left:${x}px;top:${ty}px;width:${w}px;height:2px;background:${P.line}"></span>
         <span class="an-p" style="left:${x}px;top:${ty + Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.2)}px;height:${Math.max(4, Math.round(f.h * 0.03))}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
-        <span class="an-p" id="${id}ctt" style="right:${Math.round((f.w - w) / 2)}px;left:auto;top:${ty + Math.round(f.h * 0.025)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc}">102€</span>`)
+        <span class="an-p" id="${id}ctt" style="right:${Math.round((f.w - w) / 2)}px;left:auto;top:${ty + Math.round(f.h * 0.025)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc}">${txt(0, '102€')}</span>`)
     }
     case 'delivery': {
       // E-COMMERCE — le suivi : les etapes se cochent, le colis avance.
@@ -1741,8 +1751,8 @@ export function animHtml(name, s, W, H, vs) {
       })
       return box(`
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.04)}px;width:${Math.round(w * 0.32)}px;height:${Math.max(4, Math.round(f.h * 0.028))}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
-        <span class="an-p" id="${id}pfv" style="left:${x}px;top:${Math.round(f.h * 0.11)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.ink};transform-origin:0% 50%">24 380€</span>
-        <span class="an-p" id="${id}pfp" style="left:${x}px;top:${Math.round(f.h * 0.3)}px;padding:${Math.round(f.h * 0.018)}px ${Math.round(f.h * 0.04)}px;border-radius:99px;background:#22C55E;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.055)}px;color:#FFFFFF">+12,6 %</span>
+        <span class="an-p" id="${id}pfv" style="left:${x}px;top:${Math.round(f.h * 0.11)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.ink};transform-origin:0% 50%">${txt(0, '24 380€')}</span>
+        <span class="an-p" id="${id}pfp" style="left:${x}px;top:${Math.round(f.h * 0.3)}px;padding:${Math.round(f.h * 0.018)}px ${Math.round(f.h * 0.04)}px;border-radius:99px;background:#22C55E;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.055)}px;color:#FFFFFF">${txt(1, '+12,6 %')}</span>
         ${rs}`)
     }
     case 'order': {
@@ -1771,7 +1781,7 @@ export function animHtml(name, s, W, H, vs) {
         <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">${grid}
           <path id="${id}pa" d="${area}" fill="#22C55E" opacity="0"/>
           <path id="${id}pl" d="${d}" stroke="#22C55E" stroke-width="${Math.max(4, Math.round(w * 0.014))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
-        <span class="an-p" id="${id}pp" style="left:${x}px;top:${Math.round(f.h * 0.02)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:#22C55E;transform-origin:0% 50%">+248 %</span>`)
+        <span class="an-p" id="${id}pp" style="left:${x}px;top:${Math.round(f.h * 0.02)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:#22C55E;transform-origin:0% 50%">${txt(0, '+248 %')}</span>`)
     }
     case 'mrr': {
       // SAAS — le revenu recurrent : le chiffre, et les mois qui montent.
@@ -1787,7 +1797,7 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(`
         <span class="an-p" style="left:${x}px;top:0;width:${Math.round(w * 0.24)}px;height:${Math.max(4, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
-        <span class="an-p" id="${id}mrv" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:0% 50%">12 400€</span>
+        <span class="an-p" id="${id}mrv" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:0% 50%">${txt(0, '12 400€')}</span>
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.25)}px;width:${Math.round(w * 0.34)}px;height:${Math.max(3, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:.24"></span>
         ${bs}`)
     }
@@ -1805,7 +1815,7 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" style="left:${x}px;top:${y + Math.round(bh * 0.6)}px;width:${Math.round(w * 0.16)}px;height:${Math.max(3, Math.round(bh * 0.08))}px;border-radius:99px;background:${P.ink};opacity:.26"></span>`
       }
       return box(`
-        <span class="an-p" id="${id}chp" style="left:${x}px;top:0;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.15)}px;color:#EF4444;transform-origin:0% 50%">-59 %</span>
+        <span class="an-p" id="${id}chp" style="left:${x}px;top:0;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.15)}px;color:#EF4444;transform-origin:0% 50%">${txt(0, '-59 %')}</span>
         ${rs}`)
     }
     case 'onboarding': {
@@ -1822,7 +1832,7 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" style="left:${x + Math.round(rh * 1.0)}px;top:${y + Math.round(rh * 0.42)}px;width:${[54, 44, 62, 38][k]}%;height:${Math.max(4, Math.round(rh * 0.15))}px;border-radius:99px;background:${P.ink};opacity:${done ? .45 : .22}"></span>`
       }
       return box(`
-        <span class="an-p" id="${id}obp" style="left:${x}px;top:0;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.16)}px;color:${P.acc};transform-origin:0% 50%">75 %</span>
+        <span class="an-p" id="${id}obp" style="left:${x}px;top:0;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.16)}px;color:${P.acc};transform-origin:0% 50%">${txt(0, '75 %')}</span>
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.2)}px;width:${w}px;height:${Math.max(6, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.line}"></span>
         <span class="an-p" id="${id}obb" style="left:${x}px;top:${Math.round(f.h * 0.2)}px;width:${Math.round(w * 0.75)}px;height:${Math.max(6, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.acc};transform-origin:0% 50%"></span>
         ${rs}`)
@@ -1855,7 +1865,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
         <span class="an-p an-pr" style="left:0;top:0;width:100%;height:${iv}px;background:${grad(150)}">
           <span style="position:absolute;left:16%;bottom:14%;width:68%;height:44%;background:rgba(255,255,255,.24);clip-path:polygon(50% 0,100% 36%,100% 100%,0 100%,0 36%)"></span></span>
-        <span class="an-p an-pr" style="left:${Math.round(w * 0.07)}px;top:${iv + Math.round(h * 0.05)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">289 000€</span>
+        <span class="an-p an-pr" style="left:${Math.round(w * 0.07)}px;top:${iv + Math.round(h * 0.05)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">${txt(0, '289 000€')}</span>
         <span class="an-p an-pr" style="left:${Math.round(w * 0.07)}px;top:${iv + Math.round(h * 0.18)}px;width:${Math.round(w * 0.6)}px;height:${Math.max(3, Math.round(h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.34"></span>
         ${sp}
         <span class="an-p" id="${id}prb" style="left:${Math.round(w * 0.07)}px;top:${h - Math.round(h * 0.15)}px;width:${Math.round(w * 0.86)}px;height:${Math.round(h * 0.1)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.045)}px;color:#FFFFFF">Visiter</span></div>`)
@@ -1890,7 +1900,7 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">${grid}
           <path id="${id}wl2" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(4, Math.round(w * 0.014))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
-        <span class="an-p" id="${id}wv" style="left:${x}px;top:${Math.round(f.h * 0.02)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.2)}px;color:${P.acc};transform-origin:0% 50%">-12 kg</span>
+        <span class="an-p" id="${id}wv" style="left:${x}px;top:${Math.round(f.h * 0.02)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.2)}px;color:${P.acc};transform-origin:0% 50%">${txt(0, '-12 kg')}</span>
         <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.25)}px;width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(f.h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>`)
     }
     case 'quote': {
@@ -1907,7 +1917,7 @@ export function animHtml(name, s, W, H, vs) {
         <span style="position:absolute;left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.07)}px;width:${Math.round(w * 0.36)}px;height:${Math.max(5, Math.round(h * 0.034))}px;border-radius:99px;background:${P.acc}"></span>
         ${ls}
         <span style="position:absolute;left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.66)}px;width:${Math.round(w * 0.82)}px;height:2px;background:${P.line}"></span>
-        <span class="an-p" id="${id}qtt" style="right:${Math.round(w * 0.09)}px;left:auto;top:${Math.round(h * 0.71)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.1)}px;color:${P.acc}">2 400€</span>
+        <span class="an-p" id="${id}qtt" style="right:${Math.round(w * 0.09)}px;left:auto;top:${Math.round(h * 0.71)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.1)}px;color:${P.acc}">${txt(0, '2 400€')}</span>
         <svg class="an-p" id="${id}qs" viewBox="0 0 100 30" style="left:${Math.round(w * 0.09)}px;top:${Math.round(h * 0.85)}px;width:${Math.round(w * 0.44)}px;height:${Math.round(h * 0.1)}px" fill="none">
           <path d="M2 22C10 6 16 26 24 14s10 12 18 2 12 14 20 4 14 6 22-6" stroke="${P.ink}" stroke-width="3" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg></div>`)
     }
@@ -1916,8 +1926,8 @@ export function animHtml(name, s, W, H, vs) {
       const w = Math.round(f.w * 0.88), h = Math.round(f.h * 0.56)
       const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
       return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
-        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">PAR</span>
-        <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">NYC</span>
+        <span style="position:absolute;left:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">${txt(0, 'PAR')}</span>
+        <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:${Math.round(h * 0.18)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.2)}px;color:${P.ink}">${txt(1, 'NYC')}</span>
         <span style="position:absolute;left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.32)}px;width:${Math.round(w * 0.4)}px;height:2px;border-top:2px dashed ${P.line}"></span>
         <svg class="an-p" id="${id}fp" viewBox="0 0 24 24" style="left:${Math.round(w * 0.3)}px;top:${Math.round(h * 0.22)}px;width:${Math.round(h * 0.2)}px;height:${Math.round(h * 0.2)}px" fill="${P.acc}"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
         <span style="position:absolute;left:0;top:${Math.round(h * 0.52)}px;width:100%;height:2px;border-top:2px dashed ${P.line}"></span>
@@ -1931,7 +1941,7 @@ export function animHtml(name, s, W, H, vs) {
       let ticks = ''
       for (let k = 1; k < 5; k++) ticks += `<span style="position:absolute;left:0;top:${Math.round(h * k / 5)}px;width:26%;height:2px;background:${P.ink};opacity:.18"></span>`
       return box(`
-        <span class="an-p" id="${id}svv" style="left:0;top:0;width:100%;height:${Math.round(f.h * 0.18)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:50% 50%">8 400€</span>
+        <span class="an-p" id="${id}svv" style="left:0;top:0;width:100%;height:${Math.round(f.h * 0.18)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.17)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '8 400€')}</span>
         <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.16)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">${ticks}
           <span class="an-p an-sv" id="${id}sv" style="left:0;bottom:0;top:auto;width:100%;height:100%;background:${grad(180)};transform-origin:50% 100%"></span></span>
         <span class="an-p" id="${id}svg" style="left:${x - Math.round(w * 0.12)}px;top:${y - Math.round(f.h * 0.02)}px;width:${Math.round(w * 1.24)}px;height:${Math.max(4, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>`)
@@ -2061,44 +2071,6 @@ export function animHtml(name, s, W, H, vs) {
     // bougies). Les images mentales, elles, ne prennent pas. On arrete la piste.
     // Ici : le metier de la video, en detail — la pellicule, le prompteur, le
     // clap, le setup lumiere, la transition, le zoom, le ralenti.
-    case 'filmstrip': {
-      // « image par image », « les rushs » : la pellicule defile, une vue se choisit.
-      const fh2 = Math.round(f.h * 0.46), y = Math.round((f.h - fh2) / 2)
-      const cw = Math.round(f.w * 0.3), gp = Math.round(f.w * 0.02)
-      const pad = Math.round(fh2 * 0.14)
-      let perf = ''
-      for (let k = 0; k < 14; k++) {
-        const pw = Math.round(f.w * 0.03)
-        perf += `<span style="position:absolute;left:${Math.round(f.w * 0.02) + k * Math.round(f.w * 0.088)}px;top:${Math.round(pad * 0.28)}px;width:${pw}px;height:${Math.round(pad * 0.44)}px;border-radius:${Math.round(pw * 0.25)}px;background:${P.soft}"></span>
-        <span style="position:absolute;left:${Math.round(f.w * 0.02) + k * Math.round(f.w * 0.088)}px;bottom:${Math.round(pad * 0.28)}px;width:${pw}px;height:${Math.round(pad * 0.44)}px;border-radius:${Math.round(pw * 0.25)}px;background:${P.soft}"></span>`
-      }
-      let frames = ''
-      for (let k = 0; k < 4; k++) {
-        const hot = k === 2
-        frames += `<span class="an-p an-fs2" id="${id}fs2${k}" style="left:${Math.round(f.w * 0.03) + k * (cw + gp)}px;top:${pad}px;width:${cw}px;height:${fh2 - 2 * pad}px;border-radius:${Math.round(cw * 0.05)}px;background:${hot ? P.acc : P.line};overflow:hidden">
-          <span style="position:absolute;left:50%;margin-left:${-Math.round(cw * 0.15)}px;top:22%;width:${Math.round(cw * 0.3)}px;height:${Math.round(cw * 0.3)}px;border-radius:50%;background:#FFFFFF;opacity:${hot ? .8 : .35}"></span>
-          <span style="position:absolute;left:12%;bottom:16%;width:76%;height:${Math.max(3, Math.round(fh2 * 0.03))}px;border-radius:99px;background:#FFFFFF;opacity:${hot ? .65 : .25}"></span></span>`
-      }
-      return box(`<div class="an-p" id="${id}fsw" style="left:0;top:${y}px;width:${f.w}px;height:${fh2}px;background:${P.ink};opacity:.9;border-radius:${Math.round(f.w * 0.02)}px;overflow:hidden">${perf}${frames}</div>
-        <span class="an-p" id="${id}fsr" style="box-sizing:border-box;left:${Math.round(f.w * 0.03) + 2 * (cw + gp) - 4}px;top:${y + pad - 4}px;width:${cw + 8}px;height:${fh2 - 2 * pad + 8}px;border-radius:${Math.round(cw * 0.08)}px;border:4px solid ${P.acc};opacity:0"></span>`)
-    }
-    case 'teleprompter': {
-      // « tu lis ton texte », « le prompteur » : les lignes montent, l'active brille.
-      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
-      const lh = Math.round(f.h * 0.15)
-      let ls = ''
-      for (let k = 0; k < 6; k++) {
-        const act = k === 2
-        ls += `<span class="an-p" style="left:0;top:${k * lh}px;width:${[86, 72, 92, 78, 66, 84][k]}%;height:${Math.max(6, Math.round(lh * 0.3))}px;border-radius:99px;background:${act ? P.acc : P.ink};opacity:${act ? 1 : .28}"></span>`
-      }
-      const cd = Math.round(f.h * 0.16)
-      return box(`
-        <span class="an-p" style="left:${x}px;top:0;width:${w}px;height:${f.h}px;overflow:hidden">
-          <span class="an-p" id="${id}tpw" style="left:0;top:${Math.round(f.h * 0.3)}px;width:100%;height:${6 * lh}px">${ls}</span></span>
-        <span class="an-p" style="left:0;top:${Math.round(f.h * 0.36)}px;width:${f.w}px;height:${Math.round(lh * 0.9)}px;border-top:2px solid ${P.acc};border-bottom:2px solid ${P.acc};opacity:.45"></span>
-        <span class="an-p" id="${id}tpc" style="left:${Math.round(f.w * 0.5) - Math.round(cd / 2)}px;top:${Math.round(f.h * 0.02)}px;width:${cd}px;height:${Math.round(cd * 0.7)}px;border-radius:${Math.round(cd * 0.12)}px;background:${P.ink};opacity:.85">
-          <span style="position:absolute;left:56%;top:24%;width:38%;height:52%;border-radius:50%;background:${P.acc}"></span></span>`)
-    }
     case 'script': {
       // « le script », « ce que tu vas dire » : les lignes s'ecrivent, une se surligne.
       const w = Math.round(f.w * 0.82), h = Math.round(f.h * 0.96)
@@ -2114,7 +2086,7 @@ export function animHtml(name, s, W, H, vs) {
         <span style="position:absolute;left:${Math.round(w * 0.12)}px;top:${Math.round(h * 0.06)}px;width:42%;height:${Math.max(5, Math.round(h * 0.034))}px;border-radius:99px;background:${P.acc}"></span>
         ${ls}
         <span class="an-p" id="${id}sch" style="left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.355)}px;width:${Math.round(w * 0.82)}px;height:${Math.round(h * 0.05)}px;border-radius:${Math.round(h * 0.014)}px;background:${P.acc};opacity:0;transform-origin:0% 50%"></span>
-        <span style="position:absolute;right:${Math.round(w * 0.06)}px;top:${Math.round(h * 0.8)}px;width:${Math.round(w * 0.24)}px;height:${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.025)}px;background:${P.line};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.035)}px;color:${P.ink};opacity:.7">0:42</span></div>`)
+        <span style="position:absolute;right:${Math.round(w * 0.06)}px;top:${Math.round(h * 0.8)}px;width:${Math.round(w * 0.24)}px;height:${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.025)}px;background:${P.line};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.035)}px;color:${P.ink};opacity:.7">${txt(0, '0:42')}</span></div>`)
     }
     case 'clapper': {
       // « moteur », « on tourne », « prise deux » : le clap claque.
@@ -2147,24 +2119,6 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(`${cs}
         <span class="an-p" id="${id}rtr" style="box-sizing:border-box;left:${x0 + (cw + gp) - 4}px;top:${y0 - 4}px;width:${cw + 8}px;height:${chh + 8}px;border-radius:${Math.round(cw * 0.16)}px;border:4px solid ${P.acc};opacity:0"></span>`)
-    }
-    case 'lightsetup': {
-      // « le bon setup », « comment je filme » : camera, trepied, deux softbox.
-      const sd = Math.round(f.w * 0.24)
-      const gy = Math.round(f.h * 0.86)
-      const soft = (lx, idn) => `<span class="an-p an-lg2" id="${idn}" style="left:${lx}px;top:${Math.round(f.h * 0.2)}px;width:${sd}px;height:${Math.round(sd * 1.18)}px;border-radius:${Math.round(sd * 0.1)}px;background:${P.acc};opacity:.9;box-shadow:0 0 ${Math.round(sd * 0.6)}px ${P.acc}55">
-        <span style="position:absolute;inset:14%;border-radius:${Math.round(sd * 0.06)}px;background:#FFFFFF;opacity:.35"></span></span>
-      <span class="an-p an-lg2" style="left:${lx + Math.round(sd * 0.46)}px;top:${Math.round(f.h * 0.2) + Math.round(sd * 1.18)}px;width:${Math.max(4, Math.round(sd * 0.06))}px;height:${gy - Math.round(f.h * 0.2) - Math.round(sd * 1.18)}px;background:${P.line}"></span>`
-      const cw = Math.round(f.w * 0.26)
-      return box(`
-        ${soft(Math.round(f.w * 0.04), `${id}ls1`)}
-        ${soft(Math.round(f.w * 0.72), `${id}ls2`)}
-        <span class="an-p" id="${id}lsc" style="left:${Math.round((f.w - cw) / 2)}px;top:${Math.round(f.h * 0.3)}px;width:${cw}px;height:${Math.round(cw * 0.66)}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.ink};opacity:.9">
-          <span style="position:absolute;left:58%;top:20%;width:34%;height:60%;border-radius:50%;background:${P.acc}"></span>
-          <span style="position:absolute;left:10%;top:-16%;width:26%;height:20%;border-radius:${Math.round(cw * 0.04)}px;background:${P.ink};opacity:.9"></span></span>
-        <span class="an-p" style="left:${Math.round(f.w * 0.5) - 3}px;top:${Math.round(f.h * 0.3) + Math.round(cw * 0.66)}px;width:6px;height:${gy - Math.round(f.h * 0.3) - Math.round(cw * 0.66)}px;background:${P.line}"></span>
-        <span class="an-p" style="left:${Math.round(f.w * 0.5) - Math.round(f.w * 0.09)}px;top:${gy - 4}px;width:${Math.round(f.w * 0.18)}px;height:${Math.max(5, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.line}"></span>
-        <span class="an-p" style="left:${Math.round(f.w * 0.04)}px;top:${gy}px;width:${Math.round(f.w * 0.92)}px;height:${Math.max(4, Math.round(f.h * 0.014))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>`)
     }
     case 'transition': {
       // « et la ca bascule », « la transition » : le second plan balaie le premier.
@@ -2240,7 +2194,7 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;right:${Math.round(w * 0.05)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:${Math.round(ch2 * 0.34)}px;color:#FFFFFF">↑</span></span>
         <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">
           <path id="${id}tsl" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(4, Math.round(w * 0.014))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
-        <span class="an-p" id="${id}tsn" style="left:${x}px;top:${Math.round(f.h * 0.38)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.ink};transform-origin:0% 50%">184K</span>`)
+        <span class="an-p" id="${id}tsn" style="left:${x}px;top:${Math.round(f.h * 0.38)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.ink};transform-origin:0% 50%">${txt(0, '184K')}</span>`)
     }
     case 'algorithm': {
       // « l'algo te pousse » : la video part et remplit la grille des ecrans.
@@ -2268,33 +2222,7 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${th}px;border-radius:99px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
           <span class="an-p" id="${id}lpb" style="left:0;top:0;width:100%;height:100%;border-radius:99px;background:${P.acc};transform-origin:0% 50%"></span></span>
         <span class="an-p" id="${id}lph" style="left:${x}px;top:${y - Math.round(f.h * 0.03)}px;width:${Math.max(5, Math.round(w * 0.012))}px;height:${th + Math.round(f.h * 0.06)}px;border-radius:99px;background:${P.ink}"></span>
-        <span class="an-p" id="${id}lpn" style="left:0;top:${y + Math.round(f.h * 0.16)}px;width:100%;height:${Math.round(f.h * 0.14)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.13)}px;color:${P.acc};transform-origin:50% 50%">×3</span>`)
-    }
-    case 'preset': {
-      // « un style enregistre » : le reglage s'applique aux trois videos d'un coup.
-      const cw = Math.round(f.w * 0.24), chh = Math.round(cw * 1.5), gp = Math.round(f.w * 0.04)
-      const x0 = Math.round((f.w - (3 * cw + 2 * gp)) / 2), y0 = Math.round(f.h * 0.46)
-      let cs = ''
-      for (let k = 0; k < 3; k++) cs += `<span class="an-p an-pr2" id="${id}pr2${k}" style="left:${x0 + k * (cw + gp)}px;top:${y0}px;width:${cw}px;height:${chh}px;border-radius:${Math.round(cw * 0.14)}px;background:${P.line};overflow:hidden">
-        <span class="an-p an-pf2" id="${id}pf2${k}" style="left:0;top:0;width:100%;height:100%;background:${grad(140)};opacity:0"></span>
-        <span style="position:absolute;left:50%;margin-left:${-Math.round(cw * 0.15)}px;top:20%;width:${Math.round(cw * 0.3)}px;height:${Math.round(cw * 0.3)}px;border-radius:50%;background:#FFFFFF;opacity:.45"></span>
-        <span style="position:absolute;left:12%;bottom:14%;width:76%;height:${Math.max(3, Math.round(chh * 0.04))}px;border-radius:99px;background:#FFFFFF;opacity:.4"></span></span>`
-      const pw = Math.round(f.w * 0.5)
-      return box(`
-        <span class="an-p" id="${id}prc" style="left:${Math.round((f.w - pw) / 2)}px;top:${Math.round(f.h * 0.06)}px;width:${pw}px;height:${Math.round(f.h * 0.26)}px;border-radius:${Math.round(pw * 0.1)}px;background:${grad(150)};box-shadow:0 12px 28px rgba(0,0,0,.4)">
-          ${[0.2, 0.44, 0.68].map((t, k) => `<span style="position:absolute;left:12%;top:${t * 100}%;width:${[70, 52, 62][k]}%;height:${Math.max(3, Math.round(f.h * 0.016))}px;border-radius:99px;background:rgba(255,255,255,.8)"></span>`).join('')}</span>
-        ${cs}`)
-    }
-    case 'watermark': {
-      // « ta marque sur chaque video » : le logo se pose dans le coin.
-      const pw = Math.round(f.h * 0.54), ph = f.h, px = Math.round((f.w - pw) / 2)
-      const wd = Math.round(pw * 0.24)
-      return box(`<div class="an-ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border-radius:${Math.round(pw * 0.12)}px;overflow:hidden;border:3px solid ${P.line};background:${grad(150)}">
-        <span style="position:absolute;left:50%;margin-left:${-Math.round(pw * 0.18)}px;top:26%;width:${Math.round(pw * 0.36)}px;height:${Math.round(pw * 0.36)}px;border-radius:50%;background:#FFFFFF;opacity:.34"></span>
-        <span style="position:absolute;left:12%;bottom:12%;width:64%;height:${Math.max(4, Math.round(ph * 0.02))}px;border-radius:99px;background:#FFFFFF;opacity:.34"></span>
-        <span class="an-p" id="${id}wm" style="left:${pw - wd - Math.round(pw * 0.06)}px;top:${Math.round(ph * 0.05)}px;width:${wd}px;height:${wd}px;border-radius:${Math.round(wd * 0.26)}px;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.3)">
-          <span style="width:52%;height:52%;border-radius:50%;background:${P.acc}"></span></span>
-      </div>`)
+        <span class="an-p" id="${id}lpn" style="left:0;top:${y + Math.round(f.h * 0.16)}px;width:100%;height:${Math.round(f.h * 0.14)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.13)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '×3')}</span>`)
     }
     default: { // clock — le temps qui passe, la rapidité
       const d = Math.round(f.h * 0.82)
@@ -3080,16 +3008,6 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.02,ease:'power2.out'},${t0});
       tl.fromTo('#${id}thm',{scaleY:0.06},{scaleY:0.88,duration:${r2(Math.max(0.8, dur - 0.35))},ease:'power2.inOut'},${r2(t0 + 0.2)});`
     // ── PAQUET 11 (#157) — le métier de la vidéo ──
-    case 'filmstrip':
-      return inOut + `
-      tl.fromTo('#${id}fsw',{x:${FW(id, 0.3)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.36,ease:'power3.out'},${t0});
-      tl.fromTo('#${id}an .an-fs2',{autoAlpha:0},{autoAlpha:1,duration:0.22,stagger:0.07,ease:'power2.out'},${r2(t0 + 0.2)});
-      tl.fromTo('#${id}fsr',{scale:1.25,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.62)});`
-    case 'teleprompter':
-      return inOut + `
-      tl.fromTo('#${id}tpc',{y:-16,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'back.out(1.8)'},${t0});
-      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
-      tl.to('#${id}tpw',{y:${FH(id, -0.3)},duration:${r2(Math.max(0.85, dur - 0.3))},ease:'none'},${r2(t0 + 0.24)});`
     case 'script':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{y:16,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'back.out(1.6)'},${t0});
@@ -3107,11 +3025,6 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-rx',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,stagger:0.14,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.46)});
       tl.to(['#${id}rt0','#${id}rt2'],{autoAlpha:0.35,duration:0.26,ease:'power2.out'},${r2(t0 + 0.72)});
       tl.fromTo('#${id}rtr',{scale:1.2,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.76)});`
-    case 'lightsetup':
-      return inOut + `
-      tl.fromTo('#${id}an .an-p',{y:14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.28,stagger:0.03,ease:'power3.out'},${t0});
-      tl.fromTo('#${id}an .an-lg2',{autoAlpha:0.3},{autoAlpha:1,duration:0.3,stagger:0.14,ease:'power2.out'},${r2(t0 + 0.34)});
-      tl.to('#${id}lsc',{scale:1.06,duration:0.24,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.78)});`
     case 'transition':
       return inOut + `
       tl.fromTo('#${id}an',{scale:0.94},{scale:1,duration:0.3,ease:'back.out(1.6)'},${t0});
@@ -3154,17 +3067,6 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}lph',{x:0},{x:${FW(id, 0.88)},duration:0.44,repeat:2,ease:'none'},${r2(t0 + 0.28)});
       tl.to('#${id}lpa',{rotation:360,duration:0.44,repeat:2,ease:'none',transformOrigin:'50% 50%'},${r2(t0 + 0.28)});
       tl.fromTo('#${id}lpn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.8)'},${r2(t0 + 0.6)});`
-    case 'preset':
-      return inOut + `
-      tl.fromTo('#${id}prc',{y:-18,scale:0.9,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.34,ease:'back.out(1.9)'},${t0});
-      tl.fromTo('#${id}an .an-pr2',{y:16,autoAlpha:0},{y:0,autoAlpha:1,duration:0.26,stagger:0.07,ease:'power3.out'},${r2(t0 + 0.26)});
-      tl.fromTo('#${id}an .an-pf2',{autoAlpha:0},{autoAlpha:1,duration:0.26,stagger:0.11,ease:'power2.out'},${r2(t0 + 0.6)});
-      tl.to('#${id}prc',{scale:0.95,duration:0.14,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.54)});`
-    case 'watermark':
-      return inOut + `
-      tl.fromTo('#${id}an',{scale:0.93,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.6)'},${t0});
-      tl.fromTo('#${id}wm',{scale:2.4,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.44,ease:'back.out(2)',transformOrigin:'50% 50%'},${r2(t0 + 0.34)});
-      tl.to('#${id}wm',{scale:1.08,duration:0.2,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.86)});`
     default:
       return inOut + `
       tl.fromTo('#${id}cl', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2)' }, ${t0});
