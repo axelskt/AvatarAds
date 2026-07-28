@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS } from './anim-pack.mjs'
-import { spotOf, zoneNamed } from './screen-spots.mjs'
+import { spotOf, spotForWords, zoneNamed } from './screen-spots.mjs'
 
 // L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
 // « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
@@ -61,6 +61,17 @@ export function findAny(words, forms, from = 0) {
   }
   return null
 }
+
+// LE MOT DU CTA EST LE SEUL QUE LE SPECTATEUR VA TAPER : il doit être écrit
+// juste. Or la transcription rend un SON, pas une orthographe — « écris SITE en
+// commentaire » revient en « cite ». Le contresens est fatal : personne ne
+// commente « CITE ». On corrige donc les homophones dont une seule graphie se
+// commente. La liste est courte et le restera : elle ne sert qu'aux mots-clés
+// d'appel à l'action, pas au reste du script.
+// (La correction durable viendra de la mémoire de marque, qui garde son CTA
+// habituel — ici on n'a que la transcription sous la main.)
+const CTA_HOMOPHONES = { cite: 'SITE', cit: 'SITE', cites: 'SITE' }
+const ctaWord = (w) => CTA_HOMOPHONES[norm(w)] || w
 
 // « trente secondes » se dit en LETTRES dans les scripts — parseInt n'y voit rien
 const FR_NUMS = { un: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8,
@@ -164,12 +175,32 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // Renvoie la scène RÉELLEMENT posée (fenêtre déjà rognée) ou null : l'appelant
   // peut ainsi recaler son contenu — les étapes d'une démo qui tomberaient hors
   // du panneau sont écartées au lieu de s'afficher dans le vide.
-  const add = (slide, a, b) => {
+  // la fenêtre RÉELLEMENT disponible pour [a,b] — celle qu'`add` retiendra.
+  // L'appelant peut ainsi juger de la place AVANT de poser (une animation
+  // rognée à 0,9 s ne vaut pas la peine d'être posée).
+  const fit = (a, b) => {
     for (const w of taken) {
-      if (a < w[0] && b > w[0]) b = w[0] - 0.05          // déborde sur le début d'une fenêtre
-      if (a >= w[0] && a < w[1]) a = w[1] + 0.05          // commence dans une fenêtre
+      if (a < w[0] && b > w[0]) b = w[0] - 0.05
+      if (a >= w[0] && a < w[1]) a = w[1] + 0.05
     }
-    if (b - a < 0.8 || overlaps(a, b)) return null
+    return [a, b]
+  }
+  // UNE ANIMATION QUI DURE MOINS D'UNE SECONDE N'EST PAS UNE SCÈNE, C'EST UN
+  // FLASH : elle n'a le temps ni d'entrer (0,2 s), ni de jouer, ni de sortir
+  // (0,18 s) — on voit un objet immobile apparaître et disparaître. Axel, sur
+  // l'horloge de « en deux minutes », rognée à 0,9 s par la scène suivante :
+  // « je ne suis pas fan, supprime ». Ce n'est pas le chronomètre le problème,
+  // c'est le clignement. Les captures et les scènes UI, elles, restent lisibles
+  // court : elles montrent quelque chose d'immobile.
+  const isAnimPanel = (s) => Boolean(s.anim) && s.anim !== 'ui' && s.anim !== 'screen' && s.anim !== 'result'
+  const add = (slide, a, b) => {
+    ;[a, b] = fit(a, b)
+    const floor = isAnimPanel(slide) ? 1.25 : 0.8
+    if (b - a < floor) {
+      if (isAnimPanel(slide) && b - a > 0.2) console.log(`▶ ${slide.anim} écarté : ${r2(b - a)}s, trop court pour être vu`)
+      return null
+    }
+    if (overlaps(a, b)) return null
     const s = { ...slide, start: r2(a), end: r2(b) }
     out.push(s)
     claim(a, b); return s
@@ -265,19 +296,125 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // « il faut faire les zooms ». On reconstruit les étapes depuis `plan.tuto`
     // — chacune calée sur l'instant EXACT où le mot est prononcé, ce qui règle
     // la synchro en même temps que le cadrage.
+    // « ET TU COPIES CETTE CLÉ » → la clé se copie et S'ENVOLE VERS L'AUTRE OUTIL.
+    // La visite guidée y cadrait le bouton « Ouvrir Claude → Connecteurs » : un
+    // bouton ne dit pas qu'on EMPORTE quelque chose, et Axel : « quand je dis tu
+    // copies cette clé, tu peux faire une animation, ça fait la transition avec
+    // Claude ». Posée AVANT la visite guidée, elle lui prend la fenêtre.
+    {
+      const c = findAny(words, ['copies', 'copie', 'copier', 'copie-la', 'recuperes', 'recupere'], 0)
+      const obj = c ? words.slice(c.i + 1, c.i + 4).map((w) => norm(w.text)) : []
+      if (c && obj.some((w) => ['cle', 'clef', 'lien', 'token', 'url', 'adresse', 'code'].includes(w))) {
+        // elle tient l'écran jusqu'à la PROCHAINE ÉTAPE de la visite guidée :
+        // entre les deux, la voix dit « puis tu vas te rendre dans… » — c'est
+        // exactement le trajet vers l'autre outil que l'animation raconte.
+        // …et elle rend la main juste avant, sans mordre sur son amorce. On prend
+        // la PLUS PROCHE des étapes suivantes : parcourir la liste dans l'ordre
+        // tombait sur « Cloud », qui revient plus loin dans « les paramètres
+        // Cloud » — l'animation s'étirait alors par-dessus le zoom d'après.
+        let stop = D
+        for (const t of plan.tuto || []) {
+          const w = String(t.word || '')
+          const h = findSeq(words, w, c.i + 1) || findAny(words, [w], c.i + 1)
+          if (h && h.start > c.end + 0.8) stop = Math.min(stop, h.start - LEAD - 0.12)
+        }
+        if (add({ anim: 'copy', assets: ['logo-claude'] }, Math.max(0, c.start - LEAD), Math.min(D, stop, c.end + 3))) {
+          console.log(`▶ la clé se copie et part vers l'autre outil (${r2(c.start)}s)`)
+        }
+      }
+    }
+
     const guided = (plan.tuto || []).length >= 2
     let placedScreens = 0
     if (guided) {
       for (const sl of srv) if (sl.anim === 'screen') consumedByPlan.add(sl)   // les siennes cèdent la place
-      // chaque étape retrouve son mot dans la transcription
+      // ON CLIQUE D'ABORD. Axel : « le premier screen doit être en bas sur
+      // "mon compte" ». Quand la voix nomme une entrée de la barre latérale et
+      // que le parcours saute directement au contenu, on rétablit le clic : sans
+      // lui le spectateur est téléporté et ne saura pas où trouver le bouton.
+      const tuto = plan.tuto.slice()
+      {
+        // Certaines entrées ne sont PAS dans la barre latérale : « Connecter
+        // Claude » vit au fond de la modale Mon compte. Axel : « il arrive déjà
+        // sur la page donc ne montre pas où aller ». Elles ont donc leur propre
+        // capture, et c'est elle qu'on montre avant d'ouvrir l'écran.
+        const NAV = [['mon compte', 'mon-compte'], ['images ia', 'images-ia'], ['express', 'express'],
+          ['montage ia', 'montage-ia-beta'], ['bibliotheque', 'bibliotheque'], ['generateur', 'generateur'],
+          ['connecter claude', 'connecter-claude', '12-connecter-claude-entree'],
+          ['connect cloud', 'connecter-claude', '12-connecter-claude-entree'],
+          ['connect claude', 'connecter-claude', '12-connecter-claude-entree']]
+        for (const [phrase, zone, ownScreen] of NAV) {
+          const hit = findSeq(words, phrase)
+          if (!hit || tuto.some((t) => t.zone === zone)) continue
+          const after = tuto.find((t) => {
+            const h = findSeq(words, String(t.word || '')) || findAny(words, [String(t.word || '')])
+            return h && h.start > hit.start
+          })
+          if (!after) continue
+          // l'entrée de menu se montre sur l'écran où elle se trouve : la barre
+          // latérale est la même sur toutes les captures de l'app, mais une
+          // entrée enfouie dans une modale a la sienne.
+          const host = ownScreen || '01-imagesia'
+          if (!zoneNamed(host, zone)) continue
+          tuto.splice(tuto.indexOf(after), 0, { word: phrase, screen: host, zone, text: '' })
+          console.log(`▶ clic rétabli sur « ${phrase} » avant l'ouverture de l'écran`)
+        }
+      }
+
+      // chaque étape retrouve son mot dans la transcription.
+      //
+      // ⚠ CHRONOLOGIQUEMENT. Une visite guidée se déroule dans l'ordre, et un
+      // mot d'interface se répète : « Ajouter » est dit à 24,4 s (le bouton de
+      // la liste) PUIS à 33,1 s (celui du formulaire). Sans curseur, les deux
+      // étapes se calaient sur la première occurrence — la seconde tombait hors
+      // de son panneau et disparaissait, laissant trois secondes de vide.
+      // Le repli global reste, pour un mot qu'on n'aurait pas trouvé plus loin.
+      //
+      // La transcription écrit aussi ce qu'elle entend : « Connect » pour
+      // « connecteurs ». On accepte donc qu'un des deux mots soit le préfixe de
+      // l'autre, à partir de cinq lettres — sans quoi l'étape est perdue.
+      const like = (w, from) => {
+        const tk = norm(w)
+        if (tk.length < 5) return null
+        for (let j = from; j < words.length; j++) {
+          const n = norm(words[j].text)
+          if (n.length >= 5 && (n.startsWith(tk) || tk.startsWith(n))) return { start: words[j].start, end: words[j].end, i: j }
+        }
+        return null
+      }
       const steps = []
-      for (const t of plan.tuto) {
+      let cur = 0
+      for (const t of tuto) {
         const zone = zoneNamed(t.screen, t.zone)
         if (!zone) continue
-        const hit = findSeq(words, String(t.word || '')) || findAny(words, [String(t.word || '')])
+        const w = String(t.word || '')
+        const hit = findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
+          || findSeq(words, w) || findAny(words, [w]) || like(w, 0)
         if (!hit) continue
+        if (hit.i >= cur) cur = hit.i + 1
+        // UN ZOOM SE JUSTIFIE PAR CE QUI EST DIT.
+        // Sur « tu vas aller dans Connecter Claude », il proposait un cadre sur
+        // le bouton « Commencer » de la 3ᵉ carte — Axel : « le moment où je dis
+        // tu vas générer la clé affiche l'étape 3 alors qu'elle est censée
+        // montrer l'étape 1 ». Ce mot-là NOMME L'ÉCRAN, il ne désigne aucun
+        // bouton : on arrive, on regarde la page entière, et on plongera au
+        // bouton suivant. On confronte donc les mots prononcés autour du repère
+        // aux libellés lus à l'écran : si un AUTRE élément correspond mieux,
+        // c'est lui ; si rien ne correspond et que le libellé proposé n'a aucun
+        // mot en commun avec la phrase, on garde l'écran sans zoom.
+        const said = words.slice(Math.max(0, hit.i - 2), hit.i + 4).map((x) => x.text)
+        const heard = said.map(norm).join(' ')
+        const byWords = spotForWords(t.screen, said)
+        let spot = zone
+        if (byWords && byWords.label !== zone.label) spot = byWords
+        else if (!byWords) {
+          // aucun élément ne correspond… et le mot NOMME L'ÉCRAN (« Connecter
+          // Claude » → 11-connecter-claude) : c'est une arrivée, pas un clic.
+          const scr = (t.screen.match(/[a-z]{5,}/g) || [])
+          if (scr.some((tk) => heard.includes(tk.slice(0, 5)))) spot = null
+        }
         steps.push({ screen: t.screen, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
-          spot: zone, ...(t.text ? { type: String(t.text) } : {}) })
+          spot, ...(t.text ? { type: String(t.text) } : {}) })
       }
       steps.sort((a, b) => a.t - b.t)
       // on regroupe les étapes CONSÉCUTIVES sur le même écran : un panneau par
@@ -298,6 +435,50 @@ export function deriveDynamicSlides(plan, opts = {}) {
         i = j + 1
       }
       if (placedScreens) console.log(`▶ visite guidée : ${placedScreens} écran(s), ${steps.length} étape(s) au clic`)
+    }
+
+    // « TU VAS ALLER SUR AVATARADS.FR » EST UNE NAVIGATION, PAS UN LOGO.
+    // Le chef d'orchestre y posait son animation `logo` — un grand mot au
+    // milieu de l'écran. Axel : « quand je dis tu vas aller sur AvatarAds, tu
+    // dois aller sur internet avec le bruit de clavier, avec la LP qui s'affiche
+    // après ». Le navigateur qui tape l'adresse et charge la page montre le
+    // geste ; le logo ne montre qu'un nom. Il passe donc devant.
+    //
+    // Ce qui déclenche la scène, c'est LE GESTE ANNONCÉ (« tu vas aller sur… »),
+    // pas la forme du mot : la transcription entend « AvatarAds », jamais
+    // « avatarads.fr » — le « point F R » se perd dans le mot précédent. Chercher
+    // un nom de domaine ne trouvait donc rien. On lit le verbe, puis on prend ce
+    // qui suit « sur » : ça vaut pour « rends-toi sur Canva » comme pour nous.
+    const GO = ['aller', 'va', 'vas', 'rends', 'rendre', 'rendez', 'direction', 'connecte']
+    for (let j = 1; j < words.length - 1; j++) {
+      if (norm(words[j].text) !== 'sur') continue
+      const verb = words.slice(Math.max(0, j - 3), j).findIndex((w) => GO.includes(norm(w.text)))
+      if (verb < 0) continue
+      const from = words[Math.max(0, j - 3) + verb]      // « tu VAS aller sur… »
+      const site = words[j + 1]
+      if (!site || norm(site.text).length < 3) continue
+      let a = Math.max(0, from.start - LEAD)
+      // la scène s'arrête net avant la phrase suivante : après « AvatarAds » il
+      // enchaîne sur le compte, et le navigateur n'a plus rien à raconter
+      const next = words.find((w) => w.start > site.end + 0.35)
+      const b = Math.min(D, next ? next.start - LEAD : site.end + 3.2, site.end + 3.2)
+      // …et elle PREND le blanc qui la précède (jusqu'à 1,3 s). Les panneaux se
+      // poussent l'un l'autre : un trou n'affiche pas du vide, il laisse la scène
+      // d'avant s'attarder — la vidéo de la fille débordait ainsi sur « pour
+      // commencer ». Ici le navigateur s'ouvre dès l'écran libre, et l'adresse a
+      // le temps de se taper : la page arrive PILE sur le nom prononcé.
+      const [fa] = fit(Math.max(0, a - 1.3), b)
+      if (fa < a - 0.05) a = fa
+      // le zoom se cale sur « clique sur commencer » — mais SEULEMENT si ce mot
+      // tombe dans la scène. Ici « pour commencer » est dit AVANT l'adresse : le
+      // zoom partait alors à 16,5 s, hors du panneau, et ne jouait jamais.
+      const click = findAny(words, ['commencer', 'cliquer', 'clique', 'commence'], j + 1)
+      const at = click && click.start > a + 0.5 && click.start < b - 0.3 ? click.start : 0
+      if (add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home',
+        zoomX: 0.885, zoomY: 0.146, zoomTo: 3.0, ...(at ? { zoomAt: r2(at) } : {}) }, a, b)) {
+        console.log(`▶ navigateur : l'adresse se tape puis la page s'affiche (${r2(a)}→${r2(b)}s)`)
+      }
+      break
     }
 
     let placedAnim = 0
@@ -357,18 +538,55 @@ export function deriveDynamicSlides(plan, opts = {}) {
       Math.max(0, hit.start - LEAD), Math.min(D, hit.end + 0.45))
   }
 
-  // le site : « avatarads.fr » (ou tout mot en .fr/.com) → navigateur, zoom sur
-  // le « commencer/cliquer » qui suit
-  for (let j = 0; j < words.length; j++) {
-    const t = norm(words[j].text)
-    const isUrl = /(fr|com|io|app)$/.test(t) && (t.includes('avatarads') || String(words[j].text).includes('.'))
-    if (!isUrl) continue
-    const click = findAny(words, ['commencer', 'cliquer', 'clique', 'commence'], j + 1)
-    const a = Math.max(0, words[j].start - LEAD)
-    const b = click ? Math.min(D, click.end + 1.1) : Math.min(D, words[j].end + 3.2)
-    add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home',
-      zoomX: 0.885, zoomY: 0.146, zoomTo: 3.0, ...(click ? { zoomAt: r2(click.start) } : {}) }, a, b)
-    break
+  // (la scène navigateur est posée en §0 : voir placeBrowser)
+
+  // « TU N'AS PLUS QU'À ÉCRIRE CE QUE TU VEUX » → on VOIT quelque chose s'écrire.
+  // Axel : « là on doit voir quelque chose qui est écrit dans Claude… avec le
+  // bruitage clavier ». La phrase décrit un geste ; la montrer, c'est la barre de
+  // prompt qui se remplit lettre par lettre (le clavier vient avec la scène).
+  // Le texte tapé n'est pas inventé : on reprend l'objet que la voix annonce
+  // juste après (« et Claude te SORT LA VIDÉO ») — ça vaut pour n'importe quelle
+  // marque, sans table de mots-clés.
+  {
+    const trig = findSeq(words, 'plus qua ecrire') || findSeq(words, 'qua ecrire')
+      || findSeq(words, 'plus qua demander') || findSeq(words, 'qua demander')
+    if (trig) {
+      const give = findAny(words, ['sort', 'sortir', 'donne', 'genere', 'renvoie', 'envoie', 'fabrique', 'cree'], trig.i + 1)
+      let obj = ''
+      if (give) {
+        const tail = words.slice(give.i + 1, give.i + 4).map((w) => String(w.text).replace(/[.,;:!?»«]/g, ''))
+        const art = tail.findIndex((w) => ['la', 'le', 'les', 'ta', 'ton', 'tes', 'une', 'un'].includes(norm(w)))
+        if (art >= 0 && tail[art + 1]) obj = (tail[art] + ' ' + tail[art + 1]).toLowerCase()
+      }
+      const text = obj ? `Génère-moi ${obj}` : 'Génère-moi ça'
+      // dans QUOI on écrit : si l'assistant est nommé dans la phrase, son champ
+      // porte sa marque (la transcription écrit « Cloud » pour Claude)
+      const near = words.slice(Math.max(0, trig.i - 4), trig.i + 12).map((w) => norm(w.text))
+      const mark = near.some((w) => w.startsWith('claud') || w === 'cloud') ? 'claude' : ''
+      const a = Math.max(0, trig.start - 0.4)
+      add({ anim: 'ui', ui: 'promptbar', text, ...(mark ? { mark } : {}), ...(give ? { sendAt: r2(give.start) } : {}) },
+        a, Math.min(D, (give ? give.end : trig.end) + 1.6))
+    }
+  }
+
+  // « CLAUDE EST CONNECTÉ À AVATARADS » → les deux logos qui se branchent.
+  // C'est le moment de bascule du tuto : la liaison est faite. Le chef
+  // d'orchestre y mettait un `lock` (un cadenas) — le geste n'y était pas.
+  {
+    for (let j = 1; j < words.length - 1; j++) {
+      if (!norm(words[j].text).startsWith('connect')) continue
+      const nx = norm(words[j + 1].text)
+      if (nx !== 'a' && nx !== 'avec' && nx !== 'au') continue
+      // le sujet ouvre la phrase : « [Claude] [est] [connecté] à … »
+      const k = Math.max(0, j - 2)
+      const last = words[Math.min(words.length - 1, j + 3)]
+      const after = words.find((w) => w.start > last.end + 0.05)
+      if (add({ anim: 'connect', assets: ['logo-avatarads', 'logo-claude'] }, Math.max(0, words[k].start - LEAD),
+        Math.min(D, after ? after.start - 0.1 : last.end + 0.5, last.end + 0.5))) {
+        console.log(`▶ les deux logos se branchent (${r2(words[k].start)}s)`)
+      }
+      break
+    }
   }
 
   // CTA « commente/écris X » : le mot cité devient la barre de commentaire
@@ -559,7 +777,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     { pat: ['supprimer les silences', 'supprime les silences'], ui: 'silencecut', pad: 3.4 },
     { pat: ['en un clic', 'un seul clic'], ui: 'oneclick', pad: 2.2 },
     { pat: ['genere la cle', 'generer la cle', 'génère la clé'], ui: 'keycopy', pad: 3.0 },
-    { pat: ['claude est connecte', 'est connecte a'], ui: 'connect', pad: 2.6 },
+    // (« X est connecté à Y » → animation `connect`, plus haut : les VRAIS logos)
     { pat: ['millions de vues', 'des millions de vue'], ui: 'views', pad: 1.6, value: '2400000' },
   ]
   for (const o of ONESHOT) {
@@ -626,7 +844,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     if (last && last.start > D - 10) {
       const w = words[last.i + 1]
-      const kw = w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : ''
+      const kw = ctaWord(w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : '')
       if (kw && kw.length <= 14) {
         const verb = norm(words[last.i].text).startsWith('ecris') ? 'Écris' : 'Commente'
         // LE MOT À COMMENTER EST TOUJOURS EN CAPITALES. C'est une consigne qu'on
@@ -727,6 +945,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const chain = [...out, ...avWinsAll].sort((a, b) => (a.start || 0) - (b.start || 0))
     for (let i = 0; i < chain.length - 1; i++) {
+      // …sauf une vidéo de l'utilisateur : sa fin est un point du script, pas un
+      // réglage. Axel : « la vidéo de la fille doit s'arrêter quand je dis j'ai
+      // juste créé cette vidéo ». L'étirer de quelques dixièmes la fait déborder
+      // sur la phrase suivante, celle qui ouvre le tutoriel.
+      if (chain[i].anim === 'media') continue
       const gap = (chain[i + 1].start || 0) - (chain[i].end || 0)
       if (gap > 0 && gap < 1.6) chain[i].end = r2((chain[i + 1].start || 0) - 0.02)
     }
@@ -778,7 +1001,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (headroom >= tailroom) b = r2(d.start - 0.05)
       else a = r2(d.end + 0.05)
     }
-    if (b - a < 0.8) { dropCollide++; continue }
+    // même plancher qu'en §0 : rognée par ses voisines, une animation revenait
+    // ici en clignotement de 0,9 s — c'est par ce chemin que l'horloge des
+    // « deux minutes » réapparaissait après avoir été écartée plus haut.
+    if (b - a < (isAnimPanel(sl) ? 1.25 : 0.8)) { dropCollide++; continue }
     if (blockers.some((d) => a < d.end - 0.05 && b > d.start + 0.05)) { dropCollide++; continue }
 
     let slide = { ...sl, start: a, end: b }
@@ -865,9 +1091,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
         const src = hk ? (opts.assetFiles || {})[hk.assetId] : ''
         if (cut > (first.start || 0) + 0.8) {
+          // Le split crée DEUX fenêtres à partir d'UNE seule : la seconde doit
+          // rejouer LE MÊME clip lipsync, à partir de la seconde où on l'a
+          // coupé. Sans `clip`/`clipFrom`, elle cherchait un « av1 » qui
+          // n'existe pas et retombait sur la photo fixe — le visage cessait de
+          // parler pile au milieu du hook.
           segs.splice(0, 1,
-            { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) } },
-            ...((first.end ?? 0) - cut > 0.6 ? [{ ...first, start: cut }] : []))
+            { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) }, clip: 0, clipFrom: 0 },
+            ...((first.end ?? 0) - cut > 0.6
+              ? [{ ...first, start: cut, clip: 0, clipFrom: r2(cut - (first.start || 0)) }] : []))
           console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
         }
       }

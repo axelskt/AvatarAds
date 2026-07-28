@@ -40,8 +40,12 @@ const MCP_VOICES: Record<string, string> = {
 const CLEAN_COST_PER_MIN = 1
 const CLEAN_MAX_BYTES    = 15_000_000 // ~15 min de MP3 128 kbps
 // Montage IA via Claude (#125) : chef d'orchestre + rendu serveur (mêmes tarifs que l'app)
-const MONTAGE_PLAN_COST   = 6  // = montageIA (transcription Scribe + plan Claude)
-const MONTAGE_RENDER_COST = 2  // = montageRender (MP4 monté par le moteur de rendu)
+// ⚠️ CE QUI DOIT CORRESPONDRE À L'APP, C'EST LE TOTAL, PAS LE DÉTAIL.
+// Un montage complet coûte 8 crédits ici comme dans l'app (CREDIT_COSTS.montageIA),
+// et un re-rendu de plan modifié en coûte 4 (CREDIT_COSTS.montageRender). Le
+// montage étant facturé PLAN + RENDER, la somme doit donc faire 8.
+const MONTAGE_PLAN_COST   = 4  // part « chef d'orchestre » (transcription Scribe + plan Claude)
+const MONTAGE_RENDER_COST = 4  // = montageRender (MP4 monté par le moteur de rendu)
 const MONTAGE_STYLES      = ['auto', 'apple', 'glass', 'dynamic', 'word']
 const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 // OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
@@ -1358,26 +1362,45 @@ serve(async (req) => {
   }
 
   // Streamable HTTP sans état : pas de flux SSE côté GET
-  if (req.method === 'GET') return json(405, { error: 'method_not_allowed' })
+  // GET = ouverture d'un flux SSE serveur→client. On n'en émet aucun (transport
+  // sans état), mais on répond 200 avec un flux vide plutôt qu'un 405 : côté
+  // claude.ai, un 405 fait apparaître le connecteur comme injoignable.
+  if (req.method === 'GET') {
+    return new Response(': ok\n\n', {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+    })
+  }
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
 
-  // Authentification par clé personnelle (URL, ?key= ou Authorization: Bearer)
+  // ── JAMAIS DE 401 ICI ──────────────────────────────────────────────────────
+  // Le 401 est LE signal, dans la spec MCP, qui dit « ce serveur est protégé par
+  // OAuth ». Le client enchaîne alors sur la découverte puis sur l'inscription
+  // dynamique (RFC 7591) — et comme nous n'avons pas d'OAuth (la clé est dans
+  // l'URL), ça échoue avec « Impossible de s'inscrire auprès du service de
+  // connexion de AvatarAds ». Axel : « il fonctionne mais je n'arrive pas à le
+  // connecter dans Claude » — le serveur répondait bien, c'est le 401 sur les
+  // sondes SANS clé (claude.ai interroge aussi l'URL nue) qui déclenchait tout.
+  //
+  // En JSON-RPC, une erreur se transporte DANS LE CORPS, pas dans le statut
+  // HTTP. On répond donc 200 avec un objet `error` : le client lit le message,
+  // et aucun client ne part en OAuth.
   const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
   const key = segs[1] || url.searchParams.get('key') || (bearer.startsWith('aa_') ? bearer : '')
   if (!key || !key.startsWith('aa_')) {
-    return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds manquante — génère-la dans Mon compte sur ' + APP_URL } })
+    return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds manquante — génère-la dans Mon compte sur ' + APP_URL } })
   }
   const { data: keyRow } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
     .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
   if (!keyRow) {
-    return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds invalide ou révoquée — génère-en une nouvelle dans Mon compte sur ' + APP_URL } })
+    return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds invalide ou révoquée — génère-en une nouvelle dans Mon compte sur ' + APP_URL } })
   }
   bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
 
   const { data: profile } = await svc.from('profiles').select(
     'id, email, first_name, plan, credits_remaining, is_owner',
   ).eq('id', keyRow.user_id).maybeSingle()
-  if (!profile) return json(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Compte introuvable.' } })
+  if (!profile) return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Compte introuvable.' } })
 
   // Accès réservé Pro/Élite (clé créée puis plan rétrogradé → on bloque à l'usage aussi)
   const planKey = String(profile.plan || '').toLowerCase()

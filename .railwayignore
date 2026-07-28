@@ -1,0 +1,12 @@
+# Ce qui monte vers Railway = UNIQUEMENT le render-worker.
+#
+# `railway up` envoie tout le dépôt : 20 Go ici (clips/ en pèse 9,5 à lui seul),
+# et Cloudflare coupe l'envoi bien avant la fin. Or le service n'a besoin que de
+# render-worker/ — c'est sa racine côté Railway.
+/*
+!/render-worker
+# …et dans le worker, ni les dépendances (réinstallées au build) ni le banc
+# d'essai local (323 Mo de rushes de test).
+/render-worker/node_modules
+/render-worker/test
+/render-worker/.env

@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { spawn } from 'node:child_process'
-import { mkdirSync, writeFileSync, readdirSync, existsSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
@@ -162,7 +162,12 @@ const main = async () => {
     await cdp.send('Runtime.enable')
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 2, mobile: false })
 
-    const all = {}
+    // On REPART du fichier existant : les captures d'une AUTRE application (les
+  // ecrans de Claude, fournis a la main) n'ont pas de DOM a lire ici. Repartir
+  // d'un objet vide les effacait a chaque recolte — et avec elles la visite
+  // guidee du tuto « Connecter Claude ».
+  const all = existsSync(join(OUT, 'screens.json'))
+    ? JSON.parse(readFileSync(join(OUT, 'screens.json'), 'utf8')) : {}
     for (const s of SCREENS) {
       await cdp.send('Page.navigate', { url: BASE })
       await new Promise((r) => setTimeout(r, 1400))     // le temps que le script de l'app tourne

@@ -276,6 +276,32 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
     else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
+    // UNE FENÊTRE COUPÉE EN DEUX REJOUE LE MÊME CLIP, PLUS LOIN DEDANS.
+    // La dérivation peut scinder une fenêtre avatar (le hook passe du split au
+    // plein cadre). Le moteur associe le clip à l'INDICE de la fenêtre : la
+    // seconde moitié n'avait donc plus de clip. On lui en découpe un, à partir
+    // de `clipFrom` — la voix continue, le visage aussi.
+    {
+      const segs = plan.avatarSegments || []
+      const next = {}
+      segs.forEach((w, i) => {
+        const from = Number(w.clipFrom || 0)
+        const srcId = 'av' + (w.clip ?? i)
+        const src = avatarClips[srcId]
+        if (!src) return
+        if (from < 0.05) { next['av' + i] = src; return }
+        const out = 'media/av' + i + '-cut.mp4'
+        try {
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(from), '-i', join(proj, src),
+            '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', join(proj, out)])
+          next['av' + i] = out
+          console.log(`▶ fenêtre avatar ${i} : même clip, repris à ${from.toFixed(2)}s`)
+        } catch (e) { console.warn('découpe clip avatar :', e.message) }
+      })
+      for (const k of Object.keys(avatarClips)) delete avatarClips[k]
+      Object.assign(avatarClips, next)
+    }
+
     const wantedScreens = new Set((plan.slides || []).map((sl) => sl.screen).filter(Boolean))
     // une animation peut avoir besoin d'images (le visage du comparatif fake/réel,
     // le logo dans « les bons outils ») : elles le déclarent dans `assets`

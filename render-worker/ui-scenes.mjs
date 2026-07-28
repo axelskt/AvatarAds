@@ -18,6 +18,7 @@
 const r2 = (n) => Math.round(n * 100) / 100
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const ACC = '#FF5A36'
+import { claudeBurst } from './anim-pack.mjs'
 // géométrie de la barre de commentaire — le zoom du CTA s'y réfère
 const BAR_Y = 1150, BAR_H = 132
 
@@ -83,26 +84,6 @@ export const UI_SCENES = {
   tl.fromTo('#${id}toast',{y:60,scale:0.8,opacity:0},{y:0,scale:1,opacity:1,duration:0.4,ease:'back.out(1.8)'},${r2(Math.min(t1 - 0.4, tClick + 0.9))});
   tl.to('#${id}c',{y:-20,duration:${r2(Math.max(0.4, t1 - t0 - 0.4))},ease:'none'},${r2(t0 + 0.4)});`
     return { html, js, sfx: [{ kind: 'mo-tap-1', t: r2(tClick), vol: 0.8 }, { kind: 'mo-impact-1', t: r2(Math.min(t1 - 0.4, tClick + 0.9)), vol: 0.55 }] }
-  },
-
-  // ── « Claude est connecté à AvatarAds » : deux pastilles reliées + check ───
-  connect(id, t0, t1) {
-    const y = 880
-    const html = `
-      <div id="${id}a" style="position:absolute;left:200px;top:${y}px;width:190px;height:190px;border-radius:48px;background:#D97757;display:flex;align-items:center;justify-content:center;opacity:0">
-        <svg width="96" height="96" viewBox="0 0 24 24" fill="#fff"><path d="M4.7 15.2L9.5 4.6h2.2l4.8 10.6h-2.3l-1-2.3H8l-1 2.3zm4-4.1h3.7L10.5 6.9zM17.6 15.2l-3.4-8h2.1l3.5 8z"/></svg></div>
-      <div id="${id}b" style="position:absolute;left:690px;top:${y}px;width:190px;height:190px;border-radius:48px;background:#0D0D12;display:flex;align-items:center;justify-content:center;opacity:0">
-        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="12" r="3.4"/><circle cx="15" cy="12" r="3.4"/></svg></div>
-      <div id="${id}ln" style="position:absolute;left:410px;top:${y + 88}px;width:260px;height:14px;border-radius:7px;background:${ACC}"></div>
-      <div id="${id}ck" style="position:absolute;left:488px;top:${y + 34}px;width:104px;height:104px;border-radius:50%;background:${ACC};display:flex;align-items:center;justify-content:center;opacity:0;box-shadow:0 20px 60px rgba(255,90,54,.45)">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>`
-    const js = `
-  tl.fromTo('#${id}a',{x:-300,opacity:0,rotation:-8},{x:0,opacity:1,rotation:0,duration:0.5,ease:'power3.out'},${r2(t0)});
-  tl.fromTo('#${id}b',{x:300,opacity:0,rotation:8},{x:0,opacity:1,rotation:0,duration:0.5,ease:'power3.out'},${r2(t0 + 0.08)});
-  tl.fromTo('#${id}ln',{scaleX:0,transformOrigin:'center'},{scaleX:1,duration:0.4,ease:'power3.inOut'},${r2(t0 + 0.5)});
-  tl.fromTo('#${id}ck',{scale:0,opacity:0},{scale:1,opacity:1,duration:0.44,ease:'back.out(2)'},${r2(t0 + 0.85)});
-  tl.to(['#${id}a','#${id}b'],{y:-18,duration:${r2(Math.max(0.4, t1 - t0 - 0.6))},ease:'none'},${r2(t0 + 0.6)});`
-    return { html, js, sfx: [{ kind: 'mo-impact-1', t: r2(t0 + 0.85), vol: 0.6 }] }
   },
 
   // ── « importe ton fichier » : le fichier GLISSE dans la dropzone ───────────
@@ -225,15 +206,23 @@ export const UI_SCENES = {
     const sendAt = r2(s.sendAt ? Math.min(t1 - 0.3, Math.max(t0 + 1.6, s.sendAt)) : Math.min(t1 - 0.3, Math.max(t0 + 1.5, t1 - 0.55)))
     const tA = t0 + 0.5, tB = r2(Math.max(tA + 1.0, sendAt - 0.3))
     const step = r2((tB - tA) / Math.max(1, chars.length))
+    // le champ porte la marque de l'assistant quand la voix le nomme : « on doit
+    // voir quelque chose qui est ÉCRIT DANS CLAUDE » (Axel) — une barre blanche
+    // anonyme ne dit pas dans quoi on écrit.
+    const mark = s.mark === 'claude'
+      ? `<span style="display:inline-flex;width:46px;height:46px;vertical-align:-9px;margin-right:18px">${claudeBurst('100%')}</span>` : ''
     const html = `
       <div id="${id}bar" style="position:absolute;left:110px;top:820px;width:860px;min-height:220px;background:${tone.dark ? '#1A1A21' : '#FFFFFF'};border:2px solid ${tone.dark ? '#2A2A33' : '#E6E6EB'};border-radius:36px;padding:40px 46px 92px;box-sizing:border-box;font-size:40px;font-weight:500;line-height:1.45;color:${tone.ink};opacity:0;box-shadow:0 46px 120px rgba(13,13,18,${tone.dark ? '.5' : '.14'})">
-        ${chars.split('').map((c, ci) => `<span id="${id}ch${ci}" style="opacity:0">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span>
+        ${mark}${chars.split('').map((c, ci) => `<span id="${id}ch${ci}" style="display:none">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:4px;height:44px;background:${ACC};vertical-align:-7px"></span>
         <div id="${id}snd" style="position:absolute;right:34px;bottom:26px;width:84px;height:84px;border-radius:24px;background:${ACC};display:flex;align-items:center;justify-content:center">
           <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
       </div>`
     let js = `
   tl.fromTo('#${id}bar',{y:180,opacity:0,scale:0.96},{y:0,opacity:1,scale:1,duration:0.5,ease:'power3.out'},${r2(t0)});` +
-      chars.split('').map((c, ci) => `\n  tl.set('#${id}ch${ci}',{opacity:1},${r2(tA + step * ci)});`).join('') + `
+      // `display` et non `opacity` : un caractère invisible occupait quand même
+      // sa place, le curseur attendait donc à la FIN du texte pendant que ça
+      // tapait au début. Ici la ligne pousse le curseur, lettre après lettre.
+      chars.split('').map((c, ci) => `\n  tl.set('#${id}ch${ci}',{display:'inline'},${r2(tA + step * ci)});`).join('') + `
   tl.to(['#${id}snd'],{scale:0.9,duration:0.08,ease:'power2.in'},${sendAt});
   tl.to(['#${id}snd'],{scale:1,duration:0.16,ease:'back.out(2.6)'},${r2(sendAt + 0.08)});
   tl.to('#${id}bar',{y:-20,duration:${r2(Math.max(0.4, t1 - t0 - 0.5))},ease:'none'},${r2(t0 + 0.5)});`
@@ -262,7 +251,7 @@ export const UI_SCENES = {
         <div style="position:absolute;left:0;top:0;width:100%;height:96px;background:${tone.dark ? '#1F1F27' : '#F2F2F5'};display:flex;align-items:center;gap:16px;padding:0 28px;box-sizing:border-box">
           ${['#FF5F57', '#FEBC2E', '#28C840'].map((c) => `<span style="width:20px;height:20px;border-radius:50%;background:${c}"></span>`).join('')}
           <span style="flex:1;height:56px;margin-left:18px;border-radius:28px;background:${tone.dark ? '#0E0E13' : '#FFFFFF'};display:flex;align-items:center;padding:0 26px;font-family:'JetBrains Mono',monospace;font-size:28px;color:${tone.ink}">
-            ${url.split('').map((c, i) => `<span id="${id}u${i}" style="opacity:0">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:3px;height:32px;background:${ACC};margin-left:2px"></span>
+            ${url.split('').map((c, i) => `<span id="${id}u${i}" style="display:none">${esc(c)}</span>`).join('')}<span id="${id}cr" style="display:inline-block;width:3px;height:32px;background:${ACC};margin-left:2px"></span>
           </span>
         </div>
         <div id="${id}vp" style="position:absolute;left:0;top:96px;width:${W}px;height:${H - 96}px;overflow:hidden;background:${tone.dark ? '#0E0E13' : '#fff'}">
@@ -271,7 +260,7 @@ export const UI_SCENES = {
       </div>`
     let js = `
   tl.fromTo('#${id}win',{y:220,scale:0.94,opacity:0},{y:0,scale:1,opacity:1,duration:0.5,ease:'power3.out'},${r2(t0)});` +
-      url.split('').map((c, i) => `\n  tl.set('#${id}u${i}',{opacity:1},${r2(tType + 0.09 * i)});`).join('') + `
+      url.split('').map((c, i) => `\n  tl.set('#${id}u${i}',{display:'inline'},${r2(tType + 0.09 * i)});`).join('') + `
   tl.fromTo('#${id}pg',{opacity:0,y:60},{opacity:1,y:0,duration:0.42,ease:'power3.out'},${tGo});`
     // la page glisse doucement puis la caméra PLONGE sur le bouton — c'est la
     // transition vers la suite (« un zoom sur le bouton plutôt », Axel)

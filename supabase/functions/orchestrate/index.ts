@@ -192,11 +192,12 @@ const TUTO: Record<string, Record<string, number[]>> = {
   '09-cartoon': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046] },
   '10-mon-compte': { 'axel': [0.5, 0.253, 0.256, 0.048], '33-6-00-00-00-00': [0.5, 0.347, 0.256, 0.056], 'definir-ou-changer-mon-mot-de-passe': [0.5, 0.447, 0.256, 0.059], 'nouveau-email-com': [0.5, 0.757, 0.256, 0.056], 'envoyer-le-lien-de-confirmation': [0.5, 0.888, 0.256, 0.059] },
   '11-connecter-claude': { 'generer-ma-cle': [0.284, 0.442, 0.172, 0.053], 'ouvrir-claude-connecteurs': [0.5, 0.442, 0.172, 0.053], 'commencer': [0.716, 0.442, 0.172, 0.053] },
-  '20-claude-menu': { 'menu-parametres': [0.083, 0.633, 0.157, 0.037] },
-  '21-claude-parametres': { 'onglet-connecteurs': [0.276, 0.709, 0.13, 0.036] },
-  '22-claude-connecteurs': { 'bouton-ajouter': [0.719, 0.161, 0.056, 0.043] },
-  '23-claude-ajouter': { 'bouton-ajouter': [0.72, 0.126, 0.058, 0.038], 'menu-ajouter-personnalise': [0.66, 0.216, 0.17, 0.038] },
-  '24-claude-personnalise': { 'champ-nom': [0.499, 0.33, 0.285, 0.037], 'champ-url': [0.499, 0.386, 0.285, 0.037], 'bouton-ajouter': [0.621, 0.772, 0.048, 0.034] },
+  '12-connecter-claude-entree': { 'connecter-claude': [0.498, 0.655, 0.236, 0.077] },
+  '20-claude-menu': { 'menu-parametres': [0.085, 0.632, 0.151, 0.028] },
+  '21-claude-parametres': { 'onglet-connecteurs': [0.28, 0.713, 0.103, 0.031] },
+  '22-claude-connecteurs': { 'bouton-ajouter': [0.72, 0.115, 0.055, 0.034] },
+  '23-claude-ajouter': { 'bouton-ajouter': [0.72, 0.114, 0.05, 0.032], 'menu-ajouter-personnalise': [0.666, 0.199, 0.167, 0.03] },
+  '24-claude-personnalise': { 'champ-nom': [0.499, 0.322, 0.283, 0.036], 'champ-url': [0.499, 0.374, 0.283, 0.034], 'bouton-ajouter': [0.621, 0.748, 0.043, 0.032] },
 }
 const TUTO_FILE: Record<string, string> = new Proxy(
   { 'images-ia': '01-imagesia', 'express': '02-express' },
@@ -207,10 +208,11 @@ const TUTO_FILE: Record<string, string> = new Proxy(
 // <<< ANIM-BANK:LIST — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
 const ANIMS = [
   'screen', 'result', 'phone', 'split', 'avatar', 'faceless', 'voice', 'cut',
-  'type', 'logo', 'tools', 'sign', 'post', 'upload', 'money', 'wallet',
-  'countup', 'clock', 'calendar', 'grow', 'views', 'engage', 'swipe', 'network',
-  'rocket', 'stack', 'funnel', 'bars2', 'idea', 'steps', 'flow', 'orbit',
-  'list', 'target', 'search', 'compare', 'swap', 'toggle', 'check', 'lock'
+  'type', 'logo', 'tools', 'copy', 'connect', 'sign', 'post', 'upload',
+  'money', 'wallet', 'countup', 'clock', 'calendar', 'grow', 'views', 'engage',
+  'swipe', 'network', 'rocket', 'stack', 'funnel', 'bars2', 'idea', 'steps',
+  'flow', 'orbit', 'list', 'target', 'search', 'compare', 'swap', 'toggle',
+  'check', 'lock'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -592,6 +594,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       generer-ma-cle                 « Générer ma clé »
       ouvrir-claude-connecteurs      « Ouvrir Claude → Connecteurs »
       commencer                      « Commencer »
+    12-connecter-claude-entree
+      connecter-claude               « Connecter Claude »
     20-claude-menu
       menu-parametres                « Paramètres »
     21-claude-parametres
@@ -649,6 +653,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     type     — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max).
     logo     — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage.
     tools    — LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils.
+    copy     — UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications.
+    connect  — DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — `tools` ne fait que les poser cote a cote.
     sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
     post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
     upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer.

@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { uiScene } from './ui-scenes.mjs'
+import { screenSize } from './screen-spots.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
@@ -204,15 +205,35 @@ function screenContent(id, s, tone, liveT0, t1, W) {
   const dur = r2(t1 - liveT0)
   const cw = 980, ch = Math.round(cw / 1.6)
   const cx = Math.round((W - cw) / 2), cy = 620
+  // ── POURQUOI L'IMAGE EST POSÉE EN GRAND PUIS RÉDUITE ────────────────────────
+  // Chrome rastérise une image à sa taille de MISE EN PAGE, pas à sa taille une
+  // fois `transform: scale()` appliqué. En la posant sur 980 px puis en zoomant
+  // ×4, on agrandissait donc un bitmap de 980 px — exactement comme un zoom
+  // numérique sur une photo. Axel : « ce n'est pas hyper pixel, ça réduit la
+  // qualité de la vidéo ». Vérifié : la même région découpée dans la capture
+  // d'origine et affichée à la même taille est parfaitement nette.
+  // On pose donc l'image à sa RÉSOLUTION NATIVE et on la fait tenir dans le
+  // cadre par le transform : au repos on RÉDUIT (jamais de flou), et au zoom on
+  // revient vers l'échelle 1:1 — le texte de l'interface reste net.
+  const src = screenSize(s.screen)
+  const K = src.w && src.w > cw ? src.w / cw : 1     // combien de fois la capture dépasse le cadre
+  const iw = Math.round(cw * K), ih = Math.round(ch * K)
   const steps = (s.steps || []).filter((st) => st && st.spot).sort((a, b) => a.t - b.t)
 
-  // — cadrage d'une étape : l'élément occupe ~42 % de la largeur visible, et la
-  //   caméra reste toujours à l'intérieur de l'image (jamais de bord vide)
+  // — cadrage d'une étape : ON ZOOME SUR L'ÉLÉMENT.
+  //   Axel : « dommage qu'à chaque fois ce ne soit pas un zoom plutôt sur la zone
+  //   que dit l'audio, fais plutôt ça ». On voyait la capture presque entière avec
+  //   un petit cadre orange au milieu : sur un téléphone, le bouton visé fait
+  //   trois millimètres et le spectateur cherche. L'élément occupe maintenant les
+  //   deux tiers de la largeur visible — c'est LUI le plan, la capture n'est plus
+  //   que son décor. La caméra reste dans l'image (jamais de bord vide).
   const shot = (sp) => {
-    const z = Math.min(3.1, Math.max(1.35, 0.42 / Math.max(0.04, sp.w)))
+    const z = Math.min(5.4, Math.max(1.6, 0.66 / Math.max(0.04, sp.w)))
     const cl = (v, span) => Math.min(1 - span, Math.max(span, v))
     const px = cl(sp.x, 1 / (2 * z)), py = cl(sp.y, 1 / (2 * z))
-    return { z, tx: r2(-(px - 0.5) * cw * z), ty: r2(-(py - 0.5) * ch * z),
+    // l'échelle RÉELLEMENT appliquée : le zoom demandé, divisé par le facteur
+    // d'agrandissement de l'image (elle est posée K fois trop grande)
+    return { z, s: r2(z / K), tx: r2(-(px - 0.5) * cw * z), ty: r2(-(py - 0.5) * ch * z),
       // où l'élément apparaît À L'ÉCRAN une fois la caméra posée (pour le curseur)
       sx: r2(cw / 2 + (sp.x - px) * cw * z), sy: r2(ch / 2 + (sp.y - py) * ch * z) }
   }
@@ -224,37 +245,51 @@ function screenContent(id, s, tone, liveT0, t1, W) {
     steps.forEach((st, k) => {
       const sp = st.spot
       const sh = shot(sp)
-      const bw = Math.round(sp.w * cw), bh = Math.round(sp.h * ch)
-      const bx = Math.round(sp.x * cw - bw / 2), by = Math.round(sp.y * ch - bh / 2)
-      const bd = Math.max(2, Math.round(6 / sh.z))
+      // ⚠️ LES CADRES VIVENT DANS L'IMAGE, DONC DANS SON REPÈRE.
+      // Depuis que l'image est posée à sa résolution NATIVE (iw × ih) et réduite
+      // par le transform, un cadre calculé sur la taille du cadre visible (cw)
+      // se retrouvait K fois trop petit, tassé dans le coin haut-gauche — le
+      // « bug en haut à gauche » vu par Axel sur la v16.
+      const bw = Math.round(sp.w * iw), bh = Math.round(sp.h * ih)
+      const bx = Math.round(sp.x * iw - bw / 2), by = Math.round(sp.y * ih - bh / 2)
+      // épaisseurs : ce qui compte est l'échelle VUE à l'écran (sh.s), pas le zoom
+      const bd = Math.max(2, Math.round(6 / Math.max(0.2, sh.s)))
       const tIn = r2(Math.max(liveT0, st.t))
+      // le clic se produit À L'ARRIVÉE de la caméra, pas pendant le voyage
+      const tHit = r2(k ? tIn : Math.min(t1 - 0.2, Math.max(liveT0 + 0.45, tIn - 0.08) + 0.62))
       const tOut = r2(Math.min(t1 - 0.05, k + 1 < steps.length ? Math.max(tIn + 0.35, steps[k + 1].t - 0.22) : t1))
       // Le texte tapé doit avoir la taille du texte DE L'APP, pas celle du cadre :
       // calé sur la hauteur du champ il sortait de la boîte et se superposait au
       // placeholder de la capture (« ici sur le screen ça ne fait pas très beau »).
       // Il est donc dimensionné sur la largeur de la capture — la même échelle que
       // l'interface — et un fond opaque masque le texte d'origine avant d'écrire.
-      const fs = Math.max(8, Math.round(cw * 0.0115))
+      const fs = Math.max(8, Math.round(iw * 0.0115))
       const padX = Math.round(fs * 1.1)
       const tall = bh > fs * 3.4                          // vraie zone de texte → on écrit en HAUT
       const maxW = Math.max(20, bw - padX * 2 - bd * 2)
       const tw = Math.min(maxW, Math.round(String(st.type || '').length * fs * 0.52))
       boxes += `<div id="${id}b${k}" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;` +
-        `border:${bd}px solid ${ACC};border-radius:${Math.max(6, Math.round(16 / sh.z))}px;` +
-        `box-shadow:0 0 0 ${Math.round(600 / sh.z)}px rgba(10,10,14,.42);opacity:0">` +
+        `border:${bd}px solid ${ACC};border-radius:${Math.max(6, Math.round(16 / Math.max(0.2, sh.s)))}px;` +
+        `box-shadow:0 0 0 ${Math.round(600 / Math.max(0.2, sh.s))}px rgba(10,10,14,.42);opacity:0">` +
         (st.type
-          ? `<div id="${id}m${k}" style="position:absolute;inset:0;border-radius:${Math.max(4, Math.round(12 / sh.z))}px;background:#0F0F16;opacity:0"></div>` +
+          ? `<div id="${id}m${k}" style="position:absolute;inset:0;border-radius:${Math.max(4, Math.round(12 / Math.max(0.2, sh.s)))}px;background:#0F0F16;opacity:0"></div>` +
             `<div id="${id}t${k}" style="position:absolute;left:${padX}px;${tall ? `top:${Math.round(fs * 1.1)}px` : 'top:50%;transform:translateY(-50%)'};` +
             `width:0;overflow:hidden;white-space:nowrap;font-size:${fs}px;line-height:1.25;color:#EDEDF2;font-family:'Inter',sans-serif">${esc(st.type)}</div>` +
             `<div id="${id}c${k}" style="position:absolute;left:${padX}px;${tall ? `top:${Math.round(fs * 1.1)}px` : `top:50%;margin-top:${-Math.round(fs * 0.6)}px`};` +
             `width:${Math.max(1, Math.round(fs * 0.09))}px;height:${Math.round(fs * 1.2)}px;background:${ACC};opacity:0"></div>`
           : '') +
         `</div>`
-      // caméra : elle part vers l'étape juste avant que le mot tombe
-      if (k > 0) {
-        js2 += `\n  tl.to('#${id}ci',{scale:${sh.z},x:${sh.tx},y:${sh.ty},duration:0.46,ease:'power2.inOut'},${r2(Math.max(liveT0, tIn - 0.34))});`
-      }
-      js2 += `\n  tl.fromTo('#${id}b${k}',{scale:1.35,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(1.8)'},${tIn});`
+      // ── LA CAMÉRA DOIT MONTRER LE CHEMIN, PAS LE POINT D'ARRIVÉE ───────────
+      // Axel : « quand je dis "dans mon compte tout en bas", il montre direct le
+      // menu et ne zoome pas sur mon compte tout en bas ». Le zoom était déjà
+      // terminé quand le mot tombait : on atterrissait sur la cible sans avoir
+      // vu d'où on venait, donc sans comprendre OÙ ALLER.
+      // Sur la PREMIÈRE étape d'un écran, l'écran entier tient donc l'affiche
+      // une vraie demi-seconde, puis la caméra DESCEND sur l'élément PENDANT
+      // qu'il le nomme — le trajet est le message. Les étapes suivantes, elles,
+      // restent anticipées : on est déjà dans la page, on suit juste le curseur.
+      js2 += `\n  tl.to('#${id}ci',{scale:${sh.s},x:${sh.tx},y:${sh.ty},duration:${k ? 0.46 : 0.78},ease:'power2.inOut'},${r2(k ? Math.max(liveT0, tIn - 0.34) : Math.max(liveT0 + 0.45, tIn - 0.08))});`
+      js2 += `\n  tl.fromTo('#${id}b${k}',{scale:1.35,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(1.8)'},${tHit});`
       js2 += `\n  tl.to('#${id}b${k}',{opacity:0,duration:0.22,ease:'power1.in'},${tOut});`
       if (st.type) {
         const td = r2(Math.max(0.5, Math.min(1.5, tOut - tIn - 0.25)))
@@ -265,25 +300,30 @@ function screenContent(id, s, tone, liveT0, t1, W) {
         js2 += `\n  tl.to('#${id}c${k}',{opacity:0.15,duration:0.28,repeat:3,yoyo:true,ease:'steps(1)'},${r2(tIn + 0.16 + td)});`
       }
       // curseur : il VA sur l'élément puis appuie — le geste que la voix décrit
-      js2 += `\n  tl.to('#${id}cu',{x:${sh.sx},y:${sh.sy},duration:0.34,ease:'power2.inOut'},${r2(Math.max(liveT0, tIn - 0.3))});`
-      js2 += `\n  tl.to('#${id}cu',{scale:0.82,duration:0.09,ease:'power2.in'},${tIn});`
-      js2 += `\n  tl.to('#${id}cu',{scale:1,duration:0.16,ease:'back.out(3)'},${r2(tIn + 0.09)});`
-      js2 += `\n  tl.fromTo('#${id}rp${k}',{scale:0.3,opacity:0.55},{scale:2.2,opacity:0,duration:0.5,ease:'power2.out'},${tIn});`
-      sfx.push({ kind: st.type ? 'mo-pop-1' : 'mo-tap-1', t: r2(tIn), vol: 0.8 })
+      js2 += `\n  tl.to('#${id}cu',{x:${sh.sx},y:${sh.sy},duration:${k ? 0.34 : 0.6},ease:'power2.inOut'},${r2(k ? Math.max(liveT0, tIn - 0.3) : Math.max(liveT0 + 0.45, tIn - 0.08))});`
+      js2 += `\n  tl.to('#${id}cu',{scale:0.82,duration:0.09,ease:'power2.in'},${tHit});`
+      js2 += `\n  tl.to('#${id}cu',{scale:1,duration:0.16,ease:'back.out(3)'},${r2(tHit + 0.09)});`
+      js2 += `\n  tl.fromTo('#${id}rp${k}',{scale:0.3,opacity:0.55},{scale:2.2,opacity:0,duration:0.5,ease:'power2.out'},${tHit});`
+      sfx.push({ kind: st.type ? 'mo-pop-1' : 'mo-tap-1', t: r2(tHit), vol: 0.8 })
     })
     // les ondes de clic vivent hors de l'image zoomée : taille constante
     const ripples = steps.map((_, k) =>
       `<div id="${id}rp${k}" style="position:absolute;left:-46px;top:-46px;width:92px;height:92px;border-radius:50%;background:${ACC};opacity:0"></div>`).join('')
+    // ON ARRIVE SUR L'ÉCRAN ENTIER, PUIS ON PLONGE. Démarrer déjà zoomé sur un
+    // bouton téléporte : on ne sait pas dans quelle page on est. La capture entre
+    // en grand — on reconnaît l'écran — et la caméra plonge sur le premier
+    // élément quand la voix le nomme.
+    const t0z = r2(Math.max(liveT0 + 0.12, steps[0].t - 0.42))
     js2 = `
   tl.fromTo('#${id}cw',{y:200,opacity:0,scale:0.95},{y:0,opacity:1,scale:1,duration:0.44,ease:'power3.out'},${liveT0});
-  tl.set('#${id}ci',{scale:${first.z},x:${first.tx},y:${first.ty}},${liveT0});
+  tl.set('#${id}ci',{scale:${r2(1 / K)},x:0,y:0},${liveT0});
   tl.set('#${id}cu',{x:${first.sx},y:${r2(first.sy + 180)}},${liveT0});
-  tl.fromTo('#${id}cu',{opacity:0},{opacity:1,duration:0.2},${r2(liveT0 + 0.2)});` + js2
+  tl.fromTo('#${id}cu',{opacity:0},{opacity:1,duration:0.2},${r2(Math.max(liveT0 + 0.2, t0z + 0.2))});` + js2
     const html = `
         <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
           <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.45)">
-            <div id="${id}ci" style="position:absolute;inset:0">
-              <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
+            <div id="${id}ci" style="position:absolute;left:${Math.round((cw - iw) / 2)}px;top:${Math.round((ch - ih) / 2)}px;width:${iw}px;height:${ih}px">
+              <img src="${file}" style="position:absolute;left:0;top:0;width:${iw}px;height:${ih}px" />
               ${boxes}
             </div>
             <div id="${id}cu" style="position:absolute;left:0;top:0;width:0;height:0;opacity:0">
