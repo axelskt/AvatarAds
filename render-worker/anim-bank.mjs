@@ -179,7 +179,23 @@ export const BANK = [
   { name: 'integrations', desc: "SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec »." },
   { name: 'property', desc: "IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location »." },
   { name: 'menu',    desc: "RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix »." },
-  { name: 'leads',   desc: "PROSPECTION — UN PIPELINE : les fiches passent de colonne en colonne jusqu'a signe. « mes prospects », « le pipeline », « ils passent client »." },
+
+  // ── PAQUET 8 (#157) — la suite des domaines ──
+  { name: 'program', desc: "SPORT — UN PROGRAMME DE LA SEMAINE dont les seances se cochent. « le programme », « trois seances par semaine », « ton planning »." },
+  { name: 'weight',  desc: "SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats »." },
+  { name: 'macros',  desc: "NUTRITION — TROIS BARRES qui se remplissent : proteines, glucides, lipides. « les macros », « ce que tu manges », « le bon equilibre »." },
+  { name: 'quote',   desc: "AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis »." },
+  { name: 'brief',   desc: "AGENCE — UN BRIEF CLIENT : les champs se remplissent, les pieces jointes arrivent. « le brief », « ce qu'ils me demandent », « le cahier des charges »." },
+  { name: 'course',  desc: "FORMATION — DES MODULES dont le suivant se debloque. « la formation », « le module suivant », « tu debloques la suite »." },
+  { name: 'certificate', desc: "FORMATION — UN CERTIFICAT qui se delivre, sceau et signature. « le certificat », « tu es diplome », « l'attestation »." },
+  { name: 'quiz',    desc: "FORMATION — UNE QUESTION et ses reponses, la bonne passe au vert. « le quiz », « la bonne reponse », « teste-toi »." },
+  { name: 'flight',  desc: "VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a »." },
+  { name: 'car',     desc: "AUTOMOBILE — UNE FICHE VEHICULE : la voiture, le kilometrage, l'annee, le prix. « cette voiture », « le vehicule », « l'occasion »." },
+  { name: 'budget',  desc: "FINANCES — LA REPARTITION DES DEPENSES en barres colorees. « le budget », « ou part l'argent », « les depenses du mois »." },
+  { name: 'saving',  desc: "FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint »." },
+  { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
+  { name: 'ticket',  desc: "EVENEMENTIEL — UN BILLET avec son code et les places restantes qui clignotent. « les places », « le billet », « il en reste trois »." },
+  { name: 'team',    desc: "EQUIPE — DES MEMBRES et celui qu'on ajoute a la place vide. « mon equipe », « on recrute », « on s'agrandit »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
