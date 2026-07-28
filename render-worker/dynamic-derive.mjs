@@ -255,6 +255,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // Sur Cartoon 16 il posait `network` sur « connecter » et `lock` sur
     // « la clé », là où Axel voulait l'écran : « il faut qu'il aille sur
     // AvatarAds montrer connecter Claude ». Une vraie capture bat une forme.
+    // SA VISITE GUIDÉE FAIT FOI. Dès qu'il a écrit un parcours (`tuto`), ses
+    // captures sont posées AVANT mes tables : c'est lui qui a lu la phrase et
+    // qui dispose des minutages, mes MODULES ne font que reconnaître des mots.
+    // Sans ça, ses 6 captures du tuto MCP se faisaient manger par mes visites
+    // guidées locales — 4 sur 6 absorbées.
+    const guided = (plan.tuto || []).length >= 2
+    let placedScreens = 0
+    if (guided) {
+      for (const sl of srv) {
+        if (sl.anim !== 'screen' || !sl.screen) continue
+        const a = r2(sl.start || 0), b = r2(sl.end ?? a + 2.5)
+        if (add({ ...sl }, a, b)) { consumedByPlan.add(sl); placedScreens++ }
+      }
+      if (placedScreens) console.log(`▶ visite guidée du chef d'orchestre : ${placedScreens} capture(s)`)
+    }
+
     let placedAnim = 0
     placeServerAnims = () => {
       for (const sl of srv) {
@@ -361,7 +377,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // veux, décrire l'image, générer » = CINQ gestes sur la MÊME page. On produit
   // donc une démo : la capture du module, et un clic au bon endroit à chaque mot.
   // Avant, le cadre orange se posait au centre par défaut — sur du vide.
-  {
+  if (!(plan.tuto || []).length) {
+    // mes visites guidées locales ne servent QUE de repli : si le chef
+    // d'orchestre a décrit le parcours, deux versions du même tuto se
+    // disputeraient les mêmes secondes.
     const hits = []
     for (const m of MODULES) {
       let hit = null

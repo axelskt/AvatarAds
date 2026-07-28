@@ -179,11 +179,30 @@ const MOODS = ['intense', 'dynamique', 'chill']
 // sont prises dans l'etat qu'Axel a valide : champs VIDES et « Photo Reel » +
 // 9:16 selectionnes. Le chef d'orchestre ne connait que les NOMS — les
 // coordonnees ne sortent jamais du serveur, un cadrage invente est impossible.
+// <<< SCREEN-ZONES — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>
 const TUTO: Record<string, Record<string, number[]>> = {
-  'images-ia': { 'menu': [0.288, 0.117, 0.209, 0.059], 'photo-reel': [0.240, 0.311, 0.089, 0.087], 'pixar': [0.336, 0.311, 0.089, 0.087], 'fruit': [0.240, 0.409, 0.089, 0.087], 'ugc': [0.336, 0.409, 0.089, 0.087], 'format': [0.288, 0.666, 0.057, 0.078], 'prompt': [0.749, 0.818, 0.472, 0.121], 'generer': [0.896, 0.923, 0.177, 0.062] },
-  'express': { 'menu': [0.290, 0.133, 0.210, 0.084], 'realiste': [0.242, 0.272, 0.091, 0.071], 'cartoon': [0.338, 0.272, 0.091, 0.071], 'portrait': [0.242, 0.501, 0.091, 0.065], 'duree': [0.290, 0.620, 0.210, 0.075], 'qualite': [0.290, 0.743, 0.210, 0.122], 'voix': [0.290, 0.918, 0.187, 0.067], 'ajouter': [0.501, 0.786, 0.146, 0.217], 'prompt': [0.786, 0.759, 0.394, 0.151], 'generer': [0.886, 0.936, 0.189, 0.076] },
+  '01-imagesia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'generation': [0.214, 0.184, 0.091, 0.037], 'correction': [0.305, 0.184, 0.091, 0.037], 'photo-reel-realiste': [0.216, 0.312, 0.08, 0.087], 'pixar-3d-toy-story': [0.302, 0.312, 0.08, 0.087], 'fruit-perso-fruit': [0.216, 0.41, 0.08, 0.087], 'ugc-reel-authentique': [0.302, 0.41, 0.08, 0.087], 'mascotte-de-marque': [0.216, 0.509, 0.08, 0.087], 'autre-style-libre': [0.302, 0.509, 0.08, 0.087], '1-1': [0.201, 0.668, 0.052, 0.077], '9-16': [0.259, 0.668, 0.052, 0.077], '16-9': [0.317, 0.668, 0.052, 0.077], 'standard': [0.203, 0.826, 0.056, 0.017], 'premium': [0.259, 0.826, 0.056, 0.017], '4k': [0.315, 0.826, 0.056, 0.017], '1': [0.206, 0.941, 0.054, 0.037], '2': [0.259, 0.941, 0.054, 0.037], '3': [0.313, 0.941, 0.054, 0.037], 'image-de-reference': [0.415, 0.867, 0.075, 0.23], 'decris-l-image-que-tu-veux-generer': [0.724, 0.813, 0.525, 0.121], 'ameliorer': [0.947, 0.783, 0.066, 0.039], 'entrepreneur-en-studio-moderne': [0.532, 0.921, 0.142, 0.033], 'face-cam-ugc-outdoor-micro-crav': [0.683, 0.921, 0.148, 0.033], 'generer-l-image-3-cr': [0.909, 0.921, 0.154, 0.068], '2200-9999-credits-images-ce-mois': [0.724, 0.975, 0.525, 0.014] },
+  '02-express': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'realiste-avatar-reel': [0.218, 0.25, 0.082, 0.069], 'cartoon-3d-style-pixar': [0.304, 0.25, 0.082, 0.069], 'ugc-reel-selfie-authentique': [0.218, 0.329, 0.082, 0.069], 'studio-produit-pub': [0.304, 0.329, 0.082, 0.069], 'portrait-9-16': [0.218, 0.477, 0.082, 0.064], 'paysage-16-9': [0.304, 0.477, 0.082, 0.064], '720p': [0.218, 0.735, 0.082, 0.051], '1080pdes-8-s': [0.304, 0.735, 0.082, 0.051], 'voix-native-veo-audio-genere-avec-la-vid': [0.261, 0.895, 0.168, 0.066], 'gemini-tts-voix-generee-11-timbres': [0.261, 0.967, 0.168, 0.066], 'ajoute-tes-images-avatar-produit-perso': [0.451, 0.783, 0.131, 0.222], 'importer-depuis-la-bibliotheque': [0.451, 0.939, 0.131, 0.069], 'decris-ta-video-et-ce-que-le-perso-dit-a': [0.754, 0.756, 0.456, 0.167], 'ameliorer': [0.555, 0.869, 0.058, 0.033], 'face-camera': [0.625, 0.869, 0.071, 0.038], 'cartoon': [0.693, 0.869, 0.056, 0.038], 'fitness': [0.752, 0.869, 0.052, 0.038], 'produit': [0.808, 0.869, 0.052, 0.038], 'generer-la-video': [0.898, 0.935, 0.17, 0.077] },
+  '03-generateur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], '1-produit': [0.21, 0.194, 0.046, 0.029], '2-avatar': [0.32, 0.194, 0.044, 0.029], '3-voix': [0.426, 0.194, 0.036, 0.029], '4-style': [0.528, 0.194, 0.038, 0.029], '5-generer': [0.637, 0.194, 0.049, 0.029], 'ex-dropacademy-funnelpro-monbusiness-ia': [0.424, 0.29, 0.475, 0.051], 'selectionner-un-hook-personne-ne-t-en-pa': [0.424, 0.479, 0.475, 0.051], 'le-hook-apparaitra-ici-ou-ecris-le-tien-': [0.424, 0.548, 0.475, 0.051], 'ecris-le-corps-de-ton-script-ici-le-hook': [0.424, 0.711, 0.475, 0.167], 'selectionner-un-cta-commente-plan-et-je-': [0.424, 0.874, 0.475, 0.051], 'continuer': [0.456, 0.958, 0.451, 0.049], 'tiktok': [0.76, 0.118, 0.038, 0.026], 'reels': [0.798, 0.118, 0.034, 0.026], 'facebook': [0.84, 0.118, 0.045, 0.026], 'youtube': [0.885, 0.118, 0.041, 0.026], 'linkedin': [0.931, 0.118, 0.045, 0.026], 'apercu-anime': [0.847, 0.166, 0.082, 0.036] },
+  '04-montageia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'gameplay-voix-ta-voix-ou-elevenlabs-sur-': [0.465, 0.276, 0.218, 0.081], 'ma-video-importe-ta-video-l-ia-la-monte-': [0.69, 0.276, 0.218, 0.081], 'importe-ta-voix-off-mp3-wav-m4a-l-ia-en-': [0.578, 0.412, 0.444, 0.093], 'ajoute-une-photo-d-avatar-sinon-100-game': [0.578, 0.552, 0.444, 0.093], 'https-ton-site-com': [0.464, 0.673, 0.216, 0.056], '0-8': [0.601, 0.678, 0.036, 0.064], 'parametres-avances-sous-titres-mot-par-m': [0.578, 0.773, 0.444, 0.076], 'ajouter-un-script-brief-dis-a-l-ia-ce-qu': [0.578, 0.894, 0.444, 0.076], 'creer-ma-video-6-credits': [0.578, 0.952, 0.475, 0.064] },
+  '05-bibliotheque': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'importer': [0.856, 0.118, 0.068, 0.041], 'nouvelle-video': [0.94, 0.118, 0.09, 0.039], 'toutes': [0.193, 0.212, 0.041, 0.037], 'videos': [0.234, 0.212, 0.041, 0.037], 'audio': [0.274, 0.212, 0.038, 0.037], 'images': [0.313, 0.212, 0.042, 0.037], 'importer-une-video-avatar-mp4-hedra-ou-v': [0.268, 0.591, 0.196, 0.675] },
+  '06-nettoyage-audio': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.394, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.477, 0.608, 0.193, 0.137], 'avance-traitement-renforce': [0.678, 0.608, 0.193, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.394, 0.069], 'nettoyer-mon-audio': [0.578, 0.82, 0.394, 0.064] },
+  '07-enregistreur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'recmainbtn': [0.578, 0.41, 0.046, 0.082], 'importer-un-fichier-audio-video-mp4': [0.578, 0.519, 0.195, 0.051], 'ecouter': [0.398, 0.595, 0.088, 0.049], 'couper-ici': [0.491, 0.595, 0.088, 0.049], 'supprimer': [0.584, 0.595, 0.088, 0.049], 'remplacer': [0.677, 0.595, 0.088, 0.049], 'silences-on': [0.763, 0.595, 0.075, 0.049], 'wav': [0.365, 0.694, 0.058, 0.053], 'envoyer-vers-bibliotheque': [0.475, 0.694, 0.152, 0.053], 'utiliser-dans-le-generateur': [0.705, 0.694, 0.227, 0.053] },
+  '08-parrainage': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'https-avatarads-iamanager-fr-ref-f0cae49': [0.539, 0.589, 0.29, 0.053], 'copier': [0.726, 0.589, 0.069, 0.053], 'twitter': [0.453, 0.659, 0.117, 0.052], 'facebook': [0.578, 0.659, 0.117, 0.056], 'tiktok': [0.702, 0.659, 0.117, 0.056] },
+  '09-cartoon': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046] },
+  '10-mon-compte': { 'axel': [0.5, 0.253, 0.256, 0.048], '33-6-00-00-00-00': [0.5, 0.347, 0.256, 0.056], 'definir-ou-changer-mon-mot-de-passe': [0.5, 0.447, 0.256, 0.059], 'nouveau-email-com': [0.5, 0.757, 0.256, 0.056], 'envoyer-le-lien-de-confirmation': [0.5, 0.888, 0.256, 0.059] },
+  '11-connecter-claude': { 'generer-ma-cle': [0.284, 0.442, 0.172, 0.053], 'ouvrir-claude-connecteurs': [0.5, 0.442, 0.172, 0.053], 'commencer': [0.716, 0.442, 0.172, 0.053] },
+  '20-claude-menu': { 'menu-parametres': [0.083, 0.633, 0.157, 0.037] },
+  '21-claude-parametres': { 'onglet-connecteurs': [0.276, 0.709, 0.13, 0.036] },
+  '22-claude-connecteurs': { 'bouton-ajouter': [0.719, 0.161, 0.056, 0.043] },
+  '23-claude-ajouter': { 'bouton-ajouter': [0.72, 0.126, 0.058, 0.038], 'menu-ajouter-personnalise': [0.66, 0.216, 0.17, 0.038] },
+  '24-claude-personnalise': { 'champ-nom': [0.499, 0.33, 0.285, 0.037], 'champ-url': [0.499, 0.386, 0.285, 0.037], 'bouton-ajouter': [0.621, 0.772, 0.048, 0.034] },
 }
-const TUTO_FILE: Record<string, string> = { 'images-ia': '01-imagesia', 'express': '02-express' }
+const TUTO_FILE: Record<string, string> = new Proxy(
+  { 'images-ia': '01-imagesia', 'express': '02-express' },
+  { get: (t, k: string) => t[k] ?? (TUTO[k] ? k : '') },
+) as Record<string, string>
+// <<< /SCREEN-ZONES >>>
 
 // <<< ANIM-BANK:LIST — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
 const ANIMS = [
@@ -454,9 +473,151 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   LES MOTS FORTS, C'EST TOI QUI LES DESIGNES (champ "beats"). Relis le script mot a mot et sors la LISTE des mots qui appellent une image mentale — un objet, une action, un gain, un chiffre, une emotion. Pour chacun, ecris "mot|animation" avec le mot EXACTEMENT tel qu'il est prononce (une seule forme, sans article) et l'animation de la banque qui le dessine. Vise 15 a 25 lignes sur 45 secondes, dans l'ordre du script.
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
-  DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CETTE LISTE, rien d'autre :
-    images-ia  -> menu | photo-reel | pixar | fruit | ugc | format | prompt | generer
-    express    -> menu | realiste | cartoon | portrait | duree | qualite | voix | ajouter | prompt | generer
+  DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CE CATALOGUE, rien d'autre. Le LIBELLE entre guillemets est le texte lu a l'ecran : c'est lui qui doit correspondre a ce qu'il DIT.
+// <<< SCREEN-CATALOG — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>
+    NAVIGATION (la meme barre laterale sur TOUS les ecrans de l'app) :
+      generateur | bibliotheque | images-ia | enregistreur | nettoyage-audio | express | montage-ia-beta | editeur-beta | parrainage | publier-dev | mon-compte
+    01-imagesia
+      generation                     « Génération »
+      correction                     « Correction »
+      photo-reel-realiste            « Photo Réel · réaliste »
+      pixar-3d-toy-story             « Pixar 3D · Toy Story »
+      fruit-perso-fruit              « Fruit · perso fruit »
+      ugc-reel-authentique           « UGC Réel · authentique »
+      mascotte-de-marque             « Mascotte · de marque »
+      autre-style-libre              « Autre · style libre »
+      1-1                            « 1:1 »
+      9-16                           « 9:16 »
+      16-9                           « 16:9 »
+      standard                       « Standard »
+      premium                        « Premium »
+      4k                             « 4K »
+      1                              « 1 »
+      2                              « 2 »
+      3                              « 3 »
+      image-de-reference             « Image de référence »
+      decris-l-image-que-tu-veux-generer « Décris l'image que tu veux générer… »
+      ameliorer                      « Améliorer »
+      entrepreneur-en-studio-moderne « Entrepreneur en studio moderne, … »
+      face-cam-ugc-outdoor-micro-crav « Face cam UGC outdoor, micro-crav… »
+      generer-l-image-3-cr           « Générer l'image · 3 cr »
+      2200-9999-credits-images-ce-mois « 2200 / 9999 crédits images ce mois · + »
+    02-express
+      realiste-avatar-reel           « Réaliste · avatar réel »
+      cartoon-3d-style-pixar         « Cartoon 3D · style Pixar »
+      ugc-reel-selfie-authentique    « UGC réel · selfie authentique »
+      studio-produit-pub             « Studio · produit/pub »
+      portrait-9-16                  « 📱 · Portrait · 9:16 »
+      paysage-16-9                   « 🖥 · Paysage · 16:9 »
+      720p                           « 720p »
+      1080pdes-8-s                   « 1080pdès 8 s »
+      voix-native-veo-audio-genere-avec-la-vid « Voix native (Veo) · audio généré avec la vidéo »
+      gemini-tts-voix-generee-11-timbres « Gemini TTS · voix générée · 11 timbres »
+      ajoute-tes-images-avatar-produit-perso « Ajoute tes images · avatar · produit · perso »
+      importer-depuis-la-bibliotheque « Importer depuis · la bibliothèque »
+      decris-ta-video-et-ce-que-le-perso-dit-a « Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn »
+      ameliorer                      « ✦ Améliorer »
+      face-camera                    « 💬 Face caméra »
+      cartoon                        « 🧸 Cartoon »
+      fitness                        « 💪 Fitness »
+      produit                        « 🛍 Produit »
+      generer-la-video               « Générer la vidéo »
+    03-generateur
+      1-produit                      « 1 · Produit »
+      2-avatar                       « 2 · Avatar »
+      3-voix                         « 3 · Voix »
+      4-style                        « 4 · Style »
+      5-generer                      « 5 · Générer »
+      ex-dropacademy-funnelpro-monbusiness-ia « Ex : DropAcademy, FunnelPro, MonBusiness IA… »
+      selectionner-un-hook-personne-ne-t-en-pa « Sélectionner un hook... · Personne ne t'en parle mais actuel »
+      le-hook-apparaitra-ici-ou-ecris-le-tien- « Le hook apparaîtra ici, ou écris le tien directement »
+      ecris-le-corps-de-ton-script-ici-le-hook « Écris le corps de ton script ici… · Le hook et le CTA seront »
+      selectionner-un-cta-commente-plan-et-je- « Sélectionner un CTA... · Commente "PLAN" et je t'explique to »
+      continuer                      « Continuer → »
+      tiktok                         « TikTok »
+      reels                          « Reels »
+      facebook                       « Facebook »
+      youtube                        « YouTube »
+      linkedin                       « LinkedIn »
+      apercu-anime                   « ▶ Aperçu animé »
+    04-montageia
+      gameplay-voix-ta-voix-ou-elevenlabs-sur- « Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl »
+      ma-video-importe-ta-video-l-ia-la-monte- « Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr »
+      importe-ta-voix-off-mp3-wav-m4a-l-ia-en- « Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les  »
+      ajoute-une-photo-d-avatar-sinon-100-game « Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l »
+      https-ton-site-com             « https://ton-site.com »
+      0-8                            « 0/8 »
+      parametres-avances-sous-titres-mot-par-m « Paramètres avancés · sous-titres mot-par-mot · musique auto »
+      ajouter-un-script-brief-dis-a-l-ia-ce-qu « Ajouter un script / brief · Dis à l'IA ce que la vidéo doit  »
+      creer-ma-video-6-credits       « Créer ma vidéo — 6 crédits »
+    05-bibliotheque
+      importer                       « Importer »
+      nouvelle-video                 « Nouvelle vidéo »
+      toutes                         « Toutes »
+      videos                         « Vidéos »
+      audio                          « Audio »
+      images                         « Images »
+      importer-une-video-avatar-mp4-hedra-ou-v « Importer une vidéo avatar · MP4 Hedra ou vidéo existante → a »
+    06-nettoyage-audio
+      glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m « Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco »
+      parcourir                      « Parcourir »
+      standard-nettoyage-automatique « Standard · nettoyage automatique »
+      avance-traitement-renforce     « Avancé · traitement renforcé »
+      parametres-avances-traitement-voix-silen « Paramètres avancés · Traitement voix, silences, qualité »
+      nettoyer-mon-audio             « Nettoyer mon audio »
+    07-enregistreur
+      recmainbtn                     «  »
+      importer-un-fichier-audio-video-mp4 « Importer un fichier audio / vidéo MP4 »
+      ecouter                        « ▶ Écouter »
+      couper-ici                     « Couper ici »
+      supprimer                      « Supprimer »
+      remplacer                      « ✂️ Remplacer »
+      silences-on                    « 🔇 Silences ON »
+      wav                            « WAV »
+      envoyer-vers-bibliotheque      « Envoyer vers bibliothèque »
+      utiliser-dans-le-generateur    « Utiliser dans le générateur »
+    08-parrainage
+      https-avatarads-iamanager-fr-ref-f0cae49 « https://avatarads.iamanager.fr/?ref=F0CAE49AE6 »
+      copier                         « Copier »
+      twitter                        « 𝕏 Twitter »
+      facebook                       « 📘 Facebook »
+      tiktok                         « 🎵 TikTok »
+    10-mon-compte
+      axel                           « axel »
+      33-6-00-00-00-00               « +33 6 00 00 00 00 »
+      definir-ou-changer-mon-mot-de-passe « 🔐 Définir ou changer mon mot de passe »
+      nouveau-email-com              « nouveau@email.com »
+      envoyer-le-lien-de-confirmation « ✉️ Envoyer le lien de confirmation »
+    11-connecter-claude
+      generer-ma-cle                 « Générer ma clé »
+      ouvrir-claude-connecteurs      « Ouvrir Claude → Connecteurs »
+      commencer                      « Commencer »
+    20-claude-menu
+      menu-parametres                « Paramètres »
+    21-claude-parametres
+      onglet-connecteurs             « Connecteurs »
+    22-claude-connecteurs
+      bouton-ajouter                 « Ajouter »
+    23-claude-ajouter
+      bouton-ajouter                 « Ajouter »
+      menu-ajouter-personnalise      « Ajouter un connecteur personnalisé »
+    24-claude-personnalise
+      champ-nom                      « AvatarAds »
+      champ-url                      « URL du serveur MCP distant »
+      bouton-ajouter                 « Ajouter »
+// <<< /SCREEN-CATALOG >>>
+  UNE ETAPE DECRITE = UNE LIGNE. C'est la regle la plus importante de ce champ, et
+  c'est celle qui a manque : sur un tutoriel qui decrivait HUIT manipulations, le
+  plan n'en portait que DEUX — les six autres moments montraient une forme
+  abstraite pendant qu'il expliquait ou cliquer. Quand il enchaine « tu vas dans
+  mon compte, tu vas dans connecter Claude, tu cliques sur generer la cle, tu
+  copies, puis tu vas dans les parametres de Claude, tu cherches connecteurs, tu
+  appuies sur Ajouter, tu prends connecteur personnalise, tu le nommes AvatarAds,
+  tu colles la cle » — cela fait DIX lignes. Pas trois, pas « les principales » :
+  toutes. Un tutoriel dont on ne montre que le debut ne s'applique pas.
+  Le CATALOGUE couvre plusieurs applications (l'app de l'utilisateur ET les ecrans
+  d'outils tiers qu'il utilise) : passe de l'une a l'autre en suivant sa voix, ne
+  reste pas coince sur le premier ecran trouve.
   COUVRE CHAQUE ETAPE QU'IL DECRIT, dans l'ordre, sans en sauter : s'il enumere « tu vas dans Images IA, tu selectionnes photo reel, tu mets le format TikTok, tu decris ton image », cela fait QUATRE lignes (menu, photo-reel, format, prompt). Une etape decrite sans ligne, c'est un moment de la video ou l'on ne montre rien.
   N'OUBLIE JAMAIS L'ETAPE "prompt" DE CHAQUE MODULE : c'est le moment ou l'on voit le texte s'ecrire dans le champ, avec le bruit du clavier. S'il decrit ce qu'il tape dans Images IA ET dans Express, il faut DEUX lignes prompt, une par module.
   QUATRIEME CHAMP, seulement sur une zone "prompt" : ce que l'utilisateur taperait dans le champ. Ecris-le court (moins de 60 caracteres) et dans SES mots — il s'ecrira lettre par lettre dans le vrai champ de l'app pendant qu'il parle, avec le bruit du clavier. Laisse vide sur toutes les autres zones.

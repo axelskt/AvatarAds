@@ -2058,5 +2058,89 @@
     "h": 0.0533
    }
   ]
+ },
+ "20-claude-menu": {
+  "zones": [
+   {
+    "name": "menu-parametres",
+    "label": "Paramètres",
+    "x": 0.083,
+    "y": 0.633,
+    "w": 0.157,
+    "h": 0.037
+   }
+  ]
+ },
+ "21-claude-parametres": {
+  "zones": [
+   {
+    "name": "onglet-connecteurs",
+    "label": "Connecteurs",
+    "x": 0.276,
+    "y": 0.709,
+    "w": 0.13,
+    "h": 0.036
+   }
+  ]
+ },
+ "22-claude-connecteurs": {
+  "zones": [
+   {
+    "name": "bouton-ajouter",
+    "label": "Ajouter",
+    "x": 0.719,
+    "y": 0.161,
+    "w": 0.056,
+    "h": 0.043
+   }
+  ]
+ },
+ "23-claude-ajouter": {
+  "zones": [
+   {
+    "name": "bouton-ajouter",
+    "label": "Ajouter",
+    "x": 0.72,
+    "y": 0.126,
+    "w": 0.058,
+    "h": 0.038
+   },
+   {
+    "name": "menu-ajouter-personnalise",
+    "label": "Ajouter un connecteur personnalisé",
+    "x": 0.66,
+    "y": 0.216,
+    "w": 0.17,
+    "h": 0.038
+   }
+  ]
+ },
+ "24-claude-personnalise": {
+  "zones": [
+   {
+    "name": "champ-nom",
+    "label": "AvatarAds",
+    "x": 0.499,
+    "y": 0.33,
+    "w": 0.285,
+    "h": 0.037
+   },
+   {
+    "name": "champ-url",
+    "label": "URL du serveur MCP distant",
+    "x": 0.499,
+    "y": 0.386,
+    "w": 0.285,
+    "h": 0.037
+   },
+   {
+    "name": "bouton-ajouter",
+    "label": "Ajouter",
+    "x": 0.621,
+    "y": 0.772,
+    "w": 0.048,
+    "h": 0.034
+   }
+  ]
  }
 }
