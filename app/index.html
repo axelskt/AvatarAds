@@ -3044,7 +3044,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
            mécanique. ══════════════════════════════════════════════════════════ -->
 
       <!-- ─────────── phase « idle » : le formulaire ─────────── -->
-      <div id="acPhaseIdle" style="width:100%;max-width:680px;margin:0 auto;padding-top:30px">
+      <div id="acPhaseIdle" class="lib-view" style="width:100%;max-width:680px;margin:0 auto;padding-top:30px">
 
         <div class="center" style="margin-bottom:18px">
           <h1 class="display" style="font-size:30px;font-weight:800">Nettoyage audio</h1>
@@ -3188,7 +3188,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
 
       <!-- ─────────── phase « running » ─────────── -->
-      <div id="acPhaseRunning" class="col" style="display:none;width:100%;min-height:72vh;align-items:center;justify-content:center;padding:20px">
+      <div id="acPhaseRunning" class="col" style="display:none;width:100%;overflow-y:auto;min-height:72vh;align-items:center;justify-content:center;padding:20px">
         <div class="card" style="width:100%;max-width:440px;padding:44px 36px;text-align:center">
           <div style="width:56px;height:56px;border-radius:50%;margin:0 auto 20px;border:3px solid var(--surface-3);border-top-color:var(--accent);animation:spin .9s linear infinite"></div>
           <div class="display" style="font-size:19px;font-weight:700">Nettoyage en cours…</div>
@@ -3200,7 +3200,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
 
       <!-- ─────────── phase « done » ─────────── -->
-      <div id="acPhaseDone" class="col" style="display:none;width:100%;min-height:72vh;align-items:center;justify-content:center;padding:20px">
+      <div id="acPhaseDone" class="col" style="display:none;width:100%;overflow-y:auto;min-height:72vh;align-items:center;justify-content:center;padding:20px">
         <div class="card rise" style="width:100%;max-width:440px;padding:32px 28px">
           <div class="col" style="align-items:center;text-align:center;margin-bottom:22px">
             <div style="width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(40,199,149,.12);border:1px solid rgba(40,199,149,.35);margin-bottom:14px">
@@ -21873,6 +21873,7 @@ async function _acHandleFile(file){
     }
   }
   _acAudioBlob = audioFile;
+  _acOrigBlob  = audioFile;   // gardé tel quel : « Comparer » a besoin de l'AVANT
   document.getElementById('acDropContent').style.display = 'none';
   document.getElementById('acFileInfo').style.display    = 'block';
   document.getElementById('acFileName').textContent      = file.name + (isVid ? ' · vidéo' : '');
@@ -22044,6 +22045,7 @@ async function _acDerushApply(btn){
 
 
 let _acCleanBlob = null;
+let _acOrigBlob  = null;   // l'audio d'origine, pour la comparaison
 let _acLevel     = 'normal'; // 'normal' | 'strong'
 
 function _acSetLevel(level, btn){
@@ -22482,10 +22484,38 @@ function _acFillDone(d){
   }
   const dl = el('acDoneDl');
   if(dl) dl.onclick = () => { if(d.url){ const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.mp3'; a.click(); } };
-  const lib = el('acDoneLib'); if(lib) lib.onclick = () => { try{ _acSaveToLibrary && _acSaveToLibrary(d); }catch(_){ toast('Bibliothèque indisponible'); } };
-  const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = () => { try{ _acCompare && _acCompare(d); }catch(_){ toast('Comparaison indisponible'); } };
+  const lib = el('acDoneLib'); if(lib) lib.onclick = _acSaveToLibrary;
+  const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = _acCompare;
   window._acDoneData = d;
 }
+// « Comparer » : on rejoue l'AVANT. Le bouton existait dans la maquette sans
+// rien derrière — un bouton qui ne fait rien est pire qu'un bouton absent.
+let _acCmpAudio = null;
+function _acCompare(){
+  if(!_acOrigBlob){ toast('Rien à comparer — recharge un audio'); return; }
+  if(window._acDoneAudio && !window._acDoneAudio.paused) window._acDoneAudio.pause();
+  if(_acCmpAudio && !_acCmpAudio.paused){ _acCmpAudio.pause(); toast('⏸ Original'); return; }
+  _acCmpAudio = new Audio(URL.createObjectURL(_acOrigBlob));
+  _acCmpAudio.play();
+  toast('▶️ Original (avant nettoyage)');
+}
+// « Bibliothèque » : l'audio nettoyé repart dans le Générateur, étape Voix —
+// c'est ce que le module sait faire aujourd'hui, et c'est ce dont on a besoin
+// pour enchaîner sur une vidéo.
+function _acSaveToLibrary(){
+  if(!_acCleanBlob){ toast('Lance d\'abord le nettoyage'); return; }
+  try{
+    if(typeof handleSilenceAudioFile === 'function'){
+      handleSilenceAudioFile(new File([_acCleanBlob], 'audio-nettoye.wav', { type: 'audio/wav' }));
+      toast('✅ Envoyé au Générateur (étape Voix)');
+      return;
+    }
+  }catch(_){ /* on retombe sur le téléchargement */ }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(_acCleanBlob); a.download = 'audio-nettoye.wav'; a.click();
+  toast('⬇️ Téléchargé');
+}
+
 const _acFmt = (s) => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
 function _acDoneTogglePlay(){
   const d = window._acDoneData;
@@ -22636,6 +22666,10 @@ async function _acAnalyze(){
   const resEl = document.getElementById('acResult');
   if(btn){ btn.textContent = '⏳ Analyse en cours...'; btn.disabled = true; }
   if(resEl) resEl.innerHTML = '';
+  // La maquette a trois écrans : le formulaire disparaît pendant le nettoyage.
+  // Sans cette bascule, les écrans « en cours » et « résultat » n'étaient jamais
+  // atteints — je les avais construits sans jamais les brancher.
+  _acPhase('running');
 
   try {
     // #69 · débruitage d'abord si l'option « Supprimer les bruits de fond » est activée
@@ -22677,6 +22711,9 @@ async function _acAnalyze(){
       </div>`;
     if(tipEl) tipEl.style.display = 'none';
     if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
+    // l'écran de résultat, avec les chiffres RÉELS du nettoyage
+    _acPhase('done', { cuts: segsRemoved, saved: removedS, duration: cleanS,
+      url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
     toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
     if(_acDerushEnabled) _acDerushRun();   // #151 : propose les coupes une fois l'analyse posée
     // Sauvegarde auto dans la Bibliothèque
@@ -22686,6 +22723,7 @@ async function _acAnalyze(){
     }
 
   } catch(e){
+    _acPhase('idle');   // sinon le spinner tourne indéfiniment sur une erreur
     console.error('_acAnalyze:', e);
     await creditsFlowRefund();
     toast('⚠️ Erreur : ' + (e.message||e).slice(0,80));
