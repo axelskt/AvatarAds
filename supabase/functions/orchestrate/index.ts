@@ -245,7 +245,7 @@ const PLAN_SCHEMA = {
     sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label"
     zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
     broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end|fonctionnalite"
-    beats: { type: 'array', items: { type: 'string' } },           // "mot|animation" — les mots forts
+    beats: { type: 'array', items: { type: 'string' } },           // "mot|animation|valeur" — les mots forts (valeur optionnelle)
     tuto: { type: 'array', items: { type: 'string' } },            // "mot|ecran|zone" — démo dans l'app
     sfx: { type: 'array', items: { type: 'string' } },             // "kind|t"
     beds: { type: 'array', items: { type: 'string' } },            // "name|t"
@@ -298,7 +298,7 @@ function expandPlan(raw: any): Plan {
     sections: arr(raw.sections).map((l) => { const [role, a, b, label] = cut(l, 4); return { role, start: num(a), end: num(b), label } }),
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
     broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
-    beats: arr(raw.beats).map((l) => { const [word, anim] = cut(l, 2); return { word, anim } }),
+    beats: arr(raw.beats).map((l) => { const [word, anim, value] = cut(l, 3); return { word, anim, value } }),
     tuto: arr(raw.tuto).map((l) => { const [word, screen, zone, text] = cut(l, 4); return { word, screen, zone, text } }),
     sfx: arr(raw.sfx).map((l) => { const [kind, t] = cut(l, 2); return { kind, t: num(t) } }),
     beds: arr(raw.beds).map((l) => { const [name, t] = cut(l, 2); return { name, t: num(t) } }),
@@ -327,7 +327,7 @@ type Plan = {
   sections: { role: string; start: number; end: number; label: string }[]
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
   broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
-  beats?: { word: string; anim: string }[]
+  beats?: { word: string; anim: string; value?: string }[]
   tuto?: { word: string; screen: string; zone: string; text?: string }[]
   sfx: { kind: string; t: number }[]
   hook: { text: string; start: number; end: number } | null
@@ -441,7 +441,12 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   sections[]       : "role|start|end|label"            ex "hook|0|3.2|l'accroche"
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
   broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
-  beats[]          : "mot|animation"                    ex "viral|rocket"
+  beats[]          : "mot|animation|valeur"             ex "viral|rocket|" · "kilos|weight|-10 kg" · "abonnes|profile|+3K"
+                     Le TROISIEME segment est la VALEUR AFFICHEE, quand l'animation en montre une
+                     (sa description te dit laquelle). Recopie le chiffre EXACT qu'il prononce.
+                     Laisse-le vide si l'animation n'affiche rien ou si tu n'as pas entendu de chiffre.
+                     Plusieurs valeurs pour une meme animation : separe-les par " ; "
+                     ex "promo|discount|149€ ; 79€ ; -47 %"
   tuto[]           : "mot|ecran|zone|texte"             ex "decrire|images-ia|prompt|une banane musclee"
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
@@ -667,7 +672,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     logo     — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage.
     tools    — LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils.
     copy     — UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications.
-    connect  — DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — `tools` ne fait que les poser cote a cote.
+    connect  — DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote.
     sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
     post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
     upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer.
@@ -1451,7 +1456,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       sl.emoji = ''
     }
 
-    const beatMap = new Map<string, string>()
+    const beatMap = new Map<string, { anim: string; value: string }>()
     // JOURNAL DES REJETS. Sur Cartoon 15, 7 beats sur 15 etaient jetes en
     // silence (le modele repondait avec des noms d'EMOJI) et rien ne le disait.
     // Un plan rate doit se voir dans les logs, pas dans la video.
@@ -1460,7 +1465,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const k = norm(String(b.word || ''))
       const raw = String(b.anim || '')
       const a = ANIMS.includes(raw) ? raw : (EMO2ANIM[raw] || '')
-      if (k.length >= 3 && a && !beatMap.has(k)) beatMap.set(k, a)
+      if (k.length >= 3 && a && !beatMap.has(k)) beatMap.set(k, { anim: a, value: String(b.value || '').trim() })
       else if (raw && !a) beatBad.push(`${b.word}|${raw}`)
     }
     console.log(`▶ chef d'orchestre : ${beatMap.size}/${(plan.beats || []).length} beats retenus`
@@ -1468,8 +1473,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       + (emoConv || emoDrop ? ` · emoji : ${emoConv} converti(s), ${emoDrop} efface(s)` : ''))
     const beatFor = (t: string) => {
       const k = norm(t)
-      if (k.length < 3) return ''
-      return beatMap.get(k) || ''
+      if (k.length < 3) return null
+      return beatMap.get(k) || null
     }
     // ECRANS DE DEMO : le modele designe (mot, ecran, zone) ; le serveur retrouve le
     // timing du mot dans la transcription et applique le cadrage MESURE. Deux zones
@@ -1549,7 +1554,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // on declenche donc nous-memes des qu'un mot de resultat chiffre est prononce
     // ET qu'un nombre est reellement present a cet endroit de l'audio.
     const CU_WORDS = ['million', 'millions', 'vues', 'euros', 'abonnes', 'cartonne', 'cartonnent', 'explose', 'explosent']
-    const cand: { t: number; an: string }[] = []
+    const cand: { t: number; an: string; val: string }[] = []
     let lastT = -99
     for (const w of words) {
       // Le HOOK aussi merite ses animations : c'est la ou le spectateur decide de
@@ -1558,12 +1563,16 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       if (w.start - lastT < TARGET) continue
       if (occupied(w.start)) continue
       // le modele a designe les mots forts (beats) : ils priment sur le lexique
-      let an = beatFor(w.text) || animForWord(w.text)
+      const beat = beatFor(w.text)
+      let an = (beat && beat.anim) || animForWord(w.text)
       if (CU_WORDS.includes(norm(w.text)) && !usedAnims.has('countup')) an = 'countup'
       if (!an || usedAnims.has(an)) continue
       usedAnims.add(an)
       lastT = w.start
-      cand.push({ t: w.start, an })
+      // la VALEUR entendue voyage avec le mot : c'est elle qui s'affichera dans
+      // l'animation, a la place du chiffre d'exemple code en dur.
+      const val = beat && beat.anim === an ? beat.value : ''
+      cand.push({ t: w.start, an, val })
     }
     const added: typeof slides = []
     // LE CHIFFRE DU COMPTEUR VIENT DE CE QU'IL DIT. On lit les mots autour du point
@@ -1605,7 +1614,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
         start: r2(cand[i].t), end, title: '', eyebrow: '', accent: '', sub: '',
         center: '', value: cuv ? cuv.value : '', unit: cuv ? cuv.unit : '',
-        wide: false, options: [], items: [],
+        wide: false, options: [],
+        items: String(cand[i].val || '').split(';').map((t) => t.trim()).filter(Boolean).map((text) => ({ text, t: 0, value: '', label: '' })),
       })
     }
     for (const a of added) {
