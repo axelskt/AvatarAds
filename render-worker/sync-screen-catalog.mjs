@@ -38,7 +38,11 @@ const zonesOf = (slug) => (SCREENS[slug]?.zones || []).filter((z) => !SKIP.test(
 const counts = new Map()
 const slugs = Object.keys(SCREENS)
 for (const s of slugs) for (const z of zonesOf(s)) counts.set(z.name, (counts.get(z.name) || 0) + 1)
-const shared = new Set([...counts].filter(([, n]) => n >= slugs.length - 3).map(([n]) => n))
+// Un seuil relatif au NOMBRE TOTAL d'écrans cassait dès qu'on ajoutait des
+// captures d'une autre app (Claude) : la barre latérale d'AvatarAds n'y est pas,
+// donc plus rien n'était « partagé ». Le critère est absolu : une zone présente
+// sur au moins six écrans est de la navigation.
+const shared = new Set([...counts].filter(([, n]) => n >= 6).map(([n]) => n))
 
 const label = (slug, name) => (SCREENS[slug].zones.find((z) => z.name === name) || {}).label || ''
 const firstWith = (name) => slugs.find((s) => zonesOf(s).some((z) => z.name === name))
@@ -57,12 +61,35 @@ for (const slug of slugs.sort()) {
 }
 const body = lines.join('\n')
 
-const OPEN = '// <<< SCREEN-CATALOG — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>'
-const CLOSE = '// <<< /SCREEN-CATALOG >>>'
+// ── et les COORDONNÉES, qui vivaient elles aussi en dur côté serveur ────────
+// Une deuxième copie de la carte mesurée à la main : mêmes défauts, même
+// péremption. Elle sort de la même source que tout le reste.
+const r3 = (n) => Math.round(n * 1000) / 1000
+const zoneLines = []
+for (const slug of slugs.sort()) {
+  const zs = zonesOf(slug)
+  if (!zs.length) continue
+  const inner = zs.map((z) => `'${z.name}': [${r3(z.x)}, ${r3(z.y)}, ${r3(z.w)}, ${r3(z.h)}]`).join(', ')
+  zoneLines.push(`  '${slug}': { ${inner} },`)
+}
+const zonesBody = 'const TUTO: Record<string, Record<string, number[]>> = {\n'
+  + zoneLines.join('\n') + '\n}\n'
+  // le catalogue donne déjà les vrais identifiants d'écran : la table de
+  // correspondance devient l'identité, on garde juste les deux anciens alias
+  + "const TUTO_FILE: Record<string, string> = new Proxy(\n"
+  + "  { 'images-ia': '01-imagesia', 'express': '02-express' },\n"
+  + "  { get: (t, k: string) => t[k] ?? (TUTO[k] ? k : '') },\n) as Record<string, string>"
+
+const patch = (src, tag, text) => {
+  const open = `// <<< ${tag} — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>`
+  const close = `// <<< /${tag} >>>`
+  const i = src.indexOf(open), j = src.indexOf(close)
+  if (i < 0 || j < 0) { console.error('✗ marqueurs', tag, 'absents de', TARGET); process.exit(1) }
+  return src.slice(0, i + open.length) + '\n' + text + '\n' + src.slice(j)
+}
 const src = readFileSync(TARGET, 'utf8')
-const i = src.indexOf(OPEN), j = src.indexOf(CLOSE)
-if (i < 0 || j < 0) { console.error('✗ marqueurs SCREEN-CATALOG absents de', TARGET); process.exit(1) }
-const out = src.slice(0, i + OPEN.length) + '\n' + body + '\n' + src.slice(j)
+let out = patch(src, 'SCREEN-CATALOG', body)
+out = patch(out, 'SCREEN-ZONES', zonesBody)
 
 if (process.argv.includes('--check')) {
   if (out !== src) { console.error('✗ catalogue desynchronise — lance sync-screen-catalog.mjs'); process.exit(1) }
