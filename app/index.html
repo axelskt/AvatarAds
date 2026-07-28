@@ -514,6 +514,31 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 .gp-step.done .gp-icon{background:var(--green);color:#000}
 .gp-step.on .gp-icon{background:var(--accent);color:#fff}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ══ NETTOYAGE AUDIO — refonte 1:1 (maquette AvatarAds-3) ══════════════════
+   Les lignes à interrupteur, les cartes de mode et les presets de voix. Ces
+   trois familles changent d'état au clic : leur mise en forme vit ici plutôt
+   qu'en style inline, pour que basculer un état soit une classe et pas dix
+   affectations JS. ────────────────────────────────────────────────────────── */
+@keyframes acProgress{from{width:0}to{width:100%}}
+
+.ac-row{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:13px 15px;border-radius:13px;text-align:left;transition:.15s;cursor:pointer;
+  font-family:var(--font);color:var(--text);border:1px solid var(--border);background:var(--surface)}
+.ac-row.is-on{border-color:var(--accent-line);background:var(--accent-soft)}
+.ac-row-l{display:flex;align-items:center;gap:12px;min-width:0}
+.ac-row-ic{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-3);transition:.15s}
+.ac-row.is-on .ac-row-ic{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2)}
+/* l'interrupteur : même gabarit que celui du dérush, qui existait déjà */
+.ac-sw{width:40px;height:23px;border-radius:12px;position:relative;flex:0 0 auto;
+  background:var(--surface-3);transition:.25s;display:block}
+.ac-row.is-on .ac-sw{background:var(--accent)}
+.ac-sw-th{width:17px;height:17px;border-radius:50%;position:absolute;top:3px;left:3px;
+  background:#fff;opacity:.7;transition:.25s}
+.ac-row.is-on .ac-sw-th{left:20px;opacity:1}
+
+.ac-mode.is-on{border:2px solid var(--accent);background:var(--accent-soft)}
+.ac-vp.is-on{border:2px solid var(--accent);background:var(--accent-soft)}
 @keyframes recPulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
 .spinner{width:12px;height:12px;border:2px solid rgba(255,107,53,.3);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
 
@@ -3009,27 +3034,39 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <!-- ══ NETTOYAGE AUDIO ══ -->
     <div class="view" id="v-audioclean">
-      <div class="lib-view" style="width:100%;max-width:740px;margin:0 auto;padding-top:30px">
+      <!-- ══ NETTOYAGE AUDIO — refonte 1:1 sur la maquette (AvatarAds-3.zip) ══
+           Trois phases : idle (le formulaire) · running (le nettoyage) · done (le
+           résultat). Les toggles « Voix studio » et « Adoucir les sifflantes »
+           ont été volontairement retirés de la maquette : ils ne reviennent pas.
+           Tout ce qui pilotait l'ancienne vue reste branché — mêmes identifiants,
+           mêmes fonctions (_acSetLevel, _acSetOpt, _acToggleDerush,
+           _acSetVoicePreset, _acAnalyze) : c'est la PEAU qui change, pas la
+           mécanique. ══════════════════════════════════════════════════════════ -->
 
-        <div style="margin-bottom:26px">
-          <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><span style="font-size:24px">🪄</span>Nettoyage audio</h2>
-          <p class="muted" style="margin-top:8px;font-size:14.5px">Supprime les silences automatiquement · envoie l'audio nettoyé au générateur</p>
+      <!-- ─────────── phase « idle » : le formulaire ─────────── -->
+      <div id="acPhaseIdle" style="width:100%;max-width:680px;margin:0 auto;padding-top:30px">
+
+        <div class="center" style="margin-bottom:18px">
+          <h1 class="display" style="font-size:30px;font-weight:800">Nettoyage audio</h1>
+          <p class="muted" style="margin-top:6px;font-size:14.5px;max-width:430px;margin-inline:auto;line-height:1.45">
+            Ta voix entre brute, elle ressort nette et rythmée.
+          </p>
         </div>
 
         <div class="card" style="padding:24px">
 
-          <!-- Source info -->
-          <!-- affiché UNIQUEMENT quand un audio est chargé (sinon la dropzone juste en dessous suffit) -->
+          <!-- source, affichée seulement quand l'audio vient du Générateur -->
           <div id="acSourceInfo" class="field mono faint" style="display:none;margin-bottom:18px;font-size:12.5px;padding:12px 14px">
             🎙️ Source : <span id="acSourceLabel"></span>
           </div>
 
-          <!-- Upload audio standalone -->
-          <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFiles(event.dataTransfer.files)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;border-radius:16px;cursor:pointer;margin-bottom:18px;background:var(--panel-1)">
+          <div class="label" style="margin-bottom:10px">Ton fichier audio</div>
+
+          <div id="acDropzone" class="aaph" onclick="document.getElementById('acFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_acHandleFiles(event.dataTransfer.files)" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:52px 20px;border-radius:16px;cursor:pointer;background:var(--panel-1)">
             <div id="acDropContent" style="display:flex;flex-direction:column;align-items:center;gap:8px">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.85"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-              <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton audio ou ta vidéo ici</div>
-              <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP3 · WAV · M4A · OGG — MP4 · MOV</div>
+              <div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div>
+              <div class="faint" style="font-size:11.5px;font-family:var(--mono)">MP3 · WAV · M4A · MP4 · MOV</div>
               <button onclick="event.stopPropagation();document.getElementById('acFileIn').click()" style="margin-top:8px;padding:10px 26px;background:rgba(255,90,31,.07);border:1px solid rgba(255,90,31,.45);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,90,31,.16)'" onmouseout="this.style.background='rgba(255,90,31,.07)'">Parcourir</button>
             </div>
             <div id="acFileInfo" style="display:none;flex-direction:column;align-items:center;gap:6px">
@@ -3039,75 +3076,98 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
           <input type="file" id="acFileIn" accept="audio/*,video/mp4,video/quicktime,video/*" multiple style="display:none" onchange="_acHandleFiles(this.files);this.value=''">
 
-          <!-- Niveau de nettoyage -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);border:2px solid var(--accent);background:var(--accent-soft);color:var(--text)">
-              <span style="font-size:20px">🪄</span><span style="font-weight:600;font-size:14px">Standard</span>
+          <!-- ── mode : standard / avancé ── -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
+            <button id="acLevelNormal" onclick="_acSetLevel('normal',this)" class="ac-mode is-on" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 14px;border-radius:14px;cursor:pointer;font-family:var(--font);color:var(--text);border:2px solid var(--accent);background:var(--accent-soft)">
+              <span class="ac-mode-ic" style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
+              </span>
+              <span style="font-weight:700;font-size:14.5px">Standard</span>
+              <span class="faint" style="font-size:11px">nettoyage automatique</span>
             </button>
-            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);border:1px solid var(--border);background:var(--surface);color:var(--text-2)">
-              <span style="font-size:20px">🔊</span><span style="font-weight:600;font-size:14px">Avancé</span>
-              <span style="position:absolute;top:-8px;right:10px;background:var(--violet);color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px">Pro+</span>
+            <button id="acLevelStrong" onclick="_acSetLevel('strong',this)" class="ac-mode" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 14px;border-radius:14px;cursor:pointer;font-family:var(--font);color:var(--text);border:1px solid var(--border);background:var(--surface)">
+              <span class="ac-mode-ic" style="width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>
+              </span>
+              <span style="font-weight:700;font-size:14.5px">Avancé</span>
+              <span class="faint" style="font-size:11px">traitement renforcé</span>
             </button>
           </div>
 
-          <!-- ══ #154 · CE QU'ON APPLIQUE — tout coché par défaut, choix mémorisé ══ -->
-          <div style="padding:13px 15px;margin-bottom:12px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px">
-            <div style="font-size:13.5px;font-weight:700;margin-bottom:2px">⚙️ Ce qu'on applique</div>
-            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Décoche ce que tu ne veux pas — ton choix est retenu pour les prochaines fois</div>
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
-              <input type="checkbox" id="acOptSilences" checked onchange="_acSetOpt('silences',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
-              <span style="flex:1">
-                <span style="font-size:12.5px;font-weight:700">Supprimer les silences</span>
-                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)">Les blancs et hésitations entre les phrases</span>
+          <!-- ── paramètres avancés (replié par défaut) ── -->
+          <button onclick="_acToggleAdv()" class="row" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;border-radius:13px;margin-top:18px;border:1px solid var(--border);background:var(--surface);text-align:left;cursor:pointer;font-family:var(--font);color:var(--text)">
+            <span class="row gap12" style="align-items:center">
+              <span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
               </span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
-              <input type="checkbox" id="acOptDenoise" checked onchange="_acSetOpt('denoise',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
-              <span style="flex:1">
-                <span style="font-size:12.5px;font-weight:700">Enlever les bruits de fond</span>
-                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)" id="acDenoiseHint">Souffle, clim, clics — sans crédit en plus</span>
+              <span class="col" style="line-height:1.35">
+                <span style="font-weight:600;font-size:14px">Paramètres avancés</span>
+                <span class="faint" style="font-size:11.5px">Traitement voix, silences, qualité</span>
               </span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer">
-              <input type="checkbox" id="acOptVoice" checked onchange="_acSetOpt('voice',this.checked)" style="accent-color:var(--accent);width:16px;height:16px">
-              <span style="flex:1">
-                <span style="font-size:12.5px;font-weight:700">Améliorer la voix</span>
-                <span class="faint" style="display:block;font-size:10px;font-family:var(--mono)">Égaliseur + compresseur + niveau plateformes</span>
-              </span>
-            </label>
-          </div>
-
-          <!-- ══ DÉRUSH IA (#151) — bégaiements, reprises, « euh » (Pro / Élite) ══ -->
-          <div onclick="_acToggleDerush()" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;margin-bottom:12px;background:var(--panel-1);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="display:flex;align-items:center;gap:11px">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
-              <div>
-                <div style="font-size:13.5px;font-weight:700">Dérush IA <span style="font-size:9px;font-family:var(--mono);letter-spacing:.06em;color:var(--accent-2);border:1px solid var(--accent-line);border-radius:5px;padding:1.5px 5px;vertical-align:2px;margin-left:4px">PRO · ÉLITE</span></div>
-                <div style="font-size:10.5px;font-family:var(--mono);color:var(--text-3);margin-top:1px">Coupe les « euh », bégaiements et reprises — tu valides chaque coupe</div>
-              </div>
-            </div>
-            <div id="acDerushSwitch" style="width:40px;height:23px;background:var(--surface-3);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-              <div id="acDerushThumb" style="width:17px;height:17px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.7"></div>
-            </div>
-          </div>
-
-          <!-- ══ #153 · Mastering voix : EQ paramétrique + compresseur monobande ══ -->
-          <div style="margin-top:16px">
-            <div style="font-size:11px;font-family:var(--mono);letter-spacing:.08em;color:var(--text3)">🎚️ VOIX — ÉGALISEUR + COMPRESSEUR</div>
-            <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-top:3px">Traitement studio : plus d'épaisseur, plus de présence, niveau constant</div>
-            <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
-              <button id="acVoice_off"     onclick="_acSetVoicePreset('off')"     style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Aucun</button>
-              <button id="acVoice_natural" onclick="_acSetVoicePreset('natural')" style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Naturel</button>
-              <button id="acVoice_podcast" onclick="_acSetVoicePreset('podcast')" style="flex:1;min-width:78px;padding:9px 10px;background:var(--accent);border:1.5px solid var(--accent);border-radius:20px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Podcast</button>
-              <button id="acVoice_punch"   onclick="_acSetVoicePreset('punch')"   style="flex:1;min-width:78px;padding:9px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:20px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Punchy</button>
-            </div>
-          </div>
-
-          <button id="acAnalyzeBtn" class="btn" onclick="_acAnalyze()" style="width:100%;margin-top:14px;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 34px -8px var(--accent-glow)">
-            🪄 Supprimer les silences automatiquement · 1 crédit
+            </span>
+            <svg id="acAdvChev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="faint" style="transition:.2s"><path d="M9 6l6 6-6 6"/></svg>
           </button>
 
-          <!-- ══ Coupes du dérush : appliquées d'office, chaque case décochée restaure le passage ══ -->
+          <div id="acAdvPanel" style="display:none;margin-top:16px">
+
+            <div class="label" style="margin-bottom:10px">Traitement voix</div>
+            <div id="acVoiceGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:20px">
+              <button id="acVoice_off"     onclick="_acSetVoicePreset('off')"     class="ac-vp" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 10px;border-radius:12px;cursor:pointer;font-family:var(--font);color:var(--text);border:1px solid var(--border);background:var(--surface)"><span style="font-weight:700;font-size:13.5px">Aucun</span><span class="faint" style="font-size:10.5px">original</span></button>
+              <button id="acVoice_natural" onclick="_acSetVoicePreset('natural')" class="ac-vp" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 10px;border-radius:12px;cursor:pointer;font-family:var(--font);color:var(--text);border:2px solid var(--accent);background:var(--accent-soft)"><span style="font-weight:700;font-size:13.5px">Naturel</span><span class="faint" style="font-size:10.5px">équilibré</span></button>
+              <button id="acVoice_podcast" onclick="_acSetVoicePreset('podcast')" class="ac-vp" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 10px;border-radius:12px;cursor:pointer;font-family:var(--font);color:var(--text);border:1px solid var(--border);background:var(--surface)"><span style="font-weight:700;font-size:13.5px">Podcast</span><span class="faint" style="font-size:10.5px">chaleureux</span></button>
+              <button id="acVoice_punch"   onclick="_acSetVoicePreset('punch')"   class="ac-vp" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 10px;border-radius:12px;cursor:pointer;font-family:var(--font);color:var(--text);border:1px solid var(--border);background:var(--surface)"><span style="font-weight:700;font-size:13.5px">Punchy</span><span class="faint" style="font-size:10.5px">nerveux</span></button>
+            </div>
+
+            <div class="label" style="margin-bottom:10px">Rythme</div>
+            <div class="col gap10" style="margin-bottom:20px">
+              <button id="acRowSilences" class="ac-row is-on" onclick="_acRowToggle('silences')">
+                <span class="ac-row-l">
+                  <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Supprimer les silences</span><span class="faint" style="font-size:11.5px">Coupe les blancs entre les phrases</span></span>
+                </span>
+                <span class="ac-sw"><span class="ac-sw-th"></span></span>
+              </button>
+              <button id="acRowFillers" class="ac-row" onclick="_acToggleDerush()">
+                <span class="ac-row-l">
+                  <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span class="row gap8" style="align-items:center"><span style="font-weight:600;font-size:14px">Retirer les hésitations</span><span class="tag-beta" style="font-size:9px">PRO+</span></span><span class="faint" style="font-size:11.5px">« euh », « hum », faux départs</span></span>
+                </span>
+                <span class="ac-sw" id="acDerushSwitch"><span class="ac-sw-th" id="acDerushThumb"></span></span>
+              </button>
+              <button id="acRowBreath" class="ac-row is-on" onclick="_acRowToggle('breath')">
+                <span class="ac-row-l">
+                  <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Atténuer les respirations</span><span class="faint" style="font-size:11.5px">Inspirations et bruits de bouche</span></span>
+                </span>
+                <span class="ac-sw"><span class="ac-sw-th"></span></span>
+              </button>
+            </div>
+
+            <div class="label" style="margin-bottom:10px">Qualité</div>
+            <div class="col gap10">
+              <button id="acRowDenoise" class="ac-row is-on" onclick="_acRowToggle('denoise')">
+                <span class="ac-row-l">
+                  <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Supprimer le bruit de fond</span><span class="faint" style="font-size:11.5px">Ventilo, clavier, écho de pièce</span></span>
+                </span>
+                <span class="ac-sw"><span class="ac-sw-th"></span></span>
+              </button>
+              <button id="acRowVoice" class="ac-row is-on" onclick="_acRowToggle('voice')">
+                <span class="ac-row-l">
+                  <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16M8 16v-4M13 16V8M18 16v-7"/></svg></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Volume constant</span><span class="faint" style="font-size:11.5px">Normalise à −14 LUFS (standard réseaux)</span></span>
+                </span>
+                <span class="ac-sw"><span class="ac-sw-th"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <button id="acAnalyzeBtn" class="btn btn-primary" onclick="_acAnalyze()" style="width:100%;margin-top:20px;padding:17px;font-weight:800;font-size:16.5px;border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 16px 44px -10px var(--accent-glow)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg>
+            Nettoyer mon audio
+          </button>
+
+          <!-- coupes du dérush : la liste reste sous le formulaire -->
           <div id="acDerushPanel" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:14px 15px">
             <div style="font-size:12.5px;font-weight:800;margin-bottom:2px">✂️ Coupes appliquées</div>
             <div class="faint" style="font-size:10.5px;font-family:var(--mono);margin-bottom:10px">Appliquées automatiquement — décoche une coupe pour restaurer le passage</div>
@@ -3115,7 +3175,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <button id="acDerushApply" onclick="_acDerushApply(this)" style="display:none;width:100%;margin-top:12px;padding:11px;background:var(--green);border:none;border-radius:9px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">Appliquer le dérush</button>
           </div>
 
-          <!-- Waveform avec segments supprimés -->
           <div id="acWaveWrap" style="display:none;margin-top:14px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative">
             <canvas id="acWaveCanvas" style="width:100%;height:64px;display:block"></canvas>
             <div id="acWaveStats" style="padding:6px 10px;font-size:10px;font-family:var(--mono);color:var(--text-3);text-align:center"></div>
@@ -3124,10 +3183,53 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="acTip" class="center faint" style="margin-top:14px;font-size:12px">
             Charge un audio ou utilise celui du Générateur (étape 3 Voix)
           </div>
-          <!-- Résultat inline après nettoyage -->
           <div id="acResult"></div>
         </div>
+      </div>
 
+      <!-- ─────────── phase « running » ─────────── -->
+      <div id="acPhaseRunning" class="col" style="display:none;width:100%;min-height:72vh;align-items:center;justify-content:center;padding:20px">
+        <div class="card" style="width:100%;max-width:440px;padding:44px 36px;text-align:center">
+          <div style="width:56px;height:56px;border-radius:50%;margin:0 auto 20px;border:3px solid var(--surface-3);border-top-color:var(--accent);animation:spin .9s linear infinite"></div>
+          <div class="display" style="font-size:19px;font-weight:700">Nettoyage en cours…</div>
+          <p class="faint" style="font-size:12.5px;margin-top:7px;margin-bottom:22px">Détection des silences et hésitations</p>
+          <div style="height:6px;border-radius:6px;background:var(--surface-2);overflow:hidden">
+            <div id="acProgressBar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── phase « done » ─────────── -->
+      <div id="acPhaseDone" class="col" style="display:none;width:100%;min-height:72vh;align-items:center;justify-content:center;padding:20px">
+        <div class="card rise" style="width:100%;max-width:440px;padding:32px 28px">
+          <div class="col" style="align-items:center;text-align:center;margin-bottom:22px">
+            <div style="width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(40,199,149,.12);border:1px solid rgba(40,199,149,.35);margin-bottom:14px">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="display" style="font-size:20px;font-weight:700">Audio nettoyé</div>
+            <p class="faint" style="font-size:12.5px;margin-top:7px"><b id="acDoneCuts" style="color:var(--green)">0 silence</b><span id="acDoneCutsSuffix"> supprimé</span> · <span id="acDoneSaved">0 s</span> gagnés</p>
+          </div>
+
+          <div class="card" style="padding:14px 16px;background:var(--panel-1);margin-bottom:16px">
+            <div class="row gap12" style="align-items:center">
+              <button id="acDonePlay" onclick="_acDoneTogglePlay()" style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:none;cursor:pointer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#1A0A02" stroke="none"><path d="M7 4l13 8-13 8z"/></svg>
+              </button>
+              <div id="acDoneWave" class="row" style="flex:1;gap:2.5px;align-items:center;height:32px"></div>
+              <span id="acDoneDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
+            </div>
+          </div>
+
+          <button id="acDoneDl" class="btn btn-primary" style="width:100%;font-weight:800;padding:14px;border-radius:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            Télécharger
+          </button>
+          <div class="row gap10" style="margin-top:10px">
+            <button id="acDoneLib" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>
+            <button id="acDoneCmp" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg> Comparer</button>
+          </div>
+          <button class="btn-quiet btn-sm" style="width:100%;margin-top:12px" onclick="_acPhase('idle')">↺ Nettoyer un autre audio</button>
+        </div>
       </div>
     </div><!-- /audioclean -->
 
@@ -21953,11 +22055,20 @@ function _acSetLevel(level, btn){
     }
   }
   _acLevel = level;
-  var _acBase='display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px;border-radius:14px;cursor:pointer;transition:all .15s;position:relative;font-family:var(--font);';
-  var _acOn=_acBase+'border:2px solid var(--accent);background:var(--accent-soft);color:var(--text)';
-  var _acOff=_acBase+'border:1px solid var(--border);background:var(--surface);color:var(--text-2)';
-  document.getElementById('acLevelNormal').style.cssText = level==='normal' ? _acOn : _acOff;
-  document.getElementById('acLevelStrong').style.cssText = level==='strong' ? _acOn : _acOff;
+  // La sélection est une CLASSE (.is-on), pas une réécriture de tout le style :
+  // l'ancienne version reconstruisait `cssText` et écrasait donc le contenu de
+  // la carte — icône comprise — à chaque clic.
+  for(const [id, k] of [['acLevelNormal','normal'], ['acLevelStrong','strong']]){
+    const b = document.getElementById(id); if(!b) continue;
+    const on = k === level;
+    b.classList.toggle('is-on', on);
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
+    const ic = b.querySelector('.ac-mode-ic'), sv = ic && ic.querySelector('svg');
+    if(ic){ ic.style.background = on ? 'var(--accent-soft)' : 'var(--surface-2)';
+            ic.style.borderColor = on ? 'var(--accent-line)' : 'var(--border)'; }
+    if(sv) sv.setAttribute('stroke', on ? 'var(--accent-2)' : 'var(--text-3)');
+  }
 }
 
 function _acDrawWaveform(data, sr, keepSegs, totalLen){
@@ -22301,28 +22412,97 @@ function _acSetVoicePreset(key){
     const b = document.getElementById('acVoice_' + k);
     if(!b) continue;
     const on = k === key;
-    b.style.background   = on ? 'var(--accent)' : 'var(--surface-2)';
-    b.style.borderColor  = on ? 'var(--accent)' : 'var(--border)';
-    b.style.color        = on ? '#fff' : 'var(--text2)';
+    b.classList.toggle('is-on', on);
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
   }
   try{ localStorage.setItem('aa_ac_voice', key); }catch(_){}
 }
 
 // ── #154 · Ce qu'on applique (mémorisé) ──
-const _acOpts = { silences: true, denoise: true, voice: true };
+const _acOpts = { silences: true, denoise: true, voice: true, breath: true };
 try{
   const _so = JSON.parse(localStorage.getItem('aa_ac_opts') || 'null');
   if(_so && typeof _so === 'object') Object.assign(_acOpts, _so);
 }catch(_){}
+// ── Refonte 1:1 : les trois phases, les lignes à interrupteur, le repli ──────
+// La maquette remplace la liste de cases à cocher par des LIGNES cliquables avec
+// interrupteur, et sort le résultat du formulaire pour lui donner son propre
+// écran. La mécanique dessous n'a pas bougé : ces fonctions ne font que traduire
+// un état déjà existant (_acOpts, _acDerushEnabled) en classes.
+const _AC_ROW_ID = { silences:'acRowSilences', denoise:'acRowDenoise', voice:'acRowVoice', breath:'acRowBreath' };
+function _acRowPaint(key){
+  const el = document.getElementById(_AC_ROW_ID[key]);
+  if(el) el.classList.toggle('is-on', !!_acOpts[key]);
+}
+function _acRowToggle(key){
+  _acSetOpt(key, !_acOpts[key]);
+  _acRowPaint(key);
+}
+function _acToggleAdv(){
+  const panel = document.getElementById('acAdvPanel'), chev = document.getElementById('acAdvChev');
+  if(!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if(open) panel.classList.add('rise');
+  if(chev) chev.style.transform = open ? 'rotate(90deg)' : 'none';
+}
+// idle → running → done. La barre de progression n'est PAS une animation de 3 s
+// en dur comme dans la maquette : le nettoyage dure ce qu'il dure, on avance
+// jusqu'à 92 % puis on attend le vrai résultat — une barre qui finit avant le
+// travail est un mensonge.
+let _acProgTimer = null;
+function _acPhase(ph, data){
+  for(const [id, on] of [['acPhaseIdle', ph==='idle'], ['acPhaseRunning', ph==='running'], ['acPhaseDone', ph==='done']]){
+    const el = document.getElementById(id);
+    if(el) el.style.display = on ? (id === 'acPhaseIdle' ? 'block' : 'flex') : 'none';
+  }
+  clearInterval(_acProgTimer); _acProgTimer = null;
+  if(ph === 'running'){
+    const bar = document.getElementById('acProgressBar');
+    let w = 0;
+    if(bar){ bar.style.width = '0%'; bar.style.transition = 'width .4s linear'; }
+    _acProgTimer = setInterval(() => { w = Math.min(92, w + 2.5); if(bar) bar.style.width = w + '%'; }, 260);
+  }
+  if(ph === 'done' && data) _acFillDone(data);
+}
+function _acFillDone(d){
+  const cuts = d.cuts | 0, saved = Math.round(d.saved || 0);
+  const el = (id) => document.getElementById(id);
+  if(el('acDoneCuts'))  el('acDoneCuts').textContent  = cuts + (cuts > 1 ? ' silences' : ' silence');
+  if(el('acDoneCutsSuffix')) el('acDoneCutsSuffix').textContent = cuts > 1 ? ' supprimés' : ' supprimé';
+  if(el('acDoneSaved')) el('acDoneSaved').textContent = saved + ' s';
+  if(el('acDoneDur'))   el('acDoneDur').textContent   = _acFmt(d.duration || 0);
+  // la forme d'onde : 20 barres, la part nettoyée en orange
+  const wave = el('acDoneWave');
+  if(wave){
+    const ratio = d.duration ? Math.max(.15, Math.min(.9, saved / (saved + d.duration))) : .4;
+    wave.innerHTML = [70,60,80,55,68,74,62,78,66,72,58,76,64,70,60,74,58,68,72,62]
+      .map((h, i) => `<div style="flex:1;border-radius:2px;height:${h}%;background:${i < 20 * ratio ? 'var(--accent)' : 'var(--surface-3)'}"></div>`).join('');
+  }
+  const dl = el('acDoneDl');
+  if(dl) dl.onclick = () => { if(d.url){ const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.mp3'; a.click(); } };
+  const lib = el('acDoneLib'); if(lib) lib.onclick = () => { try{ _acSaveToLibrary && _acSaveToLibrary(d); }catch(_){ toast('Bibliothèque indisponible'); } };
+  const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = () => { try{ _acCompare && _acCompare(d); }catch(_){ toast('Comparaison indisponible'); } };
+  window._acDoneData = d;
+}
+const _acFmt = (s) => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
+function _acDoneTogglePlay(){
+  const d = window._acDoneData;
+  if(!d || !d.url) return;
+  if(!window._acDoneAudio) window._acDoneAudio = new Audio(d.url);
+  const a = window._acDoneAudio;
+  if(a.paused) a.play(); else a.pause();
+}
+
 function _acSetOpt(key, val){
   _acOpts[key] = !!val;
   if(key === 'denoise') _acDenoiseEnabled = !!val;   // l'ancien drapeau suit
   try{ localStorage.setItem('aa_ac_opts', JSON.stringify(_acOpts)); }catch(_){}
 }
 document.addEventListener('DOMContentLoaded', () => {
-  for(const k of ['silences','denoise','voice']){
-    const el = document.getElementById('acOpt' + k[0].toUpperCase() + k.slice(1));
-    if(el) el.checked = _acOpts[k];
+  for(const k of ['silences','denoise','voice','breath']){
+    _acRowPaint(k);
   }
   _acDenoiseEnabled = _acOpts.denoise;
 });
