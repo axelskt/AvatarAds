@@ -220,8 +220,9 @@ const ANIMS = [
   'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form',
   'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount', 'waitlist',
   'music', 'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag',
-  'schedule', 'formats', 'variants', 'pin', 'qr', 'inbox', 'wizard', 'stock',
-  'page'
+  'schedule', 'pin', 'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes',
+  'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations',
+  'property', 'menu', 'leads'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -756,14 +757,24 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     story    — DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories ».
     hashtag  — UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche ».
     schedule — UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu ».
-    formats  — UNE VIDEO MAITRE et TROIS CADRES qui en sortent : 9:16, 1:1, 16:9. « dans tous les formats », « adapte a chaque reseau ».
-    variants — LE MEME CLIP EN TROIS VERSIONS, accroches differentes. « plusieurs versions », « tu declines », « tu testes trois accroches ».
     pin      — UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires ».
     qr       — UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es ».
-    inbox    — UNE BOITE DE RECEPTION : les messages listes, les non-lus en pastille. « tes messages », « ta boite », « tu recois des demandes ».
     wizard   — UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape ».
-    stock    — DES LIGNES DE STOCK dont les jauges descendent, la derniere passe au rouge. « le stock part », « il reste peu de places », « bientot epuise ».
-    page     — UNE PAGE DE VENTE : le titre, le visuel, le champ, le bouton qui pulse. « ta page de vente », « la landing », « la page ou ils achetent ».
+    product  — E-COMMERCE — UNE FICHE PRODUIT : le visuel, le nom, le prix, le bouton d'ajout au panier. « mon produit », « cet article », « ce que je vends ».
+    cart     — E-COMMERCE — UN PANIER : les articles, les quantites, le total qui s'affiche. « le panier moyen », « ils ajoutent au panier », « la commande ».
+    delivery — E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h ».
+    sizes    — E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris ».
+    candles  — TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart ».
+    portfolio— TRADING — UN PORTEFEUILLE : la valeur totale, la variation, les lignes d'actifs. « mon portefeuille », « mes positions », « ce que ca vaut ».
+    order    — TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position ».
+    pnl      — TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut ».
+    mrr      — SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent ».
+    churn    — SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd ».
+    onboarding— SAAS — L'ACTIVATION : les taches se cochent, le pourcentage monte. « l'onboarding », « la prise en main », « les premieres etapes ».
+    integrations— SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec ».
+    property — IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location ».
+    menu     — RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix ».
+    leads    — PROSPECTION — UN PIPELINE : les fiches passent de colonne en colonne jusqu'a signe. « mes prospects », « le pipeline », « ils passent client ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
