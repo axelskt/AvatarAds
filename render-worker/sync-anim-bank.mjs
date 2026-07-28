@@ -90,3 +90,54 @@ if (process.argv.includes('--check')) {
     process.exit(1)
   }
 }
+
+// ── LEXIQUE AUTOMATIQUE ─────────────────────────────────────────────────────
+// Axel : « toutes les animations doivent avoir un groupe de mots-clés qui les
+// appelle ». Le lexique écrit à la main couvrait 40 racines pour 153 animations :
+// sur un audio hors AvatarAds, le remplissage ne trouvait donc rien à poser et
+// laissait des trous de sept secondes. Les phrases déclencheuses existent déjà —
+// elles sont dans les descriptions, entre « … », puisque le modèle les lit. On
+// en dérive le lexique : une seule source, et ajouter un mot-clé se fait en
+// enrichissant la description, jamais en éditant deux listes.
+{
+  const STOP = new Set(('pour avec dans tout tous plus sans cette votre notre vous nous mais donc alors ' +
+    'meme chaque etre cest quand comme fait faire que qui les des une est son ses ton tes elle ont ils ' +
+    'sur par mon mes cela quoi dont moins tres bien juste aussi deja encore jamais toujours trop assez ' +
+    'rien toute toutes autre autres ceux celle').split(' '))
+  const norm = (x) => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const paires = new Map()
+  for (const a of BANK) {
+    for (const ph of [...String(a.desc).matchAll(/«([^»]+)»/g)].map((m) => m[1])) {
+      for (const w of norm(ph).split(/[^a-z0-9]+/)) {
+        if (w.length < 4 || STOP.has(w)) continue
+        const st = w.slice(0, 6)
+        if (!paires.has(st)) paires.set(st, [])
+        if (!paires.get(st).includes(a.name)) paires.get(st).push(a.name)
+      }
+    }
+  }
+  // une racine ambiguë reste utile : le dédoublonnage à la pose répartit ensuite
+  const lignes = []
+  let cur = '  '
+  for (const [st, noms] of [...paires].sort()) {
+    for (const n of noms) {
+      const t = `['${st}', '${n}'], `
+      if (cur.length + t.length > 118) { lignes.push(cur.trimEnd()); cur = '  ' }
+      cur += t
+    }
+  }
+  if (cur.trim()) lignes.push(cur.trimEnd())
+  const O = readFileSync(TARGET, 'utf8')
+  const MA = '// <<< ANIM-LEX:AUTO', MB = '  // <<< /ANIM-LEX:AUTO >>>'
+  const a = O.indexOf(MA), b = O.indexOf(MB)
+  if (a < 0 || b < 0) { console.error('✗ marqueurs ANIM-LEX:AUTO absents de orchestrate'); process.exit(1) }
+  // on repart de la DERNIERE ligne de l en-tete du marqueur (5 lignes de commentaire)
+  let tete = a
+  for (let k = 0; k < 5; k++) tete = O.indexOf('\n', tete) + 1
+  const avant = O.slice(0, tete)
+  const apres = O.slice(b)
+  const neuf = avant + lignes.join('\n') + '\n  '
+  writeFileSync(TARGET, neuf + apres)
+  console.log('✓ lexique auto : ' + paires.size + ' racines, ' +
+    new Set([...paires.values()].flat()).size + '/' + BANK.length + ' animations appelables')
+}

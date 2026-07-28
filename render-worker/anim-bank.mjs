@@ -20,54 +20,54 @@
 
 export const BANK = [
   // ── le produit, l'écran, le résultat ──
-  { name: 'screen',  desc: "une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil." },
+  { name: 'screen',  desc: "une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil. « tu vas dans », « clique sur », « tu selectionnes », « rends-toi dans l onglet », « en haut a droite »." },
   { name: 'result',  desc: "le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne »." },
   { name: 'phone',   desc: "UN DOIGT QUI FAIT DEFILER un telephone vertical, video apres video. UNIQUEMENT quand il parle de SCROLLER : « ils swipent », « tu scrolles », « il passe a la suivante », « dans le fil ». Pas pour dire simplement « sur TikTok »." },
-  { name: 'split',   desc: "un split screen, deux choses cote a cote, un ecran qui se coupe en deux." },
+  { name: 'split',   desc: "un split screen, deux choses cote a cote, un ecran qui se coupe en deux. « cote a cote », « en meme temps », « split screen », « les deux ensemble », « en haut et en bas »." },
   { name: 'avatar',  desc: "la creation d'un avatar, un personnage qui se genere, « ton premier avatar »." },
   { name: 'faceless', desc: "l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer." },
-  { name: 'voice',   desc: "une voix, un clonage vocal, un enregistrement, du son." },
+  { name: 'voice',   desc: "une voix, un clonage vocal, un enregistrement, du son. « ta voix », « clone ta voix », « la voix off », « enregistre-toi », « le micro », « parle »." },
   { name: 'cut',     desc: "une timeline qu'on coupe : le montage, la decoupe, « on enleve les blancs »." },
-  { name: 'type',    desc: "un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max)." },
+  { name: 'type',    desc: "un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max). « le script s ecrit », « il redige pour toi », « le texte apparait », « genere le texte »." },
 
   // ── la marque, les outils, l'engagement contractuel ──
-  { name: 'logo',    desc: "DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage." },
+  { name: 'logo',    desc: "DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage. « mon site », « ma marque », « chez nous », « notre plateforme »." },
   { name: 'tools',   desc: "LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils." },
   { name: 'copy',    desc: "UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications." },
   { name: 'connect', desc: "DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote." },
   { name: 'sign',    desc: "UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient »." },
   { name: 'post',    desc: "PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes »." },
-  { name: 'upload',  desc: "une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer." },
+  { name: 'upload',  desc: "une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer. « importe ton fichier », « televerse », « depose ton audio », « envoie ta video », « charge ton image »." },
 
   // ── l'argent ──
-  { name: 'countup', desc: "UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans \"value\" et l'unite dans \"unit\"." },
+  { name: 'countup', desc: "UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans \"value\" et l'unite dans \"unit\". « ca fait X euros », « X millions », « X abonnes », « on est a X »." },
 
   // ── le temps ──
   { name: 'clock',   desc: "la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes »." },
-  { name: 'calendar', desc: "une grille qui se remplit : publier regulierement, tous les jours, la constance." },
+  { name: 'calendar', desc: "une grille qui se remplit : publier regulierement, tous les jours, la constance. « tous les jours », « chaque semaine », « poste regulierement », « la constance », « ton planning »." },
 
   // ── la croissance, l'audience ──
-  { name: 'grow',    desc: "une croissance, des vues qui montent, un resultat qui progresse." },
+  { name: 'grow',    desc: "une croissance, des vues qui montent, un resultat qui progresse. « ca progresse », « ca augmente », « ca grimpe », « les resultats montent », « la croissance »." },
   { name: 'engage',  desc: "DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow." },
-  { name: 'network', desc: "un reseau, une connexion, une communaute, des gens relies." },
-  { name: 'rocket',  desc: "un lancement, un decollage, ce qui explose, devenir viral." },
-  { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent." },
-  { name: 'bars2',   desc: "deux colonnes comparees : le avant/apres chiffre." },
+  { name: 'network', desc: "un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes »." },
+  { name: 'rocket',  desc: "un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance »." },
+  { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste »." },
+  { name: 'bars2',   desc: "deux colonnes comparees : le avant/apres chiffre. « avant apres », « la difference », « d un cote et de l autre », « compare les deux chiffres »." },
 
   // ── la logique, la methode ──
   { name: 'idea',    desc: "une idee, une astuce, une methode, un declic, « le secret c'est... »." },
   { name: 'steps',   desc: "1, 2, 3 : une methode, « il te suffit de », les etapes." },
   { name: 'flow',    desc: "A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z »." },
-  { name: 'orbit',   desc: "un centre et des satellites : tout part d'un seul outil." },
+  { name: 'orbit',   desc: "un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de »." },
   { name: 'list',    desc: "une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options »." },
   { name: 'target',  desc: "un objectif, une cible, quelque chose de precis, « exactement »." },
-  { name: 'search',  desc: "chercher, analyser, trouver, reperer." },
+  { name: 'search',  desc: "chercher, analyser, trouver, reperer. « je cherche », « analyse », « trouve », « repere », « regarde ce qui marche », « la recherche »." },
 
   // ── l'opposition, le changement d'etat ──
   { name: 'compare', desc: "un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide." },
   { name: 'swap',    desc: "une chose remplacee par une autre : « au lieu de », « a la place de », remplacer." },
   { name: 'toggle',  desc: "un interrupteur qui s'allume : activer, « en un clic », ca se met en marche." },
-  { name: 'check',   desc: "c'est valide, c'est fait, ca marche, c'est simple, c'est inclus." },
+  { name: 'check',   desc: "c'est valide, c'est fait, ca marche, c'est simple, c'est inclus. « c est fait », « c est bon », « ca marche », « c est inclus », « rien de plus simple », « valide »." },
   // ── PAQUET 1 (#157) — la qualité, le temps, la diffusion ──
   { name: 'quality', desc: "LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut." },
   { name: 'podium',  desc: "UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde »." },
@@ -232,6 +232,8 @@ export const BANK = [
   { name: 'leads',   desc: "SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »)." },
   { name: 'comment', desc: "LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres." },
   { name: 'share',   desc: "CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »)." },
+  { name: 'views',   desc: "LA VIGNETTE DE SA VIDEO et le COMPTEUR DE VUES qui grimpe dessous pendant que la lecture avance. « des millions de vues », « ca fait X vues », « les vues montent ». Mets le nombre entendu dans items[0].text (« 1 200 000 »)." },
+  { name: 'linkbio', desc: "LE PROFIL ET LE LIEN DE LA BIO, avec un doigt qui vient appuyer dessus. « le lien dans ma bio », « clique sur le lien en bio », « tu as juste a mettre un lien dans ta bio ». Mets le libelle du lien dans items[0].text et le pseudo dans items[1].text." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
