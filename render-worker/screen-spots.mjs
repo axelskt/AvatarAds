@@ -108,5 +108,8 @@ export const spotForWords = (screen, words) => {
   return bestScore >= 0.5 ? box(best) : null
 }
 
+/** Une zone par son NOM exact — c'est ainsi que le chef d'orchestre la désigne. */
+export const zoneNamed = (screen, name) => box(zonesOf(screen).find((z) => z.name === name))
+
 /** Toutes les zones d'un écran, pour l'Éditeur (correction manuelle, #159). */
 export const zonesFor = (screen) => zonesOf(screen).slice()

@@ -606,6 +606,13 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       champ-url                      « URL du serveur MCP distant »
       bouton-ajouter                 « Ajouter »
 // <<< /SCREEN-CATALOG >>>
+  ON CLIQUE D'ABORD, ON ARRIVE ENSUITE. Quand il dit « tu vas dans X », la
+  premiere ligne vise l'ENTREE DE NAVIGATION sur l'ecran ou il se trouve — pas
+  directement le contenu de X. « Dans mon compte, tout en bas » se montre en
+  cadrant "mon-compte" dans la barre laterale (elle est en bas, c'est ce qu'il
+  decrit), et SEULEMENT APRES on ouvre l'ecran correspondant. Sauter le clic,
+  c'est teleporter le spectateur : il ne saura pas ou trouver le bouton.
+
   UNE ETAPE DECRITE = UNE LIGNE. C'est la regle la plus importante de ce champ, et
   c'est celle qui a manque : sur un tutoriel qui decrivait HUIT manipulations, le
   plan n'en portait que DEUX — les six autres moments montraient une forme
