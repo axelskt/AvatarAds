@@ -194,37 +194,43 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .only-mobile{display:flex}
   .hide-mobile{display:none !important}
   .hero2-grid{grid-template-columns:1fr;gap:0}
-  /* mobile : une seule colonne — on remet la preuve sociale juste sous le champ,
-     avant la vitrine, comme avant la sortie de .trust-row du bloc de gauche */
-  .hero-left{order:1} .trust-row{order:2;grid-column:1;margin-top:18px !important;justify-content:center}
-  .hero2-show{order:3} .hero-reassure{order:4;grid-column:1;gap:14px !important;margin-top:20px !important}
-  .hero-reassure>div{font-size:11.5px !important}
-  .hero-sec{padding-top:30px !important;padding-bottom:6px !important}
-  .hero-left{display:flex;flex-direction:column;align-items:center;text-align:center}
+  /* ── HERO MOBILE — recopié du handoff (HeroV2, branche `mob`). Ce n'est pas le
+     desktop rétréci : l'ordre change (les trois atouts remontent AU-DESSUS du
+     champ), les libellés raccourcissent et le paragraphe perd sa première ligne. */
+  .hero-sec{padding-top:30px !important;padding-bottom:24px !important}
+  .hero-left{order:1;display:flex;flex-direction:column;align-items:center;text-align:center}
+  .trust-row{order:2} .hero2-show{order:3}
+  .hero-reassure{display:none !important}          /* remplacée par .hero-reassure-m */
   .hero-left .pill .mono{font-size:10.5px !important;white-space:normal}
   .hero-left h1{font-size:38px !important;margin-top:18px !important;line-height:1.02 !important}
-  .hero-left p{margin-top:16px !important;font-size:15.5px !important}
-  .hero-left form{max-width:100% !important;margin-top:22px !important;padding:5px 5px 5px 8px !important}
+  .hero-left p{margin-top:16px !important;margin-bottom:8px !important;font-size:15px !important}
+  /* en mobile la phrase n'est plus mise en avant : tout le paragraphe est en gris */
+  .hero-left p b{color:var(--text-2) !important;font-weight:400 !important}
+  .hero-left form{max-width:100% !important;margin-top:18px !important;padding:5px 5px 5px 8px !important}
   .hero-left form>div:first-child{width:30px !important;height:30px !important}
   .hero-left form>div:first-child svg{width:15px;height:15px}
   .hero-left #lpPrompt{font-size:13px !important;padding:0 8px !important}
   .hero-left form button[type=submit]{padding:13px 20px !important;font-size:15.5px !important}
-  .trust-row{flex-direction:row !important;flex-wrap:nowrap !important;justify-content:space-between !important;align-items:center;width:100%;margin-top:18px !important;gap:8px !important}
-  .trust-row .pill{padding:6px 10px !important;font-size:11px !important;gap:5px !important}
-  .trust-row>div:last-child{font-size:11px !important;text-align:right}
-  /* Hero showcase — vraie variante mobile (proto k=.72) */
-  .hero2-show{height:384px !important;width:100%;max-width:360px;margin:-27px auto 0 !important;padding-top:0;animation:none !important}
-  #heroSparks{inset:16% 2% 2% 2% !important}
+  .trust-row{grid-column:1;flex-wrap:wrap !important;justify-content:center;align-items:center;gap:10px !important;margin-top:20px !important}
+  .trust-row .pill{padding:6px 11px !important;gap:6px !important}
+  .trust-row .pill svg{width:12px;height:12px}
+  .trust-row .pill span,.trust-row .pill b{font-size:11.5px !important}
+  .trust-row>div:last-child{font-size:11.5px !important;white-space:nowrap}
+  /* Hero showcase — vraie variante mobile (proto k=.72) : 500×0,72 + 16 de marge haute */
+  .hero2-show{height:376px !important;width:100%;max-width:360px;margin:18px auto 0 !important;padding-top:0;animation:none !important}
   section.wrap:not(.hero-sec){padding-top:25px !important;padding-bottom:25px !important}
   #scWrap{padding-top:0 !important}
   #scHeader{padding-top:20px !important;padding-bottom:20px !important}
   /* 380px sur un écran de 375 → 3 px de débordement horizontal : on borne au viewport */
   .hp-glow{width:min(380px,96vw) !important;height:min(380px,96vw) !important}
-  .hp-left{left:2% !important;top:96px !important;width:121px !important;height:242px !important}
-  .hp-right{right:2% !important;top:109px !important;width:121px !important;height:242px !important}
-  .hp-center{top:58px !important;width:144px !important;height:294px !important}
+  /* Positions exactes du handoff (k=0,72 · paddingTop 16) : S(78)+16=72, S(96)+16=85,
+     18+16=34. Les miennes étaient toutes 24 px plus bas, et le badge des vues
+     chevauchait le téléphone au lieu de se poser au-dessus, sans inclinaison. */
+  .hp-left{left:2% !important;top:72px !important;width:121px !important;height:242px !important}
+  .hp-right{right:2% !important;top:85px !important;width:121px !important;height:242px !important}
+  .hp-center{top:34px !important;width:144px !important;height:294px !important}
   .hp-center .ph-rail{transform:scale(.72);transform-origin:right bottom}
-  .hp-views{top:70px !important;left:2px !important;transform:rotate(-7deg) !important}
+  .hp-views{top:30px !important;left:2% !important;transform:none !important}
   .hp-ready{display:none !important}
   .sc-sec{padding-bottom:56px !important}
   .sc-grid{grid-template-columns:1fr !important;gap:24px !important}
@@ -299,10 +305,24 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         sans montrer ton visage
       </h1>
       <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
-        Avatar · Montage IA · Connecté à Claude.<br>
+        <span class="hide-mobile">Avatar · Montage IA · Connecté à Claude.<br></span>
         <b style="color:var(--text)">Décris la vidéo que tu veux créer, AvatarAds génère
         une vidéo virale prête à poster.</b>
       </p>
+
+      <!-- MOBILE UNIQUEMENT — la maquette remonte les trois atouts au-dessus du
+           champ, en --text-3, et raccourcit « Optimisé formats courts ». -->
+      <div class="row rise hero-reassure-m only-mobile" style="gap:14px;margin-top:18px;flex-wrap:wrap;align-items:center;justify-content:center;color:var(--text-3)">
+        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+          100 % automatique</div>
+        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
+          Formats courts</div>
+        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+          Prêt à poster</div>
+      </div>
 
       <!-- PromptBar (funnel → connexion) -->
       <form class="rise" onsubmit="lpGenerate(event)" style="margin-top:30px;display:flex;gap:0;align-items:center;max-width:600px;width:100%;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
@@ -318,22 +338,19 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <!-- HeroShowcase — 3 iPhones -->
     <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
       <div class="hp-glow" style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
-      <!-- sparkles -->
-      <div id="heroSparks" style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:0">
-        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:48%;top:2%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:7%;top:9%;opacity:.5;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:94%;top:7%;opacity:.55;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:18%;top:88%;opacity:.4;filter:drop-shadow(0 0 4px rgba(255,255,255,.6))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:90%;top:90%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:33%;top:3%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
-        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:65%;top:2%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:2%;top:44%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:97%;top:50%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="11" height="11" style="position:absolute;left:24%;top:5%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
-        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:76%;top:4%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:1%;top:62%;opacity:.5;filter:drop-shadow(0 0 5px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
-        <svg viewBox="0 0 48 48" width="9" height="9" style="position:absolute;left:99%;top:33%;opacity:.45;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ffd9c2"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:48%;top:97%;opacity:.4;filter:drop-shadow(0 0 4px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#ff8a4c"/></svg>
+      <!-- Étincelles : les NEUF du design, reprises une à une (position, taille,
+           opacité). J'en avais mis quatorze, toutes minuscules et en z-index 0 —
+           donc DERRIÈRE les téléphones, invisibles. Ici z-index 4, devant. -->
+      <div id="heroSparks" style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:4">
+        <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:0.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:0.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:0.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:84%;top:78%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:16%;top:82%;opacity:0.55;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:60%;top:92%;opacity:0.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
+        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:44%;top:70%;opacity:0.5;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
       </div>
 
       <!-- phone gauche : bactérie -->
@@ -355,7 +372,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
 
       <!-- carte "Prête en 2 min" — position mobile (sous le téléphone droit) -->
-      <div class="card glass only-mobile" style="position:absolute;right:6%;top:337px;z-index:7;padding:7px 11px;border-radius:13px;white-space:nowrap">
+      <div class="card glass only-mobile" style="position:absolute;right:6%;top:313px;z-index:7;padding:7px 11px;border-radius:13px;white-space:nowrap">
         <div class="row gap8"><span style="width:20px;height:20px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
           <div class="col" style="line-height:1.1"><b style="font-size:12.5px">Prête en 2 min</b><span class="faint" style="font-size:9.5px">0 caméra</span></div></div>
       </div>
@@ -388,27 +405,26 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
            dérivait en dessous (le titre passe à quatre lignes, la première ligne
            grandit). Sorties toutes les deux en ligne 2, `align-items:center` les
            tient alignées à n'importe quelle largeur, sans nombre magique. -->
-      <div class="row rise trust-row" style="gap:24px;margin-top:26px;flex-wrap:wrap">
+      <div class="row rise trust-row" style="gap:24px;margin-top:24px;flex-wrap:wrap">
         <div class="pill" style="padding:8px 14px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
-          <span class="faint">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span class="faint">utilisateurs satisfaits</span>
+          <span class="faint">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span class="faint">utilisateurs<span class="hide-mobile"> satisfaits</span></span>
         </div>
-        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span> milliards</b> de vues générées</div>
+        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues<span class="hide-mobile"> générées</span></div>
       </div>
 
-      <!-- Réassurance sous la vitrine : les trois objections levées d'un coup.
-           Icônes en `--accent` : `--accent-2` est l'orange clair des dégradés,
-           il sortait délavé à 15 px. Texte en `--text-2`, pas `.faint` — trois
-           libellés qu'on doit pouvoir lire, pas une mention de bas de page. -->
-      <div class="row rise hero-reassure" style="justify-content:center;gap:30px;flex-wrap:wrap;margin-top:26px">
-        <div class="row gap8" style="font-size:13px;color:var(--text-2)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+      <!-- Les trois atouts. `faint` sur le CONTENEUR et `stroke:currentColor` sur
+           les icônes : dans la maquette elles n'ont aucune couleur propre, elles
+           héritent du gris du texte. Je les avais passées en orange, deux fois. -->
+      <div class="row rise hero-reassure faint" style="justify-content:center;gap:22px;flex-wrap:wrap;margin-top:24px">
+        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
           100 % automatique</div>
-        <div class="row gap8" style="font-size:13px;color:var(--text-2)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
+        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
           Optimisé formats courts</div>
-        <div class="row gap8" style="font-size:13px;color:var(--text-2)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
           Prêt à poster</div>
       </div>
   </div>
@@ -838,7 +854,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 /* ══════════ Mobile : placeholder court de la PromptBar ══════════ */
 (function(){
   var inp=document.getElementById('lpPrompt');
-  if(inp && window.innerWidth<=760) inp.placeholder='Décris ici ta vidéo…';
+  if(inp && window.innerWidth<=760) inp.placeholder='Décris ici la vidéo à générer…';
 })();
 
 /* ══════════ Slider avant/après Images IA (mobile) ══════════ */
