@@ -3210,13 +3210,36 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <p class="faint" style="font-size:12.5px;margin-top:7px"><b id="acDoneCuts" style="color:var(--green)">0 silence</b><span id="acDoneCutsSuffix"> supprimé</span> · <span id="acDoneSaved">0 s</span> gagnés</p>
           </div>
 
-          <div class="card" style="padding:14px 16px;background:var(--panel-1);margin-bottom:16px">
+          <div class="card" style="padding:14px 16px;background:var(--panel-1);margin-bottom:10px">
             <div class="row gap12" style="align-items:center">
               <button id="acDonePlay" onclick="_acDoneTogglePlay()" style="width:40px;height:40px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:none;cursor:pointer">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#1A0A02" stroke="none"><path d="M7 4l13 8-13 8z"/></svg>
+                <svg id="acDonePlayIco" width="16" height="16" viewBox="0 0 24 24" fill="#1A0A02" stroke="none"><path d="M7 4l13 8-13 8z"/></svg>
               </button>
-              <div id="acDoneWave" class="row" style="flex:1;gap:2.5px;align-items:center;height:32px"></div>
+              <div id="acDoneWaveWrap" style="flex:1;position:relative;height:38px;cursor:pointer">
+                <canvas id="acDoneWave" style="width:100%;height:38px;display:block"></canvas>
+                <div id="acDoneHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:#fff;border-radius:2px;box-shadow:0 0 6px rgba(255,255,255,.55);pointer-events:none"></div>
+              </div>
               <span id="acDoneDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
+            </div>
+            <div class="faint" style="font-size:10.5px;margin-top:8px;display:flex;align-items:center;gap:6px">
+              <span style="width:9px;height:2px;background:var(--accent);border-radius:2px;display:inline-block"></span>
+              <span id="acDoneCutLegend">les traits marquent les silences retirés</span>
+            </div>
+          </div>
+
+          <!-- l'original, révélé par « Comparer » : on l'ÉCOUTE À CÔTÉ, on ne le
+               joue pas par-dessus (c'est ce que faisait l'ancien bouton) -->
+          <div id="acOrigCard" class="card" style="display:none;padding:14px 16px;background:var(--panel-1);margin-bottom:16px;border-color:var(--border-2)">
+            <div class="faint" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px">Audio original</div>
+            <div class="row gap12" style="align-items:center">
+              <button id="acOrigPlay" onclick="_acOrigTogglePlay()" style="width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-3);border:1px solid var(--border-2);cursor:pointer">
+                <svg id="acOrigPlayIco" width="13" height="13" viewBox="0 0 24 24" fill="var(--text)" stroke="none"><path d="M7 4l13 8-13 8z"/></svg>
+              </button>
+              <div id="acOrigWaveWrap" style="flex:1;position:relative;height:30px;cursor:pointer">
+                <canvas id="acOrigWave" style="width:100%;height:30px;display:block"></canvas>
+                <div id="acOrigHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:#fff;border-radius:2px;pointer-events:none"></div>
+              </div>
+              <span id="acOrigDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
             </div>
           </div>
 
@@ -3228,7 +3251,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <button id="acDoneLib" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>
             <button id="acDoneCmp" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg> Comparer</button>
           </div>
-          <button class="btn-quiet btn-sm" style="width:100%;margin-top:12px" onclick="_acPhase('idle')">↺ Nettoyer un autre audio</button>
+          <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-weight:700" onclick="_acPhase('idle')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+            Nettoyer un autre audio
+          </button>
         </div>
       </div>
     </div><!-- /audioclean -->
@@ -10280,7 +10306,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -22575,30 +22601,147 @@ function _acFillDone(d){
   if(el('acDoneCutsSuffix')) el('acDoneCutsSuffix').textContent = cuts > 1 ? ' supprimés' : ' supprimé';
   if(el('acDoneSaved')) el('acDoneSaved').textContent = saved + ' s';
   if(el('acDoneDur'))   el('acDoneDur').textContent   = _acFmt(d.duration || 0);
-  // la forme d'onde : 20 barres, la part nettoyée en orange
-  const wave = el('acDoneWave');
-  if(wave){
-    const ratio = d.duration ? Math.max(.15, Math.min(.9, saved / (saved + d.duration))) : .4;
-    wave.innerHTML = [70,60,80,55,68,74,62,78,66,72,58,76,64,70,60,74,58,68,72,62]
-      .map((h, i) => `<div style="flex:1;border-radius:2px;height:${h}%;background:${i < 20 * ratio ? 'var(--accent)' : 'var(--surface-3)'}"></div>`).join('');
-  }
+  const leg = el('acDoneCutLegend');
+  if(leg) leg.textContent = cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré')
+                                 : 'aucun silence à retirer sur cet audio';
+  _acWavePaint('acDoneWave', d.peaks, d.marks);
+  _acHeadSet('acDoneHead', 0);
+  // l'original est refermé à chaque nouveau nettoyage
+  const oc = el('acOrigCard'); if(oc) oc.style.display = 'none';
+  _acStopAll();
   const dl = el('acDoneDl');
-  if(dl) dl.onclick = () => { if(d.url){ const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.mp3'; a.click(); } };
+  if(dl) dl.onclick = () => { if(d.url){ const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.wav'; a.click(); } };
   const lib = el('acDoneLib'); if(lib) lib.onclick = _acSaveToLibrary;
   const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = _acCompare;
   window._acDoneData = d;
+  _acBindSeek('acDoneWaveWrap', () => window._acDoneAudio, 'acDoneHead');
 }
-// « Comparer » : on rejoue l'AVANT. Le bouton existait dans la maquette sans
-// rien derrière — un bouton qui ne fait rien est pire qu'un bouton absent.
-let _acCmpAudio = null;
+
+// ── LA FORME D'ONDE EST CELLE DU FICHIER, PAS UN DÉCOR ──────────────────────
+// Elle était faite de 20 barres en dur, toujours les mêmes, avec une proportion
+// inventée. On ne pouvait donc rien y lire — ni la voix, ni surtout les endroits
+// coupés. Axel : « ça serait bien de voir où les silences ont été supprimés ».
+// Les crêtes viennent du buffer nettoyé, les traits sont les instants de coupe.
+function _acPeaks(buf, n){
+  const d = buf.getChannelData(0), step = Math.max(1, Math.floor(d.length / n)), out = [];
+  for(let i = 0; i < n; i++){
+    let peak = 0;
+    const a = i * step, b = Math.min(d.length, a + step);
+    for(let j = a; j < b; j += 3){ const v = Math.abs(d[j]); if(v > peak) peak = v; }
+    out.push(peak);
+  }
+  const max = Math.max(0.02, ...out);
+  return out.map(v => Math.min(1, v / max));
+}
+function _acWavePaint(canvasId, peaks, marks){
+  const cv = document.getElementById(canvasId);
+  if(!cv || !peaks || !peaks.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 300, h = cv.clientHeight || 38;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const css = getComputedStyle(document.documentElement);
+  const bar = (css.getPropertyValue('--text-3') || '#8B8B94').trim();
+  const acc = (css.getPropertyValue('--accent') || '#FF5A36').trim();
+  const bw = Math.max(1.5, w / peaks.length - 1.2);
+  peaks.forEach((v, i) => {
+    const x = i * (w / peaks.length), bh = Math.max(2, v * (h - 4));
+    g.fillStyle = bar; g.globalAlpha = 0.55;
+    g.beginPath(); g.roundRect(x, (h - bh) / 2, bw, bh, 1.5); g.fill();
+  });
+  g.globalAlpha = 1;
+  for(const m of (marks || [])){
+    const x = Math.max(0.5, Math.min(w - 1.5, m * w));
+    g.fillStyle = acc; g.fillRect(x - 0.75, 1, 1.6, h - 2);
+  }
+}
+const _acHeadSet = (id, r) => { const e = document.getElementById(id); if(e) e.style.left = (Math.max(0, Math.min(1, r)) * 100) + '%'; };
+
+// tête de lecture DÉPLAÇABLE : clic ou glissé n'importe où dans l'onde
+function _acBindSeek(wrapId, getAudio, headId){
+  const wrap = document.getElementById(wrapId);
+  if(!wrap || wrap._acBound) return;
+  wrap._acBound = true;
+  const to = (ev) => {
+    const a = getAudio(); if(!a || !isFinite(a.duration)) return;
+    const r = wrap.getBoundingClientRect();
+    if(r.width < 4) return;   // onde pas encore mise en page : un clic n'a pas de sens
+    const x = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width;
+    a.currentTime = Math.max(0, Math.min(1, x)) * a.duration;
+    _acHeadSet(headId, a.currentTime / a.duration);
+  };
+  let dragging = false;
+  wrap.addEventListener('mousedown', (e) => { dragging = true; to(e); });
+  window.addEventListener('mousemove', (e) => { if(dragging) to(e); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  wrap.addEventListener('touchstart', to, { passive: true });
+  wrap.addEventListener('touchmove',  to, { passive: true });
+}
+
+// une seule tête avance à la fois : deux lecteurs, un seul son
+let _acRaf = null;
+function _acTick(){
+  const d = window._acDoneAudio, o = _acCmpAudio;
+  if(d && !d.paused && isFinite(d.duration)) _acHeadSet('acDoneHead', d.currentTime / d.duration);
+  if(o && !o.paused && isFinite(o.duration)) _acHeadSet('acOrigHead', o.currentTime / o.duration);
+  const on = (d && !d.paused) || (o && !o.paused);
+  _acRaf = on ? requestAnimationFrame(_acTick) : null;
+}
+const _AC_PLAY = '<path d="M7 4l13 8-13 8z"/>', _AC_PAUSE = '<path d="M7 4h4v16H7zM14 4h4v16h-4z"/>';
+function _acIcon(id, playing){ const e = document.getElementById(id); if(e) e.innerHTML = playing ? _AC_PAUSE : _AC_PLAY; }
+function _acStopAll(){
+  if(window._acDoneAudio) window._acDoneAudio.pause();
+  if(_acCmpAudio) _acCmpAudio.pause();
+  _acIcon('acDonePlayIco', false); _acIcon('acOrigPlayIco', false);
+}
+function _acDoneTogglePlay(){
+  const d = window._acDoneData;
+  if(!d || !d.url){ toast('Lance d\'abord le nettoyage'); return; }
+  if(!window._acDoneAudio){
+    // L'ancien code créait bien l'Audio mais ne branchait RIEN : ni l'icône, ni
+    // la tête, ni l'échec silencieux d'un play() refusé. Axel : « le bouton play
+    // ne marche pas ». Tout est câblé ici.
+    const a = new Audio(d.url);
+    a.addEventListener('play',  () => { _acIcon('acDonePlayIco', true);  if(!_acRaf) _acTick(); });
+    a.addEventListener('timeupdate', () => { if(isFinite(a.duration)) _acHeadSet('acDoneHead', a.currentTime / a.duration); });
+    a.addEventListener('pause', () => _acIcon('acDonePlayIco', false));
+    a.addEventListener('ended', () => { _acIcon('acDonePlayIco', false); _acHeadSet('acDoneHead', 0); });
+    a.addEventListener('error', () => toast('⚠️ Lecture impossible — retélécharge le fichier'));
+    window._acDoneAudio = a;
+  }
+  const a = window._acDoneAudio;
+  if(a.paused){ if(_acCmpAudio) _acCmpAudio.pause(); a.play().catch(() => toast('⚠️ Lecture bloquée par le navigateur')); }
+  else a.pause();
+}
+function _acOrigTogglePlay(){
+  if(!_acCmpAudio) return;
+  if(_acCmpAudio.paused){ if(window._acDoneAudio) window._acDoneAudio.pause(); _acCmpAudio.play().catch(() => {}); }
+  else _acCmpAudio.pause();
+}
+// « Comparer » : l'original s'AFFICHE en dessous, avec son titre et sa propre
+// forme d'onde. Il se jouait par-dessus le nettoyé — on ne comparait rien.
 function _acCompare(){
   if(!_acOrigBlob){ toast('Rien à comparer — recharge un audio'); return; }
-  if(window._acDoneAudio && !window._acDoneAudio.paused) window._acDoneAudio.pause();
-  if(_acCmpAudio && !_acCmpAudio.paused){ _acCmpAudio.pause(); toast('⏸ Original'); return; }
-  _acCmpAudio = new Audio(URL.createObjectURL(_acOrigBlob));
-  _acCmpAudio.play();
-  toast('▶️ Original (avant nettoyage)');
+  const card = document.getElementById('acOrigCard');
+  if(card && card.style.display !== 'none'){ _acStopAll(); card.style.display = 'none'; return; }
+  if(card) card.style.display = 'block';
+  if(!_acCmpAudio){
+    _acCmpAudio = new Audio(URL.createObjectURL(_acOrigBlob));
+    _acCmpAudio.addEventListener('play',  () => { _acIcon('acOrigPlayIco', true);  if(!_acRaf) _acTick(); });
+    _acCmpAudio.addEventListener('timeupdate', () => { if(isFinite(_acCmpAudio.duration)) _acHeadSet('acOrigHead', _acCmpAudio.currentTime / _acCmpAudio.duration); });
+    _acCmpAudio.addEventListener('pause', () => _acIcon('acOrigPlayIco', false));
+    _acCmpAudio.addEventListener('ended', () => { _acIcon('acOrigPlayIco', false); _acHeadSet('acOrigHead', 0); });
+    _acCmpAudio.addEventListener('loadedmetadata', () => {
+      const e = document.getElementById('acOrigDur'); if(e) e.textContent = _acFmt(_acCmpAudio.duration || 0);
+    });
+  }
+  const d = window._acDoneData;
+  if(d && d.origPeaks) _acWavePaint('acOrigWave', d.origPeaks, null);
+  _acHeadSet('acOrigHead', 0);
+  _acBindSeek('acOrigWaveWrap', () => _acCmpAudio, 'acOrigHead');
 }
+let _acCmpAudio = null;
 // « Bibliothèque » : l'audio nettoyé repart dans le Générateur, étape Voix —
 // c'est ce que le module sait faire aujourd'hui, et c'est ce dont on a besoin
 // pour enchaîner sur une vidéo.
@@ -22617,13 +22760,6 @@ function _acSaveToLibrary(){
 }
 
 const _acFmt = (s) => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
-function _acDoneTogglePlay(){
-  const d = window._acDoneData;
-  if(!d || !d.url) return;
-  if(!window._acDoneAudio) window._acDoneAudio = new Audio(d.url);
-  const a = window._acDoneAudio;
-  if(a.paused) a.play(); else a.pause();
-}
 
 function _acSetOpt(key, val){
   _acOpts[key] = !!val;
@@ -22814,7 +22950,20 @@ async function _acAnalyze(){
     if(tipEl) tipEl.style.display = 'none';
     if(btn){ btn.textContent = '🔄 Relancer l\'analyse'; btn.disabled = false; }
     // l'écran de résultat, avec les chiffres RÉELS du nettoyage
+    // ── CE QUE L'ÉCRAN DE RÉSULTAT A BESOIN DE SAVOIR ──
+    // Les crêtes du fichier NETTOYÉ (pour dessiner sa vraie forme d'onde), les
+    // instants de coupe ramenés à la timeline nettoyée (pour marquer où les
+    // silences ont sauté), et les crêtes de l'ORIGINAL pour le comparatif.
+    const marks = [];
+    if(cleanBuf.duration > 0){
+      let acc = 0;
+      for(let i = 0; i < keepSegs.length - 1; i++){
+        acc += (keepSegs[i].end - keepSegs[i].start) / r.sr;
+        marks.push(acc / cleanBuf.duration);
+      }
+    }
     _acPhase('done', { cuts: segsRemoved, saved: removedS, duration: cleanS,
+      peaks: _acPeaks(cleanBuf, 150), marks, origPeaks: _acPeaks(decoded, 150),
       url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
     toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
     if(_acDerushEnabled) _acDerushRun();   // #151 : propose les coupes une fois l'analyse posée
