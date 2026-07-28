@@ -211,6 +211,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
+
     // UNE FENÊTRE AVATAR NE DURE PAS PLUS LONGTEMPS QUE SON CLIP. Le plan décrit
     // les moments où le visage parle ; le clip lipsync, lui, fait la durée qu'il
     // fait. Quand la fenêtre est plus longue, le moteur de rendu compte des
@@ -263,6 +264,29 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     }
 
     // captures du tuto pour le mode presentation 3D (#135)
+    // ── LA PHOTO D'AVATAR, ET LE CAS OÙ IL N'Y EN A AUCUNE ────────────────────
+    // Le job peut fournir `avatar.png` : c'est SON visage, celui qui s'affiche
+    // quand une fenêtre avatar n'a pas de clip lipsync. Sans ce fichier le
+    // moteur retombait sur `tuto/hook-qualite.png`, une photo de démo livrée
+    // avec le worker — le visage d'un inconnu en plein écran sur la vidéo d'un
+    // client. Et si le job n'a NI clip, NI photo, NI image dans sa base (montage
+    // sur audio seul), on supprime les fenêtres avatar : la dérivation remplit
+    // alors ces secondes avec des animations, ce qui vaut mieux qu'un écran noir.
+    let avatarPhoto = ''
+    for (const n of ['avatar.png', 'avatar.jpg', 'avatar.jpeg', 'avatar.webp']) {
+      if (!existsSync(join(jobDir, n))) continue
+      try {
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(jobDir, n),
+          '-vf', "scale='min(1080,iw)':-2", join(proj, 'media', 'avatar.png')])
+        avatarPhoto = 'media/avatar.png'
+      } catch (e) { console.warn('photo avatar illisible :', e.message) }
+      break
+    }
+    if (!baseW && !avatarPhoto && !Object.keys(avatarClips).length && (plan.avatarSegments || []).length) {
+      console.log(`▶ aucun visage disponible → ${plan.avatarSegments.length} fenêtre(s) avatar retirée(s)`)
+      plan.avatarSegments = []
+    }
+
     // ⚠️ dériver AVANT de lister les captures : la dérivation #148 ajoute des scènes
     // ui avec screen:'site-home' & co — sans ça leurs images ne sont jamais copiées
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
@@ -270,18 +294,57 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // donc aussi sa dérivation, pas celle des styles posés sur une base.
     if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') {
       // assetFiles : sans lui la dérivation ne voit pas les médias de l'utilisateur
-      try { deriveDynamicSlides(plan, { assetFiles }) } catch (e) { console.warn('dérivation:', e.message) }
+      try { deriveDynamicSlides(plan, { assetFiles }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
     else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
+
+    // ── PAS DE CLIP LIPSYNC ? ON DÉCOUPE SA PROPRE VIDÉO ───────────────────────
+    // Sans clips, le moteur affichait `tuto/hook-qualite.png` — une photo de démo
+    // livrée avec le worker, l'homme au bord de la piscine. Sur la vidéo d'un
+    // client, ça met le VISAGE D'UN INCONNU en plein écran pendant sa fenêtre
+    // avatar. Axel l'a vu : « tu parles de quel homme au bord de la piscine ? »
+    //
+    // La bonne source était là depuis le début : base.mp4 EST sa vidéo, la voix
+    // qu'on entend est la sienne, et la fenêtre avatar est justement le moment où
+    // il parle face caméra. On y découpe donc le morceau correspondant — même
+    // instant, même personne, synchro par construction et gratuit.
+    // APRES LA DERIVATION, et pas avant : c'est elle qui fixe les fenetres finales
+    // (elle en ajoute, en scinde, en etire). Decoupees trop tot, les fenetres
+    // etirees demandaient plus d'images que le clip n'en contenait et HyperFrames
+    // refusait le rendu : « captured 72 of expected 116 frames ».
+    // (…sauf sur un job AUDIO SEUL : la base y est un fond noir fabriqué, il n'y a
+    //  aucun visage à découper — `baseW` vaut 0 dans ce cas.)
+    let coupesDepuisBase = false
+    if (baseW && !Object.keys(avatarClips).length && (plan.avatarSegments || []).length) {
+      coupesDepuisBase = true
+      let n = 0
+      plan.avatarSegments.forEach((w, i) => {
+        const a = Math.max(0, Number(w.start) || 0)
+        const d = Math.max(0.4, (Number(w.end) || a) - a)
+        const out = 'media/av' + i + '.mp4'
+        try {
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(a), '-t', String(d + 2.5),
+            '-i', baseOut, '-vf', "scale='min(1080,iw)':-2,fps=30", '-an',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-g', '30',
+            '-movflags', '+faststart', join(proj, out)])
+          avatarClips['av' + i] = out
+          n++
+        } catch (e) { console.warn('découpe avatar depuis base.mp4 :', e.message) }
+      })
+      if (n) console.log(`▶ ${n} fenêtre(s) avatar découpée(s) dans sa propre vidéo`)
+    }
     // UNE FENÊTRE COUPÉE EN DEUX REJOUE LE MÊME CLIP, PLUS LOIN DEDANS.
     // La dérivation peut scinder une fenêtre avatar (le hook passe du split au
     // plein cadre). Le moteur associe le clip à l'INDICE de la fenêtre : la
     // seconde moitié n'avait donc plus de clip. On lui en découpe un, à partir
     // de `clipFrom` — la voix continue, le visage aussi.
-    {
+    if (!coupesDepuisBase) {
+      // (inutile quand les clips viennent d'être découpés dans base.mp4 : chaque
+      //  fenêtre a déjà le sien, calé sur SON début. Réappliquer `clipFrom` ici
+      //  décalerait une deuxième fois.)
       const segs = plan.avatarSegments || []
       const next = {}
       segs.forEach((w, i) => {
@@ -350,7 +413,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',

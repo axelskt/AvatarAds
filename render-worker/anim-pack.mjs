@@ -925,12 +925,18 @@ export function animHtml(name, s, W, H, vs) {
     }
     case 'render': {
       // « ça génère » : l'aperçu se remplit pendant que la barre avance.
+      // ET LE POURCENTAGE MONTE. Axel : « tu pourrais mettre genre un
+      // pourcentage rapide qui va de 0 à 100 % ». Une barre qui avance dit
+      // « ça travaille » ; un compteur qui atteint 100 dit « c'est FINI ».
+      // C'est la fin qu'on vend — « en quelques secondes ».
       const w = Math.round(f.w * 0.6), h = Math.round(w * 0.66)
       const x = Math.round((f.w - w) / 2), y = Math.round(f.h * 0.04)
-      const bh = Math.max(10, Math.round(f.h * 0.07)), by = y + h + Math.round(f.h * 0.12)
+      const bh = Math.max(10, Math.round(f.h * 0.07)), by = y + h + Math.round(f.h * 0.14)
+      const ps = Math.round(f.h * 0.13)
       return box(`
         <div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.07)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
           <span class="an-p" id="${id}rv" style="left:0;top:0;width:100%;height:100%;background:${grad(150)};transform-origin:50% 100%"></span></div>
+        <div class="an-p" id="${id}rp" style="left:${x}px;top:${y + h + Math.round(f.h * 0.015)}px;width:${w}px;height:${ps}px;line-height:${ps}px;text-align:center;font-weight:800;font-size:${ps}px;color:${P.ink};letter-spacing:-.02em"><span id="${id}rn">0</span><span style="font-size:.58em;opacity:.7"> %</span></div>
         <div class="an-p" style="left:${x}px;top:${by}px;width:${w}px;height:${bh}px;border-radius:99px;background:${P.soft};overflow:hidden">
           <span class="an-p" id="${id}rb" style="left:0;top:0;width:100%;height:100%;border-radius:99px;background:${P.acc};transform-origin:0% 50%"></span></div>`)
     }
@@ -2534,7 +2540,11 @@ export function animHtml(name, s, W, H, vs) {
       // L'aiguille qui tourne dans un cercle vide illustrait « le temps », pas LE
       // GAIN de temps. Un anneau qui se VIDE, avec la durée écrite au centre et
       // l'ancienne durée barrée à côté, dit ce qu'on entend : c'était long, c'est
-      // devenu court. Le chiffre vient de l'audio.
+      // devenu court. LE CHIFFRE VIENT DE L'AUDIO — et seulement de l'audio.
+      // Les valeurs de repli « 2 MIN » / « 3 HEURES » s'affichaient dès que le
+      // plan n'en fournissait pas : sur « en quelques secondes, AvatarAds génère
+      // ta vidéo », l'écran annonçait « 2 MIN ». Une durée inventée qui contredit
+      // la voix. Sans valeur, l'anneau se vide et ne dit aucun chiffre.
       const d = Math.round(Math.min(f.h * 0.78, f.w * 0.72))
       const cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.46)
       const rr = Math.round(d / 2), sw = Math.round(d * 0.09)
@@ -2544,9 +2554,9 @@ export function animHtml(name, s, W, H, vs) {
           <circle cx="${rr}" cy="${rr}" r="${rr - sw / 2}" stroke="${P.line}" stroke-width="${sw}"/>
           <circle id="${id}cl" cx="${rr}" cy="${rr}" r="${rr - sw / 2}" stroke="${P.acc}" stroke-width="${sw}" stroke-linecap="round"
             stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 ${rr} ${rr})"/></svg>
-        <span class="an-p" id="${id}cn" style="left:0;top:${cy - Math.round(d * 0.14)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(d * 0.26)}px;color:${P.ink};transform-origin:50% 50%">${txt(0, '2 MIN')}</span>
-        <span class="an-p" id="${id}co" style="left:0;top:${cy + rr + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(d * 0.11)}px;color:${P.ink};opacity:0">
-          <span style="position:relative;opacity:.45">${txt(1, '3 HEURES')}<span id="${id}cb" style="position:absolute;left:0;top:50%;width:100%;height:${Math.max(3, Math.round(d * 0.014))}px;background:#E5484D;transform-origin:0% 50%;transform:scaleX(0)"></span></span></span>`)
+        <span class="an-p" id="${id}cn" style="left:0;top:${cy - Math.round(d * 0.14)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(d * 0.26)}px;color:${P.ink};transform-origin:50% 50%">${txt(0, '')}</span>
+        ${(raw[1] || '').trim() ? `<span class="an-p" id="${id}co" style="left:0;top:${cy + rr + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(d * 0.11)}px;color:${P.ink};opacity:0">
+          <span style="position:relative;opacity:.45">${txt(1, '')}<span id="${id}cb" style="position:absolute;left:0;top:50%;width:100%;height:${Math.max(3, Math.round(d * 0.014))}px;background:#E5484D;transform-origin:0% 50%;transform:scaleX(0)"></span></span></span>` : ''}`)
     }
   }
 }
@@ -2952,10 +2962,28 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}dz',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'power3.out',transformOrigin:'50% 50%'},${t0});
       tl.fromTo('#${id}df',{y:${FH(id, -0.62)},rotation:-8,autoAlpha:0},{y:0,rotation:0,autoAlpha:1,duration:0.5,ease:'back.out(1.5)'},${r2(t0 + 0.24)});
       tl.fromTo('#${id}dz',{scale:1},{scale:1.05,duration:0.16,yoyo:true,repeat:1,ease:'sine.out',transformOrigin:'50% 50%'},${r2(t0 + 0.7)});`
-    case 'render':
-      return inOut + `
-      tl.fromTo('#${id}rv',{scaleY:0},{scaleY:1,duration:${r2(Math.max(0.7, dur - 0.3))},ease:'power1.inOut'},${r2(t0 + 0.15)});
-      tl.fromTo('#${id}rb',{scaleX:0},{scaleX:1,duration:${r2(Math.max(0.7, dur - 0.3))},ease:'power1.inOut'},${r2(t0 + 0.15)});`
+    case 'render': {
+      const T = r2(Math.max(0.7, dur - 0.3))
+      // Le compteur est ECRIT PAS A PAS, comme celui de `countup` : un rendu
+      // image par image doit etre reproductible, ce qu'un onUpdate ne serait pas.
+      // Meme courbe que la barre (power1.inOut) pour qu'ils arrivent ensemble.
+      let js = inOut + `
+      tl.fromTo('#${id}rv',{scaleY:0},{scaleY:1,duration:${T},ease:'power1.inOut'},${r2(t0 + 0.15)});
+      tl.fromTo('#${id}rp',{autoAlpha:0,y:${FH(id, 0.03)}},{autoAlpha:1,y:0,duration:0.24,ease:'power2.out'},${r2(t0 + 0.1)});
+      tl.fromTo('#${id}rb',{scaleX:0},{scaleX:1,duration:${T},ease:'power1.inOut'},${r2(t0 + 0.15)});`
+      const steps = 24
+      for (let k = 1; k <= steps; k++) {
+        const u = k / steps
+        // l'inverse de power1.inOut, pour que le nombre colle a la barre
+        const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
+        js += `
+      tl.set('#${id}rn',{ textContent: ${JSON.stringify(String(Math.round(e * 100)))} },${r2(t0 + 0.15 + T * u)});`
+      }
+      // 100 % ATTEINT : la pastille claque. C'est le moment qui vend.
+      js += `
+      tl.fromTo('#${id}rp',{scale:1},{scale:1.16,duration:0.14,yoyo:true,repeat:1,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.15 + T)});`
+      return js
+    }
     case 'crop':
       // le cadre 16:9 se resserre sur la colonne 9:16 — dimensions lues sur le
       // cadre réel plutôt que devinées : animJs ne connaît pas la composition.

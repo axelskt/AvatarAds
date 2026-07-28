@@ -1001,9 +1001,12 @@ RYTHME ADAPTATIF : decoupe D'ABORD le transcript en phrases — TOUTES les borne
 
 ZOOMS (punch-in sur la personne) : scale entre 1.12 et 1.35, duree 0.6 a 1.4s, declenches PILE sur un mot fort (le timestamp du mot). cx/cy = point de zoom relatif (0-1) deduit des images de la video (la ou est reellement le visage). Pas de zoom pendant un b-roll.
 
-B-ROLL (images utilisateur, plein ecran par-dessus la video) — UNE IMAGE NE SERT QU'A PRESENTER UNE FONCTIONNALITE. C'est sa seule raison d'exister : il NOMME une fonctionnalite et dit ce qu'elle fait, tu montres a quoi elle ressemble. Partout ailleurs — l'accroche, la promesse, un benefice, une transition, le CTA — c'est une ANIMATION, ou rien. Une animation parle mieux qu'une capture et elle reste dans la direction artistique du style ; une image posee sur une promesse casse les deux.
-Le 4e champ est OBLIGATOIRE : ecris-y la fonctionnalite presentee, avec SES mots a lui, tels qu'il les prononce a cet instant ("split screen", "clonage de voix", "sous-titres"). Le serveur verifie que ces mots sont reellement dits dans la fenetre — une image dont la fonctionnalite n'est pas prononcee la est jetee.
-Place CHAQUE image au moment ou son CONTENU correspond a ce qui est dit (regarde les images !). Duree 1.5 a 3.5s. Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
+B-ROLL (images utilisateur, plein ecran par-dessus la video) — UNE IMAGE SERT A MONTRER CE QU'IL NOMME. Deux cas, et deux seulement :
+1. IL NOMME UNE FONCTIONNALITE et dit ce qu'elle fait -> tu montres a quoi elle ressemble.
+2. IL NOMME CE QUE L'IMAGE MONTRE — une personne ("un homme", "une femme", "un coach sportif"), un produit, un lieu, un objet. REGARDE LES IMAGES : si l'une d'elles montre exactement ce qu'il vient de prononcer, elle se pose SUR CE MOT. C'est la regle la plus forte du montage : le visuel EST le mot. Une photo d'homme sur "homme" bat n'importe quelle animation et n'importe quelle carte de texte.
+Partout ailleurs — l'accroche, la promesse, un benefice, une transition — c'est une ANIMATION, ou rien : une image posee sur une promesse casse la direction artistique.
+Le 4e champ est OBLIGATOIRE : ecris-y CE QUI EST MONTRE, avec SES mots a lui, tels qu'il les prononce a cet instant ("split screen", "clonage de voix", "homme", "coach sportif"). Le serveur verifie que ces mots sont reellement dits dans la fenetre — une image dont le 4e champ n'est pas prononce la est jetee.
+Le start est le TIMESTAMP EXACT DU MOT, pas celui de la phrase : sur une enumeration ("homme, femme, coach sportif"), chaque image demarre sur SON mot, meme si les trois se suivent a 0.4s d'intervalle. Duree 1.5 a 3.5s (raccourcis-la si le mot suivant arrive vite). Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
 
 SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur les enumerations, riser avant le CTA, success/ding sur une preuve ou un resultat. Maximum 1 SFX par 1.5s. Les timestamps tombent sur les evenements qu'ils soulignent.
 
@@ -1382,7 +1385,14 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // #131 · motif d'animation : on ne laisse passer que la liste connue du rendu
       const MOTIFS = ['chain', 'tiles', 'versus', 'bars', 'ring', 'cloud', 'halftone', 'grid']
       const motif = MOTIFS.includes(String(s.motif || '')) ? String(s.motif) : ''
-      const anim = ANIMS.includes(String(s.anim || '')) ? String(s.anim) : ''
+      let anim = ANIMS.includes(String(s.anim || '')) ? String(s.anim) : ''
+      // UNE HORLOGE SANS DUREE MENT. `clock` ecrit la duree au centre de l'anneau ;
+      // quand le plan n'en fournit aucune, le rendu affichait sa valeur de repli et
+      // l'ecran annoncait « 2 MIN » pendant que la voix disait « en quelques
+      // secondes ». Sans chiffre a montrer, c'est le COMPTEUR DE VITESSE qui dit la
+      // meme chose sans rien inventer — il n'a pas besoin de nombre.
+      if (anim === 'clock' && !String(s.value || '').trim()
+        && !(s.items || []).some((it) => String(it?.text || '').trim())) anim = 'speed'
       const emoji = EMOJIS.includes(String(s.emoji || '')) ? String(s.emoji) : ''
       return {
         type,
@@ -1493,10 +1503,34 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
 
   const inSlide = (t: number, margin = 0.5) => slides.some((s) => s.layout !== 'banner' && t >= s.start - margin && t <= s.end + margin)
 
+  // SON IMAGE TOMBE SUR LE MOT, PAS A COTE. Axel : « quand je dis "homme" tu mets
+  // l'homme, quand je dis "femme" tu mets Lena ». Le modele donne un instant lu sur
+  // la transcription — a 0,2 s pres, l'image arrive apres le mot et on la relie a la
+  // phrase suivante. Le debut se recale donc sur le DEBUT REEL du mot qui la nomme :
+  // c'est la seule chose qui rend le placement exact au lieu d'approximatif.
+  const surLeMot = (t: number, feature: string) => {
+    if (!words.length) return t
+    const mine = keys(feature)
+    let best = null as null | { t: number; d: number }
+    for (const w of words) {
+      const d = Math.abs(w.start - t)
+      if (d > 0.9) continue
+      const n = norm(w.text)
+      // le mot nomme par `feature` d'abord ; a defaut, la frontiere de mot la plus proche
+      const nomme = mine.some((k) => n === k || (k.length >= 5 && n.startsWith(k)) || sim(n, k) >= 0.86)
+      const score = nomme ? d : d + 10
+      if (!best || score < best.d) best = { t: w.start, d: score }
+    }
+    return best ? r2(best.t) : t
+  }
   const broll = (plan.broll || [])
     .filter((b) => assetIds.includes(b.assetId))
     .map((b) => ({ assetId: b.assetId, feature: String(b.feature || ''), start: r2(clamp(b.start, 1.5, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
-    .map((b) => ({ ...b, end: r2(clamp(b.end, b.start + 1.0, b.start + 4.0)) }))
+    .map((b) => { const s = surLeMot(b.start, b.feature); return { ...b, start: s, end: r2(b.end + (s - b.start)) } })
+    // 0,6 s de plancher, pas 1 s : sur une enumeration ("homme, femme, coach
+    // sportif") les mots se suivent a 0,4 s et un plancher trop haut forcait la
+    // deuxieme image a demarrer APRES son mot — le decalage qu'on veut supprimer.
+    .map((b) => ({ ...b, end: r2(clamp(b.end, b.start + 0.6, b.start + 4.0)) }))
     .filter((b) => b.end > b.start && b.end <= D)
     // VERROU · une image ne sert qu'a PRESENTER UNE FONCTIONNALITE : il la nomme, on
     // montre a quoi elle ressemble. Elle doit donc declarer laquelle, et ces mots-la
@@ -1510,14 +1544,41 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       const said = spokenAround(b.start, b.end)
       return mine.some((k) => said.has(k) || [...said].some((w) => sim(w, k) >= 0.82))
     })
-    // jamais pendant une slide (la zone haute est occupee)
-    .filter((b) => !slides.some((s) => b.start < s.end + 0.3 && b.end > s.start - 0.3))
     .sort((a, b) => a.start - b.start)
-  // pas de chevauchement entre b-rolls
+  // PAS DE CHEVAUCHEMENT — MAIS C'EST LA FIN QUI CEDE, JAMAIS LE DEBUT.
+  // Ici on repoussait le DEBUT de la suivante : sur « homme, femme, coach
+  // sportif », l'image de Lena arrivait donc apres le mot « femme », celle du
+  // coach encore plus tard, et l'enumeration entiere partait en decalage.
+  // Le debut est le mot : il ne bouge pas. C'est l'image precedente qui s'arrete.
   for (let i = 1; i < broll.length; i++) {
-    if (broll[i].start < broll[i - 1].end) broll[i].start = r2(broll[i - 1].end + 0.2)
+    if (broll[i].start < broll[i - 1].end) broll[i - 1].end = r2(broll[i].start - 0.02)
   }
   const cleanBroll = broll.filter((b) => b.end > b.start)
+
+  // ── SON MEDIA PASSE DEVANT MON TEXTE ────────────────────────────────────────
+  // Ici, un b-roll qui touchait une carte etait JETE. La priorite etait a
+  // l'envers : sur « Homme, femme, coach sportif », la carte de texte
+  // « HOMME / FEMME / COACH SPORTIF » occupait la fenetre, et la PHOTO de
+  // l'homme — celle qu'il a fournie exprès — disparaissait. Axel, sa regle :
+  // « le contenu (image/video) envoye en piece jointe est prioritaire aux
+  // animations ». Trois mots en majuscules ne valent pas un visage. C'est donc
+  // la carte qui recule : rognee sur sa partie libre, et supprimee si ce qu'il
+  // en reste ne tient plus (moins de 0,7 s).
+  if (cleanBroll.length) {
+    const survivantes = []
+    for (const s of slides) {
+      let a = s.start, b = s.end
+      for (const br of cleanBroll) {
+        if (b <= br.start + 0.05 || a >= br.end - 0.05) continue
+        if (br.start - a >= b - br.end) b = r2(br.start - 0.05)
+        else a = r2(br.end + 0.05)
+      }
+      if (b - a < 0.7 || cleanBroll.some((br) => a < br.end - 0.05 && b > br.start + 0.05)) continue
+      survivantes.push({ ...s, start: a, end: b })
+    }
+    slides.length = 0
+    slides.push(...survivantes)
+  }
 
   const inBroll = (t: number) => cleanBroll.some((b) => t >= b.start - 0.2 && t <= b.end + 0.2)
   const zooms = (plan.zooms || [])
