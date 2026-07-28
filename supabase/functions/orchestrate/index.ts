@@ -223,9 +223,9 @@ const ANIMS = [
   'schedule', 'pin', 'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes',
   'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations',
   'property', 'menu', 'weight', 'quote', 'flight', 'saving', 'liquid', 'magnet',
-  'explode', 'snowball', 'iceberg', 'tunnel', 'lighthouse', 'compass', 'chess', 'keystone',
-  'matryoshka', 'pyramid', 'maze', 'constellation', 'thermometer', 'hive', 'dam', 'elevator',
-  'cv'
+  'explode', 'iceberg', 'tunnel', 'thermometer', 'filmstrip', 'teleprompter', 'script', 'clapper',
+  'retakes', 'lightsetup', 'transition', 'zoompunch', 'speedramp', 'substyle', 'trendsound', 'algorithm',
+  'loop', 'preset', 'watermark', 'cv'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -784,21 +784,24 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
     magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
     explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
-    snowball — UNE BOULE QUI DEVALE UNE PENTE en tournant, grossit et ramasse ce qu'elle croise. « effet boule de neige », « ca s'amplifie tout seul ».
     iceberg  — LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache ».
     tunnel   — DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite ».
-    lighthouse— UN PHARE dont le faisceau balaie au-dessus des vagues. « tu deviens la reference », « le repere », « on te voit de loin ».
-    compass  — UNE BOUSSOLE graduee dont l'aiguille oscille puis se cale au nord. « la bonne direction », « tu sais ou tu vas », « le cap ».
-    chess    — UN ECHIQUIER ou une piece traverse et prend l'autre. « le bon coup », « la strategie », « un coup d'avance ».
-    keystone — UNE ARCHE qui se ferme sur sa cle de voute. « la piece qui tient tout », « sans ca rien ne tient », « l'element central ».
-    matryoshka— DES POUPEES GIGOGNES de plus en plus petites. « il y a autre chose derriere », « une fois qu'on ouvre », « couche par couche ».
-    pyramid  — UNE PYRAMIDE DE BLOCS qui se construit, la base d'abord. « on construit », « les fondations », « etage par etage ».
-    maze     — UN LABYRINTHE et le trace qui trouve la sortie. « trouver le chemin », « la sortie », « je te montre par ou passer ».
-    constellation— DES POINTS QUI SE RELIENT et forment une figure. « tout prend son sens », « les pieces se relient », « la vue d'ensemble ».
     thermometer— UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose ».
-    hive     — UN NID D'ABEILLES dont les alveoles s'allument une a une. « la communaute », « chacun sa place », « ca se remplit ».
-    dam      — UN BARRAGE qui retient puis cede, l'eau part. « ca retient plus », « ca lache », « le flot est libere ».
-    elevator — UNE CABINE qui monte les etages numerotes. « on monte d'un etage », « le niveau au-dessus », « passer au palier suivant ».
+    filmstrip— UNE PELLICULE avec ses perforations, les vignettes defilent, une se selectionne. « image par image », « les rushs », « je choisis le plan ».
+    teleprompter— UN PROMPTEUR : le texte monte devant l'objectif, la ligne active s'allume. « tu lis ton texte », « le prompteur », « tu n'as plus qu'a lire ».
+    script   — UN SCRIPT dont les lignes s'ecrivent et dont une phrase se surligne. « le script », « ce que tu vas dire », « j'ecris le texte ».
+    clapper  — UN CLAP DE CINEMA rempli qui claque. « moteur », « on tourne », « prise deux », « action ».
+    retakes  — TROIS PRISES NUMEROTEES, les ratees se barrent, la bonne s'encadre. « on la refait », « la bonne prise », « je garde celle-la ».
+    lightsetup— LE SETUP : camera sur trepied entre deux softbox qui s'allument. « le bon setup », « comment je filme », « l'eclairage ».
+    transition— UN PLAN QUI EN BALAIE UN AUTRE, ligne lumineuse au passage. « et la ca bascule », « la transition », « on enchaine ».
+    zoompunch— LE CADRE QUI SE RESSERRE d'un coup sur un detail qui grossit. « regarde bien ca », « zoom la-dessus », « le detail qui compte ».
+    speedramp— UNE TIMELINE avec sa zone ralentie et sa zone acceleree. « la tu ralentis », « en accelere », « le ralenti sur ce moment ».
+    substyle — TROIS STYLES DE SOUS-TITRES cote a cote, celui qu'on retient s'encadre. « le style de sous-titres », « tu choisis la typo ».
+    trendsound— UN SON TENDANCE : sa forme d'onde, sa courbe d'usage, son compteur. « le son du moment », « le son qui marche », « la tendance ».
+    algorithm— UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant ».
+    loop     — LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ».
+    preset   — UN STYLE ENREGISTRE applique a trois videos d'un coup. « un style enregistre », « le meme rendu partout », « mon preset ».
+    watermark— LE LOGO QUI SE POSE dans le coin de la video. « ta marque sur chaque video », « le filigrane », « ton logo dessus ».
     cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
