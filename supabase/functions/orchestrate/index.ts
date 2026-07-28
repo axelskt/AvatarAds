@@ -217,7 +217,9 @@ const ANIMS = [
   'trend', 'template', 'record', 'lock', 'dropzone', 'render', 'crop', 'silence',
   'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'checklist', 'library',
   'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice', 'settings',
-  'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder'
+  'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form',
+  'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount', 'waitlist',
+  'install', 'avatarpick', 'voicepick', 'music', 'bio'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -733,6 +735,21 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     pay      — UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ».
     sales    — DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes ».
     folder   — UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier ».
+    booking  — UN AGENDA DE LA SEMAINE dont UN creneau se reserve. « il prend rendez-vous », « ton agenda se remplit », « il reserve ».
+    form     — UN FORMULAIRE dont les champs se remplissent, puis le bouton part. « ils remplissent le formulaire », « ils laissent leur mail ».
+    donut    — UN ANNEAU decoupe en parts avec sa legende. « la repartition », « X pour cent de », « la moitie de mes clients ».
+    map      — UNE CARTE ou les epingles tombent une a une. « partout dans le monde », « dans tous les pays », « des clients partout ».
+    mixer    — UNE TABLE DE MIXAGE : les curseurs montent, les vu-metres bougent. « je regle le son », « le mixage », « les niveaux ».
+    review   — UNE CARTE D'AVIS : photo, nom, cinq etoiles qui se remplissent, le temoignage. « leurs avis », « ils temoignent », « ce qu'ils en disent ».
+    upgrade  — UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ».
+    storyboard— DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video ».
+    discount — UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ».
+    waitlist — DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes ».
+    install  — UNE FICHE D'APPLICATION dont le bouton passe a installe. « telecharge l'app », « tu l'installes », « c'est sur ton telephone ».
+    avatarpick— UNE RANGEE D'AVATARS dont UN se selectionne, l'anneau se pose. « tu choisis ton avatar », « tu prends celui que tu veux ».
+    voicepick— UNE LISTE DE VOIX dont celle qu'on retient se met a parler. « tu choisis la voix », « tu ecoutes », « cette voix-la ».
+    music    — DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix ».
+    bio      — UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
