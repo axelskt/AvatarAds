@@ -134,6 +134,23 @@ export const BANK = [
   { name: 'pay',     desc: "UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses »." },
   { name: 'sales',   desc: "DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes »." },
   { name: 'folder',  desc: "UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier »." },
+
+  // ── PAQUET 5 (#157) — l'outil et la vente ──
+  { name: 'booking', desc: "UN AGENDA DE LA SEMAINE dont UN creneau se reserve. « il prend rendez-vous », « ton agenda se remplit », « il reserve »." },
+  { name: 'form',    desc: "UN FORMULAIRE dont les champs se remplissent, puis le bouton part. « ils remplissent le formulaire », « ils laissent leur mail »." },
+  { name: 'donut',   desc: "UN ANNEAU decoupe en parts avec sa legende. « la repartition », « X pour cent de », « la moitie de mes clients »." },
+  { name: 'map',     desc: "UNE CARTE ou les epingles tombent une a une. « partout dans le monde », « dans tous les pays », « des clients partout »." },
+  { name: 'mixer',   desc: "UNE TABLE DE MIXAGE : les curseurs montent, les vu-metres bougent. « je regle le son », « le mixage », « les niveaux »." },
+  { name: 'review',  desc: "UNE CARTE D'AVIS : photo, nom, cinq etoiles qui se remplissent, le temoignage. « leurs avis », « ils temoignent », « ce qu'ils en disent »." },
+  { name: 'upgrade', desc: "UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure »." },
+  { name: 'storyboard', desc: "DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video »." },
+  { name: 'discount', desc: "UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo »." },
+  { name: 'waitlist', desc: "DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes »." },
+  { name: 'install', desc: "UNE FICHE D'APPLICATION dont le bouton passe a installe. « telecharge l'app », « tu l'installes », « c'est sur ton telephone »." },
+  { name: 'avatarpick', desc: "UNE RANGEE D'AVATARS dont UN se selectionne, l'anneau se pose. « tu choisis ton avatar », « tu prends celui que tu veux »." },
+  { name: 'voicepick', desc: "UNE LISTE DE VOIX dont celle qu'on retient se met a parler. « tu choisis la voix », « tu ecoutes », « cette voix-la »." },
+  { name: 'music',   desc: "DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix »." },
+  { name: 'bio',     desc: "UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
