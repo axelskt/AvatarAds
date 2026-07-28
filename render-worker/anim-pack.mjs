@@ -1959,46 +1959,6 @@ export function animHtml(name, s, W, H, vs) {
     // Ici : des METAPHORES PHYSIQUES. Rien ne s'empile en liste, tout se
     // deplace, penche, tombe, tourne, s'emboite ou pousse. Et comme ce sont des
     // images mentales et non des interfaces, elles servent TOUS les domaines.
-    case 'balance': {
-      // « le bon equilibre », « ca penche du bon cote » : la balance se stabilise.
-      const bw = Math.round(f.w * 0.78), bx = Math.round((f.w - bw) / 2)
-      const pd = Math.round(f.w * 0.2), py = Math.round(f.h * 0.44)
-      const pole = Math.round(f.h * 0.34)
-      return box(`
-        <span class="an-p" style="left:50%;margin-left:-3px;top:${py}px;width:6px;height:${pole}px;border-radius:99px;background:${P.line}"></span>
-        <span class="an-p" style="left:50%;margin-left:${-Math.round(f.w * 0.12)}px;top:${py + pole}px;width:${Math.round(f.w * 0.24)}px;height:${Math.max(6, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.line}"></span>
-        <div class="an-p" id="${id}bar" style="left:${bx}px;top:${py - Math.round(f.h * 0.01)}px;width:${bw}px;height:${Math.max(7, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.ink};transform-origin:50% 50%">
-          <span class="an-p" id="${id}bl3" style="left:0;top:${Math.round(f.h * 0.02)}px;width:${pd}px;height:${Math.round(pd * 0.4)}px;margin-left:${-Math.round(pd / 2)}px;border-radius:0 0 ${Math.round(pd * 0.2)}px ${Math.round(pd * 0.2)}px;background:${P.line}"></span>
-          <span class="an-p" id="${id}br2" style="left:100%;top:${Math.round(f.h * 0.02)}px;width:${pd}px;height:${Math.round(pd * 0.4)}px;margin-left:${-Math.round(pd / 2)}px;border-radius:0 0 ${Math.round(pd * 0.2)}px ${Math.round(pd * 0.2)}px;background:${P.acc}"></span>
-        </div>`)
-    }
-    case 'domino': {
-      // « l'effet boule de neige », « tout s'enchaine » : la chaine tombe.
-      const n = 7, w = Math.round(f.w * 0.86), x0 = Math.round((f.w - w) / 2)
-      const dw = Math.round(w / (n * 1.9)), dh = Math.round(f.h * 0.42)
-      const base = Math.round(f.h * 0.74)
-      let ds = ''
-      for (let k = 0; k < n; k++) ds += `<span class="an-p an-dm" id="${id}dm${k}" style="left:${x0 + k * Math.round(w / n)}px;top:${base - dh}px;width:${dw}px;height:${dh}px;border-radius:${Math.round(dw * 0.16)}px;background:${k === n - 1 ? P.acc : P.line};transform-origin:100% 100%;box-shadow:0 8px 18px rgba(0,0,0,.3)"></span>`
-      return box(`${ds}
-        <span class="an-p" style="left:${x0 - Math.round(dw * 0.5)}px;top:${base}px;width:${w + dw}px;height:${Math.max(4, Math.round(f.h * 0.014))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>`)
-    }
-    case 'gears': {
-      // « la machine tourne », « tout est rode » : deux engrenages en prise.
-      const gear = (cx2, cy2, R, teeth, col, idn, cls) => {
-        let t = ''
-        for (let k = 0; k < teeth; k++) {
-          const a = (360 / teeth) * k
-          t += `<span style="position:absolute;left:50%;top:50%;width:${Math.round(R * 0.3)}px;height:${Math.round(R * 0.46)}px;margin-left:${-Math.round(R * 0.15)}px;margin-top:${-Math.round(R * 0.23)}px;border-radius:${Math.round(R * 0.08)}px;background:${col};transform:rotate(${a}deg) translateY(${-Math.round(R * 0.86)}px)"></span>`
-        }
-        return `<span class="an-p ${cls}" id="${idn}" style="left:${cx2 - R}px;top:${cy2 - R}px;width:${2 * R}px;height:${2 * R}px">
-          <span style="position:absolute;left:50%;top:50%;width:${Math.round(R * 1.5)}px;height:${Math.round(R * 1.5)}px;margin-left:${-Math.round(R * 0.75)}px;margin-top:${-Math.round(R * 0.75)}px;border-radius:50%;background:${col}"></span>
-          <span style="position:absolute;left:50%;top:50%;width:${Math.round(R * 0.5)}px;height:${Math.round(R * 0.5)}px;margin-left:${-Math.round(R * 0.25)}px;margin-top:${-Math.round(R * 0.25)}px;border-radius:50%;background:${P.soft}"></span>${t}</span>`
-      }
-      const R1 = Math.round(Math.min(f.w * 0.2, f.h * 0.3)), R2 = Math.round(R1 * 0.72)
-      const cx1 = Math.round(f.w * 0.4), cy1 = Math.round(f.h * 0.44)
-      return box(gear(cx1, cy1, R1, 10, P.acc, `${id}g1`, 'an-gr')
-        + gear(cx1 + R1 + R2 - Math.round(R1 * 0.24), cy1 + Math.round(R1 * 0.5), R2, 8, P.line, `${id}g2`, 'an-gr'))
-    }
     case 'liquid': {
       // « ca se remplit », « jusqu'a ras bord » : le verre se remplit, le liquide ondule.
       const w = Math.round(f.w * 0.36), h = Math.round(f.h * 0.86)
@@ -2027,39 +1987,6 @@ export function animHtml(name, s, W, H, vs) {
       return box(`${ps}
         <span class="an-p" id="${id}mgc" style="left:${cx2 - Math.round(md / 2)}px;top:${cy2 - Math.round(md / 2)}px;width:${md}px;height:${md}px;border-radius:${Math.round(md * 0.5)}px ${Math.round(md * 0.5)}px ${Math.round(md * 0.16)}px ${Math.round(md * 0.16)}px;border:${Math.round(md * 0.24)}px solid ${P.acc};border-bottom:none;box-sizing:border-box"></span>`)
     }
-    case 'puzzle': {
-      // « ca s'emboite », « la piece manquante » : les deux moities se rejoignent.
-      const pw = Math.round(f.w * 0.32), ph = Math.round(pw * 1.1)
-      const cy2 = Math.round((f.h - ph) / 2), knob = Math.round(pw * 0.24)
-      const half = (idn, col, flip) => `<span class="an-p" id="${idn}" style="left:${flip ? Math.round(f.w / 2) : Math.round(f.w / 2) - pw}px;top:${cy2}px;width:${pw}px;height:${ph}px;border-radius:${flip ? `0 ${Math.round(pw * 0.14)}px ${Math.round(pw * 0.14)}px 0` : `${Math.round(pw * 0.14)}px 0 0 ${Math.round(pw * 0.14)}px`};background:${col}">
-        <span style="position:absolute;${flip ? 'left' : 'right'}:${-Math.round(knob / 2)}px;top:50%;margin-top:${-Math.round(knob / 2)}px;width:${knob}px;height:${knob}px;border-radius:50%;background:${flip ? P.soft : col}"></span></span>`
-      return box(half(`${id}pz1`, P.line, false) + half(`${id}pz2`, P.acc, true))
-    }
-    case 'snowball': {
-      // « ca fait boule de neige » : la boule roule et grossit.
-      const bd = Math.round(f.h * 0.34)
-      const base = Math.round(f.h * 0.8)
-      return box(`
-        <span class="an-p" style="left:${Math.round(f.w * 0.02)}px;top:${base}px;width:${Math.round(f.w * 0.96)}px;height:${Math.max(4, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>
-        <span class="an-p" id="${id}sw" style="left:${Math.round(f.w * 0.04)}px;top:${base - Math.round(bd * 0.34)}px;width:${Math.round(bd * 0.34)}px;height:${Math.round(bd * 0.34)}px;border-radius:50%;background:${grad(140)};transform-origin:50% 50%"></span>
-        <span class="an-p" id="${id}swt" style="left:${Math.round(f.w * 0.04)}px;top:${base - 2}px;width:${Math.round(f.w * 0.8)}px;height:4px;border-radius:99px;background:${P.acc};opacity:.4;transform-origin:0% 50%"></span>`)
-    }
-    case 'ladder': {
-      // « monter d'un cran », « etape par etape vers le haut ».
-      const n = 5, w = Math.round(f.w * 0.6), x = Math.round((f.w - w) / 2)
-      const sh = Math.round(f.h / (n + 1))
-      let rungs = ''
-      for (let k = 0; k < n; k++) {
-        const y = Math.round(f.h * 0.94) - k * sh
-        rungs += `<span class="an-p an-ld3" style="left:${x}px;top:${y}px;width:${w}px;height:${Math.max(5, Math.round(f.h * 0.018))}px;border-radius:99px;background:${P.line}"></span>`
-      }
-      const md = Math.round(f.h * 0.13)
-      return box(`
-        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.06)}px;width:${Math.max(5, Math.round(f.h * 0.016))}px;height:${Math.round(f.h * 0.9)}px;border-radius:99px;background:${P.line}"></span>
-        <span class="an-p" style="left:${x + w}px;top:${Math.round(f.h * 0.06)}px;width:${Math.max(5, Math.round(f.h * 0.016))}px;height:${Math.round(f.h * 0.9)}px;border-radius:99px;background:${P.line}"></span>
-        ${rungs}
-        <span class="an-p" id="${id}lm" style="left:${Math.round((f.w - md) / 2)}px;top:${Math.round(f.h * 0.94) - Math.round(md * 0.8)}px;width:${md}px;height:${md}px;border-radius:50%;background:${P.acc};box-shadow:0 8px 20px rgba(0,0,0,.4)"></span>`)
-    }
     case 'explode': {
       // « on decortique », « piece par piece » : la vue eclatee.
       const cd = Math.round(Math.min(f.w * 0.3, f.h * 0.28))
@@ -2074,72 +2001,242 @@ export function animHtml(name, s, W, H, vs) {
         <span class="an-p" id="${id}exc" style="left:${cx2 - Math.round(cd / 2)}px;top:${cy2 - Math.round(cd / 2)}px;width:${cd}px;height:${cd}px;border-radius:${Math.round(cd * 0.24)}px;background:${grad(140)};box-shadow:0 14px 32px rgba(0,0,0,.4)"></span>
         ${ps}`)
     }
-    case 'merge': {
-      // « on reunit tout », « les deux n'en font plus qu'un ».
-      const d = Math.round(Math.min(f.w * 0.32, f.h * 0.42))
-      const cy2 = Math.round((f.h - d) / 2)
-      return box(`
-        <span class="an-p" id="${id}mr1" style="left:${Math.round(f.w * 0.06)}px;top:${cy2}px;width:${d}px;height:${d}px;border-radius:50%;background:${P.line}"></span>
-        <span class="an-p" id="${id}mr2" style="left:${Math.round(f.w * 0.94) - d}px;top:${cy2}px;width:${d}px;height:${d}px;border-radius:50%;background:${P.acc}"></span>
-        <span class="an-p" id="${id}mr3" style="left:${Math.round((f.w - d * 1.16) / 2)}px;top:${cy2 - Math.round(d * 0.08)}px;width:${Math.round(d * 1.16)}px;height:${Math.round(d * 1.16)}px;border-radius:50%;background:${grad(140)};opacity:0;box-shadow:0 16px 36px rgba(0,0,0,.4)"></span>`)
-    }
-    case 'spiral': {
-      // « tout converge », « on resserre » : les anneaux se contractent vers le centre.
-      const cx2 = Math.round(f.w / 2), cy2 = Math.round(f.h / 2)
-      let rs = ''
-      for (let k = 0; k < 5; k++) {
-        const R = Math.round(Math.min(f.w * 0.42, f.h * 0.46) * (1 - k * 0.17))
-        rs += `<span class="an-p an-sp2" id="${id}sp2${k}" style="box-sizing:border-box;left:${cx2 - R}px;top:${cy2 - R}px;width:${2 * R}px;height:${2 * R}px;border-radius:50%;border:${Math.max(3, Math.round(f.h * 0.014))}px solid ${k === 4 ? P.acc : P.line};opacity:${0.35 + k * 0.16}"></span>`
+    // ── PAQUET 10 (#157) — METAPHORE **ET** MATIERE.
+    // Axel a retire douze des quinze du paquet 9. En les regardant : `balance`
+    // c'etait deux trapezes et un trait, `puzzle` deux rectangles, `merge` deux
+    // ronds, `mirror` deux carres. J'avais bien change de langage — mais en
+    // jetant les rangees j'avais jete la MATIERE avec. Or c'est exactement ce
+    // qu'il gardait depuis le debut : le tableau de bord a des tuiles ET une
+    // courbe, la facture a des lignes ET un total, les bougies ont des meches.
+    // Ici : des metaphores, mais peuplees — des graduations, des chiffres, des
+    // textures, de la profondeur. Et `snowball` refaite (« bonne idee mais fais
+    // la mieux ») : une vraie pente, une boule texturee qui tourne, grossit et
+    // ramasse ce qu'elle croise, avec sa trainee.
+    case 'snowball': {
+      const gy = Math.round(f.h * 0.86)
+      const d0 = Math.round(f.h * 0.13)
+      let flakes = ''
+      for (let k = 0; k < 7; k++) {
+        const fd = Math.round(f.h * (0.026 + (k % 3) * 0.012))
+        flakes += `<span class="an-p an-sf" id="${id}sf${k}" style="left:${Math.round(f.w * (0.24 + k * 0.1))}px;top:${gy - Math.round(f.h * (0.03 + (k % 2) * 0.05))}px;width:${fd}px;height:${fd}px;border-radius:50%;background:${P.ink};opacity:.35"></span>`
       }
-      const cd = Math.round(f.h * 0.12)
-      return box(`${rs}
-        <span class="an-p" id="${id}spc" style="left:${cx2 - Math.round(cd / 2)}px;top:${cy2 - Math.round(cd / 2)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${P.acc};box-shadow:0 0 30px ${P.acc}"></span>`)
-    }
-    case 'bridge': {
-      // « on comble le trou », « on fait le pont » : le tablier se construit.
-      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
-      const ty = Math.round(f.h * 0.44), pw = Math.round(f.w * 0.1)
-      let planks = ''
-      for (let k = 0; k < 6; k++) planks += `<span class="an-p an-bp" id="${id}bp${k}" style="left:${x + Math.round(w * 0.14) + k * Math.round(w * 0.12)}px;top:${ty}px;width:${Math.round(w * 0.11)}px;height:${Math.max(8, Math.round(f.h * 0.035))}px;border-radius:${Math.round(f.h * 0.012)}px;background:${P.acc}"></span>`
+      // la boule : un disque texture (secteurs alternes) pour qu'on VOIE la rotation
+      let sect = ''
+      for (let k = 0; k < 6; k++) sect += `<span style="position:absolute;left:50%;top:0;width:50%;height:100%;transform-origin:0% 50%;transform:rotate(${k * 60}deg);background:${k % 2 ? 'rgba(255,255,255,.22)' : 'transparent'};border-radius:0 100% 100% 0"></span>`
       return box(`
-        <span class="an-p" style="left:${x}px;top:${ty}px;width:${Math.round(w * 0.14)}px;height:${Math.max(8, Math.round(f.h * 0.035))}px;border-radius:${Math.round(f.h * 0.012)}px;background:${P.line}"></span>
-        <span class="an-p" style="left:${x + Math.round(w * 0.86)}px;top:${ty}px;width:${Math.round(w * 0.14)}px;height:${Math.max(8, Math.round(f.h * 0.035))}px;border-radius:${Math.round(f.h * 0.012)}px;background:${P.line}"></span>
-        <span class="an-p" style="left:${x + Math.round(w * 0.04)}px;top:${ty + Math.round(f.h * 0.04)}px;width:${Math.max(6, Math.round(f.h * 0.022))}px;height:${Math.round(f.h * 0.46)}px;background:${P.line}"></span>
-        <span class="an-p" style="left:${x + Math.round(w * 0.94)}px;top:${ty + Math.round(f.h * 0.04)}px;width:${Math.max(6, Math.round(f.h * 0.022))}px;height:${Math.round(f.h * 0.46)}px;background:${P.line}"></span>
-        ${planks}`)
+        <span class="an-p" style="left:${Math.round(f.w * 0.02)}px;top:${gy}px;width:${Math.round(f.w * 0.96)}px;height:${Math.max(5, Math.round(f.h * 0.018))}px;border-radius:99px;background:${P.ink};opacity:.3;transform:rotate(-4deg);transform-origin:0% 50%"></span>
+        <span class="an-p" id="${id}swt" style="left:${Math.round(f.w * 0.06)}px;top:${gy - Math.round(f.h * 0.012)}px;width:${Math.round(f.w * 0.72)}px;height:${Math.max(6, Math.round(f.h * 0.026))}px;border-radius:99px;background:${P.acc};opacity:.32;transform:rotate(-4deg);transform-origin:0% 50%"></span>
+        ${flakes}
+        <span class="an-p" id="${id}sw" style="left:${Math.round(f.w * 0.06)}px;top:${gy - d0}px;width:${d0}px;height:${d0}px;border-radius:50%;background:${grad(140)};overflow:hidden;box-shadow:0 10px 24px rgba(0,0,0,.45);transform-origin:50% 50%">${sect}</span>`)
     }
-    case 'seed': {
-      // « ca pousse », « planter puis recolter » : la graine devient un arbre.
-      const gy = Math.round(f.h * 0.9)
-      const th = Math.round(f.h * 0.5), tw = Math.max(8, Math.round(f.w * 0.03))
-      const cd = Math.round(f.h * 0.4)
+    case 'iceberg': {
+      // « ce que tu vois n'est qu'une partie » : la pointe emergee, la masse dessous.
+      const wl = Math.round(f.h * 0.34)
+      const tw = Math.round(f.w * 0.36), th = Math.round(f.h * 0.3)
+      const bw = Math.round(f.w * 0.72), bh = Math.round(f.h * 0.56)
+      const cx2 = Math.round(f.w / 2)
+      let strat = ''
+      for (let k = 1; k < 4; k++) strat += `<span style="position:absolute;left:8%;top:${k * 24}%;width:84%;height:${Math.max(2, Math.round(bh * 0.012))}px;background:#FFFFFF;opacity:.14"></span>`
       return box(`
-        <span class="an-p" style="left:${Math.round(f.w * 0.06)}px;top:${gy}px;width:${Math.round(f.w * 0.88)}px;height:${Math.max(5, Math.round(f.h * 0.018))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>
-        <span class="an-p" id="${id}sdt" style="left:50%;margin-left:${-Math.round(tw / 2)}px;top:${gy - th}px;width:${tw}px;height:${th}px;border-radius:99px;background:${P.line};transform-origin:50% 100%"></span>
-        <span class="an-p" id="${id}sdc" style="left:50%;margin-left:${-Math.round(cd / 2)}px;top:${gy - th - Math.round(cd * 0.62)}px;width:${cd}px;height:${cd}px;border-radius:50% 50% 46% 46%;background:${grad(150)};transform-origin:50% 100%"></span>
-        <span class="an-p" id="${id}sdl" style="left:50%;margin-left:${-Math.round(cd * 0.3)}px;top:${gy - Math.round(th * 0.5)}px;width:${Math.round(cd * 0.3)}px;height:${Math.round(cd * 0.18)}px;border-radius:60% 0 60% 0;background:${P.acc};opacity:.75;transform-origin:100% 50%"></span>`)
+        <span class="an-p" id="${id}ibb" style="left:${cx2 - Math.round(bw / 2)}px;top:${wl}px;width:${bw}px;height:${bh}px;clip-path:polygon(18% 0,82% 0,100% 34%,72% 100%,28% 100%,0 40%);background:${P.acc};opacity:.42;overflow:hidden">${strat}</span>
+        <span class="an-p" id="${id}ibt" style="left:${cx2 - Math.round(tw / 2)}px;top:${wl - th}px;width:${tw}px;height:${th}px;clip-path:polygon(52% 0,100% 100%,0 100%);background:${grad(150)}"></span>
+        <span class="an-p" id="${id}ibw" style="left:0;top:${wl}px;width:${f.w}px;height:${Math.max(4, Math.round(f.h * 0.016))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        ${[0.1, 0.34, 0.62, 0.86].map((t, k) => `<span class="an-p an-iw" style="left:${Math.round(f.w * t)}px;top:${wl + Math.round(f.h * (0.03 + (k % 2) * 0.03))}px;width:${Math.round(f.w * 0.1)}px;height:${Math.max(3, Math.round(f.h * 0.01))}px;border-radius:99px;background:${P.ink};opacity:.22"></span>`).join('')}`)
     }
-    case 'crack': {
-      // « le mur se fissure », « ca cede », « la breche ».
-      const w = Math.round(f.w * 0.86), h = Math.round(f.h * 0.9)
-      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
-      const zig = 'M50 0 L58 14 L44 30 L60 46 L46 62 L58 78 L48 92 L56 100'
-      return box(`
-        <span class="an-p" id="${id}ck1" style="left:${x}px;top:${y}px;width:${Math.round(w / 2)}px;height:${h}px;border-radius:${Math.round(w * 0.03)}px 0 0 ${Math.round(w * 0.03)}px;background:${P.line};overflow:hidden">
-          ${[0.16, 0.36, 0.56, 0.76].map((t) => `<span style="position:absolute;left:8%;top:${t * 100}%;width:64%;height:${Math.max(3, Math.round(h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:.16"></span>`).join('')}</span>
-        <span class="an-p" id="${id}ck2" style="left:${x + Math.round(w / 2)}px;top:${y}px;width:${Math.round(w / 2)}px;height:${h}px;border-radius:0 ${Math.round(w * 0.03)}px ${Math.round(w * 0.03)}px 0;background:${P.line};overflow:hidden">
-          ${[0.16, 0.36, 0.56, 0.76].map((t) => `<span style="position:absolute;right:8%;top:${t * 100}%;width:64%;height:${Math.max(3, Math.round(h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:.16"></span>`).join('')}</span>
-        <svg class="an-p" id="${id}ckl" viewBox="0 0 100 100" preserveAspectRatio="none" style="left:${x + Math.round(w * 0.4)}px;top:${y}px;width:${Math.round(w * 0.2)}px;height:${h}px" fill="none">
-          <path d="${zig}" stroke="${P.acc}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>`)
+    case 'tunnel': {
+      // « tu traverses », « la lumiere au bout » : les anneaux defilent en profondeur.
+      const cx2 = Math.round(f.w / 2), cy2 = Math.round(f.h / 2)
+      let rings = ''
+      for (let k = 0; k < 7; k++) {
+        const R = Math.round(Math.min(f.w * 0.46, f.h * 0.48) * Math.pow(0.72, k))
+        rings += `<span class="an-p an-tn" id="${id}tn${k}" style="box-sizing:border-box;left:${cx2 - R}px;top:${cy2 - R}px;width:${2 * R}px;height:${2 * R}px;border-radius:${Math.round(R * 0.2)}px;border:${Math.max(3, Math.round(R * 0.07))}px solid ${P.line};opacity:${(0.25 + k * 0.11).toFixed(2)}"></span>`
+      }
+      const gd = Math.round(f.h * 0.12)
+      return box(`${rings}
+        <span class="an-p" id="${id}tng" style="left:${cx2 - Math.round(gd / 2)}px;top:${cy2 - Math.round(gd / 2)}px;width:${gd}px;height:${gd}px;border-radius:50%;background:${P.acc};box-shadow:0 0 ${Math.round(gd * 1.4)}px ${P.acc},0 0 ${Math.round(gd * 3)}px ${P.acc}"></span>`)
     }
-    case 'mirror': {
-      // « d'un seul coup tu en as deux », « ca se duplique ».
-      const d = Math.round(Math.min(f.w * 0.34, f.h * 0.44))
-      const cy2 = Math.round((f.h - d) / 2)
+    case 'lighthouse': {
+      // « tu deviens la reference » : le phare balaie, les vagues en dessous.
+      const tw = Math.round(f.w * 0.16), th = Math.round(f.h * 0.5)
+      const x = Math.round((f.w - tw) / 2), y = Math.round(f.h * 0.16)
+      let bands = ''
+      for (let k = 0; k < 4; k++) bands += `<span style="position:absolute;left:0;top:${18 + k * 20}%;width:100%;height:10%;background:${P.acc};opacity:.85"></span>`
+      let waves = ''
+      for (let k = 0; k < 4; k++) waves += `<span class="an-p an-lw" style="left:${Math.round(f.w * (0.04 + (k % 2) * 0.5))}px;top:${Math.round(f.h * (0.8 + k * 0.045))}px;width:${Math.round(f.w * 0.42)}px;height:${Math.max(4, Math.round(f.h * 0.014))}px;border-radius:99px;background:${P.ink};opacity:.24"></span>`
+      return box(`${waves}
+        <span class="an-p" id="${id}lhb" style="left:${x + Math.round(tw * 0.1)}px;top:${y}px;width:${Math.round(tw * 0.8)}px;height:${Math.round(th * 0.26)}px;border-radius:${Math.round(tw * 0.2)}px ${Math.round(tw * 0.2)}px 0 0;background:${P.ink};opacity:.85;z-index:3"></span>
+        <span class="an-p" style="left:${x}px;top:${y + Math.round(th * 0.24)}px;width:${tw}px;height:${Math.round(th * 0.76)}px;clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);background:${P.line};overflow:hidden">${bands}</span>
+        <span class="an-p" id="${id}lhr" style="left:${x + Math.round(tw * 0.5)}px;top:${y + Math.round(th * 0.1)}px;width:${Math.round(f.w * 0.52)}px;height:${Math.round(f.h * 0.3)}px;margin-top:${-Math.round(f.h * 0.15)}px;background:linear-gradient(90deg,${P.acc}cc,transparent);clip-path:polygon(0 46%,100% 0,100% 100%,0 54%);transform-origin:0% 50%"></span>`)
+    }
+    case 'compass': {
+      // « la bonne direction », « tu sais ou tu vas » : l'aiguille se cale au nord.
+      const d = Math.round(Math.min(f.w * 0.62, f.h * 0.9))
+      const cx2 = Math.round(f.w / 2), cy2 = Math.round(f.h / 2), R = Math.round(d / 2)
+      let ticks = ''
+      for (let k = 0; k < 24; k++) {
+        const big = k % 6 === 0
+        ticks += `<span style="position:absolute;left:50%;top:50%;width:${big ? 3 : 2}px;height:${Math.round(R * (big ? 0.2 : 0.11))}px;margin-left:-1px;background:${P.ink};opacity:${big ? .6 : .3};transform-origin:50% 0;transform:rotate(${k * 15}deg) translateY(${-R + 6}px)"></span>`
+      }
+      const nd = Math.round(R * 0.82)
       return box(`
-        <span class="an-p" style="left:50%;margin-left:-1px;top:${Math.round(f.h * 0.06)}px;width:2px;height:${Math.round(f.h * 0.88)}px;background:${P.ink};opacity:.2"></span>
-        <span class="an-p" id="${id}mi1" style="left:${Math.round(f.w / 2) - d - Math.round(f.w * 0.03)}px;top:${cy2}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.24)}px;background:${grad(140)};box-shadow:0 14px 30px rgba(0,0,0,.4)"></span>
-        <span class="an-p" id="${id}mi2" style="left:${Math.round(f.w / 2) + Math.round(f.w * 0.03)}px;top:${cy2}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.24)}px;background:${grad(140)};opacity:0;box-shadow:0 14px 30px rgba(0,0,0,.4)"></span>`)
+        <span class="an-p" id="${id}cpd" style="box-sizing:border-box;left:${cx2 - R}px;top:${cy2 - R}px;width:${d}px;height:${d}px;border-radius:50%;border:${Math.max(4, Math.round(R * 0.07))}px solid ${P.line};background:${P.soft}">${ticks}</span>
+        <span class="an-p" id="${id}cpn" style="left:${cx2}px;top:${cy2}px;width:${Math.round(R * 0.16)}px;height:${nd}px;margin-left:${-Math.round(R * 0.08)}px;margin-top:${-nd}px;background:${P.acc};clip-path:polygon(50% 0,100% 100%,0 100%);transform-origin:50% 100%"></span>
+        <span class="an-p" style="left:${cx2}px;top:${cy2}px;width:${Math.round(R * 0.16)}px;height:${Math.round(nd * 0.6)}px;margin-left:${-Math.round(R * 0.08)}px;background:${P.ink};opacity:.3;clip-path:polygon(50% 100%,100% 0,0 0)"></span>
+        <span class="an-p" style="left:${cx2 - Math.round(R * 0.08)}px;top:${cy2 - Math.round(R * 0.08)}px;width:${Math.round(R * 0.16)}px;height:${Math.round(R * 0.16)}px;border-radius:50%;background:${P.ink}"></span>`)
+    }
+    case 'chess': {
+      // « le bon coup », « la strategie » : la piece traverse et prend.
+      const n = 6, bw = Math.round(Math.min(f.w * 0.88, f.h * 0.98))
+      const cs = Math.round(bw / n), x = Math.round((f.w - cs * n) / 2), y = Math.round((f.h - cs * n) / 2)
+      let cells = ''
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        cells += `<span style="position:absolute;left:${c * cs}px;top:${r * cs}px;width:${cs}px;height:${cs}px;background:${(r + c) % 2 ? P.ink : 'transparent'};opacity:${(r + c) % 2 ? .16 : 0}"></span>`
+      }
+      const pd = Math.round(cs * 0.6)
+      const piece = (col, cc, rr, idn) => `<span class="an-p" id="${idn}" style="left:${x + cc * cs + Math.round((cs - pd) / 2)}px;top:${y + rr * cs + Math.round((cs - pd) / 2)}px;width:${pd}px;height:${pd}px;border-radius:${Math.round(pd * 0.3)}px ${Math.round(pd * 0.3)}px ${Math.round(pd * 0.14)}px ${Math.round(pd * 0.14)}px;background:${col};box-shadow:0 6px 14px rgba(0,0,0,.4)">
+        <span style="position:absolute;left:22%;top:-18%;width:56%;height:38%;border-radius:50%;background:${col}"></span></span>`
+      return box(`<span class="an-p" style="left:${x}px;top:${y}px;width:${cs * n}px;height:${cs * n}px;border-radius:${Math.round(cs * 0.16)}px;border:2px solid ${P.line};background:${P.soft};overflow:hidden">${cells}</span>
+        ${piece(P.line, 4, 1, `${id}cb`)}${piece(P.acc, 1, 4, `${id}ca`)}`)
+    }
+    case 'keystone': {
+      // « la piece qui tient tout » : l'arche se ferme sur sa cle de voute.
+      const n = 7, R = Math.round(Math.min(f.w * 0.42, f.h * 0.62))
+      const cx2 = Math.round(f.w / 2), cy2 = Math.round(f.h * 0.84)
+      const bw = Math.round(R * 0.46), bh = Math.round(R * 0.3)
+      let blocks = ''
+      for (let k = 0; k < n; k++) {
+        const a = Math.PI - (Math.PI * k) / (n - 1)
+        const bx = cx2 + Math.cos(a) * R, by = cy2 - Math.sin(a) * R
+        const key = k === 3
+        blocks += `<span class="an-p an-ks" id="${id}ks${k}" style="left:${Math.round(bx - bw / 2)}px;top:${Math.round(by - bh / 2)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.16)}px;background:${key ? P.acc : P.line};transform:rotate(${Math.round(90 - (a * 180) / Math.PI)}deg);box-shadow:0 6px 14px rgba(0,0,0,.3)">
+          <span style="position:absolute;left:12%;top:26%;width:76%;height:${Math.max(2, Math.round(bh * 0.08))}px;background:${key ? 'rgba(255,255,255,.4)' : P.ink};opacity:${key ? 1 : .16}"></span></span>`
+      }
+      return box(`${blocks}
+        <span class="an-p" style="left:${Math.round(f.w * 0.04)}px;top:${cy2}px;width:${Math.round(f.w * 0.92)}px;height:${Math.max(5, Math.round(f.h * 0.02))}px;border-radius:99px;background:${P.ink};opacity:.32"></span>`)
+    }
+    case 'matryoshka': {
+      // « une fois qu'on ouvre », « il y a autre chose derriere ».
+      const n = 4
+      let ds = ''
+      for (let k = 0; k < n; k++) {
+        const dw = Math.round(f.w * (0.34 - k * 0.06)), dh = Math.round(dw * 1.5)
+        ds += `<span class="an-p an-my" id="${id}my${k}" style="left:${Math.round(f.w * (0.08 + k * 0.22))}px;top:${Math.round(f.h * 0.9) - dh}px;width:${dw}px;height:${dh}px;border-radius:${Math.round(dw * 0.5)}px ${Math.round(dw * 0.5)}px ${Math.round(dw * 0.24)}px ${Math.round(dw * 0.24)}px;background:${k === n - 1 ? P.acc : P.line};opacity:${(1 - k * 0.12).toFixed(2)};overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.3)">
+          <span style="position:absolute;left:18%;top:16%;width:64%;height:30%;border-radius:50%;background:#FFFFFF;opacity:.5"></span>
+          <span style="position:absolute;left:12%;top:56%;width:76%;height:${Math.max(3, Math.round(dh * 0.03))}px;border-radius:99px;background:#FFFFFF;opacity:.35"></span>
+          <span style="position:absolute;left:12%;top:68%;width:52%;height:${Math.max(3, Math.round(dh * 0.03))}px;border-radius:99px;background:#FFFFFF;opacity:.22"></span></span>`
+      }
+      return box(ds)
+    }
+    case 'pyramid': {
+      // « on construit », « la base d'abord » : les couches s'empilent.
+      const rows = 4, bh = Math.round(f.h * 0.17), gp = Math.round(f.h * 0.025)
+      const bw = Math.round(f.w * 0.19)
+      const base = Math.round(f.h * 0.92)
+      let bs = ''
+      for (let r = 0; r < rows; r++) {
+        const cnt = rows - r
+        const tot = cnt * bw + (cnt - 1) * gp
+        for (let c = 0; c < cnt; c++) {
+          bs += `<span class="an-p an-py" id="${id}py${r}${c}" style="left:${Math.round((f.w - tot) / 2) + c * (bw + gp)}px;top:${base - (r + 1) * (bh + gp)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw * 0.14)}px;background:${r === rows - 1 ? P.acc : P.line};opacity:${(0.55 + r * 0.15).toFixed(2)};box-shadow:0 5px 12px rgba(0,0,0,.28)">
+            <span style="position:absolute;left:14%;top:26%;width:72%;height:${Math.max(2, Math.round(bh * 0.09))}px;border-radius:99px;background:${P.ink};opacity:.14"></span>
+            <span style="position:absolute;left:14%;top:56%;width:48%;height:${Math.max(2, Math.round(bh * 0.09))}px;border-radius:99px;background:${P.ink};opacity:.1"></span></span>`
+        }
+      }
+      return box(`${bs}
+        <span class="an-p" style="left:${Math.round(f.w * 0.06)}px;top:${base}px;width:${Math.round(f.w * 0.88)}px;height:${Math.max(5, Math.round(f.h * 0.018))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>`)
+    }
+    case 'maze': {
+      // « trouver le chemin », « la sortie » : le trace traverse le labyrinthe.
+      const sz = Math.round(Math.min(f.w * 0.86, f.h * 0.98))
+      const x = Math.round((f.w - sz) / 2), y = Math.round((f.h - sz) / 2)
+      const g = sz / 6
+      const walls = [[1, 0, 1, 4], [2, 1, 4, 1], [3, 2, 3, 5], [4, 3, 6, 3], [1, 5, 5, 5], [5, 0, 5, 2]]
+      let ws = ''
+      walls.forEach(([x1, y1, x2, y2]) => {
+        const hor = y1 === y2
+        ws += `<span class="an-p an-mz" style="left:${x + Math.round(g * x1)}px;top:${y + Math.round(g * y1)}px;width:${hor ? Math.round(g * (x2 - x1)) : Math.max(4, Math.round(g * 0.1))}px;height:${hor ? Math.max(4, Math.round(g * 0.1)) : Math.round(g * (y2 - y1))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>`
+      })
+      const path = `M${x + g * 0.5} ${y + g * 0.5} L${x + g * 0.5} ${y + g * 4.5} L${x + g * 2.5} ${y + g * 4.5} L${x + g * 2.5} ${y + g * 2.5} L${x + g * 4.5} ${y + g * 2.5} L${x + g * 4.5} ${y + g * 5.5}`
+      return box(`
+        <span class="an-p" style="box-sizing:border-box;left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;border-radius:${Math.round(sz * 0.05)}px;border:3px solid ${P.line};background:${P.soft}"></span>
+        ${ws}
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">
+          <path id="${id}mzp" d="${path}" stroke="${P.acc}" stroke-width="${Math.max(5, Math.round(g * 0.16))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
+        <span class="an-p" id="${id}mze" style="left:${Math.round(x + g * 4.5 - g * 0.16)}px;top:${Math.round(y + g * 5.5 - g * 0.16)}px;width:${Math.round(g * 0.32)}px;height:${Math.round(g * 0.32)}px;border-radius:50%;background:${P.acc};box-shadow:0 0 ${Math.round(g * 0.5)}px ${P.acc}"></span>`)
+    }
+    case 'constellation': {
+      // « tout prend son sens », « les points se relient ».
+      const pts = [[0.2, 0.24], [0.44, 0.12], [0.68, 0.3], [0.82, 0.56], [0.56, 0.68], [0.3, 0.6], [0.5, 0.42]]
+      let ss = '', ls = ''
+      const link = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [6, 1], [6, 4]]
+      link.forEach(([a, b], k) => {
+        ls += `<line class="an-cl3" id="${id}cl3${k}" x1="${Math.round(f.w * pts[a][0])}" y1="${Math.round(f.h * pts[a][1])}" x2="${Math.round(f.w * pts[b][0])}" y2="${Math.round(f.h * pts[b][1])}" stroke="${P.acc}" stroke-width="2.5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>`
+      })
+      pts.forEach(([px2, py2], k) => {
+        const sd = Math.round(f.h * (k === 6 ? 0.075 : 0.045))
+        ss += `<span class="an-p an-cs2" id="${id}cs2${k}" style="left:${Math.round(f.w * px2) - Math.round(sd / 2)}px;top:${Math.round(f.h * py2) - Math.round(sd / 2)}px;width:${sd}px;height:${sd}px;border-radius:50%;background:${k === 6 ? P.acc : P.ink};opacity:${k === 6 ? 1 : .55};box-shadow:0 0 ${Math.round(sd * 0.9)}px ${k === 6 ? P.acc : 'transparent'}"></span>`
+      })
+      return box(`<svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" fill="none">${ls}</svg>${ss}`)
+    }
+    case 'thermometer': {
+      // « ca chauffe », « la pression monte » : le mercure grimpe le long des graduations.
+      const tw = Math.round(f.w * 0.16), th = Math.round(f.h * 0.76)
+      const x = Math.round((f.w - tw) / 2) - Math.round(f.w * 0.06), y = Math.round(f.h * 0.05)
+      const bd = Math.round(tw * 1.5)
+      let gr = ''
+      for (let k = 0; k <= 8; k++) {
+        const big = k % 2 === 0
+        gr += `<span class="an-p" style="left:${x + tw + Math.round(f.w * 0.02)}px;top:${y + Math.round(th * k / 8)}px;width:${Math.round(f.w * (big ? 0.1 : 0.06))}px;height:${Math.max(2, Math.round(f.h * 0.008))}px;border-radius:99px;background:${P.ink};opacity:${big ? .45 : .25}"></span>`
+      }
+      return box(`${gr}
+        <span class="an-p" style="box-sizing:border-box;left:${x}px;top:${y}px;width:${tw}px;height:${th + Math.round(bd * 0.4)}px;border-radius:99px;border:${Math.max(3, Math.round(tw * 0.12))}px solid ${P.line};background:${P.soft}"></span>
+        <span class="an-p" style="left:${x - Math.round((bd - tw) / 2)}px;top:${y + th}px;width:${bd}px;height:${bd}px;border-radius:50%;background:${P.acc};box-shadow:0 0 ${Math.round(bd * 0.5)}px ${P.acc}66"></span>
+        <span class="an-p" id="${id}thm" style="left:${x + Math.round(tw * 0.24)}px;top:${y + Math.round(tw * 0.24)}px;width:${Math.round(tw * 0.52)}px;height:${th}px;border-radius:99px;background:${P.acc};transform-origin:50% 100%"></span>`)
+    }
+    case 'hive': {
+      // « la communaute se remplit », « chacun sa place » : les alveoles s'allument.
+      const cols = 4, rows = 4
+      const hw = Math.round(f.w * 0.2), hh = Math.round(hw * 1.1)
+      const x0 = Math.round((f.w - (cols * hw * 0.88)) / 2), y0 = Math.round((f.h - rows * hh * 0.78) / 2)
+      const on = [1, 4, 5, 6, 9, 10, 13]
+      let hs = ''
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const k = r * cols + c, hot = on.includes(k)
+        hs += `<span class="an-p an-hv" id="${id}hv${k}" style="left:${x0 + Math.round(c * hw * 0.88) + (r % 2 ? Math.round(hw * 0.44) : 0)}px;top:${y0 + Math.round(r * hh * 0.78)}px;width:${hw}px;height:${hh}px;clip-path:polygon(50% 0,100% 26%,100% 74%,50% 100%,0 74%,0 26%);background:${hot ? P.acc : P.line};opacity:${hot ? 1 : .38}">
+          ${hot ? `<span style="position:absolute;left:34%;top:34%;width:32%;height:32%;border-radius:50%;background:rgba(255,255,255,.5)"></span>` : ''}</span>`
+      }
+      return box(hs)
+    }
+    case 'dam': {
+      // « ca retient puis ca lache » : le barrage cede et l'eau part.
+      const wl = Math.round(f.h * 0.24)
+      const dw = Math.round(f.w * 0.14), dx = Math.round(f.w * 0.46)
+      let bricks = ''
+      for (let r = 0; r < 6; r++) bricks += `<span style="position:absolute;left:0;top:${r * 17}%;width:100%;height:${Math.max(2, Math.round(f.h * 0.006))}px;background:${P.ink};opacity:.2"></span>`
+      let flow = ''
+      for (let k = 0; k < 5; k++) flow += `<span class="an-p an-df" id="${id}df${k}" style="left:${dx + dw}px;top:${wl + Math.round(f.h * (0.1 + k * 0.11))}px;width:${Math.round(f.w * (0.16 + (k % 2) * 0.08))}px;height:${Math.max(5, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.acc};opacity:.7"></span>`
+      return box(`
+        <span class="an-p" id="${id}dw2" style="left:0;top:${wl}px;width:${dx}px;height:${f.h - wl}px;background:${P.acc};opacity:.34"></span>
+        ${[0.06, 0.2, 0.32].map((t, k) => `<span class="an-p" style="left:${Math.round(f.w * 0.04)}px;top:${wl + Math.round(f.h * (0.06 + k * 0.14))}px;width:${Math.round(dx * 0.7)}px;height:${Math.max(3, Math.round(f.h * 0.01))}px;border-radius:99px;background:#FFFFFF;opacity:.25"></span>`).join('')}
+        ${flow}
+        <span class="an-p" id="${id}dmw" style="left:${dx}px;top:${Math.round(f.h * 0.1)}px;width:${dw}px;height:${Math.round(f.h * 0.9)}px;border-radius:${Math.round(dw * 0.1)}px;background:${P.line};overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.35)">${bricks}</span>`)
+    }
+    case 'elevator': {
+      // « on monte d'un etage », « le niveau au-dessus » : la cabine grimpe.
+      const sw = Math.round(f.w * 0.42), sx = Math.round((f.w - sw) / 2)
+      const n = 5, fh2 = Math.round(f.h / n)
+      let floors = ''
+      for (let k = 0; k < n; k++) {
+        floors += `<span class="an-p" style="left:${sx}px;top:${Math.round(f.h) - (k + 1) * fh2}px;width:${sw}px;height:2px;background:${P.ink};opacity:.22"></span>
+        <span class="an-p" style="left:${sx - Math.round(f.w * 0.14)}px;top:${Math.round(f.h) - (k + 1) * fh2 + Math.round(fh2 * 0.3)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(fh2 * 0.36)}px;color:${P.ink};opacity:${k === n - 1 ? .8 : .3}">${k + 1}</span>`
+      }
+      const cw = Math.round(sw * 0.8), ch2 = Math.round(fh2 * 0.76)
+      return box(`
+        <span class="an-p" style="box-sizing:border-box;left:${sx}px;top:0;width:${sw}px;height:${f.h}px;border-left:3px solid ${P.line};border-right:3px solid ${P.line};background:${P.soft}"></span>
+        ${floors}
+        <span class="an-p" id="${id}elc" style="left:${sx + Math.round((sw - cw) / 2)}px;top:${Math.round(f.h) - fh2 + Math.round((fh2 - ch2) / 2)}px;width:${cw}px;height:${ch2}px;border-radius:${Math.round(cw * 0.08)}px;background:${grad(150)};box-shadow:0 10px 24px rgba(0,0,0,.4)">
+          <span style="position:absolute;left:50%;top:0;width:2px;height:100%;background:rgba(255,255,255,.4)"></span>
+          <span style="position:absolute;left:14%;top:12%;width:24%;height:${Math.max(3, Math.round(ch2 * 0.07))}px;border-radius:99px;background:rgba(255,255,255,.6)"></span></span>`)
     }
     default: { // clock — le temps qui passe, la rapidité
       const d = Math.round(f.h * 0.82)
@@ -2893,21 +2990,6 @@ export function animJs(name, s, r2) {
       tl.to('#${id}cv1',{y:${FH(id, -0.06)},scale:1.08,duration:0.32,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(t0 + 0.56)});
       tl.fromTo('#${id}cvk',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.72)});`
     // ── PAQUET 9 (#157) — les métaphores physiques ──
-    case 'balance':
-      return inOut + `
-      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
-      tl.fromTo('#${id}bar',{rotation:-14},{rotation:11,duration:0.46,ease:'power2.inOut'},${r2(t0 + 0.2)});
-      tl.to('#${id}bar',{rotation:-5,duration:0.36,ease:'power2.inOut'},${r2(t0 + 0.66)});
-      tl.to('#${id}bar',{rotation:0,duration:0.34,ease:'power2.out'},${r2(t0 + 1.02)});`
-    case 'domino':
-      return inOut + `
-      tl.fromTo('#${id}an .an-dm',{autoAlpha:0,y:-10},{autoAlpha:1,y:0,duration:0.2,stagger:0.03,ease:'power2.out'},${t0});
-      tl.to('#${id}an .an-dm',{rotation:64,duration:0.2,stagger:${r2(Math.max(0.07, (dur - 0.7) / 7))},ease:'power2.in'},${r2(t0 + 0.34)});`
-    case 'gears':
-      return inOut + `
-      tl.fromTo('#${id}an .an-gr',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,stagger:0.1,ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
-      tl.to('#${id}g1',{rotation:190,duration:${r2(Math.max(0.9, dur - 0.2))},ease:'none',transformOrigin:'50% 50%'},${r2(t0 + 0.24)});
-      tl.to('#${id}g2',{rotation:-238,duration:${r2(Math.max(0.9, dur - 0.2))},ease:'none',transformOrigin:'50% 50%'},${r2(t0 + 0.24)});`
     case 'liquid':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
@@ -2918,59 +3000,85 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}mgc',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${t0});
       tl.fromTo('#${id}an .an-mg',{autoAlpha:0},{autoAlpha:1,duration:0.22,stagger:0.03,ease:'power2.out'},${r2(t0 + 0.16)});
       tl.to('#${id}an .an-mg',{x:(i,el)=>{const a=parseFloat(el.dataset.a);const r=${FRAME(id)};return -Math.cos(a)*r.width*0.4},y:(i,el)=>{const a=parseFloat(el.dataset.a);const r=${FRAME(id)};return -Math.sin(a)*r.height*0.42},scale:0.5,autoAlpha:0.9,duration:0.5,stagger:0.035,ease:'power3.in'},${r2(t0 + 0.34)});`
-    case 'puzzle':
-      return inOut + `
-      tl.fromTo('#${id}pz1',{x:${FW(id, -0.4)},rotation:-10,autoAlpha:0},{x:0,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${t0});
-      tl.fromTo('#${id}pz2',{x:${FW(id, 0.4)},rotation:10,autoAlpha:0},{x:0,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${t0});
-      tl.to(['#${id}pz1','#${id}pz2'],{scale:1.05,duration:0.16,yoyo:true,repeat:1,ease:'sine.out',transformOrigin:'50% 50%'},${r2(t0 + 0.46)});`
-    case 'snowball':
-      return inOut + `
-      tl.fromTo('#${id}sw',{scale:0.4,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,ease:'back.out(2)'},${t0});
-      tl.to('#${id}sw',{x:${FW(id, 0.66)},y:${FH(id, -0.2)},scale:3.4,rotation:520,duration:${r2(Math.max(0.85, dur - 0.3))},ease:'power1.in'},${r2(t0 + 0.22)});
-      tl.fromTo('#${id}swt',{scaleX:0},{scaleX:1,duration:${r2(Math.max(0.85, dur - 0.3))},ease:'power1.in'},${r2(t0 + 0.22)});`
-    case 'ladder':
-      return inOut + `
-      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.22,ease:'power2.out'},${t0});
-      ${[1, 2, 3, 4].map((k) => `tl.to('#${id}lm',{y:${FH(id, -0.157 * k)},duration:0.2,ease:'power2.out'},${r2(t0 + 0.24 + (k - 1) * 0.22)});
-      tl.to('#${id}lm',{scaleY:0.82,duration:0.1,yoyo:true,repeat:1,ease:'sine.out',transformOrigin:'50% 100%'},${r2(t0 + 0.24 + (k - 1) * 0.22)});`).join('\n      ')}`
     case 'explode':
       return inOut + `
       tl.fromTo('#${id}exc',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
       tl.to('#${id}exc',{scale:0.5,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.42)});
       tl.fromTo('#${id}an .an-ex',{x:0,y:0,scale:0.5,autoAlpha:0},{x:(i,el)=>parseFloat(el.dataset.dx)*${FRAME(id)}.width*0.3,y:(i,el)=>parseFloat(el.dataset.dy)*${FRAME(id)}.height*0.3,scale:1,autoAlpha:1,duration:0.44,stagger:0.045,ease:'back.out(1.6)'},${r2(t0 + 0.44)});`
-    case 'merge':
+    // ── PAQUET 10 (#157) — métaphore ET matière ──
+    case 'snowball':
       return inOut + `
-      tl.fromTo(['#${id}mr1','#${id}mr2'],{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.28,ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
-      tl.to('#${id}mr1',{x:${FW(id, 0.28)},duration:0.42,ease:'power2.inOut'},${r2(t0 + 0.34)});
-      tl.to('#${id}mr2',{x:${FW(id, -0.28)},duration:0.42,ease:'power2.inOut'},${r2(t0 + 0.34)});
-      tl.to(['#${id}mr1','#${id}mr2'],{autoAlpha:0,duration:0.16,ease:'power2.in'},${r2(t0 + 0.7)});
-      tl.fromTo('#${id}mr3',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${r2(t0 + 0.7)});`
-    case 'spiral':
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.22,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}sw',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,ease:'back.out(2)'},${t0});
+      tl.to('#${id}sw',{x:${FW(id, 0.6)},y:${FH(id, 0.02)},scale:3.6,rotation:640,duration:${r2(Math.max(0.95, dur - 0.25))},ease:'power1.in'},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}swt',{scaleX:0},{scaleX:1,duration:${r2(Math.max(0.95, dur - 0.25))},ease:'power1.in'},${r2(t0 + 0.24)});
+      ${[0, 1, 2, 3, 4, 5, 6].map((k) => `tl.to('#${id}sf${k}',{scale:0,autoAlpha:0,duration:0.18,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.34 + k * Math.max(0.09, (dur - 0.5) / 8))});`).join('\n      ')}`
+    case 'iceberg':
       return inOut + `
-      tl.fromTo('#${id}an .an-sp2',{scale:1.5,autoAlpha:0,rotation:-40},{scale:1,autoAlpha:1,rotation:0,duration:0.42,stagger:0.075,ease:'power3.out',transformOrigin:'50% 50%'},${t0});
-      tl.fromTo('#${id}spc',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.5)});
-      tl.to('#${id}an .an-sp2',{scale:0.9,duration:0.3,stagger:0.04,ease:'power2.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.62)});`
-    case 'bridge':
+      tl.fromTo('#${id}ibw',{scaleX:0},{scaleX:1,duration:0.36,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}ibt',{y:${FH(id, -0.18)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.38,ease:'back.out(1.6)'},${r2(t0 + 0.16)});
+      tl.fromTo('#${id}ibb',{y:${FH(id, 0.22)},autoAlpha:0},{y:0,autoAlpha:0.42,duration:0.5,ease:'power3.out'},${r2(t0 + 0.42)});
+      tl.fromTo('#${id}an .an-iw',{x:-12,autoAlpha:0},{x:0,autoAlpha:1,duration:0.3,stagger:0.06,ease:'power2.out'},${r2(t0 + 0.3)});`
+    case 'tunnel':
+      return inOut + `
+      tl.fromTo('#${id}an .an-tn',{scale:1.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.4,stagger:0.055,ease:'power2.out',transformOrigin:'50% 50%'},${t0});
+      tl.to('#${id}an .an-tn',{scale:1.5,duration:${r2(Math.max(0.8, dur - 0.4))},stagger:0.03,ease:'power1.in',transformOrigin:'50% 50%'},${r2(t0 + 0.4)});
+      tl.fromTo('#${id}tng',{scale:0.3,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.5,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.42)});`
+    case 'lighthouse':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.03,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}lhr',{rotation:-34,autoAlpha:0},{rotation:34,autoAlpha:0.9,duration:${r2(Math.max(0.9, dur - 0.3))},ease:'sine.inOut'},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}an .an-lw',{x:-14},{x:14,duration:1.1,yoyo:true,repeat:1,stagger:0.12,ease:'sine.inOut'},${r2(t0 + 0.2)});`
+    case 'compass':
+      return inOut + `
+      tl.fromTo('#${id}cpd',{scale:0.75,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
+      tl.fromTo('#${id}cpn',{rotation:-150},{rotation:22,duration:0.6,ease:'power2.inOut'},${r2(t0 + 0.24)});
+      tl.to('#${id}cpn',{rotation:-9,duration:0.32,ease:'power2.inOut'},${r2(t0 + 0.84)});
+      tl.to('#${id}cpn',{rotation:0,duration:0.28,ease:'power2.out'},${r2(t0 + 1.16)});`
+    case 'chess':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{scale:0.92,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(1.7)',transformOrigin:'50% 50%'},${t0});
+      tl.to('#${id}ca',{x:()=>document.getElementById('${id}cb').getBoundingClientRect().left-document.getElementById('${id}ca').getBoundingClientRect().left,y:()=>document.getElementById('${id}cb').getBoundingClientRect().top-document.getElementById('${id}ca').getBoundingClientRect().top,duration:0.5,ease:'power3.inOut'},${r2(t0 + 0.4)});
+      tl.to('#${id}cb',{scale:0,autoAlpha:0,duration:0.24,ease:'back.in(2)',transformOrigin:'50% 100%'},${r2(t0 + 0.78)});`
+    case 'keystone':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ks',{y:${FH(id, 0.24)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:{each:0.08,from:'edges'},ease:'back.out(1.6)'},${t0});
+      tl.fromTo('#${id}ks3',{y:${FH(id, -0.34)},scale:1.2,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.44,ease:'back.out(2.2)'},${r2(t0 + 0.62)});
+      tl.to('#${id}an .an-ks',{y:2,duration:0.12,yoyo:true,repeat:1,ease:'sine.out'},${r2(t0 + 1.02)});`
+    case 'matryoshka':
+      return inOut + `
+      tl.fromTo('#${id}an .an-my',{scale:0.4,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,stagger:0.16,ease:'back.out(2)',transformOrigin:'50% 100%'},${t0});`
+    case 'pyramid':
+      return inOut + `
+      tl.fromTo('#${id}an .an-py',{y:${FH(id, 0.2)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.05,ease:'back.out(1.7)'},${t0});
+      tl.to('#${id}py30',{scale:1.12,duration:0.24,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 100%'},${r2(t0 + 0.94)});`
+    case 'maze':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
-      tl.fromTo('#${id}an .an-bp',{y:${FH(id, -0.3)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.28,stagger:0.09,ease:'back.out(1.9)'},${r2(t0 + 0.26)});`
-    case 'seed':
+      tl.fromTo('#${id}mzp',{strokeDashoffset:1},{strokeDashoffset:0,duration:${r2(Math.max(0.75, dur - 0.4))},ease:'power1.inOut'},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}mze',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.28,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + Math.max(0.9, dur - 0.25))});`
+    case 'constellation':
       return inOut + `
-      tl.fromTo('#${id}sdt',{scaleY:0},{scaleY:1,duration:0.44,ease:'power2.out'},${t0});
-      tl.fromTo('#${id}sdl',{scaleX:0,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.26,ease:'back.out(2)'},${r2(t0 + 0.3)});
-      tl.fromTo('#${id}sdc',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.44,ease:'back.out(1.8)'},${r2(t0 + 0.4)});
-      tl.to('#${id}sdc',{rotation:2.5,duration:0.5,yoyo:true,repeat:1,ease:'sine.inOut'},${r2(t0 + 0.86)});`
-    case 'crack':
+      tl.fromTo('#${id}an .an-cs2',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,stagger:0.06,ease:'back.out(2.6)',transformOrigin:'50% 50%'},${t0});
+      tl.fromTo('#${id}an .an-cl3',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.26,stagger:0.06,ease:'power2.out'},${r2(t0 + 0.42)});
+      tl.to('#${id}cs26',{scale:1.4,duration:0.3,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.96)});`
+    case 'thermometer':
       return inOut + `
-      tl.fromTo(['#${id}ck1','#${id}ck2'],{scale:0.94,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'power3.out'},${t0});
-      tl.fromTo('#${id}ckl path',{strokeDashoffset:1},{strokeDashoffset:0,duration:0.42,ease:'power2.in'},${r2(t0 + 0.28)});
-      tl.to('#${id}ck1',{x:${FW(id, -0.1)},rotation:-2,duration:0.4,ease:'power2.out'},${r2(t0 + 0.72)});
-      tl.to('#${id}ck2',{x:${FW(id, 0.1)},rotation:2,duration:0.4,ease:'power2.out'},${r2(t0 + 0.72)});`
-    case 'mirror':
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.02,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}thm',{scaleY:0.06},{scaleY:0.88,duration:${r2(Math.max(0.8, dur - 0.35))},ease:'power2.inOut'},${r2(t0 + 0.2)});`
+    case 'hive':
       return inOut + `
-      tl.fromTo('#${id}mi1',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
-      tl.fromTo('#${id}mi2',{scaleX:-0.2,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.4,ease:'back.out(1.8)',transformOrigin:'0% 50%'},${r2(t0 + 0.4)});
-      tl.to(['#${id}mi1','#${id}mi2'],{y:${FH(id, -0.04)},duration:0.22,yoyo:true,repeat:1,ease:'sine.inOut'},${r2(t0 + 0.84)});`
+      tl.fromTo('#${id}an .an-hv',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,stagger:{each:0.04,from:'center'},ease:'back.out(2.2)',transformOrigin:'50% 50%'},${t0});`
+    case 'dam':
+      return inOut + `
+      tl.fromTo('#${id}dmw',{y:${FH(id, -0.2)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${t0});
+      tl.fromTo('#${id}dw2',{scaleY:0,autoAlpha:0},{scaleY:1,autoAlpha:0.34,duration:0.4,ease:'power2.out',transformOrigin:'50% 100%'},${r2(t0 + 0.2)});
+      tl.to('#${id}dmw',{x:${FW(id, 0.5)},rotation:14,autoAlpha:0,duration:0.4,ease:'power2.in'},${r2(t0 + 0.72)});
+      tl.fromTo('#${id}an .an-df',{x:${FW(id, -0.14)},scaleX:0.2,autoAlpha:0},{x:0,scaleX:1,autoAlpha:0.7,duration:0.4,stagger:0.07,ease:'power2.out',transformOrigin:'0% 50%'},${r2(t0 + 0.78)});`
+    case 'elevator':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.02,ease:'power2.out'},${t0});
+      ${[1, 2, 3, 4].map((k) => `tl.to('#${id}elc',{y:${FH(id, -0.2 * k)},duration:0.26,ease:'power2.inOut'},${r2(t0 + 0.3 + (k - 1) * 0.26)});`).join('\n      ')}`
     default:
       return inOut + `
       tl.fromTo('#${id}cl', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2)' }, ${t0});
