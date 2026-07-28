@@ -204,21 +204,30 @@ export const BANK = [
   // change de langage, mais en jetant les rangees j'avais jete la MATIERE avec
   // — or c'est ce qu'il garde depuis le debut. Ici : des metaphores PEUPLEES,
   // avec des graduations, des textures, de la profondeur.
-  { name: 'snowball', desc: "UNE BOULE QUI DEVALE UNE PENTE en tournant, grossit et ramasse ce qu'elle croise. « effet boule de neige », « ca s'amplifie tout seul »." },
   { name: 'iceberg', desc: "LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache »." },
   { name: 'tunnel',  desc: "DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite »." },
-  { name: 'lighthouse', desc: "UN PHARE dont le faisceau balaie au-dessus des vagues. « tu deviens la reference », « le repere », « on te voit de loin »." },
-  { name: 'compass', desc: "UNE BOUSSOLE graduee dont l'aiguille oscille puis se cale au nord. « la bonne direction », « tu sais ou tu vas », « le cap »." },
-  { name: 'chess',   desc: "UN ECHIQUIER ou une piece traverse et prend l'autre. « le bon coup », « la strategie », « un coup d'avance »." },
-  { name: 'keystone', desc: "UNE ARCHE qui se ferme sur sa cle de voute. « la piece qui tient tout », « sans ca rien ne tient », « l'element central »." },
-  { name: 'matryoshka', desc: "DES POUPEES GIGOGNES de plus en plus petites. « il y a autre chose derriere », « une fois qu'on ouvre », « couche par couche »." },
-  { name: 'pyramid', desc: "UNE PYRAMIDE DE BLOCS qui se construit, la base d'abord. « on construit », « les fondations », « etage par etage »." },
-  { name: 'maze',    desc: "UN LABYRINTHE et le trace qui trouve la sortie. « trouver le chemin », « la sortie », « je te montre par ou passer »." },
-  { name: 'constellation', desc: "DES POINTS QUI SE RELIENT et forment une figure. « tout prend son sens », « les pieces se relient », « la vue d'ensemble »." },
   { name: 'thermometer', desc: "UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose »." },
-  { name: 'hive',    desc: "UN NID D'ABEILLES dont les alveoles s'allument une a une. « la communaute », « chacun sa place », « ca se remplit »." },
-  { name: 'dam',     desc: "UN BARRAGE qui retient puis cede, l'eau part. « ca retient plus », « ca lache », « le flot est libere »." },
-  { name: 'elevator', desc: "UNE CABINE qui monte les etages numerotes. « on monte d'un etage », « le niveau au-dessus », « passer au palier suivant »." },
+
+  // ── PAQUET 11 (#157) — RETOUR A LA CREATION DE CONTENU ──
+  // Bilan honnete : sur trois paquets de metaphores, Axel en a garde cinq sur
+  // quarante-cinq. « Reviens dans la creation de contenu » — et il a raison :
+  // ce qu'il garde, ce sont TOUJOURS les scenes de son monde. Ici, le metier de
+  // la video, en detail.
+  { name: 'filmstrip', desc: "UNE PELLICULE avec ses perforations, les vignettes defilent, une se selectionne. « image par image », « les rushs », « je choisis le plan »." },
+  { name: 'teleprompter', desc: "UN PROMPTEUR : le texte monte devant l'objectif, la ligne active s'allume. « tu lis ton texte », « le prompteur », « tu n'as plus qu'a lire »." },
+  { name: 'script',  desc: "UN SCRIPT dont les lignes s'ecrivent et dont une phrase se surligne. « le script », « ce que tu vas dire », « j'ecris le texte »." },
+  { name: 'clapper', desc: "UN CLAP DE CINEMA rempli qui claque. « moteur », « on tourne », « prise deux », « action »." },
+  { name: 'retakes', desc: "TROIS PRISES NUMEROTEES, les ratees se barrent, la bonne s'encadre. « on la refait », « la bonne prise », « je garde celle-la »." },
+  { name: 'lightsetup', desc: "LE SETUP : camera sur trepied entre deux softbox qui s'allument. « le bon setup », « comment je filme », « l'eclairage »." },
+  { name: 'transition', desc: "UN PLAN QUI EN BALAIE UN AUTRE, ligne lumineuse au passage. « et la ca bascule », « la transition », « on enchaine »." },
+  { name: 'zoompunch', desc: "LE CADRE QUI SE RESSERRE d'un coup sur un detail qui grossit. « regarde bien ca », « zoom la-dessus », « le detail qui compte »." },
+  { name: 'speedramp', desc: "UNE TIMELINE avec sa zone ralentie et sa zone acceleree. « la tu ralentis », « en accelere », « le ralenti sur ce moment »." },
+  { name: 'substyle', desc: "TROIS STYLES DE SOUS-TITRES cote a cote, celui qu'on retient s'encadre. « le style de sous-titres », « tu choisis la typo »." },
+  { name: 'trendsound', desc: "UN SON TENDANCE : sa forme d'onde, sa courbe d'usage, son compteur. « le son du moment », « le son qui marche », « la tendance »." },
+  { name: 'algorithm', desc: "UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant »." },
+  { name: 'loop',    desc: "LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay »." },
+  { name: 'preset',  desc: "UN STYLE ENREGISTRE applique a trois videos d'un coup. « un style enregistre », « le meme rendu partout », « mon preset »." },
+  { name: 'watermark', desc: "LE LOGO QUI SE POSE dans le coin de la video. « ta marque sur chaque video », « le filigrane », « ton logo dessus »." },
   { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
 ]
 
