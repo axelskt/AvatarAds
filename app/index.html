@@ -3155,7 +3155,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button id="acRowVoice" class="ac-row is-on" onclick="_acRowToggle('voice')">
                 <span class="ac-row-l">
                   <span class="ac-row-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16M8 16v-4M13 16V8M18 16v-7"/></svg></span>
-                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Volume constant</span><span class="faint" style="font-size:11.5px">Normalise à −14 LUFS (standard réseaux)</span></span>
+                  <span class="col" style="line-height:1.35;min-width:0"><span style="font-weight:600;font-size:14px">Volume constant</span><span class="faint" style="font-size:11.5px">Même niveau du début à la fin, sans écraser</span></span>
                 </span>
                 <span class="ac-sw"><span class="ac-sw-th"></span></span>
               </button>
@@ -22062,9 +22062,12 @@ function _acToggleDerush(){
     return;
   }
   _acDerushEnabled = !_acDerushEnabled;
-  const sw = document.getElementById('acDerushSwitch'), th = document.getElementById('acDerushThumb');
-  if(sw) sw.style.background = _acDerushEnabled ? 'var(--accent)' : 'var(--surface-3)';
-  if(th){ th.style.left = _acDerushEnabled ? '20px' : '3px'; th.style.opacity = _acDerushEnabled ? '1' : '.7'; }
+  // La ligne porte `is-on` comme toutes les autres : c'est cette classe qui
+  // allume le contour, le fond et la pastille de l'icône. Le dérush pilotait
+  // seulement l'interrupteur en style inline — l'interrupteur basculait, mais la
+  // ligne restait éteinte, seule du lot.
+  const row = document.getElementById('acRowFillers');
+  if(row) row.classList.toggle('is-on', _acDerushEnabled);
   if(_acDerushEnabled) toast('✂️ Dérush IA activé — euh, bégaiements et reprises seront coupés automatiquement');
   else { const p=document.getElementById('acDerushPanel'); if(p) p.style.display='none'; }
 }
@@ -22387,16 +22390,33 @@ async function _acExportVideo(btn){
 // Appliqué APRÈS la coupe des silences : compresser avant remonterait le
 // plancher de bruit et fausserait le seuil adaptatif de détection.
 // ─────────────────────────────────────────────────────────────────────────────
-// `target` = LUFS visés (norme ITU-R BS.1770). −14 LUFS est la cible commune
-// TikTok / Instagram / YouTube : en dessous la vidéo sonne faible face aux
-// autres, au-dessus les plateformes rabaissent (et on aurait écrasé la
-// dynamique pour rien).
+// `target` = LUFS visés (norme ITU-R BS.1770).
+//
+// ⚠️ NE PAS REMONTER CES CIBLES À −14. Je l'ai fait une fois, dans un commit
+// intitulé « saturation corrigée » — c'est lui qui l'a créée. Axel a comparé à
+// l'oreille les deux exports du même fichier, à 22 minutes d'écart :
+//     cible −18  →  −17,6 LUFS mesuré, crête 17,3 dB  →  « c'est ça que je veux »
+//     cible −14  →  −14,5 LUFS mesuré, crête 14,2 dB  →  « beaucoup trop saturé »
+// La source sort du micro à −29,8 LUFS : viser −14 demande +15,8 dB, et c'est le
+// limiteur de sortie qui absorbe la différence. Le fichier n'écrête pas (crête à
+// −0,3 dBFS dans les deux cas) mais la dynamique est écrasée de 3 dB — l'oreille
+// entend ça comme de la saturation, pas comme du volume.
+//
+// Et surtout : le niveau plateforme N'EST PAS le travail de ce module. Le
+// render-worker passe un vrai loudnorm ffmpeg sur la voix au moment du montage
+// (« voix brute (−30 LUFS) → loudnorm »), avec un algorithme à deux passes bien
+// meilleur qu'un compresseur Web Audio. Ici on livre une voix propre et vivante ;
+// la mise à niveau se fait en aval, une seule fois.
 let _acVoicePreset = 'podcast';   // 'off' | 'natural' | 'podcast' | 'punch'
 const _AC_VOICE_PRESETS = {
   off: null,
-  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 9000,  g: 1.0 }, lp: 14000, deess: -5, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -15 },
-  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 9500,  g: 1.5 }, lp: 13500, deess: -7, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -14 },
-  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 9500,  g: 2.0 }, lp: 13000, deess: -8, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -13 },
+  // air : l'étagère « beau micro ». Elle était descendue à 9-9,5 kHz en même
+  // temps que la cible montait — soit un coup de pouce EN PLEIN dans la zone de
+  // dureté (8-10 kHz, les « ss » et « ch »). Elle repart à 11-12 kHz, où elle
+  // ajoute de l'air sans ajouter de sifflantes.
+  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, lp: 14000, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
+  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, lp: 13500, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
+  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3.0 }, lp: 13000, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
 };
 
 async function _acMasterVoice(buf, presetKey, opts){
