@@ -219,7 +219,9 @@ const ANIMS = [
   'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice', 'settings',
   'versus', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form',
   'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount', 'waitlist',
-  'install', 'avatarpick', 'voicepick', 'music', 'bio'
+  'music', 'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag',
+  'schedule', 'formats', 'variants', 'pin', 'qr', 'inbox', 'wizard', 'stock',
+  'page'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -745,11 +747,23 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     storyboard— DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video ».
     discount — UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ».
     waitlist — DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes ».
-    install  — UNE FICHE D'APPLICATION dont le bouton passe a installe. « telecharge l'app », « tu l'installes », « c'est sur ton telephone ».
-    avatarpick— UNE RANGEE D'AVATARS dont UN se selectionne, l'anneau se pose. « tu choisis ton avatar », « tu prends celui que tu veux ».
-    voicepick— UNE LISTE DE VOIX dont celle qu'on retient se met a parler. « tu choisis la voix », « tu ecoutes », « cette voix-la ».
     music    — DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix ».
     bio      — UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio ».
+    keyword  — UN COMMENTAIRE AVEC LE MOT-CLE, et le message prive qui part. « commente le mot », « ecris-moi X en commentaire », « tape le mot ».
+    automation— UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul ».
+    carousel — UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler ».
+    poll     — UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis ».
+    story    — DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories ».
+    hashtag  — UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche ».
+    schedule — UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu ».
+    formats  — UNE VIDEO MAITRE et TROIS CADRES qui en sortent : 9:16, 1:1, 16:9. « dans tous les formats », « adapte a chaque reseau ».
+    variants — LE MEME CLIP EN TROIS VERSIONS, accroches differentes. « plusieurs versions », « tu declines », « tu testes trois accroches ».
+    pin      — UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires ».
+    qr       — UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es ».
+    inbox    — UNE BOITE DE RECEPTION : les messages listes, les non-lus en pastille. « tes messages », « ta boite », « tu recois des demandes ».
+    wizard   — UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape ».
+    stock    — DES LIGNES DE STOCK dont les jauges descendent, la derniere passe au rouge. « le stock part », « il reste peu de places », « bientot epuise ».
+    page     — UNE PAGE DE VENTE : le titre, le visuel, le champ, le bouton qui pulse. « ta page de vente », « la landing », « la page ou ils achetent ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.

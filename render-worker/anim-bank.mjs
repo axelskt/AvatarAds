@@ -146,11 +146,25 @@ export const BANK = [
   { name: 'storyboard', desc: "DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video »." },
   { name: 'discount', desc: "UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo »." },
   { name: 'waitlist', desc: "DES INSCRITS QUI S'AJOUTENT en file, le compteur grimpe. « la liste d'attente », « ils s'inscrivent », « deja mille personnes »." },
-  { name: 'install', desc: "UNE FICHE D'APPLICATION dont le bouton passe a installe. « telecharge l'app », « tu l'installes », « c'est sur ton telephone »." },
-  { name: 'avatarpick', desc: "UNE RANGEE D'AVATARS dont UN se selectionne, l'anneau se pose. « tu choisis ton avatar », « tu prends celui que tu veux »." },
-  { name: 'voicepick', desc: "UNE LISTE DE VOIX dont celle qu'on retient se met a parler. « tu choisis la voix », « tu ecoutes », « cette voix-la »." },
   { name: 'music',   desc: "DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix »." },
   { name: 'bio',     desc: "UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio »." },
+
+  // ── PAQUET 6 (#157) — la mecanique sociale : ce qui se passe AUTOUR du post ──
+  { name: 'keyword', desc: "UN COMMENTAIRE AVEC LE MOT-CLE, et le message prive qui part. « commente le mot », « ecris-moi X en commentaire », « tape le mot »." },
+  { name: 'automation', desc: "UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul »." },
+  { name: 'carousel', desc: "UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler »." },
+  { name: 'poll',    desc: "UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis »." },
+  { name: 'story',   desc: "DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories »." },
+  { name: 'hashtag', desc: "UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche »." },
+  { name: 'schedule', desc: "UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu »." },
+  { name: 'formats', desc: "UNE VIDEO MAITRE et TROIS CADRES qui en sortent : 9:16, 1:1, 16:9. « dans tous les formats », « adapte a chaque reseau »." },
+  { name: 'variants', desc: "LE MEME CLIP EN TROIS VERSIONS, accroches differentes. « plusieurs versions », « tu declines », « tu testes trois accroches »." },
+  { name: 'pin',     desc: "UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires »." },
+  { name: 'qr',      desc: "UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es »." },
+  { name: 'inbox',   desc: "UNE BOITE DE RECEPTION : les messages listes, les non-lus en pastille. « tes messages », « ta boite », « tu recois des demandes »." },
+  { name: 'wizard',  desc: "UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape »." },
+  { name: 'stock',   desc: "DES LIGNES DE STOCK dont les jauges descendent, la derniere passe au rouge. « le stock part », « il reste peu de places », « bientot epuise »." },
+  { name: 'page',    desc: "UNE PAGE DE VENTE : le titre, le visuel, le champ, le bouton qui pulse. « ta page de vente », « la landing », « la page ou ils achetent »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
