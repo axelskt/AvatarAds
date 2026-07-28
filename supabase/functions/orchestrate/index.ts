@@ -222,9 +222,10 @@ const ANIMS = [
   'music', 'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag',
   'schedule', 'pin', 'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes',
   'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations',
-  'property', 'menu', 'weight', 'quote', 'flight', 'saving', 'balance', 'domino',
-  'gears', 'liquid', 'magnet', 'puzzle', 'snowball', 'ladder', 'explode', 'merge',
-  'spiral', 'bridge', 'seed', 'crack', 'mirror', 'cv'
+  'property', 'menu', 'weight', 'quote', 'flight', 'saving', 'liquid', 'magnet',
+  'explode', 'snowball', 'iceberg', 'tunnel', 'lighthouse', 'compass', 'chess', 'keystone',
+  'matryoshka', 'pyramid', 'maze', 'constellation', 'thermometer', 'hive', 'dam', 'elevator',
+  'cv'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -780,21 +781,24 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     quote    — AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ».
     flight   — VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a ».
     saving   — FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint ».
-    balance  — UNE BALANCE qui oscille puis se stabilise. « le bon equilibre », « ca penche du bon cote », « il faut doser ».
-    domino   — UNE CHAINE DE DOMINOS qui tombe d'un bout a l'autre. « tout s'enchaine », « l'effet domino », « une chose en entraine une autre ».
-    gears    — DEUX ENGRENAGES en prise qui tournent ensemble. « la machine tourne », « tout est rode », « le systeme fonctionne ».
     liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
     magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
-    puzzle   — DEUX PIECES DE PUZZLE qui s'emboitent. « ca s'emboite », « la piece manquante », « les deux vont ensemble ».
-    snowball — UNE BOULE QUI ROULE ET GROSSIT en laissant sa trace. « effet boule de neige », « ca grossit tout seul », « ca s'amplifie ».
-    ladder   — UN POINT QUI GRAVIT une echelle, barreau par barreau. « monter d'un cran », « passer au niveau au-dessus », « gravir ».
     explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
-    merge    — DEUX FORMES QUI SE REJOIGNENT et n'en font plus qu'une. « on reunit tout », « les deux n'en font qu'un », « la fusion ».
-    spiral   — DES ANNEAUX QUI SE RESSERRENT vers un point lumineux. « tout converge », « on resserre », « le point central ».
-    bridge   — UN PONT QUI SE CONSTRUIT planche par planche au-dessus du vide. « on comble le trou », « on fait le pont », « relier les deux ».
-    seed     — UNE POUSSE QUI DEVIENT UN ARBRE. « ca pousse », « planter puis recolter », « ca prend racine », « la croissance ».
-    crack    — UN MUR QUI SE FISSURE et s'ecarte en deux. « ca cede », « le mur se fissure », « la breche », « ca casse ».
-    mirror   — UNE FORME ET SON REFLET qui se dedouble. « d'un seul coup tu en as deux », « ca se duplique », « le double ».
+    snowball — UNE BOULE QUI DEVALE UNE PENTE en tournant, grossit et ramasse ce qu'elle croise. « effet boule de neige », « ca s'amplifie tout seul ».
+    iceberg  — LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache ».
+    tunnel   — DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite ».
+    lighthouse— UN PHARE dont le faisceau balaie au-dessus des vagues. « tu deviens la reference », « le repere », « on te voit de loin ».
+    compass  — UNE BOUSSOLE graduee dont l'aiguille oscille puis se cale au nord. « la bonne direction », « tu sais ou tu vas », « le cap ».
+    chess    — UN ECHIQUIER ou une piece traverse et prend l'autre. « le bon coup », « la strategie », « un coup d'avance ».
+    keystone — UNE ARCHE qui se ferme sur sa cle de voute. « la piece qui tient tout », « sans ca rien ne tient », « l'element central ».
+    matryoshka— DES POUPEES GIGOGNES de plus en plus petites. « il y a autre chose derriere », « une fois qu'on ouvre », « couche par couche ».
+    pyramid  — UNE PYRAMIDE DE BLOCS qui se construit, la base d'abord. « on construit », « les fondations », « etage par etage ».
+    maze     — UN LABYRINTHE et le trace qui trouve la sortie. « trouver le chemin », « la sortie », « je te montre par ou passer ».
+    constellation— DES POINTS QUI SE RELIENT et forment une figure. « tout prend son sens », « les pieces se relient », « la vue d'ensemble ».
+    thermometer— UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose ».
+    hive     — UN NID D'ABEILLES dont les alveoles s'allument une a une. « la communaute », « chacun sa place », « ca se remplit ».
+    dam      — UN BARRAGE qui retient puis cede, l'eau part. « ca retient plus », « ca lache », « le flot est libere ».
+    elevator — UNE CABINE qui monte les etages numerotes. « on monte d'un etage », « le niveau au-dessus », « passer au palier suivant ».
     cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :

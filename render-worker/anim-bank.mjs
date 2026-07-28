@@ -194,21 +194,31 @@ export const BANK = [
   // liste : ca penche, ca tombe, ca tourne, ca s'emboite, ca pousse. Et comme
   // ce sont des images mentales et non des interfaces, elles valent pour TOUS
   // les domaines a la fois.
-  { name: 'balance', desc: "UNE BALANCE qui oscille puis se stabilise. « le bon equilibre », « ca penche du bon cote », « il faut doser »." },
-  { name: 'domino',  desc: "UNE CHAINE DE DOMINOS qui tombe d'un bout a l'autre. « tout s'enchaine », « l'effet domino », « une chose en entraine une autre »." },
-  { name: 'gears',   desc: "DEUX ENGRENAGES en prise qui tournent ensemble. « la machine tourne », « tout est rode », « le systeme fonctionne »." },
   { name: 'liquid',  desc: "UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir »." },
   { name: 'magnet',  desc: "UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant »." },
-  { name: 'puzzle',  desc: "DEUX PIECES DE PUZZLE qui s'emboitent. « ca s'emboite », « la piece manquante », « les deux vont ensemble »." },
-  { name: 'snowball', desc: "UNE BOULE QUI ROULE ET GROSSIT en laissant sa trace. « effet boule de neige », « ca grossit tout seul », « ca s'amplifie »." },
-  { name: 'ladder',  desc: "UN POINT QUI GRAVIT une echelle, barreau par barreau. « monter d'un cran », « passer au niveau au-dessus », « gravir »." },
   { name: 'explode', desc: "UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout »." },
-  { name: 'merge',   desc: "DEUX FORMES QUI SE REJOIGNENT et n'en font plus qu'une. « on reunit tout », « les deux n'en font qu'un », « la fusion »." },
-  { name: 'spiral',  desc: "DES ANNEAUX QUI SE RESSERRENT vers un point lumineux. « tout converge », « on resserre », « le point central »." },
-  { name: 'bridge',  desc: "UN PONT QUI SE CONSTRUIT planche par planche au-dessus du vide. « on comble le trou », « on fait le pont », « relier les deux »." },
-  { name: 'seed',    desc: "UNE POUSSE QUI DEVIENT UN ARBRE. « ca pousse », « planter puis recolter », « ca prend racine », « la croissance »." },
-  { name: 'crack',   desc: "UN MUR QUI SE FISSURE et s'ecarte en deux. « ca cede », « le mur se fissure », « la breche », « ca casse »." },
-  { name: 'mirror',  desc: "UNE FORME ET SON REFLET qui se dedouble. « d'un seul coup tu en as deux », « ca se duplique », « le double »." },
+
+  // ── PAQUET 10 (#157) — METAPHORE **ET** MATIERE ──
+  // Axel a retire douze des quinze du paquet 9 : `balance` c'etait deux trapezes
+  // et un trait, `puzzle` deux rectangles, `merge` deux ronds. J'avais bien
+  // change de langage, mais en jetant les rangees j'avais jete la MATIERE avec
+  // — or c'est ce qu'il garde depuis le debut. Ici : des metaphores PEUPLEES,
+  // avec des graduations, des textures, de la profondeur.
+  { name: 'snowball', desc: "UNE BOULE QUI DEVALE UNE PENTE en tournant, grossit et ramasse ce qu'elle croise. « effet boule de neige », « ca s'amplifie tout seul »." },
+  { name: 'iceberg', desc: "LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache »." },
+  { name: 'tunnel',  desc: "DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite »." },
+  { name: 'lighthouse', desc: "UN PHARE dont le faisceau balaie au-dessus des vagues. « tu deviens la reference », « le repere », « on te voit de loin »." },
+  { name: 'compass', desc: "UNE BOUSSOLE graduee dont l'aiguille oscille puis se cale au nord. « la bonne direction », « tu sais ou tu vas », « le cap »." },
+  { name: 'chess',   desc: "UN ECHIQUIER ou une piece traverse et prend l'autre. « le bon coup », « la strategie », « un coup d'avance »." },
+  { name: 'keystone', desc: "UNE ARCHE qui se ferme sur sa cle de voute. « la piece qui tient tout », « sans ca rien ne tient », « l'element central »." },
+  { name: 'matryoshka', desc: "DES POUPEES GIGOGNES de plus en plus petites. « il y a autre chose derriere », « une fois qu'on ouvre », « couche par couche »." },
+  { name: 'pyramid', desc: "UNE PYRAMIDE DE BLOCS qui se construit, la base d'abord. « on construit », « les fondations », « etage par etage »." },
+  { name: 'maze',    desc: "UN LABYRINTHE et le trace qui trouve la sortie. « trouver le chemin », « la sortie », « je te montre par ou passer »." },
+  { name: 'constellation', desc: "DES POINTS QUI SE RELIENT et forment une figure. « tout prend son sens », « les pieces se relient », « la vue d'ensemble »." },
+  { name: 'thermometer', desc: "UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose »." },
+  { name: 'hive',    desc: "UN NID D'ABEILLES dont les alveoles s'allument une a une. « la communaute », « chacun sa place », « ca se remplit »." },
+  { name: 'dam',     desc: "UN BARRAGE qui retient puis cede, l'eau part. « ca retient plus », « ca lache », « le flot est libere »." },
+  { name: 'elevator', desc: "UNE CABINE qui monte les etages numerotes. « on monte d'un etage », « le niveau au-dessus », « passer au palier suivant »." },
   { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
 ]
 
