@@ -222,9 +222,9 @@ const ANIMS = [
   'music', 'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag',
   'schedule', 'pin', 'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes',
   'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations',
-  'property', 'menu', 'program', 'weight', 'macros', 'quote', 'brief', 'course',
-  'certificate', 'quiz', 'flight', 'car', 'budget', 'saving', 'cv', 'ticket',
-  'team'
+  'property', 'menu', 'weight', 'quote', 'flight', 'saving', 'balance', 'domino',
+  'gears', 'liquid', 'magnet', 'puzzle', 'snowball', 'ladder', 'explode', 'merge',
+  'spiral', 'bridge', 'seed', 'crack', 'mirror', 'cv'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -776,21 +776,26 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     integrations— SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec ».
     property — IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location ».
     menu     — RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix ».
-    program  — SPORT — UN PROGRAMME DE LA SEMAINE dont les seances se cochent. « le programme », « trois seances par semaine », « ton planning ».
     weight   — SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats ».
-    macros   — NUTRITION — TROIS BARRES qui se remplissent : proteines, glucides, lipides. « les macros », « ce que tu manges », « le bon equilibre ».
     quote    — AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ».
-    brief    — AGENCE — UN BRIEF CLIENT : les champs se remplissent, les pieces jointes arrivent. « le brief », « ce qu'ils me demandent », « le cahier des charges ».
-    course   — FORMATION — DES MODULES dont le suivant se debloque. « la formation », « le module suivant », « tu debloques la suite ».
-    certificate— FORMATION — UN CERTIFICAT qui se delivre, sceau et signature. « le certificat », « tu es diplome », « l'attestation ».
-    quiz     — FORMATION — UNE QUESTION et ses reponses, la bonne passe au vert. « le quiz », « la bonne reponse », « teste-toi ».
     flight   — VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a ».
-    car      — AUTOMOBILE — UNE FICHE VEHICULE : la voiture, le kilometrage, l'annee, le prix. « cette voiture », « le vehicule », « l'occasion ».
-    budget   — FINANCES — LA REPARTITION DES DEPENSES en barres colorees. « le budget », « ou part l'argent », « les depenses du mois ».
     saving   — FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint ».
+    balance  — UNE BALANCE qui oscille puis se stabilise. « le bon equilibre », « ca penche du bon cote », « il faut doser ».
+    domino   — UNE CHAINE DE DOMINOS qui tombe d'un bout a l'autre. « tout s'enchaine », « l'effet domino », « une chose en entraine une autre ».
+    gears    — DEUX ENGRENAGES en prise qui tournent ensemble. « la machine tourne », « tout est rode », « le systeme fonctionne ».
+    liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
+    magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
+    puzzle   — DEUX PIECES DE PUZZLE qui s'emboitent. « ca s'emboite », « la piece manquante », « les deux vont ensemble ».
+    snowball — UNE BOULE QUI ROULE ET GROSSIT en laissant sa trace. « effet boule de neige », « ca grossit tout seul », « ca s'amplifie ».
+    ladder   — UN POINT QUI GRAVIT une echelle, barreau par barreau. « monter d'un cran », « passer au niveau au-dessus », « gravir ».
+    explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
+    merge    — DEUX FORMES QUI SE REJOIGNENT et n'en font plus qu'une. « on reunit tout », « les deux n'en font qu'un », « la fusion ».
+    spiral   — DES ANNEAUX QUI SE RESSERRENT vers un point lumineux. « tout converge », « on resserre », « le point central ».
+    bridge   — UN PONT QUI SE CONSTRUIT planche par planche au-dessus du vide. « on comble le trou », « on fait le pont », « relier les deux ».
+    seed     — UNE POUSSE QUI DEVIENT UN ARBRE. « ca pousse », « planter puis recolter », « ca prend racine », « la croissance ».
+    crack    — UN MUR QUI SE FISSURE et s'ecarte en deux. « ca cede », « le mur se fissure », « la breche », « ca casse ».
+    mirror   — UNE FORME ET SON REFLET qui se dedouble. « d'un seul coup tu en as deux », « ca se duplique », « le double ».
     cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
-    ticket   — EVENEMENTIEL — UN BILLET avec son code et les places restantes qui clignotent. « les places », « le billet », « il en reste trois ».
-    team     — EQUIPE — DES MEMBRES et celui qu'on ajoute a la place vide. « mon equipe », « on recrute », « on s'agrandit ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.

@@ -181,21 +181,35 @@ export const BANK = [
   { name: 'menu',    desc: "RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix »." },
 
   // ── PAQUET 8 (#157) — la suite des domaines ──
-  { name: 'program', desc: "SPORT — UN PROGRAMME DE LA SEMAINE dont les seances se cochent. « le programme », « trois seances par semaine », « ton planning »." },
   { name: 'weight',  desc: "SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats »." },
-  { name: 'macros',  desc: "NUTRITION — TROIS BARRES qui se remplissent : proteines, glucides, lipides. « les macros », « ce que tu manges », « le bon equilibre »." },
   { name: 'quote',   desc: "AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis »." },
-  { name: 'brief',   desc: "AGENCE — UN BRIEF CLIENT : les champs se remplissent, les pieces jointes arrivent. « le brief », « ce qu'ils me demandent », « le cahier des charges »." },
-  { name: 'course',  desc: "FORMATION — DES MODULES dont le suivant se debloque. « la formation », « le module suivant », « tu debloques la suite »." },
-  { name: 'certificate', desc: "FORMATION — UN CERTIFICAT qui se delivre, sceau et signature. « le certificat », « tu es diplome », « l'attestation »." },
-  { name: 'quiz',    desc: "FORMATION — UNE QUESTION et ses reponses, la bonne passe au vert. « le quiz », « la bonne reponse », « teste-toi »." },
   { name: 'flight',  desc: "VOYAGE — UN BILLET : depart, arrivee, l'avion qui traverse, l'horaire. « le vol », « le billet », « je pars a »." },
-  { name: 'car',     desc: "AUTOMOBILE — UNE FICHE VEHICULE : la voiture, le kilometrage, l'annee, le prix. « cette voiture », « le vehicule », « l'occasion »." },
-  { name: 'budget',  desc: "FINANCES — LA REPARTITION DES DEPENSES en barres colorees. « le budget », « ou part l'argent », « les depenses du mois »." },
   { name: 'saving',  desc: "FINANCES — UNE JAUGE D'EPARGNE qui monte vers l'objectif. « l'epargne », « je mets de cote », « l'objectif est atteint »." },
+
+  // ── PAQUET 9 (#157) — LES METAPHORES PHYSIQUES ──
+  // Axel a retire dix animations du paquet 8 : « l'idee est la mais pas le
+  // design ». Vues cote a cote, le probleme saute aux yeux : `program`,
+  // `course`, `quiz`, `brief` sont DES RANGEES ; `macros` et `budget` DES
+  // BARRES — la banque en avait deja dix comme ca. Ici rien ne s'empile en
+  // liste : ca penche, ca tombe, ca tourne, ca s'emboite, ca pousse. Et comme
+  // ce sont des images mentales et non des interfaces, elles valent pour TOUS
+  // les domaines a la fois.
+  { name: 'balance', desc: "UNE BALANCE qui oscille puis se stabilise. « le bon equilibre », « ca penche du bon cote », « il faut doser »." },
+  { name: 'domino',  desc: "UNE CHAINE DE DOMINOS qui tombe d'un bout a l'autre. « tout s'enchaine », « l'effet domino », « une chose en entraine une autre »." },
+  { name: 'gears',   desc: "DEUX ENGRENAGES en prise qui tournent ensemble. « la machine tourne », « tout est rode », « le systeme fonctionne »." },
+  { name: 'liquid',  desc: "UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir »." },
+  { name: 'magnet',  desc: "UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant »." },
+  { name: 'puzzle',  desc: "DEUX PIECES DE PUZZLE qui s'emboitent. « ca s'emboite », « la piece manquante », « les deux vont ensemble »." },
+  { name: 'snowball', desc: "UNE BOULE QUI ROULE ET GROSSIT en laissant sa trace. « effet boule de neige », « ca grossit tout seul », « ca s'amplifie »." },
+  { name: 'ladder',  desc: "UN POINT QUI GRAVIT une echelle, barreau par barreau. « monter d'un cran », « passer au niveau au-dessus », « gravir »." },
+  { name: 'explode', desc: "UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout »." },
+  { name: 'merge',   desc: "DEUX FORMES QUI SE REJOIGNENT et n'en font plus qu'une. « on reunit tout », « les deux n'en font qu'un », « la fusion »." },
+  { name: 'spiral',  desc: "DES ANNEAUX QUI SE RESSERRENT vers un point lumineux. « tout converge », « on resserre », « le point central »." },
+  { name: 'bridge',  desc: "UN PONT QUI SE CONSTRUIT planche par planche au-dessus du vide. « on comble le trou », « on fait le pont », « relier les deux »." },
+  { name: 'seed',    desc: "UNE POUSSE QUI DEVIENT UN ARBRE. « ca pousse », « planter puis recolter », « ca prend racine », « la croissance »." },
+  { name: 'crack',   desc: "UN MUR QUI SE FISSURE et s'ecarte en deux. « ca cede », « le mur se fissure », « la breche », « ca casse »." },
+  { name: 'mirror',  desc: "UNE FORME ET SON REFLET qui se dedouble. « d'un seul coup tu en as deux », « ca se duplique », « le double »." },
   { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
-  { name: 'ticket',  desc: "EVENEMENTIEL — UN BILLET avec son code et les places restantes qui clignotent. « les places », « le billet », « il en reste trois »." },
-  { name: 'team',    desc: "EQUIPE — DES MEMBRES et celui qu'on ajoute a la place vide. « mon equipe », « on recrute », « on s'agrandit »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
