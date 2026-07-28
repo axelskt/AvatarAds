@@ -67,3 +67,26 @@ if (process.argv.includes('--check')) {
   writeFileSync(TARGET, out)
   console.log(`✓ orchestrate/index.ts mis à jour — ${BANK.length} animations`)
 }
+
+// ── GARDE-FOU : pas d'accent grave dans anim-pack non plus ───────────────────
+// Le HTML des animations vit dans des template literals. Un accent grave écrit
+// dans un COMMENTAIRE à l'intérieur du gabarit ferme la chaîne et casse tout le
+// fichier — c'est arrivé deux fois : dans une description de banque, puis dans un
+// commentaire HTML de `chat`. Le contrôle de la banque ne suffisait donc pas.
+{
+  const src = readFileSync(join(HERE, 'anim-pack.mjs'), 'utf8').split('\n')
+  const fautes = []
+  let dansGabarit = false
+  src.forEach((l, i) => {
+    // suivi grossier mais suffisant : une ligne qui ouvre `return box(` entre dans
+    // un gabarit, une ligne qui le referme en sort.
+    if (/return box\(`/.test(l)) dansGabarit = true
+    if (dansGabarit && /`\)$/.test(l.trim())) { dansGabarit = false; return }
+    if (dansGabarit && /<!--/.test(l) && l.includes('`')) fautes.push((i + 1) + ' : ' + l.trim().slice(0, 80))
+  })
+  if (fautes.length) {
+    console.error('✗ accent grave dans un commentaire HTML de gabarit — il ferme la chaîne :')
+    for (const f of fautes) console.error('   ' + f)
+    process.exit(1)
+  }
+}

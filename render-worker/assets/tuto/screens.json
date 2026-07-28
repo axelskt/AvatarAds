@@ -329,9 +329,7 @@
     "w": 0.525,
     "h": 0.0144
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "02-express": {
   "zones": [
@@ -615,9 +613,7 @@
     "w": 0.17,
     "h": 0.0767
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "03-generateur": {
   "zones": [
@@ -885,9 +881,7 @@
     "w": 0.0815,
     "h": 0.0356
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "04-montageia": {
   "zones": [
@@ -1084,16 +1078,14 @@
     "h": 0.0756
    },
    {
-    "name": "creer-ma-video-6-credits",
-    "label": "Créer ma vidéo — 6 crédits",
+    "name": "creer-ma-video-8-credits",
+    "label": "Créer ma vidéo — 8 crédits",
     "x": 0.5775,
     "y": 0.9522,
     "w": 0.475,
     "h": 0.0644
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "05-bibliotheque": {
   "zones": [
@@ -1281,9 +1273,7 @@
     "w": 0.1963,
     "h": 0.6746
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "06-nettoyage-audio": {
   "zones": [
@@ -1420,7 +1410,7 @@
     "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
     "x": 0.5775,
     "y": 0.3805,
-    "w": 0.3937,
+    "w": 0.3638,
     "h": 0.2778
    },
    {
@@ -1434,17 +1424,17 @@
    {
     "name": "standard-nettoyage-automatique",
     "label": "Standard · nettoyage automatique",
-    "x": 0.4772,
+    "x": 0.4847,
     "y": 0.6077,
-    "w": 0.1931,
+    "w": 0.1781,
     "h": 0.1367
    },
    {
     "name": "avance-traitement-renforce",
     "label": "Avancé · traitement renforcé",
-    "x": 0.6778,
+    "x": 0.6703,
     "y": 0.6077,
-    "w": 0.1931,
+    "w": 0.1781,
     "h": 0.1367
    },
    {
@@ -1452,7 +1442,7 @@
     "label": "Paramètres avancés · Traitement voix, silences, qualité",
     "x": 0.5775,
     "y": 0.7307,
-    "w": 0.3937,
+    "w": 0.3638,
     "h": 0.0693
    },
    {
@@ -1460,12 +1450,10 @@
     "label": "Nettoyer mon audio",
     "x": 0.5775,
     "y": 0.8198,
-    "w": 0.3937,
+    "w": 0.3638,
     "h": 0.0644
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "07-enregistreur": {
   "zones": [
@@ -1677,9 +1665,7 @@
     "w": 0.2269,
     "h": 0.0533
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "08-parrainage": {
   "zones": [
@@ -1851,9 +1837,7 @@
     "w": 0.1171,
     "h": 0.0556
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "09-cartoon": {
   "zones": [
@@ -1985,9 +1969,7 @@
     "w": 0.1419,
     "h": 0.0456
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "10-mon-compte": {
   "zones": [
@@ -2039,9 +2021,7 @@
     "w": 0.2562,
     "h": 0.0589
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "11-connecter-claude": {
   "zones": [
@@ -2077,9 +2057,7 @@
     "w": 0.1721,
     "h": 0.0533
    }
-  ],
-  "w": 3200,
-  "h": 1800
+  ]
  },
  "20-claude-menu": {
   "zones": [
@@ -2188,5 +2166,365 @@
   ],
   "w": 3416,
   "h": 1686
+ },
+ "13-montage-avance": {
+  "zones": [
+   {
+    "name": "btn-quiet",
+    "label": "✕",
+    "x": 0.6638,
+    "y": 0.1283,
+    "w": 0.0186,
+    "h": 0.0322
+   },
+   {
+    "name": "mot-par-mot",
+    "label": "Mot par mot",
+    "x": 0.3863,
+    "y": 0.4517,
+    "w": 0.1125,
+    "h": 0.0411
+   },
+   {
+    "name": "karaoke",
+    "label": "Karaoké",
+    "x": 0.4953,
+    "y": 0.4517,
+    "w": 0.0981,
+    "h": 0.0411
+   },
+   {
+    "name": "ligne-complete",
+    "label": "Ligne complète",
+    "x": 0.6091,
+    "y": 0.4517,
+    "w": 0.1219,
+    "h": 0.0411
+   },
+   {
+    "name": "punch",
+    "label": "Punch",
+    "x": 0.372,
+    "y": 0.5439,
+    "w": 0.0841,
+    "h": 0.0411
+   },
+   {
+    "name": "neon",
+    "label": "Néon",
+    "x": 0.4582,
+    "y": 0.5439,
+    "w": 0.0808,
+    "h": 0.0411
+   },
+   {
+    "name": "auto",
+    "label": "Auto",
+    "x": 0.542,
+    "y": 0.5439,
+    "w": 0.0791,
+    "h": 0.0411
+   },
+   {
+    "name": "aucun",
+    "label": "Aucun",
+    "x": 0.6276,
+    "y": 0.5439,
+    "w": 0.0847,
+    "h": 0.0411
+   },
+   {
+    "name": "haut",
+    "label": "Haut",
+    "x": 0.3554,
+    "y": 0.6361,
+    "w": 0.0508,
+    "h": 0.0411
+   },
+   {
+    "name": "centre",
+    "label": "Centre",
+    "x": 0.4136,
+    "y": 0.6361,
+    "w": 0.0582,
+    "h": 0.0411
+   },
+   {
+    "name": "bas",
+    "label": "Bas",
+    "x": 0.4698,
+    "y": 0.6361,
+    "w": 0.0467,
+    "h": 0.0411
+   },
+   {
+    "name": "s",
+    "label": "S",
+    "x": 0.5325,
+    "y": 0.6361,
+    "w": 0.0513,
+    "h": 0.0411
+   },
+   {
+    "name": "m",
+    "label": "M",
+    "x": 0.5887,
+    "y": 0.6361,
+    "w": 0.0535,
+    "h": 0.0411
+   },
+   {
+    "name": "l",
+    "label": "L",
+    "x": 0.6446,
+    "y": 0.6361,
+    "w": 0.0508,
+    "h": 0.0411
+   },
+   {
+    "name": "emoji-auto-sur-les-mots-cles-ajoutes-sur",
+    "label": "Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps",
+    "x": 0.5,
+    "y": 0.7106,
+    "w": 0.3463,
+    "h": 0.0679
+   },
+   {
+    "name": "auto-ia-choisit",
+    "label": "Auto · IA choisit",
+    "x": 0.3825,
+    "y": 0.8807,
+    "w": 0.1113,
+    "h": 0.1167
+   },
+   {
+    "name": "apple-fond-clair-minimal",
+    "label": "Apple · fond clair, minimal",
+    "x": 0.5,
+    "y": 0.8807,
+    "w": 0.1113,
+    "h": 0.1167
+   },
+   {
+    "name": "liquid-glass-verre-depoli-reflets",
+    "label": "Liquid glass · verre dépoli, reflets",
+    "x": 0.6175,
+    "y": 0.8807,
+    "w": 0.1113,
+    "h": 0.1167
+   }
+  ]
+ },
+ "14-audio-avance": {
+  "zones": [
+   {
+    "name": "credits",
+    "label": "∞ crédits",
+    "x": 0.7854,
+    "y": 0.035,
+    "w": 0.0722,
+    "h": 0.0344
+   },
+   {
+    "name": "credits-2",
+    "label": "Crédits",
+    "x": 0.8595,
+    "y": 0.035,
+    "w": 0.061,
+    "h": 0.0422
+   },
+   {
+    "name": "a",
+    "label": "A",
+    "x": 0.915,
+    "y": 0.035,
+    "w": 0.0187,
+    "h": 0.0333
+   },
+   {
+    "name": "btn-quiet",
+    "label": "",
+    "x": 0.9762,
+    "y": 0.035,
+    "w": 0.02,
+    "h": 0.0333
+   },
+   {
+    "name": "generateur",
+    "label": "Générateur",
+    "x": 0.0772,
+    "y": 0.1272,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "bibliotheque",
+    "label": "Bibliothèque",
+    "x": 0.0772,
+    "y": 0.175,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "images-ia",
+    "label": "Images IA",
+    "x": 0.0772,
+    "y": 0.2228,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "enregistreur",
+    "label": "Enregistreur",
+    "x": 0.0772,
+    "y": 0.2706,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "nettoyage-audio",
+    "label": "Nettoyage audio",
+    "x": 0.0772,
+    "y": 0.3183,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "express",
+    "label": "Express",
+    "x": 0.0772,
+    "y": 0.4217,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "montage-ia-beta",
+    "label": "Montage IA · BÊTA",
+    "x": 0.0772,
+    "y": 0.4694,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "editeur-beta",
+    "label": "Éditeur · BETA",
+    "x": 0.0772,
+    "y": 0.5172,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "parrainage",
+    "label": "Parrainage",
+    "x": 0.0772,
+    "y": 0.565,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "publier-dev",
+    "label": "Publier · DEV",
+    "x": 0.0772,
+    "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "mon-compte",
+    "label": "Mon compte",
+    "x": 0.0772,
+    "y": 0.9206,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "report-bug",
+    "label": "Report bug",
+    "x": 0.0772,
+    "y": 0.9683,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
+    "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
+    "x": 0.5775,
+    "y": 0.3805,
+    "w": 0.3638,
+    "h": 0.2778
+   },
+   {
+    "name": "parcourir",
+    "label": "Parcourir",
+    "x": 0.5775,
+    "y": 0.4382,
+    "w": 0.0697,
+    "h": 0.0444
+   },
+   {
+    "name": "standard-nettoyage-automatique",
+    "label": "Standard · nettoyage automatique",
+    "x": 0.4847,
+    "y": 0.6077,
+    "w": 0.1781,
+    "h": 0.1367
+   },
+   {
+    "name": "avance-traitement-renforce",
+    "label": "Avancé · traitement renforcé",
+    "x": 0.6703,
+    "y": 0.6077,
+    "w": 0.1781,
+    "h": 0.1367
+   },
+   {
+    "name": "parametres-avances-traitement-voix-silen",
+    "label": "Paramètres avancés · Traitement voix, silences, qualité",
+    "x": 0.5775,
+    "y": 0.7307,
+    "w": 0.3638,
+    "h": 0.0693
+   },
+   {
+    "name": "aucun-original",
+    "label": "Aucun · original",
+    "x": 0.439,
+    "y": 0.8459,
+    "w": 0.0867,
+    "h": 0.0722
+   },
+   {
+    "name": "naturel-equilibre",
+    "label": "Naturel · équilibré",
+    "x": 0.5313,
+    "y": 0.8459,
+    "w": 0.0867,
+    "h": 0.0722
+   },
+   {
+    "name": "podcast-chaleureux",
+    "label": "Podcast · chaleureux",
+    "x": 0.6237,
+    "y": 0.8459,
+    "w": 0.0867,
+    "h": 0.0722
+   },
+   {
+    "name": "punchy-nerveux",
+    "label": "Punchy · nerveux",
+    "x": 0.716,
+    "y": 0.8459,
+    "w": 0.0867,
+    "h": 0.0722
+   },
+   {
+    "name": "supprimer-les-silences-coupe-les-blancs-",
+    "label": "Supprimer les silences · Coupe les blancs entre les phrases",
+    "x": 0.5775,
+    "y": 0.9656,
+    "w": 0.3638,
+    "h": 0.0693
+   }
+  ]
  }
 }
