@@ -2441,6 +2441,39 @@ export function animHtml(name, s, W, H, vs) {
       return box(`${rows}
         <span class="an-p" id="${id}ldn" style="left:0;top:${Math.round(f.h * 0.16)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.16)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '312')}</span>`)
     }
+    case 'views': {
+      // « DES MILLIONS DE VUES ». Axel avait supprimé l'ancienne — un œil posé sur
+      // un fond, rien ne se passait. Ici c'est la vignette de SA vidéo, et le
+      // compteur de vues sous la miniature qui grimpe pendant que la barre de
+      // lecture avance. On voit le chiffre monter, pas un symbole de « vue ».
+      const pw = Math.round(f.h * 0.44), ph = Math.round(pw * 1.72)
+      const px = Math.round((f.w - pw) / 2), py = Math.round(f.h * 0.05)
+      return box(`
+        <div class="an-p" id="${id}vw" style="left:${px}px;top:${py}px;width:${pw}px;height:${ph}px;border-radius:${Math.round(pw * 0.12)}px;overflow:hidden;background:${P.soft};border:2px solid ${P.line};box-shadow:0 20px 46px rgba(0,0,0,.24)">
+          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}
+          <span style="position:absolute;left:0;bottom:0;width:100%;height:${Math.max(4, Math.round(ph * 0.02))}px;background:rgba(255,255,255,.3)">
+            <span class="an-p" id="${id}vwp" style="left:0;top:0;width:100%;height:100%;background:${P.acc};transform-origin:0% 50%;transform:scaleX(0)"></span></span>
+          <svg class="an-p" id="${id}vwt" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(pw * 0.13)}px;top:50%;margin-top:${-Math.round(pw * 0.13)}px;width:${Math.round(pw * 0.26)}px;height:${Math.round(pw * 0.26)}px" fill="#FFFFFF" opacity=".9"><path d="M8 5v14l11-7z"/></svg></div>
+        <span class="an-p" id="${id}vwn" style="left:0;top:${py + ph + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '1 200 000')}</span>
+        <span class="an-p" style="left:0;top:${py + ph + Math.round(f.h * 0.2)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;letter-spacing:.14em;font-size:${Math.round(f.h * 0.042)}px;color:${P.ink};opacity:.5">VUES</span>`)
+    }
+    case 'linkbio': {
+      // « LE LIEN DANS MA BIO ». Le profil, la ligne du lien, et le doigt qui vient
+      // taper dessus. C'est le geste qu'on demande au spectateur — il doit le voir
+      // fait une fois pour le refaire.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const av = Math.round(f.w * 0.22)
+      const ly = Math.round(f.h * 0.52), lh = Math.round(f.h * 0.12)
+      return box(`
+        <span class="an-p" id="${id}lba" style="left:${Math.round((f.w - av) / 2)}px;top:${Math.round(f.h * 0.05)}px;width:${av}px;height:${av}px;border-radius:50%;overflow:hidden;background:${P.soft};border:3px solid ${P.line}">
+          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</span>
+        <span class="an-p" id="${id}lbn" style="left:0;top:${Math.round(f.h * 0.05) + av + Math.round(f.h * 0.025)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.055)}px;color:${P.ink}">${txt(1, '@TONCOMPTE')}</span>
+        <span class="an-p" id="${id}lbb" style="left:${x + Math.round(w * 0.14)}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.72)}px;height:${Math.max(3, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.line};opacity:.55"></span>
+        <span class="an-p" id="${id}lbl" style="left:${x}px;top:${ly}px;width:${w}px;height:${lh}px;border-radius:${Math.round(lh * 0.32)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;justify-content:center;gap:${Math.round(lh * 0.2)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(lh * 0.32)}px;color:${P.acc}">
+          <svg viewBox="0 0 24 24" style="width:${Math.round(lh * 0.4)}px;height:${Math.round(lh * 0.4)}px;flex:none" fill="none" stroke="${P.acc}" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>
+          ${txt(0, 'MON LIEN')}</span>
+        <span class="an-p" id="${id}lbf" style="left:${Math.round(f.w / 2) - Math.round(f.w * 0.07)}px;top:${ly + Math.round(lh * 0.5)}px;width:${Math.round(f.w * 0.14)}px;height:${Math.round(f.w * 0.14)}px;border-radius:50%;background:${P.ink};opacity:0"></span>`)
+    }
     case 'comment': {
       // « ÉCRIS-MOI EN COMMENTAIRE ». Axel : « une animation avec un clavier
       // Apple pour commenter ». Le clavier iOS complet en bas, le champ au-dessus,
@@ -3418,6 +3451,24 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}an .an-ld', { y: ${FH(id, -0.1)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'back.out(1.8)' }, ${t0});
       tl.fromTo('#${id}ldn', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)' }, ${r2(t0 + 0.2)});`
+    case 'views':
+      // la lecture avance, le compteur saute : c'est le chiffre qui doit accrocher
+      return inOut + `
+      tl.fromTo('#${id}vw',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${t0});
+      tl.to('#${id}vwt',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.3)});
+      tl.to('#${id}vwp',{scaleX:1,duration:${r2(Math.max(0.7, dur - 0.6))},ease:'none'},${r2(t0 + 0.32)});
+      tl.fromTo('#${id}vwn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.34)});
+      tl.to('#${id}vwn',{scale:1.12,duration:0.16,yoyo:true,repeat:3,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.7)});`
+    case 'linkbio':
+      // le profil se pose, le doigt descend et appuie sur le lien
+      return inOut + `
+      tl.fromTo('#${id}lba',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.2)'},${t0});
+      tl.fromTo(['#${id}lbn','#${id}lbb'],{y:-10,autoAlpha:0},{y:0,autoAlpha:1,duration:0.24,stagger:0.08,ease:'power2.out'},${r2(t0 + 0.2)});
+      tl.fromTo('#${id}lbl',{y:${FH(id, 0.1)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'back.out(1.8)'},${r2(t0 + 0.36)});
+      tl.fromTo('#${id}lbf',{y:${FH(id, 0.18)},scale:1.3,autoAlpha:0},{y:0,scale:1,autoAlpha:0.4,duration:0.3,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.6)});
+      tl.to('#${id}lbf',{scale:0.8,duration:0.09,yoyo:true,repeat:1,transformOrigin:'50% 50%'},${r2(t0 + 0.9)});
+      tl.to('#${id}lbl',{scale:0.95,duration:0.09,yoyo:true,repeat:1,transformOrigin:'50% 50%'},${r2(t0 + 0.9)});
+      tl.to('#${id}lbf',{autoAlpha:0,y:${FH(id, 0.12)},duration:0.24},${r2(t0 + 1.1)});`
     case 'comment': {
       // chaque lettre du mot enfonce une touche : les deux sont synchronisées
       const mot = ((s.items || [])[0] && String(s.items[0].text || '').trim()) || 'PLAN'

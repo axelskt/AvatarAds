@@ -227,7 +227,8 @@ const ANIMS = [
   'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'transition', 'zoompunch', 'speedramp',
   'substyle', 'trendsound', 'algorithm', 'loop', 'cv', 'framing', 'focus', 'clipping',
   'lighting', 'retake', 'caption', 'preview', 'spike', 'brandeal', 'mediakit', 'inventory',
-  'stoploss', 'orderbook', 'deploy', 'uptime', 'leads', 'comment', 'share'
+  'stoploss', 'orderbook', 'deploy', 'uptime', 'leads', 'comment', 'share', 'views',
+  'linkbio'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -421,6 +422,248 @@ async function loadBrandMemory(token: string): Promise<BrandMemory> {
 }
 
 // ---------- appel Claude (Messages API, sortie structurée + vision) ----------
+// ─────────────────────────────────────────────────────────────────────────────
+// DEUXIÈME PASSE : LE MODÈLE COMBLE SES PROPRES TROUS.
+//
+// Axel : « à chaque fois que je t'envoie un audio que tu ne connais pas, ça ne va
+// pas du tout ». Mesuré sur un audio inédit : 7 secondes d'affilée sans rien à
+// l'écran, sur « Homme, femme, coach sportif… choisir un produit à vendre ». Le
+// remplissage automatique n'ose poser une animation que si un mot correspond au
+// lexique — et sur un discours qui n'est pas celui d'AvatarAds, rien ne
+// correspond. Le lexique généré (431 racines) réduit le problème sans l'éliminer :
+// un trou peut rester même quand aucun mot n'est reconnaissable.
+//
+// On renvoie donc les creux MESURÉS au modèle, avec les mots qui y sont dits, et
+// on lui demande UNIQUEMENT ce qu'il faut y mettre. Une ligne par trou, format
+// « début|animation|valeur » — la même grammaire plate que `beats`, pour la même
+// raison : un schéma imbriqué fait exploser le mode strict.
+// Un appel de plus (~0,03 €), seulement quand il reste vraiment des trous.
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// LE CATALOGUE, SORTI DU PROMPT. Il etait ecrit en dur au milieu du prompt du
+// premier appel : la seconde passe — celle qui comble les trous — ne pouvait donc
+// pas le lire, et aurait choisi ses animations a l aveugle. Une seule constante,
+// deux lecteurs. Les marqueurs restent ceux que sync-anim-bank.mjs regenere.
+// ─────────────────────────────────────────────────────────────────────────────
+const ANIM_CATALOGUE = `
+// <<< ANIM-BANK:PROMPT — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
+    screen   — une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil. « tu vas dans », « clique sur », « tu selectionnes », « rends-toi dans l onglet », « en haut a droite ».
+    result   — le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne ».
+    phone    — UN DOIGT QUI FAIT DEFILER un telephone vertical, video apres video. UNIQUEMENT quand il parle de SCROLLER : « ils swipent », « tu scrolles », « il passe a la suivante », « dans le fil ». Pas pour dire simplement « sur TikTok ».
+    split    — un split screen, deux choses cote a cote, un ecran qui se coupe en deux. « cote a cote », « en meme temps », « split screen », « les deux ensemble », « en haut et en bas ».
+    avatar   — la creation d'un avatar, un personnage qui se genere, « ton premier avatar ».
+    faceless — l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer.
+    voice    — une voix, un clonage vocal, un enregistrement, du son. « ta voix », « clone ta voix », « la voix off », « enregistre-toi », « le micro », « parle ».
+    cut      — une timeline qu'on coupe : le montage, la decoupe, « on enleve les blancs ».
+    type     — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max). « le script s ecrit », « il redige pour toi », « le texte apparait », « genere le texte ».
+    logo     — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage. « mon site », « ma marque », « chez nous », « notre plateforme ».
+    tools    — LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils.
+    copy     — UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications.
+    connect  — DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote.
+    sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
+    post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
+    upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer. « importe ton fichier », « televerse », « depose ton audio », « envoie ta video », « charge ton image ».
+    countup  — UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans "value" et l'unite dans "unit". « ca fait X euros », « X millions », « X abonnes », « on est a X ».
+    clock    — la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes ».
+    calendar — une grille qui se remplit : publier regulierement, tous les jours, la constance. « tous les jours », « chaque semaine », « poste regulierement », « la constance », « ton planning ».
+    grow     — une croissance, des vues qui montent, un resultat qui progresse. « ca progresse », « ca augmente », « ca grimpe », « les resultats montent », « la croissance ».
+    engage   — DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow.
+    network  — un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes ».
+    rocket   — un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance ».
+    funnel   — un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste ».
+    bars2    — deux colonnes comparees : le avant/apres chiffre. « avant apres », « la difference », « d un cote et de l autre », « compare les deux chiffres ».
+    idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
+    steps    — 1, 2, 3 : une methode, « il te suffit de », les etapes.
+    flow     — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z ».
+    orbit    — un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de ».
+    list     — une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options ».
+    target   — un objectif, une cible, quelque chose de precis, « exactement ».
+    search   — chercher, analyser, trouver, reperer. « je cherche », « analyse », « trouve », « repere », « regarde ce qui marche », « la recherche ».
+    compare  — un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide.
+    swap     — une chose remplacee par une autre : « au lieu de », « a la place de », remplacer.
+    toggle   — un interrupteur qui s'allume : activer, « en un clic », ca se met en marche.
+    check    — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus. « c est fait », « c est bon », « ca marche », « c est inclus », « rien de plus simple », « valide ».
+    quality  — LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut.
+    podium   — UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde ».
+    star     — CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis ».
+    speed    — UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse ».
+    deadline — UN CALENDRIER dont UNE date s'entoure et pulse. « avant vendredi », « la date limite », « il te reste X jours ».
+    crowd    — UNE FOULE de silhouettes qui apparait par vagues. « des milliers de personnes », « tout le monde », « ton audience ».
+    viral    — UN POINT QUI SE PROPAGE a tout un reseau, de proche en proche. « ca devient viral », « ca se partage tout seul ».
+    scrollstop— UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes ».
+    abtest   — DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux ».
+    roi      — CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 ».
+    free     — UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce.
+    plan     — TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan ».
+    layers   — DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus ».
+    badge    — UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie ».
+    trend    — UNE COURBE QUI GRIMPE avec une grande fleche qui suit sa pente, et le produit de la personne pose au sommet. « ca monte », « la tendance », « de mieux en mieux ». Mets ce qui monte dans items[0].text (« +240 % »).
+    template — UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois ».
+    record   — LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son ».
+    dropzone — UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes ».
+    render   — UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner ».
+    crop     — UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok ».
+    silence  — UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush ».
+    chat     — UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis ».
+    dashboard— UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats ».
+    translate— UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international ».
+    bgswap   — LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage ».
+    hook     — LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ». Mets la duree entendue dans items[0].text (« 3s »).
+    export   — UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges ».
+    checklist— UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter ».
+    library  — UNE GRILLE DE VIGNETTES avec leurs titres, l'une d'elles ressort. « ta bibliotheque », « tous tes rushs », « ce que tu as deja ».
+    queue    — UNE FILE DE RENDUS qui se valident un par un, coche apres coche. « ca tourne en fond », « la file d'attente », « pendant ce temps ».
+    notif    — DES BANNIERES DE NOTIFICATION qui s'empilent sur l'ecran. « ca n'arrete pas de sonner », « les notifications tombent ».
+    comments — UN FIL DE COMMENTAIRES qui defile, avatars et coeurs. « les gens reagissent », « regarde les commentaires », « ils repondent ».
+    timeline — LA TIMELINE DU MONTAGE : piste video coupee, onde audio, sous-titres, la tete de lecture passe. « le montage », « je monte la video ».
+    results  — UNE RECHERCHE QUI S'ECRIT ET SES RESULTATS qui tombent. « tu cherches », « tu tapes ca et tu trouves », « les resultats ».
+    profile  — UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page ». Mets le nombre d'abonnes entendu dans items[0].text (« +12K »).
+    invoice  — UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis ». Mets le total entendu dans items[0].text.
+    settings — UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux ».
+    versus   — DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca ».
+    thumb    — UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues ». items[0].text = le nombre de vues, items[1].text = la duree.
+    leaderboard— UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres ».
+    pay      — UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ». Mets le montant entendu dans items[0].text.
+    sales    — DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes ». items[0..2].text = les trois montants entendus.
+    folder   — UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier ».
+    booking  — UN AGENDA DE LA SEMAINE dont UN creneau se reserve. « il prend rendez-vous », « ton agenda se remplit », « il reserve ».
+    form     — UN FORMULAIRE dont les champs se remplissent, puis le bouton part. « ils remplissent le formulaire », « ils laissent leur mail ».
+    donut    — UN ANNEAU decoupe en parts avec sa legende. « la repartition », « X pour cent de », « la moitie de mes clients ».
+    map      — UNE CARTE ou les epingles tombent une a une. « partout dans le monde », « dans tous les pays », « des clients partout ».
+    mixer    — UNE TABLE DE MIXAGE : les curseurs montent, les vu-metres bougent. « je regle le son », « le mixage », « les niveaux ».
+    review   — UNE CARTE D'AVIS : photo, nom, cinq etoiles qui se remplissent, le temoignage. « leurs avis », « ils temoignent », « ce qu'ils en disent ».
+    upgrade  — UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ». Mets le nom du plan entendu dans items[0].text (« PRO », « ELITE »).
+    storyboard— DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video ».
+    discount — UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ». items[0].text = l'ancien prix, items[1].text = le nouveau, items[2].text = la remise.
+    music    — DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix ».
+    bio      — UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio ».
+    keyword  — UNE ZONE DE COMMENTAIRE OU LE MOT-CLE S'ECRIT lettre par lettre, puis le message prive arrive en reponse. « commente le mot X », « ecris-moi X », « tape X en commentaire ». Mets LE MOT EXACT qu'il demande dans items[0].text — c'est lui qu'on voit se taper.
+    automation— UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul ».
+    carousel — UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler ».
+    poll     — UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis ».
+    story    — DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories ».
+    hashtag  — UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche ».
+    schedule — UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu ».
+    pin      — UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires ».
+    qr       — UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es ».
+    wizard   — UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape ».
+    product  — E-COMMERCE — UNE FICHE PRODUIT : le visuel, le nom, le prix, le bouton d'ajout au panier. « mon produit », « cet article », « ce que je vends ». Mets le prix entendu dans items[0].text.
+    cart     — E-COMMERCE — UN PANIER : les articles, les quantites, le total qui s'affiche. « le panier moyen », « ils ajoutent au panier », « la commande ». Mets le total entendu dans items[0].text.
+    delivery — E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h ».
+    sizes    — E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris ».
+    candles  — TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart ».
+    portfolio— TRADING — UN PORTEFEUILLE : la valeur totale, la variation, les lignes d'actifs. « mon portefeuille », « mes positions », « ce que ca vaut ». items[0].text = le montant, items[1].text = la variation.
+    order    — TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position ».
+    pnl      — TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut ». Mets le pourcentage entendu dans items[0].text (« +41 % »).
+    mrr      — SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent ». Mets le montant entendu dans items[0].text (« 3 200€ »).
+    churn    — SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd ». Mets le pourcentage entendu dans items[0].text (« -22 % »).
+    onboarding— SAAS — L'ACTIVATION : les taches se cochent, le pourcentage monte. « l'onboarding », « la prise en main », « les premieres etapes ». Mets le pourcentage entendu dans items[0].text (« 90 % »).
+    integrations— SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec ».
+    property — IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location ». Mets le prix entendu dans items[0].text.
+    menu     — RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix ».
+    weight   — SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats ». Mets le chiffre exact ENTENDU dans items[0].text (« -10 kg »).
+    quote    — AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ». Mets le total entendu dans items[0].text.
+    liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
+    magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
+    explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
+    iceberg  — LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache ».
+    tunnel   — DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite ».
+    thermometer— UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose ».
+    script   — UN SCRIPT dont les lignes s'ecrivent et dont une phrase se surligne. « le script », « ce que tu vas dire », « j'ecris le texte ». Mets la duree entendue dans items[0].text (« 0:42 »).
+    clapper  — UN CLAP DE CINEMA rempli qui claque. « moteur », « on tourne », « prise deux », « action ».
+    retakes  — TROIS PRISES NUMEROTEES, les ratees se barrent, la bonne s'encadre. « on la refait », « la bonne prise », « je garde celle-la ».
+    transition— UN PLAN QUI EN BALAIE UN AUTRE, ligne lumineuse au passage. « et la ca bascule », « la transition », « on enchaine ».
+    zoompunch— LE CADRE QUI SE RESSERRE d'un coup sur un detail qui grossit. « regarde bien ca », « zoom la-dessus », « le detail qui compte ».
+    speedramp— UNE TIMELINE avec sa zone ralentie et sa zone acceleree. « la tu ralentis », « en accelere », « le ralenti sur ce moment ».
+    substyle — TROIS STYLES DE SOUS-TITRES cote a cote, celui qu'on retient s'encadre. « le style de sous-titres », « tu choisis la typo ».
+    trendsound— UN SON TENDANCE : sa forme d'onde, sa courbe d'usage, son compteur. « le son du moment », « le son qui marche », « la tendance ». Mets le nombre de videos entendu dans items[0].text.
+    algorithm— UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant ».
+    loop     — LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ». Mets le nombre de fois entendu dans items[0].text (« ×7 »).
+    cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
+    framing  — TOURNAGE — LE CADRE QUI SE RESSERRE sur le sujet, la grille des tiers apparait. « bien te cadrer », « le cadrage », « recentre-toi ».
+    focus    — TOURNAGE — L'IMAGE FLOUE QUI DEVIENT NETTE d'un coup. « fais la mise au point », « c'est flou », « une image nette ».
+    clipping — TOURNAGE — L'ONDE QUI TAPE LE PLAFOND ET ROUGIT, puis redescend sous la ligne. « ton son sature », « c'est trop fort », « ca crache ».
+    lighting — TOURNAGE — LA LUMIERE QUI SE POSE sur le visage, l'ombre recule. « eclaire-toi », « la lumiere », « ne tourne pas dans le noir ».
+    retake   — TOURNAGE — LA PRISE RATEE BARREE QUI PART et la suivante qui arrive. « je la refais », « deuxieme prise », « rate ». Mets le numero entendu dans items[0].text (« PRISE 4 »).
+    caption  — PUBLICATION — LA DESCRIPTION ET LES HASHTAGS QUI S'ECRIVENT sous la video avant de poster. « la description », « les hashtags », « ce que tu ecris ».
+    preview  — PUBLICATION — LE RENDU FINAL QUI S'AFFICHE DANS LE FIL, tel qu'il sera vu. « avant de poster », « l'apercu », « ce que les gens voient ».
+    spike    — ANALYSE — LA COURBE PLATE QUI DECOLLE D'UN COUP avec son chiffre. « ca a explose », « le pic », « d'un coup ». Mets le chiffre entendu dans items[0].text (« 340K »).
+    brandeal — CREATEUR — UNE MARQUE QUI PROPOSE UN PARTENARIAT, le montant arrive dans le message. « une marque m'a contacte », « un partenariat », « ils me paient ». Mets le montant entendu dans items[0].text (« 1500 € »).
+    mediakit — CREATEUR — LA FICHE STATS QUI SE COMPOSE, trois chiffres qui se posent. « mon media-kit », « mes stats », « ce que j'envoie aux marques ». Mets les trois valeurs entendues dans items[0..2].text (« 84K ; 2,1 M ; 7,4 % »).
+    inventory— E-COM — LE STOCK QUI DESCEND jusqu'a l'alerte, puis se reapprovisionne. « je suis en rupture », « le stock », « je recommande ».
+    stoploss — TRADING — LA BOUGIE QUI TOUCHE LA LIGNE et la position qui se ferme. « mon stop », « je coupe la perte », « ca part contre moi ».
+    orderbook— TRADING — LE CARNET D'ORDRES QUI SE REMPLIT des deux cotes, l'ecart se resserre. « le carnet », « acheteurs et vendeurs », « le spread ».
+    deploy   — SAAS — LES ETAPES QUI DEFILENT jusqu'au badge EN LIGNE. « je deploie », « la mise en ligne », « c'est en prod ».
+    uptime   — SAAS — LA LIGNE DE DISPONIBILITE qui se remplit jour apres jour. « jamais de panne », « la dispo », « ca tourne tout le temps ». Mets le taux entendu dans items[0].text (« 99,98 % »).
+    leads    — SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »).
+    comment  — LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres.
+    share    — CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »).
+    views    — LA VIGNETTE DE SA VIDEO et le COMPTEUR DE VUES qui grimpe dessous pendant que la lecture avance. « des millions de vues », « ca fait X vues », « les vues montent ». Mets le nombre entendu dans items[0].text (« 1 200 000 »).
+    linkbio  — LE PROFIL ET LE LIEN DE LA BIO, avec un doigt qui vient appuyer dessus. « le lien dans ma bio », « clique sur le lien en bio », « tu as juste a mettre un lien dans ta bio ». Mets le libelle du lien dans items[0].text et le pseudo dans items[1].text.
+// <<< /ANIM-BANK:PROMPT >>>
+`
+
+type RapportRattrapage = { trous: string[]; propose: string[]; refus: string[]; pose: string[]; erreur?: string }
+
+async function comblerTrous(
+  trous: { start: number; end: number; dit: string }[],
+  animsDispo: string[],
+  catalogue: string,
+  rapport: RapportRattrapage,
+): Promise<{ start: number; anim: string; value: string }[]> {
+  const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+  if (!anthKey) { rapport.erreur = 'ANTHROPIC_API_KEY manquante'; return [] }
+  if (!trous.length) return []
+  const liste = trous.map((t, i) => `${i + 1}. ${t.start.toFixed(1)}s → ${t.end.toFixed(1)}s : « ${t.dit} »`).join('\n')
+  const system = `Tu choisis UNE animation pour chaque moment de video qui n'en a pas.
+
+${catalogue}
+
+REGLES
+· Une ligne par moment, dans l'ordre, format : debut|animation|valeur
+· `+ '`debut`' + ` = le nombre de secondes donne, tel quel. `+ '`animation`' + ` = un nom de la liste ci-dessus, exactement.
+· `+ '`valeur`' + ` = le texte a afficher SI l'animation en demande un, sinon laisse vide.
+  Le texte doit etre un mot ou un chiffre REELLEMENT PRONONCE dans le passage.
+· Choisis ce que les mots MONTRENT, pas ce qu'ils evoquent. Si le passage ne
+  montre vraiment rien de precis, ecris `+ '`debut|SAUTE|`' + ` — un trou vaut mieux
+  qu'une animation a cote.
+· Evite de reprendre une animation deja proposee dans cette meme liste.`
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 1200,
+      output_config: { effort: 'low' },
+      system,
+      messages: [{ role: 'user', content: `Les moments sans visuel :\n${liste}\n\nUne ligne par moment.` }],
+    }),
+  })
+  if (!res.ok) {
+    rapport.erreur = 'HTTP ' + res.status
+    return []
+  }
+  const data = await res.json().catch(() => null)
+  const texte = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join('\n'))
+  const out: { start: number; anim: string; value: string }[] = []
+  for (const ligne of texte.split('\n')) {
+    const p = ligne.split('|').map((x) => x.trim())
+    if (p.length < 2) continue
+    const t = parseFloat(p[0].replace(',', '.'))
+    const an = p[1].toLowerCase()
+    // CHAQUE REFUS EST NOMME. Un rattrapage muet ne se debogue pas : quand il ne
+    // comble rien, il faut savoir si le modele a repondu SAUTE, s'il a propose une
+    // animation inconnue, ou si le filtre anti-doublon l'a jetee.
+    if (!isFinite(t)) { rapport.refus.push(`${p[0]} : instant illisible`); continue }
+    if (an === 'saute') { rapport.refus.push(`${t}s : le modele prefere ne rien mettre`); continue }
+    if (!animsDispo.includes(an)) { rapport.refus.push(`${t}s : « ${an} » indisponible (deja utilisee ou inconnue)`); continue }
+    if (!trous.some((h) => Math.abs(h.start - t) < 0.6)) { rapport.refus.push(`${t}s : instant invente, hors des creux mesures`); continue }
+    out.push({ start: t, anim: an, value: (p[2] || '').slice(0, 40) })
+  }
+  rapport.propose = out.map((o) => `${o.start}s ${o.anim}${o.value ? ' (' + o.value + ')' : ''}`)
+  return out
+}
+
 async function claudePlan(
   duration: number,
   words: Word[],
@@ -691,159 +934,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   AUCUN REPLI EMOJI. Si aucune animation ne colle, tu ne mets RIEN et tu etends la scene voisine — jamais un emoji. La banque couvre l'argent, le temps, l'idee, l'objectif, la securite, la recherche, le lancement, le reseau, la validation, la liste, la croissance, la comparaison, le format vertical, le texte qui s'ecrit, les outils, le contrat signe, la publication.
   Rythme : 0,7 a 1,5s, jamais deux colles.
   LA BANQUE D'ANIMATIONS — c'est le SEUL vocabulaire visuel. Toute autre valeur est jetee par le serveur.
-// <<< ANIM-BANK:PROMPT — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>
-    screen   — une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil.
-    result   — le RESULTAT fini qui s'affiche : l'image ou la video qui vient d'etre generee, avec un flash et un bouton d'enregistrement. « et voila ce que ca donne ».
-    phone    — UN DOIGT QUI FAIT DEFILER un telephone vertical, video apres video. UNIQUEMENT quand il parle de SCROLLER : « ils swipent », « tu scrolles », « il passe a la suivante », « dans le fil ». Pas pour dire simplement « sur TikTok ».
-    split    — un split screen, deux choses cote a cote, un ecran qui se coupe en deux.
-    avatar   — la creation d'un avatar, un personnage qui se genere, « ton premier avatar ».
-    faceless — l'anonymat : « sans montrer ton visage », « sans camera », « personne ne sait que c'est toi ». Une tete dont les yeux se font masquer.
-    voice    — une voix, un clonage vocal, un enregistrement, du son.
-    cut      — une timeline qu'on coupe : le montage, la decoupe, « on enleve les blancs ».
-    type     — un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max).
-    logo     — DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage.
-    tools    — LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils.
-    copy     — UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications.
-    connect  — DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote.
-    sign     — UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient ».
-    post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
-    upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer.
-    countup  — UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans "value" et l'unite dans "unit".
-    clock    — la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes ».
-    calendar — une grille qui se remplit : publier regulierement, tous les jours, la constance.
-    grow     — une croissance, des vues qui montent, un resultat qui progresse.
-    engage   — DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow.
-    network  — un reseau, une connexion, une communaute, des gens relies.
-    rocket   — un lancement, un decollage, ce qui explose, devenir viral.
-    funnel   — un entonnoir : beaucoup entrent, peu ressortent.
-    bars2    — deux colonnes comparees : le avant/apres chiffre.
-    idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
-    steps    — 1, 2, 3 : une methode, « il te suffit de », les etapes.
-    flow     — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z ».
-    orbit    — un centre et des satellites : tout part d'un seul outil.
-    list     — une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options ».
-    target   — un objectif, une cible, quelque chose de precis, « exactement ».
-    search   — chercher, analyser, trouver, reperer.
-    compare  — un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide.
-    swap     — une chose remplacee par une autre : « au lieu de », « a la place de », remplacer.
-    toggle   — un interrupteur qui s'allume : activer, « en un clic », ca se met en marche.
-    check    — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus.
-    quality  — LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut.
-    podium   — UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde ».
-    star     — CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis ».
-    speed    — UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse ».
-    deadline — UN CALENDRIER dont UNE date s'entoure et pulse. « avant vendredi », « la date limite », « il te reste X jours ».
-    crowd    — UNE FOULE de silhouettes qui apparait par vagues. « des milliers de personnes », « tout le monde », « ton audience ».
-    viral    — UN POINT QUI SE PROPAGE a tout un reseau, de proche en proche. « ca devient viral », « ca se partage tout seul ».
-    scrollstop— UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes ».
-    abtest   — DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux ».
-    roi      — CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 ».
-    free     — UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce.
-    plan     — TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan ».
-    layers   — DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus ».
-    badge    — UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie ».
-    trend    — UNE COURBE QUI GRIMPE avec une grande fleche qui suit sa pente, et le produit de la personne pose au sommet. « ca monte », « la tendance », « de mieux en mieux ». Mets ce qui monte dans items[0].text (« +240 % »).
-    template — UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois ».
-    record   — LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son ».
-    dropzone — UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes ».
-    render   — UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner ».
-    crop     — UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok ».
-    silence  — UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush ».
-    chat     — UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis ».
-    dashboard— UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats ».
-    translate— UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international ».
-    bgswap   — LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage ».
-    hook     — LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ». Mets la duree entendue dans items[0].text (« 3s »).
-    export   — UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges ».
-    checklist— UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter ».
-    library  — UNE GRILLE DE VIGNETTES avec leurs titres, l'une d'elles ressort. « ta bibliotheque », « tous tes rushs », « ce que tu as deja ».
-    queue    — UNE FILE DE RENDUS qui se valident un par un, coche apres coche. « ca tourne en fond », « la file d'attente », « pendant ce temps ».
-    notif    — DES BANNIERES DE NOTIFICATION qui s'empilent sur l'ecran. « ca n'arrete pas de sonner », « les notifications tombent ».
-    comments — UN FIL DE COMMENTAIRES qui defile, avatars et coeurs. « les gens reagissent », « regarde les commentaires », « ils repondent ».
-    timeline — LA TIMELINE DU MONTAGE : piste video coupee, onde audio, sous-titres, la tete de lecture passe. « le montage », « je monte la video ».
-    results  — UNE RECHERCHE QUI S'ECRIT ET SES RESULTATS qui tombent. « tu cherches », « tu tapes ca et tu trouves », « les resultats ».
-    profile  — UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page ». Mets le nombre d'abonnes entendu dans items[0].text (« +12K »).
-    invoice  — UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis ». Mets le total entendu dans items[0].text.
-    settings — UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux ».
-    versus   — DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca ».
-    thumb    — UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues ». items[0].text = le nombre de vues, items[1].text = la duree.
-    leaderboard— UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres ».
-    pay      — UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ». Mets le montant entendu dans items[0].text.
-    sales    — DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes ». items[0..2].text = les trois montants entendus.
-    folder   — UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier ».
-    booking  — UN AGENDA DE LA SEMAINE dont UN creneau se reserve. « il prend rendez-vous », « ton agenda se remplit », « il reserve ».
-    form     — UN FORMULAIRE dont les champs se remplissent, puis le bouton part. « ils remplissent le formulaire », « ils laissent leur mail ».
-    donut    — UN ANNEAU decoupe en parts avec sa legende. « la repartition », « X pour cent de », « la moitie de mes clients ».
-    map      — UNE CARTE ou les epingles tombent une a une. « partout dans le monde », « dans tous les pays », « des clients partout ».
-    mixer    — UNE TABLE DE MIXAGE : les curseurs montent, les vu-metres bougent. « je regle le son », « le mixage », « les niveaux ».
-    review   — UNE CARTE D'AVIS : photo, nom, cinq etoiles qui se remplissent, le temoignage. « leurs avis », « ils temoignent », « ce qu'ils en disent ».
-    upgrade  — UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ». Mets le nom du plan entendu dans items[0].text (« PRO », « ELITE »).
-    storyboard— DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video ».
-    discount — UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ». items[0].text = l'ancien prix, items[1].text = le nouveau, items[2].text = la remise.
-    music    — DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix ».
-    bio      — UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio ».
-    keyword  — UNE ZONE DE COMMENTAIRE OU LE MOT-CLE S'ECRIT lettre par lettre, puis le message prive arrive en reponse. « commente le mot X », « ecris-moi X », « tape X en commentaire ». Mets LE MOT EXACT qu'il demande dans items[0].text — c'est lui qu'on voit se taper.
-    automation— UN FLUX AUTOMATIQUE : le declencheur, la condition, les deux branches. « c'est automatique », « le systeme s'en occupe », « ca tourne tout seul ».
-    carousel — UN CARROUSEL dont les slides defilent, les points suivent. « le carrousel », « slide par slide », « fais defiler ».
-    poll     — UN SONDAGE dont les deux barres se remplissent avec leur pourcentage. « ils votent », « le sondage », « demande-leur leur avis ».
-    story    — DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories ».
-    hashtag  — UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche ».
-    schedule — UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu ».
-    pin      — UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires ».
-    qr       — UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es ».
-    wizard   — UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape ».
-    product  — E-COMMERCE — UNE FICHE PRODUIT : le visuel, le nom, le prix, le bouton d'ajout au panier. « mon produit », « cet article », « ce que je vends ». Mets le prix entendu dans items[0].text.
-    cart     — E-COMMERCE — UN PANIER : les articles, les quantites, le total qui s'affiche. « le panier moyen », « ils ajoutent au panier », « la commande ». Mets le total entendu dans items[0].text.
-    delivery — E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h ».
-    sizes    — E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris ».
-    candles  — TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart ».
-    portfolio— TRADING — UN PORTEFEUILLE : la valeur totale, la variation, les lignes d'actifs. « mon portefeuille », « mes positions », « ce que ca vaut ». items[0].text = le montant, items[1].text = la variation.
-    order    — TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position ».
-    pnl      — TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut ». Mets le pourcentage entendu dans items[0].text (« +41 % »).
-    mrr      — SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent ». Mets le montant entendu dans items[0].text (« 3 200€ »).
-    churn    — SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd ». Mets le pourcentage entendu dans items[0].text (« -22 % »).
-    onboarding— SAAS — L'ACTIVATION : les taches se cochent, le pourcentage monte. « l'onboarding », « la prise en main », « les premieres etapes ». Mets le pourcentage entendu dans items[0].text (« 90 % »).
-    integrations— SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec ».
-    property — IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location ». Mets le prix entendu dans items[0].text.
-    menu     — RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix ».
-    weight   — SPORT — UNE COURBE QUI DESCEND avec le chiffre perdu. « j'ai perdu X kilos », « la courbe descend », « les resultats ». Mets le chiffre exact ENTENDU dans items[0].text (« -10 kg »).
-    quote    — AGENCE / ARTISAN — UN DEVIS : les lignes, le total, la signature qui se trace. « le devis », « ma prestation », « ils signent le devis ». Mets le total entendu dans items[0].text.
-    liquid   — UN VERRE QUI SE REMPLIT, le liquide monte avec ses bulles. « ca se remplit », « jusqu'a ras bord », « le reservoir ».
-    magnet   — UN AIMANT qui aspire les points vers lui. « ca attire », « ils viennent a toi », « tu deviens un aimant ».
-    explode  — UN BLOC QUI SE DECOMPOSE en pieces, vue eclatee. « on decortique », « piece par piece », « je te detaille tout ».
-    iceberg  — LA POINTE EMERGEE et l'enorme masse sous la ligne d'eau. « ce que tu vois n'est qu'une partie », « le gros du travail est cache ».
-    tunnel   — DES ANNEAUX QUI DEFILENT en profondeur vers une lumiere. « tu traverses », « la lumiere au bout », « la derniere ligne droite ».
-    thermometer— UN THERMOMETRE gradue dont la colonne grimpe. « ca chauffe », « la pression monte », « le niveau explose ».
-    script   — UN SCRIPT dont les lignes s'ecrivent et dont une phrase se surligne. « le script », « ce que tu vas dire », « j'ecris le texte ». Mets la duree entendue dans items[0].text (« 0:42 »).
-    clapper  — UN CLAP DE CINEMA rempli qui claque. « moteur », « on tourne », « prise deux », « action ».
-    retakes  — TROIS PRISES NUMEROTEES, les ratees se barrent, la bonne s'encadre. « on la refait », « la bonne prise », « je garde celle-la ».
-    transition— UN PLAN QUI EN BALAIE UN AUTRE, ligne lumineuse au passage. « et la ca bascule », « la transition », « on enchaine ».
-    zoompunch— LE CADRE QUI SE RESSERRE d'un coup sur un detail qui grossit. « regarde bien ca », « zoom la-dessus », « le detail qui compte ».
-    speedramp— UNE TIMELINE avec sa zone ralentie et sa zone acceleree. « la tu ralentis », « en accelere », « le ralenti sur ce moment ».
-    substyle — TROIS STYLES DE SOUS-TITRES cote a cote, celui qu'on retient s'encadre. « le style de sous-titres », « tu choisis la typo ».
-    trendsound— UN SON TENDANCE : sa forme d'onde, sa courbe d'usage, son compteur. « le son du moment », « le son qui marche », « la tendance ». Mets le nombre de videos entendu dans items[0].text.
-    algorithm— UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant ».
-    loop     — LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ». Mets le nombre de fois entendu dans items[0].text (« ×7 »).
-    cv       — RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends ».
-    framing  — TOURNAGE — LE CADRE QUI SE RESSERRE sur le sujet, la grille des tiers apparait. « bien te cadrer », « le cadrage », « recentre-toi ».
-    focus    — TOURNAGE — L'IMAGE FLOUE QUI DEVIENT NETTE d'un coup. « fais la mise au point », « c'est flou », « une image nette ».
-    clipping — TOURNAGE — L'ONDE QUI TAPE LE PLAFOND ET ROUGIT, puis redescend sous la ligne. « ton son sature », « c'est trop fort », « ca crache ».
-    lighting — TOURNAGE — LA LUMIERE QUI SE POSE sur le visage, l'ombre recule. « eclaire-toi », « la lumiere », « ne tourne pas dans le noir ».
-    retake   — TOURNAGE — LA PRISE RATEE BARREE QUI PART et la suivante qui arrive. « je la refais », « deuxieme prise », « rate ». Mets le numero entendu dans items[0].text (« PRISE 4 »).
-    caption  — PUBLICATION — LA DESCRIPTION ET LES HASHTAGS QUI S'ECRIVENT sous la video avant de poster. « la description », « les hashtags », « ce que tu ecris ».
-    preview  — PUBLICATION — LE RENDU FINAL QUI S'AFFICHE DANS LE FIL, tel qu'il sera vu. « avant de poster », « l'apercu », « ce que les gens voient ».
-    spike    — ANALYSE — LA COURBE PLATE QUI DECOLLE D'UN COUP avec son chiffre. « ca a explose », « le pic », « d'un coup ». Mets le chiffre entendu dans items[0].text (« 340K »).
-    brandeal — CREATEUR — UNE MARQUE QUI PROPOSE UN PARTENARIAT, le montant arrive dans le message. « une marque m'a contacte », « un partenariat », « ils me paient ». Mets le montant entendu dans items[0].text (« 1500 € »).
-    mediakit — CREATEUR — LA FICHE STATS QUI SE COMPOSE, trois chiffres qui se posent. « mon media-kit », « mes stats », « ce que j'envoie aux marques ». Mets les trois valeurs entendues dans items[0..2].text (« 84K ; 2,1 M ; 7,4 % »).
-    inventory— E-COM — LE STOCK QUI DESCEND jusqu'a l'alerte, puis se reapprovisionne. « je suis en rupture », « le stock », « je recommande ».
-    stoploss — TRADING — LA BOUGIE QUI TOUCHE LA LIGNE et la position qui se ferme. « mon stop », « je coupe la perte », « ca part contre moi ».
-    orderbook— TRADING — LE CARNET D'ORDRES QUI SE REMPLIT des deux cotes, l'ecart se resserre. « le carnet », « acheteurs et vendeurs », « le spread ».
-    deploy   — SAAS — LES ETAPES QUI DEFILENT jusqu'au badge EN LIGNE. « je deploie », « la mise en ligne », « c'est en prod ».
-    uptime   — SAAS — LA LIGNE DE DISPONIBILITE qui se remplit jour apres jour. « jamais de panne », « la dispo », « ca tourne tout le temps ». Mets le taux entendu dans items[0].text (« 99,98 % »).
-    leads    — SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »).
-    comment  — LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres.
-    share    — CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »).
-// <<< /ANIM-BANK:PROMPT >>>
+${ANIM_CATALOGUE}
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
   ETAPE 2 · CHAQUE MOMENT FORT RECOIT SON VISUEL. Sans exception : c'est exactement la que le spectateur decroche s'il ne voit rien. Par defaut une ANIMATION. Tu ne deliberes pas pour savoir SI le moment merite un visuel — il en a un ; tu deliberes seulement pour savoir LEQUEL.
@@ -1106,6 +1197,138 @@ const ANIM_LEX: [string, string][] = [
   ['montage', 'cut'], ['coupe', 'cut'], ['edit', 'cut'], ['decoup', 'cut'], ['monte', 'cut'],
   ['etape', 'steps'], ['suffit', 'steps'], ['ensuite', 'steps'], ['process', 'steps'], ['tuto', 'steps'],
   ['active', 'toggle'], ['bouton', 'toggle'], ['allume', 'toggle'], ['branch', 'toggle'], ['parametr', 'toggle'],
+  // <<< ANIM-LEX:AUTO — genere par render-worker/sync-anim-bank.mjs depuis les
+  // phrases « … » des descriptions de la banque. Ne pas editer a la main : pour
+  // qu une animation reponde a un mot, ajoute la phrase dans SA description —
+  // le modele la lit aussi, les deux restent donc d accord. Les entrees
+  // ci-dessus sont ecrites a la main et gardent la priorite (premier match). >>>
+  ['1080p', 'quality'], ['1500', 'brandeal'], ['340k', 'spike'], ['abonne', 'countup'], ['abonne', 'network'],
+  ['abonne', 'profile'], ['abonne', 'mrr'], ['accele', 'speedramp'], ['accroc', 'scrollstop'], ['accroc', 'hook'],
+  ['achete', 'order'], ['achete', 'orderbook'], ['action', 'clapper'], ['active', 'settings'], ['adoren', 'star'],
+  ['agenda', 'booking'], ['aimant', 'magnet'], ['ajoute', 'layers'], ['ajoute', 'cart'], ['algo', 'algorithm'],
+  ['analys', 'search'], ['apercu', 'preview'], ['appara', 'type'], ['appart', 'property'], ['appuie', 'record'],
+  ['apres', 'bars2'], ['arrete', 'scrollstop'], ['arrete', 'notif'], ['articl', 'product'], ['attent', 'queue'],
+  ['attire', 'magnet'], ['audien', 'network'], ['audien', 'crowd'], ['audio', 'upload'], ['audio', 'dropzone'],
+  ['augmen', 'grow'], ['automa', 'automation'], ['autour', 'orbit'], ['avant', 'bars2'], ['avant', 'deadline'],
+  ['avant', 'algorithm'], ['avant', 'preview'], ['avatar', 'avatar'], ['avis', 'star'], ['avis', 'review'],
+  ['avis', 'poll'], ['baisse', 'music'], ['barre', 'discount'], ['bascul', 'transition'], ['biblio', 'library'],
+  ['blancs', 'cut'], ['blancs', 'silence'], ['bonne', 'retakes'], ['bons', 'tools'], ['bons', 'hashtag'],
+  ['bord', 'dashboard'], ['bord', 'liquid'], ['boucle', 'loop'], ['bougie', 'candles'], ['bout', 'tunnel'],
+  ['cache', 'iceberg'], ['cadrag', 'framing'], ['cadrer', 'framing'], ['calcul', 'render'], ['camera', 'faceless'],
+  ['candid', 'cv'], ['carnet', 'orderbook'], ['carrou', 'carousel'], ['carte', 'menu'], ['celui', 'cv'],
+  ['cent', 'funnel'], ['cent', 'donut'], ['cent', 'discount'], ['centre', 'orbit'], ['certif', 'badge'],
+  ['change', 'bgswap'], ['charge', 'upload'], ['chart', 'candles'], ['chauff', 'thermometer'], ['cherch', 'search'],
+  ['cherch', 'results'], ['cherch', 'hashtag'], ['chez', 'logo'], ['chiffr', 'bars2'], ['choisi', 'plan'],
+  ['choisi', 'substyle'], ['churn', 'churn'], ['cinqua', 'discount'], ['cles', 'hashtag'], ['clic', 'post'],
+  ['clic', 'toggle'], ['client', 'donut'], ['client', 'map'], ['clique', 'screen'], ['clique', 'bio'],
+  ['clique', 'linkbio'], ['clone', 'voice'], ['code', 'qr'], ['colis', 'delivery'], ['colori', 'sizes'],
+  ['comman', 'sales'], ['comman', 'cart'], ['commen', 'comments'], ['commen', 'keyword'], ['commen', 'pin'],
+  ['commen', 'comment'], ['commun', 'connect'], ['commun', 'network'], ['compar', 'bars2'],
+  ['compat', 'integrations'], ['compte', 'post'], ['compte', 'profile'], ['compte', 'zoompunch'],
+  ['connec', 'connect'], ['connec', 'integrations'], ['consta', 'calendar'], ['contac', 'brandeal'],
+  ['contra', 'sign'], ['contre', 'stoploss'], ['conver', 'funnel'], ['copie', 'copy'], ['copies', 'copy'],
+  ['cote', 'split'], ['cote', 'bars2'], ['couche', 'layers'], ['coup', 'spike'], ['coupe', 'stoploss'],
+  ['courbe', 'weight'], ['coute', 'invoice'], ['crache', 'clipping'], ['croiss', 'grow'], ['date', 'deadline'],
+  ['deal', 'sign'], ['debut', 'pnl'], ['decoll', 'rocket'], ['decor', 'bgswap'], ['decort', 'explode'],
+  ['defile', 'carousel'], ['demand', 'chat'], ['demand', 'poll'], ['depass', 'leaderboard'], ['deploi', 'deploy'],
+  ['depose', 'upload'], ['depose', 'dropzone'], ['depuis', 'pnl'], ['dernie', 'tunnel'], ['derush', 'silence'],
+  ['desabo', 'churn'], ['descen', 'weight'], ['descri', 'caption'], ['dessus', 'layers'], ['dessus', 'zoompunch'],
+  ['detail', 'explode'], ['detail', 'zoompunch'], ['detour', 'bgswap'], ['deux', 'split'], ['deux', 'bars2'],
+  ['deux', 'abtest'], ['deux', 'clapper'], ['deuxie', 'retake'], ['devant', 'podium'], ['devant', 'leaderboard'],
+  ['devien', 'viral'], ['devien', 'magnet'], ['devis', 'invoice'], ['devis', 'quote'], ['differ', 'bars2'],
+  ['differ', 'versus'], ['dire', 'script'], ['disent', 'review'], ['dispo', 'uptime'], ['donne', 'result'],
+  ['donne', 'flow'], ['donne', 'free'], ['dossie', 'folder'], ['droite', 'screen'], ['droite', 'tunnel'],
+  ['dupliq', 'template'], ['eclair', 'lighting'], ['ecris', 'chat'], ['ecris', 'keyword'], ['ecris', 'script'],
+  ['ecris', 'caption'], ['ecris', 'comment'], ['ecrit', 'type'], ['ecrive', 'engage'], ['elite', 'upgrade'],
+  ['empile', 'layers'], ['encais', 'pay'], ['enchai', 'transition'], ['enleve', 'cut'], ['enleve', 'silence'],
+  ['enregi', 'voice'], ['enregi', 'record'], ['enregi', 'share'], ['ensemb', 'split'], ['entre', 'connect'],
+  ['envoie', 'upload'], ['envoie', 'mediakit'], ['epingl', 'pin'], ['etape', 'wizard'], ['etapes', 'wizard'],
+  ['etapes', 'onboarding'], ['etoile', 'star'], ['euros', 'countup'], ['exacte', 'target'], ['explos', 'rocket'],
+  ['explos', 'thermometer'], ['explos', 'spike'], ['export', 'export'], ['factur', 'invoice'], ['fais', 'flow'],
+  ['fais', 'carousel'], ['fais', 'focus'], ['faite', 'connect'], ['fichie', 'upload'], ['fichie', 'folder'],
+  ['file', 'queue'], ['fleche', 'rocket'], ['flou', 'focus'], ['fois', 'template'], ['fond', 'bgswap'],
+  ['fond', 'queue'], ['fond', 'music'], ['format', 'template'], ['format', 'crop'], ['formul', 'plan'],
+  ['formul', 'form'], ['fort', 'clipping'], ['garant', 'badge'], ['garde', 'retakes'], ['genere', 'type'],
+  ['genere', 'render'], ['gens', 'network'], ['gens', 'comments'], ['gens', 'preview'], ['glisse', 'dropzone'],
+  ['graphi', 'candles'], ['gratui', 'free'], ['grimpe', 'grow'], ['gros', 'iceberg'], ['grossi', 'leads'],
+  ['guider', 'wizard'], ['hashta', 'hashtag'], ['hashta', 'caption'], ['haut', 'screen'], ['haut', 'split'],
+  ['haut', 'pin'], ['hook', 'hook'], ['image', 'upload'], ['image', 'focus'], ['import', 'upload'],
+  ['import', 'dropzone'], ['inclus', 'check'], ['inclus', 'checklist'], ['inscri', 'leads'], ['integr', 'connect'],
+  ['integr', 'integrations'], ['intern', 'translate'], ['invest', 'roi'], ['jour', 'sales'], ['jours', 'calendar'],
+  ['jours', 'deadline'], ['jusqu', 'liquid'], ['kilos', 'weight'], ['laisse', 'render'], ['laisse', 'form'],
+  ['laisse', 'wizard'], ['lance', 'rocket'], ['lancem', 'rocket'], ['langue', 'translate'], ['leads', 'leads'],
+  ['leur', 'form'], ['leur', 'poll'], ['leurs', 'review'], ['lien', 'copy'], ['lien', 'bio'], ['lien', 'linkbio'],
+  ['lieu', 'compare'], ['lieu', 'swap'], ['lieu', 'versus'], ['ligne', 'tunnel'], ['ligne', 'deploy'],
+  ['like', 'share'], ['limite', 'deadline'], ['liste', 'leads'], ['livrai', 'delivery'], ['locati', 'property'],
+  ['lumier', 'tunnel'], ['lumier', 'lighting'], ['mail', 'form'], ['main', 'onboarding'], ['marche', 'search'],
+  ['marche', 'check'], ['marche', 'podium'], ['marche', 'abtest'], ['marche', 'trendsound'], ['marque', 'logo'],
+  ['marque', 'brandeal'], ['marque', 'mediakit'], ['match', 'engage'], ['media', 'mediakit'], ['meille', 'quality'],
+  ['meille', 'podium'], ['meille', 'star'], ['mensue', 'mrr'], ['menu', 'menu'], ['messag', 'engage'],
+  ['mets', 'roi'], ['mets', 'property'], ['mets', 'share'], ['mettre', 'linkbio'], ['micro', 'voice'],
+  ['mieux', 'abtest'], ['mieux', 'trend'], ['milieu', 'plan'], ['millie', 'crowd'], ['millio', 'countup'],
+  ['millio', 'views'], ['miniat', 'thumb'], ['minute', 'clock'], ['mise', 'focus'], ['mise', 'deploy'],
+  ['mixage', 'mixer'], ['modele', 'list'], ['modele', 'template'], ['moitie', 'donut'], ['moment', 'speedramp'],
+  ['moment', 'trendsound'], ['monde', 'podium'], ['monde', 'crowd'], ['monde', 'map'], ['montag', 'layers'],
+  ['montag', 'timeline'], ['monte', 'trend'], ['monte', 'timeline'], ['monte', 'candles'], ['monte', 'thermometer'],
+  ['monten', 'grow'], ['monten', 'views'], ['montes', 'upgrade'], ['montre', 'faceless'], ['moteur', 'clapper'],
+  ['mots', 'hashtag'], ['moyen', 'cart'], ['musiqu', 'music'], ['nette', 'focus'], ['niveau', 'mixer'],
+  ['niveau', 'thermometer'], ['noir', 'lighting'], ['notifi', 'notif'], ['numero', 'podium'],
+  ['occupe', 'automation'], ['offert', 'free'], ['offre', 'plan'], ['onboar', 'onboarding'], ['onglet', 'screen'],
+  ['option', 'list'], ['ordre', 'order'], ['outil', 'orbit'], ['outils', 'tools'], ['page', 'profile'],
+  ['paieme', 'pay'], ['paient', 'sign'], ['paient', 'pay'], ['paient', 'brandeal'], ['panier', 'cart'],
+  ['panne', 'uptime'], ['parame', 'settings'], ['parle', 'voice'], ['pars', 'template'], ['part', 'rocket'],
+  ['part', 'orbit'], ['part', 'delivery'], ['part', 'algorithm'], ['part', 'stoploss'], ['partag', 'viral'],
+  ['partag', 'share'], ['parten', 'brandeal'], ['partie', 'iceberg'], ['partou', 'post'], ['partou', 'map'],
+  ['passe', 'phone'], ['passe', 'crop'], ['passe', 'pay'], ['passe', 'order'], ['passer', 'leaderboard'],
+  ['passes', 'upgrade'], ['pays', 'map'], ['pendan', 'render'], ['pendan', 'queue'], ['perd', 'churn'],
+  ['perdu', 'weight'], ['perfor', 'pnl'], ['person', 'faceless'], ['person', 'funnel'], ['person', 'crowd'],
+  ['perte', 'stoploss'], ['piece', 'explode'], ['place', 'swap'], ['plan', 'plan'], ['plan', 'upgrade'],
+  ['plan', 'storyboard'], ['planif', 'schedule'], ['planni', 'calendar'], ['plat', 'menu'], ['platef', 'logo'],
+  ['plusie', 'sizes'], ['point', 'focus'], ['portef', 'portfolio'], ['positi', 'portfolio'], ['positi', 'order'],
+  ['poste', 'calendar'], ['poster', 'post'], ['poster', 'preview'], ['postes', 'story'], ['pousse', 'algorithm'],
+  ['premie', 'avatar'], ['premie', 'hook'], ['premie', 'leaderboard'], ['premie', 'onboarding'],
+  ['prend', 'booking'], ['prends', 'order'], ['prends', 'cv'], ['pressi', 'thermometer'], ['presta', 'quote'],
+  ['prevu', 'schedule'], ['prise', 'record'], ['prise', 'onboarding'], ['prise', 'clapper'], ['prise', 'retakes'],
+  ['prise', 'retake'], ['prix', 'discount'], ['prix', 'menu'], ['prod', 'deploy'], ['produi', 'product'],
+  ['progra', 'schedule'], ['progre', 'grow'], ['promo', 'discount'], ['publie', 'post'], ['qualit', 'quality'],
+  ['quelqu', 'speed'], ['quelqu', 'share'], ['rajout', 'checklist'], ['ralent', 'speedramp'], ['range', 'folder'],
+  ['rapide', 'speed'], ['rappor', 'flow'], ['rate', 'retake'], ['reagis', 'comments'], ['rebouc', 'loop'],
+  ['recadr', 'crop'], ['recent', 'framing'], ['recher', 'search'], ['recoiv', 'delivery'], ['recomm', 'inventory'],
+  ['recrut', 'cv'], ['recupe', 'copy'], ['recupe', 'roi'], ['recupe', 'export'], ['recurr', 'mrr'],
+  ['redige', 'type'], ['refais', 'retake'], ['refait', 'retakes'], ['regard', 'search'], ['regard', 'comments'],
+  ['regard', 'zoompunch'], ['regard', 'loop'], ['regle', 'mixer'], ['regles', 'settings'], ['reguli', 'calendar'],
+  ['relie', 'connect'], ['rempli', 'booking'], ['rempli', 'form'], ['rempli', 'liquid'], ['rendem', 'pnl'],
+  ['rendez', 'booking'], ['rends', 'screen'], ['repart', 'donut'], ['repere', 'search'], ['replay', 'loop'],
+  ['repond', 'engage'], ['repond', 'comments'], ['reseau', 'post'], ['reseau', 'network'], ['reserv', 'booking'],
+  ['reserv', 'liquid'], ['ressor', 'funnel'], ['reste', 'funnel'], ['reste', 'deadline'], ['result', 'grow'],
+  ['result', 'dashboard'], ['result', 'results'], ['result', 'weight'], ['retour', 'roi'], ['revenu', 'mrr'],
+  ['ruptur', 'inventory'], ['rushs', 'library'], ['sait', 'faceless'], ['sature', 'clipping'], ['sauten', 'silence'],
+  ['scanne', 'qr'], ['scenar', 'storyboard'], ['screen', 'split'], ['script', 'type'], ['script', 'list'],
+  ['script', 'script'], ['scroll', 'phone'], ['scroll', 'scrollstop'], ['second', 'clock'], ['second', 'speed'],
+  ['second', 'scrollstop'], ['second', 'hook'], ['secret', 'idea'], ['select', 'screen'], ['semain', 'calendar'],
+  ['semain', 'schedule'], ['seul', 'orbit'], ['seul', 'viral'], ['seul', 'automation'], ['seul', 'algorithm'],
+  ['signen', 'sign'], ['signen', 'quote'], ['silenc', 'silence'], ['simple', 'check'], ['site', 'logo'],
+  ['slide', 'carousel'], ['sondag', 'poll'], ['sonner', 'notif'], ['sous', 'music'], ['sous', 'substyle'],
+  ['split', 'split'], ['spread', 'orderbook'], ['stack', 'tools'], ['stats', 'dashboard'], ['stats', 'mediakit'],
+  ['stock', 'inventory'], ['stop', 'stoploss'], ['storie', 'story'], ['story', 'story'], ['struct', 'storyboard'],
+  ['style', 'substyle'], ['suffit', 'steps'], ['suis', 'dashboard'], ['suis', 'inventory'], ['suivan', 'phone'],
+  ['superi', 'upgrade'], ['swipen', 'phone'], ['system', 'automation'], ['tablea', 'dashboard'], ['taille', 'sizes'],
+  ['tape', 'keyword'], ['tape', 'comment'], ['tapes', 'results'], ['taux', 'funnel'], ['telech', 'export'],
+  ['televe', 'upload'], ['temoig', 'review'], ['temps', 'split'], ['temps', 'queue'], ['temps', 'uptime'],
+  ['tendan', 'trend'], ['tendan', 'trendsound'], ['teste', 'abtest'], ['texte', 'type'], ['texte', 'script'],
+  ['tiktok', 'phone'], ['tiktok', 'crop'], ['titres', 'substyle'], ['token', 'copy'], ['tomben', 'notif'],
+  ['tomben', 'sales'], ['tools', 'connect'], ['tourne', 'render'], ['tourne', 'queue'], ['tourne', 'automation'],
+  ['tourne', 'clapper'], ['tourne', 'lighting'], ['tourne', 'uptime'], ['tradui', 'translate'],
+  ['transi', 'transition'], ['travai', 'iceberg'], ['traver', 'tunnel'], ['trois', 'plan'], ['trois', 'wizard'],
+  ['trouve', 'search'], ['trouve', 'results'], ['tunnel', 'funnel'], ['typo', 'substyle'], ['ultra', 'speed'],
+  ['valide', 'check'], ['valide', 'badge'], ['vaut', 'portfolio'], ['vendeu', 'orderbook'], ['vendre', 'deadline'],
+  ['vends', 'product'], ['ventes', 'sales'], ['verifi', 'badge'], ['versio', 'abtest'], ['versio', 'upgrade'],
+  ['veux', 'chat'], ['veux', 'settings'], ['video', 'upload'], ['video', 'dropzone'], ['video', 'export'],
+  ['video', 'timeline'], ['video', 'thumb'], ['video', 'storyboard'], ['vienne', 'magnet'], ['viral', 'viral'],
+  ['visage', 'faceless'], ['vitess', 'speed'], ['voient', 'preview'], ['voila', 'result'], ['vois', 'iceberg'],
+  ['voix', 'voice'], ['voix', 'record'], ['voix', 'music'], ['votent', 'poll'], ['vues', 'thumb'], ['vues', 'views'],
+  ['zoom', 'zoompunch'],
+    // <<< /ANIM-LEX:AUTO >>>
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
 function emojiForWord(w: string): string {
@@ -1160,7 +1383,15 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         emoji,
         // un bandeau peut se poser des la 1re seconde (la video reste visible dessous)
         start: r2(clamp(s.start, layout === 'banner' ? 0.3 : slideMin, D)),
-        end: r2(clamp(s.end, 0, layout === 'banner' ? r2(D - 0.3) : slideMax)),
+        // PLAFOND DUR : 3,5 s PAR SLIDE. Le modele avait pose une scene de DOUZE
+        // SECONDES sur un audio de 64 — un cinquieme de la video sur un seul ecran
+        // fixe, pendant que les animations placees dessous etaient recouvertes. En
+        // vertical, au-dela de ~3,5 s l'oeil decroche : c'est la duree, pas le
+        // contenu, qui tue le rythme. Axel : « plafonne a 4 s max, meme 3,5 ».
+        end: r2(clamp(s.end, 0, Math.min(
+          layout === 'banner' ? r2(D - 0.3) : slideMax,
+          r2(clamp(s.start, 0, D) + 3.5),
+        ))),
         title: txt(s.title, 60).toUpperCase(),
         eyebrow: txt(s.eyebrow, 34).toUpperCase(),
         accent: txt(s.accent, 30).toUpperCase(),
@@ -1693,7 +1924,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       // Chaque animation tient jusqu'a la suivante (moins la respiration), plafonnee
       // a 4 s. C'est ce qui fait passer la couverture au-dessus des 80 % demandes
       // sans inventer d'animation qui ne correspondrait a rien.
-      const end = r2(Math.min(cand[i].t + 4.0, nextT - 0.3, D - 0.4))
+      // meme plafond que les scenes du modele : 3,5 s et pas une de plus
+      const end = r2(Math.min(cand[i].t + 3.5, nextT - 0.3, D - 0.4))
       if (end - cand[i].t < 0.55) continue
       const slide = {
         type: 'card', layout: 'full', motif: '', anim: cand[i].an, emoji: '',
@@ -1702,11 +1934,38 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         wide: false, options: [],
         items: String(cand[i].val || '').split(';').map((t) => t.trim()).filter(Boolean).map((text) => ({ text, t: 0, value: '', label: '' })),
       }
-      if (cand[i].beat) beatBorn.add(slide)
+      // ON NE PROTEGE QUE CE QUI PORTE UN CONTENU PROPRE. Marquer TOUTE slide nee
+      // d'un beat mettait `grow` — une courbe generique sans le moindre texte —
+      // a l'abri du rattrapage compteur : sur « des millions de vues », le
+      // spectateur voyait une courbe au lieu du nombre qu'il entend. Une animation
+      // qui n'affiche rien de precis n'a rien a defendre.
+      if (cand[i].beat && (slide.items.length || cuv)) beatBorn.add(slide)
       added.push(slide)
     }
     for (const a of added) {
       if (!slides.some((sl) => Math.abs(sl.start - a.start) < 0.7)) slides.push(a)
+    }
+
+    // LE HOOK NE PEUT PAS ETRE VIDE. Sur l'audio « Cette influenceuse me permet de
+    // faire des millions de vues », les 1,9 PREMIERES SECONDES ne montraient rien :
+    // aucun mot du debut n'est dans le lexique (« cette », « influenceuse »…), et
+    // les scenes plein cadre du modele ne peuvent pas commencer avant 2 s. Or c'est
+    // exactement la que le spectateur decide de rester. Si rien ne couvre la
+    // premiere seconde et demie, on pose `hook` — l'animation faite pour ca.
+    {
+      const couvert = slides.some((sl) => (sl.anim || sl.emoji) && sl.start < 1.6 && sl.end > 0.5)
+      if (!couvert && D > 4) {
+        const fin = r2(Math.min(2.6, (slides.filter((sl) => sl.anim || sl.emoji)
+          .map((sl) => sl.start).filter((t) => t > 0.6).sort((a, b) => a - b)[0] ?? 2.6) - 0.3))
+        if (fin > 0.9) {
+          slides.push({
+            type: 'card', layout: 'full', motif: '', anim: 'hook', emoji: '',
+            start: 0.45, end: fin, title: '', eyebrow: '', accent: '', sub: '',
+            center: '', value: '', unit: '', wide: false, options: [], items: [],
+          } as unknown as typeof slides[number])
+          slides.sort((x, y) => x.start - y.start)
+        }
+      }
     }
 
     // ENTRÉE DE MODULE GARANTIE. Axel : « quand je dis "tu vas aller dans Express",
@@ -1906,7 +2165,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     // Resultat : la saisie Images IA disparaissait un coup sur deux. Une seule passe
     // tranche desormais, et l'ordre est ecrit noir sur blanc.
     {
-      const prio = (sl: { anim?: string; screenText?: string; items?: { text: string }[] }) => {
+      const prio = (sl: { anim?: string; emoji?: string; screenText?: string; items?: { text: string }[] }) => {
         if (sl.anim === 'screen' && sl.screenText) return 5   // le texte se tape + le clavier sonne
         if (sl.anim === 'result') return 5                    // l'image produite : le vrai resultat
         if (sl.anim === 'logo') return 4                      // la marque est nommee
@@ -1916,11 +2175,19 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
         // compteur, et ca ne doit pas ceder devant une illustration generique.
         if (sl.anim && sl.items && sl.items.some((it) => String(it.text || '').trim())) return 4
         if (sl.anim === 'screen') return 3                    // une etape de la demo
+        // UNE SLIDE DE TEXTE NE PASSE JAMAIS DEVANT UNE ANIMATION. Elle n'entrait
+        // meme pas dans l'arbitrage : le filtre ne gardait que ce qui porte un
+        // `anim` ou un `emoji`. Une scene « CREE TON INFLUENCEUR IA » posee sur
+        // 12 s recouvrait donc en silence les animations placees dessous — a
+        // l'ecran, un mot geant tout seul sur un fond vide, et rien d'autre.
+        if (!sl.anim && !sl.emoji) return 0                   // du texte, rien de plus
         return 1                                              // habillage
       }
-      const vis = slides.filter((sl) => sl.anim || sl.emoji)
+      // on arbitre TOUT ce qui occupe le cadre en plein ecran, texte compris ; seuls
+      // les bandeaux NUS restent hors jeu (ils vivent sur une couche a part).
+      const vis = slides.filter((sl) => sl.layout !== 'banner' || sl.anim || sl.emoji)
         .sort((a, b) => a.start - b.start) as unknown as
-        { start: number; end: number; anim?: string; screenText?: string }[]
+        { start: number; end: number; anim?: string; emoji?: string; screenText?: string }[]
       for (let i = 0; i < vis.length; i++) {
         for (let j = 0; j < vis.length; j++) {
           if (i === j) continue
@@ -2109,6 +2376,54 @@ serve(async (req: Request) => {
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), fixedWords, brief + '\n' + mem.text, filters !== 'low', brandName)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
+    // le verdict du rattrapage voyage dans la REPONSE, pas dans un log invisible :
+    // sans ca, impossible de savoir s'il n'a rien comble parce qu'il a refuse ou
+    // parce qu'il n'a jamais tourne.
+    const rattrapage: RapportRattrapage = { trous: [], propose: [], refus: [], pose: [] }
+    // ── RATTRAPAGE DES TROUS (2e passe) ───────────────────────────────────────
+    // On mesure ce qui reste NU apres tous les verrous deterministes, et on le
+    // fait combler par le modele. Seuls les trous de plus de 2 s comptent : en
+    // dessous, l'oeil ne decroche pas et une animation de 1,5 s ne s'installe pas.
+    {
+      const visuels = (plan.slides || []).filter((s) => s.anim || s.emoji).sort((a, b) => a.start - b.start)
+      const trous: { start: number; end: number; dit: string }[] = []
+      let curseur = 0
+      const pousse = (a: number, b: number) => {
+        if (b - a < 2.0) return
+        const dit = fixedWords.filter((w) => w.start >= a && w.start < b).map((w) => w.text).join(' ').slice(0, 180)
+        if (dit.split(' ').length >= 3) trous.push({ start: r2(a + 0.25), end: r2(b - 0.2), dit })
+      }
+      for (const s of visuels) { pousse(curseur, s.start); curseur = Math.max(curseur, s.end) }
+      pousse(curseur, duration)
+      rattrapage.trous = trous.map((t) => `${t.start}s→${t.end}s : « ${t.dit.slice(0, 60)} »`)
+      if (trous.length) {
+        // UN DOUBLON ELOIGNE VAUT MIEUX QU'UN TROU. On excluait toute animation deja
+        // posee : le modele proposait alors `screen` pour « cree ton compte sur
+        // avatarads.fr » et `logo` pour « va sur avatarads.fr » — les DEUX bonnes
+        // reponses — et on les jetait, laissant le creux nu. Une demonstration
+        // montre legitimement plusieurs ecrans. On n'interdit donc que la
+        // REPETITION RAPPROCHEE : la meme animation a moins de 8 s d'intervalle.
+        const posees = (plan.slides || []).filter((s) => s.anim).map((s) => ({ anim: s.anim as string, start: s.start }))
+        const propositions = await comblerTrous(trous.slice(0, 8), ANIMS, ANIM_CATALOGUE, rattrapage)
+        for (const p of propositions) {
+          const t = trous.find((h) => Math.abs(h.start - p.start) < 0.6)
+          if (!t) { rattrapage.refus.push(`${p.start}s : creux introuvable a la pose`); continue }
+          const proche = posees.find((q) => q.anim === p.anim && Math.abs(q.start - p.start) < 8)
+          if (proche) { rattrapage.refus.push(`${p.start}s : « ${p.anim} » deja a ${proche.start}s, trop proche`); continue }
+          rattrapage.pose.push(`${p.start}s ${p.anim}`)
+          posees.push({ anim: p.anim, start: p.start })
+          plan.slides.push({
+            type: 'card', layout: 'full', motif: '', anim: p.anim, emoji: '',
+            start: p.start, end: r2(Math.min(p.start + 3.5, t.end)),
+            title: '', eyebrow: '', accent: '', sub: '', center: '', value: '', unit: '',
+            wide: false, options: [],
+            items: p.value ? [{ text: p.value, t: p.start, value: '', label: '' }] : [],
+          } as unknown as typeof plan.slides[number])
+        }
+        plan.slides.sort((a, b) => a.start - b.start)
+      }
+    }
+
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
     const captions = plan.detected.subtitles ? [] : buildCaptions(fixedWords, plan.accents, duration)
 
@@ -2118,6 +2433,7 @@ serve(async (req: Request) => {
       model: CLAUDE_MODEL,
       plan: { ...plan, captions },
       transcript: { text: scribe.text, words, aligned: !!script },
+      rattrapage,
       usage,
     })
   } catch (err) {
