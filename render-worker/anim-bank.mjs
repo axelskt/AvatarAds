@@ -79,34 +79,43 @@ export const BANK = [
   { name: 'podium',  desc: "UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde »." },
   { name: 'star',    desc: "CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis »." },
   { name: 'speed',   desc: "UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse »." },
-  { name: 'hourglass', desc: "UN SABLIER qui se vide. Le temps qui passe SANS l'horloge — utilise-le quand `clock` a deja servi, ou pour une attente." },
   { name: 'deadline',  desc: "UN CALENDRIER dont UNE date s'entoure et pulse. « avant vendredi », « la date limite », « il te reste X jours »." },
-  { name: 'share',   desc: "UN PARTAGE : le fichier part vers plusieurs contacts. « partage-le », « envoie-le a un pote », « fais tourner »." },
-  { name: 'dm',      desc: "UN MESSAGE PRIVE qui arrive dans la conversation. « je t'envoie ca en prive », « en DM », « je te reponds »." },
-  { name: 'bell',    desc: "UNE CLOCHE DE NOTIFICATION qui sonne, avec sa pastille. « active les notifications », « tu recois une alerte »." },
   { name: 'crowd',   desc: "UNE FOULE de silhouettes qui apparait par vagues. « des milliers de personnes », « tout le monde », « ton audience »." },
   { name: 'viral',   desc: "UN POINT QUI SE PROPAGE a tout un reseau, de proche en proche. « ca devient viral », « ca se partage tout seul »." },
   { name: 'scrollstop', desc: "UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes »." },
-  { name: 'retention',  desc: "DEUX COURBES DE RETENTION : celle qui s'effondre (pointilles) et la tienne qui tient haut. « ils regardent jusqu'au bout »." },
   { name: 'abtest',  desc: "DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux »." },
 
   // ── PAQUET 2 (#157) — l'argent, l'outil, la methode ──
   { name: 'roi',     desc: "CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 »." },
-  { name: 'save',    desc: "UNE TIRELIRE qui se remplit de pieces. « tu economises », « ca te coute moins cher », « sans depenser »." },
   { name: 'free',    desc: "UNE ETIQUETTE GRATUIT qui claque en biais. « c'est gratuit », « offert », « sans payer »." },
   { name: 'plan',    desc: "TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan »." },
-  { name: 'crown',   desc: "UNE COURONNE qui se pose, avec son halo. « la version premium », « le plan Elite », « le haut de gamme »." },
-  { name: 'robot',   desc: "UN PETIT ROBOT qui s'anime : antenne, yeux qui clignent. « l'IA le fait pour toi », « c'est automatique », « un robot qui bosse »." },
-  { name: 'brain',   desc: "UN CERVEAU dont des zones s'allument. « l'IA comprend », « ca reflechit », « le cerveau du systeme »." },
-  { name: 'magic',   desc: "UNE BAGUETTE qui transforme un bloc terne en bloc colore, avec des etincelles. « et la ca devient magique », « en un coup de baguette »." },
-  { name: 'filter',  desc: "UN TAMIS : beaucoup de choses entrent, UNE SEULE ressort. « on garde que le meilleur », « on filtre », « le tri »." },
   { name: 'layers',  desc: "DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus »." },
-  { name: 'before',  desc: "LE MEME VISUEL QUI CHANGE, revele par une glissiere qui descend. « avant / apres », « regarde la transformation ». (`compare` pose deux plans COTE A COTE, pas la meme chose.)" },
   { name: 'badge',   desc: "UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie »." },
   { name: 'trend',   desc: "UN ESCALIER DE BARRES qui montent + une fleche vers le haut. « ca monte », « la tendance », « de mieux en mieux »." },
   { name: 'template', desc: "UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois »." },
   { name: 'record',  desc: "LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son »." },
   { name: 'lock',    desc: "la securite, l'acces reserve, ce qui se debloque, une cle." },
+
+  // ── PAQUET 3 (#157) — le geste, pas l'icone ──
+  // Axel a supprime douze animations du paquet 2 : cloche, couronne, cerveau,
+  // robot, sablier, baguette… toutes le meme defaut, UNE ICONE POSEE SUR UN FOND.
+  // Celles-ci montrent une action qui se deroule. Regle pour la suite : si
+  // l'animation tient sur une image fixe, elle n'a rien a faire dans la banque.
+  { name: 'dropzone', desc: "UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes »." },
+  { name: 'render',  desc: "UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner »." },
+  { name: 'subs',    desc: "DES SOUS-TITRES QUI S'ALLUMENT MOT PAR MOT sur un ecran vertical. « les sous-titres se mettent tout seuls », « le karaoke »." },
+  { name: 'crop',    desc: "UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok »." },
+  { name: 'silence', desc: "UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush »." },
+  { name: 'chat',    desc: "UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis »." },
+  { name: 'dashboard', desc: "UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats »." },
+  { name: 'translate', desc: "UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international »." },
+  { name: 'bgswap', desc: "LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage »." },
+  { name: 'hook',    desc: "LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche »." },
+  { name: 'export',  desc: "UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges »." },
+  { name: 'bulk',    desc: "UNE SEULE PRISE AUDIO QUI SE DEMULTIPLIE EN PLUSIEURS VIDEOS. « un audio, dix videos », « en serie », « tu declines »." },
+  { name: 'broll',   desc: "UN VISUEL QUI PASSE PAR-DESSUS LE PLAN PRINCIPAL puis repart. « on met une image par-dessus », « le b-roll », « une illustration »." },
+  { name: 'checklist', desc: "UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter »." },
+  { name: 'countdown', desc: "UN DECOMPTE 3, 2, 1 dans un cercle. « dans 3 secondes », « on decompte », « c'est parti dans »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)

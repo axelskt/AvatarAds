@@ -212,10 +212,11 @@ const ANIMS = [
   'money', 'wallet', 'countup', 'clock', 'calendar', 'grow', 'views', 'engage',
   'swipe', 'network', 'rocket', 'stack', 'funnel', 'bars2', 'idea', 'steps',
   'flow', 'orbit', 'list', 'target', 'search', 'compare', 'swap', 'toggle',
-  'check', 'quality', 'hd', 'podium', 'star', 'speed', 'hourglass', 'deadline',
-  'share', 'dm', 'bell', 'crowd', 'viral', 'scrollstop', 'retention', 'abtest',
-  'roi', 'save', 'free', 'plan', 'crown', 'robot', 'brain', 'magic',
-  'filter', 'layers', 'before', 'badge', 'trend', 'template', 'record', 'lock'
+  'check', 'quality', 'hd', 'podium', 'star', 'speed', 'deadline', 'crowd',
+  'viral', 'scrollstop', 'abtest', 'roi', 'free', 'plan', 'layers', 'badge',
+  'trend', 'template', 'record', 'lock', 'dropzone', 'render', 'subs', 'crop',
+  'silence', 'chat', 'dashboard', 'translate', 'bgswap', 'hook', 'export', 'bulk',
+  'broll', 'checklist', 'countdown'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -691,32 +692,35 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     podium   — UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde ».
     star     — CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis ».
     speed    — UN COMPTEUR DE VITESSE dont l'aiguille part a fond. « ultra rapide », « en quelques secondes », « la vitesse ».
-    hourglass— UN SABLIER qui se vide. Le temps qui passe SANS l'horloge — utilise-le quand `clock` a deja servi, ou pour une attente.
     deadline — UN CALENDRIER dont UNE date s'entoure et pulse. « avant vendredi », « la date limite », « il te reste X jours ».
-    share    — UN PARTAGE : le fichier part vers plusieurs contacts. « partage-le », « envoie-le a un pote », « fais tourner ».
-    dm       — UN MESSAGE PRIVE qui arrive dans la conversation. « je t'envoie ca en prive », « en DM », « je te reponds ».
-    bell     — UNE CLOCHE DE NOTIFICATION qui sonne, avec sa pastille. « active les notifications », « tu recois une alerte ».
     crowd    — UNE FOULE de silhouettes qui apparait par vagues. « des milliers de personnes », « tout le monde », « ton audience ».
     viral    — UN POINT QUI SE PROPAGE a tout un reseau, de proche en proche. « ca devient viral », « ca se partage tout seul ».
     scrollstop— UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes ».
-    retention— DEUX COURBES DE RETENTION : celle qui s'effondre (pointilles) et la tienne qui tient haut. « ils regardent jusqu'au bout ».
     abtest   — DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux ».
     roi      — CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 ».
-    save     — UNE TIRELIRE qui se remplit de pieces. « tu economises », « ca te coute moins cher », « sans depenser ».
     free     — UNE ETIQUETTE GRATUIT qui claque en biais. « c'est gratuit », « offert », « sans payer ».
     plan     — TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan ».
-    crown    — UNE COURONNE qui se pose, avec son halo. « la version premium », « le plan Elite », « le haut de gamme ».
-    robot    — UN PETIT ROBOT qui s'anime : antenne, yeux qui clignent. « l'IA le fait pour toi », « c'est automatique », « un robot qui bosse ».
-    brain    — UN CERVEAU dont des zones s'allument. « l'IA comprend », « ca reflechit », « le cerveau du systeme ».
-    magic    — UNE BAGUETTE qui transforme un bloc terne en bloc colore, avec des etincelles. « et la ca devient magique », « en un coup de baguette ».
-    filter   — UN TAMIS : beaucoup de choses entrent, UNE SEULE ressort. « on garde que le meilleur », « on filtre », « le tri ».
     layers   — DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus ».
-    before   — LE MEME VISUEL QUI CHANGE, revele par une glissiere qui descend. « avant / apres », « regarde la transformation ». (`compare` pose deux plans COTE A COTE, pas la meme chose.)
     badge    — UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie ».
     trend    — UN ESCALIER DE BARRES qui montent + une fleche vers le haut. « ca monte », « la tendance », « de mieux en mieux ».
     template — UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois ».
     record   — LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son ».
     lock     — la securite, l'acces reserve, ce qui se debloque, une cle.
+    dropzone — UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes ».
+    render   — UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner ».
+    subs     — DES SOUS-TITRES QUI S'ALLUMENT MOT PAR MOT sur un ecran vertical. « les sous-titres se mettent tout seuls », « le karaoke ».
+    crop     — UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok ».
+    silence  — UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush ».
+    chat     — UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis ».
+    dashboard— UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats ».
+    translate— UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international ».
+    bgswap   — LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage ».
+    hook     — LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ».
+    export   — UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges ».
+    bulk     — UNE SEULE PRISE AUDIO QUI SE DEMULTIPLIE EN PLUSIEURS VIDEOS. « un audio, dix videos », « en serie », « tu declines ».
+    broll    — UN VISUEL QUI PASSE PAR-DESSUS LE PLAN PRINCIPAL puis repart. « on met une image par-dessus », « le b-roll », « une illustration ».
+    checklist— UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter ».
+    countdown— UN DECOMPTE 3, 2, 1 dans un cercle. « dans 3 secondes », « on decompte », « c'est parti dans ».
 // <<< /ANIM-BANK:PROMPT >>>
   COMMENT TU T'Y PRENDS, DANS CET ORDRE — ne saute aucune etape :
   ETAPE 1 · LA LISTE DES MOMENTS FORTS. Avant d'ecrire le moindre JSON, releve les instants qui PORTENT la video : (a) la PROMESSE, ce qu'il jure au spectateur ("sans jamais montrer ton visage", "devenir viral") ; (b) CHAQUE fonctionnalite qu'il nomme, une par une ; (c) le chiffre marquant ; (d) le CTA. Sur un script de 30s il y en a typiquement 5 a 8.
