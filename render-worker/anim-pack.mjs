@@ -905,15 +905,6 @@ export function animHtml(name, s, W, H, vs) {
         <div class="an-p" style="left:${x}px;top:${by}px;width:${w}px;height:${bh}px;border-radius:99px;background:${P.soft};overflow:hidden">
           <span class="an-p" id="${id}rb" style="left:0;top:0;width:100%;height:100%;border-radius:99px;background:${P.acc};transform-origin:0% 50%"></span></div>`)
     }
-    case 'subs': {
-      // « les sous-titres se mettent tout seuls » : les mots s'allument un par un.
-      const pw = Math.round(f.h * 0.52), ph = f.h, px = Math.round((f.w - pw) / 2)
-      const ws = ['SOUS', 'TITRES', 'AUTO'].map((t, k) =>
-        `<span id="${id}w${k}" style="display:block;font-family:'Archivo Black',sans-serif;font-size:${Math.round(pw * 0.16)}px;line-height:1.16;color:${P.ink};opacity:.22">${t}</span>`).join('')
-      return box(`<div class="an-ph" id="${id}ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.13)}px;overflow:hidden;background:${P.soft}">
-        <span class="an-p" style="left:50%;margin-left:${-Math.round(pw * 0.19)}px;top:${Math.round(ph * 0.12)}px;width:${Math.round(pw * 0.38)}px;height:${Math.round(pw * 0.38)}px;border-radius:50%;background:${P.acc};opacity:.45"></span>
-        <div style="position:absolute;left:8%;right:8%;top:${Math.round(ph * 0.56)}px;text-align:center">${ws}</div></div>`)
-    }
     case 'crop': {
       // « on passe en vertical » : le cadre se resserre au format 9:16.
       const w0 = Math.round(f.w * 0.86), h0 = Math.round(w0 * 9 / 16)
@@ -1012,33 +1003,6 @@ export function animHtml(name, s, W, H, vs) {
         <svg class="an-p" id="${id}xa" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(f.h * 0.07)}px;top:${Math.round(f.h * 0.56)}px;width:${Math.round(f.h * 0.14)}px;height:${Math.round(f.h * 0.14)}px" fill="none" stroke="${P.acc}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v14M6 12l6 6 6-6"/></svg>
         <div class="an-p" id="${id}xf" style="left:${cx}px;top:${Math.round(f.h * 0.74)}px;width:${cw}px;height:${Math.round(f.h * 0.22)}px;border-radius:${Math.round(cw * 0.12)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.095)}px;color:${P.ink}">MP4</div>`)
     }
-    case 'bulk': {
-      // « un audio, dix vidéos » : la prise unique se démultiplie.
-      const aw = Math.round(f.w * 0.42), ah = Math.round(f.h * 0.19)
-      const cw = Math.round(f.w * 0.19), ch = Math.round(cw * 1.5)
-      const gp = Math.round(cw * 0.17), tot = 4 * cw + 3 * gp
-      const x0 = Math.round((f.w - tot) / 2), cy = Math.round(f.h * 0.42)
-      let cards = ''
-      for (let k = 0; k < 4; k++) cards += `<span class="an-p an-bk" id="${id}bk${k}" style="left:${x0 + k * (cw + gp)}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.17)}px;background:${P.acc};opacity:${(1 - k * 0.13).toFixed(2)}"></span>`
-      let wv = ''
-      const st = Math.round(aw * 0.072)
-      for (let k = 0; k < 11; k++) {
-        const hg = Math.round(ah * (0.22 + 0.58 * Math.abs(Math.sin(k * 1.9))))
-        wv += `<span style="position:absolute;left:${Math.round(aw * 0.11) + k * st}px;top:${Math.round((ah - hg) / 2)}px;width:${Math.max(3, Math.round(aw * 0.028))}px;height:${hg}px;border-radius:99px;background:${P.ink};opacity:.7"></span>`
-      }
-      return box(`
-        <div class="an-p" id="${id}ba" style="left:${Math.round((f.w - aw) / 2)}px;top:${Math.round(f.h * 0.06)}px;width:${aw}px;height:${ah}px;border-radius:${Math.round(ah * 0.36)}px;background:${P.soft};border:2px solid ${P.line}">${wv}</div>
-        ${cards}`)
-    }
-    case 'broll': {
-      // « on met un visuel par-dessus » : le b-roll passe sur le plan principal.
-      const pw = Math.round(f.h * 0.56), ph = f.h, px = Math.round((f.w - pw) / 2)
-      const bw = Math.round(pw * 0.74), bh = Math.round(bw * 0.62)
-      return box(`<div class="an-ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border-radius:${Math.round(pw * 0.12)}px;overflow:hidden;border:3px solid ${P.line};background:${P.soft}">
-        <span class="an-p" style="left:50%;margin-left:${-Math.round(pw * 0.17)}px;top:${Math.round(ph * 0.24)}px;width:${Math.round(pw * 0.34)}px;height:${Math.round(pw * 0.34)}px;border-radius:50%;background:${P.line}"></span>
-        <span class="an-p" style="left:50%;margin-left:${-Math.round(pw * 0.3)}px;top:${Math.round(ph * 0.24 + pw * 0.42)}px;width:${Math.round(pw * 0.6)}px;height:${Math.round(ph * 0.32)}px;border-radius:${Math.round(pw * 0.3)}px ${Math.round(pw * 0.3)}px 0 0;background:${P.line}"></span>
-        <span class="an-p" id="${id}bl" style="left:${Math.round((pw - bw) / 2)}px;top:${Math.round(ph * 0.12)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw * 0.1)}px;background:${grad(150)};box-shadow:0 18px 40px rgba(0,0,0,.5)"></span></div>`)
-    }
     case 'checklist': {
       // « tout est inclus » : les lignes se cochent une par une.
       const w = Math.round(f.w * 0.82), x = Math.round((f.w - w) / 2)
@@ -1054,14 +1018,264 @@ export function animHtml(name, s, W, H, vs) {
       }
       return box(rows)
     }
-    case 'countdown': {
-      // « 3, 2, 1 » : le décompte, chaque chiffre chasse le précédent.
-      const d = Math.round(Math.min(f.w * 0.52, f.h * 0.9))
-      const cx = Math.round((f.w - d) / 2), cy = Math.round((f.h - d) / 2)
-      const num = (t, k) => `<span class="an-p" id="${id}cd${k}" style="left:${cx}px;top:${cy}px;width:${d}px;height:${d}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(d * 0.58)}px;color:${P.ink}">${t}</span>`
+    // ── PAQUET 4 (#157) — du DÉTAIL, pas des aplats.
+    // Axel a encore retiré quatre animations du paquet 3 : `bulk` (quatre
+    // rectangles orange nus), `broll` (une silhouette grise), `countdown` (un
+    // chiffre seul), `subs` (un pavé de texte). Le point commun avec les douze
+    // du paquet 2 : une forme pleine sans rien dedans, ou un glyphe isolé. Ici
+    // chaque bloc porte de la matière — des lignes de texte, des pastilles, des
+    // vignettes, des chiffres — comme une vraie interface qu'on regarde.
+    case 'library': {
+      // « ta bibliothèque » : la grille de vignettes, l'une d'elles s'ouvre.
+      const cols = 3, rows = 2, gp = Math.round(f.w * 0.03)
+      const cw = Math.round((f.w * 0.92 - gp * (cols - 1)) / cols), chh = Math.round(cw * 1.16)
+      const x0 = Math.round((f.w - (cw * cols + gp * (cols - 1))) / 2)
+      const y0 = Math.round((f.h - (chh * rows + gp * rows)) / 2)
+      let g = ''
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const k = r * cols + c, hot = k === 4
+        g += `<span class="an-p an-lb" id="${id}lb${k}" style="left:${x0 + c * (cw + gp)}px;top:${y0 + r * (chh + gp)}px;width:${cw}px;height:${chh}px;border-radius:${Math.round(cw * 0.14)}px;background:${P.soft};border:2px solid ${hot ? P.acc : P.line};overflow:hidden">
+          <span style="position:absolute;left:0;top:0;width:100%;height:64%;background:${hot ? P.acc : P.line};opacity:${hot ? 1 : .55}"></span>
+          <span style="position:absolute;left:9%;top:73%;width:74%;height:${Math.max(3, Math.round(chh * 0.05))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+          <span style="position:absolute;left:9%;top:86%;width:44%;height:${Math.max(3, Math.round(chh * 0.05))}px;border-radius:99px;background:${P.ink};opacity:.3"></span></span>`
+      }
+      return box(g)
+    }
+    case 'queue': {
+      // « ça tourne en fond » : les rendus s'enchaînent, un par un, jusqu'au vert.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.2), gp = Math.round(f.h * 0.06)
+      const y0 = Math.round((f.h - (4 * rh + 3 * gp)) / 2)
+      let rws = ''
+      for (let k = 0; k < 4; k++) {
+        const y = y0 + k * (rh + gp), th = Math.round(rh * 0.56)
+        rws += `<span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.28)}px;top:${y + Math.round(rh * 0.22)}px;width:${th}px;height:${th}px;border-radius:${Math.round(th * 0.3)}px;background:${P.line}"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.28) + th + Math.round(rh * 0.3)}px;top:${y + Math.round(rh * 0.3)}px;width:${Math.round(w * (0.4 - k * 0.05))}px;height:${Math.max(4, Math.round(rh * 0.11))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.28) + th + Math.round(rh * 0.3)}px;top:${y + Math.round(rh * 0.55)}px;width:${Math.round(w * (0.24 - k * 0.03))}px;height:${Math.max(3, Math.round(rh * 0.09))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>
+        <span class="an-p an-qd" id="${id}qd${k}" style="left:${x + w - Math.round(rh * 1.1)}px;top:${y + Math.round((rh - th) / 2)}px;width:${th}px;height:${th}px;border-radius:50%;background:${P.acc};display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" width="62%" height="62%" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span>`
+      }
+      return box(rws)
+    }
+    case 'notif': {
+      // « ça n'arrête pas de sonner » : les bannières s'empilent sur l'écran.
+      const pw = Math.round(f.h * 0.52), ph = f.h, px = Math.round((f.w - pw) / 2)
+      const bw = Math.round(pw * 0.86), bh = Math.round(pw * 0.3), bx = Math.round((pw - bw) / 2)
+      let bs = ''
+      for (let k = 0; k < 3; k++) {
+        const av = Math.round(bh * 0.52)
+        bs += `<span class="an-p an-nb" id="${id}nb${k}" style="left:${bx}px;top:${Math.round(ph * 0.1) + k * Math.round(bh * 1.18)}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bh * 0.3)}px;background:rgba(255,255,255,.92);box-shadow:0 10px 26px rgba(0,0,0,.4)">
+          <span style="position:absolute;left:${Math.round(bh * 0.2)}px;top:${Math.round((bh - av) / 2)}px;width:${av}px;height:${av}px;border-radius:${Math.round(av * 0.32)}px;background:${P.acc}"></span>
+          <span style="position:absolute;left:${Math.round(bh * 0.24) + av}px;top:${Math.round(bh * 0.28)}px;width:${[46, 38, 52][k]}%;height:${Math.max(3, Math.round(bh * 0.1))}px;border-radius:99px;background:#111111;opacity:.8"></span>
+          <span style="position:absolute;left:${Math.round(bh * 0.24) + av}px;top:${Math.round(bh * 0.55)}px;width:${[62, 54, 44][k]}%;height:${Math.max(3, Math.round(bh * 0.09))}px;border-radius:99px;background:#111111;opacity:.4"></span></span>`
+      }
+      return box(`<div class="an-ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.13)}px;overflow:hidden;background:${P.soft}">${bs}</div>`)
+    }
+    case 'comments': {
+      // « les gens réagissent » : le fil de commentaires monte.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.22), av = Math.round(rh * 0.6)
+      let cs = ''
+      for (let k = 0; k < 4; k++) {
+        const y = k * Math.round(rh * 1.06)
+        cs += `<span class="an-p an-cm" id="${id}cm${k}" style="left:0;top:${y}px;width:${w}px;height:${rh}px">
+          <span style="position:absolute;left:0;top:${Math.round((rh - av) / 2)}px;width:${av}px;height:${av}px;border-radius:50%;background:${k % 2 ? P.acc : P.line}"></span>
+          <span style="position:absolute;left:${av + Math.round(rh * 0.2)}px;top:${Math.round(rh * 0.24)}px;width:${[34, 28, 40, 30][k]}%;height:${Math.max(3, Math.round(rh * 0.1))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
+          <span style="position:absolute;left:${av + Math.round(rh * 0.2)}px;top:${Math.round(rh * 0.52)}px;width:${[72, 58, 66, 48][k]}%;height:${Math.max(3, Math.round(rh * 0.09))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>
+          <svg viewBox="0 0 24 24" width="${Math.round(rh * 0.3)}" height="${Math.round(rh * 0.3)}" style="position:absolute;right:0;top:${Math.round(rh * 0.34)}px" fill="${P.acc}"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg></span>`
+      }
+      return box(`<div class="an-p" style="left:${x}px;top:0;width:${w}px;height:${f.h}px;overflow:hidden"><div id="${id}cmw" style="position:absolute;left:0;top:${Math.round(f.h * 0.06)}px;width:100%">${cs}</div></div>`)
+    }
+    case 'timeline': {
+      // « le montage » : la vraie timeline, trois pistes, la tête de lecture passe.
+      const w = Math.round(f.w * 0.94), x = Math.round((f.w - w) / 2)
+      const th = Math.round(f.h * 0.2), gp = Math.round(f.h * 0.06)
+      const y0 = Math.round((f.h - (3 * th + 2 * gp)) / 2)
+      let cl = ''
+      const cuts = [0, 0.28, 0.52, 0.78]
+      cuts.forEach((c, k) => {
+        const cw2 = Math.round(w * ((cuts[k + 1] ?? 1) - c)) - 3
+        cl += `<span class="an-p" style="left:${x + Math.round(w * c)}px;top:${y0}px;width:${cw2}px;height:${th}px;border-radius:${Math.round(th * 0.18)}px;background:${P.line};overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,${P.ink}22 0 2px,transparent 2px ${Math.round(th * 0.34)}px)"></span></span>`
+      })
+      let wv = ''
+      for (let k = 0; k < 30; k++) {
+        const hg = Math.round(th * (0.18 + 0.6 * Math.abs(Math.sin(k * 1.6))))
+        wv += `<span style="position:absolute;left:${Math.round(w * 0.02) + k * Math.round(w * 0.032)}px;top:${Math.round((th - hg) / 2)}px;width:${Math.max(2, Math.round(w * 0.008))}px;height:${hg}px;border-radius:99px;background:${P.ink};opacity:.6"></span>`
+      }
+      let chips = ''
+      for (let k = 0; k < 4; k++) chips += `<span style="position:absolute;left:${Math.round(w * (0.03 + k * 0.245))}px;top:${Math.round(th * 0.24)}px;width:${Math.round(w * 0.19)}px;height:${Math.round(th * 0.52)}px;border-radius:${Math.round(th * 0.2)}px;background:${P.acc};opacity:${(0.95 - k * 0.12).toFixed(2)}"></span>`
+      return box(`${cl}
+        <span class="an-p" style="left:${x}px;top:${y0 + th + gp}px;width:${w}px;height:${th}px;border-radius:${Math.round(th * 0.18)}px;background:${P.soft};overflow:hidden">${wv}</span>
+        <span class="an-p" style="left:${x}px;top:${y0 + 2 * (th + gp)}px;width:${w}px;height:${th}px;border-radius:${Math.round(th * 0.18)}px;background:${P.soft};overflow:hidden">${chips}</span>
+        <span class="an-p" id="${id}tp" style="left:${x}px;top:${y0 - Math.round(f.h * 0.04)}px;width:${Math.max(3, Math.round(w * 0.006))}px;height:${3 * th + 2 * gp + Math.round(f.h * 0.08)}px;border-radius:99px;background:${P.ink}"></span>`)
+    }
+    case 'results': {
+      // « tu cherches, tu trouves » : la requête s'écrit, les résultats tombent.
+      const w = Math.round(f.w * 0.88), x = Math.round((f.w - w) / 2)
+      const fh = Math.round(f.h * 0.2), rh = Math.round(f.h * 0.16), gp = Math.round(f.h * 0.05)
+      let rs = ''
+      for (let k = 0; k < 3; k++) {
+        const y = fh + gp + Math.round(f.h * 0.04) + k * (rh + gp)
+        rs += `<span class="an-p an-rs" id="${id}rs${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${P.soft};border:2px solid ${k === 0 ? P.acc : P.line}">
+          <span style="position:absolute;left:${Math.round(rh * 0.26)}px;top:${Math.round(rh * 0.24)}px;width:${Math.round(rh * 0.52)}px;height:${Math.round(rh * 0.52)}px;border-radius:${Math.round(rh * 0.18)}px;background:${k === 0 ? P.acc : P.line}"></span>
+          <span style="position:absolute;left:${Math.round(rh * 1.02)}px;top:${Math.round(rh * 0.3)}px;width:${[52, 40, 46][k]}%;height:${Math.max(3, Math.round(rh * 0.13))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
+          <span style="position:absolute;left:${Math.round(rh * 1.02)}px;top:${Math.round(rh * 0.6)}px;width:${[34, 28, 24][k]}%;height:${Math.max(3, Math.round(rh * 0.11))}px;border-radius:99px;background:${P.ink};opacity:.3"></span></span>`
+      }
       return box(`
-        <span class="an-p" id="${id}cr" style="left:${cx}px;top:${cy}px;width:${d}px;height:${d}px;border-radius:50%;border:${Math.max(5, Math.round(d * 0.05))}px solid ${P.acc}"></span>
-        ${num(3, 0)}${num(2, 1)}${num(1, 2)}`)
+        <div class="an-p" style="left:${x}px;top:0;width:${w}px;height:${fh}px;border-radius:99px;background:${P.soft};border:2px solid ${P.line}">
+          <svg viewBox="0 0 24 24" width="${Math.round(fh * 0.42)}" height="${Math.round(fh * 0.42)}" style="position:absolute;left:${Math.round(fh * 0.3)}px;top:${Math.round(fh * 0.29)}px" fill="none" stroke="${P.ink}" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="an-p" id="${id}rq" style="left:${Math.round(fh * 0.92)}px;top:${Math.round(fh * 0.44)}px;width:${Math.round(w * 0.5)}px;height:${Math.max(4, Math.round(fh * 0.12))}px;border-radius:99px;background:${P.ink};opacity:.55;transform-origin:0% 50%"></span>
+        </div>${rs}`)
+    }
+    case 'profile': {
+      // « ton compte » : l'entête, le compteur d'abonnés, la grille de posts.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const av = Math.round(f.h * 0.24)
+      let g = ''
+      const cw = Math.round((w - 2 * Math.round(w * 0.025)) / 3)
+      for (let k = 0; k < 6; k++) {
+        const c = k % 3, r = (k / 3) | 0
+        g += `<span class="an-p an-pg" id="${id}pg${k}" style="left:${x + c * (cw + Math.round(w * 0.025))}px;top:${Math.round(f.h * 0.42) + r * (Math.round(cw * 1.1) + Math.round(w * 0.025))}px;width:${cw}px;height:${Math.round(cw * 1.1)}px;border-radius:${Math.round(cw * 0.12)}px;background:${k % 2 ? P.acc : P.line};opacity:${k % 2 ? .9 : .55}"></span>`
+      }
+      return box(`
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.05)}px;width:${av}px;height:${av}px;border-radius:50%;background:${P.acc};border:3px solid ${P.line}"></span>
+        <span class="an-p" style="left:${x + av + Math.round(w * 0.05)}px;top:${Math.round(f.h * 0.1)}px;width:${Math.round(w * 0.34)}px;height:${Math.max(4, Math.round(f.h * 0.035))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
+        <span class="an-p" id="${id}pc" style="left:${x + av + Math.round(w * 0.05)}px;top:${Math.round(f.h * 0.19)}px;width:${Math.round(w * 0.46)}px;height:${Math.round(f.h * 0.13)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.12)}px;color:${P.acc};transform-origin:0% 50%">+12K</span>
+        ${g}`)
+    }
+    case 'invoice': {
+      // « la facture » : les lignes se posent, le total tombe.
+      const w = Math.round(f.w * 0.76), h = Math.round(f.h * 0.96)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      let ls = ''
+      for (let k = 0; k < 4; k++) {
+        const ly = Math.round(h * (0.24 + k * 0.13))
+        ls += `<span class="an-p an-iv" id="${id}iv${k}" style="left:${Math.round(w * 0.1)}px;top:${ly}px;width:${[52, 44, 58, 38][k]}%;height:${Math.max(3, Math.round(h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.42"></span>
+        <span class="an-p an-iv" style="left:${Math.round(w * 0.68)}px;top:${ly}px;width:${Math.round(w * 0.22)}px;height:${Math.max(3, Math.round(h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>`
+      }
+      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.06)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span style="position:absolute;left:0;top:0;width:100%;height:${Math.round(h * 0.13)}px;background:${P.acc}"></span>
+        <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.045)}px;width:${Math.round(w * 0.34)}px;height:${Math.max(3, Math.round(h * 0.028))}px;border-radius:99px;background:rgba(255,255,255,.9)"></span>
+        ${ls}
+        <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.76)}px;width:${Math.round(w * 0.8)}px;height:2px;background:${P.line}"></span>
+        <span class="an-p" id="${id}it" style="left:${Math.round(w * 0.5)}px;top:${Math.round(h * 0.82)}px;width:${Math.round(w * 0.4)}px;height:${Math.round(h * 0.13)}px;display:flex;align-items:center;justify-content:flex-end;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.11)}px;color:${P.acc}">490€</span></div>`)
+    }
+    case 'settings': {
+      // « tu règles » : les interrupteurs basculent l'un après l'autre.
+      const w = Math.round(f.w * 0.84), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.2), gp = Math.round(f.h * 0.06)
+      const y0 = Math.round((f.h - (3 * rh + 2 * gp)) / 2)
+      const sw = Math.round(rh * 0.9), sh = Math.round(sw * 0.56)
+      let rs = ''
+      for (let k = 0; k < 3; k++) {
+        const y = y0 + k * (rh + gp)
+        rs += `<span class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.3)}px;top:${y + Math.round(rh * 0.3)}px;width:${[46, 38, 52][k]}%;height:${Math.max(4, Math.round(rh * 0.12))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        <span class="an-p" style="left:${x + Math.round(rh * 0.3)}px;top:${y + Math.round(rh * 0.58)}px;width:${[30, 24, 34][k]}%;height:${Math.max(3, Math.round(rh * 0.1))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>
+        <span class="an-p an-sb" id="${id}sb${k}" style="left:${x + w - sw - Math.round(rh * 0.3)}px;top:${y + Math.round((rh - sh) / 2)}px;width:${sw}px;height:${sh}px;border-radius:99px;background:${P.line}">
+          <span class="an-p an-st" id="${id}st${k}" style="left:${Math.round(sh * 0.12)}px;top:${Math.round(sh * 0.12)}px;width:${Math.round(sh * 0.76)}px;height:${Math.round(sh * 0.76)}px;border-radius:50%;background:#FFFFFF"></span></span>`
+      }
+      return box(rs)
+    }
+    case 'versus': {
+      // « eux, et toi » : deux colonnes, les croix d'un côté, les coches de l'autre.
+      const cw = Math.round(f.w * 0.42), gp = Math.round(f.w * 0.06)
+      const x0 = Math.round((f.w - (2 * cw + gp)) / 2)
+      const rh = Math.round(f.h * 0.18)
+      const col = (cx, ok, idp) => {
+        let o = `<span class="an-p" style="left:${cx}px;top:0;width:${cw}px;height:${Math.round(f.h * 0.14)}px;border-radius:${Math.round(f.h * 0.05)}px;background:${ok ? P.acc : P.soft};border:2px solid ${ok ? P.acc : P.line}"></span>`
+        for (let k = 0; k < 3; k++) {
+          const y = Math.round(f.h * 0.22) + k * (rh + Math.round(f.h * 0.04))
+          const ic = ok
+            ? `<path d="M5 13l4 4 10-10"/>`
+            : `<path d="M6 6l12 12M18 6L6 18"/>`
+          o += `<span class="an-p an-vs" id="${idp}${k}" style="left:${cx}px;top:${y}px;width:${cw}px;height:${rh}px">
+            <svg viewBox="0 0 24 24" width="${Math.round(rh * 0.62)}" height="${Math.round(rh * 0.62)}" style="position:absolute;left:0;top:${Math.round(rh * 0.19)}px" fill="none" stroke="${ok ? P.acc : P.line}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>
+            <span style="position:absolute;left:${Math.round(rh * 0.82)}px;top:${Math.round(rh * 0.42)}px;width:${[62, 76, 54][k]}%;height:${Math.max(3, Math.round(rh * 0.13))}px;border-radius:99px;background:${P.ink};opacity:${ok ? .5 : .28}"></span></span>`
+        }
+        return o
+      }
+      return box(col(x0, false, `${id}vl`) + col(x0 + cw + gp, true, `${id}vr`))
+    }
+    case 'thumb': {
+      // « la miniature » : la vignette, son titre, et le compteur qui grimpe.
+      const w = Math.round(f.w * 0.8), h = Math.round(w * 0.62)
+      const x = Math.round((f.w - w) / 2)
+      const pd = Math.round(h * 0.3)
+      return box(`
+        <div class="an-p" id="${id}tb" style="left:${x}px;top:${Math.round(f.h * 0.05)}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.05)}px;background:${P.line};overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.4)">
+          <span style="position:absolute;inset:0;background:${grad(140)};opacity:.85"></span>
+          <span class="an-p" id="${id}tp2" style="left:50%;top:50%;width:${pd}px;height:${pd}px;margin-left:${-Math.round(pd / 2)}px;margin-top:${-Math.round(pd / 2)}px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="46%" height="46%" fill="#111111"><path d="M8 5l11 7-11 7z"/></svg></span>
+          <span style="position:absolute;right:${Math.round(h * 0.08)}px;bottom:${Math.round(h * 0.08)}px;padding:${Math.round(h * 0.045)}px ${Math.round(h * 0.09)}px;border-radius:${Math.round(h * 0.07)}px;background:rgba(0,0,0,.66);font-family:${SANS};font-weight:700;font-size:${Math.round(h * 0.11)}px;color:#FFFFFF">0:28</span>
+        </div>
+        <span class="an-p" style="left:${x}px;top:${Math.round(f.h * 0.05) + h + Math.round(f.h * 0.07)}px;width:${Math.round(w * 0.86)}px;height:${Math.max(4, Math.round(f.h * 0.035))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+        <span class="an-p" id="${id}tv" style="left:${x}px;top:${Math.round(f.h * 0.05) + h + Math.round(f.h * 0.15)}px;width:${Math.round(w * 0.6)}px;height:${Math.round(f.h * 0.12)}px;display:flex;align-items:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.1)}px;color:${P.acc};transform-origin:0% 50%">1,2M</span>`)
+    }
+    case 'leaderboard': {
+      // « passer devant » : le classement, et ta ligne remonte à la première place.
+      const w = Math.round(f.w * 0.86), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.19), gp = Math.round(f.h * 0.045)
+      const y0 = Math.round((f.h - (4 * rh + 3 * gp)) / 2)
+      let rs = ''
+      for (let k = 0; k < 4; k++) {
+        const y = y0 + k * (rh + gp), me = k === 3, av = Math.round(rh * 0.58)
+        rs += `<span class="an-p an-ld" id="${id}ld${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${me ? P.acc : P.soft};border:2px solid ${me ? P.acc : P.line}">
+          <span style="position:absolute;left:${Math.round(rh * 0.28)}px;top:${Math.round(rh * 0.28)}px;width:${Math.round(rh * 0.44)}px;height:${Math.round(rh * 0.44)}px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(rh * 0.4)}px;color:${me ? '#FFFFFF' : P.ink};opacity:${me ? 1 : .5}">${k + 1}</span>
+          <span style="position:absolute;left:${Math.round(rh * 0.9)}px;top:${Math.round((rh - av) / 2)}px;width:${av}px;height:${av}px;border-radius:50%;background:${me ? 'rgba(255,255,255,.9)' : P.line}"></span>
+          <span style="position:absolute;left:${Math.round(rh * 1.62)}px;top:${Math.round(rh * 0.42)}px;width:${[42, 34, 48, 38][k]}%;height:${Math.max(4, Math.round(rh * 0.13))}px;border-radius:99px;background:${me ? '#FFFFFF' : P.ink};opacity:${me ? .9 : .45}"></span></span>`
+      }
+      return box(rs)
+    }
+    case 'pay': {
+      // « ils paient » : le récapitulatif, le bouton, la coche verte.
+      const w = Math.round(f.w * 0.78), h = Math.round(f.h * 0.94)
+      const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
+      const bh = Math.round(h * 0.17)
+      return box(`<div class="an-p" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(w * 0.08)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+        <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.1)}px;width:${Math.round(w * 0.46)}px;height:${Math.max(4, Math.round(h * 0.028))}px;border-radius:99px;background:${P.ink};opacity:.45"></span>
+        <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.19)}px;width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(h * 0.024))}px;border-radius:99px;background:${P.ink};opacity:.26"></span>
+        <span style="position:absolute;right:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.13)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.085)}px;color:${P.ink}">49€</span>
+        <span style="position:absolute;left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.32)}px;width:${Math.round(w * 0.8)}px;height:${Math.round(h * 0.16)}px;border-radius:${Math.round(h * 0.045)}px;background:${P.line};overflow:hidden">
+          <span style="position:absolute;left:${Math.round(w * 0.06)}px;top:50%;transform:translateY(-50%);width:${Math.round(w * 0.14)}px;height:${Math.round(h * 0.06)}px;border-radius:${Math.round(h * 0.015)}px;background:${P.acc}"></span>
+          <span style="position:absolute;right:${Math.round(w * 0.08)}px;top:50%;transform:translateY(-50%);width:${Math.round(w * 0.3)}px;height:${Math.max(3, Math.round(h * 0.022))}px;border-radius:99px;background:${P.ink};opacity:.4"></span></span>
+        <span class="an-p" id="${id}pb" style="left:${Math.round(w * 0.1)}px;top:${Math.round(h * 0.56)}px;width:${Math.round(w * 0.8)}px;height:${bh}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(bh * 0.42)}px;color:#FFFFFF">Payer</span>
+        <span class="an-p" id="${id}pk" style="left:50%;margin-left:${-Math.round(h * 0.09)}px;top:${Math.round(h * 0.78)}px;width:${Math.round(h * 0.18)}px;height:${Math.round(h * 0.18)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></span></div>`)
+    }
+    case 'sales': {
+      // « les ventes tombent » : les notifications de commande s'empilent avec leur montant.
+      const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
+      const rh = Math.round(f.h * 0.21), gp = Math.round(f.h * 0.05)
+      const y0 = Math.round(f.h * 0.06)
+      const amts = ['+49€', '+129€', '+49€']
+      let rs = ''
+      for (let k = 0; k < 3; k++) {
+        const y = y0 + k * (rh + gp), av = Math.round(rh * 0.54)
+        rs += `<span class="an-p an-sl" id="${id}sl${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${rh}px;border-radius:${Math.round(rh * 0.28)}px;background:${P.soft};border:2px solid ${P.line};box-shadow:0 12px 28px rgba(0,0,0,.28)">
+          <span style="position:absolute;left:${Math.round(rh * 0.26)}px;top:${Math.round((rh - av) / 2)}px;width:${av}px;height:${av}px;border-radius:${Math.round(av * 0.3)}px;background:${P.acc};display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 100-2 1 1 0 000 2zM18 20a1 1 0 100-2 1 1 0 000 2z"/></svg></span>
+          <span style="position:absolute;left:${Math.round(rh * 0.95)}px;top:${Math.round(rh * 0.28)}px;width:${[38, 30, 44][k]}%;height:${Math.max(4, Math.round(rh * 0.12))}px;border-radius:99px;background:${P.ink};opacity:.5"></span>
+          <span style="position:absolute;left:${Math.round(rh * 0.95)}px;top:${Math.round(rh * 0.56)}px;width:${[26, 22, 30][k]}%;height:${Math.max(3, Math.round(rh * 0.1))}px;border-radius:99px;background:${P.ink};opacity:.28"></span>
+          <span style="position:absolute;right:${Math.round(rh * 0.28)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:${Math.round(rh * 0.3)}px;color:${P.acc}">${amts[k]}</span></span>`
+      }
+      return box(rs)
+    }
+    case 'folder': {
+      // « tes fichiers » : le dossier s'ouvre, les documents sortent en éventail.
+      const fw = Math.round(f.w * 0.5), fh2 = Math.round(fw * 0.76)
+      const fx = Math.round((f.w - fw) / 2), fy = Math.round(f.h * 0.4)
+      const dw = Math.round(fw * 0.44), dh = Math.round(dw * 1.3)
+      let ds = ''
+      for (let k = 0; k < 3; k++) {
+        ds += `<span class="an-p an-fd" id="${id}fd${k}" style="left:${Math.round((f.w - dw) / 2)}px;top:${fy - Math.round(dh * 0.18)}px;width:${dw}px;height:${dh}px;border-radius:${Math.round(dw * 0.12)}px;background:#FFFFFF;box-shadow:0 12px 28px rgba(0,0,0,.35)">
+          ${[0.2, 0.36, 0.52, 0.68].map((t, j) => `<span style="position:absolute;left:14%;top:${t * 100}%;width:${[64, 52, 70, 40][j]}%;height:${Math.max(2, Math.round(dh * 0.035))}px;border-radius:99px;background:#111111;opacity:.3"></span>`).join('')}</span>`
+      }
+      return box(`${ds}
+        <span class="an-p" id="${id}fb" style="left:${fx}px;top:${fy}px;width:${fw}px;height:${fh2}px;border-radius:${Math.round(fw * 0.08)}px;background:${P.acc};box-shadow:0 18px 40px rgba(0,0,0,.4)"></span>
+        <span class="an-p" style="left:${fx}px;top:${fy - Math.round(fh2 * 0.16)}px;width:${Math.round(fw * 0.44)}px;height:${Math.round(fh2 * 0.2)}px;border-radius:${Math.round(fw * 0.05)}px ${Math.round(fw * 0.05)}px 0 0;background:${P.acc};opacity:.85"></span>`)
     }
     default: { // clock — le temps qui passe, la rapidité
       const d = Math.round(f.h * 0.82)
@@ -1078,6 +1292,7 @@ export function animHtml(name, s, W, H, vs) {
 // cadre au moment du rendu — GSAP accepte une fonction comme valeur cible.
 const FRAME = (id) => `document.getElementById('${id}an').getBoundingClientRect()`
 const FH = (id, ratio) => `()=>${FRAME(id)}.height*${ratio}`
+const FW = (id, ratio) => `()=>${FRAME(id)}.width*${ratio}`
 
 export function animJs(name, s, r2) {
   const id = s.id, t0 = r2(s.start + 0.05), end = r2(s.start + s.dur)
@@ -1486,11 +1701,6 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}rv',{scaleY:0},{scaleY:1,duration:${r2(Math.max(0.7, dur - 0.3))},ease:'power1.inOut'},${r2(t0 + 0.15)});
       tl.fromTo('#${id}rb',{scaleX:0},{scaleX:1,duration:${r2(Math.max(0.7, dur - 0.3))},ease:'power1.inOut'},${r2(t0 + 0.15)});`
-    case 'subs':
-      return inOut + `
-      tl.fromTo('#${id}ph',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${t0});
-      ${[0, 1, 2].map((k) => `tl.to('#${id}w${k}',{opacity:1,scale:1.08,duration:0.2,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.36 + k * 0.24)});
-      tl.to('#${id}w${k}',{scale:1,duration:0.16,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.56 + k * 0.24)});`).join('\n      ')}`
     case 'crop':
       // le cadre 16:9 se resserre sur la colonne 9:16 — dimensions lues sur le
       // cadre réel plutôt que devinées : animJs ne connaît pas la composition.
@@ -1536,26 +1746,77 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}xa',{y:-14,autoAlpha:0},{y:0,autoAlpha:1,duration:0.26,ease:'power2.out'},${r2(t0 + 0.38)});
       tl.to('#${id}xa',{y:10,duration:0.3,yoyo:true,repeat:2,ease:'sine.inOut'},${r2(t0 + 0.6)});
       tl.fromTo('#${id}xf',{y:22,autoAlpha:0},{y:0,autoAlpha:1,duration:0.34,ease:'back.out(2)'},${r2(t0 + 0.62)});`
-    case 'bulk':
-      return inOut + `
-      tl.fromTo('#${id}ba',{scale:0.86,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.9)'},${t0});
-      tl.fromTo('#${id}an .an-bk',{y:${FH(id, -0.2)},scale:0.7,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.34,stagger:{each:0.09,from:'center'},ease:'back.out(2)'},${r2(t0 + 0.36)});`
-    case 'broll':
-      return inOut + `
-      tl.fromTo('#${id}bl',{xPercent:130,autoAlpha:0},{xPercent:0,autoAlpha:1,duration:0.36,ease:'power3.out'},${r2(t0 + 0.24)});
-      tl.to('#${id}bl',{xPercent:-130,autoAlpha:0,duration:0.32,ease:'power3.in'},${r2(Math.max(t0 + 0.7, end - 0.5))});`
     case 'checklist':
       return inOut + `
       tl.fromTo('#${id}an .an-p',{x:-24,autoAlpha:0},{x:0,autoAlpha:1,duration:0.26,stagger:0.04,ease:'power3.out'},${t0});
       ${[0, 1, 2, 3].map((k) => `tl.fromTo('#${id}ck${k}',{scale:0},{scale:1,duration:0.26,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.4 + k * 0.16)});`).join('\n      ')}`
-    case 'countdown':
+    // ── PAQUET 4 (#157) ──
+    case 'library':
       return inOut + `
-      ${[0, 1, 2].map((k) => {
-        const a = r2(t0 + 0.1 + k * Math.max(0.3, (dur - 0.4) / 3))
-        return `tl.fromTo('#${id}cd${k}',{scale:1.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.2,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${a});
-      tl.to('#${id}cd${k}',{scale:0.7,autoAlpha:0,duration:0.18,ease:'power2.in',transformOrigin:'50% 50%'},${r2(a + Math.max(0.3, (dur - 0.4) / 3) - 0.06)});
-      tl.fromTo('#${id}cr',{scale:0.86,autoAlpha:0.4},{scale:1,autoAlpha:1,duration:0.24,ease:'power2.out',transformOrigin:'50% 50%'},${a});`
-      }).join('\n      ')}`
+      tl.fromTo('#${id}an .an-lb',{scale:0.7,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,stagger:{each:0.06,from:'start'},ease:'back.out(2)',transformOrigin:'50% 50%'},${t0});
+      tl.to('#${id}lb4',{scale:1.12,duration:0.28,ease:'back.out(2.4)',transformOrigin:'50% 50%'},${r2(t0 + 0.62)});`
+    case 'queue':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{x:-20,autoAlpha:0},{x:0,autoAlpha:1,duration:0.26,stagger:0.03,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}an .an-qd',{scale:0},{scale:1,duration:0.24,stagger:0.17,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.34)});`
+    case 'notif':
+      return inOut + `
+      tl.fromTo('#${id}an .an-nb',{y:${FH(id, -0.14)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.34,stagger:0.16,ease:'back.out(1.7)'},${r2(t0 + 0.1)});
+      tl.to('#${id}nb0',{scale:1.03,duration:0.18,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.5)});`
+    case 'comments':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cm',{x:-26,autoAlpha:0},{x:0,autoAlpha:1,duration:0.3,stagger:0.13,ease:'power3.out'},${t0});
+      tl.to('#${id}cmw',{y:${FH(id, -0.2)},duration:${r2(Math.max(0.7, dur - 0.4))},ease:'none'},${r2(t0 + 0.5)});`
+    case 'timeline':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.04,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}tp',{x:0},{x:()=>document.getElementById('${id}an').getBoundingClientRect().width*0.9,duration:${r2(Math.max(0.8, dur - 0.3))},ease:'none'},${r2(t0 + 0.3)});`
+    case 'results':
+      return inOut + `
+      tl.fromTo('#${id}rq',{scaleX:0},{scaleX:1,duration:0.34,ease:'steps(9)'},${t0});
+      tl.fromTo('#${id}an .an-rs',{y:18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.11,ease:'back.out(1.8)'},${r2(t0 + 0.42)});`
+    case 'profile':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:16,autoAlpha:0},{y:0,autoAlpha:1,duration:0.28,stagger:0.05,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}pc',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.36,ease:'back.out(2.6)'},${r2(t0 + 0.3)});
+      tl.fromTo('#${id}an .an-pg',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,stagger:0.05,ease:'back.out(2)',transformOrigin:'50% 50%'},${r2(t0 + 0.44)});`
+    case 'invoice':
+      return inOut + `
+      tl.fromTo('#${id}an .an-iv',{scaleX:0,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.22,stagger:0.07,ease:'power2.out',transformOrigin:'0% 50%'},${r2(t0 + 0.18)});
+      tl.fromTo('#${id}it',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)',transformOrigin:'100% 50%'},${r2(t0 + 0.66)});`
+    case 'settings':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{x:-18,autoAlpha:0},{x:0,autoAlpha:1,duration:0.26,stagger:0.03,ease:'power3.out'},${t0});
+      ${[0, 1, 2].map((k) => `tl.to('#${id}sb${k}',{backgroundColor:'${'#'}FF5A1F',duration:0.22,ease:'power2.out'},${r2(t0 + 0.42 + k * 0.2)});
+      tl.to('#${id}st${k}',{x:()=>document.getElementById('${id}sb${k}').offsetWidth-document.getElementById('${id}st${k}').offsetWidth-(document.getElementById('${id}st${k}').offsetLeft*2),duration:0.26,ease:'back.out(2)'},${r2(t0 + 0.42 + k * 0.2)});`).join('\n      ')}`
+    case 'versus':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${t0});
+      tl.fromTo('#${id}an .an-vs',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,stagger:0.09,ease:'back.out(2.4)',transformOrigin:'0% 50%'},${r2(t0 + 0.28)});`
+    case 'thumb':
+      return inOut + `
+      tl.fromTo('#${id}tb',{scale:0.88,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(1.8)'},${t0});
+      tl.to('#${id}tp2',{scale:1.16,duration:0.26,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.4)});
+      tl.fromTo('#${id}tv',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.52)});`
+    case 'leaderboard':
+      return inOut + `
+      tl.fromTo('#${id}an .an-ld',{x:-22,autoAlpha:0},{x:0,autoAlpha:1,duration:0.28,stagger:0.08,ease:'power3.out'},${t0});
+      tl.to('#${id}ld3',{y:()=>-(document.getElementById('${id}ld3').getBoundingClientRect().top-document.getElementById('${id}ld0').getBoundingClientRect().top),duration:0.46,ease:'power3.inOut'},${r2(t0 + 0.6)});
+      tl.to(['#${id}ld0','#${id}ld1','#${id}ld2'],{y:()=>document.getElementById('${id}ld1').getBoundingClientRect().top-document.getElementById('${id}ld0').getBoundingClientRect().top,duration:0.46,ease:'power3.inOut'},${r2(t0 + 0.6)});`
+    case 'pay':
+      return inOut + `
+      tl.fromTo('#${id}an .an-p',{y:18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,ease:'power3.out'},${t0});
+      tl.fromTo('#${id}pk',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.66)});
+      tl.to('#${id}pb',{scale:0.96,duration:0.14,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.48)});`
+    case 'sales':
+      return inOut + `
+      tl.fromTo('#${id}an .an-sl',{x:${FW(id, 0.5)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.36,stagger:0.19,ease:'back.out(1.6)'},${r2(t0 + 0.1)});`
+    case 'folder':
+      return inOut + `
+      tl.fromTo('#${id}fb',{scale:0.8,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(1.9)',transformOrigin:'50% 100%'},${t0});
+      tl.fromTo('#${id}fd0',{y:0,x:0,rotation:0,autoAlpha:0},{y:${FH(id, -0.3)},x:${FW(id, -0.26)},rotation:-16,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${r2(t0 + 0.3)});
+      tl.fromTo('#${id}fd1',{y:0,x:0,rotation:0,autoAlpha:0},{y:${FH(id, -0.38)},x:0,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${r2(t0 + 0.38)});
+      tl.fromTo('#${id}fd2',{y:0,x:0,rotation:0,autoAlpha:0},{y:${FH(id, -0.3)},x:${FW(id, 0.26)},rotation:16,autoAlpha:1,duration:0.42,ease:'back.out(1.5)'},${r2(t0 + 0.46)});`
     default:
       return inOut + `
       tl.fromTo('#${id}cl', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2)' }, ${t0});

@@ -103,7 +103,6 @@ export const BANK = [
   // l'animation tient sur une image fixe, elle n'a rien a faire dans la banque.
   { name: 'dropzone', desc: "UN FICHIER QUI TOMBE DANS UNE ZONE EN POINTILLES. « tu deposes ton audio », « glisse ta video », « tu l'importes »." },
   { name: 'render',  desc: "UN APERCU QUI SE REMPLIT pendant qu'une barre de progression avance. « ca genere », « pendant que ca calcule », « laisse tourner »." },
-  { name: 'subs',    desc: "DES SOUS-TITRES QUI S'ALLUMENT MOT PAR MOT sur un ecran vertical. « les sous-titres se mettent tout seuls », « le karaoke »." },
   { name: 'crop',    desc: "UN CADRE PAYSAGE QUI SE RESSERRE AU FORMAT VERTICAL. « on passe en 9:16 », « au bon format », « recadre pour TikTok »." },
   { name: 'silence', desc: "UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush »." },
   { name: 'chat',    desc: "UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis »." },
@@ -112,10 +111,29 @@ export const BANK = [
   { name: 'bgswap', desc: "LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage »." },
   { name: 'hook',    desc: "LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche »." },
   { name: 'export',  desc: "UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges »." },
-  { name: 'bulk',    desc: "UNE SEULE PRISE AUDIO QUI SE DEMULTIPLIE EN PLUSIEURS VIDEOS. « un audio, dix videos », « en serie », « tu declines »." },
-  { name: 'broll',   desc: "UN VISUEL QUI PASSE PAR-DESSUS LE PLAN PRINCIPAL puis repart. « on met une image par-dessus », « le b-roll », « une illustration »." },
   { name: 'checklist', desc: "UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter »." },
-  { name: 'countdown', desc: "UN DECOMPTE 3, 2, 1 dans un cercle. « dans 3 secondes », « on decompte », « c'est parti dans »." },
+
+  // ── PAQUET 4 (#157) — du DETAIL, pas des aplats ──
+  // Axel a retire quatre animations du paquet 3 : quatre rectangles orange nus,
+  // une silhouette grise, un chiffre seul, un pave de texte. Meme defaut que les
+  // douze du paquet 2 : une forme pleine sans rien dedans, ou un glyphe isole.
+  // Regle : chaque bloc porte de la matiere — lignes de texte, pastilles,
+  // vignettes, chiffres — comme une interface qu'on regarde vraiment.
+  { name: 'library', desc: "UNE GRILLE DE VIGNETTES avec leurs titres, l'une d'elles ressort. « ta bibliotheque », « tous tes rushs », « ce que tu as deja »." },
+  { name: 'queue',   desc: "UNE FILE DE RENDUS qui se valident un par un, coche apres coche. « ca tourne en fond », « la file d'attente », « pendant ce temps »." },
+  { name: 'notif',   desc: "DES BANNIERES DE NOTIFICATION qui s'empilent sur l'ecran. « ca n'arrete pas de sonner », « les notifications tombent »." },
+  { name: 'comments', desc: "UN FIL DE COMMENTAIRES qui defile, avatars et coeurs. « les gens reagissent », « regarde les commentaires », « ils repondent »." },
+  { name: 'timeline', desc: "LA TIMELINE DU MONTAGE : piste video coupee, onde audio, sous-titres, la tete de lecture passe. « le montage », « je monte la video »." },
+  { name: 'results', desc: "UNE RECHERCHE QUI S'ECRIT ET SES RESULTATS qui tombent. « tu cherches », « tu tapes ca et tu trouves », « les resultats »." },
+  { name: 'profile', desc: "UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page »." },
+  { name: 'invoice', desc: "UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis »." },
+  { name: 'settings', desc: "UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux »." },
+  { name: 'versus',  desc: "DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca »." },
+  { name: 'thumb',   desc: "UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues »." },
+  { name: 'leaderboard', desc: "UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres »." },
+  { name: 'pay',     desc: "UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses »." },
+  { name: 'sales',   desc: "DES NOTIFICATIONS DE VENTE qui tombent avec leur montant. « les ventes tombent », « ca commande », « chaque jour des commandes »." },
+  { name: 'folder',  desc: "UN DOSSIER QUI S'OUVRE et laisse sortir ses documents en eventail. « tes fichiers », « tout est range la », « ton dossier »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
