@@ -157,14 +157,29 @@ export const BANK = [
   { name: 'story',   desc: "DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories »." },
   { name: 'hashtag', desc: "UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche »." },
   { name: 'schedule', desc: "UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu »." },
-  { name: 'formats', desc: "UNE VIDEO MAITRE et TROIS CADRES qui en sortent : 9:16, 1:1, 16:9. « dans tous les formats », « adapte a chaque reseau »." },
-  { name: 'variants', desc: "LE MEME CLIP EN TROIS VERSIONS, accroches differentes. « plusieurs versions », « tu declines », « tu testes trois accroches »." },
   { name: 'pin',     desc: "UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires »." },
   { name: 'qr',      desc: "UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es »." },
-  { name: 'inbox',   desc: "UNE BOITE DE RECEPTION : les messages listes, les non-lus en pastille. « tes messages », « ta boite », « tu recois des demandes »." },
   { name: 'wizard',  desc: "UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape »." },
-  { name: 'stock',   desc: "DES LIGNES DE STOCK dont les jauges descendent, la derniere passe au rouge. « le stock part », « il reste peu de places », « bientot epuise »." },
-  { name: 'page',    desc: "UNE PAGE DE VENTE : le titre, le visuel, le champ, le bouton qui pulse. « ta page de vente », « la landing », « la page ou ils achetent »." },
+
+  // ── PAQUET 7 (#157) — LES DOMAINES D'ACTIVITE ──
+  // La banque ne parlait que creation de contenu. Ses utilisateurs vendent des
+  // produits, tradent, editent des logiciels, louent des biens : un e-commercant
+  // qui dit « mon panier moyen » n'avait rien a mettre a l'ecran.
+  { name: 'product', desc: "E-COMMERCE — UNE FICHE PRODUIT : le visuel, le nom, le prix, le bouton d'ajout au panier. « mon produit », « cet article », « ce que je vends »." },
+  { name: 'cart',    desc: "E-COMMERCE — UN PANIER : les articles, les quantites, le total qui s'affiche. « le panier moyen », « ils ajoutent au panier », « la commande »." },
+  { name: 'delivery', desc: "E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h »." },
+  { name: 'sizes',   desc: "E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris »." },
+  { name: 'candles', desc: "TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart »." },
+  { name: 'portfolio', desc: "TRADING — UN PORTEFEUILLE : la valeur totale, la variation, les lignes d'actifs. « mon portefeuille », « mes positions », « ce que ca vaut »." },
+  { name: 'order',   desc: "TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position »." },
+  { name: 'pnl',     desc: "TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut »." },
+  { name: 'mrr',     desc: "SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent »." },
+  { name: 'churn',   desc: "SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd »." },
+  { name: 'onboarding', desc: "SAAS — L'ACTIVATION : les taches se cochent, le pourcentage monte. « l'onboarding », « la prise en main », « les premieres etapes »." },
+  { name: 'integrations', desc: "SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec »." },
+  { name: 'property', desc: "IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location »." },
+  { name: 'menu',    desc: "RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix »." },
+  { name: 'leads',   desc: "PROSPECTION — UN PIPELINE : les fiches passent de colonne en colonne jusqu'a signe. « mes prospects », « le pipeline », « ils passent client »." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)
