@@ -10804,22 +10804,44 @@ function mtLibRender(){
   const g=document.getElementById('mtLibGrid'); if(!g) return;
   if(!_mtLib.length){ g.innerHTML=''; g.style.marginBottom='0'; return; }
   g.style.marginBottom='14px';
+  // LE NOM DE LA FEATURE SE TAPE SUR L'ÉCRAN, PAS DANS UNE BOÎTE DE DIALOGUE.
+  // C'était un `prompt()` du navigateur : il faut cliquer, attendre la fenêtre,
+  // taper, valider — pour UNE étiquette, sur vingt visuels. Axel : « faut que ça
+  // soit direct sur l'écran, pas en ouvrant un menu ». C'est maintenant un champ
+  // sous la vignette : on clique, on tape, on sort. Il enregistre tout seul.
   g.innerHTML=_mtLib.map((a)=>{
     const on = a.auto !== false;
     const isSnd = a.kind==='audio';
     const inner = isSnd
-      ? '<span style="font-size:20px">🔊</span>'
-      : (a.kind==='video' ? '<span style="font-size:20px">🎬</span>' : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
-    return '<div style="display:flex;flex-direction:column;align-items:center;width:74px"><div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:66px;height:66px;border-radius:12px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
+      ? '<span style="font-size:22px">🔊</span>'
+      : (a.kind==='video' ? '<span style="font-size:22px">🎬</span>' : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
+    return '<div style="display:flex;flex-direction:column;align-items:center;width:96px">'
+      + '<div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:88px;height:88px;border-radius:13px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
       + inner
-      + (isSnd ? '' : '<button type="button" title="'+(on?'Ne plus proposer à l\'IA':'Proposer à l\'IA')+'" onclick="mtLibToggle(\''+a.id+'\')" style="position:absolute;left:3px;bottom:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:'+(on?'var(--accent-2)':'rgba(0,0,0,.6)')+';color:'+(on?'#1A0A02':'#fff')+'">'+(on?'✓':'+')+'</button>')
-      + '<button type="button" title="Supprimer" onclick="mtLibDelete(\''+a.id+'\')" style="position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:5px;border:none;cursor:pointer;font-size:10px;line-height:1;background:rgba(0,0,0,.65);color:#ff8a8a">✕</button>'
+      + (isSnd ? '' : '<button type="button" title="'+(on?"Ne plus proposer à l'IA":"Proposer à l'IA")+'" onclick="mtLibToggle(\''+a.id+'\')" style="position:absolute;left:4px;bottom:4px;width:22px;height:22px;border-radius:7px;border:none;cursor:pointer;font-size:11px;line-height:1;background:'+(on?'var(--accent-2)':'rgba(0,0,0,.65)')+';color:'+(on?'#1A0A02':'#fff')+'">'+(on?'✓':'+')+'</button>')
+      + '<button type="button" title="Supprimer" onclick="mtLibDelete(\''+a.id+'\')" style="position:absolute;right:4px;top:4px;width:24px;height:24px;border-radius:8px;border:none;cursor:pointer;font-size:13px;line-height:1;background:rgba(0,0,0,.72);color:#ff9a9a;display:grid;place-items:center">✕</button>'
       + '</div>'
       // le libellé = LA feature que ce visuel illustre → l'IA saura quand le sortir
-      + '<button type="button" onclick="mtLibLabel(\''+a.id+'\')" style="max-width:74px;background:none;border:none;padding:2px 0 0;cursor:pointer;font-family:var(--font);font-size:10px;line-height:1.25;color:'+(a.label?'var(--accent-2)':'var(--text-3)')+';text-align:center;overflow:hidden;display:block">'
-      + (a.label ? String(a.label).slice(0,24) : '+ quelle feature ?') + '</button>'
+      + '<input type="text" value="'+String(a.label||'').replace(/"/g,'&quot;')+'" placeholder="quelle feature ?" maxlength="200"'
+      + ' onchange="mtLibLabelSet(\''+a.id+'\', this.value)"'
+      + ' onkeydown="if(event.key===\'Enter\'){this.blur()}"'
+      + ' style="width:94px;margin-top:4px;padding:4px 5px;border-radius:7px;border:1px solid '+(a.label?'var(--accent-line)':'var(--border)')+';background:var(--surface);font-family:var(--font);font-size:10px;line-height:1.3;color:'+(a.label?'var(--accent-2)':'var(--text-2)')+';text-align:center">'
       + '</div>';
   }).join('');
+}
+
+// enregistre le libellé sans re-dessiner la grille : re-dessiner à chaque frappe
+// ferait perdre le focus du champ au premier caractère.
+async function mtLibLabelSet(id, value){
+  const a=_mtLib.find(x=>x.id===id); if(!a) return;
+  const label=String(value||'').trim().slice(0,200);
+  if(label === (a.label||'')) return;
+  a.label=label;
+  try{
+    const { error } = await sb.from('brand_assets').update({ label }).eq('id', id);
+    if(error) throw error;
+    try{ mtLibSyncToMontage(); }catch(_){}
+  }catch(e){ toast('Impossible d\'enregistrer : '+(e.message||e)); }
 }
 
 async function mtLibUpload(list, kind){
@@ -10846,29 +10868,25 @@ async function mtLibUpload(list, kind){
 
 // « Ce que ça montre » : Montage IA, Express, Images IA… c'est le lien entre
 // un visuel et le moment où l'audio en parle.
-async function mtLibLabel(id){
-  const a=_mtLib.find(x=>x.id===id); if(!a) return;
-  const v=prompt('Ce visuel montre quelle fonctionnalité ?\n(ex : Montage IA, Express, Images IA)', a.label||'');
-  if(v===null) return;
-  const label=String(v).trim().slice(0,200);
-  try{
-    const { error } = await sb.from('brand_assets').update({ label }).eq('id', id);
-    if(error) throw error;
-    a.label=label; mtLibRender();
-  }catch(e){ toast('Impossible d\'enregistrer : '+(e.message||e)); }
-}
-
+// SUPPRIMER DOIT ÊTRE INSTANTANÉ. La vignette partait après DEUX allers-retours
+// réseau, puis `mtLibLoad()` rechargeait toute la bibliothèque et resignait une
+// URL pour CHAQUE visuel — vingt requêtes pour en enlever un. Axel : « c'est pas
+// très fluide pour supprimer ». La carte disparaît maintenant tout de suite et le
+// réseau suit derrière ; si ça échoue, elle revient et on le dit.
 async function mtLibDelete(id){
-  const a=_mtLib.find(x=>x.id===id); if(!a) return;
+  const i=_mtLib.findIndex(x=>x.id===id); if(i<0) return;
+  const a=_mtLib[i];
+  _mtLib.splice(i,1); mtLibRender();                       // l'écran répond d'abord
+  if(_edAi) _edAi.files=(_edAi.files||[]).filter(f=>f.libId!==id);
+  try{ _mtRenderMedia(); }catch(_){}
   try{
-    await sb.storage.from('brand-assets').remove([a.path]);
     const { error } = await sb.from('brand_assets').delete().eq('id', id);
     if(error) throw error;
-    // retire aussi la copie posée dans les médias du montage en cours
-    if(_edAi) _edAi.files=(_edAi.files||[]).filter(f=>f.libId!==id);
-    try{ _mtRenderMedia(); }catch(_){}
-  }catch(e){ toast('Suppression impossible : '+(e.message||e)); return; }
-  await mtLibLoad();
+    sb.storage.from('brand-assets').remove([a.path]).catch(()=>{});   // le fichier suit, sans bloquer
+  }catch(e){
+    _mtLib.splice(i,0,a); mtLibRender();                   // rien n'a été supprimé : on remet
+    toast('Suppression impossible : '+(e.message||e)); return;
+  }
 }
 
 async function mtLibToggle(id){
