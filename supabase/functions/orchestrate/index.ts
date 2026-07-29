@@ -739,6 +739,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   C'est le champ le plus utile que tu remplis : le serveur s'en sert pour poser les animations au bon endroit, la ou un simple mot-cle se tromperait. Exemple sur « tu gagnes du temps et tu produis dix fois plus » : "gagnes|clock", "produis|stack", "dix|grow".
   Un mot vide de sens (un connecteur, un article) n'a rien a faire dans cette liste.
   DEMO DANS L'APPLICATION (champ "tuto"). Si — et SEULEMENT si — l'utilisateur EXPLIQUE COMMENT FAIRE quelque chose dans son outil (« tu vas dans X », « tu selectionnes Y », « tu ecris ton prompt »), montre son vrai ecran plutot qu'une animation abstraite. Ecris "mot|ecran|zone" avec le mot EXACT prononce, et un ecran + une zone pris DANS CE CATALOGUE, rien d'autre. Le LIBELLE entre guillemets est le texte lu a l'ecran : c'est lui qui doit correspondre a ce qu'il DIT.
+  UNE ETAPE = UN ELEMENT QU'IL NOMME. Ne pose PAS deux etapes sur deux mots colles ("Image" puis "IA" dans « l'onglet Image IA ») : c'est un seul geste. Et ne choisis une zone que si son LIBELLE se retrouve dans ce qu'il dit a cet instant — sinon saute l'etape, l'ecran entier suffit. Un cadre qui contredit la voix est pire que pas de cadre.
+  LE 4e CHAMP EST CE QU'ON TAPE DANS LE CHAMP CADRE. Il n'apparait que sur une zone de SAISIE, et c'est un VRAI contenu, celui qu'un utilisateur ecrirait : pour un champ de description d'image, decris une image ("une fille qui prend un selfie", "un chat en costume dans un bureau") — jamais une etiquette ni un resume de la fonctionnalite.
 // <<< SCREEN-CATALOG — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>
     NAVIGATION (la meme barre laterale sur TOUS les ecrans de l'app) :
       generateur | bibliotheque | images-ia | enregistreur | nettoyage-audio | express | montage-ia-beta | editeur-beta | parrainage | publier-dev | mon-compte
@@ -1006,7 +1008,7 @@ B-ROLL (images utilisateur, plein ecran par-dessus la video) — UNE IMAGE SERT 
 2. IL NOMME CE QUE L'IMAGE MONTRE — une personne ("un homme", "une femme", "un coach sportif"), un produit, un lieu, un objet. REGARDE LES IMAGES : si l'une d'elles montre exactement ce qu'il vient de prononcer, elle se pose SUR CE MOT. C'est la regle la plus forte du montage : le visuel EST le mot. Une photo d'homme sur "homme" bat n'importe quelle animation et n'importe quelle carte de texte.
 Partout ailleurs — l'accroche, la promesse, un benefice, une transition — c'est une ANIMATION, ou rien : une image posee sur une promesse casse la direction artistique.
 Le 4e champ est OBLIGATOIRE : ecris-y CE QUI EST MONTRE, avec SES mots a lui, tels qu'il les prononce a cet instant ("split screen", "clonage de voix", "homme", "coach sportif"). Le serveur verifie que ces mots sont reellement dits dans la fenetre — une image dont le 4e champ n'est pas prononce la est jetee.
-Le start est le TIMESTAMP EXACT DU MOT, pas celui de la phrase : sur une enumeration ("homme, femme, coach sportif"), chaque image demarre sur SON mot, meme si les trois se suivent a 0.4s d'intervalle. Duree 1.5 a 3.5s (raccourcis-la si le mot suivant arrive vite). Jamais dans les 1.5 premieres secondes (le hook montre le visage), jamais dans la derniere seconde. Si aucune image fournie : broll = [].
+Le start est le TIMESTAMP EXACT DU MOT, pas celui de la phrase : sur une enumeration ("homme, femme, coach sportif"), chaque image demarre sur SON mot, meme si les trois se suivent a 0.4s d'intervalle. Duree 1.5 a 3.5s (raccourcis-la si le mot suivant arrive vite). Le HOOK ne fait plus exception : si l'accroche NOMME ce que l'image ou la video montre ("cette influenceuse me permet de faire des millions de vues"), pose-la des ce mot-la — elle sera affichee en medaillon sur le visage, sans le cacher. Jamais dans la derniere seconde. Si aucune image fournie : broll = [].
 
 SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur les enumerations, riser avant le CTA, success/ding sur une preuve ou un resultat. Maximum 1 SFX par 1.5s. Les timestamps tombent sur les evenements qu'ils soulignent.
 
@@ -1525,7 +1527,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   }
   const broll = (plan.broll || [])
     .filter((b) => assetIds.includes(b.assetId))
-    .map((b) => ({ assetId: b.assetId, feature: String(b.feature || ''), start: r2(clamp(b.start, 1.5, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
+    .map((b) => ({ assetId: b.assetId, feature: String(b.feature || ''), start: r2(clamp(b.start, 0.25, D)), end: r2(clamp(b.end, 0, Math.max(0, D - 0.5))) }))
     .map((b) => { const s = surLeMot(b.start, b.feature); return { ...b, start: s, end: r2(b.end + (s - b.start)) } })
     // 0,6 s de plancher, pas 1 s : sur une enumeration ("homme, femme, coach
     // sportif") les mots se suivent a 0,4 s et un plancher trop haut forcait la

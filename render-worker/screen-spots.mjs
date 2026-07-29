@@ -95,24 +95,111 @@ export const spotOf = (screen, role) => {
  * Claude » sans qu'on ait eu à prévoir ce module.
  * Un seul mot commun ne suffit pas : « la » ou « ton » ferait n'importe quoi.
  */
-export const spotForWords = (screen, words) => {
-  const said = words.map(norm).filter((w) => w.length >= 4)
-  if (!said.length) return null
-  let best = null, bestScore = 0
-  for (const z of zonesOf(screen)) {
-    const toks = norm(z.label).split(' ').filter((t) => t.length >= 4)
-    if (!toks.length) continue
-    let hits = 0
-    for (const t of toks) if (said.some((w) => w === t || (t.length >= 5 && w.startsWith(t)) || (w.length >= 5 && t.startsWith(w)))) hits++
-    // proportion du libellé retrouvée dans la voix — un libellé court et
-    // entièrement prononcé bat un libellé long à moitié reconnu
-    const score = hits / toks.length
-    if (hits && score > bestScore) { bestScore = score; best = z }
-  }
-  return bestScore >= 0.5 ? box(best) : null
+// LE VOCABULAIRE DE LA VOIX N'EST PAS CELUI DE L'INTERFACE. On dit « ton
+// audio », l'écran écrit « Importe ta voix off · MP3 · WAV · M4A » : aucun mot
+// commun, donc aucune zone trouvée, et le cadre restait sur « Ma vidéo »
+// pendant qu'il parlait du son (Axel : « quand je dis "ainsi que ton audio" il
+// montre "Ma vidéo" »). Ces équivalences-là sont du métier, pas de la langue :
+// on les écrit une fois, elles valent pour toutes les captures.
+const SYN = {
+  audio: ['voix', 'off', 'mp3', 'wav', 'm4a', 'son'],
+  son: ['voix', 'off', 'audio'],
+  voix: ['voix', 'off', 'audio'],
+  musique: ['musique', 'fond'],
+  image: ['image', 'photo', 'visuel'],
+  photo: ['photo', 'image', 'avatar'],
+  visuel: ['image', 'photo', 'visuel'],
+  video: ['video', 'clip'],
+  clip: ['video', 'clip'],
+  script: ['script', 'brief'],
+  brief: ['script', 'brief'],
+  soustitres: ['sous', 'titres'],
+  legende: ['sous', 'titres'],
+}
+const elargir = (mots) => {
+  const out = new Set(mots)
+  for (const m of mots) for (const e of SYN[m] || []) out.add(e)
+  return [...out]
 }
 
-/** Une zone par son NOM exact — c'est ainsi que le chef d'orchestre la désigne. */
+// LA BARRE LATÉRALE. Elle est identique sur toutes les captures et ses libellés
+// sont les noms des modules — que la voix prononce sans arrêt. Sans l'écarter,
+// « ainsi que ton audio » cadrait « Nettoyage audio » dans le menu et « importe
+// ton image » cadrait « Images IA » : le curseur restait dans la barre pendant
+// qu'il décrivait le contenu de la page.
+export const MENU_ZONES = ['images-ia', 'montage-ia-beta', 'generateur', 'bibliotheque',
+  'enregistreur', 'nettoyage-audio', 'express', 'parrainage', 'cartoon', 'mon-compte']
+
+// LES VERBES D'INTERFACE NE DISTINGUENT RIEN. « Importe ta voix off » et
+// « Importe ta vidéo » commencent pareil ; la voix dit « importe » à chaque
+// étape. Sur « et importe ton IMAGE », le verbe faisait gagner le champ de la
+// voix off. C'est l'OBJET qui désigne la zone, pas l'action.
+const VERBES = new Set(['importe', 'importer', 'ajoute', 'ajouter', 'creer', 'cree', 'selectionne',
+  'selectionner', 'choisis', 'choisir', 'clique', 'cliquer', 'lance', 'lancer', 'ouvre', 'ouvrir',
+  'generer', 'genere', 'modifier', 'telecharge', 'telecharger', 'commence', 'commencer'])
+
+// Le SUJET d'un libellé : ce qui précède le premier séparateur. Les libellés
+// récoltés collent le titre et son sous-titre (« Importe ta voix off · MP3 ·
+// WAV · M4A — l'IA en extrait les sous-titres ») : noyé dans dix-sept mots, le
+// sujet ne pesait plus rien et la zone n'était jamais retenue.
+const sujet = (label) => String(label || '').split(/[·—–]|\s-\s/)[0]
+// Un verbe compte MOITIÉ MOINS qu'un objet : « Importe ta voix off » et
+// « Importe ta vidéo » commencent pareil, et la voix dit « importe » à chaque
+// étape. Sur « et importe ton IMAGE », le verbe faisait gagner le champ de la
+// voix off. C'est l'objet qui désigne la zone.
+// On descend à trois lettres — « off », « mp3 », « wav » distinguent le champ de
+// la voix off de « Gameplay + voix », qui partagent leur seul mot long. Les mots
+// vides sont écartés nommément plutôt que par leur longueur.
+const VIDES = new Set(['une', 'des', 'les', 'ton', 'ta', 'tes', 'mon', 'ma', 'mes', 'son', 'sa',
+  'ses', 'aux', 'par', 'sur', 'pour', 'avec', 'sans', 'dans', 'que', 'qui', 'est', 'and', 'the'])
+const motsDe = (label) => norm(sujet(label)).split(' ')
+  .filter((t) => t.length >= 3 && !VIDES.has(t))
+  .map((t) => ({ t, w: VERBES.has(t) ? 0.5 : 1 }))
+
+// UN MOT QUI REVIENT PARTOUT NE DÉSIGNE RIEN. Sur l'écran Images IA, « image »
+// apparaît dans cinq libellés : il ne peut pas servir à choisir entre eux, et
+// c'est pourtant lui qui faisait gagner « Générer l'image · 3 cr » à chaque
+// phrase contenant le mot. Le poids d'un mot est donc divisé par le nombre de
+// libellés où il figure — un mot unique sur l'écran vaut une preuve, un mot
+// omniprésent ne vaut presque rien. Le score est ABSOLU (une somme de preuves),
+// pas une proportion : un libellé d'un seul mot n'est plus gagnant d'office.
+const rarete = (screen) => {
+  const n = {}
+  for (const z of zonesOf(screen)) {
+    const vus = new Set(motsDe(z.label).map((m) => m.t))
+    for (const t of vus) n[t] = (n[t] || 0) + 1
+  }
+  return n
+}
+
+/** somme des preuves : ce qui est DIT et qu'on retrouve, ÉCRIT, sur la zone */
+export const zoneScore = (z, said, freq) => {
+  let score = 0
+  for (const { t, w } of motsDe(z && z.label)) {
+    if (!said.some((x) => x === t || (t.length >= 5 && x.startsWith(t)) || (x.length >= 5 && t.startsWith(x)))) continue
+    score += w / ((freq && freq[t]) || 1)
+  }
+  return score
+}
+
+export const spotForWords = (screen, words, opts) => {
+  const o = opts || {}
+  const said = elargir(words.map(norm).filter((w) => w.length >= 3 && !VIDES.has(w)))
+  if (!said.length) return null
+  const min = typeof o.min === 'number' ? o.min : 0.55
+  const freq = rarete(screen)
+  let best = null, bestScore = 0
+  for (const z of zonesOf(screen)) {
+    if (o.sansMenu && MENU_ZONES.includes(z.name)) continue
+    const score = zoneScore(z, said, freq)
+    if (score > bestScore) { bestScore = score; best = z }
+  }
+  return bestScore >= min ? box(best) : null
+}
+
+/** Ce que la voix dit retrouve-t-il un mot du libellé de CETTE zone ? */
+export const zoneDite = (z, words) => zoneScore(z, elargir(words.map(norm).filter((w) => w.length >= 3))) > 0
+
 export const zoneNamed = (screen, name) => box(zonesOf(screen).find((z) => z.name === name))
 
 /** Toutes les zones d'un écran, pour l'Éditeur (correction manuelle, #159). */
