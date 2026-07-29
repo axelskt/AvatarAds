@@ -2460,7 +2460,7 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;left:0;bottom:0;width:100%;height:${Math.max(4, Math.round(ph * 0.02))}px;background:rgba(255,255,255,.3)">
             <span class="an-p" id="${id}vwp" style="left:0;top:0;width:100%;height:100%;background:${P.acc};transform-origin:0% 50%;transform:scaleX(0)"></span></span>
           <svg class="an-p" id="${id}vwt" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(pw * 0.13)}px;top:50%;margin-top:${-Math.round(pw * 0.13)}px;width:${Math.round(pw * 0.26)}px;height:${Math.round(pw * 0.26)}px" fill="#FFFFFF" opacity=".9"><path d="M8 5v14l11-7z"/></svg></div>
-        <span class="an-p" id="${id}vwn" style="left:0;top:${py + ph + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.acc};transform-origin:50% 50%">${txt(0, '1 200 000')}</span>
+        <span class="an-p" id="${id}vwn" style="left:0;top:${py + ph + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.14)}px;color:${P.acc};transform-origin:50% 50%">${txt(1, '200')}</span>
         <span class="an-p" style="left:0;top:${py + ph + Math.round(f.h * 0.2)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;letter-spacing:.14em;font-size:${Math.round(f.h * 0.042)}px;color:${P.ink};opacity:.5">VUES</span>`)
     }
     case 'linkbio': {
@@ -3479,14 +3479,34 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}an .an-ld', { y: ${FH(id, -0.1)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.28, stagger: 0.14, ease: 'back.out(1.8)' }, ${t0});
       tl.fromTo('#${id}ldn', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2.2)' }, ${r2(t0 + 0.2)});`
-    case 'views':
-      // la lecture avance, le compteur saute : c'est le chiffre qui doit accrocher
-      return inOut + `
+    case 'views': {
+      // LE COMPTEUR MONTE, IL NE SE POSE PAS. Le chiffre s'affichait d'un coup et
+      // pulsait : on lisait un nombre, on ne voyait pas une AUDIENCE QUI GRIMPE.
+      // Axel : « quand je dis "tes vidéos vont générer des vues", mets une
+      // animation en mode de 200 à 100 000 vues rapidement ». C'est la montée
+      // qui raconte, pas la valeur finale.
+      // ⚠️ `animJs` ne dispose pas du `items` d'`animHtml` : on relit la scène.
+      const its = (s.items || []).map((it) => String(it.text || ''))
+      const nb = (t, d) => { const v = String(t || '').replace(/[^0-9]/g, ''); return v ? parseInt(v, 10) : d }
+      const dep = nb(its[1], 200)
+      const arr = Math.max(dep + 1, nb(its[0], 100000))
+      const T = r2(Math.max(0.8, Math.min(dur - 0.7, 1.3)))
+      let js = inOut + `
       tl.fromTo('#${id}vw',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${t0});
       tl.to('#${id}vwt',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.3)});
       tl.to('#${id}vwp',{scaleX:1,duration:${r2(Math.max(0.7, dur - 0.6))},ease:'none'},${r2(t0 + 0.32)});
-      tl.fromTo('#${id}vwn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(2.6)'},${r2(t0 + 0.34)});
-      tl.to('#${id}vwn',{scale:1.12,duration:0.16,yoyo:true,repeat:3,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.7)});`
+      tl.fromTo('#${id}vwn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)'},${r2(t0 + 0.34)});`
+      const steps = 28
+      for (let k = 1; k <= steps; k++) {
+        const u = k / steps
+        // exponentiel : ça part vite et ça finit en s'installant sur le gros chiffre
+        const v = Math.round(dep * Math.pow(arr / dep, Math.pow(u, 0.72)))
+        js += `\n      tl.set('#${id}vwn', { textContent: ${JSON.stringify(v.toLocaleString('fr-FR'))} }, ${r2(t0 + 0.4 + T * u)});`
+      }
+      js += `
+      tl.to('#${id}vwn',{scale:1.16,duration:0.15,yoyo:true,repeat:1,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.4 + T)});`
+      return js
+    }
     case 'linkbio':
       // le profil se pose, le doigt descend et appuie sur le lien
       return inOut + `

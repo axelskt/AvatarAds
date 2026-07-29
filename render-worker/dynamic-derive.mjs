@@ -386,6 +386,38 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
 
 
+  // ── 0a-ter · « GÉNÉRER DES VUES » : LE COMPTEUR GRIMPE ──────────────────────
+  // Axel : « quand je dis "tes vidéos vont générer des vues", mets une animation
+  // en mode de 200 à 100 000 vues rapidement ». La phrase annonce une AUDIENCE
+  // QUI MONTE — c'est le mouvement qu'il faut montrer, pas un chiffre posé.
+  // Elle réserve sa place avant l'animation du lien en bio, qui commence juste
+  // avant et débordait dessus.
+  {
+    const n = (w) => norm(String(w && w.text || ''))
+    const SUITES = [['generer', 'des', 'vues'], ['faire', 'des', 'vues'], ['generer', 'de', 'la', 'vue'],
+      ['des', 'vues'], ['de', 'la', 'vue'], ['des', 'millions', 'de', 'vues']]
+    for (let i = 0; i < words.length; i++) {
+      const seq = SUITES.find((q) => q.every((tk, k) => words[i + k] && n(words[i + k]) === tk))
+      if (!seq) continue
+      const fin = words[i + seq.length - 1]
+      const a = Math.max(0, words[i].start - LEAD - 0.9)
+      // …et elle rend la main vite : la phrase suivante (« vers ton lien bio »)
+      // a droit à son animation. Une fenêtre trop généreuse ici l'effaçait.
+      const b = Math.min(D, fin.end + 1.2)
+      // les valeurs ne sont pas des résultats annoncés : c'est l'ordre de grandeur
+      // d'une vidéo qui décolle. Si la voix cite un nombre, le chef d'orchestre
+      // pose son propre `countup` et celui-ci n'a plus lieu d'être.
+      // …et on N'ABANDONNE PAS à la première occurrence. « des millions de vues »
+      // est aussi dit dans l'accroche, sur la fenêtre du visage : le compteur y
+      // était refusé, et le `break` faisait rater celui de « générer des vues »,
+      // trois phrases plus loin. On continue jusqu'à en poser un.
+      if (add({ anim: 'views', items: [{ text: '100 000' }, { text: '200' }] }, a, b)) {
+        console.log(`▶ « ${seq.join(' ')} » → le compteur de vues grimpe (${r2(a)}s)`)
+        break
+      }
+    }
+  }
+
   // ── 0a-bis · « LE LIEN EN BIO » EST UNE PHRASE, PAS UNE DEVINETTE ───────────
   // Le chef d'orchestre posait ici un ENTONNOIR — trois barres chiffrées
   // 1000 / 240 / 38 qu'Axel n'a pas comprises (« c'est quoi ça, on comprend
