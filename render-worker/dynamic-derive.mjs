@@ -32,6 +32,8 @@ import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-
 // « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
 // partout (Axel : « mets cet avatar dans le hook et comme avatar principal »).
 const AVATAR_MAIN = 'hook-qualite'
+// La page d'accueil de l'app : celle qu'on voit avant d'avoir cliqué où que ce soit.
+const ACCUEIL = '03-generateur'
 // …à ne pas confondre avec l'avatar OBTENU : « et là tu obtiens ton premier
 // avatar » montre le résultat d'Images IA, pas le visage qui parle depuis le
 // hook. Deux images distinctes, deux rôles distincts.
@@ -589,7 +591,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // la remplace que si la voix en désigne clairement une autre.
         let spot = zone
         if (alt && alt.label !== zone.label && !estNav(zone)) spot = alt
-        steps.push({ screen: t.screen, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
+        // ON CLIQUE DEPUIS LA PAGE OÙ L'ON EST. Un cadre sur « Images IA » posé
+        // sur la capture DE la page Images IA montre un bouton déjà ouvert : on
+        // est arrivé avant d'avoir cliqué. Axel : « ça serait mieux qu'il zoome
+        // sur Images IA depuis le Générateur ». Le Générateur est la page
+        // d'accueil de l'app : c'est de là qu'on part, et l'écran d'après montre
+        // la destination — le trajet devient lisible.
+        let ecran = t.screen
+        if (spot && MENU_ZONES.includes(String(spot.name || '')) && ecran !== ACCUEIL
+          && zoneNamed(ACCUEIL, spot.name)) {
+          ecran = ACCUEIL
+          spot = zoneNamed(ACCUEIL, spot.name)
+        }
+        steps.push({ screen: ecran, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
           spot, ...(t.text ? { type: String(t.text) } : {}) })
       }
       // ── CE QU'IL NOMME PENDANT LA CAPTURE OBTIENT SON CADRE ─────────────────
@@ -645,7 +659,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
           // les étapes situées avant ce nouveau début étaient purement jetées,
           // et l'écran restait figé pendant que la voix décrivait des clics.
           // Elles sont désormais ramenées au bord du panneau, dans l'ordre.
-          let borne = r2(sl.start + 0.05)
+          // LE CADRE ATTEND QUE L'ÉCRAN SOIT ARRIVÉ. Les panneaux se poussent en
+          // 0,42 s : un zoom programmé à l'ouverture se jouait pendant que la
+          // capture glissait encore, et on ne voyait pas le clic (« il zoome sur
+          // Images IA » — mais trop tôt pour être lu). Le premier cadre tombe
+          // donc à la fin de la poussée ; les suivants gardent leur mot.
+          let borne = r2(sl.start + 0.42)
           sl.steps = steps.slice(i, j + 1)
             .filter((st) => st.t < sl.end - 0.25)
             .map(({ t, spot, type }) => {
@@ -703,10 +722,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // le zoom se cale sur « clique sur commencer » — mais SEULEMENT si ce mot
       // tombe dans la scène. Ici « pour commencer » est dit AVANT l'adresse : le
       // zoom partait alors à 16,5 s, hors du panneau, et ne jouait jamais.
-      const click = findAny(words, ['commencer', 'cliquer', 'clique', 'commence'], j + 1)
-      const at = click && click.start > a + 0.5 && click.start < b - 0.3 ? click.start : 0
-      if (add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home',
-        zoomX: 0.885, zoomY: 0.146, zoomTo: 3.0, ...(at ? { zoomAt: r2(at) } : {}) }, a, b)) {
+      // PAS DE ZOOM SUR LE BOUTON DE LA PAGE D'ACCUEIL. Il zoomait sur
+      // « Commencer » : un troisième plan serré dans une scène qui en a déjà
+      // deux (l'adresse qui se tape, la page qui arrive), et qui vole la place
+      // du vrai geste suivant — le clic sur Images IA dans l'app. Axel :
+      // « annule ce zoom ». La page s'affiche en entier, et la visite guidée
+      // prend le relais sur l'écran d'après.
+      if (add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home' }, a, b)) {
         console.log(`▶ navigateur : l'adresse se tape puis la page s'affiche (${r2(a)}→${r2(b)}s)`)
       }
       break

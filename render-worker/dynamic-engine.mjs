@@ -512,6 +512,18 @@ export function buildDynamicComposition(plan, opts = {}) {
         pjs += `\n  tl.to('#${cid}',{scale:1.1,filter:'grayscale(0) brightness(1)',duration:0.26,ease:'back.out(2)',transformOrigin:'50% 50%'},${tw});`
         pjs += `\n  tl.to('#${cid}',{scale:0.96,duration:0.3,ease:'power2.out',transformOrigin:'50% 50%'},${r2(tw + 0.34)});`
         sfxAdd.push({ kind: 'mo-pop-2', t: tw, vol: 0.5 })
+        // LA DERNIÈRE PHOTO EMPORTE L'ÉCRAN. Axel : « zoom sur la dernière image,
+        // celle du coach sportif, pour faire la transition, ça peut être cool ».
+        // Elle grandit jusqu'à couvrir le cadre pendant que les autres s'effacent :
+        // l'énumération se termine sur une image, pas sur un fondu.
+        if (k === its.length - 1) {
+          const t2 = r2(Math.max(tw + 0.5, t1 - 0.85))
+          pjs += `\n  tl.to('#${cid}',{scale:${r2(Math.max(H / ch, W / cw) * 1.06)},duration:0.8,ease:'power2.in',transformOrigin:'50% 50%'},${t2});`
+          pjs += `\n  tl.to('#${cid}',{borderRadius:0,duration:0.5,ease:'power2.in'},${t2});`
+          sfxAdd.push({ kind: 'mo-whoosh-1', t: t2, vol: 0.5 })
+        } else {
+          pjs += `\n  tl.to('#${cid}',{autoAlpha:0,scale:0.86,duration:0.34,ease:'power2.in',transformOrigin:'50% 50%'},${r2(Math.max(tw + 0.5, t1 - 0.8))});`
+        }
       })
 
     } else if (p.kind === 'media') {
