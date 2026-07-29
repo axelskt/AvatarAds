@@ -761,10 +761,9 @@ export function buildDynamicComposition(plan, opts = {}) {
       if (coupe) grp.push({ mots: [w] })
       else g.mots.push(w)
     }
-    const fs = Math.round(H * 0.042)
-    const bas = Math.round(H * (1 - SAFE.bottom) - fs * 1.9)
-    const encre = ap ? '#16161A' : '#FFFFFF'
-    const halo = ap ? 'rgba(255,255,255,.92)' : 'rgba(0,0,0,.55)'
+    const fs = Math.round(H * 0.036)
+    const bas = Math.round(H * (1 - SAFE.bottom) - fs * 2.1)
+    const encre = '#FFFFFF'                       // sur pastille sombre, toujours blanc
     // DEUX GROUPES NE SE CHEVAUCHENT JAMAIS. Avec une marge avant ET après, deux
     // blocs restaient affichés en même temps et les phrases se superposaient,
     // illisibles (« que|ton|audio »). Chaque groupe s'arrête où le suivant
@@ -781,16 +780,16 @@ export function buildDynamicComposition(plan, opts = {}) {
       const dedans = g.mots.map((w, k) =>
         `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
-        style="top:${bas}px">${dedans}</div>`
+        style="top:${bas}px"><span class="dc-p" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
       g.mots.forEach((w, k) => {
-        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${ap ? '#E8623A' : '#FF7A55'}' }, ${r2(w.start)});`
+        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '#FF8A5B' }, ${r2(w.start)});`
         if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${encre}' }, ${r2(w.start)});`
       })
-      js += `\n  tl.fromTo('#dc${i}', { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.16, ease: 'power2.out' }, ${a});`
+      js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
     }
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
   }
@@ -811,15 +810,19 @@ export function buildDynamicComposition(plan, opts = {}) {
     : `'Archivo Black',sans-serif; letter-spacing:-.01em`}; }
   .stack { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column;
            justify-content:center; align-items:center; gap:34px; padding:0 70px; box-sizing:border-box; }
-  /* SOUS-TITRES — gros, centrés, dans la zone sûre. Le halo (plutôt qu'un fond
-     plein) garde la lecture nette sur un panneau clair comme sur une photo. */
-  .dyncap { position:absolute; left:${Math.round(W * 0.06)}px; width:${Math.round(W * 0.88)}px;
-    text-align:center; font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.02em;
-    font-size:${Math.round(H * 0.042)}px; line-height:1.16; color:${ap ? '#16161A' : '#FFFFFF'};
-    text-shadow:0 2px 0 ${ap ? 'rgba(255,255,255,.92)' : 'rgba(0,0,0,.55)'},
-      0 0 18px ${ap ? 'rgba(255,255,255,.95)' : 'rgba(0,0,0,.6)'},
-      0 0 40px ${ap ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.45)'};
+  /* SOUS-TITRES — une PASTILLE sombre, texte blanc, mot en cours en accent.
+     Le halo seul manquait de tenue : sur un fond clair il bavait, sur une photo
+     il se noyait. Une pastille pleine se pose sur n'importe quel arrière-plan,
+     assume sa présence, et laisse le mot prononcé ressortir vraiment. */
+  .dyncap { position:absolute; left:0; width:${W}px; text-align:center;
     z-index:60; pointer-events:none; }
+  .dc-p { display:inline-block; max-width:${Math.round(W * 0.84)}px;
+    padding:${Math.round(H * 0.014)}px ${Math.round(H * 0.024)}px ${Math.round(H * 0.017)}px;
+    border-radius:${Math.round(H * 0.019)}px;
+    background:rgba(16,16,20,.9); box-shadow:0 ${Math.round(H * 0.008)}px ${Math.round(H * 0.026)}px rgba(0,0,0,.3);
+    font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.022em;
+    font-size:${Math.round(H * 0.036)}px; line-height:1.24; color:#FFFFFF;
+    text-wrap:balance; }
   .dc-w { display:inline-block; }
 </style>
 </head>
