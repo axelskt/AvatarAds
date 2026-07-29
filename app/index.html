@@ -21809,6 +21809,30 @@ async function _cartoonProxyFetch(path, options={}){
 // Décrit la STRUCTURE d'une réponse sans en révéler le contenu : uniquement les
 // chemins de clés, sur trois niveaux. C'est ce qu'il faut pour savoir où chercher
 // la vidéo quand Google déplace son enveloppe, et rien de plus.
+// « VIDÉO INTROUVABLE » ÉTAIT UN MENSONGE. Google renvoie une opération TERMINÉE,
+// sans vidéo, mais avec `raiMediaFilteredCount` et `raiMediaFilteredReasons` : la
+// vidéo n'a pas été perdue, elle a été BLOQUÉE par son filtre de sécurité. Dire
+// « introuvable » envoyait Axel chercher un bug de parsing pendant que la vraie
+// cause — un refus côté fournisseur — était écrite dans la réponse. On la lit.
+function _veoFiltre(o, prof){
+  prof = prof || 0;
+  if(!o || typeof o !== 'object' || prof > 6) return null;
+  if(typeof o.raiMediaFilteredCount === 'number' && o.raiMediaFilteredCount > 0){
+    const r = Array.isArray(o.raiMediaFilteredReasons) ? o.raiMediaFilteredReasons.filter(Boolean) : [];
+    return { nb: o.raiMediaFilteredCount, raisons: r };
+  }
+  for(const k of Object.keys(o)){
+    const t = _veoFiltre(o[k], prof+1);
+    if(t) return t;
+  }
+  return null;
+}
+function _veoMsgFiltre(f){
+  const r = (f.raisons || []).join(' · ');
+  return '🚫 Vidéo bloquée par le filtre de sécurité de Google — ta vidéo n\'est pas perdue, elle n\'a jamais été produite'
+    + (r ? ' · motif : ' + r : '')
+    + '. Change la photo de départ (cadrage plus serré, tenue moins ajustée) ou reformule le prompt.';
+}
 function _veoForme(o, prof){
   prof = prof || 0;
   if(o === null || o === undefined) return String(o);
@@ -21865,7 +21889,9 @@ async function _veoAwaitOp(opName){
         // …et le NOM DE L'OPÉRATION : une opération Veo reste interrogeable, c'est
         // par là qu'on récupère une vidéo déjà produite et déjà payée.
         window._veoDerniereOp = { op: opName, reponse: pd.response || pd };
-        err = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pd.response || pd)
+        const filtre = _veoFiltre(pd.response || pd);
+        err = filtre ? _veoMsgFiltre(filtre)
+          : 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pd.response || pd)
             + ' · opération ' + opName;
       }
       break;
@@ -22044,7 +22070,9 @@ async function cartoonGenVideo(btn){
           // même extraction que l'Express : on ne devine plus les chemins
           ({ b64: videoB64, uri: videoUri } = _veoPickVideo(pollData.response || pollData));
           if(!videoB64 && !videoUri){
-            opErr = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pollData.response || pollData);
+            const f = _veoFiltre(pollData.response || pollData);
+            opErr = f ? _veoMsgFiltre(f)
+              : 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pollData.response || pollData);
           }
           break;
         }
