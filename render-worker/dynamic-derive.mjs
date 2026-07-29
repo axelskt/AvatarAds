@@ -1211,8 +1211,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
     plan.avatarSegments = plan.avatarSegments.filter((w) => !w.adresse)
     const MAXW = 6.5
     let budget = D * 0.4
-    // la fenêtre du hook a déjà été réservée en §0 : on la garde telle quelle
-    const clamped = hookWin ? [hookWin] : []
+    // la fenêtre du hook a déjà été réservée en §0 : on garde ses BORNES, mais
+    // pas au prix de ce que le plan y avait accroché. `hookWin` est un objet nu
+    // {start, end} : le poser tel quel effaçait la photo d'avatar ET le médaillon
+    // de la fenêtre 0 — l'animation qu'Axel avait fournie pour le hook
+    // disparaissait sans un mot, et le split de marque reprenait la main avec sa
+    // pastille dessinée. On fusionne : bornes de §0, contenu du plan.
+    const seg0 = (plan.avatarSegments || []).find((w) => (w.start || 0) < 0.6)
+    const clamped = hookWin ? [{ ...(seg0 || {}), ...hookWin }] : []
     if (hookWin) budget -= hookWin.end - hookWin.start
     for (const w of plan.avatarSegments.slice().sort((a, b) => a.start - b.start)) {
       if (hookWin && (w.start || 0) < 0.6) continue
