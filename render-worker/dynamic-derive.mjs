@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS } from './anim-pack.mjs'
-import { spotOf, spotForWords, zoneNamed } from './screen-spots.mjs'
+import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
 // L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
 // « ton premier avatar ». La remplacer dans assets/tuto suffit à changer l'avatar
@@ -534,7 +534,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
         return null
       }
       const steps = []
-      let cur = 0
+      let cur = 0, dernierMot = -1
       for (const t of tuto) {
         const zone = zoneNamed(t.screen, t.zone)
         if (!zone) continue
@@ -542,6 +542,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const hit = findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
           || findSeq(words, w) || findAny(words, [w]) || like(w, 0)
         if (!hit) continue
+        // DEUX CADRES SUR DEUX MOTS COLLÉS, C'EST UN CADRE DE TROP. Le plan
+        // demandait « Image » puis « IA » — deux mots d'un même nom d'onglet —
+        // et la caméra sautait aussitôt ailleurs, sur une zone qui n'avait rien
+        // à voir (Axel : « pourquoi il montre "Génération" alors que je ne
+        // parle pas de génération ? »). Le premier des deux suffit.
+        if (dernierMot >= 0 && hit.i - dernierMot <= 1) continue
+        dernierMot = hit.i
         if (hit.i >= cur) cur = hit.i + 1
         // UN ZOOM SE JUSTIFIE PAR CE QUI EST DIT.
         // Sur « tu vas aller dans Connecter Claude », il proposait un cadre sur
@@ -554,37 +561,75 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // c'est lui ; si rien ne correspond et que le libellé proposé n'a aucun
         // mot en commun avec la phrase, on garde l'écran sans zoom.
         const said = words.slice(Math.max(0, hit.i - 2), hit.i + 4).map((x) => x.text)
-        const heard = said.map(norm).join(' ')
-        const byWords = spotForWords(t.screen, said)
-        let spot = zone
-        // LA BARRE LATÉRALE NE VOLE PAS LE CADRE. Elle est identique sur toutes
-        // les captures, et ses libellés sont les noms des modules — que la voix
-        // prononce sans arrêt. Sur « ouvre l'onglet Montage IA et IMPORTE ton
-        // image », le rapprochement par mots cadrait donc « Montage IA » puis
-        // « Images IA » dans le menu, pendant que la voix parlait du champ
-        // d'import. Les deux étapes tombaient hors du panneau et disparaissaient :
-        // trois secondes de capture immobile, exactement ce qu'Axel décrit
-        // (« importe ton image, là y'a rien »). Quand le plan a nommé un champ du
-        // CONTENU, une entrée de menu ne peut plus le remplacer.
-        const NAVZ = ['images-ia', 'montage-ia-beta', 'generateur', 'bibliotheque', 'enregistreur',
-          'nettoyage-audio', 'express', 'parrainage', 'cartoon', 'mon-compte']
-        const estNav = (z) => NAVZ.some((n) => String(z && z.name || '') === n)
-        if (byWords && byWords.label !== zone.label && !(estNav(byWords) && !estNav(zone))) spot = byWords
-        else if (!byWords) {
-          // aucun élément ne correspond… et le mot NOMME L'ÉCRAN (« Connecter
-          // Claude » → 11-connecter-claude) : c'est une arrivée, pas un clic.
-          // …sauf si l'étape doit ÉCRIRE quelque part : elle désigne forcément un
-          // champ, jamais l'écran entier. Sur « puis décris simplement l'image
-          // que tu souhaites générer », le mot « image » ressemblait au nom de
-          // l'écran (01-imagesIA) : le cadre était annulé, la phrase se tapait
-          // dans le vide et il ne se passait plus rien à l'écran.
-          const scr = t.text ? [] : (t.screen.match(/[a-z]{5,}/g) || [])
-          if (scr.some((tk) => heard.includes(tk.slice(0, 5)))) spot = null
+        // ── LE CADRE DOIT ÊTRE JUSTIFIÉ PAR CE QUI EST DIT ────────────────────
+        // Axel : « pourquoi il montre encadré "Génération" alors que je ne parle
+        // pas de génération ? ». Le plan avait proposé cette zone sur le mot
+        // « IA », et on la posait sans jamais vérifier. Trois cas, dans l'ordre :
+        //  1. la voix désigne clairement une AUTRE zone → c'est elle ;
+        //  2. le libellé du plan se retrouve dans la phrase → on le garde ;
+        //  3. ni l'un ni l'autre → AUCUN cadre. L'écran entier reste vrai ; un
+        //     encadré qui contredit la voix, non.
+        // Une étape qui TAPE garde toujours sa cible : elle désigne un champ.
+        // Un libellé sans mot exploitable (« 9:16 ») échappe au test 2 : on ne
+        // peut pas le juger, on fait confiance au plan.
+        const estNav = (z) => MENU_ZONES.includes(String(z && z.name || ''))
+        // …sur une fenêtre SERRÉE. Avec six mots, « le format neuf seize » lisait
+        // déjà « puis décris simplement » et se faisait remplacer par le champ de
+        // description : le cadre partait une phrase trop loin.
+        // …et elle S'ARRÊTE À LA FIN DE LA PHRASE. « le format neuf seize. Puis
+        // décris… » : sans cette coupure, le cadre du format se faisait remplacer
+        // par le champ de description, une phrase trop tôt.
+        const proche = []
+        for (let k = Math.max(0, hit.i - 1); k < Math.min(words.length, hit.i + 3); k++) {
+          if (k > hit.i && /[.!?]$/.test(String(words[k - 1].text))) break
+          proche.push(words[k].text)
         }
+        const alt = spotForWords(t.screen, proche, { sansMenu: true, min: 0.55 })
+        // LE PLAN GARDE SA ZONE PAR DÉFAUT : c'est lui qui a lu la phrase. On ne
+        // la remplace que si la voix en désigne clairement une autre.
+        let spot = zone
+        if (alt && alt.label !== zone.label && !estNav(zone)) spot = alt
         steps.push({ screen: t.screen, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
           spot, ...(t.text ? { type: String(t.text) } : {}) })
       }
+      // ── CE QU'IL NOMME PENDANT LA CAPTURE OBTIENT SON CADRE ─────────────────
+      // Axel : « quand je dis "ainsi que ton audio", il montre "Ma vidéo" ». Le
+      // plan n'avait pas prévu d'étape pour « audio » : la caméra restait donc
+      // sur le champ précédent pendant qu'il parlait d'autre chose. Ici on relit
+      // la transcription entre deux étapes : dès qu'un mot désigne clairement un
+      // élément de l'écran affiché, il obtient son propre cadre. C'est la même
+      // règle que partout ailleurs — le visuel EST le mot — appliquée aux
+      // champs de l'interface.
       steps.sort((a, b) => a.t - b.t)
+      {
+        let ajouts = 0
+        for (let k = 0; k < steps.length; k++) {
+          const st = steps[k], suiv = steps[k + 1]
+          if (suiv && suiv.screen !== st.screen) continue
+          const borne = suiv ? suiv.t : st.end + 2.6
+          for (let j = 0; j < words.length; j++) {
+            const w = words[j]
+            if (w.start <= st.end + 0.15 || w.start >= borne - 0.5) continue
+            // LE CADRE TOMBE SUR LE MOT QUI LE JUSTIFIE, PAS SUR SON VOISIN.
+            // En cherchant sur une fenêtre de quatre mots, le cadre s'ancrait au
+            // PREMIER de la fenêtre : « ainsi que ton audio » encadrait le champ
+            // de la voix off dès « ainsi », presque une seconde avant le mot.
+            // On teste donc le mot SEUL d'abord ; la fenêtre ne sert que de repli
+            // pour les libellés qui demandent deux mots (« mot par mot »).
+            let z = spotForWords(st.screen, [w.text], { sansMenu: true, min: 1.2 })
+            if (!z) {
+              const duo = words.slice(j, j + 2).map((x) => x.text)
+              z = spotForWords(st.screen, duo, { sansMenu: true, min: 1.6 })
+            }
+            if (!z || (st.spot && z.label === st.spot.label)) continue
+            if (steps.some((o) => Math.abs(o.t - (w.start - LEAD)) < 0.8)) continue
+            steps.push({ screen: st.screen, t: r2(Math.max(0, w.start - LEAD)), end: w.end, spot: z })
+            ajouts++
+            break                                  // un cadre par intervalle suffit
+          }
+        }
+        if (ajouts) { steps.sort((a, b) => a.t - b.t); console.log(`▶ ${ajouts} cadre(s) ajouté(s) sur ce qu'il nomme`) }
+      }
       // on regroupe les étapes CONSÉCUTIVES sur le même écran : un panneau par
       // écran visité, la caméra s'y déplace d'un élément à l'autre
       let i = 0
