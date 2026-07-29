@@ -303,6 +303,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     for (const b of brut) {
       if (b.__pose) continue
+      // UN MÉDIA DE HOOK N'EST PAS UN MÉDAILLON. Marqué `hook`, il est réservé au
+      // split d'ouverture — son animation en HAUT, le visage en BAS. Axel : « je
+      // parle en split screen, en haut le Claude x AvatarAds et en bas l'avatar ».
+      // Sans cette sortie, §0a l'accrochait en vignette sur le visage et le split
+      // ne le voyait jamais : on retombait sur la pastille dessinée.
+      if (b.hook) continue
       const src = files[b.assetId]
       if (!src) continue
       const a = r2(b.start || 0), e = r2(b.end ?? a + 3)
