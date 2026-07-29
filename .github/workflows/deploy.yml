@@ -27,10 +27,26 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      # ON NE PUBLIE QUE LE SITE. `path: .` envoyait TOUT le dépôt suivi — 171 Mo,
+      # dont 118 Mo de `render-worker/` qui tourne sur Railway et n'a rien à faire
+      # sur un site web. Un artefact de cette taille finit par échouer côté service
+      # d'artefacts (run #451 : « Upload artifact » en erreur, le même contenu étant
+      # passé au run précédent). On assemble donc un `_site/` avec ce qui est
+      # réellement servi : trois fois plus léger, et plus rien qui traîne en public.
+      - name: Assembler le site
+        run: |
+          mkdir -p _site
+          rsync -a --exclude='.git' --exclude='.github' --exclude='_site' \
+                --exclude='render-worker' --exclude='supabase' --exclude='tools' \
+                --exclude='.agents' --exclude='.claude' --exclude='.anim-check' \
+                --exclude='clips' --exclude='Musique' --exclude='stories' \
+                --exclude='deploy-orchestrate.sh' --exclude='.DS_Store' \
+                ./ _site/
+          echo "poids publié : $(du -sh _site | cut -f1)"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
