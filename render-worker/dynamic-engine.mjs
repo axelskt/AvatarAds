@@ -581,7 +581,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         }
         const bot = src
           ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
-          : `<div style="width:100%;height:100%;background:url('${esc(avatarStill)}') center 22%/cover"></div>`
+          : `<div style="width:100%;height:100%;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
         inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
       } else if (src) {
