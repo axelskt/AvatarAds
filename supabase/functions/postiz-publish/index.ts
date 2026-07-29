@@ -5,7 +5,10 @@
 //
 //   POST { action:'channels' }
 //        → { channels: [{ id, name, identifier, picture, disabled }] }
-//   POST { action:'publish', videoPath, caption, title?, integrations?:[ids], schedule_at? }
+//   POST { action:'publish', videoPath, caption, title?, integrations?:[ids], schedule_at?,
+//          captions?:{ [integrationId]: string }, stagger?:boolean }
+//        captions : légende propre à un réseau (#117) — vide ⇒ la description commune
+//        stagger  : true par défaut ⇒ un appel /posts par réseau, espacés de 20-40 min
 //        videoPath : chemin dans le bucket privé render-media (doit commencer par l'uid)
 //        schedule_at : ISO 8601 optionnel (#150) → publication PROGRAMMÉE au lieu de « now »
 //        → télécharge le MP4, l'upload vers Postiz, publie/programme sur les canaux
@@ -33,6 +36,29 @@ const json = (status: number, body: unknown) =>
 
 const postiz = (path: string, init: RequestInit = {}) =>
   fetch(POSTIZ_BASE + path, { ...init, headers: { Authorization: POSTIZ_KEY, ...(init.headers || {}) } })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉCALAGE DES PUBLICATIONS (#117)
+//
+// Avant : UN seul appel /posts avec UNE date → les 5 réseaux partaient à la même
+// milliseconde. Dans les logs Postiz : cinq jobs traités à `16:00:00.657`. Même
+// fichier, même légende, cinq plateformes, la même seconde — c'est la signature
+// d'automatisation la plus lisible qui existe, et Instagram démote les comptes
+// qu'il classe en contenu recyclé.
+//
+// Maintenant : un appel /posts PAR réseau, chacun avec sa propre date. Le premier
+// part tout de suite (ou à l'heure programmée), les suivants sont espacés de 20 à
+// 40 min tirés au sort — un intervalle FIXE se repère aussi bien qu'une rafale.
+//
+// L'ordre n'est pas alphabétique : les réseaux où la fenêtre des premières
+// minutes décide de la portée passent en premier, les vitrines ferment la marche.
+const ORDRE = ['tiktok', 'instagram', 'youtube', 'threads', 'x', 'facebook', 'linkedin', 'pinterest', 'snapchat']
+const rang = (identifier: string) => {
+  const id = identifier.toLowerCase()
+  const i = ORDRE.findIndex((k) => id.includes(k))
+  return i < 0 ? ORDRE.length : i
+}
+const ECART_MIN = 20, ECART_MAX = 40   // minutes entre deux réseaux
 
 // Contenu adapté par réseau : X et Threads ont des limites dures → on tronque
 // la description proprement en PRÉSERVANT les hashtags (jamais coupés).
@@ -127,38 +153,72 @@ serve(async (req) => {
     // 3bis) hashtags : ceux d'Axel, envoyés par le client (champ sauvegardé) — max 8, format #mot
     const tags = (String(body.tags || '').match(/#[\p{L}\p{N}_]+/gu) || []).slice(0, 8).join(' ')
 
-    // 4) publication immédiate — ou programmée si schedule_at est fourni
-    const payload = {
-      type: when ? 'schedule' : 'now',
-      date: (when ?? new Date()).toISOString(),
-      shortLink: false,
-      tags: [],
-      posts: wanted.map((c) => ({
-        integration: { id: c.id },
-        value: [{
-          content: contentFor(String(c.identifier || ''), caption, tags),
-          image: [{ id: media.id, path: media.path }],
+    // 3ter) légendes par réseau (#117) : `captions` est indexé par id d'intégration.
+    // Une entrée vide = ce réseau reprend la description principale.
+    const parReseau = (body.captions && typeof body.captions === 'object')
+      ? body.captions as Record<string, string> : {}
+
+    // 4) un appel /posts PAR réseau, chacun avec sa propre date
+    const espace = body.stagger === false ? 0 : 1
+    const base = when ?? new Date()
+    const file = [...wanted].sort((a, b) => rang(String(a.identifier || '')) - rang(String(b.identifier || '')))
+
+    let curseur = base.getTime()
+    const envois: Array<{ name: string; at: string; ok: boolean; detail?: string }> = []
+    for (let i = 0; i < file.length; i++) {
+      const c = file[i]
+      if (i > 0 && espace) {
+        curseur += Math.round((ECART_MIN + Math.random() * (ECART_MAX - ECART_MIN)) * 60_000)
+      }
+      const quand = new Date(curseur)
+      // le premier part « now » s'il n'y a pas de programmation ; tout le reste
+      // est forcément une programmation, sinon Postiz publierait immédiatement.
+      const immediat = i === 0 && !when
+      const texte = String(parReseau[String(c.id)] || '').trim() || caption
+      const payload = {
+        type: immediat ? 'now' : 'schedule',
+        date: quand.toISOString(),
+        shortLink: false,
+        tags: [],
+        posts: [{
+          integration: { id: c.id },
+          value: [{
+            content: contentFor(String(c.identifier || ''), texte, tags),
+            image: [{ id: media.id, path: media.path }],
+          }],
+          group: '',
+          settings: settingsFor(String(c.identifier || ''), title),
         }],
-        group: '',
-        settings: settingsFor(String(c.identifier || ''), title),
-      })),
+      }
+      const pr = await postiz('/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const prText = await pr.text()
+      envois.push({
+        name: String(c.name || c.identifier || ''),
+        at: quand.toISOString(),
+        ok: pr.ok,
+        ...(pr.ok ? {} : { detail: prText.slice(0, 300) }),
+      })
     }
-    const pr = await postiz('/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    const prText = await pr.text()
-    if (!pr.ok) return json(502, { error: 'postiz_post_failed', detail: prText })
+    // UN réseau qui échoue ne doit pas faire échouer les autres : ils sont déjà
+    // partis. On renvoie donc le détail réseau par réseau, et on n'échoue en bloc
+    // que si RIEN n'est passé.
+    const passes = envois.filter((e) => e.ok)
+    if (!passes.length) return json(502, { error: 'postiz_post_failed', detail: envois })
 
     // 5) ménage : le MP4 n'a plus besoin de traîner dans render-media
     await svc.storage.from('render-media').remove([videoPath]).then(() => {}, () => {})
 
-    let result: unknown = prText
-    try { result = JSON.parse(prText) } catch { /* texte brut */ }
     return json(200, {
-      ok: true, published: wanted.map((c) => c.name), hashtags: tags,
-      scheduled_at: when ? when.toISOString() : null, result,
+      ok: true,
+      published: passes.map((e) => e.name),
+      failed: envois.filter((e) => !e.ok),
+      hashtags: tags,
+      scheduled_at: when ? when.toISOString() : null,
+      plan: envois,                                  // qui part, et à quelle heure
     })
   }
 

@@ -3550,6 +3550,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <input id="postizTagsInput" placeholder="#viral #businessenligne #saas" oninput="try{localStorage.setItem('aa_pub_tags', this.value)}catch(e){}" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px 0">
         </div>
 
+        <!-- #117 · une légende par réseau. La même phrase copiée-collée sur cinq
+             plateformes à la même seconde, c'est ce qui se lit comme du contenu
+             recyclé. Vide = ce réseau reprend la description ci-dessus. -->
+        <div style="margin-top:13px">
+          <button type="button" id="pubCapsBtn" onclick="_pubCapsToggle()" class="btn-quiet btn-sm" style="font-size:11.5px">✎ Personnaliser par réseau</button>
+          <div id="pubCapsBox" style="display:none;flex-direction:column;gap:10px;margin-top:10px"></div>
+        </div>
+
         <!-- #150 · quand publier : tout de suite, ou programmé (Postiz type schedule) -->
         <div style="margin-top:14px;font-size:11px;font-family:var(--mono);letter-spacing:.08em;color:var(--text3)">QUAND</div>
         <div style="display:flex;gap:8px;margin-top:7px;align-items:center;flex-wrap:wrap">
@@ -3569,6 +3577,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <button type="button" onclick="_pubQuick(1,18)" class="btn-quiet btn-sm" style="font-size:11.5px">Demain 18 h</button>
           </div>
         </div>
+        <!-- #117 · les logs Postiz montraient les 5 réseaux traités à la même
+             milliseconde. On étale : le premier part à l'heure choisie, les
+             autres suivent à 20-40 min d'intervalle tirés au sort. -->
+        <label style="display:flex;align-items:flex-start;gap:9px;margin-top:11px;cursor:pointer;user-select:none">
+          <input type="checkbox" id="pubStaggerChk" checked style="accent-color:var(--accent);width:15px;height:15px;margin-top:1px;flex:0 0 auto">
+          <span style="font-family:var(--font);font-size:12.5px;color:var(--text2);line-height:1.45">Décaler les réseaux de 20 à 40 min<br><span class="muted" style="font-size:11.5px">au lieu de tout publier à la même seconde</span></span>
+        </label>
         <button id="postizGoBtn" onclick="postizPublish(this)" style="width:100%;margin-top:14px;padding:15px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3);display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Publier maintenant</button>
         <div id="postizStatus" style="display:none;margin-top:9px;font-size:11.5px;font-family:var(--mono);color:var(--text2);text-align:center"></div>
       </div>
@@ -17994,6 +18009,44 @@ function _pubPaintChannels(){
     + '<svg class="pubChk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="transition:opacity .15s"><path d="M20 6L9 17l-5-5"/></svg>'
     + '</label>').join('') || '<span class="muted">Aucun canal connecté</span>';
 }
+// #117 · légendes par réseau — un champ par canal COCHÉ, repeint à chaque
+// ouverture (la sélection de réseaux bouge entre deux publications). Ce qui est
+// saisi reste en mémoire tant que la page vit : rouvrir le volet ne l'efface pas.
+let _pubCaps = {};
+function _pubCapsToggle(){
+  const box = document.getElementById('pubCapsBox'), btn = document.getElementById('pubCapsBtn');
+  const ouvert = box.style.display !== 'none';
+  if(ouvert){ _pubCapsLire(); box.style.display = 'none'; btn.textContent = '✎ Personnaliser par réseau'; return; }
+  _pubCapsPaint();
+  box.style.display = 'flex'; btn.textContent = '✕ Replier les légendes';
+}
+function _pubCapsLire(){
+  document.querySelectorAll('#pubCapsBox textarea[data-canal]').forEach(t => {
+    const v = (t.value||'').trim();
+    if(v) _pubCaps[t.dataset.canal] = v; else delete _pubCaps[t.dataset.canal];
+  });
+}
+function _pubCapsPaint(){
+  const box = document.getElementById('pubCapsBox');
+  const ids = [...document.querySelectorAll('#postizChannels input:checked')].map(i=>i.value);
+  if(!ids.length){ box.innerHTML = '<span class="muted" style="font-size:12px">Choisis d\'abord au moins un réseau.</span>'; return; }
+  const parId = Object.fromEntries((_postizChannels||[]).map(c=>[String(c.id), c]));
+  box.innerHTML = ids.map(id => {
+    const c = parId[id] || {};
+    // LE TITRE, C'EST LA PLATEFORME, PAS LE NOM DU COMPTE. Tous les canaux d'Axel
+    // s'appellent « AvatarAds » : afficher `c.name` donnait trois blocs identiques
+    // intitulés AVATARADS, impossible de savoir lequel est Instagram.
+    const plateforme = String(c.identifier || 'réseau').toUpperCase();
+    const compte = String(c.name || '');
+    return '<div>'
+      + '<div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.05em;margin-bottom:5px">' + plateforme
+      + (compte && compte.toLowerCase() !== String(c.identifier||'').toLowerCase() ? ' <span style="color:var(--text3);opacity:.6">· ' + compte + '</span>' : '')
+      + '</div>'
+      + '<textarea data-canal="' + id + '" rows="2" placeholder="vide = reprend la description ci-dessus"'
+      + ' style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:10px;resize:vertical">'
+      + String(_pubCaps[id] || '').replace(/</g,'&lt;') + '</textarea></div>';
+  }).join('');
+}
 // preset CTA « commente {mot} → je t'envoie tout en DM » — verbe tiré au sort
 function _pubPreset(k){
   const T = [
@@ -18049,6 +18102,7 @@ async function postizPublish(btn){
   if(!caption){ toast('⚠️ Écris une description avant de publier'); return; }
   const ids = [...document.querySelectorAll('#postizChannels input:checked')].map(i=>i.value);
   if(!ids.length){ toast('⚠️ Choisis au moins un réseau'); return; }
+  _pubCapsLire();   // le volet peut être encore ouvert : on ne perd pas ce qui vient d'être tapé
   // programmation : date locale du champ → ISO, jamais dans le passé
   let scheduleAt = null;
   if(_pubWhen === 'later'){
@@ -18081,8 +18135,18 @@ async function postizPublish(btn){
     st.textContent = '2/2 · ' + (scheduleAt ? 'Programmation' : 'Publication') + ' sur ' + ids.length + ' réseau(x)…';
     const d = await _postizCall({ action:'publish', videoPath: path, caption, integrations: ids,
       tags: (document.getElementById('postizTagsInput')?.value||'').trim(),
+      captions: _pubCaps,
+      stagger: !!document.getElementById('pubStaggerChk')?.checked,
       ...(scheduleAt ? { schedule_at: scheduleAt } : {}) });
-    if(d.scheduled_at){
+    // le plan dit QUI part et À QUELLE HEURE — c'est la seule preuve que le
+    // décalage a bien eu lieu, et ça évite de retourner voir le calendrier Postiz.
+    const heure = t => new Date(t).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const ligne = (d.plan||[]).map(p => p.name + ' ' + heure(p.at)).join(' · ');
+    if(d.plan && d.plan.length > 1){
+      st.innerHTML = (d.scheduled_at ? '⏰ Programmé' : '✓ Envoyé') + ' · ' + ligne
+        + ((d.failed||[]).length ? '<br><span style="color:var(--danger,#ff6b6b)">✗ ' + d.failed.map(f=>f.name).join(', ') + '</span>' : '');
+      toast((d.scheduled_at ? '⏰ Programmé' : '✓ Publié') + ' sur ' + (d.published||[]).length + ' réseau(x), étalés jusqu\'à ' + heure(d.plan[d.plan.length-1].at));
+    } else if(d.scheduled_at){
       const lbl = new Date(d.scheduled_at).toLocaleString('fr-FR', { dateStyle:'medium', timeStyle:'short' });
       st.textContent = '⏰ Programmé le ' + lbl + ' : ' + (d.published||[]).join(', ');
       toast('⏰ Publication programmée le ' + lbl + ' sur ' + (d.published||[]).length + ' réseau(x)');
