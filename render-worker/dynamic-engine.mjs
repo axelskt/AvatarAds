@@ -19,6 +19,7 @@
 
 import { uiScene } from './ui-scenes.mjs'
 import { screenSize } from './screen-spots.mjs'
+import { SAFE } from './visual-styles.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
@@ -737,6 +738,63 @@ export function buildDynamicComposition(plan, opts = {}) {
   plan.sfx = sfxOut
   if (kbAdd.length) plan.keyboard = [...(plan.keyboard || []), ...kbAdd]
 
+  // ── LES SOUS-TITRES ─────────────────────────────────────────────────────────
+  // Ce style n'en affichait aucun : les panneaux PORTENT le texte, donc doubler
+  // la voix aurait fait deux lectures concurrentes. Mais sur les réseaux la
+  // majorité regarde sans le son, et une capture d'interface ne remplace pas la
+  // phrase. On les pose donc en bas, DANS LA ZONE SÛRE (au-dessus du bandeau
+  // TikTok/Reels), par groupes de trois mots — assez gros pour se lire d'un
+  // coup d'œil sur un téléphone, avec le mot prononcé en accent.
+  // Ils s'effacent quand un panneau écrit déjà le mot à l'écran : deux fois la
+  // même chose au même instant, c'est du bruit.
+  let capHtml = ''
+  if (plan.captions && plan.captions.length && plan.subtitles !== false) {
+    const mots = plan.captions.filter((c) => String(c.text || '').trim())
+      .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(Math.max(c.start + 0.12, c.end)) }))
+      .sort((a, b) => a.start - b.start)
+    // groupes de 3 mots, coupés sur la ponctuation : on lit une respiration
+    const grp = []
+    for (const w of mots) {
+      const g = grp[grp.length - 1]
+      const coupe = !g || g.mots.length >= 3 || /[.!?,]$/.test(g.mots[g.mots.length - 1].text)
+        || w.start - g.mots[g.mots.length - 1].end > 0.45
+      if (coupe) grp.push({ mots: [w] })
+      else g.mots.push(w)
+    }
+    const fs = Math.round(H * 0.042)
+    const bas = Math.round(H * (1 - SAFE.bottom) - fs * 1.9)
+    const encre = ap ? '#16161A' : '#FFFFFF'
+    const halo = ap ? 'rgba(255,255,255,.92)' : 'rgba(0,0,0,.55)'
+    // DEUX GROUPES NE SE CHEVAUCHENT JAMAIS. Avec une marge avant ET après, deux
+    // blocs restaient affichés en même temps et les phrases se superposaient,
+    // illisibles (« que|ton|audio »). Chaque groupe s'arrête où le suivant
+    // commence.
+    grp.forEach((g, i) => {
+      g.a = r2(Math.max(i ? grp[i - 1].b + 0.01 : 0, g.mots[0].start - 0.08))
+      const suiv = grp[i + 1]
+      g.b = r2(Math.min(D, g.mots[g.mots.length - 1].end + 0.16,
+        suiv ? suiv.mots[0].start - 0.04 : D))
+    })
+    capHtml = grp.map((g, i) => {
+      const a = g.a
+      const b = Math.max(a + 0.2, g.b)
+      const dedans = g.mots.map((w, k) =>
+        `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
+      return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
+        style="top:${bas}px">${dedans}</div>`
+    }).join('\n')
+    // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
+    for (const [i, g] of grp.entries()) {
+      const a = g.a
+      g.mots.forEach((w, k) => {
+        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${ap ? '#E8623A' : '#FF7A55'}' }, ${r2(w.start)});`
+        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${encre}' }, ${r2(w.start)});`
+      })
+      js += `\n  tl.fromTo('#dc${i}', { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.16, ease: 'power2.out' }, ${a});`
+    }
+    console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
+  }
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -753,10 +811,21 @@ export function buildDynamicComposition(plan, opts = {}) {
     : `'Archivo Black',sans-serif; letter-spacing:-.01em`}; }
   .stack { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column;
            justify-content:center; align-items:center; gap:34px; padding:0 70px; box-sizing:border-box; }
+  /* SOUS-TITRES — gros, centrés, dans la zone sûre. Le halo (plutôt qu'un fond
+     plein) garde la lecture nette sur un panneau clair comme sur une photo. */
+  .dyncap { position:absolute; left:${Math.round(W * 0.06)}px; width:${Math.round(W * 0.88)}px;
+    text-align:center; font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.02em;
+    font-size:${Math.round(H * 0.042)}px; line-height:1.16; color:${ap ? '#16161A' : '#FFFFFF'};
+    text-shadow:0 2px 0 ${ap ? 'rgba(255,255,255,.92)' : 'rgba(0,0,0,.55)'},
+      0 0 18px ${ap ? 'rgba(255,255,255,.95)' : 'rgba(0,0,0,.6)'},
+      0 0 40px ${ap ? 'rgba(255,255,255,.85)' : 'rgba(0,0,0,.45)'};
+    z-index:60; pointer-events:none; }
+  .dc-w { display:inline-block; }
 </style>
 </head>
 <body>
 <div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${html}
+${capHtml}
 </div>
 <script>
 window.__timelines = window.__timelines || {};
