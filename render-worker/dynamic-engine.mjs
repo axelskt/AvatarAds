@@ -622,7 +622,12 @@ export function buildDynamicComposition(plan, opts = {}) {
       // mots ») : le plan a choisi une anim qui ILLUSTRE la phrase (network,
       // target, grow, money…). Plein panneau, palette adaptée au tone, temps
       // absolus — le pack est déjà seek-safe.
-      const s = { ...p.slide, id, start: liveT0, dur: Math.max(0.8, t1 - liveT0) }
+      // LA VIGNETTE D'UNE VIDÉO, C'EST SON VISAGE. Les animations qui montrent
+      // « sa » vidéo (le compteur de vues, le profil) tombaient sur un dégradé
+      // orange faute d'image : un rectangle plein, illisible. La photo d'avatar
+      // du job fait une vraie miniature — c'est SA vidéo qu'on regarde monter.
+      const s = { ...p.slide, id, start: liveT0, dur: Math.max(0.8, t1 - liveT0),
+        logoFile: p.slide.logoFile || (['views', 'linkbio', 'bio', 'post'].includes(p.kind) ? avatarStill : '') }
       const ah = animHtml(p.kind, s, W, H, ap ? 'apple' : tone.dark ? 'dynamic' : 'word')
       if (ah) {
         // frame() du pack vise le haut (au-dessus des sous-titres du mode
