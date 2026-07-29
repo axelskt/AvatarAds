@@ -5730,9 +5730,11 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 
 // ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
 // 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
-// Plafond de l'envoi simple vers Supabase Storage : c'est le réglage GLOBAL du
-// projet (Settings → Storage → Upload file size limit), pas une limite du bucket
-// `render-media`, qui n'en a aucune. Au-dessus, il faut l'envoi reprenable (TUS).
+// Plafond de l'envoi vers Supabase Storage. Ce n'est PAS une limite du bucket
+// `render-media` (il n'en a aucune) : c'est le réglage global du projet, et sur le
+// plan Free il est FIXE à 50 Mo — non modifiable, seul le passage en Pro l'ouvre
+// (jusqu'à 500 Go). Le message d'erreur ne doit donc pas suggérer de le changer :
+// sur ce plan, la seule action possible est un export plus léger.
 const PUB_MAX_MO = 50;
 
 const CREDIT_COSTS = {
@@ -18053,7 +18055,7 @@ async function postizPublish(btn){
     const _mo = blob.size / 1024 / 1024;
     if(_mo > PUB_MAX_MO){
       throw new Error('ta vidéo fait ' + _mo.toFixed(1) + ' Mo, l\'envoi est plafonné à '
-        + PUB_MAX_MO + ' Mo — réexporte-la plus légère, ou fais monter la limite de stockage du projet');
+        + PUB_MAX_MO + ' Mo — réexporte-la plus légère, ou publie-la à la main sur ce coup-là');
     }
     st.textContent = '1/2 · Envoi de la vidéo (' + _mo.toFixed(1) + ' Mo)…';
     const up = await sb.storage.from('render-media').upload(path, blob, { contentType:'video/mp4', upsert:true });
