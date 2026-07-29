@@ -541,8 +541,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
           // entrée enfouie dans une modale a la sienne.
           const host = ownScreen || '01-imagesia'
           if (!zoneNamed(host, zone)) continue
-          tuto.splice(tuto.indexOf(after), 0, { word: phrase, screen: host, zone, text: '' })
-          console.log(`▶ clic rétabli sur « ${phrase} » avant l'ouverture de l'écran`)
+          // ON SAIT DÉJÀ OÙ. `hit` vient d'être trouvé au bon endroit ; laisser la
+          // boucle principale rechercher le mot une deuxième fois lui faisait
+          // attraper une AUTRE occurrence — « connecter claude » cadré à 35,8 s
+          // au lieu de 17,9 s. Et comme la visite est chronologique, ce saut en
+          // avant a fait rejeter les 8 étapes suivantes d'un coup : toute la
+          // partie Claude du tutoriel a disparu de la vidéo. On fige l'index.
+          tuto.splice(tuto.indexOf(after), 0, { word: phrase, screen: host, zone, text: '', at: hit })
+          console.log(`▶ clic rétabli sur « ${phrase} » avant l'ouverture de l'écran (${r2(hit.start)}s)`)
         }
       }
 
@@ -568,20 +574,34 @@ export function deriveDynamicSlides(plan, opts = {}) {
         return null
       }
       const steps = []
+      // POURQUOI UNE ÉTAPE DISPARAÎT, ÇA DOIT SE LIRE. Les 4 écrans de la visite
+      // Claude ont été jetés ICI, en silence, pendant que le plan les prévoyait :
+      // la vidéo montrait 13 s de visage à la place du tutoriel, et rien dans les
+      // logs ne le disait. Un rejet muet est un rejet qu'on ne corrige jamais.
+      const jetees = []
       let cur = 0, dernierMot = -1
       for (const t of tuto) {
         const zone = zoneNamed(t.screen, t.zone)
-        if (!zone) continue
+        if (!zone) { jetees.push(`${t.screen}/${t.zone} : zone inconnue de la capture`); continue }
         const w = String(t.word || '')
-        const hit = findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
+        const hit = t.at || findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
           || findSeq(words, w) || findAny(words, [w]) || like(w, 0)
-        if (!hit) continue
+        if (!hit) { jetees.push(`${t.screen}/${t.zone} : « ${w} » introuvable dans la transcription`); continue }
         // DEUX CADRES SUR DEUX MOTS COLLÉS, C'EST UN CADRE DE TROP. Le plan
         // demandait « Image » puis « IA » — deux mots d'un même nom d'onglet —
         // et la caméra sautait aussitôt ailleurs, sur une zone qui n'avait rien
         // à voir (Axel : « pourquoi il montre "Génération" alors que je ne
         // parle pas de génération ? »). Le premier des deux suffit.
-        if (dernierMot >= 0 && hit.i - dernierMot <= 1) continue
+        // ⚠ EN AVANÇANT SEULEMENT. Écrite `hit.i - dernierMot <= 1`, la condition
+        // était vraie pour tout écart NÉGATIF — donc pour toute étape trouvée
+        // AVANT la précédente. Une seule étape mal calée en fin de script
+        // (dernierMot = 152) suffisait à faire rejeter les huit suivantes, qui
+        // étaient pourtant aux index 84 à 137. Un écart négatif ne veut pas dire
+        // « collé », il veut dire « à l'envers » : ça se traite autrement.
+        if (dernierMot >= 0 && hit.i > dernierMot && hit.i - dernierMot <= 1) {
+          jetees.push(`${t.screen}/${t.zone} : « ${w} » colle au mot de l'étape précédente`)
+          continue
+        }
         dernierMot = hit.i
         if (hit.i >= cur) cur = hit.i + 1
         // UN ZOOM SE JUSTIFIE PAR CE QUI EST DIT.
@@ -710,6 +730,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
         i = j + 1
       }
       if (placedScreens) console.log(`▶ visite guidée : ${placedScreens} écran(s), ${steps.length} étape(s) au clic`)
+      // les écrans du plan ont TOUS été absorbés plus haut : ce qui n'a pas été
+      // reposé ici est perdu pour de bon. On le dit, avec la raison.
+      if (jetees.length) {
+        console.log(`▶ visite guidée — ${jetees.length} étape(s) du plan JETÉE(S) :`)
+        for (const j of jetees) console.log(`    · ${j}`)
+      }
+      const demandes = (plan.tuto || []).length
+      if (demandes && placedScreens < demandes / 2) {
+        console.log(`⚠ visite guidée incomplète : ${placedScreens} écran(s) posé(s) pour ${demandes} étape(s) demandée(s) — le tutoriel sera creux`)
+      }
     }
 
     // « TU VAS ALLER SUR AVATARADS.FR » EST UNE NAVIGATION, PAS UN LOGO.
