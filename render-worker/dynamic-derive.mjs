@@ -1468,7 +1468,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       'veo', 'sora', 'runway', 'elevenlabs', 'capcut', 'shopify', 'stripe', 'zapier', 'n8n']
     const segs = plan.avatarSegments || []
     const first = segs[0]
-    if (first && (first.start || 0) < 0.6 && !first.duo) {
+    // SON MÉDIA DANS LE HOOK PASSE AVANT LE SPLIT DE MARQUE. Quand la fenêtre
+    // porte déjà un médaillon — l'animation qu'il a fabriquée — le split coupait
+    // l'écran en deux et affichait une pastille DESSINÉE à la place. Axel :
+    // « au début tu mets un écran 9:16 avec l'avatar principal, puis l'animation
+    // en plus petit ». Visage plein cadre + son animation en médaillon : c'est
+    // exactement ce que le médaillon fait, et le split le lui interdisait.
+    if (first && (first.start || 0) < 0.6 && !first.duo && !(first.insets || []).length) {
       const early = words.filter((w) => w.start < Math.min(4, first.end ?? 4))
       const hit = early.find((w) => BRANDS.includes(norm(w.text)))
       if (hit) {
