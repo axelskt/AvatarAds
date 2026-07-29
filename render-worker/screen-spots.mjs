@@ -65,7 +65,11 @@ const MENU_LABEL = {
 }
 
 const zonesOf = (screen) => (SCREENS[screen] || {}).zones || []
-const box = (z) => (z ? { x: z.x, y: z.y, w: z.w, h: z.h, label: z.label } : null)
+// `name` est conservé : c'est le seul moyen de reconnaître une entrée de MENU
+// (identique sur toutes les captures) d'un champ du contenu. Sans lui, le
+// rapprochement par mots cadrait la barre latérale dès que la voix prononçait
+// le nom d'un module — c'est-à-dire à peu près tout le temps.
+const box = (z) => (z ? { x: z.x, y: z.y, w: z.w, h: z.h, label: z.label, name: z.name } : null)
 
 /** Le rôle sémantique → la zone qui l'incarne sur cet écran. */
 export const spotOf = (screen, role) => {

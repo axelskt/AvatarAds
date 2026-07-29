@@ -324,6 +324,95 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (med) console.log(`▶ ${med} média(s) en médaillon sur l'avatar qui parle`)
   }
 
+  // ── 0b · QUAND IL S'ADRESSE À TOI, ON MONTRE LE VISAGE ──────────────────────
+  // (AVANT les phrases fortes ci-dessous : « maintenant, pour créer ton
+  //  influenceur IA » suit immédiatement « ton lien bio », et l'animation du
+  //  lien débordait sur l'annonce. La fenêtre du visage se réserve donc en
+  //  premier, l'animation prend ce qui reste devant elle.)
+  // Axel, sur cette vidéo : « "produit physique, coaching, formation, c'est toi
+  // qui vois" → je dois voir mon avatar principal », et « quand je dis
+  // "maintenant pour créer ton influenceur IA", l'avatar principal doit
+  // apparaître ». Les deux ont la même forme : la voix ne DÉSIGNE plus rien
+  // qu'on puisse montrer — elle rend la main au spectateur, ou elle annonce la
+  // suite. Toute illustration y est arbitraire (l'écran affichait une fiche
+  // produit à 39 € pendant qu'il énumérait des métiers). Un visage, lui, est
+  // toujours juste sur une adresse directe : c'est le moment de respirer.
+  const adresses = []
+  {
+    // ces tournures ferment une énumération ou ouvrent un chapitre
+    const FERME = [['cest', 'toi', 'qui', 'vois'], ['cest', 'comme', 'tu', 'veux'],
+      ['a', 'toi', 'de', 'voir'], ['peu', 'importe'], ['cest', 'toi', 'qui', 'decides']]
+    const OUVRE = [['maintenant'], ['desormais'], ['place', 'a'], ['on', 'passe', 'a']]
+    const n = (w) => norm(String(w && w.text || ''))
+    const suite = (i, seq) => seq.every((tk, k) => words[i + k] && n(words[i + k]) === tk)
+    for (let i = 0; i < words.length; i++) {
+      for (const seq of FERME) {
+        if (!suite(i, seq)) continue
+        // …et on remonte au DÉBUT de la phrase qu'elle conclut : l'énumération
+        // entière est le moment, pas ses trois derniers mots.
+        let a = i
+        for (let k = i - 1; k >= 0 && i - k < 14; k--) {
+          if (/[.!?]$/.test(String(words[k].text)) || words[k + 1].start - words[k].end > 0.34) break
+          a = k
+        }
+        const deb = Math.max(0, words[a].start - 0.15)
+        const fin = Math.min(D, words[i + seq.length - 1].end + 0.35)
+        if (fin - deb >= 1.2) adresses.push([deb, Math.min(fin, deb + 6.5)])
+        break
+      }
+      for (const seq of OUVRE) {
+        if (!suite(i, seq) || i < 3) continue
+        // …jusqu'à la fin de la proposition qu'elle ouvre (la virgule suivante)
+        let e = i
+        for (let k = i + 1; k < words.length && k - i < 12; k++) {
+          e = k
+          if (/[,.!?]$/.test(String(words[k].text))) break
+        }
+        const deb = Math.max(0, words[i].start - 0.2)
+        const fin = Math.min(D, words[e].end + 0.3)
+        if (fin - deb >= 1.2) adresses.push([deb, Math.min(fin, deb + 6.5)])
+        break
+      }
+    }
+    let n2 = 0
+    for (const [a, b] of adresses.sort((x, y) => x[0] - y[0])) {
+      if (overlaps(a, b)) continue
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true })
+      claim(a, b); n2++
+    }
+    if (n2) console.log(`▶ ${n2} adresse(s) directe(s) : le visage reprend l'écran`)
+  }
+
+
+  // ── 0a-bis · « LE LIEN EN BIO » EST UNE PHRASE, PAS UNE DEVINETTE ───────────
+  // Le chef d'orchestre posait ici un ENTONNOIR — trois barres chiffrées
+  // 1000 / 240 / 38 qu'Axel n'a pas comprises (« c'est quoi ça, on comprend
+  // rien ») — et, deux phrases plus tôt, une simple carte de texte
+  // « AJOUTE UN LIEN ». Or la voix dit exactement ce qu'il faut montrer :
+  // « ajouter un lien dans ta bio », puis « rediriger cette audience vers ton
+  // lien bio ». Une phrase aussi explicite bat n'importe quelle interprétation,
+  // donc elle réserve sa fenêtre avant tout le monde. Deux occurrences = deux
+  // animations différentes : le profil et son lien, puis le doigt qui appuie
+  // dessus (« mets le deuxième lien en bio que tu as créé »).
+  {
+    const n = (w) => norm(String(w && w.text || ''))
+    const SUITES = [['lien', 'dans', 'ta', 'bio'], ['lien', 'dans', 'la', 'bio'], ['lien', 'en', 'bio'],
+      ['lien', 'bio'], ['lien', 'dans', 'ma', 'bio'], ['lien', 'de', 'la', 'bio']]
+    const vus = []
+    for (let i = 0; i < words.length; i++) {
+      const seq = SUITES.find((q) => q.every((tk, k) => words[i + k] && n(words[i + k]) === tk))
+      if (!seq) continue
+      if (vus.length && i - vus[vus.length - 1] < 6) continue     // même mention, deux fois
+      vus.push(i)
+      const fin = words[i + seq.length - 1]
+      const a = Math.max(0, words[i].start - LEAD - 1.6)
+      const b = Math.min(D, fin.end + 1.9)
+      const quoi = vus.length % 2 === 1 ? 'bio' : 'linkbio'
+      if (add({ anim: quoi }, a, b)) console.log(`▶ « ${seq.join(' ')} » → animation ${quoi} (${r2(a)}s)`)
+      i += seq.length
+    }
+  }
+
   {
     // certaines animations ont besoin d'un visuel : le comparatif veut un vrai
     // visage, `tools` veut le logo. Le serveur ne connaît pas ces fichiers.
@@ -468,11 +557,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const heard = said.map(norm).join(' ')
         const byWords = spotForWords(t.screen, said)
         let spot = zone
-        if (byWords && byWords.label !== zone.label) spot = byWords
+        // LA BARRE LATÉRALE NE VOLE PAS LE CADRE. Elle est identique sur toutes
+        // les captures, et ses libellés sont les noms des modules — que la voix
+        // prononce sans arrêt. Sur « ouvre l'onglet Montage IA et IMPORTE ton
+        // image », le rapprochement par mots cadrait donc « Montage IA » puis
+        // « Images IA » dans le menu, pendant que la voix parlait du champ
+        // d'import. Les deux étapes tombaient hors du panneau et disparaissaient :
+        // trois secondes de capture immobile, exactement ce qu'Axel décrit
+        // (« importe ton image, là y'a rien »). Quand le plan a nommé un champ du
+        // CONTENU, une entrée de menu ne peut plus le remplacer.
+        const NAVZ = ['images-ia', 'montage-ia-beta', 'generateur', 'bibliotheque', 'enregistreur',
+          'nettoyage-audio', 'express', 'parrainage', 'cartoon', 'mon-compte']
+        const estNav = (z) => NAVZ.some((n) => String(z && z.name || '') === n)
+        if (byWords && byWords.label !== zone.label && !(estNav(byWords) && !estNav(zone))) spot = byWords
         else if (!byWords) {
           // aucun élément ne correspond… et le mot NOMME L'ÉCRAN (« Connecter
           // Claude » → 11-connecter-claude) : c'est une arrivée, pas un clic.
-          const scr = (t.screen.match(/[a-z]{5,}/g) || [])
+          // …sauf si l'étape doit ÉCRIRE quelque part : elle désigne forcément un
+          // champ, jamais l'écran entier. Sur « puis décris simplement l'image
+          // que tu souhaites générer », le mot « image » ressemblait au nom de
+          // l'écran (01-imagesIA) : le cadre était annulé, la phrase se tapait
+          // dans le vide et il ne se passait plus rien à l'écran.
+          const scr = t.text ? [] : (t.screen.match(/[a-z]{5,}/g) || [])
           if (scr.some((tk) => heard.includes(tk.slice(0, 5)))) spot = null
         }
         steps.push({ screen: t.screen, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
@@ -489,9 +595,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const b = r2(Math.min(D, steps[j].end + (steps[j].type ? 1.6 : 0.9)))
         const sl = add({ anim: 'screen', screen: steps[i].screen }, a, b)
         if (sl) {
+          // UNE ÉTAPE RECALÉE VAUT MIEUX QU'UNE ÉTAPE PERDUE. `add` peut décaler
+          // le début du panneau (la scène précédente occupe encore la place) :
+          // les étapes situées avant ce nouveau début étaient purement jetées,
+          // et l'écran restait figé pendant que la voix décrivait des clics.
+          // Elles sont désormais ramenées au bord du panneau, dans l'ordre.
+          let borne = r2(sl.start + 0.05)
           sl.steps = steps.slice(i, j + 1)
-            .filter((st) => st.t >= sl.start - 0.02 && st.t < sl.end - 0.25)
-            .map(({ t, spot, type }) => ({ t, spot, ...(type ? { type } : {}) }))
+            .filter((st) => st.t < sl.end - 0.25)
+            .map(({ t, spot, type }) => {
+              const tt = Math.max(t, borne)
+              borne = r2(tt + 0.35)
+              return { t: r2(Math.min(tt, sl.end - 0.3)), spot, ...(type ? { type } : {}) }
+            })
+            .filter((st) => st.t < sl.end - 0.25)
           if (sl.steps.length) placedScreens++
         }
         i = j + 1
@@ -511,7 +628,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // « avatarads.fr » — le « point F R » se perd dans le mot précédent. Chercher
     // un nom de domaine ne trouvait donc rien. On lit le verbe, puis on prend ce
     // qui suit « sur » : ça vaut pour « rends-toi sur Canva » comme pour nous.
-    const GO = ['aller', 'va', 'vas', 'rends', 'rendre', 'rendez', 'direction', 'connecte']
+    // …et « CRÉER TON COMPTE SUR X » est aussi une navigation. Axel : « au lieu
+    // de montrer "écris avatarads.fr", mets une page qui cherche et va sur le
+    // site, avec le bruit du clavier, et après ça affiche la LP — la visite
+    // guidée doit commencer d'ici ». Sans ces verbes, la seule occurrence
+    // reconnue était le « va sur avatarads.fr » de la toute fin, que la carte
+    // de CTA mange : le navigateur ne jouait jamais.
+    const GO = ['aller', 'va', 'vas', 'rends', 'rendre', 'rendez', 'direction', 'connecte',
+      'creer', 'cree', 'crees', 'inscris', 'inscrire', 'commence', 'commencer', 'compte']
     for (let j = 1; j < words.length - 1; j++) {
       if (norm(words[j].text) !== 'sur') continue
       const verb = words.slice(Math.max(0, j - 3), j).findIndex((w) => GO.includes(norm(w.text)))
@@ -953,7 +1077,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // Les fenêtres venues de l'orchestrateur peuvent couvrir 15-30 s d'un coup
   // (héritage du mode classique où l'avatar EST la vidéo). En Dynamique le
   // visage est une RESPIRATION : 6,5 s max par fenêtre, 40 % du temps au total.
+  const adresses2 = (plan.avatarSegments || []).filter((w) => w.adresse)
   if ((plan.avatarSegments || []).length) {
+    plan.avatarSegments = plan.avatarSegments.filter((w) => !w.adresse)
     const MAXW = 6.5
     let budget = D * 0.4
     // la fenêtre du hook a déjà été réservée en §0 : on la garde telle quelle
@@ -974,10 +1100,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // …avec ses médaillons : sans `...w` la fenêtre était recréée à vide et le
       // média accroché en §0a disparaissait sans un mot.
       clamped.push({ ...w, start: a, end: b })
+      budget += 0   // (les fenêtres d'adresse de §0b sont déjà réservées)
       claim(a, b)
       budget -= b - a
     }
-    plan.avatarSegments = clamped
+    // LES ADRESSES DIRECTES DE §0b SURVIVENT. Elles ont déjà réservé leur place
+    // avant tout le monde ; les repasser dans le rognage ci-dessus les faisait
+    // tomber sur leur propre réservation (`overlaps`) et disparaître.
+    plan.avatarSegments = [...clamped, ...adresses2].sort((x, y) => x.start - y.start)
   }
   // …et s'il n'en reste presque rien (l'orchestrateur n'en propose souvent QU'UNE,
   // le hook), on complète dans les trous libres : « 3-4 vidéos de l'avatar »

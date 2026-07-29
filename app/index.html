@@ -21521,7 +21521,7 @@ function _veoForme(o, prof){
   return '{' + Object.keys(o).slice(0,8).map(function(k){ return k+':'+_veoForme(o[k], prof+1) }).join(',') + '}';
 }
 function _veoPickVideo(resp){
-  let b64 = null, uri = null
+  let b64 = null, uri = null, fichier = null
   const seen = new Set()
   const walk = (node, depth) => {
     if(!node || depth > 8 || typeof node !== 'object' || seen.has(node)) return
@@ -21529,12 +21529,22 @@ function _veoPickVideo(resp){
     for(const [k, v] of Object.entries(node)){
       if(typeof v === 'string' && v){
         if(!b64 && /bytesbase64encoded|videobytes/i.test(k)) b64 = v
-        // une URI de vidéo : soit la clé le dit, soit on est dans un objet `video`
-        else if(!uri && /^(uri|videouri|gcsuri|url|downloaduri)$/i.test(k) && /^https?:|^gs:/i.test(v)) uri = v
+        // UNE ADRESSE DE VIDÉO, QUEL QUE SOIT LE NOM DE LA CLÉ. La liste fermée
+        // d'avant (uri|videoUri|gcsUri|url|downloadUri) tombait dès que Google
+        // renommait son champ — et la vidéo, produite et facturée, était perdue
+        // faute d'un synonyme. On accepte maintenant toute valeur QUI EST une
+        // adresse : la forme de la valeur est un critère bien plus stable que
+        // le nom que Google choisit ce mois-ci.
+        else if(!uri && /^(https?|gs):\/\//i.test(v)
+          && (/ur[il]|link|media|file|download|video/i.test(k) || /\.mp4(\?|$)|alt=media|\/files\//i.test(v))) uri = v
+        // …et à défaut d'adresse, le NOM DU FICHIER suffit : l'API expose
+        // « files/xxxx », on sait reconstruire le lien de téléchargement.
+        else if(!fichier && /^files\/[\w-]+$/i.test(v)) fichier = v
       } else if(v && typeof v === 'object') walk(v, depth + 1)
     }
   }
   walk(resp, 0)
+  if(!b64 && !uri && fichier) uri = 'https://generativelanguage.googleapis.com/v1beta/' + fichier + ':download?alt=media'
   return { b64, uri: b64 ? null : uri }
 }
 
@@ -21555,7 +21565,11 @@ async function _veoAwaitOp(opName){
         // invisible et l'erreur ne disait rien d'exploitable. La structure part
         // maintenant dans le message lui-même — c'est la seule façon de savoir
         // OÙ Google a déplacé la vidéo la prochaine fois.
-        err = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pd.response || pd);
+        // …et le NOM DE L'OPÉRATION : une opération Veo reste interrogeable, c'est
+        // par là qu'on récupère une vidéo déjà produite et déjà payée.
+        window._veoDerniereOp = { op: opName, reponse: pd.response || pd };
+        err = 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pd.response || pd)
+            + ' · opération ' + opName;
       }
       break;
     }
