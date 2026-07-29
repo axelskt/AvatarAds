@@ -11062,6 +11062,179 @@ function mtSetVideo(f){
   _mt.video = f;
   _mtDropFill('mtVideoDrop', 'mtVideoName', 'mtVideoSub', f.name);
 }
+// ── LE RAPPORT : CE QU'IL DIT, CE QUE L'IA VA MONTRER ───────────────────────
+// Une nuit d'allers-retours sur un seul montage, et presque chaque correction
+// disait la même chose : « ce que tu montres ne correspond pas à ce que je dis ».
+// Le problème n'était pas le montage, c'était la BOUCLE — il fallait attendre un
+// rendu de plusieurs minutes, le regarder, puis décrire ce qui n'allait pas.
+// Le plan sait pourtant déjà tout ça avant le premier pixel. On l'affiche donc :
+// une ligne par moment, le mot prononcé en face du visuel choisi. Ça se lit en
+// trente secondes et ça attrape les erreurs qui coûtaient un rendu entier —
+// une durée inventée, une animation hors sujet, des visuels jamais utilisés.
+// C'est le montage papier : on valide la liste avant de couper.
+const _MT_LIB = {
+  screen:'capture de ton app', ui:'scène d\'interface', logo:'ton logo en grand', result:'le résultat produit',
+  countup:'un compteur qui défile', views:'le compteur de vues qui grimpe', bio:'le profil et son lien',
+  linkbio:'le lien en bio, doigt qui appuie', funnel:'un entonnoir chiffré', product:'une fiche produit',
+  clock:'une durée qui se raccourcit', speed:'un compteur de vitesse', render:'un rendu qui se calcule',
+  avatar:'un avatar qui se crée', type:'un texte qui s\'écrit', post:'une publication qui part',
+  share:'like et partage', comment:'un commentaire qui se tape', keyword:'un mot-clé à commenter',
+  grow:'une courbe qui monte', money:'de l\'argent qui tombe', target:'une cible touchée',
+  compare:'un avant / après', swap:'une chose remplacée par une autre', tools:'les outils connectés',
+  network:'un réseau qui se relie', idea:'une idée qui s\'allume', rocket:'un décollage',
+  viral:'une propagation virale', mixer:'des réglages qu\'on pousse', layers:'des couches empilées',
+  export:'un export qui se lance', timeline:'une timeline qui se remplit', hook:'les 3 premières secondes',
+  crop:'un recadrage 9:16', silence:'les blancs qu\'on enlève', upload:'un envoi de fichier',
+  dropzone:'un fichier qu\'on dépose', search:'une recherche', chat:'une conversation',
+  leads:'des contacts qui arrivent', poll:'un sondage', trend:'une tendance qui monte',
+  free:'une offre gratuite', quality:'un gain de qualité', copy:'une clé qu\'on copie',
+  media:'TON média', medias:'TES photos, une par mot', avclip:'TON visage qui parle',
+};
+const _mtLibelle = (a) => _MT_LIB[a] || ('animation « ' + a + ' »');
+
+function _mtRapport(plan){
+  const caps = (plan.captions || []).filter(c => String(c.text||'').trim());
+  const dit = (a, b) => caps.filter(c => c.start >= a - 0.35 && c.start <= b + 0.1)
+    .map(c => c.text).join(' ').trim().slice(0, 74) || '—';
+  const f = (t) => (Math.round(t*10)/10).toFixed(1).replace('.', ',') + ' s';
+
+  // une ligne par élément visuel décidé par le chef d'orchestre
+  const lignes = [];
+  for (const w of plan.avatarSegments || [])
+    lignes.push({ t:w.start, e:w.end, quoi:'TON VISAGE qui parle', cls:'v' });
+  for (const b of plan.broll || [])
+    lignes.push({ t:b.start, e:b.end, quoi:'TON média « ' + (b.feature || b.assetId) + ' »', cls:'v' });
+  for (const sl of plan.slides || []) {
+    if (sl.layout === 'banner') continue;
+    const items = (sl.items || []).map(i => String(i.text||'').trim()).filter(Boolean);
+    let quoi = sl.anim ? _mtLibelle(sl.anim) : (items.length ? 'du TEXTE : ' + items.join(' · ') : 'une carte vide');
+    if (sl.value) quoi += ' → ' + sl.value;
+    lignes.push({ t:sl.start, e:sl.end, quoi, cls: sl.anim ? 'a' : 't' });
+  }
+  for (const tu of plan.tuto || [])
+    lignes.push({ t:null, quoi:'capture ' + tu.screen + ' → ' + tu.zone + (tu.text ? ' (on tape « '+tu.text+' »)' : ''), mot:tu.word, cls:'s' });
+  lignes.sort((x,y) => (x.t ?? 1e9) - (y.t ?? 1e9));
+
+  // ── les points d'attention : ce qui coûte un rendu quand on ne le voit pas ──
+  const alerte = [];
+  // UNE VALEUR AFFICHÉE DOIT AVOIR ÉTÉ DITE. C'est l'erreur qui coûte le plus
+  // cher : l'écran annonçait « 2 MIN » pendant que la voix disait « en quelques
+  // secondes ». On cherche donc le nombre — en chiffres OU en lettres — dans ce
+  // qui est prononcé autour de la scène.
+  const CHIFFRES = { zero:'0', un:'1', une:'1', deux:'2', trois:'3', quatre:'4', cinq:'5', six:'6',
+    sept:'7', huit:'8', neuf:'9', dix:'10', vingt:'20', trente:'30', cinquante:'50', cent:'100',
+    mille:'1000', million:'1000000', millions:'1000000' };
+  const nrm = (x) => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for (const sl of plan.slides || []) {
+    const brut = String(sl.value || '').trim(); if (!brut) continue;
+    const v = brut.replace(/[^0-9]/g,''); if (!v) continue;
+    const autour = caps.filter(c => c.start >= sl.start - 2.5 && c.start <= (sl.end ?? sl.start) + 2.5)
+      .map(c => nrm(c.text));
+    const nombres = new Set();
+    for (const w of autour) {
+      const d = w.replace(/[^0-9]/g,''); if (d) nombres.add(d);
+      const l = w.replace(/[^a-z]/g,''); if (CHIFFRES[l]) nombres.add(CHIFFRES[l]);
+    }
+    if (!nombres.has(v))
+      alerte.push('« ' + brut +' » s\'affiche à ' + f(sl.start) + ' mais ce nombre n\'est pas prononcé à ce moment-là.');
+  }
+  // …et une scène posée sur un silence ne montre rien à personne
+  for (const sl of plan.slides || []) {
+    if (sl.layout === 'banner' || !sl.anim) continue;
+    if (!caps.some(c => c.start >= sl.start - 0.4 && c.start <= (sl.end ?? sl.start) + 0.2))
+      alerte.push(_mtLibelle(sl.anim) + ' est posé à ' + f(sl.start) + ' alors que tu ne dis rien à cet instant.');
+  }
+  const utilises = new Set((plan.broll||[]).map(b => b.assetId));
+  const fournis  = (window._edAi && (_edAi.files||[]).map(a => a.id)) || [];
+  const inutiles = fournis.filter(id => !utilises.has(id));
+  if (inutiles.length) alerte.push(inutiles.length + ' de tes visuels ne seront pas utilisés — renomme-les avec ce qu\'ils montrent pour aider l\'IA à les placer.');
+  if (!(plan.avatarSegments||[]).length) alerte.push('Ton visage n\'apparaît jamais : la vidéo sera 100 % animations.');
+  if (!(plan.broll||[]).length && fournis.length) alerte.push('Aucun de tes médias n\'a trouvé sa place dans le montage.');
+
+  return new Promise((ok) => {
+    let m = document.getElementById('mtRapportModal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'mtRapportModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.74);backdrop-filter:blur(6px);display:grid;place-items:center;padding:14px';
+    const rows = lignes.map(l => {
+      const coul = l.cls === 'v' ? 'var(--accent-2)' : l.cls === 't' ? 'var(--text-3)' : 'var(--text2)';
+      const quand = l.t == null ? (l.mot ? 'sur « '+l.mot+' »' : '—') : f(l.t);
+      const voix = l.t == null ? '' : dit(l.t, l.e ?? l.t + 1);
+      return '<tr>'
+        + '<td style="padding:7px 10px 7px 0;color:var(--text-3);font-family:var(--mono);font-size:11px;white-space:nowrap;vertical-align:top">'+quand+'</td>'
+        + '<td style="padding:7px 12px 7px 0;color:var(--text2);font-size:12px;line-height:1.45;vertical-align:top">'+(voix?'« '+_esc(voix)+' »':'<span style="color:var(--text-3)">—</span>')+'</td>'
+        + '<td style="padding:7px 0;color:'+coul+';font-size:12px;font-weight:600;line-height:1.45;vertical-align:top">'+_esc(l.quoi)+'</td></tr>';
+    }).join('');
+    m.innerHTML = '<div style="width:min(700px,96vw);max-height:88vh;display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden">'
+      + '<div style="padding:18px 20px 12px;border-bottom:1px solid var(--border2)">'
+      +   '<div style="font-size:16.5px;font-weight:800">🎬 Ce que l\'IA va montrer</div>'
+      +   '<div style="font-size:12px;color:var(--text3);line-height:1.55;margin-top:5px">Relis la colonne de droite en face de ce que tu dis. Si une ligne ne va pas, ajuste ton brief ou tes visuels maintenant — après le rendu, il faut tout relancer.</div>'
+      + '</div>'
+      + (alerte.length ? '<div style="padding:12px 20px;background:rgba(255,107,53,.08);border-bottom:1px solid var(--border2)">'
+          + alerte.map(a => '<div style="font-size:12px;color:var(--accent-2);line-height:1.55;margin:2px 0">⚠️ '+_esc(a)+'</div>').join('') + '</div>' : '')
+      + '<div style="flex:1;overflow:auto;padding:6px 20px 14px"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
+      + '<div style="padding:14px 20px;border-top:1px solid var(--border2);display:flex;gap:10px">'
+      +   '<button id="mtRpBack" style="flex:0 0 auto;padding:12px 16px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font)">← Ajuster</button>'
+      +   '<button id="mtRpGo" style="flex:1;padding:12px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13.5px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font)">Lancer le rendu →</button>'
+      + '</div></div>';
+    document.body.appendChild(m);
+    m.querySelector('#mtRpGo').onclick   = () => { m.remove(); ok(true) };
+    m.querySelector('#mtRpBack').onclick = () => { m.remove(); ok(false) };
+  });
+}
+
+// ── AVANT DE LANCER : LE BRIEF, ET UN AVERTISSEMENT SI RIEN N'EST FOURNI ─────
+// Une nuit entière d'allers-retours sur un montage a montré d'où venaient les
+// erreurs : le chef d'orchestre ne savait pas de quoi parlait la vidéo, et il
+// n'avait aucune image de l'utilisateur. Il comblait donc — une fiche produit à
+// 39 € sur une énumération de métiers, « 2 MIN » sur « en quelques secondes ».
+// Rien de tout ça n'était rattrapable APRÈS : le crédit était dépensé, le rendu
+// fait, et il fallait tout recommencer. Ces deux garde-fous coûtent dix secondes
+// et suppriment la moitié des reprises.
+const MT_BRIEF_MIN = 25;   // « ok » ou « ma vidéo » ne renseignent rien
+
+// Le brief est OBLIGATOIRE. Sans lui, le chef d'orchestre devine le sujet à
+// partir des seuls mots prononcés — il ne sait ni ce que vend l'utilisateur, ni
+// à qui il parle, ni ce qu'il veut mettre en avant.
+function _mtBriefManquant(){
+  const v = String(_mt.brief || '').trim();
+  if (v.length >= MT_BRIEF_MIN) return false;
+  try { mtBriefOpen(); } catch(_) {}
+  const t = document.getElementById('mtBrief');
+  if (t) { t.focus(); try { t.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(_){} }
+  toast(v ? '✍️ Ton brief est trop court — dis en une phrase de quoi parle la vidéo et ce que tu veux mettre en avant'
+          : '✍️ Décris ta vidéo en une phrase — c\'est ce qui guide tout le montage');
+  return true;
+}
+
+// …et s'il ne fournit NI avatar NI image, on le prévient AVANT de débiter :
+// la vidéo sera faite d'animations génériques, jamais de son visage ni de ses
+// visuels. C'est un choix valable, mais il doit être conscient.
+function _mtSansMedia(){
+  const aImages = !!(window._edAi && (_edAi.files || []).length);
+  return !_mt.avatar && !aImages;
+}
+function _mtAvertirSansMedia(){
+  return new Promise((ok) => {
+    let m = document.getElementById('mtNoMediaModal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'mtNoMediaModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px';
+    m.innerHTML = '<div style="width:min(440px,94vw);background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px">'
+      + '<div style="font-size:17px;font-weight:800;margin-bottom:8px">⚠️ Aucun visuel à toi</div>'
+      + '<div style="font-size:12.5px;color:var(--text3);line-height:1.65;margin-bottom:8px">Tu n\'as fourni ni photo d\'avatar, ni image de référence. Ta vidéo sera montée <b>uniquement avec des animations</b> : quand tu parleras de toi, de ton produit ou de ton résultat, l\'IA ne pourra rien montrer de réel.</div>'
+      + '<div style="font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:16px">Une photo d\'avatar + 2 ou 3 visuels changent complètement le rendu.</div>'
+      + '<button id="mtNmAdd" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13.5px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px">🖼️ Ajouter mes visuels</button>'
+      + '<button id="mtNmGo" style="width:100%;padding:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font)">Continuer sans (100 % animations)</button>'
+      + '</div>';
+    document.body.appendChild(m);
+    m.querySelector('#mtNmAdd').onclick = () => {
+      m.remove(); ok(false);
+      const z = document.getElementById('edAiDrop') || document.getElementById('mtAvatarDrop');
+      if (z) try { z.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(_){}
+    };
+    m.querySelector('#mtNmGo').onclick = () => { m.remove(); ok(true) };
+  });
+}
+
 async function montageGo(){
   // ⛔ RÉSERVÉ ÉLITE POUR L'INSTANT. Décision d'Axel : le rendu demande encore du
   // travail, on ne l'ouvre pas aux paliers inférieurs tant qu'il n'est pas au
@@ -11075,6 +11248,9 @@ async function montageGo(){
       return;
     }
   }
+  if (_mtBriefManquant()) return;
+  if (_mtSansMedia() && !(await _mtAvertirSansMedia())) return;
+
   // le site est mémorisé une bonne fois — edAiGenerate/orchestrate le récupèrent tout seuls
   const site = (document.getElementById('mtSite')?.value || '').trim();
   try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
@@ -11508,6 +11684,10 @@ async function _mtSegmentedGenerate(){
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
+    // le seul instant où une erreur se corrige sans tout relancer.
+    if (typeof _mtProgPause === 'function') _mtProgPause();
+    if (!(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
@@ -11658,6 +11838,10 @@ async function _mtVideoGenerate(){
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
+    // le seul instant où une erreur se corrige sans tout relancer.
+    if (typeof _mtProgPause === 'function') _mtProgPause();
+    if (!(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
