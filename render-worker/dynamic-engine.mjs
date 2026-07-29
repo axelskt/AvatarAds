@@ -592,7 +592,12 @@ export function buildDynamicComposition(plan, opts = {}) {
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
         inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
-        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(avatarStill)}') center/cover"></div>`
+        // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
+        // principaux différents ». Le hook et le CTA sont deux moments distincts ;
+        // le même visage figé aux deux bouts donne l'impression d'un seul plan
+        // recollé. `photo` sur le segment prime, `avatarStill` reste le défaut.
+        const still = String(p.slide.photo || '') || avatarStill
+        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') center/cover"></div>`
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
       }
 
@@ -603,7 +608,13 @@ export function buildDynamicComposition(plan, opts = {}) {
       // porte le hook. Ici il devient une carte flottante en haut, l'avatar
       // continue de parler dessous : on voit CE DONT il parle ET qui le dit.
       for (const [k, ins] of (p.slide.insets || []).entries()) {
-        const iw = Math.round(W * 0.42), ih = Math.round(iw * 16 / 9)
+        // LE MÉDAILLON PREND LA FORME DE SON MÉDIA. La carte était portrait en
+        // dur : une animation 16:9 (les deux logos côte à côte) s'y retrouvait
+        // recadrée au centre, donc amputée de ses deux logos — exactement ce
+        // qu'elle avait à montrer. `ratio` = largeur/hauteur de la source.
+        const iw = Math.round(W * 0.42)
+        const rat = Number(ins.ratio) > 0 ? Number(ins.ratio) : 9 / 16
+        const ih = Math.round(iw / rat)
         const ix = Math.round(W - iw - W * 0.06), iy = Math.round(H * 0.11)
         const iid = id + 'in' + k
         const a = Math.max(liveT0, r2(ins.start)), b = Math.min(t1, r2(ins.end))
