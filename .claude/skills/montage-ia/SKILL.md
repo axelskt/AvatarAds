@@ -45,8 +45,12 @@ Chacune vient d'un rendu raté et d'un retour précis. Ne pas les redécouvrir.
 1. **Le visuel EST le mot.** Tout élément posé doit pouvoir nommer le mot qui le
    justifie. Si le libellé d'une zone / les mots-clés d'une animation ne se retrouvent
    pas dans ce qui est prononcé à cet instant, on n'affiche rien.
-2. **Un trou vaut mieux qu'une animation fausse.** Un écran sans cadre reste vrai ;
-   un encadré qui contredit la voix, non.
+2. **Un trou se remplit par le VISAGE, jamais par une animation fausse.** Axel :
+   « limite si tu as un trou tu mets ton avatar principal, ça dynamise et c'est
+   clean ». La hiérarchie est donc : un visuel juste (son média, une animation
+   justifiée, une capture) → sinon l'avatar principal → et seulement si aucun
+   visage n'est disponible, rien. Un écran vide reste vrai, mais il est mou ; un
+   encadré qui contredit la voix, lui, est faux — c'est le seul interdit.
 3. **Le chiffre affiché vient de ce qui est DIT.** Jamais une valeur de repli dans le
    code : l'écran a annoncé « 2 MIN » pendant que la voix disait « en quelques
    secondes ». Sans valeur → pas de nombre, ou une autre animation.

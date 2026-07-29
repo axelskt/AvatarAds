@@ -1239,6 +1239,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
   const avWinsAll = plan.avatarSegments || []
 
+  // ── 3b-bis · UN TROU SE REMPLIT PAR LE VISAGE ───────────────────────────────
+  // Axel : « limite si tu as un trou tu mets ton avatar principal, ça dynamise et
+  // c'est clean ». Le plafond de §3b (40 % de visage, 4 fenêtres) protégeait le
+  // rythme, mais il laissait passer des creux : la scène d'avant s'y étirait, ou
+  // l'écran restait sur un fond vide. Un visage n'est jamais faux — c'est bien
+  // l'animation hors sujet qui l'est. On passe donc une dernière fois sur ce qui
+  // reste et on y met la personne qui parle, sans plafond.
+  {
+    const bornes = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
+      .sort((a, b) => a[0] - b[0])
+    const creux = []
+    let cur = 0
+    for (const [a, b] of bornes) { if (a - cur >= 1.2) creux.push([cur, a]); cur = Math.max(cur, b) }
+    if (D - cur >= 1.2) creux.push([cur, D])
+    let n = 0
+    for (const [a, b] of creux) {
+      const d = Math.min(b - 0.05, a + 6.5)
+      if (d - a < 1.2 || overlaps(a, d)) continue
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true })
+      claim(a, d); n++
+    }
+    if (n) {
+      plan.avatarSegments.sort((x, y) => x.start - y.start)
+      console.log(`▶ ${n} trou(s) comblé(s) par le visage`)
+    }
+  }
+
   // ── 3c · PAS DE MOT SEUL ENTRE DEUX ANIMATIONS ──
   // Un trou de 0,6 s entre deux scènes devient un panneau de texte : un mot
   // apparaît, disparaît, ne montre rien. Axel : « priorise les animations à la
