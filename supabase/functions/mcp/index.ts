@@ -229,15 +229,37 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 // base64 dans un résultat d'outil. Le lien, lui, coûte trois lignes.
 const carteHtml = (url: string, nom: string, mime: string) => {
   const video = mime.startsWith('video')
+  // Contrastes : la premiere version posait un libelle a 65 % d'opacite et un
+  // bouton a bordure grise 35 % — sur le fond sombre de Claude, Axel ne voyait
+  // ni l'un ni l'autre. Les couleurs sont maintenant declarees pour les DEUX
+  // themes via prefers-color-scheme, et « Ouvrir » a un fond, pas un filet.
   const media = video
-    ? `<video src="${url}" controls playsinline preload="metadata" style="width:100%;max-height:70vh;border-radius:12px;background:#000;display:block"></video>`
-    : `<audio src="${url}" controls preload="metadata" style="width:100%;display:block"></audio>`
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:12px;color-scheme:light dark">
+    ? `<video src="${url}" controls playsinline preload="metadata" poster="" class="aa-m"></video>`
+    : `<audio src="${url}" controls preload="metadata" class="aa-m" style="height:44px"></audio>`
+  return `<style>
+  .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
+    background:#fff;color:#1a1a1a;max-width:520px}
+  .aa-m{width:100%;display:block;background:#000;max-height:66vh}
+  .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
+    border-top:1px solid rgba(128,128,128,.22)}
+  .aa-n{font-size:12.5px;font-weight:600;opacity:.9;font-variant-numeric:tabular-nums}
+  .aa-a{font-size:13px;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:10px;
+    line-height:1;white-space:nowrap}
+  .aa-dl{background:#FF5A1F;color:#fff}
+  .aa-op{background:rgba(128,128,128,.16);color:inherit}
+  @media (prefers-color-scheme:dark){
+    .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
+    .aa-b{border-top-color:rgba(255,255,255,.12)}
+    .aa-op{background:rgba(255,255,255,.14)}
+  }
+</style>
+<div class="aa-c">
   ${media}
-  <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
-    <span style="font-size:12px;opacity:.65">${nom}</span>
-    <a href="${url}" download="${nom}" style="margin-left:auto;font-size:12.5px;font-weight:600;text-decoration:none;padding:7px 13px;border-radius:9px;background:#FF5A1F;color:#fff">Télécharger</a>
-    <a href="${url}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:600;text-decoration:none;padding:7px 13px;border-radius:9px;border:1px solid rgba(128,128,128,.35);color:inherit">Ouvrir</a>
+  <div class="aa-b">
+    <span class="aa-n">${nom}</span>
+    <a class="aa-a aa-dl" href="${url}" download="${nom}" style="margin-left:auto">Télécharger</a>
+    <a class="aa-a aa-op" href="${url}" target="_blank" rel="noopener">Ouvrir</a>
   </div>
 </div>`
 }
