@@ -613,7 +613,14 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (job.status === 'done' && job.result_url) {
     const vignette = await blocImage(String(job.preview_url || job.result_url))
-    const texte = { type: 'text', text: `✅ Image prête !\nURL (pleine résolution) : ${job.result_url}` }
+    // L'image s'affiche bien, mais DANS la carte de l'outil — pas dans le fil de
+    // la conversation (bug claude.ai connu, cf. anthropics/claude-ai-mcp#238).
+    // Le seul chemin pour qu'elle descende dans la réponse : que le modèle
+    // l'écrive lui-même en markdown. On le lui demande explicitement ici.
+    const texte = { type: 'text', text: `✅ Image prête !
+URL (pleine résolution) : ${job.result_url}
+
+Affiche-la dans ta réponse en écrivant exactement : ![image](${job.result_url})` }
     return vignette ? { content: [vignette, texte] } : { content: [texte] }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
