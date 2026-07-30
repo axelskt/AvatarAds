@@ -41,6 +41,27 @@ import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
 //           correspond pas » — remplacee par `lowcost` (fleche + piece)
 //   free    sur « zero competence a avoir »   → « supprime cette animation
 //           gratuit la »
+// Ce que le chef d'orchestre demande parfois et qui n'existe pas sous ce nom :
+// plutot que de jeter, on l'envoie vers la plus proche de la banque.
+const REDIRECTIONS = {
+  // Les animations qu'Axel a refusees ne disparaissent pas : elles pointent
+  // vers celle qu'il a validee pour ce moment-la. Le chef d'orchestre garde
+  // donc sa fenetre ET son intention, avec le visuel qu'Axel veut.
+  versus: 'twopaths',      // « aucune concurrence » → les deux chemins
+  clock: 'daypart',        // « une a deux heures par jour » → le creneau
+  calendar: 'daypart',
+  check: 'blankfill',      // « zero competence » → la page qui se remplit
+  free: 'blankfill',
+  target: 'easyup',        // l'objectif atteint sans effort → la courbe douce
+  hook: 'rocket',          // « le debut du business » → l'elan
+  robot: 'idea', ia: 'idea', cerveau: 'idea', brain: 'idea',
+  temps: 'daypart', horloge: 'daypart', calendrier: 'daypart',
+  argent: 'money', cash: 'money', euro: 'money', cout: 'lowcost', budget: 'lowcost',
+  graph: 'trend', graphique: 'trend', courbe: 'trend', stats: 'trend',
+  facile: 'easyup', simple: 'easyup', debutant: 'easyup',
+  seul: 'twopaths', different: 'twopaths', foule: 'twopaths',
+  zero: 'blankfill', vide: 'blankfill', depart: 'blankfill',
+}
 const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free'])
 const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
@@ -231,7 +252,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // Le filtre doit etre ICI, au seul passage obligé : filtrer la liste ANIMS
     // ne bloquait que mes tables de mots-clés, et les scènes proposées par le
     // chef d'orchestre repassaient devant (clock revenait à 13,8 s).
-    if (REFUSEES.has(String(slide && slide.anim || ''))) return null
+    // Refusee par Axel ? On ne jette pas : on remplace par celle qu'il a validee
+    // pour ce moment-la. Le refus ne doit pas coûter la fenêtre — sinon le trou
+    // retombe sur le visage, ce qu'il reproche depuis le debut.
+    const nom = String(slide && slide.anim || '')
+    if (REFUSEES.has(nom)) {
+      const proche = REDIRECTIONS[nom]
+      if (proche && !REFUSEES.has(proche)) slide = { ...slide, anim: proche }
+      else return null
+    }
     ;[a, b] = fit(a, b)
     // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
     // sportif » — laisse 0,4 s par mot : au plancher commun, les deux dernieres
@@ -1202,6 +1231,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // dérivation ne lisait que les slides. Résultat : une énumération de sept
   // bénéfices tenait en trois panneaux longs, et le visage bouchait le reste.
   //
+  // ── LE CHEF D'ORCHESTRE SERT AVANT MES TABLES ────────────────────────────
+  // Mesure sur Cartoon 17 : 3 de ses 13 scenes arrivaient dans la video, dont
+  // 5 « en collision » — c'est-a-dire ecrasees parce que la passe des beats
+  // ci-dessous avait deja reserve la fenetre. Axel paie une analyse de son
+  // audio dont on jetait les trois quarts, et ce qu'il voyait a l'ecran etait
+  // mes tables de mots-cles ecrites a la main, pas les choix du modele.
+  // Il passe donc EN PREMIER. Mes tables ne servent plus qu'a boucher ce qu'il
+  // n'a pas couvert. L'ordre de reservation decide de tout dans ce moteur.
+  placeServerAnims()
+
   // On repasse donc sur les beats AVANT de poser les fenêtres avatar : chaque
   // mot-clé réellement prononcé, qui trouve une place libre, reçoit SON
   // animation SUR SON MOT. Le visage ne récupère plus que ce qui reste — c'est
@@ -1279,7 +1318,6 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (posB) console.log(`▶ ${posB} idée(s) du script animée(s) sur leur mot` + (sautB ? ` · ${sautB} sans place` : ''))
   }
 
-  placeServerAnims()
   placeLocalAnims()
   placeServerText()
 
@@ -1525,9 +1563,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
   const kept = []
   const blockers = [...out, ...avWinsAll]
   let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0, dropCreux = 0
-  for (const sl of srcSlides) {
+  for (let sl of srcSlides) {
     if (consumed.has(sl) || consumedByPlan.has(sl)) continue
-    if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) { dropUnrenderable++; continue }
+    if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) {
+      // On jetait en silence : impossible de savoir CE QU'IL DEMANDE. Axel :
+      // « on peut toujours créer l'animation qu'il veut si elle est pertinente
+      // ou on la redirige vers la plus proche ». Encore faut-il connaître le
+      // nom. On le journalise, et on tente une redirection par synonyme.
+      const voulu = String(sl.anim)
+      const proche = REDIRECTIONS[voulu]
+      if (proche && RENDERABLE.has(proche)) {
+        console.log(`▶ « ${voulu} » n'existe pas → redirigé vers « ${proche} »`)
+        sl = { ...sl, anim: proche }
+      } else {
+        console.log(`▶ « ${voulu} » demandé par le chef d'orchestre : absent de la banque`)
+        dropUnrenderable++; continue
+      }
+    }
     // ⚠️ ICI se trouvait la ligne qui jetait TOUTE animation serveur sans texte.
     // Comme une scène d'animation n'en a jamais — l'animation EST le visuel —
     // elle supprimait la totalité des propositions du chef d'orchestre, et mes
