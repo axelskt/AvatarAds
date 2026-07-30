@@ -609,46 +609,95 @@ export function animHtml(name, s, W, H, vs) {
           ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>`)
     }
     case 'lowcost': {
-      // Une flèche qui DESCEND, une pièce qui tombe avec elle : ce que ça coûte
-      // au départ est petit. Axel : « une flèche qui part vers le bas avec une
-      // icône d'argent ». La flèche est le sujet, la pièce la précise.
-      const aw = Math.round(f.w * 0.30), ah = Math.round(f.h * 0.46)
-      const ax = Math.round((f.w - aw) / 2), ay = Math.round(f.h * 0.16)
-      const cd = Math.round(f.h * 0.19)
-      return box(`
-        <svg class="an-p" id="${id}ar" style="left:${ax}px;top:${ay}px;width:${aw}px;height:${ah}px;overflow:visible" viewBox="0 0 100 160" preserveAspectRatio="none">
-          <path id="${id}sh" d="M50 6 L50 116" fill="none" stroke="${P.acc}" stroke-width="13" stroke-linecap="round"
-            stroke-dasharray="120" stroke-dashoffset="120" />
-          <path id="${id}hp" d="M18 92 L50 128 L82 92" fill="none" stroke="${P.acc}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"
-            stroke-dasharray="110" stroke-dashoffset="110" />
-        </svg>
-        <span class="an-p" id="${id}co" style="left:${Math.round((f.w - cd) / 2)}px;top:${Math.round(f.h * 0.63)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${P.acc};box-shadow:0 14px 34px rgba(0,0,0,.26);display:grid;place-items:center;opacity:0">
-          <span style="font:800 ${Math.round(cd * 0.52)}px/1 ${SANS};color:#FFF">€</span></span>`)
-    }
-    case 'twopaths': {
-      // Deux chemins depuis un même point : UNE silhouette part d'un côté,
-      // la foule part de l'autre. Axel, pour « aucune concurrence » : « 1
-      // personne prend un chemin et 50 autres prennent l'autre ».
-      const cx = Math.round(f.w / 2), cy = Math.round(f.h * 0.20)
-      const bd = Math.round(f.h * 0.13), sd = Math.round(f.h * 0.055)
-      const bas = Math.round(f.h * 0.78)
-      const gx = Math.round(f.w * 0.20), dx = Math.round(f.w * 0.78)
-      const pion = (x, y, d, col) => `<span class="an-p" style="left:${x - Math.round(d / 2)}px;top:${y - Math.round(d / 2)}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.3)}px;background:${col};border:2px solid ${P.line}">
-        <span class="an-p" style="left:28%;top:16%;width:44%;height:36%;border-radius:50%;background:rgba(255,255,255,.85)"></span>
-        <span class="an-p" style="left:20%;top:58%;width:60%;height:32%;border-radius:${Math.round(d * 0.28)}px ${Math.round(d * 0.28)}px 0 0;background:rgba(255,255,255,.85)"></span></span>`
-      let foule = ''
-      for (let k = 0; k < 12; k++) {
-        const cxx = dx + ((k % 4) - 1.5) * Math.round(sd * 1.25)
-        const cyy = bas + Math.floor(k / 4) * Math.round(sd * 1.2) - Math.round(sd * 1.2)
-        foule += `<span class="an-p an-fl">${pion(cxx, cyy, sd, P.soft)}</span>`
-      }
+      // Un VRAI graphe qui descend. Axel avait refuse la fleche : « je veux un
+      // vrai graph qui descend plutot qu'une fleche ». Quatre barres qui
+      // decroissent, la courbe qui plonge, la piece au bout.
+      const gx = Math.round(f.w * 0.16), gy = Math.round(f.h * 0.22)
+      const gw = Math.round(f.w * 0.70), gh = Math.round(f.h * 0.44)
+      const bw = Math.round(gw * 0.15), pas = Math.round(gw * 0.23)
+      const base = gy + gh
+      let barres = ''
+      const hs = [1, 0.70, 0.42, 0.20]
+      hs.forEach((r, k) => {
+        const bh = Math.round(gh * r), bx = gx + Math.round(gw * 0.09) + k * pas
+        const col = k === 3 ? P.acc : k === 2 ? 'rgba(255,90,31,.34)' : P.soft
+        barres += `<span class="an-p an-bar" id="${id}b${k}" style="left:${bx}px;top:${base - bh}px;width:${bw}px;height:${bh}px;border-radius:${Math.round(bw * 0.26)}px;background:${col};transform-origin:50% 100%"></span>`
+      })
+      const cd = Math.round(f.h * 0.115)
       return box(`
         <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px;overflow:visible" viewBox="0 0 ${f.w} ${f.h}">
-          <path id="${id}pg" d="M${cx} ${cy} C${cx - Math.round(f.w * 0.10)} ${Math.round(f.h * 0.45)} ${gx} ${Math.round(f.h * 0.55)} ${gx} ${bas}" fill="none" stroke="${P.acc}" stroke-width="9" stroke-linecap="round" stroke-dasharray="1200" stroke-dashoffset="1200" />
-          <path id="${id}pd" d="M${cx} ${cy} C${cx + Math.round(f.w * 0.10)} ${Math.round(f.h * 0.45)} ${dx} ${Math.round(f.h * 0.55)} ${dx} ${bas}" fill="none" stroke="${P.line}" stroke-width="9" stroke-linecap="round" stroke-dasharray="1200" stroke-dashoffset="1200" />
+          <path d="M${gx} ${gy} L${gx} ${base} L${gx + gw} ${base}" fill="none" stroke="${P.line}" stroke-width="3" stroke-linecap="round"/>
+          <path id="${id}cv" d="M${gx + Math.round(gw * 0.14)} ${gy + Math.round(gh * 0.10)} C${gx + Math.round(gw * 0.36)} ${gy + Math.round(gh * 0.32)} ${gx + Math.round(gw * 0.52)} ${gy + Math.round(gh * 0.60)} ${gx + Math.round(gw * 0.80)} ${base - Math.round(gh * 0.18)}"
+            fill="none" stroke="${P.acc}" stroke-width="8" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900"/>
         </svg>
-        <span class="an-p an-solo" id="${id}so">${pion(gx, bas, bd, P.acc)}</span>
-        ${foule}`)
+        <span class="an-p" id="${id}co" style="left:${Math.round((f.w - cd) / 2)}px;top:${Math.round(f.h * 0.74)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${P.acc};box-shadow:0 14px 34px rgba(0,0,0,.24);display:grid;place-items:center;opacity:0">
+          <span style="font:800 ${Math.round(cd * 0.5)}px/1 ${SANS};color:#FFF">&#8364;</span></span>
+        ${barres}`)
+    }
+    case 'twopaths': {
+      // La perspective de l'image qu'Axel a envoyee : un chemin qui s'ouvre en
+      // bas, la foule qui s'ecoule d'un cote, LUI seul de l'autre. La premiere
+      // version — deux traits et des pastilles — etait « pas ouf ».
+      const som = Math.round(f.h * 0.24), bas = f.h
+      const cxx = Math.round(f.w / 2)
+      const marcheur = (x, y, sc, col, cls) => {
+        const t = Math.round(f.h * 0.030 * sc)
+        return `<span class="an-p ${cls}" style="left:${x - t}px;top:${y - Math.round(t * 2.4)}px;width:${t * 2}px;height:${Math.round(t * 3.4)}px">
+          <span class="an-p" style="left:14%;top:0;width:72%;height:34%;border-radius:50%;background:${col}"></span>
+          <span class="an-p" style="left:0;top:36%;width:100%;height:64%;border-radius:${Math.round(t * 0.5)}px ${Math.round(t * 0.5)}px ${Math.round(t * 0.2)}px ${Math.round(t * 0.2)}px;background:${col}"></span></span>`
+      }
+      const P_ = [[0.70,0.40,.36],[0.77,0.44,.42],[0.68,0.50,.50],[0.83,0.52,.52],[0.73,0.58,.60],[0.90,0.61,.64],
+                  [0.65,0.66,.70],[0.80,0.70,.78],[0.96,0.73,.82],[0.71,0.79,.92],[0.88,0.84,1.0],[0.78,0.92,1.12]]
+      let foule = ''
+      P_.forEach(([rx, ry, sc]) => { foule += marcheur(Math.round(f.w * rx), Math.round(f.h * ry), sc, P.ink, 'an-fl') })
+      return box(`
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px" viewBox="0 0 ${f.w} ${f.h}">
+          <path d="M${cxx} ${som} L${Math.round(f.w * 0.30)} ${bas} L0 ${bas} L${Math.round(cxx - f.w * 0.11)} ${som} Z" fill="rgba(255,255,255,.92)"/>
+          <path d="M${cxx} ${som} L${Math.round(f.w * 0.70)} ${bas} L${f.w} ${bas} L${Math.round(cxx + f.w * 0.11)} ${som} Z" fill="rgba(255,255,255,.92)"/>
+        </svg>
+        ${foule}
+        <span class="an-p an-solo" id="${id}so">${marcheur(Math.round(f.w * 0.20), Math.round(f.h * 0.66), 0.78, P.acc, '')}</span>`)
+    }
+    case 'daypart': {
+      // Une journee en creneaux : tout est vide sauf DEUX heures, en couleur.
+      const cw = Math.round(f.w * 0.46), ch = Math.round(f.h * 0.062)
+      const cx2 = Math.round((f.w - cw) / 2), y0 = Math.round(f.h * 0.16)
+      let h = ''
+      for (let k = 0; k < 10; k++) {
+        const plein = k === 4 || k === 5
+        h += `<span class="an-p an-cr" id="${id}c${k}" style="left:${cx2}px;top:${y0 + k * Math.round(ch * 1.25)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(ch * 0.3)}px;background:${plein ? P.acc : P.soft}"></span>`
+      }
+      h += `<span class="an-p" id="${id}lb" style="left:0;top:${Math.round(f.h * 0.82)}px;width:${f.w}px;text-align:center;font:800 ${Math.round(f.h * 0.075)}px/1 ${SANS};color:${P.acc};opacity:0">2h</span>`
+      return box(h)
+    }
+    case 'blankfill': {
+      // Une page blanche qui se remplit de resultats : on part de rien.
+      const pw = Math.round(f.w * 0.72), ph = Math.round(f.h * 0.56)
+      const px = Math.round((f.w - pw) / 2), py = Math.round(f.h * 0.20)
+      const g = Math.round(pw * 0.06), cw2 = Math.round((pw - g * 3) / 2), chh = Math.round(cw2 * 0.94)
+      const tons = ['rgba(255,90,31,.88)', 'rgba(255,90,31,.62)', 'rgba(255,90,31,.40)', 'rgba(255,90,31,.22)', P.soft, P.soft]
+      let h = `<span class="an-p" style="left:${px}px;top:${py}px;width:${pw}px;height:${ph}px;border-radius:${Math.round(pw * 0.07)}px;background:#FFF;border:2px solid ${P.line}"></span>`
+      for (let k = 0; k < 6; k++) {
+        const cxx = px + g + (k % 2) * (cw2 + g), cyy = py + g + Math.floor(k / 2) * (chh + g)
+        h += `<span class="an-p an-cd" id="${id}d${k}" style="left:${cxx}px;top:${cyy}px;width:${cw2}px;height:${chh}px;border-radius:${Math.round(cw2 * 0.14)}px;background:${tons[k]}"></span>`
+      }
+      return box(h)
+    }
+    case 'easyup': {
+      // Une courbe VERTE qui monte doucement : la facilite, sans a-coup.
+      const VERT = '#22B573'
+      const gx = Math.round(f.w * 0.14), gy = Math.round(f.h * 0.24)
+      const gw = Math.round(f.w * 0.74), gh = Math.round(f.h * 0.44)
+      const base = gy + gh
+      return box(`
+        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px;overflow:visible" viewBox="0 0 ${f.w} ${f.h}">
+          <path d="M${gx} ${gy} L${gx} ${base} L${gx + gw} ${base}" fill="none" stroke="${P.line}" stroke-width="3" stroke-linecap="round"/>
+          <path id="${id}up" d="M${gx + Math.round(gw * 0.08)} ${base - Math.round(gh * 0.10)} C${gx + Math.round(gw * 0.34)} ${base - Math.round(gh * 0.22)} ${gx + Math.round(gw * 0.56)} ${base - Math.round(gh * 0.62)} ${gx + Math.round(gw * 0.90)} ${gy + Math.round(gh * 0.06)}"
+            fill="none" stroke="${VERT}" stroke-width="9" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900"/>
+          <path id="${id}tp" d="M${gx + Math.round(gw * 0.74)} ${gy + Math.round(gh * 0.14)} L${gx + Math.round(gw * 0.92)} ${gy + Math.round(gh * 0.02)} L${gx + Math.round(gw * 0.96)} ${gy + Math.round(gh * 0.26)}"
+            fill="none" stroke="${VERT}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="120" stroke-dashoffset="120"/>
+          <circle id="${id}pt" cx="${gx + Math.round(gw * 0.08)}" cy="${base - Math.round(gh * 0.10)}" r="9" fill="${VERT}" opacity="0"/>
+        </svg>`)
     }
     case 'network': {
       // Des profils qui se relient : le réseau, la communauté.
@@ -2856,17 +2905,29 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an .an-rk', { scale: 0.3, autoAlpha: 0 }, { scale: 1.15, autoAlpha: 0.5, duration: 0.4, stagger: 0.13, ease: 'power2.out', transformOrigin: '50% 50%' }, ${r2(t0 + 0.2)});
       tl.to('#${id}an .an-rk', { autoAlpha: 0, duration: 0.4, stagger: 0.13 }, ${r2(t0 + 0.6)});
       tl.fromTo('#${id}hd', { x: ${FW(id, -0.5)}, y: ${FH(id, 0.5)}, scale: 0.4, autoAlpha: 0 }, { x: 0, y: 0, scale: 1, autoAlpha: 1, duration: ${r2(Math.max(0.5, dur - 0.7))}, ease: 'power2.out' }, ${t0});`
+    case 'daypart':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cr', { scaleX: 0.2, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.22, stagger: 0.05, ease: 'power2.out', transformOrigin: '0% 50%' }, ${t0});
+      tl.fromTo('#${id}c4', { scale: 1 }, { scale: 1.08, duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.7)});
+      tl.fromTo('#${id}c5', { scale: 1 }, { scale: 1.08, duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.76)});
+      tl.fromTo('#${id}lb', { y: ${FH(id, 0.05)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4, ease: 'back.out(2)' }, ${r2(t0 + 0.8)});`
+    case 'blankfill':
+      return inOut + `
+      tl.fromTo('#${id}an .an-cd', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.11, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.15)});`
+    case 'easyup':
+      return inOut + `
+      tl.fromTo('#${id}pt', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 1, scale: 1, duration: 0.25, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
+      tl.fromTo('#${id}up', { strokeDashoffset: 900 }, { strokeDashoffset: 0, duration: ${r2(Math.max(0.7, dur - 0.7))}, ease: 'power1.inOut' }, ${r2(t0 + 0.15)});
+      tl.fromTo('#${id}tp', { strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + Math.max(0.6, dur - 0.75))});`
     case 'lowcost':
       return inOut + `
-      tl.fromTo('#${id}sh', { strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.5, ease: 'power2.out' }, ${t0});
-      tl.fromTo('#${id}hp', { strokeDashoffset: 110 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + 0.38)});
-      tl.fromTo('#${id}co', { y: ${FH(id, -0.30)}, scale: 0.5, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.5, ease: 'back.out(1.8)' }, ${r2(t0 + 0.5)});`
+      tl.fromTo('#${id}an .an-bar', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.32, stagger: 0.1, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}cv', { strokeDashoffset: 900 }, { strokeDashoffset: 0, duration: 0.6, ease: 'power2.inOut' }, ${r2(t0 + 0.3)});
+      tl.fromTo('#${id}co', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.4, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.75)});`
     case 'twopaths':
       return inOut + `
-      tl.fromTo('#${id}pg', { strokeDashoffset: 1200 }, { strokeDashoffset: 0, duration: 0.55, ease: 'power2.inOut' }, ${t0});
-      tl.fromTo('#${id}pd', { strokeDashoffset: 1200 }, { strokeDashoffset: 0, duration: 0.55, ease: 'power2.inOut' }, ${r2(t0 + 0.1)});
-      tl.fromTo('#${id}so', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.5)});
-      tl.fromTo('#${id}an .an-fl', { scale: 0.2, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.035, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.62)});`
+      tl.fromTo('#${id}an .an-fl', { y: ${FH(id, -0.06)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.3, stagger: 0.045, ease: 'power2.out' }, ${t0});
+      tl.fromTo('#${id}so', { y: ${FH(id, -0.06)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4, ease: 'power2.out' }, ${r2(t0 + 0.45)});`
     case 'network':
       return inOut + `
       tl.fromTo('#${id}an .an-ln', { scaleX: 0 }, { scaleX: 1, duration: 0.3, stagger: 0.07, ease: 'power2.out', transformOrigin: '0% 50%' }, ${t0});
