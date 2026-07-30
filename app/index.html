@@ -22884,32 +22884,55 @@ const _AC_VOICE_PRESETS = {
   // -4/-6/-7 dB avec un ratio de 6, il serrait fort la bande des sifflantes et
   // c'est ce qui « s'entend traite ». Il descend a -1,5/-2,5/-3,5 : il protege
   // encore des « ss » agressifs, il ne sculpte plus la voix.
-  // ── ON NE MASTERISE PAS DEUX FOIS ─────────────────────────────────────────
-  // Les cibles etaient a -17/-18 LUFS : des niveaux de DIFFUSION plateforme.
-  // Or cette voix repart dans le Montage IA, qui la renormalise. On la poussait
-  // donc au maximum, puis on la repoussait — d'ou une voix qui s'entend
-  // « saturee » sans jamais ecreter (mesure : 0 echantillon au plafond, pic a
-  // -1,5 dB, mais un RMS a -19,4 dB, tres chaud). Les cibles descendent de 2,5 a
-  // 3 dB et les taux de compression avec : on laisse de la marge au lieu de
-  // livrer un fichier deja au taquet.
-  // ── LES PRESETS AJOUTENT DU CORPS, ILS N'EN ENLEVENT PLUS ─────────────────
-  // Ils creusaient tous 250-300 Hz (« le carton ») en montant la presence et
-  // l'air. Ce reglage vient du studio, ou l'on capte un micro statique proche
-  // et grave. Sur un micro-cravate — deja clair et sans grave — on retirait le
-  // peu de corps qui restait et on ajoutait de la durete : la voix sortait
-  // maigre. Axel : « ca donne un audio pourri ».
-  // La bande `mud` sert donc maintenant a AJOUTER du bas-medium (gain positif),
-  // la presence reste discrete et l'air quasi nul. Le caractere vient du corps
-  // et de la compression, pas d'un coup de pouce dans les aigus.
-  natural: { hp: 70, mud: { f: 190, g: 1.2, q: 0.8 }, pres: { f: 3000, g: 1.0, q: 0.9 }, air: { f: 11500, g: 0.4 }, lp: 17000, deess: -1.5, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -21 },
-  // podcast : le creux à 250 + la présence à 3500 + l'air à 11k s'additionnaient
-  // en un basculement de 6 dB vers les aigus — mesuré sur une prise DJI : +10 dB
-  // sous 2 kHz contre +16 dB au-dessus. Sur un micro-cravate, déjà clair par
-  // nature, ça donne une voix maigre et agressive. Axel : « quand j'active
-  // Volume constant ça donne un audio pourri ». Les trois corrections sont
-  // divisées par deux : on garde le caractère, on enlève la dureté.
-  podcast: { hp: 70, mud: { f: 180, g: 2.2, q: 0.8 }, pres: { f: 3000, g: 1.4, q: 0.8 }, air: { f: 11500, g: 0.6 }, lp: 17000, deess: -2.5, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -20.5 },
-  punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -3.5, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -19.5 },
+  // ── LE NIVEAU N'ETAIT PAS LE COUPABLE ─────────────────────────────────────
+  // Les cibles avaient ete descendues a -19,5/-21 LUFS en pensant qu'une voix
+  // « poussee au maximum » expliquait ce qu'Axel entend. Mesure du 30/07, sur
+  // ses propres fichiers, qui tranche : celui qu'il trouve IDEAL est a
+  // -14,5 LUFS avec 2,1 LU de plage, celui qu'il trouve sature est a -20,6 LUFS
+  // avec 2,5 LU. Le fichier ideal est donc a la fois PLUS FORT et PLUS COMPRIME.
+  // Ni le niveau ni la compression ne sont en cause — c'est la courbe (voir
+  // plus bas). Les cibles reviennent donc a ce qui lui plait.
+  //
+  // Le montage renormalise derriere, mais worker.mjs ne repasse loudnorm que sur
+  // une voix hors cible : a -14,5 LUFS elle est dans la fenetre, il applique un
+  // simple gain statique et ne touche pas a la dynamique.
+  // ── LES COURBES SONT RELEVEES SUR SES FICHIERS, PLUS DEDUITES ─────────────
+  // Le 30/07 Axel a fourni le meme enregistrement passe par les trois presets du
+  // 27/07 (VOIX4-off / -podcast / -punch) en disant : « voila l'audio traite
+  // ideal ». Mesure bande par bande, en absolu, apres compensation de niveau —
+  // c'est-a-dire la courbe REELLE de l'egaliseur, pas celle qu'on croit ecrire :
+  //
+  //     bande      podcast    punch
+  //      80 Hz      -1,55     -0,88
+  //     160 Hz      -2,15     -1,58
+  //     315 Hz      -3,77     -4,27      ← le creux du « carton »
+  //     630 Hz      -3,75     -4,56
+  //    1250 Hz      -2,12     -2,60
+  //    2500 Hz      +0,88     +0,72
+  //    5000 Hz      +2,88     +3,06      ← la clarte
+  //    8000 Hz      +3,78     +3,96
+  //   12500 Hz      +3,89     +4,03
+  //
+  // Ce preset CREUSE 315-630 Hz de pres de 4 dB et REMONTE tout ce qui est
+  // au-dessus de 5 kHz de 3 a 4 dB. Le code faisait l'inverse exact : `mud` avec
+  // un gain POSITIF a 180 Hz (donc du bas-medium en plus) et un `air` a +0,6 dB.
+  // L'inversion vient d'une session precedente qui a lu « ca donne un audio
+  // pourri » comme « il y a trop d'aigus » et a change le SIGNE au lieu de
+  // reduire l'exces. Mesure sur sa prise DJI : la chaine ajoutait +2,2 dB dans
+  // le 60-120 Hz. Une voix de micro-cravate chargee en grave, c'est exactement
+  // ce qu'on entend comme « ca sature » — et aucun test d'ecretage ne le voit.
+  //
+  // Les valeurs ci-dessous reproduisent la courbe relevee a ±0,5 dB (verifie en
+  // rejouant VOIX4-off a travers ces filtres et en re-mesurant les neuf bandes).
+  // Ne pas les « ajuster a l'oreille » sans refaire la mesure : c'est comme ca
+  // qu'elles se sont inversees.
+  //
+  // Le creux est un peaking LARGE (Q 0,5) centre a 500 Hz : il couvre 315-1250,
+  // ce que deux bandes etroites ne faisaient pas. `pres` reste a zero — dans les
+  // fichiers d'Axel la presence vient du shelf, pas d'une bosse a 3 kHz.
+  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 18000, deess: -2.0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
+  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 18000, deess: -2.5, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 60, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2600, g: 0, q: 1.0 }, air: { f: 3600, g: 5.8 }, lp: 18000, deess: -3.0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
