@@ -25,7 +25,20 @@
 // Gated : ne s'applique QUE si plan.slideStyle === 'dynamic'.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { ANIMS } from './anim-pack.mjs'
+import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
+
+// ── ANIMATIONS REFUSEES PAR AXEL ────────────────────────────────────────────
+// Sur la v7 (30/07/2026), animation par animation :
+//   target  sur « C'est un business »        → « supprime cette animation »
+//   clock   sur « ça va te prendre »         → « pareil, je n'aime pas »
+//   check   sur « zéro compétence à avoir »  → « je n'aime pas l'animation »
+//   versus  sur « aucune concurrence »       → « change la » (il veut deux
+//           chemins : 1 personne d'un côté, 50 de l'autre — reste à créer)
+//   hook    sur « début du business »        → « ne correspond pas »
+// Tant qu'on ne les remplace pas par ce qu'il a demandé, elles ne doivent plus
+// pouvoir etre choisies : un visuel qu'il refuse vaut moins que pas de visuel.
+const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook'])
+const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
 // L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
@@ -208,14 +221,37 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // court : elles montrent quelque chose d'immobile.
   const isAnimPanel = (s) => Boolean(s.anim) && s.anim !== 'ui' && s.anim !== 'screen' && s.anim !== 'result'
   const add = (slide, a, b) => {
+    // Le filtre doit etre ICI, au seul passage obligé : filtrer la liste ANIMS
+    // ne bloquait que mes tables de mots-clés, et les scènes proposées par le
+    // chef d'orchestre repassaient devant (clock revenait à 13,8 s).
+    if (REFUSEES.has(String(slide && slide.anim || ''))) return null
     ;[a, b] = fit(a, b)
     // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
     // sportif » — laisse 0,4 s par mot : au plancher commun, les deux dernieres
     // photos disparaissaient et l'enumeration retombait sur du texte. Une photo
     // vue 0,4 s sur SON mot vaut mieux qu'une photo juste, jetee.
     const floor = slide.anim === 'media' ? 0.35 : isAnimPanel(slide) ? 1.25 : 0.8
+    // ── ON ÉTIRE AVANT DE JETER ────────────────────────────────────────────
+    // Mesuré sur Cartoon 17 : 16 idées sur 23 « sans place », rejetées à 0,28 s,
+    // 0,71 s, 0,83 s, 0,94 s… Le mot dure ce qu'il dure ; exiger 1,25 s sur le
+    // mot seul revenait à tout jeter, et le trou retombait sur le visage —
+    // Axel : « on voit beaucoup trop l'avatar principal et pas assez les
+    // animations ». L'animation garde son ancrage sur le mot et grandit dans le
+    // temps LIBRE autour (donc pris au visage, jamais à un autre panneau).
+    if (b - a < floor && isAnimPanel(slide)) {
+      const PAS = 0.05
+      let na = a, nb = b
+      for (let k = 0; k < 80 && nb - na < floor; k++) {
+        const apres = r2(nb + PAS)
+        if (!overlaps(nb, apres)) { nb = apres; continue }
+        const avant = r2(Math.max(0, na - PAS))
+        if (avant < na && !overlaps(avant, na)) { na = avant; continue }
+        break
+      }
+      if (nb - na >= floor) { a = na; b = nb }
+    }
     if (b - a < floor) {
-      if (isAnimPanel(slide) && b - a > 0.2) console.log(`▶ ${slide.anim} écarté : ${r2(b - a)}s, trop court pour être vu`)
+      if (isAnimPanel(slide) && b - a > 0.2) console.log(`▶ ${slide.anim} écarté : ${r2(b - a)}s même après étirement`)
       return null
     }
     if (overlaps(a, b)) return null
@@ -1170,14 +1206,47 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // l'animation n'existe pas (« robot » sur « l'IA ») disparaissait aussi du
     // calcul de fin : l'animation precedente s'etirait par-dessus elle.
     const tousLesBeats = (plan.beats || []).filter((b) => b && String(b.word || '').trim())
+    // ── L'ANIMATION DOIT ÊTRE JUSTIFIÉE PAR LA PHRASE, PAS PAR UN MOT ─────────
+    // Mesuré sur un vrai script : `free` (le badge GRATUIT) tombait sur « zéro »
+    // dans « clairement ZÉRO COMPÉTENCE à avoir » — rien à voir avec un prix.
+    // `network` (les points qui se relient) tombait sur « débutants ». `countup`
+    // tombait sur « argent » sans le moindre chiffre à afficher. Axel, trois
+    // fois : « les animations ne correspondent pas du tout ».
+    // Le mot déclencheur ne suffit donc plus : certaines animations exigent que
+    // la PHRASE porte leur sujet. Faute de quoi on ne pose rien — le visage
+    // reprendra la place, et lui au moins ne raconte rien de faux.
+    const EXIGE = {
+      free:    /gratuit|gratuite|offert|cadeau|sans payer|zero euro|0 ?€|ne paie|payer/i,
+      countup: /\d/,                                  // un compteur sans chiffre ne compte rien
+      invoice: /investi|budget|cout|coût|facture|depense|dépense|euro|€|prix/i,
+      logo:    /logo|marque/i,
+      versus:  /concurrence|concurrent|versus|contre|comparé|comparaison|difference|différence/i,
+      network: /communaut|reseau|réseau|equipe|équipe|ensemble|connect|relie|relié/i,
+    }
+    const phraseAutour = (i) => words.slice(Math.max(0, i - 5), i + 8).map((w) => w.text).join(' ')
     const beats = tousLesBeats.filter((b) => ANIMS.includes(String(b.anim || '')))
     for (let i = 0; i < beats.length; i++) {
       const b = beats[i]
       const mot = String(b.word || '').trim()
       if (!mot) continue
-      const hit = findSeq(words, mot, curB) || findAny(words, [mot], curB)
+      // ⚠ MOT ENTIER, PAS SOUS-CHAÎNE. « IA » se trouvait DANS « SasIA » : la
+      // recherche renvoyait la phrase du début et l'animation partait 16 s trop
+      // tôt, sur un tout autre sujet.
+      const norme = (x) => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+      const cible = norme(mot)
+      let hit = null
+      for (let k = curB; k < words.length; k++) {
+        if (norme(words[k].text) === cible) { hit = { start: words[k].start, end: words[k].end, i: k }; break }
+      }
+      if (!hit) hit = findSeq(words, mot, curB)          // repli : expression de plusieurs mots
       if (!hit) { sautB++; continue }
       curB = hit.i + 1
+      // le sujet de l'animation doit exister dans la phrase, sinon on ne pose rien
+      const exige = EXIGE[String(b.anim)]
+      if (exige && !exige.test(phraseAutour(hit.i) + ' ' + String(b.value || ''))) {
+        console.log(`▶ ${b.anim} écarté sur « ${mot} » : la phrase ne parle pas de ça`)
+        sautB++; continue
+      }
       // la fenêtre s'arrête au mot du beat SUIVANT : une idée ne déborde jamais
       // sur la suivante, sinon on lit « zéro compétence » sur l'animation de
       // l'investissement.
