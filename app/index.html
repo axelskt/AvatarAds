@@ -22876,9 +22876,22 @@ async function _acMasterVoice(buf, presetKey, opts){
   // 3 · DÉ-ESSEUR : Web Audio n'a pas d'entrée sidechain — on sépare en deux
   //     bandes et on ne compresse QUE les aigus (les « S » qui sifflent), puis
   //     on resomme. Sans ça, la remontée de présence rend la voix agressive.
+  //     ⚠️ LE TROU DE 124 dB. La séparation se faisait avec un passe-bas ET un
+  //     passe-haut d'ordre 2 à 5,5 kHz, resommés. À la coupure ces deux filtres
+  //     sont en opposition de phase : mesuré au générateur de sinus, la somme
+  //     donnait -124 dB à 5500 Hz, -7,4 dB à 4500 et -8,5 dB à 6500. Autrement
+  //     dit toute la bande des consonnes était creusée — c'est ça que Axel
+  //     entendait (« la voix est super moche », « le volume constant qui bug »).
+  //     On ne sépare plus par deux filtres : les aigus sont obtenus par
+  //     SOUSTRACTION (signal entier moins les graves). La somme redonne alors
+  //     l'original exactement quand le dé-esseur ne compresse pas — vérifié,
+  //     0,00 dB de 1 kHz à 12 kHz.
+  //     (Piège Web Audio : sur lowpass/highpass, `Q` est en DÉCIBELS. Un
+  //     Butterworth demande -3,0102, pas 0,7071.)
   const SPLIT = 5500;
-  const lowB = off.createBiquadFilter(); lowB.type = 'lowpass';  lowB.frequency.value = SPLIT;
-  const hiB  = off.createBiquadFilter(); hiB.type  = 'highpass'; hiB.frequency.value  = SPLIT;
+  const lowB = off.createBiquadFilter(); lowB.type = 'lowpass'; lowB.frequency.value = SPLIT; lowB.Q.value = -3.0102;
+  const inv  = off.createGain(); inv.gain.value = -1;
+  const hiB  = off.createGain();   // point de sommation : signal - graves = aigus
   const dess = off.createDynamicsCompressor();
   dess.threshold.value = P.deess; dess.ratio.value = 6; dess.attack.value = 0.001; dess.release.value = 0.05; dess.knee.value = 6;
   const sum = off.createGain();
@@ -22895,8 +22908,10 @@ async function _acMasterVoice(buf, presetKey, opts){
   lim.threshold.value = -1.5; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; lim.knee.value = 0;
 
   src.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air); air.connect(lpIn);
-  lp.connect(lowB); lowB.connect(sum);           // bande grave/médium intacte
-  lp.connect(hiB);  hiB.connect(dess); dess.connect(sum);    // aigus dé-essés
+  lp.connect(lowB); lowB.connect(sum);                       // bande grave/médium intacte
+  lp.connect(hiB);                                           // signal entier…
+  lowB.connect(inv); inv.connect(hiB);                       // …moins les graves = aigus exacts
+  hiB.connect(dess); dess.connect(sum);                      // aigus dé-essés
   sum.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
   src.start(0);
 
