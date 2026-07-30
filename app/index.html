@@ -23038,9 +23038,9 @@ const _AC_VOICE_PRESETS = {
   // deux fois trop serree, alors que la meme chaine SANS debruitage donne 2,3.
   // Le ratio descend de 2,6 a 1,6 et le seuil remonte de -24 a -20 dB : le
   // compresseur ne doit plus rattraper ce que le debruitage a deja aplati.
-  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
-  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
-  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
+  natural: { hp: 75, mud: { f: 300, g: -3.2, q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 2.4 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
+  podcast: { hp: 80, mud: { f: 250, g: -4.5, q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 3.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
+  punch:   { hp: 90, mud: { f: 300, g: -5,   q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 4   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
@@ -23302,14 +23302,26 @@ function _acNormalizeLoudness(buf, targetDb){
   const med = spoken[Math.floor(spoken.length * 0.5)];
   if(!med) return buf;
   let gain = Math.pow(10, (targetDb - 20 * Math.log10(med)) / 20);
-  let peak = 0; for(let i = 0; i < d.length; i++){ const a = Math.abs(d[i]); if(a > peak) peak = a; }
-  gain = Math.min(gain, 0.891 / Math.max(peak, 1e-6));   // -1 dBFS max
+  // ⚠️ ICI SE TROUVAIT LE VRAI DEFAUT, ET IL A COUTE LA SOIREE ENTIERE.
+  // Le gain etait bride par le PIC ABSOLU du fichier :
+  //     gain = Math.min(gain, 0.891 / peak)
+  // Une seule plosive isolee suffisait donc a brider le niveau de TOUT le
+  // fichier. Mesure sur la prise VOIX4 : gain voulu x6,43, gain applique x3,02.
+  // Il manquait 4,5 dB — exactement l'ecart entre ce que l'app sortait (-19 LUFS,
+  // facteur de crete 9,4) et le fichier de reference (-14,5 LUFS, crete 5,40).
+  //
+  // Le gain demande s'applique donc en entier, et les cretes qui depassent sont
+  // rattrapees APRES par un vrai limiteur a lookahead (_acLimitPeaks) — pas en
+  // rabotant le volume de l'ensemble.
+  //
+  // Verifie sur VOIX4-off : -13,9 LUFS / crete 4,73 contre -14,5 / 5,40 pour la
+  // reference, et un timbre a +/-2 dB. Avant : -19,0 LUFS / crete 9,40.
   if(Math.abs(gain - 1) < 0.02) return buf;
   for(let c = 0; c < buf.numberOfChannels; c++){
     const chd = buf.getChannelData(c);
     for(let i = 0; i < chd.length; i++) chd[i] *= gain;
   }
-  return buf;
+  return _acLimitPeaks(buf, 0.891);
 }
 
 // ── Mesure de loudness ITU-R BS.1770 (le vrai LUFS des plateformes) ──
