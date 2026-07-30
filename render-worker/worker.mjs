@@ -294,6 +294,22 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // donc aussi sa dérivation, pas celle des styles posés sur une base.
     if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') {
       // assetFiles : sans lui la dérivation ne voit pas les médias de l'utilisateur
+      // ── LA TRANSCRIPTION ÉCRIT CE QU'ELLE ENTEND, PAS CE QUI S'ÉCRIT ──
+      // Scribe rend « Sasia » pour « SaaS IA ». Le mot part tel quel dans les
+      // sous-titres, donc à l'écran, sous le visage d'Axel, avec une faute sur
+      // le nom de son propre produit. On corrige AVANT la dérivation : les
+      // scènes se calent alors sur le mot juste, et le sous-titre l'affiche bien.
+      // Table ouverte : y ajouter chaque nom propre que la transcription rate.
+      const ORTHO = [[/\bsas+ia\b/gi, 'SaaS IA'], [/\bsaas\s*ia\b/gi, 'SaaS IA'],
+        [/\bavatar\s*ads\b/gi, 'AvatarAds']]
+      let corr = 0
+      for (const c of plan.captions || []) {
+        const avant = String(c.text || '')
+        let apres = avant
+        for (const [re, bon] of ORTHO) apres = apres.replace(re, bon)
+        if (apres !== avant) { c.text = apres; corr++ }
+      }
+      if (corr) console.log(`▶ orthographe : ${corr} mot(s) corrigé(s) dans les sous-titres`)
       try { deriveDynamicSlides(plan, { assetFiles }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes

@@ -435,7 +435,17 @@ export function buildDynamicComposition(plan, opts = {}) {
       }
 
     } else if (p.kind === 'countup') {
-      const s = p.slide, val = parseInt(String(s.value || '0').replace(/\D/g, ''), 10) || 0
+      // ⚠ LE MOTEUR A SA PROPRE BRANCHE COMPTEUR, ET ELLE NE LISAIT QUE `value`.
+      // Le chef d'orchestre range parfois le nombre dans `center` et un libellé
+      // dans `value` (« 100 » / « % DE BENEFIC ») : le compteur partait alors de
+      // 0 vers 0, et l'écran affichait un gros 0 pendant qu'Axel disait « cent
+      // pour cent des bénéfices ». Un chiffre faux est pire que pas de chiffre.
+      // J'ai d'abord corrigé la même faute dans anim-pack — sans effet, parce
+      // que cette branche-ci passe AVANT et court-circuite le pack.
+      const s = p.slide
+      const source = [s.value, s.center, s.title, (s.items || [])[0] && (s.items || [])[0].text]
+        .map((x) => String(x == null ? '' : x)).find((x) => /\d/.test(x)) || '0'
+      const val = parseInt(source.replace(/\D/g, ''), 10) || 0
       inner += `<div class="stack">
         <div class="disp" id="${id}n" style="font-size:330px;color:${tone.ink};opacity:0">0</div>
         <div id="${id}u" style="font-family:'JetBrains Mono',monospace;font-size:44px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || '')}</div></div>`

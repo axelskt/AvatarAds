@@ -350,7 +350,7 @@ export function animHtml(name, s, W, H, vs) {
       const x = Math.round((f.w - w) / 2), y = Math.round((f.h - h) / 2)
       const py = y - Math.round(h * 0.9)
       return box(`
-        <span class="an-p" id="${id}fp" style="left:0;top:${py}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.52)}px;color:${P.ink};opacity:.55">${txt(0, '97 €')}</span>
+        <span class="an-p" id="${id}fp" style="left:0;top:${py}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.52)}px;color:${P.ink};opacity:.55">${txt(0, '')}</span>
         <span class="an-p" id="${id}fb" style="left:${Math.round(f.w * 0.28)}px;top:${py + Math.round(h * 0.3)}px;width:${Math.round(f.w * 0.44)}px;height:${Math.max(5, Math.round(h * 0.07))}px;border-radius:99px;background:#E5484D;transform-origin:0% 50%"></span>
         <div class="an-p" id="${id}fr" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.round(h*0.22)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;transform:rotate(-7deg);box-shadow:0 20px 48px rgba(0,0,0,.32)">
           <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(h*0.42)}px;color:#fff;letter-spacing:.04em">GRATUIT</span></div>`)
@@ -425,7 +425,7 @@ export function animHtml(name, s, W, H, vs) {
           <polygon id="${id}ta" points="${tri}" fill="${P.acc}" opacity="0"/></svg>
         <div class="an-p" id="${id}tp" style="left:${Math.min(f.w - tw - 4, tip[0] - Math.round(tw * 0.1))}px;top:${Math.max(0, tip[1] - tw - Math.round(f.h * 0.12))}px;width:${tw}px;height:${tw}px;border-radius:${Math.round(tw * 0.24)}px;overflow:hidden;background:${P.soft};box-shadow:0 14px 32px rgba(0,0,0,.28);opacity:0">
           ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>
-        <span class="an-p" id="${id}tn" style="left:0;top:${Math.round(f.h * 0.12)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc};opacity:0">${txt(0, '+240 %')}</span>`)
+        <span class="an-p" id="${id}tn" style="left:0;top:${Math.round(f.h * 0.12)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc};opacity:0">${txt(0, '')}</span>`)   // jamais de pourcentage inventé : vide si rien n'est dit
     }
     case 'template': {
       // « pars d'un modèle », « duplique » : le gabarit se copie.
@@ -704,9 +704,16 @@ export function animHtml(name, s, W, H, vs) {
       // "ca cartonne", pareil de 0 a 8000 € quand on parle d'argent ». La valeur
       // vient de ce qu'il DIT (extraite de la transcription cote serveur), jamais
       // inventee ici.
-      const val = String(s.value || '')
+      // LE CHIFFRE SE LIT OÙ QU'IL SOIT, ET S'IL N'Y EN A PAS ON NE MONTRE RIEN.
+      // Le chef d'orchestre avait mis « 100 » dans `center` et « % DE BENEFIC »
+      // dans `value` : on ne lisait que `value`, aucun nombre dedans, et le
+      // compteur restait figé sur 0 pendant qu'Axel disait « cent pour cent des
+      // bénéfices ». Un 0 à l'écran sur « cent pour cent », c'est pire que rien.
+      const brut = [s.value, s.center, s.title, (s.items || [])[0] && (s.items || [])[0].text]
+        .map((x) => String(x == null ? '' : x)).find((x) => /\d/.test(x)) || ''
+      const val = brut
       const unit = String(s.unit || '')
-      if (!val) return ''
+      if (!/\d/.test(val)) return ''   // pas de nombre prononcé → pas de compteur
       const fs = Math.round(f.h * 0.30)
       return box(`<div class="an-cu" id="${id}cu">
         <span class="an-cun" id="${id}cun" style="font-size:${fs}px;color:${P.ink}">0</span>
@@ -2877,9 +2884,15 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}fl', { autoAlpha: 0.85 }, { autoAlpha: 0, duration: 0.35, ease: 'power2.out' }, ${r2(t0 + 0.1)});
       tl.fromTo('#${id}sv', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + Math.max(0.7, dur * 0.42))});`
     case 'countup': {
-      const raw = String(s.value || '').replace(/[^0-9.]/g, '')
+      // ⚠ MEME SOURCE QUE LE HTML. Le HTML cherchait le nombre dans value, center
+      // ou title ; le JS ne lisait que `value`. Avec « 100 » dans center et
+      // « % DE BENEFIC » dans value, le compteur animait donc de 0 vers 0 — un
+      // gros 0 affiché pendant qu'Axel disait « cent pour cent des bénéfices ».
+      const source = [s.value, s.center, s.title, (s.items || [])[0] && (s.items || [])[0].text]
+        .map((x) => String(x == null ? '' : x)).find((x) => /\d/.test(x)) || ''
+      const raw = source.replace(/[^0-9.]/g, '')
       const target = parseFloat(raw) || 0
-      const dec = (String(s.value || '').split('.')[1] || '').length
+      const dec = (source.split('.')[1] || '').length
       const steps = 26
       let js = inOut + `
       tl.fromTo('#${id}cun', { scale: 0.7, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2)', transformOrigin: '50% 60%' }, ${t0});
