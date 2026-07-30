@@ -22930,9 +22930,18 @@ const _AC_VOICE_PRESETS = {
   // Le creux est un peaking LARGE (Q 0,5) centre a 500 Hz : il couvre 315-1250,
   // ce que deux bandes etroites ne faisaient pas. `pres` reste a zero — dans les
   // fichiers d'Axel la presence vient du shelf, pas d'une bosse a 3 kHz.
-  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 18000, deess: -2.0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
-  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 18000, deess: -2.5, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 60, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2600, g: 0, q: 1.0 }, air: { f: 3600, g: 5.8 }, lp: 18000, deess: -3.0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
+  // `deess: 0` = INACTIF, et c'est un constat, pas un renoncement. Le seuil
+  // etait exprime en dBFS ABSOLU (-2,5) alors que la bande des sifflantes
+  // isolee plafonne 25 a 30 dB plus bas : mesure sur ses deux fichiers, le
+  // de-esseur ne reduisait RIEN, jamais, dans aucun preset. Il n'apportait que
+  // le retard de son compresseur — donc le peigne. Et VOIX4-podcast, le fichier
+  // qu'Axel juge ideal, a ete produit avec ce meme de-esseur inactif : ne rien
+  // de-esser reproduit donc exactement ce qu'il valide. `_acDeEsser` reste en
+  // place, teste et a phase nulle ; pour l'activer un jour il faudra un seuil
+  // relatif a la bande HF (vers -30 dBFS), cale sur un fichier de reference.
+  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
+  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 60, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2600, g: 0, q: 1.0 }, air: { f: 3600, g: 5.8 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
@@ -23028,6 +23037,70 @@ function _acNiveauConstant(buf, cible = 0.10){
   return buf
 }
 
+// ── DÉ-ESSEUR À PHASE NULLE ─────────────────────────────────────────────────
+// Il remplace la branche parallèle du graphe Web Audio, qui fabriquait un
+// filtre en peigne (voir le commentaire dans _acMasterVoice). Ici il n'y a
+// aucune sommation de deux chemins différents : on isole la bande des
+// sifflantes DANS le signal, on lui applique un gain variable, et on la remet.
+//
+// La bande est obtenue par un passe-haut d'ordre 2 appliqué EN AVANT PUIS EN
+// ARRIÈRE (filtfilt). Ce double passage annule le déphasage — c'est ce qui rend
+// la soustraction `bas = signal - aigus` exacte à l'échantillon près. Un simple
+// filtrage aller laisserait un décalage de phase, donc un creux à la coupure :
+// le trou de 124 dB d'une version précédente venait exactement de là.
+//
+// `seuilDb` reste le réglage du preset (-2 à -3 dB) : au-dessus, la bande est
+// réduite avec un ratio de 4, attaque 1 ms, relâche 60 ms. En dessous, gain 1 —
+// et comme la somme est exacte, le signal ressort alors INCHANGÉ.
+function _acDeEsser(buf, seuilDb, fc = 5500){
+  if (!buf || !buf.length || !isFinite(seuilDb) || seuilDb >= 0) return buf
+  const sr = buf.sampleRate, n = buf.length
+  const seuil = Math.pow(10, seuilDb / 20)
+  const RATIO = 4
+  const att = Math.exp(-1 / (sr * 0.001)), rel = Math.exp(-1 / (sr * 0.060))
+
+  // coefficients d'un passe-haut biquad Butterworth (Audio EQ Cookbook)
+  const w0 = 2 * Math.PI * fc / sr, cw = Math.cos(w0), sw = Math.sin(w0)
+  const alpha = sw / (2 * Math.SQRT1_2)
+  const a0 = 1 + alpha
+  const b0 = ((1 + cw) / 2) / a0, b1 = (-(1 + cw)) / a0, b2 = ((1 + cw) / 2) / a0
+  const a1 = (-2 * cw) / a0, a2 = (1 - alpha) / a0
+  const passe = (src, dst) => {
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0
+    for (let i = 0; i < n; i++) {
+      const x = src[i]
+      const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+      x2 = x1; x1 = x; y2 = y1; y1 = y
+      dst[i] = y
+    }
+  }
+
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c)
+    const hf = new Float32Array(n), tmp = new Float32Array(n)
+    passe(d, tmp)
+    // retour : on refiltre le signal inversé dans le temps, puis on le remet à
+    // l'endroit — aller + retour = déphasage nul
+    const rev = new Float32Array(n)
+    for (let i = 0; i < n; i++) rev[i] = tmp[n - 1 - i]
+    passe(rev, tmp)
+    for (let i = 0; i < n; i++) hf[i] = tmp[n - 1 - i]
+
+    // enveloppe de la bande sifflante, puis gain de réduction
+    let env = 0, g = 1
+    for (let i = 0; i < n; i++) {
+      const a = Math.abs(hf[i])
+      env = a > env ? att * env + (1 - att) * a : rel * env + (1 - rel) * a
+      let cible = 1
+      if (env > seuil) cible = Math.pow(seuil / env, 1 - 1 / RATIO)
+      g = cible < g ? att * g + (1 - att) * cible : rel * g + (1 - rel) * cible
+      // bas + aigus réduits = signal - (1 - g) * aigus
+      d[i] -= (1 - g) * hf[i]
+    }
+  }
+  return buf
+}
+
 async function _acMasterVoice(buf, presetKey, opts){
   const cle = presetKey || _acVoicePreset
   // « Aucun » ne traverse plus la chaine du tout : il prend le chemin court.
@@ -23082,28 +23155,28 @@ async function _acMasterVoice(buf, presetKey, opts){
   for (let i = 0; i < lps.length - 1; i++) lps[i].connect(lps[i + 1]);
   const lpIn = lps[0], lp = lps[lps.length - 1];
 
-  // 3 · DÉ-ESSEUR : Web Audio n'a pas d'entrée sidechain — on sépare en deux
-  //     bandes et on ne compresse QUE les aigus (les « S » qui sifflent), puis
-  //     on resomme. Sans ça, la remontée de présence rend la voix agressive.
-  //     ⚠️ LE TROU DE 124 dB. La séparation se faisait avec un passe-bas ET un
-  //     passe-haut d'ordre 2 à 5,5 kHz, resommés. À la coupure ces deux filtres
-  //     sont en opposition de phase : mesuré au générateur de sinus, la somme
-  //     donnait -124 dB à 5500 Hz, -7,4 dB à 4500 et -8,5 dB à 6500. Autrement
-  //     dit toute la bande des consonnes était creusée — c'est ça que Axel
-  //     entendait (« la voix est super moche », « le volume constant qui bug »).
-  //     On ne sépare plus par deux filtres : les aigus sont obtenus par
-  //     SOUSTRACTION (signal entier moins les graves). La somme redonne alors
-  //     l'original exactement quand le dé-esseur ne compresse pas — vérifié,
-  //     0,00 dB de 1 kHz à 12 kHz.
-  //     (Piège Web Audio : sur lowpass/highpass, `Q` est en DÉCIBELS. Un
-  //     Butterworth demande -3,0102, pas 0,7071.)
-  const SPLIT = 5500;
-  const lowB = off.createBiquadFilter(); lowB.type = 'lowpass'; lowB.frequency.value = SPLIT; lowB.Q.value = -3.0102;
-  const inv  = off.createGain(); inv.gain.value = -1;
-  const hiB  = off.createGain();   // point de sommation : signal - graves = aigus
-  const dess = off.createDynamicsCompressor();
-  dess.threshold.value = P.deess; dess.ratio.value = 6; dess.attack.value = 0.001; dess.release.value = 0.05; dess.knee.value = 6;
-  const sum = off.createGain();
+  // 3 · PLUS DE DÉ-ESSEUR DANS LE GRAPHE ────────────────────────────────────
+  //     Axel, 30/07 : « il n'y a que "Aucun" qui marche, natural/podcast/punch
+  //     buguent avec le même effet de saturation robot ». « Aucun » est
+  //     précisément le seul preset qui NE TRAVERSE PAS ce graphe.
+  //
+  //     Le dé-esseur sommait deux branches : les graves d'un côté, les aigus
+  //     passés dans un DynamicsCompressor de l'autre. Or DynamicsCompressor
+  //     applique un LOOKAHEAD interne (~6 ms dans Blink) : on additionnait donc
+  //     une bande retardée avec une bande qui ne l'était pas. C'est un filtre en
+  //     peigne — un creux tous les ~167 Hz — et c'est exactement le timbre
+  //     métallique qu'il décrit. Le défaut EXISTE même quand le compresseur ne
+  //     réduit rien, puisque le retard, lui, est toujours là.
+  //
+  //     Deux tentatives précédentes ont traité le symptôme sans voir la cause :
+  //     séparation par deux filtres (trou de 124 dB à la coupure), puis
+  //     séparation par soustraction (« vérifié, 0,00 dB de 1 kHz à 12 kHz » —
+  //     vérification faite compresseur au repos, donc aveugle au retard).
+  //
+  //     La sommation disparaît. Le dé-essage se fait après le rendu, sur le
+  //     buffer, à phase nulle (`_acDeEsser`) : une seule chaîne, aucune branche
+  //     parallèle, donc plus rien à déphaser.
+  const dessSeuil = P.deess;
 
   // 4 · COMPRESSEUR MONOBANDE : l'épaisseur — les mots faibles remontent, les
   //     attaques sont tenues, la voix « colle » au micro d'un bout à l'autre
@@ -23116,15 +23189,14 @@ async function _acMasterVoice(buf, presetKey, opts){
   const lim = off.createDynamicsCompressor();
   lim.threshold.value = -1.5; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; lim.knee.value = 0;
 
+  // UNE SEULE CHAÎNE, EN SÉRIE. Aucune branche parallèle, donc aucune somme :
+  // c'est la sommation qui fabriquait le peigne.
   src.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air); air.connect(lpIn);
-  lp.connect(lowB); lowB.connect(sum);                       // bande grave/médium intacte
-  lp.connect(hiB);                                           // signal entier…
-  lowB.connect(inv); inv.connect(hiB);                       // …moins les graves = aigus exacts
-  hiB.connect(dess); dess.connect(sum);                      // aigus dé-essés
-  sum.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
+  lp.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
   src.start(0);
 
   const out = await off.startRendering();
+  _acDeEsser(out, dessSeuil);
   // Calage LUFS puis VRAI limiteur — dans cet ordre : on monte au niveau
   // plateforme, et le limiteur rattrape les crêtes que ce gain fait dépasser.
   const lufs = await _acMeasureLUFS(out);
