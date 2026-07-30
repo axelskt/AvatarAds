@@ -22990,9 +22990,34 @@ const _AC_VOICE_PRESETS = {
   // changement global (enlever du grave ET ajouter de l'air) se fait manger par
   // la renormalisation : la 2e passe lisait -1,17 dB la ou l'EQ en appliquait
   // -5,7. Meme source, seul l'egaliseur change => comparaison brute.
-  natural: { hp: 60, mudType: 'lowshelf', mud: { f: 780, g: -4.2, q: 0.7 }, pres: { f: 2200, g: 1.0, q: 0.9 }, air: { f: 3100, g: 4.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
-  podcast: { hp: 60, mudType: 'lowshelf', mud: { f: 780, g: -6.0, q: 0.7 }, pres: { f: 2200, g: 1.4, q: 0.9 }, air: { f: 3100, g: 5.6 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 65, mudType: 'lowshelf', mud: { f: 780, g: -6.6, q: 0.7 }, pres: { f: 2200, g: 1.6, q: 0.9 }, air: { f: 3100, g: 6.2 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
+  // ── 4e PASSE — LA SEULE MESURE QUI VALAIT ────────────────────────────────
+  // Axel a fini par nettoyer LE MEME fichier que sa reference (VOIX4). Meme
+  // source, meme duree : la comparaison devient exacte, plus aucune hypothese
+  // sur le micro. Verdict, courbe relative de chacun sur cette source :
+  //
+  //     bande    CIBLE    ce que je sortais    ecart
+  //     315 Hz   +11,53         +6,62          -4,91
+  //     630 Hz   +11,55         +7,23          -4,32
+  //    8000 Hz   +19,08        +19,90          +0,82
+  //
+  // Je creusais le grave de 4 a 5 dB DE TROP. Mes 2e et 3e passes, calees sur
+  // des comparaisons entre deux prises DIFFERENTES (VOIX4 contre DJI), m'ont
+  // eloigne de la cible a chaque fois. Le low-shelf, la compensation du
+  // debruitage, le coupe-bas a 115 Hz : tout ca corrigeait un ecart de MICRO.
+  //
+  // On revient donc aux valeurs de la 1re passe, revalidees sur la mesure
+  // exacte : ecart residuel +/-0,5 dB en relatif sur les neuf bandes.
+  //
+  // Le compresseur n'y etait pour rien : teste a -24/2.6, -22/2.2, -20/1.9,
+  // -18/1.6 et -16/1.4, c'est le reglage d'origine qui approche le mieux la
+  // dynamique de la reference (LRA 2,3 contre 2,1).
+  //
+  // ⚠️ LA REGLE, APRES QUATRE PASSES : ne comparer que des fichiers issus de la
+  // MEME PRISE. Deux enregistrements du meme micro different deja de 2 dB dans
+  // l'aigu — assez pour envoyer trois corrections dans le mur.
+  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 16000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -14.5 },
+  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 16000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 55, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 6.2 }, lp: 16000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
