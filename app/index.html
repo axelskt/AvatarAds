@@ -23061,7 +23061,7 @@ const _AC_VOICE_PRESETS = {
 // bouge. Les attaques, les respirations et la dynamique de la voix sont
 // intactes : c'est la difference entre egaliser un discours et compresser un
 // signal.
-function _acNiveauConstant(buf, cible = 0.10){
+function _acNiveauConstant(buf, cible = 0){
   const sr = buf.sampleRate, n = buf.length
   const win = Math.round(sr * 0.6)                 // 600 ms : l'echelle de la phrase
   const nb = Math.max(1, Math.ceil(n / win))
@@ -23081,9 +23081,26 @@ function _acNiveauConstant(buf, cible = 0.10){
   }
   // 2 · le gain voulu par fenetre, borne a ±12 dB pour ne jamais reveler le bruit
   const MINI = 0.004                               // sous ce niveau c'est du silence
+  // ── LA CIBLE EST CELLE DU FICHIER, PAS UNE VALEUR ABSOLUE ─────────────────
+  // Elle valait 0,10 en dur, soit -20 dB. Sur une prise a -32,7 dB (le DJI
+  // d'Axel), il fallait donc +12,7 dB PARTOUT : mesure, le gain restait colle
+  // contre sa butee de +12 dB sur 57,7 % du fichier. La ou il n'y est pas colle,
+  // il bouge d'une fenetre a l'autre — et ca s'entend comme un pompage. C'est
+  // exactement « ca sature du debut a la fin ».
+  //
+  // « Volume constant » ne promet pas un NIVEAU, il promet une REGULARITE :
+  // « meme niveau du debut a la fin, sans ecraser ». On vise donc la mediane du
+  // fichier lui-meme. Une prise faible reste une prise faible — le calage en
+  // niveau, c'est le travail du mastering ou du montage, pas le sien.
+  //
+  // Et la course est bornee a +/-4 dB au lieu de +/-12 : au-dela on ne regularise
+  // plus, on reconstruit, et le bruit de fond monte avec la voix.
+  const parle = Array.from(niv).filter((v) => v >= MINI).sort((a, b) => a - b)
+  const ref = cible || (parle.length ? parle[Math.floor(parle.length / 2)] : 0)
+  const MAXG = Math.pow(10, 4 / 20), MING = Math.pow(10, -4 / 20)
   const gw = new Float32Array(nb)
   for (let k = 0; k < nb; k++) {
-    gw[k] = niv[k] < MINI ? 1 : Math.min(4, Math.max(0.25, cible / niv[k]))
+    gw[k] = (niv[k] < MINI || !ref) ? 1 : Math.min(MAXG, Math.max(MING, ref / niv[k]))
   }
   // 3 · on lisse la courbe : un gain qui saute entre deux fenetres s'entend
   const lisse = new Float32Array(nb)
