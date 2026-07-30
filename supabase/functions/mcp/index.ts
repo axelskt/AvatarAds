@@ -233,8 +233,12 @@ const carteHtml = (url: string, nom: string, mime: string) => {
   // bouton a bordure grise 35 % — sur le fond sombre de Claude, Axel ne voyait
   // ni l'un ni l'autre. Les couleurs sont maintenant declarees pour les DEUX
   // themes via prefers-color-scheme, et « Ouvrir » a un fond, pas un filet.
+  // `#t=0.1` : le navigateur se cale sur la frame a 0,1 s et l'affiche comme
+  // apercu. Sans ca le lecteur reste un rectangle noir tant qu'on n'a pas
+  // appuye sur play — Axel : « pareil pour pas que le lecteur soit un
+  // rectangle noir ». Aucune extraction serveur, aucun fichier en plus.
   const media = video
-    ? `<video src="${url}" controls playsinline preload="metadata" poster="" class="aa-m"></video>`
+    ? `<video src="${url}#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>`
     : `<audio src="${url}" controls preload="metadata" class="aa-m" style="height:44px"></audio>`
   return `<style>
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -258,7 +262,8 @@ const carteHtml = (url: string, nom: string, mime: string) => {
   ${media}
   <div class="aa-b">
     <span class="aa-n">${nom}</span>
-    <a class="aa-a aa-dl" href="${url}" download="${nom}" style="margin-left:auto">Télécharger</a>
+    <a class="aa-a aa-dl" href="${url}" download="${nom}" style="margin-left:auto">T&#233;l&#233;charger</a>
+    ${video ? `<a class="aa-a aa-op" href="${APP_URL}?video=${encodeURIComponent(url)}&nom=${encodeURIComponent(nom)}" target="_blank" rel="noopener">Ouvrir dans l&#39;&#201;diteur</a>` : ''}
     <a class="aa-a aa-op" href="${url}" target="_blank" rel="noopener">Ouvrir</a>
   </div>
 </div>`
