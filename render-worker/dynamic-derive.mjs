@@ -37,7 +37,11 @@ import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
 //   hook    sur « début du business »        → « ne correspond pas »
 // Tant qu'on ne les remplace pas par ce qu'il a demandé, elles ne doivent plus
 // pouvoir etre choisies : un visuel qu'il refuse vaut moins que pas de visuel.
-const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook'])
+//   calendar sur « peu d'investissement »    → « change l'animation, elle ne
+//           correspond pas » — remplacee par `lowcost` (fleche + piece)
+//   free    sur « zero competence a avoir »   → « supprime cette animation
+//           gratuit la »
+const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free'])
 const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
@@ -178,6 +182,9 @@ export const VOICE_ANIMS = [
   { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
   { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
   { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
+  // Les deux animations decrites par Axel, cablees sur SES mots.
+  { w: ['investissement', 'investir', 'mise', 'depart', 'capital'],                     anim: 'lowcost' },
+  { w: ['concurrence', 'concurrent', 'concurrents', 'personne'],                        anim: 'twopaths' },
 ]
 
 export function deriveDynamicSlides(plan, opts = {}) {
@@ -1222,6 +1229,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
       logo:    /logo|marque/i,
       versus:  /concurrence|concurrent|versus|contre|comparé|comparaison|difference|différence/i,
       network: /communaut|reseau|réseau|equipe|équipe|ensemble|connect|relie|relié/i,
+      lowcost:  /investi|mise|depart|départ|capital|cout|coût|budget|euro|€/i,
+      twopaths: /concurrence|concurrent|personne|seul|autres|tout le monde/i,
     }
     const phraseAutour = (i) => words.slice(Math.max(0, i - 5), i + 8).map((w) => w.text).join(' ')
     const beats = tousLesBeats.filter((b) => ANIMS.includes(String(b.anim || '')))
