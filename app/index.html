@@ -23299,8 +23299,13 @@ function _acCutDelete(){
                          keepSegs: (_acKeepSegsSec || []).map(s => ({ ...s })) });
   // la vidéo doit perdre exactement le même morceau, sinon l'image se décale
   _acKeepSegsRemove(_acCleanToOrigSec(a), _acCleanToOrigSec(b));
+  // La zone est effacée AVANT le repeint : _acApplyEdited termine par
+  // _acCutPaint(), et tant que les marques traînaient encore, il redessinait le
+  // bandeau orange d'une zone qui n'existe plus — sur la nouvelle durée, donc au
+  // mauvais endroit, avec la tête de lecture dedans. Axel : « la barre blanche
+  // ne doit pas aller dedans ».
+  _acCutMarks = []
   _acApplyEdited(out, a, b);
-  _acCutMarks = [];
   toast('✂️ ' + (b - a).toFixed(1) + ' s supprimés');
 }
 
@@ -23436,6 +23441,28 @@ function _acDetectDenoised(buf){
   return floorDb < -65 || ratio > 55;
 }
 
+// ── COMBIEN DE BRUIT DE FOND, VRAIMENT ? ────────────────────────────────────
+// RNNoise est fait pour une prise bruitée. Sur une prise déjà propre il n'a
+// rien à retirer et abîme la voix — elle sort métallique, « sous l'eau ». Axel
+// l'a entendu tout de suite. On mesure donc l'écart entre le silence et la voix
+// avant de décider : sous -38 dB, il n'y a rien à gagner, seulement à perdre.
+const _AC_BRUIT_SEUIL_DB = -38;
+function _acBruitDeFondDb(buf){
+  const d = buf.getChannelData(0), sr = buf.sampleRate;
+  const win = Math.max(1, Math.floor(sr * 0.02));   // fenêtres de 20 ms
+  const rms = [];
+  for(let i = 0; i + win <= d.length; i += win){
+    let s = 0;
+    for(let j = i; j < i + win; j += 2) s += d[j] * d[j];
+    rms.push(Math.sqrt(s / (win / 2)));
+  }
+  if(rms.length < 10) return 0;                     // trop court pour juger
+  const tri = rms.slice().sort((a, b) => a - b);
+  const q = (p) => tri[Math.min(tri.length - 1, Math.floor(p * tri.length))];
+  const plancher = q(0.10), voix = Math.max(q(0.90), 1e-6);
+  return 20 * Math.log10(Math.max(plancher, 1e-6) / voix);
+}
+
 async function _acCleanCore(srcBlob, onAfterDenoise){
   let working = srcBlob;
   // auscultation AVANT tout traitement : inutile (et nuisible) de débruiter
@@ -23444,13 +23471,13 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   try{
     const pc = new (window.AudioContext || window.webkitAudioContext)();
     const pb = await pc.decodeAudioData(await srcBlob.arrayBuffer());
-    alreadyClean = _acDetectDenoised(pb);
+    alreadyClean = _acDetectDenoised(pb) || _acBruitDeFondDb(pb) < _AC_BRUIT_SEUIL_DB;
     await pc.close();
   }catch(_){}
   if(alreadyClean && _acDenoiseEnabled){
-    toast('🎙️ Réducteur de bruit déjà présent dans ce fichier (micro DJI, etc.) — on ne le repasse pas');
+    toast('🎙️ Prise déjà propre — on ne repasse pas le réducteur de bruit (il abîmerait la voix)');
     const h = document.getElementById('acDenoiseHint');
-    if(h) h.textContent = 'Déjà débruité à la source — étape ignorée';
+    if(h) h.textContent = 'Prise déjà propre — étape ignorée';
   }
   if(_acDenoiseEnabled && !alreadyClean) working = await denoiseAudioFile(working);
   if(onAfterDenoise) onAfterDenoise();
