@@ -49,6 +49,8 @@ export const BANK = [
   // ── la croissance, l'audience ──
   { name: 'grow',    desc: "une croissance, des vues qui montent, un resultat qui progresse. « ca progresse », « ca augmente », « ca grimpe », « les resultats montent », « la croissance »." },
   { name: 'engage',  desc: "DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow." },
+  { name: 'lowcost', desc: "peu d'argent a mettre au depart, un cout qui baisse, un investissement faible. « peu d'investissement », « ca coute presque rien », « sans mise de depart »." },
+  { name: 'twopaths', desc: "deux chemins : une personne prend l'un, la foule prend l'autre. L'absence de concurrence, le contre-pied, « personne ne le fait », « aucune concurrence », « tout le monde va la-bas sauf toi »." },
   { name: 'network', desc: "un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes »." },
   { name: 'rocket',  desc: "un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance »." },
   { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste »." },
