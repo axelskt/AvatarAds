@@ -3221,6 +3221,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </button>
               <div id="acDoneWaveWrap" style="flex:1;position:relative;height:38px;cursor:pointer">
                 <canvas id="acDoneWave" style="width:100%;height:38px;display:block"></canvas>
+                <!-- #162 · zone de coupe manuelle : la sélection se voit SUR l'onde -->
+                <div id="acCutSel" style="display:none;position:absolute;top:-2px;bottom:-2px;background:rgba(255,90,54,.20);border-left:1.5px solid var(--accent);border-right:1.5px solid var(--accent);border-radius:2px;pointer-events:none"></div>
+                <div id="acCutMarkA" style="display:none;position:absolute;top:-4px;bottom:-4px;width:1.5px;background:var(--accent);box-shadow:0 0 5px var(--accent-glow,rgba(255,90,54,.6));pointer-events:none"></div>
                 <div id="acDoneHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:#fff;border-radius:2px;box-shadow:0 0 6px rgba(255,255,255,.55);pointer-events:none"></div>
               </div>
               <span id="acDoneDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
@@ -3229,6 +3232,34 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <span style="width:9px;height:2px;background:var(--accent);border-radius:2px;display:inline-block"></span>
               <span id="acDoneCutLegend">les traits marquent les silences retirés</span>
             </div>
+          </div>
+
+          <!-- ✂️ COUPE MANUELLE (#162) ─────────────────────────────────────────
+               Le nettoyage automatique ne rattrape pas tout : une reprise, un
+               « euh » collé au mot suivant, une phrase ratée. Ici l'utilisateur
+               pose deux séparations sur l'onde et supprime ce qu'il y a entre —
+               la partie de droite vient se recoller à celle de gauche. -->
+          <div class="card" style="padding:14px 16px;background:var(--panel-1);margin-bottom:10px">
+            <!-- à l'étroit (mobile), l'indication passe SOUS le titre plutôt que
+                 de casser les deux libellés en deux lignes chacun -->
+            <div class="row" style="align-items:center;justify-content:space-between;gap:4px 10px;flex-wrap:wrap;margin-bottom:10px">
+              <span class="faint" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap">Coupe manuelle</span>
+              <span id="acCutHint" class="faint mono" style="font-size:10.5px;text-align:right;flex:1 1 auto;min-width:0">Place la tête, puis « Séparer »</span>
+            </div>
+            <div class="row gap10">
+              <button id="acCutSplit" class="btn btn-ghost btn-sm grow" onclick="_acCutSplit()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
+                Séparer
+              </button>
+              <button id="acCutDel" class="btn btn-ghost btn-sm grow" onclick="_acCutDelete()" disabled style="opacity:.45;cursor:not-allowed">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M9 7V4h6v3"/></svg>
+                Supprimer
+              </button>
+            </div>
+            <button id="acCutUndo" class="btn btn-ghost btn-sm" onclick="_acCutUndo()" style="display:none;width:100%;margin-top:8px;font-weight:600">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+              Annuler la dernière coupe
+            </button>
           </div>
 
           <!-- l'original, révélé par « Comparer » : on l'ÉCOUTE À CÔTÉ, on ne le
@@ -23038,6 +23069,15 @@ function _acFillDone(d){
   const lib = el('acDoneLib'); if(lib) lib.onclick = _acSaveToLibrary;
   const cmp = el('acDoneCmp'); if(cmp) cmp.onclick = _acCompare;
   window._acDoneData = d;
+  // #162 · la coupe manuelle repart d'une ardoise vierge à chaque nettoyage
+  window._acEditBuf = d.buf || null;
+  _acCutMarks = []; _acCutUndoStack = [];
+  // Le lecteur était conservé d'un nettoyage à l'autre : au 2e audio, play
+  // rejouait le 1er et la tête se calait sur l'ANCIENNE durée. On repart d'un
+  // Audio neuf branché sur la nouvelle URL.
+  if(window._acDoneAudio){ window._acDoneAudio.pause(); window._acDoneAudio = null; }
+  _acDoneEnsureAudio();   // l'onde doit être cliquable avant le premier play
+  _acCutPaint();
   _acBindSeek('acDoneWaveWrap', () => window._acDoneAudio, 'acDoneHead');
 }
 
@@ -23119,9 +23159,13 @@ function _acStopAll(){
   if(_acCmpAudio) _acCmpAudio.pause();
   _acIcon('acDonePlayIco', false); _acIcon('acOrigPlayIco', false);
 }
-function _acDoneTogglePlay(){
+// L'Audio est créé DÈS l'affichage du résultat, pas au premier play : la coupe
+// manuelle et le clic sur l'onde ont besoin d'une tête de lecture avant qu'on
+// ait appuyé sur play. Tant que c'était paresseux, cliquer dans l'onde d'un
+// audio jamais lancé ne faisait rien.
+function _acDoneEnsureAudio(){
   const d = window._acDoneData;
-  if(!d || !d.url){ toast('Lance d\'abord le nettoyage'); return; }
+  if(!d || !d.url) return null;
   if(!window._acDoneAudio){
     // L'ancien code créait bien l'Audio mais ne branchait RIEN : ni l'icône, ni
     // la tête, ni l'échec silencieux d'un play() refusé. Axel : « le bouton play
@@ -23134,9 +23178,180 @@ function _acDoneTogglePlay(){
     a.addEventListener('error', () => toast('⚠️ Lecture impossible — retélécharge le fichier'));
     window._acDoneAudio = a;
   }
-  const a = window._acDoneAudio;
+  return window._acDoneAudio;
+}
+function _acDoneTogglePlay(){
+  const a = _acDoneEnsureAudio();
+  if(!a){ toast('Lance d\'abord le nettoyage'); return; }
   if(a.paused){ if(_acCmpAudio) _acCmpAudio.pause(); a.play().catch(() => toast('⚠️ Lecture bloquée par le navigateur')); }
   else a.pause();
+}
+
+// ── ✂️ COUPE MANUELLE (#162) ────────────────────────────────────────────────
+// Le nettoyage auto retire les silences, pas les reprises ni les « euh » collés
+// au mot suivant. Ici : deux séparations posées à la tête de lecture, puis
+// « Supprimer » — et la partie de droite vient se recoller à celle de gauche.
+// La suppression se fait sur l'AudioBuffer, jamais sur le blob : on ré-encode
+// un WAV propre derrière, sinon la Bibliothèque et le Générateur recevraient un
+// fichier dont la durée ne correspond plus à ce qu'on affiche.
+let _acCutMarks = [];      // 0, 1 ou 2 instants en secondes, triés
+let _acCutUndoStack = [];  // { buf, blob, marks, keepSegs } avant chaque coupe
+const _AC_CUT_FADE = 0.005;  // 5 ms de fondu au raccord : sans ça, un clic sec
+
+function _acCutDur(){ const b = window._acEditBuf; return b ? b.duration : 0; }
+function _acCutPaint(){
+  const dur = _acCutDur();
+  const sel = document.getElementById('acCutSel'), mk = document.getElementById('acCutMarkA');
+  const del = document.getElementById('acCutDel'), hint = document.getElementById('acCutHint');
+  const undo = document.getElementById('acCutUndo');
+  if(sel) sel.style.display = 'none';
+  if(mk)  mk.style.display  = 'none';
+  const deux = _acCutMarks.length === 2 && dur > 0;
+  if(del){
+    del.disabled = !deux;
+    del.style.opacity = deux ? '1' : '.45';
+    del.style.cursor  = deux ? 'pointer' : 'not-allowed';
+    del.style.color   = deux ? 'var(--accent)' : '';
+  }
+  if(undo) undo.style.display = _acCutUndoStack.length ? 'inline-flex' : 'none';
+  if(dur <= 0) return;
+  if(_acCutMarks.length === 1 && mk){
+    mk.style.display = 'block';
+    mk.style.left = (_acCutMarks[0] / dur * 100) + '%';
+    if(hint) hint.textContent = 'Fin de la zone → « Séparer »';
+  } else if(deux && sel){
+    const [a, b] = _acCutMarks;
+    sel.style.display = 'block';
+    sel.style.left  = (a / dur * 100) + '%';
+    sel.style.width = ((b - a) / dur * 100) + '%';
+    if(hint) hint.textContent = 'Zone de ' + ((b - a).toFixed(1)) + ' s sélectionnée';
+  } else if(hint){
+    hint.textContent = 'Place la tête, puis « Séparer »';
+  }
+}
+function _acCutReset(){ _acCutMarks = []; _acCutPaint(); }
+
+function _acCutSplit(){
+  const buf = window._acEditBuf;
+  if(!buf){ toast('Lance d\'abord le nettoyage'); return; }
+  const a = _acDoneEnsureAudio();
+  const t = Math.max(0, Math.min(buf.duration, a ? (a.currentTime || 0) : 0));
+  if(_acCutMarks.length >= 2) _acCutMarks = [];      // 3e appui : on repart d'une zone neuve
+  if(_acCutMarks.length === 1 && Math.abs(t - _acCutMarks[0]) < 0.02){
+    toast('⚠️ Déplace la tête de lecture avant de séparer'); return;
+  }
+  _acCutMarks.push(t);
+  _acCutMarks.sort((x, y) => x - y);
+  _acCutPaint();
+}
+
+// clean-time → original-time, en marchant les segments gardés : c'est ce qui
+// permet à la vidéo (#68b) de rester synchro après une coupe manuelle.
+function _acCleanToOrigSec(t){
+  const segs = _acKeepSegsSec || [];
+  let acc = 0;
+  for(const s of segs){
+    const d = s.end - s.start;
+    if(t <= acc + d) return s.start + (t - acc);
+    acc += d;
+  }
+  return segs.length ? segs[segs.length - 1].end : t;
+}
+function _acKeepSegsRemove(oa, ob){
+  if(!_acKeepSegsSec || !_acKeepSegsSec.length) return;
+  const out = [];
+  for(const s of _acKeepSegsSec){
+    if(s.end <= oa || s.start >= ob){ out.push(s); continue; }
+    if(s.start < oa) out.push({ start: s.start, end: oa });
+    if(s.end   > ob) out.push({ start: ob, end: s.end });
+  }
+  _acKeepSegsSec = out.filter(s => s.end - s.start > 0.001);
+}
+
+function _acCutDelete(){
+  const buf = window._acEditBuf;
+  if(!buf || _acCutMarks.length < 2) return;
+  const [a, b] = _acCutMarks;
+  const sr = buf.sampleRate;
+  const iA = Math.max(0, Math.round(a * sr));
+  const iB = Math.min(buf.length, Math.round(b * sr));
+  if(iB - iA < 1){ toast('⚠️ Zone trop courte'); return; }
+  const nLen = buf.length - (iB - iA);
+  if(nLen < sr * 0.2){ toast('⚠️ Il ne resterait presque rien de l\'audio'); return; }
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const out = ctx.createBuffer(buf.numberOfChannels, nLen, sr);
+  const nf  = Math.min(Math.round(_AC_CUT_FADE * sr), iA, buf.length - iB);
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const src = buf.getChannelData(c), dst = out.getChannelData(c);
+    dst.set(src.subarray(0, iA), 0);
+    dst.set(src.subarray(iB), iA);
+    // fondu de part et d'autre du raccord — un collage net s'entend « tac »
+    for(let i = 0; i < nf; i++){
+      const g = i / nf;
+      dst[iA - nf + i] *= (1 - g);
+      dst[iA + i]      *= g;
+    }
+  }
+  try{ ctx.close(); }catch(_){}
+
+  _acCutUndoStack.push({ buf, blob: _acCleanBlob, marks: (window._acDoneData || {}).marks || [],
+                         keepSegs: (_acKeepSegsSec || []).map(s => ({ ...s })) });
+  // la vidéo doit perdre exactement le même morceau, sinon l'image se décale
+  _acKeepSegsRemove(_acCleanToOrigSec(a), _acCleanToOrigSec(b));
+  _acApplyEdited(out, a, b);
+  _acCutMarks = [];
+  toast('✂️ ' + (b - a).toFixed(1) + ' s supprimés');
+}
+
+function _acCutUndo(){
+  const prev = _acCutUndoStack.pop();
+  if(!prev) return;
+  _acCleanBlob   = prev.blob;
+  _acKeepSegsSec = prev.keepSegs;
+  _acApplyEdited(prev.buf, null, null, prev.marks);
+  _acCutMarks = [];
+  toast('↺ Coupe annulée');
+}
+
+// remet TOUT à jour derrière une coupe : le fichier téléchargé, le lecteur, la
+// forme d'onde, la durée et les marques de silence. Oublier un seul de ces
+// points, c'est afficher un état qui ment sur le fichier réel.
+function _acApplyEdited(newBuf, cutA, cutB, marksForce){
+  const oldDur = _acCutDur();
+  window._acEditBuf = newBuf;
+  const dur = newBuf.duration;
+  // à l'annulation on réutilise le blob d'avant (gratuit) ; s'il manque, on
+  // ré-encode plutôt que de fabriquer une URL sur « undefined »
+  if(!marksForce || !_acCleanBlob) _acCleanBlob = _audioBufferToWavBlob(newBuf);
+
+  const d = window._acDoneData || (window._acDoneData = {});
+  if(d.url) { try{ URL.revokeObjectURL(d.url); }catch(_){} }
+  d.url = URL.createObjectURL(_acCleanBlob);
+  d.duration = Math.round(dur);
+  d.peaks = _acPeaks(newBuf, 150);
+
+  // les traits de silence suivent la coupe : ceux dedans disparaissent, ceux
+  // d'après reculent de la durée retirée
+  if(marksForce) d.marks = marksForce;
+  else if(cutA != null && oldDur > 0){
+    const gap = cutB - cutA;
+    d.marks = (d.marks || []).map(m => m * oldDur)
+      .filter(t => t <= cutA || t >= cutB)
+      .map(t => (t >= cutB ? t - gap : t))
+      .map(t => t / dur);
+  }
+
+  const el = (id) => document.getElementById(id);
+  if(el('acDoneDur')) el('acDoneDur').textContent = _acFmt(dur);
+  _acWavePaint('acDoneWave', d.peaks, d.marks);
+  _acHeadSet('acDoneHead', 0);
+  if(window._acDoneAudio){ window._acDoneAudio.pause(); window._acDoneAudio = null; }
+  _acIcon('acDonePlayIco', false);
+  _acDoneEnsureAudio();
+  const dl = el('acDoneDl');
+  if(dl) dl.onclick = () => { const a = document.createElement('a'); a.href = d.url; a.download = 'audio-nettoye.wav'; a.click(); };
+  _acCutPaint();
 }
 function _acOrigTogglePlay(){
   if(!_acCmpAudio) return;
@@ -23388,6 +23603,7 @@ async function _acAnalyze(){
     }
     _acPhase('done', { cuts: segsRemoved, saved: removedS, duration: cleanS,
       peaks: _acPeaks(cleanBuf, 150), marks, origPeaks: _acPeaks(decoded, 150),
+      buf: cleanBuf,   // #162 · la coupe manuelle travaille sur ce buffer
       url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
     toast('✅ Audio nettoyé — ' + removedS + 's supprimés');
     if(_acDerushEnabled) _acDerushRun();   // #151 : propose les coupes une fois l'analyse posée
