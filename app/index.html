@@ -22857,7 +22857,15 @@ async function _acExportVideo(btn){
 // la mise à niveau se fait en aval, une seule fois.
 let _acVoicePreset = 'podcast';   // 'off' | 'natural' | 'podcast' | 'punch'
 const _AC_VOICE_PRESETS = {
-  off: null,
+  // « Aucun » ne veut pas dire « ne rien faire » : il veut dire PAS DE COULEUR.
+  // L'interface propose deux reglages distincts — TRAITEMENT VOIX (le timbre) et
+  // « Volume constant » (le niveau) — mais le code n'en avait qu'un : activer le
+  // volume imposait aussi l'EQ du preset. Axel : « quand j'active volume constant
+  // ca donne un audio pourri ». Il demandait un niveau regulier, il recevait un
+  // relookage complet du timbre. « Aucun » nivelle donc sans toucher au spectre :
+  // ni coupe-bas, ni creux, ni presence, ni air, ni de-esseur.
+  off: { hp: 20, mud: { f: 250, g: 0, q: 1 }, pres: { f: 3500, g: 0, q: 1 }, air: { f: 11000, g: 0 },
+         lp: 19500, deess: 0, comp: { th: -22, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -18 },
   // air : l'étagère « beau micro ». Elle était descendue à 9-9,5 kHz en même
   // temps que la cible montait — soit un coup de pouce EN PLEIN dans la zone de
   // dureté (8-10 kHz, les « ss » et « ch »). Elle repart à 11-12 kHz, où elle
