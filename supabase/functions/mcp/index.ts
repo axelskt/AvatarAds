@@ -439,20 +439,57 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   return toolText(
     `🎨 Génération d'image lancée ! (${quality}, ${format}, −${cost} crédits)
 job_id : ${job.id}
-Appelle check_image avec ce job_id dans environ 30 secondes.`)
+La génération prend 45 à 60 secondes. Appelle check_image avec ce job_id : cet outil
+attend tout seul côté serveur, donc rappelle-le simplement jusqu'à obtenir l'URL.
+Un « ⏳ en cours » n'est jamais une panne — l'image arrive.`)
 }
+
+// ── ON ATTEND CÔTÉ SERVEUR, PAS CÔTÉ CLIENT ────────────────────────────────
+// Mesuré le 30/07/2026 : Claude a appelé check_image 8 SECONDES après avoir
+// lancé une génération qui en prend 50, a lu « toujours en cours », et a
+// annoncé à Axel « le serveur ne répond pas ». Sept images produites et
+// facturées ce jour-là qu'il n'a jamais vues. On ne peut pas compter sur la
+// patience du client : check_* attend ici jusqu'à ATTENTE_MAX_MS que le job
+// bascule, en restant sous la coupure ~28 s du relais Netlify.
+const ATTENTE_MAX_MS = 20000
+const ATTENTE_PAS_MS = 1500
+
+async function attendreJob(jobId: string, userId: string, kind: string) {
+  const limite = Date.now() + ATTENTE_MAX_MS
+  let job: Record<string, unknown> | null = null
+  for (;;) {
+    const { data } = await svc.from('mcp_jobs').select('*')
+      .eq('id', jobId).eq('user_id', userId).eq('kind', kind).maybeSingle()
+    job = data
+    if (!job) return null
+    if (job.status !== 'running' || Date.now() >= limite) return job
+    await new Promise((r) => setTimeout(r, ATTENTE_PAS_MS))
+  }
+}
+
+// Un « en cours » ne doit JAMAIS pouvoir se lire comme une panne : c'est
+// exactement l'erreur commise par le client le 30/07/2026. On le dit en toutes
+// lettres dans la réponse, parce que c'est le modèle en face qui décide.
+const enCours = (etat: string, outil: string, delai: string) =>
+  toolText(`⏳ ${etat}
+CE N'EST PAS UNE ERREUR : le serveur répond normalement, le travail tourne encore.
+Attends ${delai}, puis rappelle ${outil} avec le même job_id. N'annonce jamais une panne
+tant que le statut n'est pas explicitement « échoué ».`)
 
 async function runCheckImage(profile: Record<string, unknown>, args: Record<string, unknown>) {
   const jobId = String(args.job_id || '').trim()
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
-  const { data: job } = await svc.from('mcp_jobs').select('*')
-    .eq('id', jobId).eq('user_id', String(profile.id)).eq('kind', 'image').maybeSingle()
+  const job = await attendreJob(jobId, String(profile.id), 'image')
   if (!job) return toolErr('Job introuvable sur ce compte.')
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (job.status === 'done' && job.result_url) {
     return toolText(`✅ Image prête !\nURL : ${job.result_url}`)
   }
-  return toolText('⏳ Toujours en cours — rappelle check_image dans ~20 secondes.')
+  const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
+  return toolText(
+    `⏳ Génération en cours depuis ${ecoule} s. Une image prend 45 à 60 s au total.
+CE N'EST PAS UNE ERREUR et le serveur répond normalement : le travail tourne encore.
+Rappelle check_image avec le même job_id — n'abandonne pas et n'annonce jamais une panne tant que le statut n'est pas « échouée ».`)
 }
 
 async function veoFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -660,7 +697,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
     await failAndRefund(userId, job, opErr) // idempotent : rembourse une seule fois
     return toolErr(`Génération échouée : ${opErr}. Les ${job.credits_cost} crédits ont été remboursés.`)
   }
-  if (!done) return toolText('⏳ Toujours en cours — rappelle check_video dans ~30 secondes.')
+  if (!done) return enCours('Génération vidéo en cours (elle prend 1 à 3 minutes).', 'check_video', '30 secondes')
 
   // Vidéo terminée : base64 direct ou URI à télécharger (mêmes chemins de réponse que l'app)
   const { b64, uri } = extractVideo(done)
@@ -886,7 +923,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
     await failAndRefund(userId, job, String(hedraErr))
     return toolErr(`Génération échouée : ${hedraErr}. Les ${job.credits_cost} crédits ont été remboursés.`)
   }
-  if (!videoUrl) return toolText(`⏳ Toujours en cours${lastProgress ? ` (${lastProgress} %)` : ''} — rappelle check_avatar_video dans ~30 secondes.`)
+  if (!videoUrl) return enCours(`Vidéo avatar en cours${lastProgress ? ` (${lastProgress} %)` : ''} — elle prend 2 à 5 minutes.`, 'check_avatar_video', '30 secondes')
 
   // Ré-héberge le MP4 (l'URL Hedra expire) puis livre — claim atomique anti-doublon
   const vRes = await fetch(videoUrl).catch(() => null)
@@ -1235,9 +1272,9 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
       await failAndRefund(userId, job, 'moteur de rendu hors ligne')
       return toolErr('Le moteur de rendu est resté hors ligne plus de 2 h — crédits remboursés, réessaie plus tard.')
     }
-    return toolText("⏳ En file d'attente du moteur de rendu — rappelle check_montage dans ~1 minute.")
+    return enCours("En file d'attente du moteur de rendu.", 'check_montage', '1 minute')
   }
-  if (rj.status === 'rendering') return toolText('🎬 Rendu en cours — rappelle check_montage dans ~1 minute.')
+  if (rj.status === 'rendering') return enCours('Rendu du montage en cours (il prend 2 à 5 minutes).', 'check_montage', '1 minute')
   if (rj.status === 'done' && rj.output_url) {
     // ré-héberge le MP4 en public (render-media est privé) — claim atomique anti-doublon
     const dl = await svc.storage.from('render-media').download(String(rj.output_url))
