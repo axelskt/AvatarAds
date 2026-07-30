@@ -2673,6 +2673,185 @@ export function animHtml(name, s, W, H, vs) {
         ${(raw[1] || '').trim() ? `<span class="an-p" id="${id}co" style="left:0;top:${cy + rr + Math.round(f.h * 0.04)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(d * 0.11)}px;color:${P.ink};opacity:0">
           <span style="position:relative;opacity:.45">${txt(1, '')}<span id="${id}cb" style="position:absolute;left:0;top:50%;width:100%;height:${Math.max(3, Math.round(d * 0.014))}px;background:#E5484D;transform-origin:0% 50%;transform:scaleX(0)"></span></span></span>` : ''}`)
     }
+
+    // ── PAQUET 12 (#147) — LES QUATRE SCENES DECRITES PAR AXEL ────────────────
+    // Décrites par lui, maquettées, montrées, validées le 30/07. `brickbuild`
+    // (la main qui pose une brique, l'immeuble qui monte) a été écarté à la
+    // maquette : la construction dit EFFORT alors que la phrase dit FACILE.
+    case 'salesphone': {
+      // Le téléphone est un VRAI téléphone : bezel, encoche, heure, fond d'écran.
+      // Les notifications sont des bannières iOS — icône du sac, l'app qui envoie,
+      // le libellé de la commande, et le montant à droite. C'est la matière qui
+      // fait qu'on croit à l'écran ; trois rectangles ne vendent rien.
+      // QUATRE notifications, jamais plus : Axel veut que ça s'emballe, pas que
+      // l'écran déborde. Le rythme s'accélère (voir draftJs) et le compteur rouge
+      // est COMPTÉ, il ne porte plus un « 3 » écrit dans le code.
+      const ph = Math.round(f.h * 0.98), pw = Math.round(ph * 0.49)
+      const px = Math.round((f.w - pw) / 2), r = Math.round(pw * 0.13)
+      const amts = [txt(0, '+49 €'), txt(1, '+129 €'), txt(2, '+79 €'), txt(3, '+34 €')]
+      const nw = Math.round(pw * 0.86), nx = Math.round((pw - nw) / 2)
+      const nh = Math.round(nw * 0.25), ic = Math.round(nh * 0.56)
+      let notes = ''
+      for (let k = 0; k < 4; k++) {
+        const y = Math.round(ph * 0.185) + k * Math.round(nh * 1.14)
+        notes += `<span class="an-p an-sn" id="${id}sn${k}" style="left:${nx}px;top:${y}px;width:${nw}px;height:${nh}px;border-radius:${Math.round(nh * 0.3)}px;background:rgba(255,255,255,.94);box-shadow:0 10px 26px rgba(0,0,0,.22)">
+          <span style="position:absolute;left:${Math.round(nh * 0.2)}px;top:${Math.round((nh - ic) / 2)}px;width:${ic}px;height:${ic}px;border-radius:${Math.round(ic * 0.28)}px;background:#5E8E3E;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="62%" height="62%" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1.2 12H7.2zM9 7V5a3 3 0 016 0v2"/></svg></span>
+          <span style="position:absolute;left:${Math.round(nh * 0.82)}px;top:${Math.round(nh * 0.22)}px;font-family:Inter,Helvetica,Arial,sans-serif;font-weight:700;font-size:${Math.round(nh * 0.19)}px;color:#111;letter-spacing:-.01em">Commande</span>
+          <span style="position:absolute;left:${Math.round(nh * 0.82)}px;top:${Math.round(nh * 0.56)}px;width:${[30, 22, 26, 24][k]}%;height:${Math.max(3, Math.round(nh * 0.08))}px;border-radius:99px;background:#111;opacity:.24"></span>
+          <span style="position:absolute;right:${Math.round(nh * 0.2)}px;top:50%;transform:translateY(-50%);font-family:'Archivo Black',Inter,sans-serif;font-size:${Math.round(nh * 0.25)}px;color:#5E8E3E;white-space:nowrap">${amts[k]}</span></span>`
+      }
+      // la pastille rouge du compteur, qui claque à chaque notification
+      const bd = Math.round(pw * 0.17)
+      return box(`<div class="an-ph" id="${id}ph" style="left:${px}px;top:${Math.round((f.h - ph) / 2)}px;width:${pw}px;height:${ph}px;border-radius:${r}px;background:#0B0B0D;border:${Math.max(3, Math.round(pw * 0.022))}px solid #26262B;overflow:hidden;box-shadow:0 28px 60px -18px rgba(0,0,0,.45)">
+        <span style="position:absolute;inset:${Math.round(pw * 0.03)}px;border-radius:${Math.round(r * 0.86)}px;background:linear-gradient(165deg,#2A2F3A,#12141A 62%,#0B0B0D)"></span>
+        <span style="position:absolute;left:50%;top:${Math.round(pw * 0.05)}px;transform:translateX(-50%);width:${Math.round(pw * 0.32)}px;height:${Math.round(pw * 0.09)}px;border-radius:99px;background:#000"></span>
+        <span style="position:absolute;left:0;right:0;top:${Math.round(ph * 0.085)}px;text-align:center;font-family:Inter,Helvetica,Arial,sans-serif;font-weight:300;font-size:${Math.round(pw * 0.19)}px;color:#fff;letter-spacing:-.02em">9:41</span>
+        <span class="an-p" id="${id}bdg" style="left:${Math.round(pw * 0.5 - bd / 2)}px;top:${Math.round(ph * 0.82)}px;width:${bd}px;height:${bd}px;border-radius:50%;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-weight:800;font-size:${Math.round(bd * 0.56)}px;color:#fff">0</span>
+        ${notes}
+      </div>`)
+    }
+
+    // ── 2 · « une personne ouvre son ordinateur, clique une fois, le projet est
+    //         terminé ». Remplace `brickbuild` : l'immeuble ne lui plaisait pas,
+    //         et il avait raison — la métaphore de la construction dit « effort »,
+    //         alors que la phrase dit « facile ». Ici le geste EST le propos :
+    //         un clic, et c'est fait.
+    case 'oneclick': {
+      const sw = Math.round(f.w * 0.62), sh = Math.round(f.h * 0.44)
+      const bw = Math.round(f.w * 0.74), bh = Math.round(f.h * 0.028)
+      const y0 = Math.round((f.h - sh - bh) / 2)
+      const sx = Math.round((f.w - sw) / 2), bx2 = Math.round((f.w - bw) / 2)
+      const rad = Math.round(sw * 0.028)
+      const pad = Math.round(sw * 0.055)
+
+      // état 1 — l'application, avec son bouton. Trois lignes de contenu et une
+      // barre de titre : sans matière, un écran blanc ne dit rien.
+      const btnW = Math.round(sw * 0.42), btnH = Math.round(sh * 0.17)
+      const ui1 = `<span class="an-p" id="${id}ui1" style="left:0;top:0;width:${sw}px;height:${sh}px">
+        <span style="position:absolute;left:${pad}px;top:${pad}px;display:flex;gap:${Math.round(pad * 0.35)}px">
+          ${['#FF5F57', '#FEBC2E', '#28C840'].map((c) => `<span style="width:${Math.round(pad * 0.42)}px;height:${Math.round(pad * 0.42)}px;border-radius:50%;background:${c};display:inline-block"></span>`).join('')}
+        </span>
+        ${[0, 1, 2].map((k) => `<span style="position:absolute;left:${pad}px;top:${Math.round(sh * (0.26 + k * 0.11))}px;width:${[62, 44, 52][k]}%;height:${Math.max(4, Math.round(sh * 0.035))}px;border-radius:99px;background:${P.ink};opacity:${[0.3, 0.18, 0.18][k]}"></span>`).join('')}
+        <span id="${id}btn" style="position:absolute;left:${Math.round((sw - btnW) / 2)}px;top:${Math.round(sh * 0.66)}px;width:${btnW}px;height:${btnH}px;border-radius:${Math.round(btnH * 0.5)}px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-weight:800;font-size:${Math.round(btnH * 0.42)}px;color:#fff;letter-spacing:-.01em;box-shadow:0 ${Math.round(btnH * 0.2)}px ${Math.round(btnH * 0.5)}px -${Math.round(btnH * 0.18)}px rgba(255,90,54,.6)">Générer</span>
+      </span>`
+
+      // état 2 — le projet fini : la vignette du rendu, sa coche, sa durée.
+      const vw = Math.round(sw * 0.34), vh = Math.round(vw * 1.5)
+      const ui2 = `<span class="an-p" id="${id}ui2" style="left:0;top:0;width:${sw}px;height:${sh}px;opacity:0">
+        <span style="position:absolute;left:${Math.round(sw * 0.1)}px;top:${Math.round((sh - vh) / 2)}px;width:${vw}px;height:${vh}px;border-radius:${Math.round(vw * 0.11)}px;background:linear-gradient(160deg,#3B4252,#15171D);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,.28)">
+          <svg viewBox="0 0 24 24" width="26%" height="26%" fill="#FFFFFF"><path d="M8 5l11 7-11 7z"/></svg></span>
+        <span style="position:absolute;left:${Math.round(sw * 0.1 + vw + sw * 0.07)}px;top:${Math.round(sh * 0.3)}px;width:${Math.round(sh * 0.17)}px;height:${Math.round(sh * 0.17)}px;border-radius:50%;background:#28A745;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l5 5L19 7"/></svg></span>
+        <span style="position:absolute;left:${Math.round(sw * 0.1 + vw + sw * 0.07)}px;top:${Math.round(sh * 0.52)}px;font-family:Inter,sans-serif;font-weight:800;font-size:${Math.round(sh * 0.1)}px;color:${P.ink};letter-spacing:-.02em">Terminé</span>
+        <span style="position:absolute;left:${Math.round(sw * 0.1 + vw + sw * 0.07)}px;top:${Math.round(sh * 0.68)}px;width:${Math.round(sw * 0.3)}px;height:${Math.max(4, Math.round(sh * 0.032))}px;border-radius:99px;background:#28A745"></span>
+      </span>`
+
+      // le curseur : une vraie flèche système, pas un rond. Il entre, il clique.
+      const cs = Math.round(f.h * 0.075)
+      const cur = `<span class="an-p" id="${id}cur" style="left:${sx + Math.round(sw * 0.5)}px;top:${y0 + Math.round(sh * 0.7)}px;width:${cs}px;height:${cs}px;opacity:0;z-index:6">
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="#111111" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"><path d="M5 2l14 8.5-6.2 1.4L10 20z"/></svg></span>`
+      const halo = `<span class="an-p" id="${id}halo" style="left:${sx + Math.round((sw - btnW) / 2) - Math.round(btnW * 0.1)}px;top:${y0 + Math.round(sh * 0.66) - Math.round(btnH * 0.35)}px;width:${Math.round(btnW * 1.2)}px;height:${Math.round(btnH * 1.7)}px;border-radius:99px;border:3px solid ${P.acc};opacity:0"></span>`
+
+      return box(`<span class="an-p" id="${id}wrap" style="left:${sx}px;top:${y0}px;width:${sw}px;height:${sh}px;perspective:1400px">
+          <span class="an-p" id="${id}lid" style="left:0;top:0;width:${sw}px;height:${sh}px;border-radius:${rad}px ${rad}px 0 0;background:#FFFFFF;border:2px solid ${P.line};border-bottom:none;overflow:hidden;transform-origin:50% 100%;box-shadow:0 18px 40px -20px rgba(0,0,0,.35)">
+            ${ui1}${ui2}
+          </span>
+        </span>
+        <span class="an-p" id="${id}base" style="left:${bx2}px;top:${y0 + sh}px;width:${bw}px;height:${bh}px;border-radius:0 0 ${Math.round(bh * 0.9)}px ${Math.round(bh * 0.9)}px;background:linear-gradient(180deg,#E8E8ED,#C9C9D1)">
+          <span style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:${Math.round(bw * 0.13)}px;height:${Math.round(bh * 0.34)}px;border-radius:0 0 99px 99px;background:rgba(17,17,17,.16)"></span></span>
+        ${halo}${cur}`)
+    }
+
+    // ── ancienne version, remplacée à sa demande — gardée hors du switch
+    case 'tsunami': {
+      // Première version : trois `path` qui descendaient jusqu'au bas du cadre et
+      // se recouvraient — résultat, un aplat orange, aucune vague. Ici la mer
+      // n'occupe que le bas, et la vague est une VAGUE : une face qui monte, une
+      // crête qui bascule, de l'écume dessus. Elle passe en trois temps, petite,
+      // moyenne, immense — la même vague qui enfle, pas trois vagues côte à côte.
+      // Le « numérique » est DANS la masse : des points de données emportés.
+      // Rien n'est percuté : il n'y a rien d'autre dans le cadre.
+      const w = f.w, h = f.h
+      const seaY = Math.round(h * 0.86)
+      const sea = `<rect x="0" y="${seaY}" width="${w}" height="${h - seaY}" fill="${P.acc}" opacity=".30"/>`
+
+      const wave = (k, ampR, widR, op) => {
+        const a = Math.round(h * ampR), v = Math.round(w * widR)
+        const d = `M0 ${seaY}
+          C ${(v * 0.22).toFixed(0)} ${(seaY - a * 0.12).toFixed(0)}, ${(v * 0.38).toFixed(0)} ${(seaY - a * 0.96).toFixed(0)}, ${(v * 0.62).toFixed(0)} ${(seaY - a).toFixed(0)}
+          C ${(v * 0.81).toFixed(0)} ${(seaY - a * 1.03).toFixed(0)}, ${(v * 0.93).toFixed(0)} ${(seaY - a * 0.66).toFixed(0)}, ${(v * 0.79).toFixed(0)} ${(seaY - a * 0.46).toFixed(0)}
+          C ${(v * 0.91).toFixed(0)} ${(seaY - a * 0.3).toFixed(0)}, ${(v * 0.97).toFixed(0)} ${(seaY - a * 0.12).toFixed(0)}, ${v} ${seaY} Z`
+        // l'écume : un trait blanc épais qui suit la crête et le rouleau
+        const fd = `M${(v * 0.30).toFixed(0)} ${(seaY - a * 0.6).toFixed(0)}
+          C ${(v * 0.44).toFixed(0)} ${(seaY - a * 0.99).toFixed(0)}, ${(v * 0.72).toFixed(0)} ${(seaY - a * 1.06).toFixed(0)}, ${(v * 0.85).toFixed(0)} ${(seaY - a * 0.7).toFixed(0)}
+          C ${(v * 0.9).toFixed(0)} ${(seaY - a * 0.54).toFixed(0)}, ${(v * 0.84).toFixed(0)} ${(seaY - a * 0.46).toFixed(0)}, ${(v * 0.79).toFixed(0)} ${(seaY - a * 0.46).toFixed(0)}`
+        // `data-org` : l'origine du scale en coordonnées du viewBox, c'est-à-dire
+        // LA LIGNE DE MER. Sans elle GSAP prend le centre de la bbox — et comme
+        // la bbox est mesurée pendant que le scale change, il compense par une
+        // translation résiduelle : la vague finissait à 242 px au-dessus de l'eau,
+        // détachée. animJs n'a pas les dimensions, il lit donc l'attribut.
+        return `<g class="an-wg" id="${id}wg${k}" opacity="${op}" data-org="${Math.round(v / 2)} ${seaY}">
+          <path d="${d}" fill="${P.acc}"/>
+          <path d="${fd}" fill="none" stroke="#FFFFFF" stroke-width="${Math.max(3, Math.round(a * 0.07))}" stroke-linecap="round" opacity=".85"/>
+        </g>`
+      }
+
+      // les points de données, emportés dans la grande vague uniquement
+      let dots = ''
+      const aBig = Math.round(h * 0.62)
+      for (let k = 0; k < 22; k++) {
+        const dx = Math.round(w * (((k * 37) % 100) / 100) * 0.92)
+        const dy = seaY - Math.round(aBig * (0.08 + ((k * 61) % 100) / 100 * 0.72))
+        const dr = 3 + (k % 3) * 2
+        dots += `<span class="an-p an-dt" id="${id}dt${k}" style="left:${dx}px;top:${dy}px;width:${dr * 2}px;height:${dr * 2}px;border-radius:50%;background:#FFFFFF;opacity:.8"></span>`
+      }
+      return box(`<svg class="an-p" id="${id}svg" style="left:0;top:0" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+          ${sea}
+          ${wave(0, 0.13, 0.40, 0)}
+          ${wave(1, 0.32, 0.68, 0)}
+          ${wave(2, 0.62, 1.00, 0)}
+        </svg>${dots}`)
+    }
+
+    // ── 4 · « une jauge 0 → 100 % pendant que des notifications de vente tombent »
+    case 'gaugefill': {
+      // La jauge est graduée (0 / 50 / 100) : sans graduations c'est un tube qui
+      // se colore. Le chiffre est compté par le JS, il n'est jamais écrit en dur.
+      //
+      // Les graduations sont passées À GAUCHE de la jauge et le grand chiffre en
+      // haut : à droite, il recouvrait le « 100 » — Axel l'a vu tout de suite.
+      // Rien ne se superpose plus, chaque bloc a sa colonne.
+      const gw = Math.round(f.w * 0.13), gh = Math.round(f.h * 0.80)
+      const gx = Math.round(f.w * 0.17), gy = Math.round((f.h - gh) / 2)
+      const rr = Math.round(gw * 0.46)
+      let ticks = ''
+      for (const t of [0, 0.5, 1]) {
+        const ty = Math.round(gy + gh - t * gh)
+        ticks += `<span class="an-p" style="left:${gx - Math.round(f.w * 0.055)}px;top:${ty - 2}px;width:${Math.round(f.w * 0.04)}px;height:4px;border-radius:99px;background:${P.ink};opacity:.3"></span>
+          <span style="position:absolute;left:0;top:${ty - Math.round(f.w * 0.026)}px;width:${gx - Math.round(f.w * 0.068)}px;text-align:right;font-family:Inter,sans-serif;font-weight:700;font-size:${Math.round(f.w * 0.045)}px;color:${P.ink};opacity:.45">${Math.round(t * 100)}</span>`
+      }
+      const pct = txt(0, '100 %')
+      // QUATRE ventes, et elles tombent au fur et à mesure que la jauge monte :
+      // « plus ça monte, plus il y en a », mais jamais plus de quatre.
+      const cw = Math.round(f.w * 0.58), cx = f.w - cw
+      const ch = Math.round(f.h * 0.155)
+      const amts4 = [txt(1, '+49 €'), txt(2, '+129 €'), txt(3, '+79 €'), txt(4, '+34 €')]
+      let cards = ''
+      for (let k = 0; k < 4; k++) {
+        const cy = Math.round(f.h * 0.21) + k * Math.round(ch * 1.24)
+        cards += `<span class="an-p an-gs" id="${id}gs${k}" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(ch * 0.3)}px;background:#FFFFFF;border:2px solid ${P.line};box-shadow:0 10px 24px rgba(0,0,0,.16)">
+          <span style="position:absolute;left:${Math.round(ch * 0.24)}px;top:50%;transform:translateY(-50%);width:${Math.round(ch * 0.5)}px;height:${Math.round(ch * 0.5)}px;border-radius:${Math.round(ch * 0.16)}px;background:${P.acc};display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2"/></svg></span>
+          <span style="position:absolute;left:${Math.round(ch * 0.88)}px;top:${Math.round(ch * 0.3)}px;width:${[52, 40, 60, 46][k]}%;height:${Math.max(3, Math.round(ch * 0.1))}px;border-radius:99px;background:${P.ink};opacity:.32"></span>
+          <span style="position:absolute;left:${Math.round(ch * 0.88)}px;top:${Math.round(ch * 0.56)}px;font-family:'Archivo Black',Inter,sans-serif;font-size:${Math.round(ch * 0.28)}px;color:${P.acc}">${amts4[k]}</span></span>`
+      }
+      return box(`<span class="an-p" style="left:${gx}px;top:${gy}px;width:${gw}px;height:${gh}px;border-radius:${rr}px;background:${P.soft};border:2px solid ${P.line}"></span>
+        <span class="an-p" id="${id}gfill" style="left:${gx}px;top:${gy}px;width:${gw}px;height:${gh}px;border-radius:${rr}px;background:${P.acc};transform-origin:50% 100%"></span>
+        ${ticks}
+        <span class="an-t" id="${id}gnum" style="top:${Math.round(f.h * 0.035)}px;left:${Math.round(f.w * 0.34)}px;right:0;transform:none;font-family:'Archivo Black',Inter,sans-serif;font-size:${Math.round(f.h * 0.135)}px;color:${P.ink};text-align:center" data-pct="${pct}">0 %</span>
+        ${cards}`)
+    }
   }
 }
 
@@ -3689,6 +3868,86 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}shr',{scale:0.6,autoAlpha:0.9},{scale:1.9,autoAlpha:0,duration:0.5,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.68)});
       tl.fromTo('#${id}shn',{y:10,autoAlpha:0},{y:-6,autoAlpha:1,duration:0.3,ease:'back.out(2)'},${r2(t0 + 0.74)});
       tl.to('#${id}sh3',{x:${FW(id, 0.18)},y:${FH(id, -0.08)},autoAlpha:0,duration:0.4,ease:'power2.in'},${r2(t0 + 0.96)});`
+
+    // ── PAQUET 12 (#147) — LES QUATRE SCENES DECRITES PAR AXEL ────────────────
+    // Décrites par lui, maquettées, montrées, validées le 30/07. `brickbuild`
+    // (la main qui pose une brique, l'immeuble qui monte) a été écarté à la
+    // maquette : la construction dit EFFORT alors que la phrase dit FACILE.
+    case 'salesphone': {
+      // Le téléphone se pose, puis les notifications GLISSENT DU HAUT — et le
+      // rythme S'ACCÉLÈRE : 0,56 s entre la 1re et la 2e, 0,44 puis 0,32. C'est
+      // ce qui donne « ça n'arrête plus ». Quatre au maximum : au-delà l'écran
+      // déborde et on ne lit plus les montants.
+      const at = [0.34, 0.90, 1.34, 1.66]
+      let notifs = ''
+      for (let k = 0; k < 4; k++) {
+        notifs += `
+      tl.fromTo('#${id}sn${k}',{y:${FH(id, -0.24)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${r2(t0 + at[k])});
+      tl.to(CNT${id},{v:${k + 1},duration:0.01,onUpdate:SET${id}},${r2(t0 + at[k] + 0.12)});
+      tl.to('#${id}bdg',{scale:1.24,duration:0.13,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + at[k] + 0.12)});`
+      }
+      return inOut + `
+      var CNT${id} = {v:0};
+      var SET${id} = (function(){ var el=document.getElementById('${id}bdg');
+        return function(){ if(el) el.textContent = Math.round(CNT${id}.v); }; })();
+      tl.fromTo('#${id}ph',{y:${FH(id, 0.1)},scale:0.9,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.4,ease:'back.out(1.5)',transformOrigin:'50% 50%'},${t0});
+      tl.fromTo('#${id}bdg',{scale:0,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,ease:'back.out(3)',transformOrigin:'50% 50%'},${r2(t0 + 0.4)});${notifs}
+      tl.to('#${id}ph',{y:-5,duration:0.09,yoyo:true,repeat:3,ease:'sine.inOut'},${r2(t0 + 0.46)});
+      tl.to('#${id}ph',{y:-5,duration:0.09,yoyo:true,repeat:3,ease:'sine.inOut'},${r2(t0 + 1.46)});`
+    }
+    case 'oneclick':
+      // trois temps, dans cet ordre : on OUVRE, on CLIQUE UNE FOIS, c'est FINI.
+      // L'écran se relève sur sa charnière (rotationX, origine en bas), le
+      // curseur arrive et clique, et l'app laisse place au rendu terminé. Le
+      // curseur part avant la fin : ce qui doit rester à l'écran, c'est le
+      // résultat, pas la souris.
+      return inOut + `
+      tl.fromTo('#${id}base',{scaleX:0.7,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.28,ease:'back.out(1.6)',transformOrigin:'50% 50%'},${t0});
+      tl.fromTo('#${id}lid',{rotationX:-92,autoAlpha:0},{rotationX:0,autoAlpha:1,duration:0.62,ease:'back.out(1.1)',transformOrigin:'50% 100%'},${r2(t0 + 0.16)});
+      tl.fromTo('#${id}ui1',{autoAlpha:0},{autoAlpha:1,duration:0.24,ease:'power2.out'},${r2(t0 + 0.66)});
+      tl.fromTo('#${id}cur',{x:${FW(id, 0.22)},y:${FH(id, 0.24)},autoAlpha:0},{x:0,y:0,autoAlpha:1,duration:0.46,ease:'power3.out'},${r2(t0 + 0.98)});
+      tl.to('#${id}btn',{scale:0.93,duration:0.1,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 1.52)});
+      tl.fromTo('#${id}halo',{scale:0.86,autoAlpha:0.9},{scale:1.3,autoAlpha:0,duration:0.44,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 1.52)});
+      tl.to('#${id}ui1',{autoAlpha:0,duration:0.2,ease:'power2.in'},${r2(t0 + 1.86)});
+      tl.fromTo('#${id}ui2',{autoAlpha:0,scale:0.94},{autoAlpha:1,scale:1,duration:0.34,ease:'back.out(1.6)',transformOrigin:'50% 50%'},${r2(t0 + 1.96)});
+      tl.to('#${id}cur',{x:${FW(id, 0.18)},y:${FH(id, 0.2)},autoAlpha:0,duration:0.3,ease:'power2.in'},${r2(t0 + 1.9)});`
+    case 'tsunami':
+      // la vague ENFLE : trois passages, chacun plus haut, chacun relevé depuis
+      // la ligne de mer (transformOrigin en bas de la bbox = la surface). La
+      // précédente s'efface quand la suivante arrive — c'est la MÊME vague.
+      // Les points de données montent avec la grande et dérivent : l'eau avance.
+      // PAS de scaleY sur les groupes SVG : GSAP calcule l'origine sur une bbox
+      // qui bouge pendant le tween et compense par une translation — la vague
+      // finissait 800 px au-dessus de l'eau, en l'air. Ici les trois vagues sont
+      // dessinées à leur taille définitive, ancrées sur la ligne de mer, et se
+      // succèdent : chacune arrive de la gauche et pousse la précédente dehors.
+      // Rien qui puisse dériver, et « ça enfle » se lit dans l'enchaînement.
+      return inOut + `
+      tl.fromTo('#${id}wg0',{x:${FW(id, -0.16)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.42,ease:'power2.out'},${t0});
+      tl.to('#${id}wg0',{x:${FW(id, 0.1)},autoAlpha:0,duration:0.3,ease:'power1.in'},${r2(t0 + 0.66)});
+      tl.fromTo('#${id}wg1',{x:${FW(id, -0.2)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.5,ease:'power2.out'},${r2(t0 + 0.62)});
+      tl.to('#${id}wg1',{x:${FW(id, 0.12)},autoAlpha:0,duration:0.34,ease:'power1.in'},${r2(t0 + 1.3)});
+      tl.fromTo('#${id}wg2',{x:${FW(id, -0.26)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.72,ease:'power3.out'},${r2(t0 + 1.24)});
+      tl.fromTo('#${id}an .an-dt',{y:${FH(id, 0.26)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.66,stagger:0.014,ease:'power2.out'},${r2(t0 + 1.42)});
+      tl.to('#${id}an .an-dt',{x:${FW(id, 0.07)},duration:${r2(Math.max(0.8, dur - 2))},ease:'sine.inOut'},${r2(t0 + 1.9)});`
+    case 'gaugefill': {
+      // le chiffre est COMPTÉ, il suit la jauge. Il n'y a pas de valeur écrite
+      // dans le code : le libellé cible est lu sur l'élément (data-pct), et le
+      // compteur s'arrête dessus.
+      const fill = r2(Math.max(0.9, dur * 0.66))
+      return inOut + `
+      tl.fromTo('#${id}gfill',{scaleY:0},{scaleY:1,duration:${fill},ease:'power1.inOut',transformOrigin:'50% 100%'},${r2(t0 + 0.2)});
+      (function(){ var el=document.getElementById('${id}gnum'); if(!el) return;
+        var target=(el.getAttribute('data-pct')||'100 %'), n=parseFloat(String(target).replace(',','.'))||100, o={v:0};
+        // lazy:false — sans lui GSAP diffère le rendu du premier tick, et un
+        // seek() sur la timeline laisse le compteur figé à 0 %.
+        tl.to(o,{v:n,duration:${fill},lazy:false,ease:'power1.inOut',onUpdate:function(){ el.textContent=Math.round(o.v)+' %'; }},${r2(t0 + 0.2)}); })();
+      // les quatre ventes tombent PENDANT la montée, calées sur la jauge : à un
+      // quart, à la moitié, aux trois quarts, puis juste avant le plein. « Plus
+      // ça monte, plus il y en a » — et jamais plus de quatre.
+      ${[0.22, 0.46, 0.7, 0.92].map((p, k) => `tl.fromTo('#${id}gs${k}',{x:${FW(id, 0.26)},autoAlpha:0},{x:0,autoAlpha:1,duration:0.3,ease:'back.out(1.6)'},${r2(t0 + 0.2 + fill * p)});`).join('\n      ')}
+      tl.to('#${id}gnum',{scale:1.1,duration:0.18,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(t0 + 0.2 + fill)});`
+    }
     default:
       return inOut + `
       tl.fromTo('#${id}cn', { scale: 0.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2.4)' }, ${t0});

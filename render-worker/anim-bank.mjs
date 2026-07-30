@@ -239,6 +239,17 @@ export const BANK = [
   { name: 'share',   desc: "CTA UNIQUEMENT — LA BARRE D'ACTIONS D'UN POST : le coeur se remplit et pulse, la fleche de partage s'envole. « mets un like », « partage a quelqu'un », « enregistre ». Ne la choisis JAMAIS ailleurs que sur l'appel a l'action de fin. Mets le libelle entendu dans items[1].text (« PARTAGE », « LIKE »)." },
   { name: 'views',   desc: "LA VIGNETTE DE SA VIDEO et le COMPTEUR DE VUES qui grimpe dessous pendant que la lecture avance. « des millions de vues », « ca fait X vues », « les vues montent ». Mets le nombre entendu dans items[0].text (« 1 200 000 »)." },
   { name: 'linkbio', desc: "LE PROFIL ET LE LIEN DE LA BIO, avec un doigt qui vient appuyer dessus. « le lien dans ma bio », « clique sur le lien en bio », « tu as juste a mettre un lien dans ta bio ». Mets le libelle du lien dans items[0].text et le pseudo dans items[1].text." },
+
+  // ── PAQUET 12 (#147) — LES QUATRE SCENES DECRITES PAR AXEL ──
+  // Meme methode que `twopaths` et les quatre du 30/07 : il decrit la scene, on
+  // fait la maquette, il valide, on integre. C'est la seule qui ait marche.
+  // `brickbuild` (la main qui pose une brique, l'immeuble qui monte) a ete
+  // ecarte a la maquette : la construction dit EFFORT alors que la phrase dit
+  // FACILE. Remplace par `oneclick`, ou le geste EST le propos.
+  { name: 'salesphone', desc: "UN TELEPHONE QUI SE MET A SONNER DE VENTES : les notifications de commande tombent l'une apres l'autre, de plus en plus vite, jusqu'a quatre, avec leur montant, et le compteur rouge grimpe avec elles. « ca peut changer ta vie », « ca rapporte », « les commandes tombent », « ca vend pendant que tu dors ». items[0..3].text = les montants entendus." },
+  { name: 'oneclick', desc: "UN ORDINATEUR QU'ON OUVRE, UN SEUL CLIC, ET LE PROJET EST DEJA TERMINE : l'ecran se releve, le curseur clique une fois, le rendu fini s'affiche avec sa coche. « accessible aux debutants », « un seul clic », « c'est fait tout seul », « aucune competence », « meme si tu n'y connais rien »." },
+  { name: 'tsunami', desc: "UNE PETITE ONDULATION QUI ENFLE JUSQU'A UN MUR D'EAU peuple de points de donnees : la meme vague en trois passages, de plus en plus haute. Rien n'est detruit. « la vraie vague arrive », « c'est un raz-de-maree », « ce qui arrive va tout emporter », « on n'a rien vu encore »." },
+  { name: 'gaugefill', desc: "UNE JAUGE GRADUEE QUI MONTE DE 0 A 100 % pendant que les ventes tombent a cote, de plus en plus nombreuses (quatre au maximum). « 100 % des benefices », « tout est pour toi », « l'integralite », « tu gardes tout ». items[0].text = le pourcentage entendu, items[1..4].text = les montants." },
 ]
 
 export const ANIM_NAMES = BANK.map((b) => b.name)

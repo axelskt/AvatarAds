@@ -54,6 +54,21 @@ const EXIGE_GLOBAL = {
   lowcost: /investi|mise|depart|départ|capital|cout|coût|budget|euro|€|prix/i,
   twopaths:/concurrence|concurrent|personne|seul|autres|tout le monde|different/i,
   countup: /\d|cent|mille|pourcent/i,
+  // ── PAQUET 12 (#147) ──
+  // Le garde-fou est la seule chose qui empêche « le visuel EST le mot » de
+  // redevenir « le visuel ressemble au mot ». Chaque motif reprend le vocabulaire
+  // de la phrase qu'Axel a décrite, pas le thème général : `salesphone` ne doit
+  // pas tomber sur n'importe quelle mention d'argent, il lui faut la VENTE.
+  // `changer ta vie` : ce n'est pas du vocabulaire de vente, et pourtant c'est
+  // LA phrase pour laquelle Axel a décrit cette animation — « un téléphone qui
+  // reçoit plein de notifications de vente Shopify ». Chez lui, la vie qui
+  // change, ce sont les commandes qui tombent. La métaphore est assumée et
+  // validée ; elle est donc écrite ici, explicitement, plutôt que subie par un
+  // garde-fou trop large.
+  salesphone: /vend|vente|ventes|command|achat|acheteur|client|boutique|shopify|encaiss|rapporte|revenu|chang\w*\s+(ta|ma|sa|la|ton|mon)\s+vie|\bvie\b/i,
+  oneclick: /debutant|débutant|accessible|simple|facile|clic|clique|competence|compétence|connais rien|sans savoir|tout seul/i,
+  tsunami: /vague|tsunami|raz|maree|marée|deferl|déferl|arrive|arrivera|vient|va tout/i,
+  gaugefill: /benefic|bénéfic|pourcent|%|totalit|integralit|intégralit|tout pour|garde tout|100/i,
 }
 
 const REDIRECTIONS = {
@@ -219,6 +234,13 @@ export const VOICE_ANIMS = [
   // Les deux animations decrites par Axel, cablees sur SES mots.
   { w: ['investissement', 'investir', 'mise', 'depart', 'capital'],                     anim: 'lowcost' },
   { w: ['concurrence', 'concurrent', 'concurrents', 'personne'],                        anim: 'twopaths' },
+  // ── PAQUET 12 (#147) — les quatre scenes qu'il a decrites et validees ──
+  // Elles passent AVANT les tables generiques ci-dessus quand les mots
+  // coincident : c'est sa description qui a le dernier mot sur ses phrases.
+  { w: ['ventes', 'vente', 'commandes', 'commande', 'shopify', 'boutique', 'encaisse'], anim: 'salesphone' },
+  { w: ['debutant', 'debutants', 'accessible', 'clic', 'clique'],                       anim: 'oneclick' },
+  { w: ['vague', 'tsunami', 'raz'],                                                     anim: 'tsunami' },
+  { w: ['benefices', 'benefice', 'integralite', 'totalite'],                            anim: 'gaugefill' },
 ]
 
 export function deriveDynamicSlides(plan, opts = {}) {
@@ -1562,30 +1584,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
     return null
   }
 
-  // ── UN MOT SEUL À L'ÉCRAN DOIT PORTER QUELQUE CHOSE ────────────────────────
-  // Axel, deux fois : « les mots comme "entièrement" tout seul non ! » puis
-  // « "vont" ». La réduction plus bas ramène une carte de texte à UN item —
-  // celui qui est réellement prononcé. Quand ce mot est un adverbe, un
-  // auxiliaire ou une préposition, l'écran affiche un mot creux en très gros :
-  // ni image, ni information, et on a perdu une seconde de vidéo. Le trou vaut
-  // mieux : la scène voisine s'étire dessus (§3c).
-  const CREUX = new Set([
-    'vont', 'vais', 'allez', 'allons', 'fait', 'faire', 'fais', 'font', 'peux', 'peut', 'pouvez',
-    'veux', 'veut', 'voulez', 'suis', 'sont', 'etes', 'etre', 'avoir', 'avez', 'avons',
-    'cette', 'celui', 'celle', 'ceux', 'celles', 'autre', 'autres', 'meme', 'memes',
-    'tout', 'toute', 'tous', 'toutes', 'plus', 'moins', 'tres', 'bien', 'juste', 'aussi',
-    'encore', 'deja', 'apres', 'avant', 'pour', 'avec', 'sans', 'dans', 'chez', 'vers',
-    'depuis', 'pendant', 'quand', 'comme', 'donc', 'alors', 'ensuite', 'puis', 'enfin',
-    'importe', 'peu', 'beaucoup', 'assez', 'trop', 'quelque', 'quelques', 'chaque',
-  ])
+  // ── JAMAIS UN MOT TOUT SEUL À L'ÉCRAN ──────────────────────────────────────
+  // Règle d'Axel, donnée et redonnée : « jamais un mot tout seul ».
+  //
+  // Le code n'en appliquait que la moitié. Il tenait une liste de mots CREUX
+  // (« vont », « entièrement », les prépositions) et ne refusait QUE ceux-là :
+  // un mot plein isolé — « bénéfices », « débutants » — passait sans problème.
+  // Or ce n'est pas la vacuité du mot qui gêne, c'est l'isolement : un substantif
+  // seul en très gros ne montre rien de plus qu'un adverbe seul. La liste était
+  // aussi un puits sans fond, à rallonger à chaque rendu raté.
+  //
+  // Un mot seul est donc refusé, quel qu'il soit. Une seule exception, et elle
+  // vient d'une autre de ses règles : UN CHIFFRE PORTE UNE INFORMATION. « 100 % »,
+  // « 2,1M » disent quelque chose que la voix vient d'annoncer — c'est tout le
+  // principe de `countup`. Le reste dégage, et la scène voisine s'étire sur le
+  // trou (§3c) : un trou vaut mieux qu'un mot posé là pour meubler.
   const motPlein = (txt) => {
     const mots = String(txt || '').trim().split(/[\s,/·]+/).filter(Boolean)
-    if (mots.length !== 1) return true              // deux mots ou plus : c'est une idée
-    const n = norm(mots[0])
-    if (/\d/.test(n)) return true                   // un chiffre porte toujours
-    if (n.length < 4) return false                  // « et », « ton », « son »…
-    if (/ment$/.test(n)) return false               // entierement, simplement, vraiment…
-    return !CREUX.has(n)
+    if (mots.length >= 2) return true               // deux mots ou plus : c'est une idée
+    if (!mots.length) return false
+    return /\d/.test(norm(mots[0]))                 // seul un chiffre survit isolé
   }
 
   const kept = []
@@ -1654,7 +1672,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
   if (dropUnrenderable || dropCollide || dropUnsaid || dropCreux) {
     console.log(`▶ scènes serveur écartées : ${dropUnrenderable} non rendables · `
       + `${dropCollide} en collision · ${dropUnsaid} dont aucun mot n'est prononcé · `
-      + `${dropCreux} réduites à un mot creux`)
+      + `${dropCreux} réduites à un mot seul`)
   }
 
   // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur
