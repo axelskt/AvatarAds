@@ -282,7 +282,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       } catch (e) { console.warn('photo avatar illisible :', e.message) }
       break
     }
-    if (!baseW && !avatarPhoto && !Object.keys(avatarClips).length && (plan.avatarSegments || []).length) {
+    // `noFace` : vider `avatarSegments` ne suffisait pas — la dérivation en
+    // recréait juste après (adresse directe, respiration, trou comblé) et chacune
+    // retombait sur la photo de démo. Il faut le lui DIRE.
+    const noFace = !baseW && !avatarPhoto && !Object.keys(avatarClips).length
+    if (noFace && (plan.avatarSegments || []).length) {
       console.log(`▶ aucun visage disponible → ${plan.avatarSegments.length} fenêtre(s) avatar retirée(s)`)
       plan.avatarSegments = []
     }
@@ -310,7 +314,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         if (apres !== avant) { c.text = apres; corr++ }
       }
       if (corr) console.log(`▶ orthographe : ${corr} mot(s) corrigé(s) dans les sous-titres`)
-      try { deriveDynamicSlides(plan, { assetFiles }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
+      try { deriveDynamicSlides(plan, { assetFiles, noFace }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot

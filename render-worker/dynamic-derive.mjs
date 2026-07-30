@@ -244,6 +244,15 @@ export const VOICE_ANIMS = [
 ]
 
 export function deriveDynamicSlides(plan, opts = {}) {
+  // ── AUCUN VISAGE DISPONIBLE ? ALORS ON N'EN RÉCLAME PAS ───────────────────
+  // Le worker vide `plan.avatarSegments` quand le job n'a ni clip lipsync, ni
+  // photo, ni base vidéo — mais la dérivation en RECRÉAIT juste après, sans
+  // savoir qu'il n'y a personne à montrer : une adresse directe (§0b), une
+  // respiration (§3b), un trou comblé (§3b-bis). Chacune de ces fenêtres
+  // retombait sur `tuto/hook-qualite.png`, la photo de démo — un inconnu au
+  // bord d'une piscine en plein écran, ce qu'Axel a déjà vu et refusé. Les
+  // fenêtres qui restaient vides, elles, donnaient l'écran nu à 18 s.
+  const noFace = !!opts.noFace
   // apple partage ce moteur (cf. build-composition) : sans lui ouvrir la porte
   // ici, il recevait le plan BRUT — 19 panneaux au lieu de 14, captures non
   // pilotées, animations non ancrées. La peau était claire, la matière non.
@@ -506,6 +515,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     let n2 = 0
     for (const [a, b] of adresses.sort((x, y) => x[0] - y[0])) {
+      if (noFace) break                       // pas de visage à rendre l'écran à
       if (overlaps(a, b)) continue
       ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true })
       claim(a, b); n2++
@@ -1489,6 +1499,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     let room = D * 0.4 - avCovered                       // 40 % de visage au maximum
     const placed = (plan.avatarSegments || []).map((w) => w.start)
     for (const g of freeGaps.slice().sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))) {
+      if (noFace) break                       // aucune respiration à réserver
       if (avWins.length + (plan.avatarSegments || []).length >= 4 || room < 1.6) break
       if (g[1] - g[0] < 2.0) continue
       if (placed.some((t) => Math.abs(t - g[0]) < 6)) continue
@@ -1512,14 +1523,31 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const bornes = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
       .sort((a, b) => a[0] - b[0])
+    // 1,2 s est le seuil du VISAGE : en dessous, le montrer puis le retirer fait
+    // un clignotement. Sans visage, il n'y a rien à faire clignoter et le trou
+    // reste à l'écran — 0,97 s et 0,83 s de fond nu sur le rendu du 30/07. Le
+    // seuil descend donc à 0,3 s quand c'est la scène voisine qui reprend.
+    const SEUIL = noFace ? 0.3 : 1.2
     const creux = []
     let cur = 0
-    for (const [a, b] of bornes) { if (a - cur >= 1.2) creux.push([cur, a]); cur = Math.max(cur, b) }
-    if (D - cur >= 1.2) creux.push([cur, D])
-    let n = 0
+    for (const [a, b] of bornes) { if (a - cur >= SEUIL) creux.push([cur, a]); cur = Math.max(cur, b) }
+    if (D - cur >= SEUIL) creux.push([cur, D])
+    let n = 0, etires = 0
     for (const [a, b] of creux) {
       const d = Math.min(b - 0.05, a + 6.5)
-      if (d - a < 1.2 || overlaps(a, d)) continue
+      if (d - a < SEUIL || overlaps(a, d)) continue
+      // Sans visage, la hiérarchie d'Axel descend d'un cran : le creux revient à
+      // la scène qui le précède (ou à celle qui le suit s'il ouvre la vidéo).
+      // Un panneau qui dure une seconde de plus vaut mieux qu'un écran nu — le
+      // rendu du 30/07 laissait le fond vide sur « clairement zéro compétence ».
+      if (noFace) {
+        const fin = r2(b - 0.05)
+        const avant = out.filter((s) => s.end <= a + 0.06).sort((x, y) => y.end - x.end)[0]
+        const apres = out.filter((s) => s.start >= b - 0.06).sort((x, y) => x.start - y.start)[0]
+        if (avant) { avant.end = fin; claim(a, fin); etires++ }
+        else if (apres) { apres.start = r2(a); claim(a, fin); etires++ }
+        continue
+      }
       ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true })
       claim(a, d); n++
     }
@@ -1527,6 +1555,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       plan.avatarSegments.sort((x, y) => x.start - y.start)
       console.log(`▶ ${n} trou(s) comblé(s) par le visage`)
     }
+    if (etires) console.log(`▶ ${etires} trou(s) rendu(s) à la scène voisine (aucun visage disponible)`)
   }
 
   // ── 3c · PAS DE MOT SEUL ENTRE DEUX ANIMATIONS ──
