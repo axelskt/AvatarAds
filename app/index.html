@@ -22912,8 +22912,72 @@ const _AC_VOICE_PRESETS = {
   punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -3.5, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -19.5 },
 };
 
+// ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
+// Axel, apres huit tentatives : « ca sature du debut a la fin, le mieux serait
+// que tu reprennes de 0 le volume constant, c'est ca qui bloque ».
+// Toutes mes mesures disaient le fichier propre — pic a -1,6 dB, aucun
+// echantillon ecrete, spectre normal. Le probleme n'etait donc pas un reglage a
+// corriger mais la NATURE du traitement : un compresseur qui reagit a chaque
+// syllabe, un limiteur, un calage LUFS, des filtres. Beaucoup d'etages, chacun
+// discret, qui ensemble donnent ce que l'oreille appelle « sature » — un son
+// tenu, sans respiration.
+//
+// L'etiquette promet une chose simple : « meme niveau du debut a la fin, sans
+// ecraser ». On la prend au mot. Plus de compresseur, plus d'EQ, plus de LUFS.
+// Un seul principe : on mesure le niveau sur des fenetres LONGUES (600 ms), on
+// en deduit une courbe de gain LENTE, et on l'applique. Une phrase faible
+// remonte, une phrase forte descend — mais A L'INTERIEUR d'une phrase, rien ne
+// bouge. Les attaques, les respirations et la dynamique de la voix sont
+// intactes : c'est la difference entre egaliser un discours et compresser un
+// signal.
+function _acNiveauConstant(buf, cible = 0.10){
+  const sr = buf.sampleRate, n = buf.length
+  const win = Math.round(sr * 0.6)                 // 600 ms : l'echelle de la phrase
+  const nb = Math.max(1, Math.ceil(n / win))
+  // 1 · le niveau efficace de chaque fenetre, en ignorant les silences
+  const niv = new Float32Array(nb)
+  const d0 = buf.getChannelData(0)
+  for (let k = 0; k < nb; k++) {
+    const a = k * win, b = Math.min(n, a + win)
+    let s = 0, c = 0
+    for (let i = a; i < b; i += 4) { const v = d0[i]; s += v * v; c++ }
+    niv[k] = c ? Math.sqrt(s / c) : 0
+  }
+  // 2 · le gain voulu par fenetre, borne a ±12 dB pour ne jamais reveler le bruit
+  const MINI = 0.004                               // sous ce niveau c'est du silence
+  const gw = new Float32Array(nb)
+  for (let k = 0; k < nb; k++) {
+    gw[k] = niv[k] < MINI ? 1 : Math.min(4, Math.max(0.25, cible / niv[k]))
+  }
+  // 3 · on lisse la courbe : un gain qui saute entre deux fenetres s'entend
+  const lisse = new Float32Array(nb)
+  for (let k = 0; k < nb; k++) {
+    let s = 0, c = 0
+    for (let j = Math.max(0, k - 2); j <= Math.min(nb - 1, k + 2); j++) { s += gw[j]; c++ }
+    lisse[k] = s / c
+  }
+  // 4 · application, avec interpolation lineaire entre les centres de fenetre
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch)
+    for (let i = 0; i < n; i++) {
+      const pos = i / win - 0.5
+      const k0 = Math.max(0, Math.min(nb - 1, Math.floor(pos)))
+      const k1 = Math.max(0, Math.min(nb - 1, k0 + 1))
+      const t = Math.max(0, Math.min(1, pos - k0))
+      d[i] *= lisse[k0] * (1 - t) + lisse[k1] * t
+    }
+  }
+  return buf
+}
+
 async function _acMasterVoice(buf, presetKey, opts){
-  const P = _AC_VOICE_PRESETS[presetKey || _acVoicePreset];
+  const cle = presetKey || _acVoicePreset
+  // « Aucun » ne traverse plus la chaine du tout : il prend le chemin court.
+  if (cle === 'off') {
+    if (!buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf
+    return _acLimitPeaks(_acNiveauConstant(buf), 0.89)
+  }
+  const P = _AC_VOICE_PRESETS[cle];
   // #154 · case « Améliorer la voix » décochée → on ne touche à rien
   if(!P || !buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf;
   const sr = buf.sampleRate, ch = buf.numberOfChannels;
