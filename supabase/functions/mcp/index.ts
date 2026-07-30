@@ -15,6 +15,18 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 // / mcp_refund_credits (barème #79 : image 3 ou 5, vidéo 1/s).
 
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
+// ── L'URL QU'ON DONNE À L'UTILISATEUR NE PEUT PAS ÊTRE CELLE DE SUPABASE ──
+// Claude sonde l'emplacement RFC 9728 pour savoir si la ressource est protégée :
+//   https://<hôte>/.well-known/oauth-protected-resource/<chemin>
+// Sur supabase.co, c'est la PASSERELLE Supabase qui répond (jamais l'edge
+// function) et elle renvoie 401 « No API key found in request ». Un 401 là-bas
+// signifie « OAuth » : Claude enchaîne sur l'inscription dynamique du client,
+// qu'on n'a pas, et échoue — « Impossible de s'inscrire auprès du service de
+// connexion de AvatarAds ». Rien dans ce fichier ne peut corriger ça : la
+// requête ne l'atteint jamais.
+// On distribue donc l'adresse du relais (mcp-proxy/), servi depuis un domaine
+// où l'on maîtrise /.well-known/* et où il répond 404 = « pas d'OAuth ».
+const MCP_PUBLIC_BASE = Deno.env.get('MCP_PUBLIC_BASE') || 'https://avatarads-mcp.netlify.app'
 const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY       = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
@@ -1325,7 +1337,7 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     await svc.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null)
     const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key) })
     if (insErr) return json(500, { error: 'server_error' })
-    return json(200, { ok: true, url: `${SUPABASE_URL}/functions/v1/mcp/${key}` })
+    return json(200, { ok: true, url: `${MCP_PUBLIC_BASE}/${key}` })
   }
   if (body.action === 'revoke') {
     await svc.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null)
