@@ -229,7 +229,13 @@ function screenContent(id, s, tone, liveT0, t1, W) {
   //   deux tiers de la largeur visible — c'est LUI le plan, la capture n'est plus
   //   que son décor. La caméra reste dans l'image (jamais de bord vide).
   const shot = (sp) => {
-    const z = Math.min(5.4, Math.max(1.6, 0.66 / Math.max(0.04, sp.w)))
+    // …MAIS ON DOIT ENCORE RECONNAITRE L'APP. À 0,66 de largeur utile, un bouton
+    // étroit poussait le zoom à 3,8× : on ne voyait plus qu'une carte blanche
+    // flottante. Axel : « c'est quoi ça le Générer la clé, ce n'est pas le bouton
+    // sur AvatarAds ». Le vrai bouton, cadré si serré, ne ressemble plus à rien.
+    // L'élément occupe donc la moitié de la largeur, plafond à 3,2× : on le voit,
+    // et on voit l'écran autour — c'est ce qui prouve que c'est bien SON outil.
+    const z = Math.min(3.2, Math.max(1.5, 0.5 / Math.max(0.04, sp.w)))
     const cl = (v, span) => Math.min(1 - span, Math.max(span, v))
     const px = cl(sp.x, 1 / (2 * z)), py = cl(sp.y, 1 / (2 * z))
     // l'échelle RÉELLEMENT appliquée : le zoom demandé, divisé par le facteur
