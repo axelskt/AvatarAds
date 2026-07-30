@@ -614,7 +614,7 @@ export function animHtml(name, s, W, H, vs) {
       // decroissent, la courbe qui plonge, la piece au bout.
       const gx = Math.round(f.w * 0.16), gy = Math.round(f.h * 0.22)
       const gw = Math.round(f.w * 0.70), gh = Math.round(f.h * 0.44)
-      const bw = Math.round(gw * 0.15), pas = Math.round(gw * 0.23)
+      const bw = Math.round(gw * 0.19), pas = Math.round(gw * 0.245)
       const base = gy + gh
       let barres = ''
       const hs = [1, 0.70, 0.42, 0.20]
@@ -627,10 +627,10 @@ export function animHtml(name, s, W, H, vs) {
       return box(`
         <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px;overflow:visible" viewBox="0 0 ${f.w} ${f.h}">
           <path d="M${gx} ${gy} L${gx} ${base} L${gx + gw} ${base}" fill="none" stroke="${P.line}" stroke-width="3" stroke-linecap="round"/>
-          <path id="${id}cv" d="M${gx + Math.round(gw * 0.14)} ${gy + Math.round(gh * 0.10)} C${gx + Math.round(gw * 0.36)} ${gy + Math.round(gh * 0.32)} ${gx + Math.round(gw * 0.52)} ${gy + Math.round(gh * 0.60)} ${gx + Math.round(gw * 0.80)} ${base - Math.round(gh * 0.18)}"
+          <path id="${id}cv" d="M${gx + Math.round(gw * 0.14)} ${gy + Math.round(gh * 0.10)} C${gx + Math.round(gw * 0.36)} ${gy + Math.round(gh * 0.32)} ${gx + Math.round(gw * 0.52)} ${gy + Math.round(gh * 0.60)} ${gx + Math.round(gw * 0.09) + 3 * pas + Math.round(bw / 2)} ${base - Math.round(gh * 0.20)}"
             fill="none" stroke="${P.acc}" stroke-width="8" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900"/>
         </svg>
-        <span class="an-p" id="${id}co" style="left:${Math.round((f.w - cd) / 2)}px;top:${Math.round(f.h * 0.74)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${P.acc};box-shadow:0 14px 34px rgba(0,0,0,.24);display:grid;place-items:center;opacity:0">
+        <span class="an-p" id="${id}co" style="left:${gx + Math.round(gw * 0.09) + 3 * pas + Math.round((bw - cd) / 2)}px;top:${base - Math.round(gh * 0.20) - Math.round(cd * 1.15)}px;width:${cd}px;height:${cd}px;border-radius:50%;background:${P.acc};box-shadow:0 14px 34px rgba(0,0,0,.24);display:grid;place-items:center;opacity:0">
           <span style="font:800 ${Math.round(cd * 0.5)}px/1 ${SANS};color:#FFF">&#8364;</span></span>
         ${barres}`)
     }
