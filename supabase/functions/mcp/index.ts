@@ -222,6 +222,15 @@ function toolDefs(isOwner: boolean) {
       },
     },
     {
+      name: 'check_image',
+      description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête. Si toujours en cours, rappelle cet outil ~20 secondes plus tard.",
+      inputSchema: {
+        type: 'object',
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_image.' } },
+        required: ['job_id'],
+      },
+    },
+    {
       name: 'check_video',
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
@@ -387,38 +396,63 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
-  let delivered = false
-  try {
-    let lastErr = 'Erreur génération'
-    for (const model of GPT_IMG_MODELS) {
-      const res = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (data.error) {
-        lastErr = data.error.message || 'Erreur génération'
-        if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue // modèle indispo → suivant
-        return toolErr('Génération refusée : ' + lastErr) // finally rembourse
-      }
-      const b64 = data.data?.[0]?.b64_json
-      if (!b64) { lastErr = 'Aucune image retournée'; continue }
-
-      const url = await uploadMedia(userId, b64ToBytes(b64), 'png', 'image/png')
-      // Trace la dépense (plafond quotidien + suivi d'usage) — seulement après succès
-      await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'done', credits_cost: cost, result_url: url })
-      delivered = true
-      const balTxt = isUnlimited(profile) ? '∞' : String(bal)
-      const content: Array<Record<string, unknown>> = []
-      if (b64.length < 4_000_000) content.push({ type: 'image', data: b64, mimeType: 'image/png' })
-      content.push({ type: 'text', text: `✅ Image générée !\nURL : ${url}\n−${cost} crédits · solde : ${balTxt}` })
-      return { content }
-    }
-    return toolErr('Génération échouée : ' + lastErr) // finally rembourse
-  } finally {
-    if (!delivered) await refundCredits(userId, cost)
+  // ── L'IMAGE PART EN TÂCHE DE FOND ────────────────────────────────────────
+  // Cet outil tenait la requête ouverte pendant toute la génération : 43 s
+  // mesurées. Depuis que le MCP passe par un relais (le connecteur Claude refuse
+  // sinon de se connecter), la requête est coupée à ~28 s et Claude affiche
+  // « le serveur AvatarAds ne répond pas ». Aucun outil MCP ne doit tenir la
+  // ligne aussi longtemps : la vidéo et le montage rendent déjà un job_id tout
+  // de suite. L'image fait pareil — et ça résiste aussi aux coupures réseau.
+  const { data: job, error: jobErr } = await svc.from('mcp_jobs')
+    .insert({ user_id: userId, kind: 'image', status: 'running', credits_cost: cost }).select('id').single()
+  if (jobErr || !job) {
+    await refundCredits(userId, cost)
+    return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
   }
+
+  bg((async () => {
+    let lastErr = 'Erreur génération'
+    try {
+      for (const model of GPT_IMG_MODELS) {
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (data.error) {
+          lastErr = data.error.message || 'Erreur génération'
+          if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue
+          break
+        }
+        const b64 = data.data?.[0]?.b64_json
+        if (!b64) { lastErr = 'Aucune image retournée'; continue }
+        const url = await uploadMedia(userId, b64ToBytes(b64), 'png', 'image/png')
+        await svc.from('mcp_jobs').update({ status: 'done', result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
+        return
+      }
+    } catch (e) { lastErr = String((e as Error)?.message || e) }
+    await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+    await refundCredits(userId, cost)   // échec → on rend les crédits
+  })())
+
+  return toolText(
+    `🎨 Génération d'image lancée ! (${quality}, ${format}, −${cost} crédits)
+job_id : ${job.id}
+Appelle check_image avec ce job_id dans environ 30 secondes.`)
+}
+
+async function runCheckImage(profile: Record<string, unknown>, args: Record<string, unknown>) {
+  const jobId = String(args.job_id || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
+  const { data: job } = await svc.from('mcp_jobs').select('*')
+    .eq('id', jobId).eq('user_id', String(profile.id)).eq('kind', 'image').maybeSingle()
+  if (!job) return toolErr('Job introuvable sur ce compte.')
+  if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+  if (job.status === 'done' && job.result_url) {
+    return toolText(`✅ Image prête !\nURL : ${job.result_url}`)
+  }
+  return toolText('⏳ Toujours en cours — rappelle check_image dans ~20 secondes.')
 }
 
 async function veoFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -1470,6 +1504,7 @@ serve(async (req) => {
       if (name === 'get_account') out = await runGetAccount(profile)
       else if (name === 'generate_image') out = await runGenerateImage(profile, args, ctx)
       else if (name === 'generate_video') out = await runGenerateVideo(profile, args, ctx)
+      else if (name === 'check_image') out = await runCheckImage(profile, args)
       else if (name === 'check_video') out = await runCheckVideo(profile, args)
       else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)
       else if (name === 'check_avatar_video') out = await runCheckAvatarVideo(profile, args)
