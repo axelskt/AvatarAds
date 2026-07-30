@@ -1152,6 +1152,43 @@ export function deriveDynamicSlides(plan, opts = {}) {
   //   1. ce que le chef d'orchestre a choisi (il lit la phrase)
   //   2. mes tables de mots-clés (elles ne font que reconnaître)
   //   3. ses cartes de texte, dans ce qu'il reste
+  // ── 2c · CHAQUE IDÉE NOMMÉE A SON ANIMATION ────────────────────────────────
+  // Axel : « je dis 6 bénéfices après le "voici pourquoi" et y'a 3 animations…
+  // qui ne correspondent même pas ». Le chef d'orchestre propose UN `beat` par
+  // idée — 26 sur cet audio — mais ne les traduit qu'en 13 slides, et cette
+  // dérivation ne lisait que les slides. Résultat : une énumération de sept
+  // bénéfices tenait en trois panneaux longs, et le visage bouchait le reste.
+  //
+  // On repasse donc sur les beats AVANT de poser les fenêtres avatar : chaque
+  // mot-clé réellement prononcé, qui trouve une place libre, reçoit SON
+  // animation SUR SON MOT. Le visage ne récupère plus que ce qui reste — c'est
+  // l'inverse de ce qui se passait.
+  {
+    let curB = 0, posB = 0, sautB = 0
+    const beats = (plan.beats || []).filter((b) => b && ANIMS.includes(String(b.anim || '')))
+    for (let i = 0; i < beats.length; i++) {
+      const b = beats[i]
+      const mot = String(b.word || '').trim()
+      if (!mot) continue
+      const hit = findSeq(words, mot, curB) || findAny(words, [mot], curB)
+      if (!hit) { sautB++; continue }
+      curB = hit.i + 1
+      // la fenêtre s'arrête au mot du beat SUIVANT : une idée ne déborde jamais
+      // sur la suivante, sinon on lit « zéro compétence » sur l'animation de
+      // l'investissement.
+      let fin = D
+      for (let j = i + 1; j < beats.length; j++) {
+        const h2 = findSeq(words, String(beats[j].word || ''), curB) || findAny(words, [String(beats[j].word || '')], curB)
+        if (h2) { fin = h2.start - 0.05; break }
+      }
+      const a = r2(Math.max(0, hit.start - 0.12))
+      const bb = r2(Math.min(D, fin, a + 2.4))
+      if (bb - a < 1.25) { sautB++; continue }   // sous 1,25 s c'est un flash, pas une scène
+      if (add({ anim: b.anim, value: b.value || '', items: b.value ? [{ t: 0, text: String(b.value) }] : [] }, a, bb)) posB++
+    }
+    if (posB) console.log(`▶ ${posB} idée(s) du script animée(s) sur leur mot` + (sautB ? ` · ${sautB} sans place` : ''))
+  }
+
   placeServerAnims()
   placeLocalAnims()
   placeServerText()
