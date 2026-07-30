@@ -22957,9 +22957,42 @@ const _AC_VOICE_PRESETS = {
   //
   // Verifie en rejouant VOIX4-off a travers l'ancienne PUIS la nouvelle courbe :
   // ecart residuel <= 0,26 dB sur huit bandes sur neuf (0,75 dB a 2,5 kHz).
-  natural: { hp: 105, mud: { f: 360, g: -2.4, q: 0.9 }, pres: { f: 2500, g: 1.6, q: 1.0 }, air: { f: 4800, g: 3.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
-  podcast: { hp: 115, mud: { f: 360, g: -3.4, q: 0.9 }, pres: { f: 2500, g: 2.2, q: 1.0 }, air: { f: 4800, g: 4.2 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 120, mud: { f: 360, g: -3.8, q: 0.9 }, pres: { f: 2600, g: 2.4, q: 1.0 }, air: { f: 4800, g: 4.6 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
+  // ── 3e PASSE : le grave est un PLATEAU, pas une bosse ─────────────────────
+  // Axel : « bof ». Et pour cause — j'avais monte le coupe-bas de 55 a 115 Hz
+  // et le grave etait quand meme remonte. La mesure explique pourquoi : ses deux
+  // fichiers ne viennent pas de la meme prise. DJI_02 est intrinsequement PLUS
+  // CLAIRE que VOIX4 (-1,8 dB de medium, +2,3 dB a 8 kHz). Une partie de l'ecart
+  // que je corrigeais n'etait pas le traitement, c'etait le micro.
+  //
+  // Ecart corrige de la difference de prise — ce que la chaine faisait de trop :
+  //    80-315 Hz   +2,2 a +3,0     trop de grave
+  //      2500 Hz   +0,11           deja cale
+  //     5-12 kHz   -1,3 a -1,6     pas assez d'air
+  //
+  // C'est un PLATEAU de grave, pas une bosse : -5,4 dB de 80 a 315 Hz qui
+  // remonte vers 0 au-dessus de 1,2 kHz. Un peaking, meme large, ne sait pas
+  // dessiner ca — d'ou `mudType: 'lowshelf'`.
+  //
+  // Courbe absolue visee (vs le preset « off »), et obtenue :
+  //     bande    visee   obtenue
+  //      80 Hz   -5,44    -5,69
+  //     160 Hz   -5,44    -5,57
+  //     315 Hz   -4,88    -4,71
+  //     630 Hz   -2,96    -3,35
+  //    1250 Hz   -1,04    -0,51
+  //    2500 Hz   +2,41    +2,91
+  //    5000 Hz   +4,07    +3,84
+  //    8000 Hz   +4,64    +4,35
+  //   12500 Hz   +4,53    +4,39
+  // Ecart <= 0,55 dB sur les neuf bandes.
+  //
+  // ⚠️ MESURER LA DIFFERENCE D'EQ SANS COMPENSATION DE NIVEAU. Avec, un
+  // changement global (enlever du grave ET ajouter de l'air) se fait manger par
+  // la renormalisation : la 2e passe lisait -1,17 dB la ou l'EQ en appliquait
+  // -5,7. Meme source, seul l'egaliseur change => comparaison brute.
+  natural: { hp: 60, mudType: 'lowshelf', mud: { f: 780, g: -4.2, q: 0.7 }, pres: { f: 2200, g: 1.0, q: 0.9 }, air: { f: 3100, g: 4.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
+  podcast: { hp: 60, mudType: 'lowshelf', mud: { f: 780, g: -6.0, q: 0.7 }, pres: { f: 2200, g: 1.4, q: 0.9 }, air: { f: 3100, g: 5.6 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 65, mudType: 'lowshelf', mud: { f: 780, g: -6.6, q: 0.7 }, pres: { f: 2200, g: 1.6, q: 0.9 }, air: { f: 3100, g: 6.2 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
@@ -23138,7 +23171,12 @@ async function _acMasterVoice(buf, presetKey, opts){
 
   // 2 · ÉGALISEUR PARAMÉTRIQUE : on creuse le « carton » (200-400 Hz), on avance
   //     la présence (intelligibilité), on ajoute l'air (le côté « beau micro »)
-  const mud  = off.createBiquadFilter(); mud.type  = 'peaking';   mud.frequency.value  = P.mud.f;  mud.gain.value  = P.mud.g;  mud.Q.value  = P.mud.q;
+  // `mud` est un LOW-SHELF depuis la 3e passe : mesure faite, ce que le
+  // traitement du 27/07 enleve dans le bas n'est pas une bosse mais un PLATEAU
+  // (-5,4 dB de 80 a 315 Hz, qui remonte vers 0 au-dessus de 1,2 kHz). Un
+  // peaking, meme large, ne peut pas dessiner ca : il laissait +3 dB de grave
+  // de trop. `mudType` reste ouvert pour un preset qui voudrait une cloche.
+  const mud  = off.createBiquadFilter(); mud.type  = P.mudType || 'peaking';   mud.frequency.value  = P.mud.f;  mud.gain.value  = P.mud.g;  mud.Q.value  = P.mud.q;
   const pres = off.createBiquadFilter(); pres.type = 'peaking';   pres.frequency.value = P.pres.f; pres.gain.value = P.pres.g; pres.Q.value = P.pres.q;
   const air  = off.createBiquadFilter(); air.type  = 'highshelf'; air.frequency.value  = P.air.f;  air.gain.value  = P.air.g;
 
