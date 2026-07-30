@@ -22866,11 +22866,19 @@ const _AC_VOICE_PRESETS = {
   // relookage complet du timbre. « Aucun » nivelle donc sans toucher au spectre :
   // ni coupe-bas, ni creux, ni presence, ni air, ni de-esseur.
   off: { hp: 20, mud: { f: 250, g: 0, q: 1 }, pres: { f: 3500, g: 0, q: 1 }, air: { f: 11000, g: 0 },
-         lp: 19500, deess: 0, comp: { th: -22, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -18 },
+         lp: 19500, deess: 0, comp: { th: -24, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -21 },
   // air : l'étagère « beau micro ». Elle était descendue à 9-9,5 kHz en même
   // temps que la cible montait — soit un coup de pouce EN PLEIN dans la zone de
   // dureté (8-10 kHz, les « ss » et « ch »). Elle repart à 11-12 kHz, où elle
   // ajoute de l'air sans ajouter de sifflantes.
+  // ── ON NE MASTERISE PAS DEUX FOIS ─────────────────────────────────────────
+  // Les cibles etaient a -17/-18 LUFS : des niveaux de DIFFUSION plateforme.
+  // Or cette voix repart dans le Montage IA, qui la renormalise. On la poussait
+  // donc au maximum, puis on la repoussait — d'ou une voix qui s'entend
+  // « saturee » sans jamais ecreter (mesure : 0 echantillon au plafond, pic a
+  // -1,5 dB, mais un RMS a -19,4 dB, tres chaud). Les cibles descendent de 2,5 a
+  // 3 dB et les taux de compression avec : on laisse de la marge au lieu de
+  // livrer un fichier deja au taquet.
   // ── LES PRESETS AJOUTENT DU CORPS, ILS N'EN ENLEVENT PLUS ─────────────────
   // Ils creusaient tous 250-300 Hz (« le carton ») en montant la presence et
   // l'air. Ce reglage vient du studio, ou l'on capte un micro statique proche
@@ -22880,15 +22888,15 @@ const _AC_VOICE_PRESETS = {
   // La bande `mud` sert donc maintenant a AJOUTER du bas-medium (gain positif),
   // la presence reste discrete et l'air quasi nul. Le caractere vient du corps
   // et de la compression, pas d'un coup de pouce dans les aigus.
-  natural: { hp: 70, mud: { f: 190, g: 1.2, q: 0.8 }, pres: { f: 3000, g: 1.0, q: 0.9 }, air: { f: 11500, g: 0.4 }, lp: 17000, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -19 },
+  natural: { hp: 70, mud: { f: 190, g: 1.2, q: 0.8 }, pres: { f: 3000, g: 1.0, q: 0.9 }, air: { f: 11500, g: 0.4 }, lp: 17000, deess: -4, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -21 },
   // podcast : le creux à 250 + la présence à 3500 + l'air à 11k s'additionnaient
   // en un basculement de 6 dB vers les aigus — mesuré sur une prise DJI : +10 dB
   // sous 2 kHz contre +16 dB au-dessus. Sur un micro-cravate, déjà clair par
   // nature, ça donne une voix maigre et agressive. Axel : « quand j'active
   // Volume constant ça donne un audio pourri ». Les trois corrections sont
   // divisées par deux : on garde le caractère, on enlève la dureté.
-  podcast: { hp: 70, mud: { f: 180, g: 2.2, q: 0.8 }, pres: { f: 3000, g: 1.4, q: 0.8 }, air: { f: 11500, g: 0.6 }, lp: 17000, deess: -6, comp: { th: -22, ratio: 3.0, att: 0.005, rel: 0.13 }, target: -18 },
-  punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -7, comp: { th: -24, ratio: 4.5, att: 0.003, rel: 0.09 }, target: -17 },
+  podcast: { hp: 70, mud: { f: 180, g: 2.2, q: 0.8 }, pres: { f: 3000, g: 1.4, q: 0.8 }, air: { f: 11500, g: 0.6 }, lp: 17000, deess: -6, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -20.5 },
+  punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -7, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -19.5 },
 };
 
 async function _acMasterVoice(buf, presetKey, opts){
@@ -22924,9 +22932,16 @@ async function _acMasterVoice(buf, presetKey, opts){
   //     enlève toute la qualité (j'ai mis voix podcast) ». Les résidus qu'on
   //     voulait supprimer n'existent QUE quand un débruiteur est passé avant.
   //     Sans débruitage : un seul étage très haut (18 kHz), inaudible.
+  // Mesure sur le fichier qu'Axel trouve « sature » (18:57) : la bande
+  // 12-20 kHz sort 8 dB sous la 6-12 kHz. C'est ce mur, en trois etages a
+  // 13,5 kHz. Une voix amputee de son haut du spectre sonne bouchee — ce qu'il
+  // appelle sature n'est pas de l'ecretage (Flat factor mesure : 0) mais ca.
+  // Le mur existait pour masquer les residus de RNNoise quand on poussait a
+  // -14 LUFS. On vise maintenant -21 : les residus sont 7 dB plus bas, un seul
+  // etage a 16 kHz suffit. On garde une protection, on arrete la mutilation.
   const denoised = opts && opts.denoised
-  const lpF = denoised ? (P.lp || 14000) : 18000
-  const lps = (denoised ? [0, 1, 2] : [0]).map(() => {
+  const lpF = denoised ? 16000 : 18000
+  const lps = [0].map(() => {
     const f = off.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lpF; f.Q.value = 0.6; return f;
   });
   for (let i = 0; i < lps.length - 1; i++) lps[i].connect(lps[i + 1]);
