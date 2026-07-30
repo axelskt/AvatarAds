@@ -1165,7 +1165,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // l'inverse de ce qui se passait.
   {
     let curB = 0, posB = 0, sautB = 0
-    const beats = (plan.beats || []).filter((b) => b && ANIMS.includes(String(b.anim || '')))
+    // ⚠ LA BORNE SE CALCULE SUR **TOUTES** LES IDEES, pas seulement sur celles
+    // qu'on sait animer. En ne gardant que les beats rendables, une idee dont
+    // l'animation n'existe pas (« robot » sur « l'IA ») disparaissait aussi du
+    // calcul de fin : l'animation precedente s'etirait par-dessus elle.
+    const tousLesBeats = (plan.beats || []).filter((b) => b && String(b.word || '').trim())
+    const beats = tousLesBeats.filter((b) => ANIMS.includes(String(b.anim || '')))
     for (let i = 0; i < beats.length; i++) {
       const b = beats[i]
       const mot = String(b.word || '').trim()
@@ -1176,13 +1181,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // la fenêtre s'arrête au mot du beat SUIVANT : une idée ne déborde jamais
       // sur la suivante, sinon on lit « zéro compétence » sur l'animation de
       // l'investissement.
+      // UNE ANIMATION MEURT QUAND SON IDEE MEURT. Elle demarrait bien sur son
+      // mot, mais tenait 2,4 s : le calendrier de « par jour » restait a l'ecran
+      // pendant « peu d'investissement de depart », `free` pendant « cent pour
+      // cent des benefices ». Axel : « les animations ne correspondent pas du
+      // tout ». Elles correspondaient une demi-seconde, puis mentaient deux.
       let fin = D
-      for (let j = i + 1; j < beats.length; j++) {
-        const h2 = findSeq(words, String(beats[j].word || ''), curB) || findAny(words, [String(beats[j].word || '')], curB)
-        if (h2) { fin = h2.start - 0.05; break }
+      const iTous = tousLesBeats.indexOf(b)
+      for (let j = iTous + 1; j < tousLesBeats.length; j++) {
+        const w2 = String(tousLesBeats[j].word || '')
+        const h2 = findSeq(words, w2, curB) || findAny(words, [w2], curB)
+        if (h2 && h2.start > hit.start) { fin = h2.start - 0.05; break }
       }
       const a = r2(Math.max(0, hit.start - 0.12))
-      const bb = r2(Math.min(D, fin, a + 2.4))
+      const bb = r2(Math.min(D, fin, a + 1.9))
       if (bb - a < 1.25) { sautB++; continue }   // sous 1,25 s c'est un flash, pas une scène
       if (add({ anim: b.anim, value: b.value || '', items: b.value ? [{ t: 0, text: String(b.value) }] : [] }, a, bb)) posB++
     }
@@ -1366,7 +1378,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // sur la phrase suivante, celle qui ouvre le tutoriel.
       if (chain[i].anim === 'media') continue
       const gap = (chain[i + 1].start || 0) - (chain[i].end || 0)
-      if (gap > 0 && gap < 1.6) chain[i].end = r2((chain[i + 1].start || 0) - 0.02)
+      if (!(gap > 0 && gap < 1.6)) continue
+      // UNE ANIMATION NE SURVIT PAS À SON IDÉE. Cette passe collait chaque scène
+      // à la suivante pour éviter les trous — au prix d'un visuel qui MENT : le
+      // calendrier de « par jour » restait 1 s de plus sur « peu d'investissement
+      // de départ », `free` débordait sur « cent pour cent des bénéfices ».
+      // Axel : « les animations ne correspondent pas du tout ». Un panneau animé
+      // ne s'étire donc que de 0,35 s ; au-delà, mieux vaut le trou — il sera
+      // comblé par le visage, qui lui ne raconte rien de faux.
+      const cible = r2((chain[i + 1].start || 0) - 0.02)
+      chain[i].end = isAnimPanel(chain[i]) ? r2(Math.min(cible, (chain[i].end || 0) + 0.35)) : cible
     }
     const last = chain[chain.length - 1]
     if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2) last.end = r2(D)
