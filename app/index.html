@@ -23910,7 +23910,23 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
     const h = document.getElementById('acDenoiseHint');
     if(h) h.textContent = 'Prise déjà propre — étape ignorée';
   }
-  if(_acDenoiseEnabled && !alreadyClean) working = await denoiseAudioFile(working);
+  // ⚠️ LE DÉBRUITAGE S'APPLIQUE DÈS QUE LA CASE EST COCHÉE — comme le 27/07.
+  //
+  // Le saut « prise déjà propre » ci-dessus a été ajouté APRÈS le commit 5851435,
+  // pour éviter de repasser RNNoise sur un fichier déjà traité. L'intention est
+  // bonne, l'effet de bord ne l'était pas : sur une prise saine (DJI, cas le plus
+  // courant chez Axel), RNNoise était sauté, et le mastering recevait un signal
+  // que ses presets n'ont jamais vu. Mesuré : le débruitage déplace le spectre de
+  // +6 dB dans le grave relatif — il retire du souffle, qui est surtout aigu.
+  //
+  // Autrement dit, les presets du 27/07 ont été regles SUR UN SIGNAL DEBRUITE.
+  // Les appliquer à un signal qui ne l'est pas donne le « son horrible » qu'Axel
+  // décrit dès qu'il active « Volume constant » (la case qui autorise le
+  // mastering) — et c'est bien le mastering qui est en cause, pas le nivellement.
+  //
+  // `alreadyClean` reste calculé : il sert au mur de coupe HF plus bas, qui lui
+  // ne doit tomber que sur un fichier réellement débruité en amont.
+  if(_acDenoiseEnabled) working = await denoiseAudioFile(working);
   if(onAfterDenoise) onAfterDenoise();
   const arrBuf  = await working.arrayBuffer();
   const ac      = new (window.AudioContext || window.webkitAudioContext)();
