@@ -519,7 +519,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <section id="features" class="wrap" style="padding-bottom:100px">
   <div class="center reveal" style="margin-bottom:40px">
     <div class="eyebrow">Fonctionnalités</div>
-    <h2 class="display" style="font-size:clamp(28px,4.6vw,56px);font-weight:800;margin-top:14px;line-height:1.02">
+    <h2 class="display feat-h2" style="font-size:clamp(28px,4.6vw,56px);font-weight:800;margin-top:14px;line-height:1.02">
       Tout ce qu'il faut<br>pour <span class="accent">scaler</span> ton contenu
     </h2>
   </div>
@@ -773,7 +773,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:1">
       <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;opacity:1;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
       <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-      <svg viewBox="0 0 48 48" width="16" height="16" style="position:absolute;left:9%;top:20%;opacity:.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
       <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
       <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
       <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
@@ -848,6 +847,13 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 @media (max-width:760px){ .foot-grid{grid-template-columns:1fr !important;gap:32px !important} footer .wrap{padding-top:44px} }
 /* mobile : les étoiles décoratives chevauchaient le titre « Tout en un » (colonne unique, texte à gauche) */
 @media (max-width:760px){ .lp-sparkles{display:none !important} }
+/* ── LP · Features, mobile (handoff §5) ─────────────────────────────────────
+   Le H2 cassait mal et le sous-titre passait plus gros que lui. */
+@media (max-width:760px){
+  .feat-h2{font-size:25px !important;max-width:320px !important;line-height:1.1 !important;margin-left:auto;margin-right:auto}
+  .feat-h2 br{display:none}
+  .feat-sub{font-size:13.5px !important}
+}
 
 /* ── LP · barre de prompt : le grossissement est DESKTOP uniquement ──────────
    Le handoff agrandit la pastille, l'input et le bouton pour donner du poids au
