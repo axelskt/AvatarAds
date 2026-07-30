@@ -930,7 +930,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // elle qui borne la fin d'une démo, pas l'inverse (« quand tu génères l'image,
   // fais une animation de clic puis MONTRE le résultat », Axel).
   {
-    const hit = findSeq(words, 'et voila') || findSeq(words, 'et la')
+    // ⚠ « ET LA » N'EST PAS UNE PHRASE, C'EST DU BRUIT. Ce repli se déclenchait
+    // sur « et LA vraie vague arrivera » — n'importe quelle phrase française le
+    // contient — et posait l'écran de démo `99-resultat` : une vidéo d'un AUTRE
+    // homme, en dur dans les assets, sur une vidéo qu'Axel publie sous son
+    // visage. Deux fautes d'un coup : un visuel qui ne dit pas le mot, et un
+    // média qui n'est pas le sien. On exige la vraie formule de clôture.
+    const hit = findSeq(words, 'et voila')
     if (hit) {
       // …mais elle rend la main dès qu'il enchaîne (« t'as plus qu'à POSTER ») :
       // sinon le résultat mange l'animation des plateformes qui vient après
