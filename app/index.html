@@ -22856,7 +22856,12 @@ async function _acExportVideo(btn){
 // (« voix brute (−30 LUFS) → loudnorm »), avec un algorithme à deux passes bien
 // meilleur qu'un compresseur Web Audio. Ici on livre une voix propre et vivante ;
 // la mise à niveau se fait en aval, une seule fois.
-let _acVoicePreset = 'podcast';   // 'off' | 'natural' | 'podcast' | 'punch'
+// Defaut = 'off', c'est-a-dire NIVELLEMENT SANS COULEUR. C'est le seul reglage
+// qu'Axel ait valide a l'oreille (fichier du 18:38). Le defaut etait 'podcast',
+// donc activer « Volume constant » lui donnait un timbre qu'il n'avait pas
+// demande et qu'il rejette depuis le debut de la journee. Le caractere reste
+// disponible en un clic, mais il se choisit — il ne s'impose pas.
+let _acVoicePreset = 'off';   // 'off' | 'natural' | 'podcast' | 'punch'
 const _AC_VOICE_PRESETS = {
   // « Aucun » ne veut pas dire « ne rien faire » : il veut dire PAS DE COULEUR.
   // L'interface propose deux reglages distincts — TRAITEMENT VOIX (le timbre) et
