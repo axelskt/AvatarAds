@@ -977,14 +977,25 @@ export function animHtml(name, s, W, H, vs) {
       // conteneur qui donne l'échelle.
       const bh = Math.round(f.h * 0.26), r = Math.round(bh * 0.42)
       const th = Math.max(3, Math.round(bh * 0.1))
+      // LA POLICE S'ADAPTE AU TEXTE, PAS L'INVERSE. Axel : « ça aurait été bien
+      // qu'elle reste sur une seule ligne… max 2 lignes selon le texte ». Une
+      // taille fixe marche pour une phrase courte et casse tout dès qu'elle
+      // s'allonge. On calcule : une ligne si elle reste lisible, deux sinon,
+      // jamais trois. (0.52 = largeur moyenne d'un caractère d'Inter gras,
+      // rapportée à la taille de police.)
+      const phrase = txt(0, 'écris-moi un hook')
+      const dedansW = Math.round(w * 0.92) - 2 * Math.round(bh * 0.28)
+      const fsMax = Math.round(bh * 0.38), fsMin = Math.round(bh * 0.24)
+      const pour = (lignes) => Math.floor(dedansW / (0.52 * Math.ceil(phrase.length / lignes)))
+      const fs = Math.max(fsMin, Math.min(fsMax, pour(1) >= Math.round(bh * 0.28) ? pour(1) : pour(2)))
       return box(`
         <!-- Axel : « chat pareil, on peut ajouter bruitage de clavier ». La question
              ne doit pas apparaître d'un bloc : on l'ÉCRIT, et le son de frappe se
              pose sur cet intervalle comme pour « search » et « comment ».
              (Aucun accent grave ici : ce commentaire vit DANS un template literal.) -->
-        <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.2)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.8)}px;height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.28)}px;box-sizing:border-box">
-          <span id="${id}cqt" style="font-family:${SANS};font-weight:800;font-size:${Math.round(bh * 0.34)}px;letter-spacing:-.015em;color:#FFFFFF;line-height:1.2">${
-            txt(0, 'écris-moi un hook').split('').map((c) => `<span class="an-cq2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</span>
+        <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.08)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.92)}px;min-height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.28)}px;box-sizing:border-box">
+          <span id="${id}cqt" style="font-family:${SANS};font-weight:800;font-size:${fs}px;letter-spacing:-.015em;color:#FFFFFF;line-height:1.18">${
+            phrase.split('').map((c) => `<span class="an-cq2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</span>
           <span id="${id}cqc" style="width:2px;height:${Math.round(bh * 0.3)}px;background:#FFFFFF;border-radius:2px;margin-left:2px"></span></div>
         <div class="an-p" id="${id}ca" style="left:${x}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.86)}px;height:${Math.round(bh * 1.6)}px;border-radius:${r}px ${r}px ${r}px ${Math.round(r * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
           <span style="position:absolute;left:8%;top:13%;width:${Math.round(bh * 0.4)}px;height:${Math.round(bh * 0.4)}px">${claudeBurst('100%', P.acc)}</span>
