@@ -23038,9 +23038,9 @@ const _AC_VOICE_PRESETS = {
   // deux fois trop serree, alors que la meme chaine SANS debruitage donne 2,3.
   // Le ratio descend de 2,6 a 1,6 et le seuil remonte de -24 a -20 dB : le
   // compresseur ne doit plus rattraper ce que le debruitage a deja aplati.
-  natural: { hp: 75, mud: { f: 560, g: -1.0, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 3.4 }, lp: 16000, deess: 0, comp: { th: -20, ratio: 1.5, att: 0.006, rel: 0.15 }, target: -14.5 },
-  podcast: { hp: 75, mud: { f: 560, g: -1.4, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.8 }, lp: 16000, deess: 0, comp: { th: -20, ratio: 1.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 75, mud: { f: 560, g: -1.8, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.4 }, lp: 16000, deess: 0, comp: { th: -21, ratio: 2.0, att: 0.004, rel: 0.10 }, target: -14.5 },
+  natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
+  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
+  punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3   }, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
@@ -23200,15 +23200,32 @@ function _acDeEsser(buf, seuilDb, fc = 5500){
   return buf
 }
 
-async function _acMasterVoice(buf, presetKey, opts){
-  const cle = presetKey || _acVoicePreset
-  // « Aucun » ne traverse plus la chaine du tout : il prend le chemin court.
+// ── RESTAURATION DU COMMIT 5851435 (27/07) ──────────────────────────────────
+// C'est ce code, exactement, qui a produit VOIX4-podcast.wav — le fichier
+// qu'Axel juge bon. Apres cinq passes de reglages a l'aveugle, la seule
+// approche qui vaille : reprendre la version qui marchait plutot que d'essayer
+// de la reconstruire par la mesure.
+//
+// Trois differences avec ce que j'avais fabrique, et les trois comptent :
+//   1. AUCUN lowpass. Le mur de coupe dans les aigus a ete ajoute apres coup,
+//      pour masquer des residus de debruitage. Il enlevait l'air de la voix.
+//   2. Le de-esseur separe par DEUX filtres a 6 kHz, resommes. J'ai « corrige »
+//      ca comme un bug de phase — c'etait une signature du son.
+//   3. La normalisation se fait sur la MEDIANE RMS des zones parlees
+//      (_acNormalizeLoudness), pas sur une mesure LUFS suivie d'un limiteur.
+//
+// Lecon : ce que je prenais pour des defauts faisait partie de ce qui plaisait.
+// Ne plus « ameliorer » cette chaine sans un fichier de reference et l'accord
+// d'Axel a l'oreille.
+async function _acMasterVoice(buf, presetKey){
+  const cle = presetKey || _acVoicePreset;
+  // « Aucun » garde le chemin court : nivellement sans couleur, seul reglage
+  // qu'Axel ait valide de bout en bout.
   if (cle === 'off') {
     if (!buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf
     return _acLimitPeaks(_acNiveauConstant(buf), 0.89)
   }
   const P = _AC_VOICE_PRESETS[cle];
-  // #154 · case « Améliorer la voix » décochée → on ne touche à rien
   if(!P || !buf || !buf.length || (!presetKey && !_acOpts.voice)) return buf;
   const sr = buf.sampleRate, ch = buf.numberOfChannels;
   const off = new OfflineAudioContext(ch, buf.length, sr);
@@ -23219,68 +23236,19 @@ async function _acMasterVoice(buf, presetKey, opts){
 
   // 2 · ÉGALISEUR PARAMÉTRIQUE : on creuse le « carton » (200-400 Hz), on avance
   //     la présence (intelligibilité), on ajoute l'air (le côté « beau micro »)
-  // `mud` est un LOW-SHELF depuis la 3e passe : mesure faite, ce que le
-  // traitement du 27/07 enleve dans le bas n'est pas une bosse mais un PLATEAU
-  // (-5,4 dB de 80 a 315 Hz, qui remonte vers 0 au-dessus de 1,2 kHz). Un
-  // peaking, meme large, ne peut pas dessiner ca : il laissait +3 dB de grave
-  // de trop. `mudType` reste ouvert pour un preset qui voudrait une cloche.
-  const mud  = off.createBiquadFilter(); mud.type  = P.mudType || 'peaking';   mud.frequency.value  = P.mud.f;  mud.gain.value  = P.mud.g;  mud.Q.value  = P.mud.q;
+  const mud  = off.createBiquadFilter(); mud.type  = 'peaking';   mud.frequency.value  = P.mud.f;  mud.gain.value  = P.mud.g;  mud.Q.value  = P.mud.q;
   const pres = off.createBiquadFilter(); pres.type = 'peaking';   pres.frequency.value = P.pres.f; pres.gain.value = P.pres.g; pres.Q.value = P.pres.q;
   const air  = off.createBiquadFilter(); air.type  = 'highshelf'; air.frequency.value  = P.air.f;  air.gain.value  = P.air.g;
 
-  // 2bis · PLAFOND HF (le fix de la « saturation » entendue par Axel) : un audio
-  //     déjà débruité (Voice Isolator & co) garde des résidus au-dessus de
-  //     ~13 kHz, inaudibles à -30 LUFS. En montant à -14 LUFS ils remontaient
-  //     avec — mesuré au spectrogramme : la bande 10-20 kHz passait de -90 à
-  //     -50 dB. On la coupe : la voix n'a rien à y perdre (l'air utile est à
-  //     8-12 kHz), la dureté disparaît.
-  //     Un seul biquad (-12 dB/oct) ne suffisait pas : mesuré, il n'enlevait que
-  //     0,8 dB au-dessus de 14 kHz. Trois étages en cascade = -36 dB/oct, la
-  //     zone d'artefacts tombe vraiment.
-  //     ⚠️ MAIS SEULEMENT SUR UN AUDIO DÉBRUITÉ. C'est là que je m'étais
-  //     trompé : ce mur de brique était appliqué à TOUS les fichiers. Sur un
-  //     enregistrement propre (DJI Mic en 48 kHz), couper à 13,5 kHz avec une
-  //     pente de -36 dB/oct enlève tout l'air de la voix — Axel : « l'audio
-  //     enlève toute la qualité (j'ai mis voix podcast) ». Les résidus qu'on
-  //     voulait supprimer n'existent QUE quand un débruiteur est passé avant.
-  //     Sans débruitage : un seul étage très haut (18 kHz), inaudible.
-  // Mesure sur le fichier qu'Axel trouve « sature » (18:57) : la bande
-  // 12-20 kHz sort 8 dB sous la 6-12 kHz. C'est ce mur, en trois etages a
-  // 13,5 kHz. Une voix amputee de son haut du spectre sonne bouchee — ce qu'il
-  // appelle sature n'est pas de l'ecretage (Flat factor mesure : 0) mais ca.
-  // Le mur existait pour masquer les residus de RNNoise quand on poussait a
-  // -14 LUFS. On vise maintenant -21 : les residus sont 7 dB plus bas, un seul
-  // etage a 16 kHz suffit. On garde une protection, on arrete la mutilation.
-  const denoised = opts && opts.denoised
-  const lpF = denoised ? 16000 : 18000
-  const lps = [0].map(() => {
-    const f = off.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lpF; f.Q.value = 0.6; return f;
-  });
-  for (let i = 0; i < lps.length - 1; i++) lps[i].connect(lps[i + 1]);
-  const lpIn = lps[0], lp = lps[lps.length - 1];
-
-  // 3 · PLUS DE DÉ-ESSEUR DANS LE GRAPHE ────────────────────────────────────
-  //     Axel, 30/07 : « il n'y a que "Aucun" qui marche, natural/podcast/punch
-  //     buguent avec le même effet de saturation robot ». « Aucun » est
-  //     précisément le seul preset qui NE TRAVERSE PAS ce graphe.
-  //
-  //     Le dé-esseur sommait deux branches : les graves d'un côté, les aigus
-  //     passés dans un DynamicsCompressor de l'autre. Or DynamicsCompressor
-  //     applique un LOOKAHEAD interne (~6 ms dans Blink) : on additionnait donc
-  //     une bande retardée avec une bande qui ne l'était pas. C'est un filtre en
-  //     peigne — un creux tous les ~167 Hz — et c'est exactement le timbre
-  //     métallique qu'il décrit. Le défaut EXISTE même quand le compresseur ne
-  //     réduit rien, puisque le retard, lui, est toujours là.
-  //
-  //     Deux tentatives précédentes ont traité le symptôme sans voir la cause :
-  //     séparation par deux filtres (trou de 124 dB à la coupure), puis
-  //     séparation par soustraction (« vérifié, 0,00 dB de 1 kHz à 12 kHz » —
-  //     vérification faite compresseur au repos, donc aveugle au retard).
-  //
-  //     La sommation disparaît. Le dé-essage se fait après le rendu, sur le
-  //     buffer, à phase nulle (`_acDeEsser`) : une seule chaîne, aucune branche
-  //     parallèle, donc plus rien à déphaser.
-  const dessSeuil = P.deess;
+  // 3 · DÉ-ESSEUR : Web Audio n'a pas d'entrée sidechain — on sépare en deux
+  //     bandes et on ne compresse QUE les aigus (les « S » qui sifflent), puis
+  //     on resomme. Sans ça, la remontée de présence rend la voix agressive.
+  const SPLIT = 6000;
+  const lowB = off.createBiquadFilter(); lowB.type = 'lowpass';  lowB.frequency.value = SPLIT;
+  const hiB  = off.createBiquadFilter(); hiB.type  = 'highpass'; hiB.frequency.value  = SPLIT;
+  const dess = off.createDynamicsCompressor();
+  dess.threshold.value = P.deess; dess.ratio.value = 6; dess.attack.value = 0.001; dess.release.value = 0.05; dess.knee.value = 6;
+  const sum = off.createGain();
 
   // 4 · COMPRESSEUR MONOBANDE : l'épaisseur — les mots faibles remontent, les
   //     attaques sont tenues, la voix « colle » au micro d'un bout à l'autre
@@ -23293,27 +23261,38 @@ async function _acMasterVoice(buf, presetKey, opts){
   const lim = off.createDynamicsCompressor();
   lim.threshold.value = -1.5; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; lim.knee.value = 0;
 
-  // UNE SEULE CHAÎNE, EN SÉRIE. Aucune branche parallèle, donc aucune somme :
-  // c'est la sommation qui fabriquait le peigne.
-  src.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air); air.connect(lpIn);
-  lp.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
+  src.connect(hp); hp.connect(mud); mud.connect(pres); pres.connect(air);
+  air.connect(lowB); lowB.connect(sum);          // bande grave/médium intacte
+  air.connect(hiB);  hiB.connect(dess); dess.connect(sum);   // aigus dé-essés
+  sum.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(off.destination);
   src.start(0);
 
   const out = await off.startRendering();
-  _acDeEsser(out, dessSeuil);
-  // Calage LUFS puis VRAI limiteur — dans cet ordre : on monte au niveau
-  // plateforme, et le limiteur rattrape les crêtes que ce gain fait dépasser.
-  const lufs = await _acMeasureLUFS(out);
-  if(isFinite(lufs)){
-    const g = Math.min(4, Math.pow(10, (P.target - lufs) / 20));   // +12 dB max
-    if(Math.abs(g - 1) > 0.02){
-      for(let c = 0; c < out.numberOfChannels; c++){
-        const chd = out.getChannelData(c);
-        for(let i = 0; i < chd.length; i++) chd[i] *= g;
-      }
-    }
+  return _acNormalizeLoudness(out, P.target);
+}
+
+function _acNormalizeLoudness(buf, targetDb){
+  const d = buf.getChannelData(0);
+  const win = Math.round(buf.sampleRate * 0.4);
+  const blocks = [];
+  for(let i = 0; i < d.length; i += win){
+    let s = 0; const e = Math.min(i + win, d.length);
+    for(let j = i; j < e; j++) s += d[j] * d[j];
+    blocks.push(Math.sqrt(s / Math.max(1, e - i)));
   }
-  return _acLimitPeaks(out, 0.84);   // plafond -1,5 dBFS
+  const spoken = blocks.filter((b) => b > 0.02).sort((a, b) => a - b);
+  if(!spoken.length) return buf;
+  const med = spoken[Math.floor(spoken.length * 0.5)];
+  if(!med) return buf;
+  let gain = Math.pow(10, (targetDb - 20 * Math.log10(med)) / 20);
+  let peak = 0; for(let i = 0; i < d.length; i++){ const a = Math.abs(d[i]); if(a > peak) peak = a; }
+  gain = Math.min(gain, 0.891 / Math.max(peak, 1e-6));   // -1 dBFS max
+  if(Math.abs(gain - 1) < 0.02) return buf;
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const chd = buf.getChannelData(c);
+    for(let i = 0; i < chd.length; i++) chd[i] *= gain;
+  }
+  return buf;
 }
 
 // ── Mesure de loudness ITU-R BS.1770 (le vrai LUFS des plateformes) ──
