@@ -23015,9 +23015,32 @@ const _AC_VOICE_PRESETS = {
   // ⚠️ LA REGLE, APRES QUATRE PASSES : ne comparer que des fichiers issus de la
   // MEME PRISE. Deux enregistrements du meme micro different deja de 2 dB dans
   // l'aigu — assez pour envoyer trois corrections dans le mur.
-  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 16000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -14.5 },
-  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 16000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 55, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 6.2 }, lp: 16000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
+  // ── 5e PASSE — CALEE SUR LA VRAIE SORTIE DE L'APP, PAS SUR UNE SIMULATION ─
+  // Les quatre passes precedentes reglaient l'egaliseur d'apres une simulation
+  // ffmpeg qui NE CONTIENT PAS le debruitage. L'app, elle, l'applique. Les
+  // reglages etaient donc justes pour un signal que l'app ne produit jamais.
+  //
+  // Ici la reference de reglage est le fichier qu'AXEL a genere avec l'app, sur
+  // la MEME prise que sa cible (VOIX4). Ecart mesure, sortie app contre cible :
+  //
+  //      80 Hz   +1,16        2500 Hz   -0,28
+  //     160 Hz   +0,24        5000 Hz   +0,40
+  //     315 Hz   -2,67        8000 Hz   +0,79
+  //     630 Hz   -4,06       12500 Hz   +1,06
+  //    1250 Hz   -2,00
+  //
+  // Le creux de `mud` tombait donc 4 dB trop bas APRES le debruitage : RNNoise
+  // retire du souffle aigu, ce qui deplace tout l'equilibre. Il passe de -5,0 a
+  // -1,4 et remonte a 560 Hz ; l'air redescend de 5,6 a 4,8 ; le coupe-bas
+  // monte a 75 Hz pour les 1,2 dB de grave en trop.
+  //
+  // COMPRESSION : sa sortie mesure 1,1 LU de plage contre 2,1 pour la cible —
+  // deux fois trop serree, alors que la meme chaine SANS debruitage donne 2,3.
+  // Le ratio descend de 2,6 a 1,6 et le seuil remonte de -24 a -20 dB : le
+  // compresseur ne doit plus rattraper ce que le debruitage a deja aplati.
+  natural: { hp: 75, mud: { f: 560, g: -1.0, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 3.4 }, lp: 16000, deess: 0, comp: { th: -20, ratio: 1.5, att: 0.006, rel: 0.15 }, target: -14.5 },
+  podcast: { hp: 75, mud: { f: 560, g: -1.4, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.8 }, lp: 16000, deess: 0, comp: { th: -20, ratio: 1.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 75, mud: { f: 560, g: -1.8, q: 0.6 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.4 }, lp: 16000, deess: 0, comp: { th: -21, ratio: 2.0, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
