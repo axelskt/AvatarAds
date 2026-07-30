@@ -969,7 +969,13 @@ export function animHtml(name, s, W, H, vs) {
     case 'chat': {
       // « tu lui demandes » : la question part, la réponse s'écrit.
       const w = Math.round(f.w * 0.84), x = Math.round((f.w - w) / 2)
-      const bh = Math.round(f.h * 0.2), r = Math.round(bh * 0.42)
+      // LA BULLE ÉTAIT MINUSCULE. `frame()` borne le panneau à 44 % de la hauteur,
+      // donc f.h ≈ 595 px : une bulle à 0,2 × f.h faisait 119 px et son texte à
+      // 0,26 × bh tombait à 31 px sur une vidéo 1080 de large — illisible au
+      // téléphone. Axel : « ce n'est pas très beau la police ». On grossit la
+      // bulle ET son texte : grossir la police seule ne suffit pas, c'est le
+      // conteneur qui donne l'échelle.
+      const bh = Math.round(f.h * 0.26), r = Math.round(bh * 0.42)
       const th = Math.max(3, Math.round(bh * 0.1))
       return box(`
         <!-- Axel : « chat pareil, on peut ajouter bruitage de clavier ». La question
@@ -977,7 +983,7 @@ export function animHtml(name, s, W, H, vs) {
              pose sur cet intervalle comme pour « search » et « comment ».
              (Aucun accent grave ici : ce commentaire vit DANS un template literal.) -->
         <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.2)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.8)}px;height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.28)}px;box-sizing:border-box">
-          <span id="${id}cqt" style="font-family:${SANS};font-weight:700;font-size:${Math.round(bh * 0.26)}px;color:#FFFFFF;line-height:1.25">${
+          <span id="${id}cqt" style="font-family:${SANS};font-weight:800;font-size:${Math.round(bh * 0.34)}px;letter-spacing:-.015em;color:#FFFFFF;line-height:1.2">${
             txt(0, 'écris-moi un hook').split('').map((c) => `<span class="an-cq2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</span>
           <span id="${id}cqc" style="width:2px;height:${Math.round(bh * 0.3)}px;background:#FFFFFF;border-radius:2px;margin-left:2px"></span></div>
         <div class="an-p" id="${id}ca" style="left:${x}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.86)}px;height:${Math.round(bh * 1.6)}px;border-radius:${r}px ${r}px ${r}px ${Math.round(r * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">

@@ -54,7 +54,14 @@ export const WORD_INK = '#111111'
 export const WORD_SHAPES = ['#FF5A36', '#2F6BFF', '#12B76A', '#FFC300', '#7A3BFF']
 export const WORD_ACCENT = '#FF5A36'   // le mot que le chef d'orchestre veut appuyer
 
-export const SANS = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif'
+// GUILLEMETS SIMPLES, PAS DOUBLES. SANS est injecté dans des attributs
+// `style="..."` — 39 fois rien que dans anim-pack. Avec des guillemets DOUBLES,
+// le navigateur ferme l'attribut au premier `"` d'« Inter » : tout ce qui suit
+// font-family (font-size, font-weight, color) était jeté EN SILENCE. C'est ce
+// qui rendait le texte des animations minuscule et de la mauvaise couleur, et
+// pourquoi grossir la police dans le code ne changeait rien à l'écran.
+// Les guillemets simples sont valides en CSS et survivent dans l'attribut.
+export const SANS = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 const SERIF = '"Instrument Serif", "Liberation Serif", Georgia, serif'
 const MONO = '"JetBrains Mono", "Liberation Mono", ui-monospace, monospace'
 const BLACK = '"Archivo Black", "Arial Black", Arial, sans-serif'
