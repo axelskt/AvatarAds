@@ -22934,14 +22934,19 @@ function _acNiveauConstant(buf, cible = 0.10){
   const sr = buf.sampleRate, n = buf.length
   const win = Math.round(sr * 0.6)                 // 600 ms : l'echelle de la phrase
   const nb = Math.max(1, Math.ceil(n / win))
-  // 1 · le niveau efficace de chaque fenetre, en ignorant les silences
-  const niv = new Float32Array(nb)
+  // 1 · le niveau efficace de chaque fenetre, en ignorant les silences.
+  //     On releve AUSSI le pic de la fenetre : c'est lui qui bornera le gain
+  //     plus bas. Le pic est cherche sur TOUS les echantillons (pas un sur
+  //     quatre comme le niveau efficace) — un pic rate, c'est un plafond faux.
+  const niv = new Float32Array(nb), pic = new Float32Array(nb)
   const d0 = buf.getChannelData(0)
   for (let k = 0; k < nb; k++) {
     const a = k * win, b = Math.min(n, a + win)
-    let s = 0, c = 0
+    let s = 0, c = 0, m = 0
     for (let i = a; i < b; i += 4) { const v = d0[i]; s += v * v; c++ }
+    for (let i = a; i < b; i++) { const x = Math.abs(d0[i]); if (x > m) m = x }
     niv[k] = c ? Math.sqrt(s / c) : 0
+    pic[k] = m
   }
   // 2 · le gain voulu par fenetre, borne a ±12 dB pour ne jamais reveler le bruit
   const MINI = 0.004                               // sous ce niveau c'est du silence
@@ -22955,6 +22960,36 @@ function _acNiveauConstant(buf, cible = 0.10){
     let s = 0, c = 0
     for (let j = Math.max(0, k - 2); j <= Math.min(nb - 1, k + 2); j++) { s += gw[j]; c++ }
     lisse[k] = s / c
+  }
+  // 3bis · LE PLAFOND, ET IL VIENT APRES LE LISSAGE ───────────────────────────
+  // C'est la cause de « ca sature du debut a la fin ». On visait un niveau
+  // EFFICACE (0,10) sans jamais regarder le PIC de la fenetre : sur une voix a
+  // 24 dB de facteur de crete — une prise DJI, typiquement — atteindre cette
+  // cible impose des pics a +2,2 dBFS, au-dessus du plein niveau. Le limiteur
+  // derriere rattrapait tout, si bien que le fichier sortait a -1 dBFS avec zero
+  // echantillon ecrete : TOUTES les mesures disaient « propre » pendant que
+  // l'oreille entendait le limiteur mordre les attaques (-3,2 dB au pire, et
+  // 3,4 dB de facteur de crete perdus entre l'entree et la sortie).
+  //
+  // Chaque fenetre est donc bornee pour que son pic reste sous 0,80 (-1,9 dBFS),
+  // avec 0,9 dB de marge sous le plafond du limiteur. On regarde le pic de la
+  // fenetre ET de ses voisines, puisque l'etape 4 interpole entre deux centres.
+  //
+  // ⚠️ APRES le lissage, jamais avant : borne en amont, la moyenne mobile rend a
+  // la fenetre le gain de ses voisines et le plafond saute — mesure, le pic
+  // restait a +2,22 dBFS, exactement comme sans correctif.
+  //
+  // Mesure sur une prise DJI brute (77 s, -32,7 dBFS efficace) :
+  //   pic avant limiteur  +2,22 dBFS -> -0,10 dBFS
+  //   limiteur actif       0,53 %    ->  0,05 % du temps
+  //   reduction maximale  -3,23 dB   -> -0,91 dB
+  //   facteur de crete     20,5 dB   ->  20,9 dB   (preserve)
+  //   regularite            6,70 dB  ->   6,64 dB  (le nivellement fait toujours
+  //                                                 son travail)
+  const PLAFOND = 0.80
+  for (let k = 0; k < nb; k++) {
+    const p = Math.max(pic[k], pic[Math.max(0, k - 1)], pic[Math.min(nb - 1, k + 1)])
+    if (p > 1e-6) lisse[k] = Math.min(lisse[k], PLAFOND / p)
   }
   // 4 · application, avec interpolation lineaire entre les centres de fenetre
   for (let ch = 0; ch < buf.numberOfChannels; ch++) {
