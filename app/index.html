@@ -22939,9 +22939,27 @@ const _AC_VOICE_PRESETS = {
   // de-esser reproduit donc exactement ce qu'il valide. `_acDeEsser` reste en
   // place, teste et a phase nulle ; pour l'activer un jour il faudra un seuil
   // relatif a la bande HF (vers -30 dBFS), cale sur un fichier de reference.
-  natural: { hp: 55, mud: { f: 500, g: -3.5, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 4.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
-  podcast: { hp: 55, mud: { f: 500, g: -5.0, q: 0.5 }, pres: { f: 2500, g: 0, q: 1.0 }, air: { f: 3600, g: 5.6 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
-  punch:   { hp: 60, mud: { f: 500, g: -5.6, q: 0.5 }, pres: { f: 2600, g: 0, q: 1.0 }, air: { f: 3600, g: 5.8 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
+  // ── 2e PASSE, SUR LA COMPARAISON DIRECTE DES DEUX SORTIES ─────────────────
+  // La 1re passe calait le delta « off -> podcast » (27/07) contre le delta
+  // « DJI brut -> nettoye » (actuel). Axel a corrige : ses deux fichiers sont
+  // tous les deux passes par PODCAST, l'un avec l'ancienne version, l'autre
+  // avec la nouvelle. Comparer un delta de preset avec un delta de chaine
+  // entiere (RNNoise compris) n'avait pas de sens.
+  //
+  // Comparaison directe des deux sorties, a niveau egalise — l'ecart reel :
+  //     80 Hz  +1,38   trop de grave
+  //    630 Hz  -2,02   creux trop large
+  //   2500 Hz  -1,35   medium en retrait
+  //   8000 Hz  +1,25   trop d'aigu extreme
+  // Le basculement etait trop marque : creux trop bas et trop large, shelf trop
+  // fort. Le creux remonte a 360 Hz et se resserre (Q 0,9), la presence revient
+  // a 2,5 kHz, le shelf monte a 4,8 kHz et faiblit.
+  //
+  // Verifie en rejouant VOIX4-off a travers l'ancienne PUIS la nouvelle courbe :
+  // ecart residuel <= 0,26 dB sur huit bandes sur neuf (0,75 dB a 2,5 kHz).
+  natural: { hp: 105, mud: { f: 360, g: -2.4, q: 0.9 }, pres: { f: 2500, g: 1.6, q: 1.0 }, air: { f: 4800, g: 3.0 }, lp: 18000, deess: 0, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -16 },
+  podcast: { hp: 115, mud: { f: 360, g: -3.4, q: 0.9 }, pres: { f: 2500, g: 2.2, q: 1.0 }, air: { f: 4800, g: 4.2 }, lp: 18000, deess: 0, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -14.5 },
+  punch:   { hp: 120, mud: { f: 360, g: -3.8, q: 0.9 }, pres: { f: 2600, g: 2.4, q: 1.0 }, air: { f: 4800, g: 4.6 }, lp: 18000, deess: 0, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -14.5 },
 };
 
 // ── « VOLUME CONSTANT », REPRIS DE ZERO ─────────────────────────────────────
