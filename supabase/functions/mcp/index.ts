@@ -185,7 +185,7 @@ const toolText = (t: string): ToolContent => ({ content: [{ type: 'text', text: 
 const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }], isError: true })
 
 // ── Définition des outils ──
-function toolDefs(isOwner: boolean) {
+function toolDefs(isOwner: boolean, requireConfirm = true) {
   const tools: Array<Record<string, unknown>> = [
     {
       name: 'get_account',
@@ -354,6 +354,19 @@ function toolDefs(isOwner: boolean) {
         required: ['email'],
       },
     })
+  }
+  // ── QUAND LE DEVIS EST DÉSACTIVÉ, ON RETIRE `confirm` DES SCHÉMAS ─────────
+  // Axel avait décoché « demander confirmation » (require_confirm = false en
+  // base, le serveur ne réclamait donc rien) et Claude lui demandait quand même
+  // son accord : on continuait à ANNONCER un paramètre confirm dont la consigne
+  // dit « montre le devis et attends l'accord explicite ». Le modèle obéit à la
+  // description, pas au réglage. Un paramètre qu'on ne veut pas voir utilisé ne
+  // doit pas exister dans le schéma.
+  if (!requireConfirm) {
+    for (const t of tools) {
+      const props = ((t.inputSchema as Record<string, unknown> | undefined)?.properties) as Record<string, unknown> | undefined
+      if (props) delete props.confirm
+    }
   }
   return tools
 }
@@ -1522,11 +1535,13 @@ serve(async (req) => {
             { src: 'https://avatarads.fr/assets/avatarads-logo.png', mimeType: 'image/png', sizes: ['512x512'] },
           ],
         },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. get_account donne le solde.",
+        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. " + (ctx.requireConfirm
+          ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
+          : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
     }
     if (method === 'ping') return rpcResult(id, {})
-    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(isUnlimited(profile)) })
+    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(isUnlimited(profile), ctx.requireConfirm) })
     if (method === 'resources/list') return rpcResult(id, { resources: [] })
     if (method === 'prompts/list') return rpcResult(id, { prompts: [] })
     if (method === 'tools/call') {
