@@ -703,7 +703,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
       </div>
       <!-- Logout -->
-      <button onclick="authLogout()" class="btn-quiet" style="display:flex;align-items:center;padding:5px 6px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text-2)'">
+      <button onclick="authLogout()" class="btn btn-quiet" style="display:flex;align-items:center;padding:5px 6px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:all .15s" title="Se déconnecter" onmouseover="this.style.borderColor='rgba(255,71,87,.3)';this.style.color='#ff4757'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text-2)'">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
     </div>
@@ -1875,7 +1875,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <span style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio — obligatoire</span>
                   </button>
                   <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
-                  <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>
+                  <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>
                 </div>
               </div>
             </div>
@@ -3568,9 +3568,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="margin-top:18px;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">DESCRIPTION</div>
         <!-- presets CTA « commente le mot-clé → DM » : verbe aléatoire à chaque clic -->
         <div style="display:flex;gap:8px;margin-top:8px">
-          <button type="button" onclick="_pubPreset('SITE')" class="btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">SITE</button>
-          <button type="button" onclick="_pubPreset('AVATAR')" class="btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">AVATAR</button>
-          <button type="button" onclick="_pubPreset('GO')" class="btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">GO</button>
+          <button type="button" onclick="_pubPreset('SITE')" class="btn btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">SITE</button>
+          <button type="button" onclick="_pubPreset('AVATAR')" class="btn btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">AVATAR</button>
+          <button type="button" onclick="_pubPreset('GO')" class="btn btn-quiet btn-sm" style="font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em">GO</button>
         </div>
         <textarea id="postizCaption" rows="4" placeholder="Écris ta description / légende…" style="width:100%;box-sizing:border-box;margin-top:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--font);font-size:13.5px;padding:11px;resize:vertical"></textarea>
 
@@ -3585,7 +3585,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
              plateformes à la même seconde, c'est ce qui se lit comme du contenu
              recyclé. Vide = ce réseau reprend la description ci-dessus. -->
         <div style="margin-top:13px">
-          <button type="button" id="pubCapsBtn" onclick="_pubCapsToggle()" class="btn-quiet btn-sm" style="font-size:11.5px">✎ Personnaliser par réseau</button>
+          <button type="button" id="pubCapsBtn" onclick="_pubCapsToggle()" class="btn btn-quiet btn-sm" style="font-size:11.5px">✎ Personnaliser par réseau</button>
           <div id="pubCapsBox" style="display:none;flex-direction:column;gap:10px;margin-top:10px"></div>
         </div>
 
@@ -3603,9 +3603,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="pubWhenBox" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
             <input id="pubWhenDay" type="date" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;color-scheme:dark">
             <input id="pubWhenTime" type="time" step="900" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;color-scheme:dark">
-            <button type="button" onclick="_pubQuick(0,18)" class="btn-quiet btn-sm" style="font-size:11.5px">Ce soir 18 h</button>
-            <button type="button" onclick="_pubQuick(1,15)" class="btn-quiet btn-sm" style="font-size:11.5px">Demain 15 h</button>
-            <button type="button" onclick="_pubQuick(1,18)" class="btn-quiet btn-sm" style="font-size:11.5px">Demain 18 h</button>
+            <button type="button" onclick="_pubQuick(0,18)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Ce soir 18 h</button>
+            <button type="button" onclick="_pubQuick(1,15)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Demain 15 h</button>
+            <button type="button" onclick="_pubQuick(1,18)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Demain 18 h</button>
           </div>
         </div>
         <!-- #117 · les logs Postiz montraient les 5 réseaux traités à la même
@@ -4326,7 +4326,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="edAddMusicPreset('../assets/music/music-3.mp3','Tendance 3')" class="btn btn-sm" style="padding:8px 4px;font-size:11.5px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🎵 Tendance 3</button>
                 </div>
                 <div id="edMusicLoaded" style="display:none">
-                  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
+                  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
                   <div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="faint mono" style="font-size:10px">🎵 Musique</span><span id="edMusicVolLbl" class="mono" style="font-size:10px;color:var(--accent-2)">70%</span></div>
                   <input type="range" min="0" max="100" value="70" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'" style="width:100%;margin-bottom:12px;accent-color:var(--accent)">
                 </div>
@@ -4394,7 +4394,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="edProps" class="card" style="padding:16px;margin-bottom:14px;display:none">
                 <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
                   <div class="label" id="edPropsTitle" style="margin:0">Élément</div>
-                  <button onclick="edDeleteSelected()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button>
+                  <button onclick="edDeleteSelected()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button>
                 </div>
                 <div id="edPropsBody"></div>
               </div>
@@ -4717,7 +4717,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <span id="accountOverlayEmail" class="mono" style="font-size:11.5px;color:var(--text-3)">—</span>
         </div>
       </div>
-      <button class="btn-quiet" onclick="closeAccountSettings()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
+      <button class="btn btn-quiet" onclick="closeAccountSettings()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
     </div>
 
     <!-- ① Profil -->
@@ -4748,7 +4748,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <span class="faint" style="font-size:12.5px">L'IA connaît ton business, une fois pour toutes</span>
             </div>
           </div>
-          <button class="btn-quiet" onclick="closeBrandModal()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
+          <button class="btn btn-quiet" onclick="closeBrandModal()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
         </div>
         <p class="muted" style="font-size:13.5px;line-height:1.55;margin:14px 0 22px">
           Renseigne ton site et ce que tu fais <b style="color:var(--text)">une seule fois</b>. Le monteur IA saura quel visuel utiliser au bon moment.
@@ -4795,7 +4795,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div class="card" style="width:min(400px,94vw);padding:22px;text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <div class="display" style="font-size:18px;font-weight:800">Mot de passe</div>
-          <button class="btn-quiet" onclick="closePwdModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
+          <button class="btn btn-quiet" onclick="closePwdModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px">✕</button>
         </div>
         <p id="pwdModalSub" class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:16px">Confirme d'abord que c'est bien toi.</p>
 
@@ -4804,7 +4804,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div class="setup-label" style="margin-bottom:6px">Mot de passe actuel</div>
           <input class="field" type="password" id="pwdCurrent" autocomplete="current-password" placeholder="Ton mot de passe actuel" onkeydown="if(event.key==='Enter')pwdVerifyCurrent()">
           <button onclick="pwdVerifyCurrent()" class="btn btn-primary" style="width:100%;margin-top:12px">Continuer</button>
-          <button onclick="pwdSendCode()" class="btn-quiet btn-sm" style="width:100%;margin-top:10px;background:transparent;border:none;cursor:pointer;font-family:var(--font);font-size:12px;text-decoration:underline">Je ne le connais pas — recevoir un code par e-mail</button>
+          <button onclick="pwdSendCode()" class="btn btn-quiet btn-sm" style="width:100%;margin-top:10px;background:transparent;border:none;cursor:pointer;font-family:var(--font);font-size:12px;text-decoration:underline">Je ne le connais pas — recevoir un code par e-mail</button>
         </div>
 
         <!-- étape 1 bis · code e-mail -->
@@ -10704,7 +10704,7 @@ function mtMemRender(){
       + '</div>'
       + '<div class="row gap10" style="margin-top:16px">'
       +   '<button type="button" class="btn btn-primary btn-sm" onclick="mtMemSave()">Enregistrer</button>'
-      +   '<button type="button" class="btn-quiet btn-sm" onclick="mtMemEdit(false)" style="border:none;background:none;cursor:pointer;font-family:var(--font)">Annuler</button>'
+      +   '<button type="button" class="btn btn-quiet btn-sm" onclick="mtMemEdit(false)" style="border:none;background:none;cursor:pointer;font-family:var(--font)">Annuler</button>'
       + '</div>';
     setTimeout(()=>{ const t=document.getElementById('mtMemText'); if(t) t.focus(); }, 30);
     return;
@@ -11387,7 +11387,7 @@ function _mtProg(pct, label){
       +'<div class="display" style="font-size:34px;font-weight:800;color:var(--accent-2);margin-top:14px"><span id="mtProgPct">0</span><span style="font-size:16px">%</span></div>'
       +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:24px;width:100%;max-width:420px;text-align:left"></div>'
       +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:340px;line-height:1.5">Garde cette page ouverte — le montage peut prendre quelques minutes.</p>'
-      +'<button class="btn-quiet btn-sm" style="margin-top:14px;background:none;border:none;box-shadow:none;-webkit-appearance:none;appearance:none;color:var(--text-2);font-family:var(--font);font-size:13.5px;cursor:pointer" onclick="_mtAbortRun()">Annuler</button></div>';
+      +'<button class="btn btn-quiet btn-sm" style="margin-top:14px;background:none;border:none;box-shadow:none;-webkit-appearance:none;appearance:none;color:var(--text-2);font-family:var(--font);font-size:13.5px;cursor:pointer" onclick="_mtAbortRun()">Annuler</button></div>';
     const host=document.querySelector('.layout .main')||document.body;
     if(getComputedStyle(host).position==='static') host.style.position='relative';
     host.appendChild(o);
@@ -23467,13 +23467,25 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   let working = srcBlob;
   // auscultation AVANT tout traitement : inutile (et nuisible) de débruiter
   // un fichier qui l'est déjà
-  let alreadyClean = false;
+  // DEUX CHOSES DIFFÉRENTES, qu'il ne faut surtout pas confondre :
+  //  · dejaDebruite  = un débruiteur est DÉJÀ passé sur ce fichier (micro DJI…).
+  //    Il laisse des résidus au-dessus de 13 kHz → le mastering doit poser son
+  //    mur de coupe.
+  //  · priseSaine    = il n'y a simplement pas de bruit de fond à retirer.
+  //    Le fichier est intact → surtout PAS de mur de coupe, il mangerait l'air
+  //    de la voix.
+  // Les deux mènent à « on saute RNNoise », mais une seule mène au mur de coupe.
+  // Je les avais fusionnées dans une même variable : les prises propres se
+  // retrouvaient filtrées à 13,5 kHz comme si on les avait débruitées.
+  let dejaDebruite = false, priseSaine = false;
   try{
     const pc = new (window.AudioContext || window.webkitAudioContext)();
     const pb = await pc.decodeAudioData(await srcBlob.arrayBuffer());
-    alreadyClean = _acDetectDenoised(pb) || _acBruitDeFondDb(pb) < _AC_BRUIT_SEUIL_DB;
+    dejaDebruite = _acDetectDenoised(pb);
+    priseSaine   = !dejaDebruite && _acBruitDeFondDb(pb) < _AC_BRUIT_SEUIL_DB;
     await pc.close();
   }catch(_){}
+  const alreadyClean = dejaDebruite || priseSaine;   // « on saute RNNoise »
   if(alreadyClean && _acDenoiseEnabled){
     toast('🎙️ Prise déjà propre — on ne repasse pas le réducteur de bruit (il abîmerait la voix)');
     const h = document.getElementById('acDenoiseHint');
@@ -23556,7 +23568,13 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // #153 · mastering voix APRÈS la coupe (compresser avant fausserait le seuil)
   // `alreadyClean` = le fichier arrivait déjà débruité (micro DJI…), sinon on
   // regarde si NOUS l'avons débruité. Dans les deux cas, plafond HF ; sinon non.
-  const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: alreadyClean || (_acDenoiseEnabled && !alreadyClean) });
+  // Le mur de coupe à 13,5 kHz vise les résidus que laisse NOTRE débruiteur.
+  // Il ne doit donc tomber que si NOUS avons passé RNNoise. Le drapeau valait
+  // aussi vrai quand le micro avait débruité à la source — or _acDetectDenoised
+  // se déclenche sur un plancher de silence très bas, c'est-à-dire la signature
+  // d'un DJI Mic : toutes les prises d'Axel repartaient filtrées à 13,5 kHz,
+  // exactement ce que l'avertissement juste au-dessus interdit.
+  const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: _acDenoiseEnabled && !alreadyClean });
   return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs };
 }
 
@@ -24513,7 +24531,7 @@ function edPickFromLibrary(){
   modal.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(5,5,7,.78);backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   modal.innerHTML='<div class="card" style="width:100%;max-width:600px;max-height:82vh;overflow-y:auto;padding:20px">'
-    +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px"><div class="label" style="margin:0">📁 Choisir une vidéo de la bibliothèque</div><button onclick="document.getElementById(\'edLibModal\').remove()" class="btn-quiet btn-sm" style="font-size:13px">✕</button></div>'
+    +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px"><div class="label" style="margin:0">📁 Choisir une vidéo de la bibliothèque</div><button onclick="document.getElementById(\'edLibModal\').remove()" class="btn btn-quiet btn-sm" style="font-size:13px">✕</button></div>'
     +'<div id="edLibGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px"></div></div>';
   document.body.appendChild(modal);
   const grid=modal.querySelector('#edLibGrid');
@@ -24968,7 +24986,7 @@ function edRenderTextMenu(ov){
   const styles=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
   const subs=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
   m.innerHTML=
-    '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="label" style="margin:0">✏️ Texte</div><button onclick="edDeleteSelected()" class="btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button></div>'+
+    '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="label" style="margin:0">✏️ Texte</div><button onclick="edDeleteSelected()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button></div>'+
     '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:8px" placeholder="Ton texte…">'+
     '<div class="row gap6" style="margin-bottom:8px;flex-wrap:wrap">'+subs.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid var(--border2);background:#0d0d0f;color:'+s[2]+';font-size:11px;font-weight:800;padding:4px 9px;-webkit-text-stroke:.6px #000">'+s[1]+'</button>').join('')+'</div>'+
     '<div class="row gap8" style="align-items:center;flex-wrap:wrap;margin-bottom:8px">'+
@@ -26797,7 +26815,7 @@ window.mPreviewClose=function(){
          notre backend ne la montre qu'une fois (clé stockée hashée). La carte ①
          affiche donc l'état de la clé, et l'URL n'apparaît qu'à la création. -->
     <div id="mcpModal" style="display:none;position:fixed;inset:0;z-index:9895;background:radial-gradient(900px 500px at 50% -5%, rgba(255,90,31,.10), transparent 60%), rgba(8,8,10,.97);backdrop-filter:blur(8px);overflow-y:auto;text-align:left">
-      <button class="btn-quiet" onclick="closeMcpModal()" style="position:fixed;top:22px;right:26px;z-index:2;width:40px;height:40px;padding:0;border-radius:12px;display:grid;place-items:center;border:1px solid var(--border-2);background:var(--surface);cursor:pointer">
+      <button class="btn btn-quiet" onclick="closeMcpModal()" style="position:fixed;top:22px;right:26px;z-index:2;width:40px;height:40px;padding:0;border-radius:12px;display:grid;place-items:center;border:1px solid var(--border-2);background:var(--surface);cursor:pointer">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
       <div style="max-width:1160px;margin:0 auto;padding:clamp(56px,8vh,96px) clamp(28px,6vw,72px) 60px">
@@ -26851,11 +26869,11 @@ window.mPreviewClose=function(){
               </div>
               <p class="faint" style="font-size:11px;line-height:1.5;margin-top:10px">Ta clé est stockée de façon sécurisée et n'est affichée qu'une fois. Perdue ? Régénère-la.</p>
               <div class="row gap8" style="margin-top:12px">
-                <button id="mcpKeyRegenBtn" class="btn-quiet btn-sm faint row gap6" onclick="mcpKeyCreate(true)" style="font-size:12px;padding:0;background:none;border:none;cursor:pointer">
+                <button id="mcpKeyRegenBtn" class="btn btn-quiet btn-sm faint row gap6" onclick="mcpKeyCreate(true)" style="font-size:12px;padding:0;background:none;border:none;cursor:pointer">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
                   Régénérer
                 </button>
-                <button id="mcpKeyRevokeBtn" class="btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
+                <button id="mcpKeyRevokeBtn" class="btn btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
               </div>
             </div>
           </div>
@@ -26907,7 +26925,7 @@ window.mPreviewClose=function(){
               <span class="faint" style="font-size:12.5px">Contrôle fin du rendu — laisse en Auto si tu hésites</span>
             </div>
           </div>
-          <button class="btn-quiet" onclick="mzAdvClose()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
+          <button class="btn btn-quiet" onclick="mzAdvClose()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none">✕</button>
         </div>
 
         <div style="margin:20px 0 24px">
@@ -26956,7 +26974,7 @@ window.mPreviewClose=function(){
         </div>
 
         <div class="row gap10" style="margin-top:8px">
-          <button type="button" class="btn-quiet btn-sm" onclick="mzAdvReset()" style="border:none;background:none;cursor:pointer;font-family:var(--font)">↺ Tout remettre en auto</button>
+          <button type="button" class="btn btn-quiet btn-sm" onclick="mzAdvReset()" style="border:none;background:none;cursor:pointer;font-family:var(--font)">↺ Tout remettre en auto</button>
           <button type="button" class="btn btn-primary" style="margin-left:auto;padding:12px 28px;font-weight:800" onclick="mzAdvClose()">Appliquer</button>
         </div>
       </div>
