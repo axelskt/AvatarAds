@@ -1,0 +1,50 @@
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "/Users/axelskotnicki/Downloads/Autre SaaS/avatarads-membres/mcp-proxy"
+publishOrigin = "default"
+base = "/Users/axelskotnicki/Downloads/Autre SaaS/avatarads-membres/mcp-proxy"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[redirects]]
+from = "/.well-known/*"
+to = "/404.html"
+status = 404.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/*"
+to = "https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/mcp/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
