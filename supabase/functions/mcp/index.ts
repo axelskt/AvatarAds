@@ -219,6 +219,21 @@ type ToolContent = { content: Array<Record<string, unknown>>; isError?: boolean 
 const toolText = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }] })
 const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }], isError: true })
 
+// ── ANNONCER UN MÉDIA, PAS SEULEMENT SON URL ────────────────────────────────
+// J'avais affirmé à Axel qu'aucun serveur MCP ne pouvait faire apparaître une
+// vidéo dans la conversation. C'était faux, et son contre-exemple l'a montré :
+// Higgsfield y arrive. Le protocole ne connaît pas de type « vidéo », mais il
+// connaît le LIEN DE RESSOURCE, qui porte un mimeType arbitraire — et ce que le
+// client en fait ensuite n'est pas dans la spec, c'est son affaire.
+// On ne peut pas embarquer le fichier : un montage pèse 20 Mo, impensable en
+// base64 dans un résultat d'outil. Le lien, lui, coûte trois lignes.
+const toolMedia = (url: string, nom: string, mime: string, texte: string): ToolContent => ({
+  content: [
+    { type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom },
+    { type: 'text', text: texte },
+  ],
+})
+
 // ── Définition des outils ──
 function toolDefs(isOwner: boolean, requireConfirm = true) {
   const tools: Array<Record<string, unknown>> = [
@@ -732,7 +747,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
-  if (job.status === 'done') return toolText(`✅ Vidéo prête !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // Poll Google jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
@@ -764,7 +779,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   }
   const url = await deliverVideo(userId, job, bytes) // claim atomique : pas de double upload
   return url
-    ? toolText(`✅ Vidéo prête !\nURL : ${url}`)
+    ? toolMedia(url, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${url}`)
     : toolText('⏳ Presque prête — rappelle check_video dans quelques secondes.')
 }
 
@@ -916,7 +931,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'avatar').maybeSingle()
   if (!job) return toolErr('Job avatar introuvable sur ce compte.')
-  if (job.status === 'done') return toolText(`✅ Vidéo avatar prête !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
@@ -952,7 +967,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
     if (!vres || !vres.ok) return toolText('⏳ Presque prêt — rappelle check_avatar_video dans quelques secondes.')
     const url = await deliverVideo(userId, job, new Uint8Array(await vres.arrayBuffer()))
     return url
-      ? toolText(`✅ Clip OmniHuman prêt !\nURL : ${url}`)
+      ? toolMedia(url, 'omnihuman.mp4', 'video/mp4', `✅ Clip OmniHuman prêt !\nURL : ${url}`)
       : toolText('⏳ Presque prêt — rappelle check_avatar_video dans quelques secondes.')
   }
 
@@ -987,7 +1002,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   const bytes = new Uint8Array(await vRes.arrayBuffer())
   const url = await deliverVideo(userId, job, bytes)
   return url
-    ? toolText(`✅ Vidéo avatar prête !\nURL : ${url}\n💡 Pour ajouter sous-titres et effets : ${APP_URL}`)
+    ? toolMedia(url, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${url}\n💡 Pour ajouter sous-titres et effets : ${APP_URL}`)
     : toolText('⏳ Presque prête — rappelle check_avatar_video dans quelques secondes.')
 }
 
@@ -1029,7 +1044,7 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
     await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
     delivered = true
     const balTxt = isUnlimited(profile) ? '∞' : String(bal)
-    return toolText(`✅ Audio nettoyé (voix isolée, bruit supprimé) !\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
+    return toolMedia(url, 'audio-nettoye.wav', 'audio/wav', `✅ Audio nettoyé (voix isolée, bruit supprimé) !\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
   } finally {
     if (!delivered) await refundCredits(userId, cost)
   }
@@ -1298,7 +1313,7 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'montage').maybeSingle()
   if (!job) return toolErr('Job montage introuvable sur ce compte.')
-  if (job.status === 'done') return toolText(`✅ Montage prêt !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${job.result_url}`)
   if (job.status === 'failed') return toolErr(`Rendu échoué : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // phase 1 (op_name vide) : le chef d'orchestre prépare encore le plan en tâche de fond
@@ -1338,7 +1353,7 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
     const bytes = new Uint8Array(await dl.data.arrayBuffer())
     const url = await deliverVideo(userId, job, bytes)
     return url
-      ? toolText(`✅ Montage prêt !\nURL : ${url}\n💡 Pour ajuster : get_montage_plan → modifie → render_montage_plan. Ou ouvre l'Éditeur sur ${APP_URL}`)
+      ? toolMedia(url, 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${url}\n💡 Pour ajuster : get_montage_plan → modifie → render_montage_plan. Ou ouvre l'Éditeur sur ${APP_URL}`)
       : toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
   }
   return toolText(`⏳ Statut : ${rj.status} — rappelle check_montage dans ~1 minute.`)
