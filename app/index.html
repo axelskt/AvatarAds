@@ -22863,7 +22863,13 @@ const _AC_VOICE_PRESETS = {
   // dureté (8-10 kHz, les « ss » et « ch »). Elle repart à 11-12 kHz, où elle
   // ajoute de l'air sans ajouter de sifflantes.
   natural: { hp: 75, mud: { f: 300, g: -2,   q: 1.0 }, pres: { f: 3200, g: 2,   q: 0.9 }, air: { f: 11000, g: 1.5 }, lp: 14000, deess: -4, comp: { th: -20, ratio: 2.5, att: 0.006, rel: 0.14 }, target: -20 },
-  podcast: { hp: 80, mud: { f: 250, g: -3,   q: 1.1 }, pres: { f: 3500, g: 3,   q: 0.8 }, air: { f: 11000, g: 2.5 }, lp: 13500, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
+  // podcast : le creux à 250 + la présence à 3500 + l'air à 11k s'additionnaient
+  // en un basculement de 6 dB vers les aigus — mesuré sur une prise DJI : +10 dB
+  // sous 2 kHz contre +16 dB au-dessus. Sur un micro-cravate, déjà clair par
+  // nature, ça donne une voix maigre et agressive. Axel : « quand j'active
+  // Volume constant ça donne un audio pourri ». Les trois corrections sont
+  // divisées par deux : on garde le caractère, on enlève la dureté.
+  podcast: { hp: 80, mud: { f: 250, g: -1.5, q: 1.1 }, pres: { f: 3500, g: 1.5, q: 0.8 }, air: { f: 11000, g: 1.2 }, lp: 13500, deess: -6, comp: { th: -22, ratio: 3.5, att: 0.004, rel: 0.12 }, target: -18 },
   punch:   { hp: 90, mud: { f: 300, g: -3.5, q: 1.2 }, pres: { f: 4000, g: 4,   q: 0.8 }, air: { f: 12000, g: 3.0 }, lp: 13000, deess: -7, comp: { th: -24, ratio: 5,   att: 0.003, rel: 0.09 }, target: -16.5 },
 };
 
