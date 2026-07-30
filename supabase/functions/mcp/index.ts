@@ -227,8 +227,41 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 // client en fait ensuite n'est pas dans la spec, c'est son affaire.
 // On ne peut pas embarquer le fichier : un montage pèse 20 Mo, impensable en
 // base64 dans un résultat d'outil. Le lien, lui, coûte trois lignes.
+const carteHtml = (url: string, nom: string, mime: string) => {
+  const video = mime.startsWith('video')
+  const media = video
+    ? `<video src="${url}" controls playsinline preload="metadata" style="width:100%;max-height:70vh;border-radius:12px;background:#000;display:block"></video>`
+    : `<audio src="${url}" controls preload="metadata" style="width:100%;display:block"></audio>`
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:12px;color-scheme:light dark">
+  ${media}
+  <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+    <span style="font-size:12px;opacity:.65">${nom}</span>
+    <a href="${url}" download="${nom}" style="margin-left:auto;font-size:12.5px;font-weight:600;text-decoration:none;padding:7px 13px;border-radius:9px;background:#FF5A1F;color:#fff">Télécharger</a>
+    <a href="${url}" target="_blank" rel="noopener" style="font-size:12.5px;font-weight:600;text-decoration:none;padding:7px 13px;border-radius:9px;border:1px solid rgba(128,128,128,.35);color:inherit">Ouvrir</a>
+  </div>
+</div>`
+}
+
+// ── FAIRE APPARAÎTRE LE MÉDIA, PAS SON URL ──────────────────────────────────
+// J'avais affirmé qu'aucun serveur MCP ne pouvait afficher une vidéo dans la
+// conversation. Faux : Higgsfield le fait. Axel m'a montré sa carte — lecteur,
+// boutons Download / Recreate, icône `</>` — c'est un WIDGET HTML, pas un lien.
+// Le client rend une ressource embarquée `text/html` dans une iframe ; c'est
+// l'iframe qui va chercher le MP4 à son URL, donc AUCUN base64 : le problème du
+// poids (21 Mo pour un montage) disparaît.
+// On envoie les trois formes, de la plus riche à la plus sobre : le widget, le
+// lien de ressource, puis le texte. Un client qui ignore la première tombe sur
+// la suivante — on ne parie pas sur une seule.
 const toolMedia = (url: string, nom: string, mime: string, texte: string): ToolContent => ({
   content: [
+    {
+      type: 'resource',
+      resource: {
+        uri: `ui://avatarads/${nom.replace(/[^a-z0-9.]/gi, '-')}`,
+        mimeType: 'text/html',
+        text: carteHtml(url, nom, mime),
+      },
+    },
     { type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom },
     { type: 'text', text: texte },
   ],
