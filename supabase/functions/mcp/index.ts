@@ -132,6 +132,41 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
   return `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
 }
 
+// ── L'IMAGE DOIT S'AFFICHER DANS CLAUDE, PAS ÊTRE UN LIEN ───────────────────
+// Axel : « les vidéos et images ne s'affichent pas dans Claude ». Le protocole
+// MCP sait renvoyer un bloc `image` en base64, que le client rend en vignette —
+// mais l'originale pèse 3 Mo (≈ 4 Mo une fois en base64), impensable dans un
+// résultat d'outil. On fabrique donc une vignette ~640 px à la génération, une
+// seule fois, et c'est elle qu'on renvoie. Si la vignette échoue, on retombe
+// simplement sur le lien : jamais de génération perdue pour une miniature.
+const APERCU_LARGEUR = 640
+async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
+  try {
+    const { Image } = await import('https://deno.land/x/imagescript@1.2.17/mod.ts')
+    const img = await Image.decode(bytes)
+    if (img.width > APERCU_LARGEUR) img.resize(APERCU_LARGEUR, Image.RESIZE_AUTO)
+    return await img.encodeJPEG(72)
+  } catch (e) {
+    console.error('apercu:', (e as Error)?.message || e)
+    return null
+  }
+}
+// Un résultat d'outil ne doit pas dépasser quelques centaines de Ko : au-delà,
+// on préfère le lien seul à une réponse que le client tronque ou refuse.
+const APERCU_MAX_OCTETS = 700_000
+async function blocImage(url: string): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return null
+    const buf = new Uint8Array(await r.arrayBuffer())
+    if (!buf.length || buf.length > APERCU_MAX_OCTETS) return null
+    let bin = ''
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
+    const mime = /\.png($|\?)/i.test(url) ? 'image/png' : 'image/jpeg'
+    return { type: 'image', data: btoa(bin), mimeType: mime }
+  } catch { return null }
+}
+
 const isUnlimited = (p: Record<string, unknown>) =>
   (String(p.plan || '').toLowerCase() === 'developer') || !!p.is_owner
 
@@ -440,8 +475,14 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
         }
         const b64 = data.data?.[0]?.b64_json
         if (!b64) { lastErr = 'Aucune image retournée'; continue }
-        const url = await uploadMedia(userId, b64ToBytes(b64), 'png', 'image/png')
-        await svc.from('mcp_jobs').update({ status: 'done', result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
+        const brut = b64ToBytes(b64)
+        const url = await uploadMedia(userId, brut, 'png', 'image/png')
+        let apercu: string | null = null
+        try {
+          const petit = await fabriquerApercu(brut)
+          if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg')
+        } catch (_) { /* la vignette est un confort, jamais un bloquant */ }
+        await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
         return
       }
     } catch (e) { lastErr = String((e as Error)?.message || e) }
@@ -496,7 +537,9 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
   if (!job) return toolErr('Job introuvable sur ce compte.')
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (job.status === 'done' && job.result_url) {
-    return toolText(`✅ Image prête !\nURL : ${job.result_url}`)
+    const vignette = await blocImage(String(job.preview_url || job.result_url))
+    const texte = { type: 'text', text: `✅ Image prête !\nURL (pleine résolution) : ${job.result_url}` }
+    return vignette ? { content: [vignette, texte] } : { content: [texte] }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
   return toolText(
