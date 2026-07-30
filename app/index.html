@@ -22510,6 +22510,10 @@ function _acToggleDerush(){
     return;
   }
   _acDerushEnabled = !_acDerushEnabled;
+  // « Retirer les hesitations » n'etait PAS memorise : ma restauration ne
+  // couvrait que silences/denoise/voice/breath, et le derush vit dans son
+  // propre drapeau. Axel : « retirer les hesitations n'est jamais reactive ».
+  try{ localStorage.setItem('aa_ac_derush', _acDerushEnabled ? '1' : '0'); }catch(_){}
   // La ligne porte `is-on` comme toutes les autres : c'est cette classe qui
   // allume le contour, le fond et la pastille de l'icône. Le dérush pilotait
   // seulement l'interrupteur en style inline — l'interrupteur basculait, mais la
@@ -23534,6 +23538,10 @@ function _acRestaurerReglages(){
     const n = localStorage.getItem('aa_ac_level');
     if(n === 'normal' || n === 'strong') _acLevel = n;
   }catch(_){}
+  try{
+    const d = localStorage.getItem('aa_ac_derush');
+    if(d === '1' || d === '0') _acDerushEnabled = d === '1';
+  }catch(_){}
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23544,6 +23552,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // l'interface doit refleter ce qu'on vient de restaurer, pas les defauts
   try{ _acSetVoicePreset(_acVoicePreset); }catch(_){}
   try{ if(typeof _acSetLevel === 'function') _acSetLevel(_acLevel); }catch(_){}
+  try{
+    const b = document.getElementById('acRowFillers')
+    if(b) b.classList.toggle('is-on', !!_acDerushEnabled)
+  }catch(_){}
   _acDenoiseEnabled = _acOpts.denoise;
 });
 
