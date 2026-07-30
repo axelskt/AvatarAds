@@ -22876,6 +22876,10 @@ const _AC_VOICE_PRESETS = {
   // temps que la cible montait — soit un coup de pouce EN PLEIN dans la zone de
   // dureté (8-10 kHz, les « ss » et « ch »). Elle repart à 11-12 kHz, où elle
   // ajoute de l'air sans ajouter de sifflantes.
+  // Le de-esseur etait le dernier ecart avec « Aucun » (qui n'en a pas) : a
+  // -4/-6/-7 dB avec un ratio de 6, il serrait fort la bande des sifflantes et
+  // c'est ce qui « s'entend traite ». Il descend a -1,5/-2,5/-3,5 : il protege
+  // encore des « ss » agressifs, il ne sculpte plus la voix.
   // ── ON NE MASTERISE PAS DEUX FOIS ─────────────────────────────────────────
   // Les cibles etaient a -17/-18 LUFS : des niveaux de DIFFUSION plateforme.
   // Or cette voix repart dans le Montage IA, qui la renormalise. On la poussait
@@ -22893,15 +22897,15 @@ const _AC_VOICE_PRESETS = {
   // La bande `mud` sert donc maintenant a AJOUTER du bas-medium (gain positif),
   // la presence reste discrete et l'air quasi nul. Le caractere vient du corps
   // et de la compression, pas d'un coup de pouce dans les aigus.
-  natural: { hp: 70, mud: { f: 190, g: 1.2, q: 0.8 }, pres: { f: 3000, g: 1.0, q: 0.9 }, air: { f: 11500, g: 0.4 }, lp: 17000, deess: -4, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -21 },
+  natural: { hp: 70, mud: { f: 190, g: 1.2, q: 0.8 }, pres: { f: 3000, g: 1.0, q: 0.9 }, air: { f: 11500, g: 0.4 }, lp: 17000, deess: -1.5, comp: { th: -23, ratio: 2.2, att: 0.006, rel: 0.15 }, target: -21 },
   // podcast : le creux à 250 + la présence à 3500 + l'air à 11k s'additionnaient
   // en un basculement de 6 dB vers les aigus — mesuré sur une prise DJI : +10 dB
   // sous 2 kHz contre +16 dB au-dessus. Sur un micro-cravate, déjà clair par
   // nature, ça donne une voix maigre et agressive. Axel : « quand j'active
   // Volume constant ça donne un audio pourri ». Les trois corrections sont
   // divisées par deux : on garde le caractère, on enlève la dureté.
-  podcast: { hp: 70, mud: { f: 180, g: 2.2, q: 0.8 }, pres: { f: 3000, g: 1.4, q: 0.8 }, air: { f: 11500, g: 0.6 }, lp: 17000, deess: -6, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -20.5 },
-  punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -7, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -19.5 },
+  podcast: { hp: 70, mud: { f: 180, g: 2.2, q: 0.8 }, pres: { f: 3000, g: 1.4, q: 0.8 }, air: { f: 11500, g: 0.6 }, lp: 17000, deess: -2.5, comp: { th: -24, ratio: 2.6, att: 0.005, rel: 0.14 }, target: -20.5 },
+  punch:   { hp: 75, mud: { f: 170, g: 2.8, q: 0.8 }, pres: { f: 3200, g: 2.0, q: 0.8 }, air: { f: 12000, g: 0.8 }, lp: 16500, deess: -3.5, comp: { th: -25, ratio: 3.5, att: 0.004, rel: 0.10 }, target: -19.5 },
 };
 
 async function _acMasterVoice(buf, presetKey, opts){
