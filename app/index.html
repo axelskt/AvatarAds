@@ -22640,6 +22640,7 @@ let _acOrigBlob  = null;   // l'audio d'origine, pour la comparaison
 let _acLevel     = 'normal'; // 'normal' | 'strong'
 
 function _acSetLevel(level, btn){
+  try{ localStorage.setItem('aa_ac_level', level); }catch(_){}
   // Vérifier plan pour le niveau fort
   if(level === 'strong'){
     const plan = (currentMember?.plan || 'free').toLowerCase();
@@ -23064,6 +23065,7 @@ try{
 
 function _acSetVoicePreset(key){
   _acVoicePreset = key;
+  try{ localStorage.setItem('aa_ac_voice', key); }catch(_){}
   for(const k of ['off','natural','podcast','punch']){
     const b = document.getElementById('acVoice_' + k);
     if(!b) continue;
@@ -23483,10 +23485,41 @@ function _acSetOpt(key, val){
   if(key === 'denoise') _acDenoiseEnabled = !!val;   // l'ancien drapeau suit
   try{ localStorage.setItem('aa_ac_opts', JSON.stringify(_acOpts)); }catch(_){}
 }
+// ── LES CHOIX DE L'UTILISATEUR DOIVENT SURVIVRE AU RECHARGEMENT ────────────
+// _acSetOpt ecrivait bien dans localStorage… mais rien ne relisait au
+// chargement. Les preferences etaient donc sauvegardees dans le vide : a chaque
+// visite on repartait sur les defauts du code. Axel : « ça serait bien que le
+// systeme retienne les modifications qu'on fait ».
+// On restaure les trois familles de reglages avant de peindre l'interface :
+// les interrupteurs, le preset de voix et le niveau de nettoyage.
+function _acRestaurerReglages(){
+  try{
+    const o = JSON.parse(localStorage.getItem('aa_ac_opts') || 'null');
+    if(o && typeof o === 'object'){
+      for(const k of ['silences','denoise','voice','breath']){
+        if(typeof o[k] === 'boolean') _acOpts[k] = o[k];
+      }
+      _acDenoiseEnabled = _acOpts.denoise;
+    }
+  }catch(_){}
+  try{
+    const v = localStorage.getItem('aa_ac_voice');
+    if(v && Object.prototype.hasOwnProperty.call(_AC_VOICE_PRESETS, v)) _acVoicePreset = v;
+  }catch(_){}
+  try{
+    const n = localStorage.getItem('aa_ac_level');
+    if(n === 'normal' || n === 'strong') _acLevel = n;
+  }catch(_){}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  _acRestaurerReglages();
   for(const k of ['silences','denoise','voice','breath']){
     _acRowPaint(k);
   }
+  // l'interface doit refleter ce qu'on vient de restaurer, pas les defauts
+  try{ _acSetVoicePreset(_acVoicePreset); }catch(_){}
+  try{ if(typeof _acSetLevel === 'function') _acSetLevel(_acLevel); }catch(_){}
   _acDenoiseEnabled = _acOpts.denoise;
 });
 
