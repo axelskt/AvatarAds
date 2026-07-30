@@ -43,6 +43,19 @@ import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
 //           gratuit la »
 // Ce que le chef d'orchestre demande parfois et qui n'existe pas sous ce nom :
 // plutot que de jeter, on l'envoie vers la plus proche de la banque.
+// Ce qu'une phrase DOIT contenir pour meriter l'animation. S'applique a tout le
+// monde — mes tables comme le chef d'orchestre.
+const EXIGE_GLOBAL = {
+  logo:    /logo|marque|avatarads/i,
+  free:    /gratuit|offert|cadeau|sans payer|ne paie/i,
+  versus:  /concurrence|concurrent|versus|contre|compar/i,
+  network: /communaut|reseau|réseau|equipe|équipe|ensemble|connect/i,
+  daypart: /heure|heures|temps|jour|journ|minute/i,
+  lowcost: /investi|mise|depart|départ|capital|cout|coût|budget|euro|€|prix/i,
+  twopaths:/concurrence|concurrent|personne|seul|autres|tout le monde|different/i,
+  countup: /\d|cent|mille|pourcent/i,
+}
+
 const REDIRECTIONS = {
   // Les animations qu'Axel a refusees ne disparaissent pas : elles pointent
   // vers celle qu'il a validee pour ce moment-la. Le chef d'orchestre garde
@@ -256,6 +269,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // pour ce moment-la. Le refus ne doit pas coûter la fenêtre — sinon le trou
     // retombe sur le visage, ce qu'il reproche depuis le debut.
     const nom = String(slide && slide.anim || '')
+    // ── LE GARDE-FOU VAUT AUSSI POUR LE CHEF D'ORCHESTRE ────────────────────
+    // « le visuel EST le mot » : une animation ne se pose que si la phrase
+    // prononcee pendant sa fenetre parle vraiment de son sujet. Ce controle ne
+    // s'appliquait qu'a mes tables de mots-cles. Resultat mesure : sur « le
+    // SaaS IA peut changer ta vie », le chef d'orchestre posait `logo` — et
+    // l'ecran affichait « avatarads.fr » pendant qu'Axel dit « SaaS IA ».
+    // Sa proposition n'est pas au-dessus de la regle.
+    if (EXIGE_GLOBAL[nom]) {
+      const dit = (plan.captions || []).filter((w) => w.start < b && w.end > a)
+        .map((w) => w.text).join(' ')
+      if (!EXIGE_GLOBAL[nom].test(dit)) {
+        console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça`)
+        return null
+      }
+    }
     if (REFUSEES.has(nom)) {
       const proche = REDIRECTIONS[nom]
       if (proche && !REFUSEES.has(proche)) slide = { ...slide, anim: proche }
