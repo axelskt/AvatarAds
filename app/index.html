@@ -20628,6 +20628,41 @@ async function _expBurnSubs(){
   }
 }
 
+// ── OUVRIR UN MÉDIA DANS L'ÉDITEUR DEPUIS UNE URL ───────────────────────────
+// La carte renvoyée par le MCP porte un bouton « Ouvrir dans l'Éditeur ». Sans
+// ce point d'entrée, ce bouton aurait été un lien mort : l'app ne savait ouvrir
+// que des fichiers déjà en mémoire (Express, Montage). On accepte maintenant
+// ?video=<url>&nom=<fichier>, on télécharge, et on route vers l'Éditeur comme
+// pour un import manuel. Marche pour un montage, un avatar ou un clip Express.
+async function _ouvrirMediaDepuisUrl(){
+  const p = new URLSearchParams(location.search)
+  const src = p.get('video')
+  if(!src) return
+  // on nettoie l'URL tout de suite : un rechargement ne doit pas relancer
+  try { history.replaceState(null, '', location.pathname) } catch(_){}
+  const nom = (p.get('nom') || 'video.mp4').replace(/[^\w.\-]/g, '_')
+  // l'Éditeur n'existe qu'une fois l'app démarrée : on attend qu'il réponde
+  for (let i = 0; i < 60 && typeof edRouteFile !== 'function'; i++) {
+    await new Promise(r => setTimeout(r, 250))
+  }
+  if (typeof edRouteFile !== 'function'){ toast('⚠️ Éditeur indisponible'); return }
+  try {
+    toast('⏳ Ouverture du média…')
+    const r = await fetch(src)
+    if(!r.ok) throw new Error('HTTP ' + r.status)
+    const blob = await r.blob()
+    nav('studio', document.querySelector('.nav-i[onclick*="studio"]'))
+    setTimeout(() => {
+      edRouteFile(new File([blob], nom, { type: blob.type || 'video/mp4' }))
+      toast('✅ Média ouvert dans l\'Éditeur')
+    }, 200)
+  } catch(e){
+    console.error('_ouvrirMediaDepuisUrl:', e)
+    toast('⚠️ Impossible d\'ouvrir ce média — ' + String(e.message || e).slice(0, 40))
+  }
+}
+window.addEventListener('load', () => { setTimeout(_ouvrirMediaDepuisUrl, 800) })
+
 function expressOpenInEditor(){
   if(!window._expVidBlob){ toast('⚠️ Génère une vidéo d\'abord'); return; }
   try {
