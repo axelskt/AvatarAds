@@ -684,20 +684,80 @@ export function animHtml(name, s, W, H, vs) {
       return box(h)
     }
     case 'easyup': {
-      // Une courbe VERTE qui monte doucement : la facilite, sans a-coup.
-      const VERT = '#22B573'
-      const gx = Math.round(f.w * 0.14), gy = Math.round(f.h * 0.24)
-      const gw = Math.round(f.w * 0.74), gh = Math.round(f.h * 0.44)
-      const base = gy + gh
+      // v2 validee par Axel (maquette du 31/07) : la courbe montante HABILLEE —
+      // axes gradues, aire coloree sous le trace, un point qui suit la courbe
+      // avec sa pastille (une fleche, jamais un chiffre invente), trois jalons
+      // qui claquent au passage. La v1 etait un trait nu sur un axe fantome.
+      const COUL = '#22B573'
+      const mx = Math.round(f.w * 0.12), my = Math.round(f.h * 0.14)
+      const gw2 = f.w - 2 * mx, gh2 = f.h - 2 * my
+      const x0 = mx, y0 = f.h - my
+      const pts = [[0, 0.06], [0.22, 0.16], [0.45, 0.34], [0.68, 0.58], [0.88, 0.8], [1, 0.9]]
+        .map(([px, py]) => [Math.round(x0 + px * gw2), Math.round(y0 - py * gh2)])
+      const dLine = 'M' + pts.map((p2) => p2.join(' ')).join(' L')
+      const dArea = dLine + ` L${x0 + gw2} ${y0} L${x0} ${y0} Z`
+      let ticks = ''
+      for (let k = 1; k <= 3; k++) {
+        const ty = Math.round(y0 - (k / 3) * gh2)
+        ticks += `<span class="an-p" style="left:${x0 - Math.round(f.w * 0.02)}px;top:${ty - 1}px;width:${Math.round(f.w * 0.02)}px;height:2px;background:${P.ink};opacity:.35"></span>
+          <span class="an-p" style="left:${x0}px;top:${ty}px;width:${gw2}px;height:1px;background:${P.ink};opacity:.08"></span>`
+        const tx = Math.round(x0 + (k / 3) * gw2)
+        ticks += `<span class="an-p" style="left:${tx - 1}px;top:${y0}px;width:2px;height:${Math.round(f.h * 0.018)}px;background:${P.ink};opacity:.35"></span>`
+      }
+      const jalons = [1, 3, 4].map((i, k) => {
+        const [jx, jy] = pts[i]
+        return `<span class="an-p" id="${id}j${k}" style="left:${jx - 7}px;top:${jy - 7}px;width:14px;height:14px;border-radius:50%;background:#FFFFFF;border:3px solid ${COUL};opacity:0"></span>`
+      }).join('')
       return box(`
-        <svg class="an-p" style="left:0;top:0;width:${f.w}px;height:${f.h}px;overflow:visible" viewBox="0 0 ${f.w} ${f.h}">
-          <path d="M${gx} ${gy} L${gx} ${base} L${gx + gw} ${base}" fill="none" stroke="${P.line}" stroke-width="3" stroke-linecap="round"/>
-          <path id="${id}up" d="M${gx + Math.round(gw * 0.08)} ${base - Math.round(gh * 0.10)} C${gx + Math.round(gw * 0.34)} ${base - Math.round(gh * 0.22)} ${gx + Math.round(gw * 0.56)} ${base - Math.round(gh * 0.62)} ${gx + Math.round(gw * 0.90)} ${gy + Math.round(gh * 0.06)}"
-            fill="none" stroke="${VERT}" stroke-width="9" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900"/>
-          <path id="${id}tp" d="M${gx + Math.round(gw * 0.74)} ${gy + Math.round(gh * 0.14)} L${gx + Math.round(gw * 0.92)} ${gy + Math.round(gh * 0.02)} L${gx + Math.round(gw * 0.96)} ${gy + Math.round(gh * 0.26)}"
-            fill="none" stroke="${VERT}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="120" stroke-dashoffset="120"/>
-          <circle id="${id}pt" cx="${gx + Math.round(gw * 0.08)}" cy="${base - Math.round(gh * 0.10)}" r="9" fill="${VERT}" opacity="0"/>
-        </svg>`)
+        <span class="an-p" style="left:${x0}px;top:${y0}px;width:${gw2}px;height:3px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        <span class="an-p" style="left:${x0}px;top:${y0 - gh2}px;width:3px;height:${gh2}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        ${ticks}
+        <svg class="an-p" style="left:0;top:0" width="${f.w}" height="${f.h}" viewBox="0 0 ${f.w} ${f.h}">
+          <path id="${id}area" d="${dArea}" fill="${COUL}" opacity="0"/>
+          <path id="${id}line" d="${dLine}" fill="none" stroke="${COUL}" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+        ${jalons}
+        <span class="an-p" id="${id}dot" style="left:${pts[0][0] - 11}px;top:${pts[0][1] - 11}px;width:22px;height:22px;border-radius:50%;background:${COUL};box-shadow:0 0 0 6px ${COUL}2E;opacity:0"></span>
+        <span class="an-p" id="${id}bdg" style="left:${pts[0][0] - 26}px;top:${pts[0][1] - 64}px;width:52px;height:36px;border-radius:12px;background:${COUL};opacity:0;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px ${COUL}59">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l6-6 4 3 6-7M20 6h-5M20 6v5"/></svg></span>`)
+    }
+    case 'easydown': {
+      // v2 validee par Axel (maquette du 31/07) : la courbe descendante HABILLEE —
+      // axes gradues, aire coloree sous le trace, un point qui suit la courbe
+      // avec sa pastille (une fleche, jamais un chiffre invente), trois jalons
+      // qui claquent au passage. La v1 etait un trait nu sur un axe fantome.
+      const COUL = '#E5484D'
+      const mx = Math.round(f.w * 0.12), my = Math.round(f.h * 0.14)
+      const gw2 = f.w - 2 * mx, gh2 = f.h - 2 * my
+      const x0 = mx, y0 = f.h - my
+      const pts = [[0, 0.9], [0.22, 0.8], [0.45, 0.62], [0.68, 0.38], [0.88, 0.16], [1, 0.06]]
+        .map(([px, py]) => [Math.round(x0 + px * gw2), Math.round(y0 - py * gh2)])
+      const dLine = 'M' + pts.map((p2) => p2.join(' ')).join(' L')
+      const dArea = dLine + ` L${x0 + gw2} ${y0} L${x0} ${y0} Z`
+      let ticks = ''
+      for (let k = 1; k <= 3; k++) {
+        const ty = Math.round(y0 - (k / 3) * gh2)
+        ticks += `<span class="an-p" style="left:${x0 - Math.round(f.w * 0.02)}px;top:${ty - 1}px;width:${Math.round(f.w * 0.02)}px;height:2px;background:${P.ink};opacity:.35"></span>
+          <span class="an-p" style="left:${x0}px;top:${ty}px;width:${gw2}px;height:1px;background:${P.ink};opacity:.08"></span>`
+        const tx = Math.round(x0 + (k / 3) * gw2)
+        ticks += `<span class="an-p" style="left:${tx - 1}px;top:${y0}px;width:2px;height:${Math.round(f.h * 0.018)}px;background:${P.ink};opacity:.35"></span>`
+      }
+      const jalons = [1, 3, 4].map((i, k) => {
+        const [jx, jy] = pts[i]
+        return `<span class="an-p" id="${id}j${k}" style="left:${jx - 7}px;top:${jy - 7}px;width:14px;height:14px;border-radius:50%;background:#FFFFFF;border:3px solid ${COUL};opacity:0"></span>`
+      }).join('')
+      return box(`
+        <span class="an-p" style="left:${x0}px;top:${y0}px;width:${gw2}px;height:3px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        <span class="an-p" style="left:${x0}px;top:${y0 - gh2}px;width:3px;height:${gh2}px;border-radius:99px;background:${P.ink};opacity:.4"></span>
+        ${ticks}
+        <svg class="an-p" style="left:0;top:0" width="${f.w}" height="${f.h}" viewBox="0 0 ${f.w} ${f.h}">
+          <path id="${id}area" d="${dArea}" fill="${COUL}" opacity="0"/>
+          <path id="${id}line" d="${dLine}" fill="none" stroke="${COUL}" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+        ${jalons}
+        <span class="an-p" id="${id}dot" style="left:${pts[0][0] - 11}px;top:${pts[0][1] - 11}px;width:22px;height:22px;border-radius:50%;background:${COUL};box-shadow:0 0 0 6px ${COUL}2E;opacity:0"></span>
+        <span class="an-p" id="${id}bdg" style="left:${pts[0][0] - 26}px;top:${pts[0][1] - 64}px;width:52px;height:36px;border-radius:12px;background:${COUL};opacity:0;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px ${COUL}59">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l6 6 4-3 6 7M20 18h-5M20 18v-5"/></svg></span>`)
     }
     case 'network': {
       // Des profils qui se relient : le réseau, la communauté.
@@ -3103,10 +3163,30 @@ export function animJs(name, s, r2) {
       return inOut + `
       tl.fromTo('#${id}an .an-cd', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.11, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.15)});`
     case 'easyup':
+    case 'easydown': {
+      // v2 : la courbe se DESSINE (dash mesure a l'execution), l'aire suit, le
+      // point la parcourt via getPointAtLength (deterministe au seek), les
+      // jalons claquent a leur tour de passage.
+      const trace = r2(Math.min(2.2, Math.max(1.2, dur * 0.62)))
       return inOut + `
-      tl.fromTo('#${id}pt', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 1, scale: 1, duration: 0.25, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
-      tl.fromTo('#${id}up', { strokeDashoffset: 900 }, { strokeDashoffset: 0, duration: ${r2(Math.max(0.7, dur - 0.7))}, ease: 'power1.inOut' }, ${r2(t0 + 0.15)});
-      tl.fromTo('#${id}tp', { strokeDashoffset: 120 }, { strokeDashoffset: 0, duration: 0.3, ease: 'power2.out' }, ${r2(t0 + Math.max(0.6, dur - 0.75))});`
+      (function(){ var p = document.getElementById('${id}line');
+        if (p && p.getTotalLength) { var L = p.getTotalLength();
+          p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L;
+          tl.to(p, { strokeDashoffset: 0, duration: ${trace}, ease: 'power1.inOut' }, ${r2(t0 + 0.25)});
+          var mv = { t: 0 }, dot = document.getElementById('${id}dot'), bdg = document.getElementById('${id}bdg');
+          tl.to(mv, { t: 1, duration: ${trace}, lazy: false, ease: 'power1.inOut', onUpdate: function(){
+            var pt = p.getPointAtLength(L * mv.t);
+            if (dot) { dot.style.left = (pt.x - 11) + 'px'; dot.style.top = (pt.y - 11) + 'px'; }
+            if (bdg) { bdg.style.left = (pt.x - 26) + 'px'; bdg.style.top = (pt.y - 64) + 'px'; }
+          } }, ${r2(t0 + 0.25)}); } })();
+      tl.fromTo('#${id}dot', { autoAlpha: 0, scale: 0.4 }, { autoAlpha: 1, scale: 1, duration: 0.22, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.2)});
+      tl.fromTo('#${id}bdg', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.26, ease: 'back.out(1.8)' }, ${r2(t0 + 0.4)});
+      tl.fromTo('#${id}area', { opacity: 0 }, { opacity: 0.14, duration: ${trace}, ease: 'power1.inOut' }, ${r2(t0 + 0.3)});
+      tl.fromTo('#${id}j0', { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.25 + trace * 0.24)});
+      tl.fromTo('#${id}j1', { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.25 + trace * 0.62)});
+      tl.fromTo('#${id}j2', { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.25 + trace * 0.85)});
+      tl.to('#${id}dot', { scale: 1.25, duration: 0.3, yoyo: true, repeat: 1, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.35 + trace)});`
+    }
     case 'lowcost':
       return inOut + `
       tl.fromTo('#${id}an .an-bar', { scaleY: 0, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.32, stagger: 0.1, ease: 'power2.out' }, ${t0});
