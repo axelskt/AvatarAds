@@ -877,17 +877,26 @@ export function buildDynamicComposition(plan, opts = {}) {
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
+      // « c'est tout le temps les mêmes sous-titres » (Axel, 31/07) : en apple,
+      // la pastille S'ADAPTE au panneau qu'elle survole — claire sur les
+      // panneaux clairs (animations, cartes, captures), sombre sur le visage
+      // et les médias plein cadre. Le style respire au rythme des plans.
+      const mid = (a + b) / 2
+      const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
+      g.sombre = !ap || !pan || pan.kind === 'avclip'
       const dedans = g.mots.map((w, k) =>
         `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
-        style="top:${bas}px"><span class="dc-p" id="dp${i}">${dedans}</span></div>`
+        style="top:${bas}px"><span class="dc-p${g.sombre ? '' : ' dc-clair'}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
+      const enc = g.sombre ? encre : '#17171C'
+      const accW = g.sombre ? '#FF8A5B' : '#E8500A'
       g.mots.forEach((w, k) => {
-        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '#FF8A5B' }, ${r2(w.start)});`
-        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${encre}' }, ${r2(w.start)});`
+        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}' }, ${r2(w.start)});`
+        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
       })
       js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
     }
@@ -923,6 +932,10 @@ export function buildDynamicComposition(plan, opts = {}) {
     font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.022em;
     font-size:${Math.round(H * 0.036)}px; line-height:1.24; color:#FFFFFF;
     text-wrap:balance; }
+  /* apple : sur un panneau CLAIR, la pastille s'inverse — blanche, texte encre,
+     comme une bulle iOS. La sombre reste pour le visage et les médias. */
+  .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
+    box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
   .dc-w { display:inline-block; }
 </style>
 </head>

@@ -1005,7 +1005,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const ra = r2(rival.start || 0), rbPlan = r2(rival.end ?? ra + 1.5)
           const rlast = Math.max(0, ...(rival.items || []).map((it) => Number(it && it.t) || 0))
           const rb = r2(Math.min(D, Math.max(rbPlan, rlast + 0.4)))
-          if (add(rival, ra, rb) || (rb > rbPlan && add(rival, ra, rbPlan))) consumedByPlan.add(rival)
+          // Retour d'Axel (31/07, v2) : « sans forcément écrire "formation"
+          // "coaching" — à chaque fois que j'en dis un, l'animation ajoute UN
+          // truc ». Une énumération NUE (type card) devient donc l'anim
+          // `lineup` : un visuel se pose par terme prononcé, zéro mot écrit.
+          // Les checklists restent écrites — cocher des mots est leur identité.
+          const pose = String(rival.type) === 'card' ? { ...rival, anim: 'lineup', title: '', motif: '' } : rival
+          if (add(pose, ra, rb) || (rb > rbPlan && add(pose, ra, rbPlan))) consumedByPlan.add(rival)
           continue
         }
         // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste

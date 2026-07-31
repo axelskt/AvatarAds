@@ -1873,6 +1873,59 @@ export function animHtml(name, s, W, H, vs) {
           : `<span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.2)}px;width:${Math.round(w * 0.28)}px;height:${Math.round(h * 0.06)}px;border-radius:99px;background:${P.acc};opacity:.85"></span>`}
         <span class="an-p" id="${id}pdb" style="left:${Math.round(w * 0.09)}px;top:${h - Math.round(h * 0.17)}px;width:${Math.round(w * 0.82)}px;height:${Math.round(h * 0.11)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.05)}px;color:#FFFFFF">Ajouter au panier</span></div>`)
     }
+    case 'lineup': {
+      // LE PRÉSENTOIR QUI SE REMPLIT (retour d'Axel 31/07) : « sans forcément
+      // écrire "formation" "coaching" — à chaque fois que j'en dis un,
+      // l'animation ajoute UN truc ». Une étagère vide, et une offre VISUELLE
+      // qui se pose à chaque terme prononcé : un colis (produit physique), une
+      // personne qui parle (coaching), un cours qui se joue (formation). Aucun
+      // mot écrit — le sous-titre les porte déjà. Les instants d'arrivée
+      // viennent des items du plan (it.t) : chaque carte claque SUR son mot.
+      const n = Math.max(2, Math.min(4, (s.items || []).length || 3))
+      const cw = Math.round(f.w * (n > 3 ? 0.2 : 0.24))
+      const ch = Math.round(cw * 1.28)
+      const gap = Math.round(f.w * 0.05)
+      const total = n * cw + (n - 1) * gap
+      const x0 = Math.round((f.w - total) / 2)
+      const cy = Math.round(f.h * 0.5 - ch / 2)
+      const shelfY = cy + ch + Math.round(f.h * 0.055)
+      // l'étagère est là AVANT les cartes : la scène existe, elle attend
+      let h = `<span class="an-p" style="left:${x0 - gap}px;top:${shelfY}px;width:${total + 2 * gap}px;height:4px;border-radius:99px;background:${P.ink};opacity:.35"></span>`
+      const rr = Math.round(cw * 0.14)
+      const mocks = [
+        // 0 · LE COLIS : la boîte, son rabat clair, sa bande de scotch
+        (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.42)}px;border-radius:${Math.round(cw * 0.08)}px;background:${grad(150)}"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.11)}px;border-radius:${Math.round(cw * 0.08)}px ${Math.round(cw * 0.08)}px 0 0;background:rgba(255,255,255,.35)"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.46)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.08)}px;height:${Math.round(ch * 0.42)}px;background:rgba(255,255,255,.5)"></span>`,
+        // 1 · LA PERSONNE : tête + épaules + bulle qui pop (le coaching, c'est
+        // quelqu'un qui te parle)
+        (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.33)}px;top:${Math.round(ch * 0.2)}px;width:${Math.round(cw * 0.34)}px;height:${Math.round(cw * 0.34)}px;border-radius:50%;background:${P.acc}"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.22)}px;top:${Math.round(ch * 0.52)}px;width:${Math.round(cw * 0.56)}px;height:${Math.round(ch * 0.24)}px;border-radius:99px 99px 0 0;background:${P.acc}"></span>
+          <span class="an-p" id="${ix}bub" style="left:${Math.round(cw * 0.06)}px;top:${Math.round(ch * 0.08)}px;width:${Math.round(cw * 0.32)}px;height:${Math.round(ch * 0.15)}px;border-radius:${Math.round(cw * 0.1)}px ${Math.round(cw * 0.1)}px 2px ${Math.round(cw * 0.1)}px;background:${P.ink};opacity:0"></span>`,
+        // 2 · LE COURS : l'écran, son play, sa barre de progression qui avance
+        (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.24)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.ink}"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.44)}px;top:${Math.round(ch * 0.36)}px;width:0;height:0;border-top:${Math.round(cw * 0.07)}px solid transparent;border-bottom:${Math.round(cw * 0.07)}px solid transparent;border-left:${Math.round(cw * 0.12)}px solid #FFFFFF"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.73)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.06)}px;border-radius:99px;background:${P.line}"></span>
+          <span class="an-p" id="${ix}bar" style="left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.73)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.06)}px;border-radius:99px;background:${P.acc};transform:scaleX(0);transform-origin:0 50%"></span>`,
+        // 3 · repli générique : la carte à lignes muettes
+        (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.28)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.09)}px;border-radius:99px;background:${P.ink};opacity:.6"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.46)}px;width:${Math.round(cw * 0.5)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line}"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.6)}px;width:${Math.round(cw * 0.58)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line}"></span>`,
+      ]
+      for (let k = 0; k < n; k++) {
+        const ix = `${id}l${k}`
+        h += `<span class="an-p an-lu" id="${ix}" style="left:${x0 + k * (cw + gap)}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rr}px;background:${P.soft};border:2px solid ${P.line};opacity:0;overflow:visible">
+          ${mocks[Math.min(k, mocks.length - 1)](ix)}
+          <span class="an-p" id="${ix}ck" style="left:auto;right:-8px;top:-8px;width:${Math.round(cw * 0.24)}px;height:${Math.round(cw * 0.24)}px;border-radius:50%;background:${P.acc};opacity:0;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">
+            <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        </span>`
+      }
+      return box(h)
+    }
     case 'cart': {
       // E-COMMERCE — le panier : les lignes, les quantites, le total.
       const w = Math.round(f.w * 0.9), x = Math.round((f.w - w) / 2)
@@ -3289,6 +3342,25 @@ export function animJs(name, s, r2) {
         const v = (target * Math.pow(k / steps, 0.62)).toFixed(dec)
         const txt = Number(v).toLocaleString('fr-FR')
         js += `\n      tl.set('#${id}cun', { textContent: ${JSON.stringify(txt)} }, ${r2(t0 + 0.2 + (k / steps) * T)});`
+      }
+      return js
+    }
+    case 'lineup': {
+      // chaque carte ARRIVE sur le mot de son item (it.t du plan) ; sans
+      // timing, cascade régulière. La bulle du coach et la barre du cours
+      // s'animent après l'arrivée : la scène continue de vivre.
+      const its = (s.items || [])
+      const n = Math.max(2, Math.min(4, its.length || 3))
+      let js = inOut
+      for (let k = 0; k < n; k++) {
+        const tk = r2(Math.min(end - 0.5, Math.max(t0 + 0.15 + k * 0.05, Number(its[k] && its[k].t) || (t0 + 0.3 + k * 0.85))))
+        js += `
+      tl.fromTo('#${id}l${k}', { y: 64, scale: 0.6, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.4, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${tk});
+      tl.fromTo('#${id}l${k}ck', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(tk + 0.3)});`
+        if (k === 1) js += `
+      tl.fromTo('#${id}l1bub', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, ease: 'back.out(2.4)', transformOrigin: '80% 100%' }, ${r2(tk + 0.42)});`
+        if (k === 2) js += `
+      tl.to('#${id}l2bar', { scaleX: 1, duration: ${r2(Math.max(0.5, 1.2))}, ease: 'power1.inOut' }, ${r2(tk + 0.35)});`
       }
       return js
     }
