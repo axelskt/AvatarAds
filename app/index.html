@@ -3211,7 +3211,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </div>
             <div class="display" style="font-size:20px;font-weight:700">Audio nettoyé</div>
-            <p class="faint" style="font-size:12.5px;margin-top:7px"><b id="acDoneCuts" style="color:var(--green)">0 silence</b><span id="acDoneCutsSuffix"> supprimé</span> · <span id="acDoneSaved">0 s</span> gagnés</p>
+            <p class="faint" style="font-size:12.5px;margin-top:7px"><b id="acDoneCuts" style="color:var(--green)">0 silence</b><span id="acDoneCutsSuffix"> supprimé</span><span id="acDoneHes" style="color:var(--text-2)"></span> · <span id="acDoneSaved">0 s</span> gagnés</p>
           </div>
 
           <div class="card" style="padding:14px 16px;background:var(--panel-1);margin-bottom:10px">
@@ -22499,7 +22499,7 @@ function _acToggleDenoise(){
 let _acDerushEnabled = false;
 let _acDerushCuts    = [];        // [{start,end,label,kind,keep}] — secondes SOURCE
 let _acKeepSegsBase  = null;      // segments AVANT dérush : décocher une coupe repart de là
-const _DERUSH_FILLERS = new Set(['euh','heu','hum','hmm','hem','mmh','hein']);
+const _DERUSH_FILLERS = new Set(['euh','heu','hum','hmm','hem','mmh','hein','euhm','uhm','mhm','hm','ah','ha','bah','ben']);
 
 function _acToggleDerush(){
   const m = currentMember || {};
@@ -22626,6 +22626,20 @@ async function _acDerushApply(btn){
     _acCleanBlob = _encodeWAV(buf);
     _acKeepSegsSec = finalKeep;                      // la découpe VIDÉO suit les mêmes instants
     const cutS = cuts.reduce((a,c) => a + (c.end - c.start), 0);
+    // VISIBLE, enfin : le compte d'hésitations rejoint le bandeau du résultat,
+    // et chaque coupe dérush laisse un trait ROUGE sur la forme d'onde (les
+    // silences restent orange).
+    {
+      const hes = document.getElementById('acDoneHes');
+      if(hes) hes.textContent = cuts.length ? ' · ' + cuts.length + ' hésitation' + (cuts.length > 1 ? 's' : '') + ' retirée' + (cuts.length > 1 ? 's' : '') : '';
+      const dur2 = finalKeep.reduce((a2, s2) => a2 + (s2.end - s2.start), 0) || 1;
+      const toClean = (t) => { let a2 = 0; for(const s2 of finalKeep){ if(t <= s2.start) break; a2 += Math.min(t, s2.end) - s2.start; if(t <= s2.end) break; } return a2; };
+      const m2 = [];
+      let acc2 = 0;
+      for(let i2 = 0; i2 < finalKeep.length - 1; i2++){ acc2 += finalKeep[i2].end - finalKeep[i2].start; m2.push(acc2 / dur2); }
+      for(const c of cuts) m2.push({ r: toClean(c.start) / dur2, kind: 'hes' });
+      _acWavePaint('acDoneWave', _acPeaks(buf, 150), m2);
+    }
     if(btn){ btn.disabled = false; btn.textContent = '✓ Dérush appliqué — −' + cutS.toFixed(1) + 's'; }
     const pb = document.getElementById('acPlayBtn'); if(pb) pb.textContent = '▶ Écouter l\'audio dérushé';
     toast(cuts.length
@@ -23494,8 +23508,10 @@ function _acFillDone(d){
   if(el('acDoneSaved')) el('acDoneSaved').textContent = saved + ' s';
   if(el('acDoneDur'))   el('acDoneDur').textContent   = _acFmt(d.duration || 0);
   const leg = el('acDoneCutLegend');
-  if(leg) leg.textContent = cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré')
-                                 : 'aucun silence à retirer sur cet audio';
+  const compr = d.compressed | 0;
+  if(leg) leg.textContent = (cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré')
+                                  : 'aucun silence à retirer sur cet audio')
+                          + (compr ? ' · ' + compr + ' blanc' + (compr > 1 ? 's' : '') + ' resserré' + (compr > 1 ? 's' : '') : '');
   _acWavePaint('acDoneWave', d.peaks, d.marks);
   _acHeadSet('acDoneHead', 0);
   // l'original est refermé à chaque nouveau nettoyage
@@ -23553,8 +23569,10 @@ function _acWavePaint(canvasId, peaks, marks){
   });
   g.globalAlpha = 1;
   for(const m of (marks || [])){
-    const x = Math.max(0.5, Math.min(w - 1.5, m * w));
-    g.fillStyle = acc; g.fillRect(x - 0.75, 1, 1.6, h - 2);
+    const r = (typeof m === 'object' && m) ? m.r : m;
+    const x = Math.max(0.5, Math.min(w - 1.5, r * w));
+    g.fillStyle = (typeof m === 'object' && m && m.kind === 'hes') ? '#E5484D' : acc;
+    g.fillRect(x - 0.75, 1, 1.6, h - 2);
   }
 }
 const _acHeadSet = (id, r) => { const e = document.getElementById(id); if(e) e.style.left = (Math.max(0, Math.min(1, r)) * 100) + '%'; };
@@ -23998,13 +24016,31 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // le seuil : l'ancien seuil fixe « Avancé » (0.03) passait AU-DESSUS d'une voix
   // enregistrée doucement (DJI gain bas) et la classait silence — vu par Axel :
   // 26.5s coupées sur 52s en 62 morceaux, voix hachée.
+  // ── RECALAGE DU 31/07, mesuré sur le fichier d'Axel ───────────────────────
+  // « Avancé » à 180 ms / marge 40 ms / plancher 0,012 ECORCHAIT LES MOTS :
+  // 180 ms coupe la tenue d'une plosive, 40 ms rabote les attaques douces, et
+  // MONTER le seuil en avancé classait les fins de mots comme silence. Axel :
+  // « il coupe tous les mots et les écorche — mets-le un peu plus puissant que
+  // standard mais pas trop ». Avancé = couper des silences PLUS COURTS, jamais
+  // une définition plus large du silence : la marge REMONTE à 60 ms et le
+  // plancher redescend (0,009, cf. threshold plus bas).
+  //
+  // Et les « blancs minuscules qui comptent » : après un nettoyage normal, son
+  // fichier gardait 14 blancs de 120-213 ms — 2,1 s cumulées sur 65 s. Trop
+  // courts pour la coupe, assez longs pour se sentir. Ils sont désormais
+  // COMPRESSÉS (pas supprimés : la voix respire) — tout silence entre shrinkMs
+  // et minSilMs est ramené à ~2 × keepShortMs.
   const isStrong  = _acLevel === 'strong';
-  const minSilMs  = isStrong ? 180   : 350;    // durée mini silence à couper
-  const keepMs    = isStrong ? 40    : 80;     // marge autour des mots
+  const minSilMs  = isStrong ? 240   : 300;    // durée mini silence à couper
+  const keepMs    = isStrong ? 60    : 80;     // marge autour des mots
+  const shrinkMs  = isStrong ? 160   : 200;    // en dessous : on garde tel quel
+  const keepShortMs = isStrong ? 55  : 60;     // respiration laissée en compressant
 
   const winSz    = Math.round(0.05 * sr);
   const minSilSmp = Math.round(minSilMs/1000 * sr);
   const keepSmp   = Math.round(keepMs/1000  * sr);
+  const shrinkSmp = Math.round(shrinkMs/1000 * sr);
+  const keepShortSmp = Math.round(keepShortMs/1000 * sr);
 
   // RMS par fenêtre
   const rmsArr = [];
@@ -24020,11 +24056,18 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   const q = (p) => sorted[Math.min(sorted.length-1, Math.floor(p*sorted.length))] || 0;
   const noiseFloor = q(0.2);
   const voiceLevel = Math.max(q(0.9), 0.01);
-  const threshold  = Math.min(Math.max(noiseFloor*3, isStrong ? 0.012 : 0.008), voiceLevel*0.35);
+  // le plancher d'« Avancé » redescend : 0,012 classait les fins de mots douces
+  // comme silence — c'était lui qui « écorchait », pas la durée
+  const threshold  = Math.min(Math.max(noiseFloor*3, isStrong ? 0.009 : 0.008), voiceLevel*0.35);
   const voiced = rmsArr.map((r) => r >= threshold);
 
-  // Construire segments à garder
+  // Construire segments à garder — trois sorts pour un silence :
+  //   < shrinkMs            → gardé tel quel (une respiration normale)
+  //   shrinkMs … minSilMs   → COMPRESSÉ à ~2 × keepShortMs (le blanc minuscule
+  //                           qui « compte » disparaît, la respiration reste)
+  //   ≥ minSilMs            → coupé, marge keepMs de chaque côté (comme avant)
   const keepSegs = [];
+  let nCoupes = 0, nCompr = 0;
   let segStart = -1;
   for(let w=0; w<voiced.length; w++){
     if(voiced[w] && segStart<0) segStart = Math.max(0, w*winSz - keepSmp);
@@ -24034,7 +24077,11 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
       const silSmp=(silEnd-w)*winSz;
       if(silSmp >= minSilSmp){
         keepSegs.push({ start:segStart, end:Math.min(w*winSz+keepSmp, data.length) });
-        segStart=-1; w=silEnd-1;
+        segStart=-1; w=silEnd-1; nCoupes++;
+      } else if(silSmp >= shrinkSmp){
+        keepSegs.push({ start:segStart, end:Math.min(w*winSz+keepShortSmp, data.length) });
+        segStart = Math.max(0, silEnd*winSz - keepShortSmp);
+        w = silEnd-1; nCompr++;
       }
     }
   }
@@ -24138,7 +24185,7 @@ async function _acAnalyze(){
         marks.push(acc / cleanBuf.duration);
       }
     }
-    _acPhase('done', { cuts: segsRemoved, saved: removedS, duration: cleanS,
+    _acPhase('done', { cuts: nCoupes, compressed: nCompr, saved: removedS, duration: cleanS,
       peaks: _acPeaks(cleanBuf, 150), marks, origPeaks: _acPeaks(decoded, 150),
       buf: cleanBuf,   // #162 · la coupe manuelle travaille sur ce buffer
       url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
