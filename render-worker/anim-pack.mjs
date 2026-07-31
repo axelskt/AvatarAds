@@ -75,6 +75,26 @@ function frame(W, H) {
   return { w, h, x: Math.round((W - w) / 2), y }
 }
 
+// lineup : le visuel de chaque carte se choisit d'après le TERME prononcé —
+// un colis pour un produit, une personne pour du coaching, un cours pour une
+// formation, un calque qui glisse pour « animations », un haut-parleur pour
+// les sons, deux panneaux qui permutent pour « transitions ». Jamais le mot
+// écrit (retour d'Axel 31/07 : « je ne veux pas que tu l'écrives »). Sans
+// correspondance, le trio d'offres par position, puis la carte muette.
+const LINEUP_KINDS = [
+  ['colis', /produit|physique|article|colis|objet|marchandise|e ?-?commerce|boutique/i],
+  ['personne', /coach|accompagn|consult|mentor|humain|appel|rendez/i],
+  ['cours', /formation|cours|module|ebook|programme|academ|masterclass|tuto/i],
+  ['calque', /animation|motion|effet|anim/i],
+  ['son', /bruitage|son(s)?\b|audio|musique|voix|sound/i],
+  ['transition', /transition|encha|coupe/i],
+]
+export const lineupKind = (texte, k) => {
+  const t = String(texte || '')
+  for (const [nom, re] of LINEUP_KINDS) if (re.test(t)) return nom
+  return ['colis', 'personne', 'cours'][k] || 'carte'
+}
+
 export function animHtml(name, s, W, H, vs) {
   const P = animPalette(vs)
   const f = frame(W, H)
@@ -667,7 +687,7 @@ export function animHtml(name, s, W, H, vs) {
         const plein = k === 4 || k === 5
         h += `<span class="an-p an-cr" id="${id}c${k}" style="left:${cx2}px;top:${y0 + k * Math.round(ch * 1.25)}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(ch * 0.3)}px;background:${plein ? P.acc : P.soft}"></span>`
       }
-      h += `<span class="an-p" id="${id}lb" style="left:0;top:${Math.round(f.h * 0.82)}px;width:${f.w}px;text-align:center;font:800 ${Math.round(f.h * 0.075)}px/1 ${SANS};color:${P.acc};opacity:0">2h</span>`
+      h += `<span class="an-p" id="${id}lb" style="left:0;top:${Math.round(f.h * 0.82)}px;width:${f.w}px;text-align:center;font:800 ${Math.round(f.h * 0.075)}px/1 ${SANS};color:${P.acc};opacity:0">${txt(0, '')}</span>`
       return box(h)
     }
     case 'blankfill': {
@@ -1892,34 +1912,52 @@ export function animHtml(name, s, W, H, vs) {
       // l'étagère est là AVANT les cartes : la scène existe, elle attend
       let h = `<span class="an-p" style="left:${x0 - gap}px;top:${shelfY}px;width:${total + 2 * gap}px;height:4px;border-radius:99px;background:${P.ink};opacity:.35"></span>`
       const rr = Math.round(cw * 0.14)
-      const mocks = [
-        // 0 · LE COLIS : la boîte, son rabat clair, sa bande de scotch
-        (ix) => `
+      const mocks = {
+        // LE COLIS : la boîte, son rabat clair, sa bande de scotch
+        colis: (ix) => `
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.42)}px;border-radius:${Math.round(cw * 0.08)}px;background:${grad(150)}"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.11)}px;border-radius:${Math.round(cw * 0.08)}px ${Math.round(cw * 0.08)}px 0 0;background:rgba(255,255,255,.35)"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.46)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.08)}px;height:${Math.round(ch * 0.42)}px;background:rgba(255,255,255,.5)"></span>`,
-        // 1 · LA PERSONNE : tête + épaules + bulle qui pop (le coaching, c'est
+        // LA PERSONNE : tête + épaules + bulle qui pop (le coaching, c'est
         // quelqu'un qui te parle)
-        (ix) => `
+        personne: (ix) => `
           <span style="position:absolute;left:${Math.round(cw * 0.33)}px;top:${Math.round(ch * 0.2)}px;width:${Math.round(cw * 0.34)}px;height:${Math.round(cw * 0.34)}px;border-radius:50%;background:${P.acc}"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.22)}px;top:${Math.round(ch * 0.52)}px;width:${Math.round(cw * 0.56)}px;height:${Math.round(ch * 0.24)}px;border-radius:99px 99px 0 0;background:${P.acc}"></span>
           <span class="an-p" id="${ix}bub" style="left:${Math.round(cw * 0.06)}px;top:${Math.round(ch * 0.08)}px;width:${Math.round(cw * 0.32)}px;height:${Math.round(ch * 0.15)}px;border-radius:${Math.round(cw * 0.1)}px ${Math.round(cw * 0.1)}px 2px ${Math.round(cw * 0.1)}px;background:${P.ink};opacity:0"></span>`,
-        // 2 · LE COURS : l'écran, son play, sa barre de progression qui avance
-        (ix) => `
+        // LE COURS : l'écran, son play, sa barre de progression qui avance
+        cours: (ix) => `
           <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.24)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.ink}"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.44)}px;top:${Math.round(ch * 0.36)}px;width:0;height:0;border-top:${Math.round(cw * 0.07)}px solid transparent;border-bottom:${Math.round(cw * 0.07)}px solid transparent;border-left:${Math.round(cw * 0.12)}px solid #FFFFFF"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.73)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.06)}px;border-radius:99px;background:${P.line}"></span>
           <span class="an-p" id="${ix}bar" style="left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.73)}px;width:${Math.round(cw * 0.72)}px;height:${Math.round(ch * 0.06)}px;border-radius:99px;background:${P.acc};transform:scaleX(0);transform-origin:0 50%"></span>`,
-        // 3 · repli générique : la carte à lignes muettes
-        (ix) => `
+        // LE CALQUE QUI GLISSE : deux panneaux superposés, celui du dessus
+        // décalé — « des animations », c'est quelque chose qui BOUGE
+        calque: (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.16)}px;top:${Math.round(ch * 0.34)}px;width:${Math.round(cw * 0.52)}px;height:${Math.round(ch * 0.34)}px;border-radius:${Math.round(cw * 0.08)}px;background:${P.line}"></span>
+          <span class="an-p" id="${ix}mv" style="left:${Math.round(cw * 0.32)}px;top:${Math.round(ch * 0.24)}px;width:${Math.round(cw * 0.52)}px;height:${Math.round(ch * 0.34)}px;border-radius:${Math.round(cw * 0.08)}px;background:${P.acc};box-shadow:0 8px 18px rgba(0,0,0,.18)"></span>`,
+        // LE HAUT-PARLEUR : le cône + deux arcs qui claquent — un son s'entend,
+        // les arcs le montrent
+        son: (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.16)}px;top:${Math.round(ch * 0.4)}px;width:${Math.round(cw * 0.16)}px;height:${Math.round(ch * 0.18)}px;border-radius:3px;background:${P.ink}"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.28)}px;top:${Math.round(ch * 0.32)}px;width:0;height:0;border-top:${Math.round(ch * 0.17)}px solid transparent;border-bottom:${Math.round(ch * 0.17)}px solid transparent;border-right:${Math.round(cw * 0.22)}px solid ${P.ink}"></span>
+          <span class="an-p" id="${ix}w1" style="left:${Math.round(cw * 0.56)}px;top:${Math.round(ch * 0.34)}px;width:${Math.round(cw * 0.14)}px;height:${Math.round(ch * 0.3)}px;border:4px solid ${P.acc};border-left:none;border-radius:0 99px 99px 0;background:transparent;opacity:0"></span>
+          <span class="an-p" id="${ix}w2" style="left:${Math.round(cw * 0.7)}px;top:${Math.round(ch * 0.27)}px;width:${Math.round(cw * 0.18)}px;height:${Math.round(ch * 0.44)}px;border:4px solid ${P.acc};border-left:none;border-radius:0 99px 99px 0;background:transparent;opacity:0"></span>`,
+        // LA TRANSITION : deux panneaux, celui du dessus GLISSE par-dessus
+        // l'autre — l'enchaînement, montré
+        transition: (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.44)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.line}"></span>
+          <span class="an-p" id="${ix}sl" style="left:${Math.round(cw * 0.42)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.44)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.acc};box-shadow:-6px 0 14px rgba(0,0,0,.16)"></span>`,
+        // repli générique : la carte à lignes muettes
+        carte: (ix) => `
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.28)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.09)}px;border-radius:99px;background:${P.ink};opacity:.6"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.46)}px;width:${Math.round(cw * 0.5)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line}"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.6)}px;width:${Math.round(cw * 0.58)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line}"></span>`,
-      ]
+      }
       for (let k = 0; k < n; k++) {
         const ix = `${id}l${k}`
+        const kind = lineupKind((s.items || [])[k] && (s.items || [])[k].text, k)
         h += `<span class="an-p an-lu" id="${ix}" style="left:${x0 + k * (cw + gap)}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rr}px;background:${P.soft};border:2px solid ${P.line};opacity:0;overflow:visible">
-          ${mocks[Math.min(k, mocks.length - 1)](ix)}
+          ${(mocks[kind] || mocks.carte)(ix)}
           <span class="an-p" id="${ix}ck" style="left:auto;right:-8px;top:-8px;width:${Math.round(cw * 0.24)}px;height:${Math.round(cw * 0.24)}px;border-radius:50%;background:${P.acc};opacity:0;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">
             <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
         </span>`
@@ -3354,13 +3392,22 @@ export function animJs(name, s, r2) {
       let js = inOut
       for (let k = 0; k < n; k++) {
         const tk = r2(Math.min(end - 0.5, Math.max(t0 + 0.15 + k * 0.05, Number(its[k] && its[k].t) || (t0 + 0.3 + k * 0.85))))
+        const kind = lineupKind(its[k] && its[k].text, k)
         js += `
       tl.fromTo('#${id}l${k}', { y: 64, scale: 0.6, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.4, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${tk});
       tl.fromTo('#${id}l${k}ck', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(tk + 0.3)});`
-        if (k === 1) js += `
-      tl.fromTo('#${id}l1bub', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, ease: 'back.out(2.4)', transformOrigin: '80% 100%' }, ${r2(tk + 0.42)});`
-        if (k === 2) js += `
-      tl.to('#${id}l2bar', { scaleX: 1, duration: ${r2(Math.max(0.5, 1.2))}, ease: 'power1.inOut' }, ${r2(tk + 0.35)});`
+        // la micro-vie de chaque variante, APRÈS l'arrivée : la scène continue
+        if (kind === 'personne') js += `
+      tl.fromTo('#${id}l${k}bub', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.24, ease: 'back.out(2.4)', transformOrigin: '80% 100%' }, ${r2(tk + 0.42)});`
+        if (kind === 'cours') js += `
+      tl.to('#${id}l${k}bar', { scaleX: 1, duration: 1.2, ease: 'power1.inOut' }, ${r2(tk + 0.35)});`
+        if (kind === 'calque') js += `
+      tl.fromTo('#${id}l${k}mv', { x: -10, y: 6 }, { x: 6, y: -4, duration: 0.5, yoyo: true, repeat: 1, ease: 'sine.inOut' }, ${r2(tk + 0.4)});`
+        if (kind === 'son') js += `
+      tl.fromTo('#${id}l${k}w1', { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '0% 50%' }, ${r2(tk + 0.38)});
+      tl.fromTo('#${id}l${k}w2', { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '0% 50%' }, ${r2(tk + 0.52)});`
+        if (kind === 'transition') js += `
+      tl.fromTo('#${id}l${k}sl', { x: -Math.round(18) }, { x: 8, duration: 0.45, ease: 'power2.inOut' }, ${r2(tk + 0.4)});`
       }
       return js
     }

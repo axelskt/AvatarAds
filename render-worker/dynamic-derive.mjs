@@ -228,7 +228,10 @@ export const VOICE_ANIMS = [
   { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
   { w: ['fake', 'faux', 'realisme', 'realiste'],                       anim: 'compare', pad: 2.1, photo: 'hook-qualite' },
   { w: ['outils', 'outil', 'methode', 'technique', 'strategie'], anim: 'tools', pad: 2.0, assets: ['logo-avatarads'] },
-  { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'clock' },
+  // « en quelques secondes » parle de VITESSE, pas d'un créneau horaire — via
+  // clock→daypart, la grille des heures s'affichait avec « 2h » pendant que la
+  // voix disait « quelques secondes » (Axel, 31/07 : « hors contexte »)
+  { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'speed' },
   { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
   { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
   // Les deux animations decrites par Axel, cablees sur SES mots.
@@ -1005,12 +1008,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const ra = r2(rival.start || 0), rbPlan = r2(rival.end ?? ra + 1.5)
           const rlast = Math.max(0, ...(rival.items || []).map((it) => Number(it && it.t) || 0))
           const rb = r2(Math.min(D, Math.max(rbPlan, rlast + 0.4)))
-          // Retour d'Axel (31/07, v2) : « sans forcément écrire "formation"
-          // "coaching" — à chaque fois que j'en dis un, l'animation ajoute UN
-          // truc ». Une énumération NUE (type card) devient donc l'anim
-          // `lineup` : un visuel se pose par terme prononcé, zéro mot écrit.
-          // Les checklists restent écrites — cocher des mots est leur identité.
-          const pose = String(rival.type) === 'card' ? { ...rival, anim: 'lineup', title: '', motif: '' } : rival
+          // Retour d'Axel (31/07, v2 puis v3) : « sans forcément écrire
+          // "formation" "coaching" — l'animation ajoute UN truc », puis « la
+          // MONTAGE COMPLET non ! je veux des animations, je ne veux pas que tu
+          // l'écrives ». Toute énumération datée (card OU checklist) devient
+          // l'anim `lineup` : un visuel par terme prononcé, zéro mot écrit —
+          // le visuel de chaque carte se choisit d'après le terme (colis,
+          // personne, cours, calque, son, transition…).
+          const pose = ['card', 'checklist'].includes(String(rival.type))
+            ? { ...rival, anim: 'lineup', title: '', motif: '' } : rival
           if (add(pose, ra, rb) || (rb > rbPlan && add(pose, ra, rbPlan))) consumedByPlan.add(rival)
           continue
         }
@@ -1042,7 +1048,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // d'être dit. On tente la fenêtre étendue, sinon celle du plan.
         const lastT = Math.max(0, ...its.map((it) => Number(it.t) || 0))
         const b2 = r2(Math.min(D, Math.max(b, lastT + 0.4)))
-        if (add(sl, a, b2) || (b2 > b && add(sl, a, b))) { consumedByPlan.add(sl); n++ }
+        // en apple, une énumération datée ne s'ÉCRIT pas : elle devient lineup
+        // (mêmes retours d'Axel que dans placeServerAnims)
+        const dated = its.filter((it) => Number(it.t) > 0)
+        const pose2 = (plan.slideStyle === 'apple' && ['card', 'checklist'].includes(String(sl.type)) && dated.length >= 2)
+          ? { ...sl, anim: 'lineup', title: '', motif: '' } : sl
+        if (add(pose2, a, b2) || (b2 > b && add(pose2, a, b))) { consumedByPlan.add(sl); n++ }
       }
       const tot = srv.length, anims = srv.filter(isAnim).length
       console.log(`▶ chef d'orchestre : ${placedAnim}/${anims} animations + ${n} carte(s) de texte`
