@@ -375,6 +375,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 @media(max-width:768px){
   #v-generator.gen-generating .gen-left{display:none !important}
   #v-generator.gen-generating .gen-right{display:flex !important;width:100% !important;flex:1 1 auto !important;border-left:none !important;padding:24px 16px 30px !important;min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  /* zoom de l'onde : 22px se rate au doigt */
+  #acZoomPanL,#acZoomOut,#acZoomIn,#acZoomPanR{width:30px !important;height:30px !important}
 }
 .gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,53,0.07) 0%,transparent 55%);pointer-events:none}
 .gen-right::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.5}
@@ -3228,9 +3230,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <span id="acDoneDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
             </div>
-            <div class="faint" style="font-size:10.5px;margin-top:8px;display:flex;align-items:center;gap:6px">
+            <div class="faint" style="font-size:10.5px;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span style="width:9px;height:2px;background:var(--accent);border-radius:2px;display:inline-block"></span>
-              <span id="acDoneCutLegend">les traits marquent les silences retirés</span>
+              <span id="acDoneCutLegend" style="flex:1 1 auto;min-width:0">les traits marquent les silences retirés</span>
+              <!-- 🔍 zoom : viser un « euh » de 200 ms sur 60 s d'onde est impossible
+                   sans loupe — la fenêtre se resserre autour de la tête de lecture -->
+              <span style="display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;margin-left:auto">
+                <button id="acZoomPanL" onclick="_acZoomPan(-1)" title="Décaler la fenêtre à gauche" style="width:22px;height:22px;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-2);cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center;padding:0;opacity:.4;pointer-events:none">‹</button>
+                <button id="acZoomOut" onclick="_acZoomStep(-1)" title="Zoom arrière" style="width:22px;height:22px;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-2);cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0;opacity:.4;pointer-events:none">−</button>
+                <span id="acZoomLbl" class="mono" style="min-width:24px;text-align:center;font-size:10.5px">×1</span>
+                <button id="acZoomIn" onclick="_acZoomStep(1)" title="Zoomer autour de la tête de lecture" style="width:22px;height:22px;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-2);cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0">+</button>
+                <button id="acZoomPanR" onclick="_acZoomPan(1)" title="Décaler la fenêtre à droite" style="width:22px;height:22px;border-radius:6px;background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-2);cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center;padding:0;opacity:.4;pointer-events:none">›</button>
+              </span>
             </div>
           </div>
 
@@ -22638,7 +22649,10 @@ async function _acDerushApply(btn){
       let acc2 = 0;
       for(let i2 = 0; i2 < finalKeep.length - 1; i2++){ acc2 += finalKeep[i2].end - finalKeep[i2].start; m2.push(acc2 / dur2); }
       for(const c of cuts) m2.push({ r: toClean(c.start) / dur2, kind: 'hes' });
-      _acWavePaint('acDoneWave', _acPeaks(buf, 150), m2);
+      // TOUT l'écran de résultat suit le dérush : buffer d'édition, lecteur,
+      // durée, URL de téléchargement — pas seulement l'onde. Avant, le lecteur
+      // rejouait l'audio d'AVANT dérush et la coupe manuelle travaillait dessus.
+      _acApplyEdited(buf, null, null, m2);
     }
     if(btn){ btn.disabled = false; btn.textContent = '✓ Dérush appliqué — −' + cutS.toFixed(1) + 's'; }
     const pb = document.getElementById('acPlayBtn'); if(pb) pb.textContent = '▶ Écouter l\'audio dérushé';
@@ -23531,6 +23545,7 @@ function _acFillDone(d){
   if(window._acDoneAudio){ window._acDoneAudio.pause(); window._acDoneAudio = null; }
   _acDoneEnsureAudio();   // l'onde doit être cliquable avant le premier play
   _acCutPaint();
+  _acZoom = 1; _acZoomC = 0.5; _acZoomPaint();   // chaque nettoyage repart à ×1
   _acBindSeek('acDoneWaveWrap', () => window._acDoneAudio, 'acDoneHead');
 }
 
@@ -23575,7 +23590,12 @@ function _acWavePaint(canvasId, peaks, marks){
     g.fillRect(x - 0.75, 1, 1.6, h - 2);
   }
 }
-const _acHeadSet = (id, r) => { const e = document.getElementById(id); if(e) e.style.left = (Math.max(0, Math.min(1, r)) * 100) + '%'; };
+const _acHeadSet = (id, r) => {
+  const e = document.getElementById(id); if(!e) return;
+  // l'onde du résultat peut être zoomée : la position se lit dans la fenêtre de vue
+  if(id === 'acDoneHead' && _acZoom > 1){ const v = _acViewAB(); r = (r - v.a) / (v.b - v.a); }
+  e.style.left = (Math.max(0, Math.min(1, r)) * 100) + '%';
+};
 
 // tête de lecture DÉPLAÇABLE : clic ou glissé n'importe où dans l'onde
 function _acBindSeek(wrapId, getAudio, headId){
@@ -23587,7 +23607,10 @@ function _acBindSeek(wrapId, getAudio, headId){
     const r = wrap.getBoundingClientRect();
     if(r.width < 4) return;   // onde pas encore mise en page : un clic n'a pas de sens
     const x = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width;
-    a.currentTime = Math.max(0, Math.min(1, x)) * a.duration;
+    let rr = Math.max(0, Math.min(1, x));
+    // onde zoomée : le clic est relatif à la FENÊTRE visible, pas au fichier entier
+    if(wrapId === 'acDoneWaveWrap' && _acZoom > 1){ const v = _acViewAB(); rr = v.a + rr * (v.b - v.a); }
+    a.currentTime = rr * a.duration;
     _acHeadSet(headId, a.currentTime / a.duration);
   };
   let dragging = false;
@@ -23602,7 +23625,12 @@ function _acBindSeek(wrapId, getAudio, headId){
 let _acRaf = null;
 function _acTick(){
   const d = window._acDoneAudio, o = _acCmpAudio;
-  if(d && !d.paused && isFinite(d.duration)) _acHeadSet('acDoneHead', d.currentTime / d.duration);
+  if(d && !d.paused && isFinite(d.duration)){
+    const r = d.currentTime / d.duration;
+    _acHeadSet('acDoneHead', r);
+    // onde zoomée : quand la tête sort de la fenêtre, la fenêtre tourne la page
+    if(_acZoom > 1){ const v = _acViewAB(); if(r > v.b || r < v.a){ _acZoomC = r + 0.4 / _acZoom; _acZoomPaint(); } }
+  }
   if(o && !o.paused && isFinite(o.duration)) _acHeadSet('acOrigHead', o.currentTime / o.duration);
   const on = (d && !d.paused) || (o && !o.paused);
   _acRaf = on ? requestAnimationFrame(_acTick) : null;
@@ -23642,6 +23670,75 @@ function _acDoneTogglePlay(){
   else a.pause();
 }
 
+// ── 🔍 ZOOM SUR L'ONDE ──────────────────────────────────────────────────────
+// Demande d'Axel (31/07) : viser un « euh » de 200 ms sur 60 s d'onde est
+// impossible sans loupe. La fenêtre de vue [a,b] (ratios de la durée) se
+// resserre autour de la tête de lecture ; TOUT ce qui parle en position sur
+// l'onde (tête, marques, sélection de coupe, clic de seek) passe par elle.
+// Les crêtes sont RECALCULÉES sur la fenêtre visible — zoomer ne doit pas
+// étirer 150 barres, il doit en montrer 150 nouvelles — et normalisées sur le
+// max GLOBAL du fichier : un silence zoomé doit rester plat, pas devenir du
+// bruit plein cadre.
+let _acZoom = 1, _acZoomC = 0.5;   // niveau ×1..×16, centre de la fenêtre (ratio)
+function _acViewAB(){
+  const w = 1 / _acZoom;
+  const a = Math.max(0, Math.min(1 - w, _acZoomC - w / 2));
+  return { a, b: a + w };
+}
+function _acPeaksRange(buf, n, ra, rb){
+  const d = buf.getChannelData(0);
+  let maxAll = 0.02;
+  for(let j = 0; j < d.length; j += 16){ const v = Math.abs(d[j]); if(v > maxAll) maxAll = v; }
+  const i0 = Math.floor(ra * d.length), i1 = Math.max(i0 + 1, Math.floor(rb * d.length));
+  const step = Math.max(1, Math.floor((i1 - i0) / n)), out = [];
+  for(let i = 0; i < n; i++){
+    let peak = 0;
+    const a = i0 + i * step, b = Math.min(i1, a + step);
+    for(let j = a; j < b; j++){ const v = Math.abs(d[j]); if(v > peak) peak = v; }
+    out.push(Math.min(1, peak / maxAll));
+  }
+  return out;
+}
+function _acZoomPaint(){
+  const d = window._acDoneData;
+  if(!d) return;
+  const lbl = document.getElementById('acZoomLbl'); if(lbl) lbl.textContent = '×' + _acZoom;
+  const { a, b } = _acViewAB();
+  const buf = window._acEditBuf;
+  if(_acZoom <= 1 || !buf){
+    _acWavePaint('acDoneWave', d.peaks, d.marks);
+  } else {
+    const marks = [];
+    for(const m of (d.marks || [])){
+      const r = (typeof m === 'object' && m) ? m.r : m;
+      if(r < a || r > b) continue;
+      const rv = (r - a) / (b - a);
+      marks.push((typeof m === 'object' && m) ? { ...m, r: rv } : rv);
+    }
+    _acWavePaint('acDoneWave', _acPeaksRange(buf, 150, a, b), marks);
+  }
+  const au = window._acDoneAudio;
+  if(au && isFinite(au.duration) && au.duration > 0) _acHeadSet('acDoneHead', au.currentTime / au.duration);
+  _acCutPaint();
+  const set = (id, on) => { const e = document.getElementById(id); if(e){ e.style.opacity = on ? '1' : '.4'; e.style.pointerEvents = on ? '' : 'none'; } };
+  set('acZoomOut', _acZoom > 1); set('acZoomIn', _acZoom < 16);
+  set('acZoomPanL', _acZoom > 1 && a > 0.0001); set('acZoomPanR', _acZoom > 1 && b < 0.9999);
+}
+function _acZoomStep(dir){
+  const z2 = Math.max(1, Math.min(16, dir > 0 ? _acZoom * 2 : _acZoom / 2));
+  if(z2 === _acZoom) return;
+  // on zoome AUTOUR de la tête : c'est elle que l'utilisateur vient de poser
+  if(dir > 0){ const au = window._acDoneAudio; if(au && isFinite(au.duration) && au.duration > 0) _acZoomC = au.currentTime / au.duration; }
+  _acZoom = z2;
+  _acZoomPaint();
+}
+function _acZoomPan(dir){
+  if(_acZoom <= 1) return;
+  const w = 1 / _acZoom;
+  _acZoomC = Math.max(w / 2, Math.min(1 - w / 2, _acZoomC + dir * w * 0.6));
+  _acZoomPaint();
+}
+
 // ── ✂️ COUPE MANUELLE (#162) ────────────────────────────────────────────────
 // Le nettoyage auto retire les silences, pas les reprises ni les « euh » collés
 // au mot suivant. Ici : deux séparations posées à la tête de lecture, puis
@@ -23670,15 +23767,22 @@ function _acCutPaint(){
   }
   if(undo) undo.style.display = _acCutUndoStack.length ? 'inline-flex' : 'none';
   if(dur <= 0) return;
+  // en zoom, les positions se projettent dans la fenêtre de vue (et se cachent
+  // si elles en sortent — un trait clampé au bord mentirait sur sa position)
+  const mapv = (t) => { const r = t / dur; if(_acZoom > 1){ const v = _acViewAB(); return (r - v.a) / (v.b - v.a); } return r; };
   if(_acCutMarks.length === 1 && mk){
-    mk.style.display = 'block';
-    mk.style.left = (_acCutMarks[0] / dur * 100) + '%';
+    const p = mapv(_acCutMarks[0]);
+    if(p >= 0 && p <= 1){ mk.style.display = 'block'; mk.style.left = (p * 100) + '%'; }
     if(hint) hint.textContent = 'Fin de la zone → « Séparer »';
   } else if(deux && sel){
     const [a, b] = _acCutMarks;
-    sel.style.display = 'block';
-    sel.style.left  = (a / dur * 100) + '%';
-    sel.style.width = ((b - a) / dur * 100) + '%';
+    const pa = mapv(a), pb = mapv(b);
+    if(pb > 0 && pa < 1){
+      sel.style.display = 'block';
+      const la = Math.max(0, pa), lb = Math.min(1, pb);
+      sel.style.left  = (la * 100) + '%';
+      sel.style.width = ((lb - la) * 100) + '%';
+    }
     if(hint) hint.textContent = 'Zone de ' + ((b - a).toFixed(1)) + ' s sélectionnée';
   } else if(hint){
     hint.textContent = 'Place la tête, puis « Séparer »';
@@ -23792,19 +23896,21 @@ function _acApplyEdited(newBuf, cutA, cutB, marksForce){
   d.peaks = _acPeaks(newBuf, 150);
 
   // les traits de silence suivent la coupe : ceux dedans disparaissent, ceux
-  // d'après reculent de la durée retirée
+  // d'après reculent de la durée retirée — en préservant leur type (les traits
+  // rouges d'hésitation sont des objets {r,kind}, pas des nombres)
   if(marksForce) d.marks = marksForce;
   else if(cutA != null && oldDur > 0){
     const gap = cutB - cutA;
-    d.marks = (d.marks || []).map(m => m * oldDur)
-      .filter(t => t <= cutA || t >= cutB)
-      .map(t => (t >= cutB ? t - gap : t))
-      .map(t => t / dur);
+    d.marks = (d.marks || [])
+      .map(m => ({ t: ((typeof m === 'object' && m) ? m.r : m) * oldDur, kind: (typeof m === 'object' && m) ? m.kind : null }))
+      .filter(o => o.t <= cutA || o.t >= cutB)
+      .map(o => ({ ...o, t: o.t >= cutB ? o.t - gap : o.t }))
+      .map(o => o.kind ? { r: o.t / dur, kind: o.kind } : o.t / dur);
   }
 
   const el = (id) => document.getElementById(id);
   if(el('acDoneDur')) el('acDoneDur').textContent = _acFmt(dur);
-  _acWavePaint('acDoneWave', d.peaks, d.marks);
+  _acZoomPaint();   // repeint l'onde dans la fenêtre de vue courante (×1 = pleine)
   _acHeadSet('acDoneHead', 0);
   if(window._acDoneAudio){ window._acDoneAudio.pause(); window._acDoneAudio = null; }
   _acIcon('acDonePlayIco', false);
@@ -24114,7 +24220,7 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // d'un DJI Mic : toutes les prises d'Axel repartaient filtrées à 13,5 kHz,
   // exactement ce que l'avertissement juste au-dessus interdit.
   const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: _acDenoiseEnabled && !alreadyClean });
-  return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs };
+  return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs, nCoupes, nCompr };
 }
 
 async function _acAnalyze(){
@@ -24185,7 +24291,7 @@ async function _acAnalyze(){
         marks.push(acc / cleanBuf.duration);
       }
     }
-    _acPhase('done', { cuts: nCoupes, compressed: nCompr, saved: removedS, duration: cleanS,
+    _acPhase('done', { cuts: r.nCoupes, compressed: r.nCompr, saved: removedS, duration: cleanS,
       peaks: _acPeaks(cleanBuf, 150), marks, origPeaks: _acPeaks(decoded, 150),
       buf: cleanBuf,   // #162 · la coupe manuelle travaille sur ce buffer
       url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
