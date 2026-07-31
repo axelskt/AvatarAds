@@ -71,6 +71,15 @@ serve(async (req: Request) => {
       return json({ ok: true, job_id: data.id })
     }
 
+    if (body.action === 'last') {
+      // le dernier montage TERMINÉ du compte — l'entrée dev « Détails montage »
+      // ouvre l'écran de révision dessus sans relancer un rendu
+      const { data: job } = await service.from('render_jobs')
+        .select('id').eq('user_id', user.id).eq('status', 'done')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      return json({ ok: true, job_id: job?.id ?? null })
+    }
+
     if (body.action === 'status') {
       const id = String(body.job_id || '')
       if (!id) return json({ error: 'job_id manquant' }, 400)

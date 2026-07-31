@@ -775,6 +775,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         Publier
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
       </div>
+      <!-- ⚙️ Détails montage — l'écran post-Montage IA (réviser puis régénérer),
+           ouvert sur le DERNIER montage terminé du compte. Entrée dev pour voir
+           l'interface sans relancer un montage. -->
+      <div class="nav-i" id="navMtDet" onclick="_mtDetDemo()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Détails montage
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
+      </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <div class="nav-i" id="navConnexions" onclick="openSetup()" style="display:none">
@@ -6490,6 +6498,9 @@ function enterApp(profile){
   // 📤 Publier (#116) : module cross-post visible UNIQUEMENT compte developer/owner
   const navPub = document.getElementById('navPublish');
   if(navPub) navPub.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
+  // ⚙️ Détails montage : même gating dev — ouvre l'écran post-Montage IA
+  const navDet = document.getElementById('navMtDet');
+  if(navDet) navDet.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
@@ -12072,6 +12083,19 @@ async function _mtOpenFinalInEditor(){
 // c'est lui la vérité de ce que montre la vidéo — le plan du chef n'est qu'une
 // proposition, la dérivation tranche.
 let _mtDet = null;   // { job, derived, bank, edits:{replaces:[],bans:[],moves:{}} }
+
+// entrée DEV de la barre latérale : ouvre l'écran sur le DERNIER montage
+// terminé du compte — l'interface exacte d'après un Montage IA, sans en
+// relancer un. Le job vient de l'edge (action 'last', bornée au compte).
+async function _mtDetDemo(){
+  if(window._mtLastJobId){ _mtDetOpen(); return; }
+  try{
+    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'last' }) });
+    const d = await r.json().catch(()=>({}));
+    if(d && d.job_id){ window._mtLastJobId = d.job_id; _mtDetOpen(); return; }
+  }catch(_){}
+  toast('⚠️ Aucun montage terminé sur ce compte — lance un Montage IA d\'abord');
+}
 
 async function _mtDetOpen(){
   const jobId = window._mtLastJobId;
