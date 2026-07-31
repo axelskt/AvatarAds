@@ -11876,6 +11876,7 @@ function _mtPollSegmented(jobId, onDone){
       if(d.status==='done' && d.url){
         clearInterval(iv);
         creditsFlowDone();
+        window._mtLastJobId = jobId;   // l'écran « Détails du montage » relit ce job
         // #124 : la fiche de marque apprend ce que cette vidéo révèle de neuf (silencieux)
         try{ mtMemLearn(_mt._transcript||''); }catch(_){}
         toast('✅ Ta vidéo montée est prête — téléchargement lancé !');
@@ -12026,6 +12027,8 @@ function _mtVideoDone(finalUrl){
     +'<p class="muted" style="font-size:14px;line-height:1.55;margin-top:10px;max-width:420px">Le téléchargement est lancé. « Ajuster » ouvre la vidéo montée dans l\'Éditeur.</p>'
     +'<button onclick="_mtDownloadFinal()" class="btn btn-primary" style="width:100%;margin-top:26px;padding:16px;font-size:15.5px;font-weight:800;border-radius:14px">'
       +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg> Télécharger le MP4</button>'
+    +'<button onclick="_mtDetOpen()" class="btn" style="width:100%;margin-top:10px;padding:16px;font-size:15.5px;font-weight:700;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">'
+      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Détails du montage — réviser puis régénérer</button>'
     +'<button onclick="_mtOpenFinalInEditor()" class="btn" style="width:100%;margin-top:10px;padding:16px;font-size:15.5px;font-weight:700;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);color:var(--text)">'
       +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Ajuster dans l\'Éditeur</button>'
     // 📤 Publier (#116) : importe le MP4 final dans le module Publier — compte developer uniquement
@@ -12055,6 +12058,247 @@ async function _mtOpenFinalInEditor(){
     nav('studio');
     edLoadFile(new File([b], 'montage-ia.mp4', { type:'video/mp4' }));
   }catch(e){ _mtProg(-1); toast('⚠️ Ouverture impossible — ton MP4 est déjà téléchargé'); }
+}
+
+// ── ⚙️ DÉTAILS DU MONTAGE — réviser puis régénérer (vision d'Axel, 31/07) ─────
+// À la FIN du montage (pas dans l'Éditeur) : TOUT ce que l'IA a posé, scène par
+// scène, avec le mot déclencheur et l'instant. Chaque animation se REMPLACE
+// (suggestions façon Tinder, les plus logiques d'abord) ou se SUPPRIME (le
+// visage reprend la fenêtre). Les médias se DÉPLACENT sur la timeline. Puis UN
+// bouton « Régénérer » rejoue le rendu complet avec toutes les personnalisations
+// d'un coup — devis « lipsync + vidéo » affiché, payé à la confirmation. Les
+// scènes avatar existantes sont RÉUTILISÉES (0 crédit de lipsync).
+// La liste vient du plan DÉRIVÉ (<mp4>.derived.json, écrit par le worker) :
+// c'est lui la vérité de ce que montre la vidéo — le plan du chef n'est qu'une
+// proposition, la dérivation tranche.
+let _mtDet = null;   // { job, derived, bank, edits:{replaces:[],bans:[],moves:{}} }
+
+async function _mtDetOpen(){
+  const jobId = window._mtLastJobId;
+  if(!jobId){ toast('⚠️ Aucun montage récent — lance un montage d\'abord'); return; }
+  let ov = document.getElementById('mtDetOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'mtDetOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:720;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none';
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'block';
+  ov.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center"><div class="muted" style="font-size:14px">⏳ Lecture du montage…</div></div>';
+  try{
+    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
+    const d = await r.json().catch(()=>({}));
+    if(!d.ok || d.status!=='done') throw new Error(d.error||'montage introuvable');
+    // le plan dérivé est la référence ; s'il manque (vieux rendu), on retombe
+    // sur le plan du chef — moins fidèle, mais l'écran reste utilisable
+    let derived = null;
+    if(d.derived_url){ try{ derived = await (await fetch(d.derived_url)).json(); }catch(_){} }
+    if(!derived) derived = d.plan;
+    if(!derived || !Array.isArray(derived.slides)) throw new Error('plan illisible');
+    let bank = [];
+    try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
+    _mtDet = { jobId, job: d, derived, bank, edits: { replaces: [], bans: [], moves: {} } };
+    _mtDetRender();
+  }catch(e){
+    ov.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;padding:30px;text-align:center"><div><div style="font-size:15px;font-weight:700">⚠️ '+String(e.message||e).replace(/</g,'&lt;').slice(0,120)+'</div>'
+      +'<button onclick="_mtDetClose()" class="btn" style="margin-top:18px;padding:12px 26px;border-radius:12px;background:var(--surface);border:1px solid var(--border-2);color:var(--text);font-family:var(--font);cursor:pointer">Fermer</button></div></div>';
+  }
+}
+function _mtDetClose(){ const ov=document.getElementById('mtDetOv'); if(ov) ov.style.display='none'; }
+
+// mot déclencheur = le premier mot prononcé dans la fenêtre de la scène
+function _mtDetWord(t){
+  const caps = (_mtDet.derived.captions||[]);
+  const w = caps.find(c => c.start >= t-0.25 && String(c.text||'').trim().length > 1) || caps.find(c => c.start >= t-0.8);
+  return w ? String(w.text).replace(/[.,!?«»]/g,'') : '';
+}
+const _mtDetFmt = (t) => { t=Math.max(0,t||0); const m=Math.floor(t/60), s=(t%60); return m+':'+(s<10?'0':'')+s.toFixed(1).replace('.0',''); };
+
+// la liste des scènes, depuis le plan DÉRIVÉ
+function _mtDetScenes(){
+  const P = _mtDet.derived, rows = [];
+  const bankNames = new Set((_mtDet.bank||[]).map(b=>b.name));
+  for(const sl of (P.slides||[])){
+    const a = Number(sl.start)||0, b = Number(sl.end)||a+1;
+    let kind='carte', label=String(sl.title||sl.type||'carte'), icon='🧩', repl=false, del=false;
+    if(sl.anim==='screen'||sl.anim==='ui'||sl.anim==='result'){ kind='visite'; icon='🖥️'; label = sl.anim==='ui' ? 'Navigateur' : (sl.anim==='result' ? 'Résultat généré' : 'Capture · '+String(sl.screen||'')); }
+    else if(sl.anim==='media'||sl.anim==='medias'){ kind='media'; icon='🖼️'; label = sl.anim==='medias' ? 'Tes photos ('+((sl.items||[]).length)+')' : 'Ton média'; }
+    else if(sl.anim){ kind='anim'; icon='✨'; label='Animation · '+sl.anim; repl = bankNames.has(sl.anim); del = true; }
+    else { kind='texte'; icon='📋'; label = String(sl.title||((sl.items||[]).map(i=>i.text).filter(Boolean).slice(0,3).join(' · '))||'Carte'); del = true; }
+    rows.push({ a, b, kind, icon, label, repl, del, anim: sl.anim||'', items: sl.items||[], word: _mtDetWord(a) });
+  }
+  for(const s of (P.avatarSegments||[])){
+    const a=Number(s.start)||0, b=Number(s.end)||a+1;
+    rows.push({ a, b, kind:'avatar', icon:'🧑', label:'Ton avatar parle'+((s.insets||[]).length?' · média en médaillon':''), repl:false, del:false, word:_mtDetWord(a) });
+  }
+  rows.sort((x,y)=>x.a-y.a);
+  const sfx = (P.sfx||[]);
+  for(const r of rows) r.sfx = sfx.filter(s=>s.t>=r.a && s.t<r.b).length;
+  return rows;
+}
+
+function _mtDetRender(){
+  const ov = document.getElementById('mtDetOv'); if(!ov||!_mtDet) return;
+  const E = _mtDet.edits;
+  const rows = _mtDetScenes();
+  const dur = Number(_mtDet.derived.duration)||1;
+  const broll = (_mtDet.job.plan && _mtDet.job.plan.broll)||[];
+  const rowHtml = rows.map((r,i)=>{
+    const rep = E.replaces.find(x=>Math.abs(x.start-r.a)<0.05);
+    const ban = E.bans.find(x=>Math.abs(x.start-r.a)<0.05);
+    const state = ban ? '<span style="font-size:11px;font-weight:800;color:#E5484D">supprimée → avatar</span>'
+      : rep ? '<span style="font-size:11px;font-weight:800;color:var(--accent-2)">→ '+rep.anim+'</span>' : '';
+    const acts = (r.repl||r.del) && !ban ? '<div style="display:flex;gap:8px;flex:0 0 auto">'
+        +(r.repl&&!rep?'<button onclick="_mtDetTinder('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">Remplacer</button>':'')
+        +(rep?'<button onclick="_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">↺</button>':'')
+        +(r.del?'<button onclick="_mtDetBan('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;color:#E5484D">Supprimer</button>':'')
+      +'</div>'
+      : (ban?'<button onclick="_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;flex:0 0 auto">↺ Annuler</button>':'');
+    return '<div class="card" style="padding:13px 15px;background:var(--panel-1);display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      +'<span style="font-size:19px;flex:0 0 auto">'+r.icon+'</span>'
+      +'<div style="flex:1;min-width:150px">'
+        +'<div style="font-size:13.5px;font-weight:700">'+r.label.replace(/</g,'&lt;')+' '+state+'</div>'
+        +'<div class="faint mono" style="font-size:10.5px;margin-top:2px">'+_mtDetFmt(r.a)+' → '+_mtDetFmt(r.b)
+          +(r.word?' · sur « '+r.word.replace(/</g,'&lt;')+' »':'')+(r.sfx?' · '+r.sfx+' bruitage'+(r.sfx>1?'s':''):'')+'</div>'
+      +'</div>'+acts+'</div>';
+  }).join('');
+  // médias déplaçables : chaque b-roll du plan du chef a son curseur de timeline
+  const mediaHtml = broll.length ? '<div class="faint" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:22px 0 10px">Tes médias — place-les au moment précis</div>'
+    + broll.map((b,k)=>{
+      const cur = (E.moves[b.assetId]!=null) ? E.moves[b.assetId] : (Number(b.start)||0);
+      return '<div class="card" style="padding:13px 15px;background:var(--panel-1)">'
+        +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:17px">🖼️</span>'
+        +'<span style="font-size:13px;font-weight:700;flex:1;min-width:120px">'+String(b.assetId).replace(/</g,'&lt;')+'</span>'
+        +'<span class="mono" id="mtDetMv'+k+'" style="font-size:12px;color:var(--accent-2);font-weight:800">'+_mtDetFmt(cur)+'</span></div>'
+        +'<input type="range" min="0" max="'+(Math.max(0,dur-1)).toFixed(1)+'" step="0.1" value="'+cur+'" oninput="_mtDetMove('+k+', this.value)" style="width:100%;margin-top:10px;accent-color:var(--accent-2)">'
+      +'</div>';
+    }).join('') : '';
+  const nEdits = E.replaces.length + E.bans.length + Object.keys(E.moves).length;
+  const devis = _mtDetDevis();
+  ov.innerHTML = '<div style="max-width:660px;margin:0 auto;padding:26px 18px 120px">'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">'
+      +'<button onclick="_mtDetClose()" style="background:var(--surface);border:1px solid var(--border-2);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--text);cursor:pointer;flex:0 0 auto">✕</button>'
+      +'<div><div class="display" style="font-size:21px;font-weight:800">Détails du montage</div>'
+      +'<div class="faint" style="font-size:12px">Tout ce que l\'IA a posé. Remplace, supprime, déplace — puis régénère en une fois.</div></div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">'+rowHtml+'</div>'
+    +mediaHtml
+    +'<div style="position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:13px 18px calc(13px + env(safe-area-inset-bottom))">'
+      +'<div style="max-width:660px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:170px"><div style="font-size:13px;font-weight:800">'+(nEdits?nEdits+' modification'+(nEdits>1?'s':''):'Aucune modification')+'</div>'
+      +'<div class="faint mono" style="font-size:10.5px">Lipsync : '+devis.lip+' cr (scènes réutilisées) · Vidéo : '+devis.video+' cr</div></div>'
+      +'<button onclick="_mtDetRegen()" '+(nEdits?'':'disabled')+' class="btn btn-primary" style="padding:14px 22px;border-radius:12px;font-size:14.5px;font-weight:800;'+(nEdits?'':'opacity:.45;cursor:not-allowed')+'">Régénérer — '+(devis.lip+devis.video)+' cr</button>'
+      +'</div></div>'
+    +'</div>';
+}
+
+function _mtDetDevis(){
+  // les clips lipsync existants sont RÉUTILISÉS (les fenêtres d'origine ne
+  // bougent pas) : lipsync 0 cr. Une scène supprimée passe en photo avatar
+  // animée — la vidéo, elle, se re-rend en entier hors fenêtres avatar.
+  const P = _mtDet.derived, dur = Number(P.duration)||0;
+  const av = (P.avatarSegments||[]).reduce((s,a)=>s+Math.max(0,(a.end||0)-(a.start||0)),0);
+  const perSec = (typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.hyperframesPerSec) || 1;
+  return { lip: 0, video: Math.max(1, Math.ceil(Math.max(0, dur-av)*perSec)) };
+}
+
+function _mtDetBan(i){
+  const r = _mtDetScenes()[i]; if(!r||!r.del) return;
+  _mtDet.edits.replaces = _mtDet.edits.replaces.filter(x=>Math.abs(x.start-r.a)>=0.05);
+  _mtDet.edits.bans.push({ start: r.a, end: r.b });
+  _mtDetRender();
+}
+function _mtDetUnedit(i){
+  const r = _mtDetScenes()[i]; if(!r) return;
+  _mtDet.edits.bans = _mtDet.edits.bans.filter(x=>Math.abs(x.start-r.a)>=0.05);
+  _mtDet.edits.replaces = _mtDet.edits.replaces.filter(x=>Math.abs(x.start-r.a)>=0.05);
+  _mtDetRender();
+}
+function _mtDetMove(k, v){
+  const b = ((_mtDet.job.plan&&_mtDet.job.plan.broll)||[])[k]; if(!b) return;
+  _mtDet.edits.moves[b.assetId] = Math.round(Number(v)*10)/10;
+  const el = document.getElementById('mtDetMv'+k); if(el) el.textContent = _mtDetFmt(Number(v));
+  // pas de re-render complet pendant le drag : le récap se met à jour au lâcher
+  clearTimeout(window._mtDetMvT); window._mtDetMvT = setTimeout(_mtDetRender, 600);
+}
+
+// ── le remplacement façon TINDER : on swipe les suggestions, les plus logiques
+// d'abord (recouvrement de mots entre la scène — son mot déclencheur, sa
+// description actuelle — et la description de chaque animation de la banque)
+function _mtDetTinder(i){
+  const r = _mtDetScenes()[i]; if(!r||!r.repl) return;
+  const norm = (s)=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const cur = (_mtDet.bank||[]).find(b=>b.name===r.anim);
+  const ctx = new Set(norm(r.word+' '+(cur?cur.desc:'')).split(/[^a-z0-9]+/).filter(w=>w.length>=4));
+  const sugg = (_mtDet.bank||[]).filter(b=>b.name!==r.anim)
+    .map(b=>{ const toks = norm(b.desc).split(/[^a-z0-9]+/); let sc=0; for(const t of new Set(toks)) if(t.length>=4 && ctx.has(t)) sc++; return { ...b, sc }; })
+    .sort((a,b)=>b.sc-a.sc).slice(0, 14);
+  let idx = 0;
+  let td = document.getElementById('mtDetTinder');
+  if(!td){ td = document.createElement('div'); td.id='mtDetTinder'; document.getElementById('mtDetOv').appendChild(td); }
+  td.style.cssText = 'position:fixed;inset:0;z-index:730;background:rgba(10,10,14,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px';
+  const paint = ()=>{
+    const s = sugg[idx];
+    if(!s){ td.remove(); toast('Plus de suggestions — la scène reste telle quelle'); return; }
+    td.innerHTML = '<div style="width:min(420px,92vw)">'
+      +'<div class="faint" style="text-align:center;font-size:12px;margin-bottom:12px">Remplacer « '+r.anim+' »'+(r.word?' sur « '+r.word.replace(/</g,'&lt;')+' »':'')+' · '+(idx+1)+'/'+sugg.length+'</div>'
+      +'<div id="mtDetCard" class="card" style="background:var(--panel-1);border:1px solid var(--border-2);border-radius:20px;padding:26px 22px;touch-action:none;cursor:grab;box-shadow:0 30px 80px rgba(0,0,0,.5)">'
+        +'<div style="font-size:15px;font-weight:800;color:var(--accent-2);margin-bottom:8px">✨ '+s.name+'</div>'
+        +'<div style="font-size:13px;line-height:1.55;color:var(--text)">'+String(s.desc).replace(/</g,'&lt;').slice(0,260)+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:14px;justify-content:center;margin-top:18px">'
+        +'<button onclick="_mtDetSwipe(false)" style="width:64px;height:64px;border-radius:50%;background:var(--surface);border:1px solid var(--border-2);color:#E5484D;font-size:24px;cursor:pointer">✗</button>'
+        +'<button onclick="_mtDetTinderClose()" style="align-self:center;background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;cursor:pointer">annuler</button>'
+        +'<button onclick="_mtDetSwipe(true)" style="width:64px;height:64px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer">✓</button>'
+      +'</div></div>';
+    // le swipe au doigt/souris : glisser à droite = accepter, à gauche = refuser
+    const card = document.getElementById('mtDetCard');
+    let x0=null, dx=0;
+    card.onpointerdown = (e)=>{ x0=e.clientX; card.setPointerCapture(e.pointerId); };
+    card.onpointermove = (e)=>{ if(x0==null) return; dx=e.clientX-x0; card.style.transform='translateX('+dx+'px) rotate('+(dx/18)+'deg)'; card.style.opacity=String(Math.max(.4,1-Math.abs(dx)/380)); };
+    card.onpointerup = ()=>{ if(x0==null) return; const d=dx; x0=null; dx=0;
+      if(Math.abs(d)>85){ window._mtDetSwipe(d>0); } else { card.style.transform=''; card.style.opacity='1'; } };
+  };
+  window._mtDetSwipe = (ok)=>{
+    const s = sugg[idx];
+    if(ok && s){
+      _mtDet.edits.bans = _mtDet.edits.bans.filter(x=>Math.abs(x.start-r.a)>=0.05);
+      _mtDet.edits.replaces.push({ start: r.a, end: r.b, anim: s.name, items: r.items });
+      td.remove(); _mtDetRender(); toast('✓ « '+s.name+' » remplacera « '+r.anim+' »');
+    } else { idx++; paint(); }
+  };
+  window._mtDetTinderClose = ()=>{ td.remove(); };
+  paint();
+}
+
+// ── RÉGÉNÉRER : le plan du chef + les choix de l'utilisateur, UN rendu payé ──
+async function _mtDetRegen(){
+  const E = _mtDet && _mtDet.edits; if(!E) return;
+  const n = E.replaces.length + E.bans.length + Object.keys(E.moves).length;
+  if(!n) return;
+  const devis = _mtDetDevis(), cost = devis.lip + devis.video;
+  const plan = JSON.parse(JSON.stringify(_mtDet.job.plan||{}));
+  plan.duration = plan.duration || _mtDet.derived.duration;
+  plan.userSlides = E.replaces;
+  plan.userBans = E.bans;
+  for(const b of (plan.broll||[])){
+    if(E.moves[b.assetId]!=null){ const d=(Number(b.end)||0)-(Number(b.start)||0); b.start=E.moves[b.assetId]; b.end=Math.round((b.start+Math.max(0.8,d))*100)/100; }
+  }
+  _mtDetClose();
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(cost, 'montage'))) return;
+  _mtProg(8, 'Régénération avec tes personnalisations…');
+  try{
+    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'create', plan, input_video: _mtDet.job.input_video, assets: _mtDet.job.assets||[], avatar_clips: _mtDet.job.avatar_clips||[] }) });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error||('render-job '+r.status));
+    _mtProg(14, 'Rendu en cours… (1 à 3 min)');
+    _mtPollSegmented(d.job_id, (url)=>_mtVideoDone(url));
+  }catch(e){
+    await creditsFlowRefund('la régénération a échoué');
+    _mtProg(-1);
+    toast('⚠️ Régénération : '+String(e.message||e).slice(0,110));
+  }
 }
 // ── 🎉 Vidéo prête (flux module) : ajuster dans l'Éditeur OU MP4 final direct ──
 function _mtShowChoice(){

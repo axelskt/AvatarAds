@@ -75,16 +75,25 @@ serve(async (req: Request) => {
       const id = String(body.job_id || '')
       if (!id) return json({ error: 'job_id manquant' }, 400)
       const { data: job, error } = await service.from('render_jobs')
-        .select('id, user_id, status, output_url, error').eq('id', id).single()
+        .select('id, user_id, status, output_url, error, plan, input_video, assets, avatar_clips').eq('id', id).single()
       if (error || !job) return json({ error: 'job introuvable' }, 404)
       if (job.user_id !== user.id) return json({ error: 'acces refuse' }, 403)
       let url: string | null = null
+      let derived_url: string | null = null
       if (job.status === 'done' && job.output_url) {
         const { data: signed } = await service.storage.from('render-media')
           .createSignedUrl(job.output_url, 3600, { download: 'montage-final.mp4' })
         url = signed?.signedUrl ?? null
+        // le plan DÉRIVÉ (écrit par le worker à côté du MP4) : c'est lui que lit
+        // l'écran « Détails du montage » — la dérivation tranche, pas le chef
+        const { data: dsigned } = await service.storage.from('render-media')
+          .createSignedUrl(job.output_url + '.derived.json', 3600)
+        derived_url = dsigned?.signedUrl ?? null
       }
-      return json({ ok: true, status: job.status, url, error: job.error })
+      // plan/input/assets/clips : ce qu'il faut pour RÉGÉNÉRER avec des
+      // personnalisations sans que le client ait à garder d'état local
+      return json({ ok: true, status: job.status, url, derived_url, error: job.error,
+        plan: job.plan, input_video: job.input_video, assets: job.assets, avatar_clips: job.avatar_clips })
     }
 
     return json({ error: 'action inconnue' }, 400)

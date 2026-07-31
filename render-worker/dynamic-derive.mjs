@@ -417,6 +417,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
   let placeServerAnims = () => {}
   let placeLocalAnims = () => {}
 
+  // ── LES CHOIX DE L'ÉCRAN « DÉTAILS DU MONTAGE » PASSENT EN PREMIER ─────────
+  // L'utilisateur a déjà VU sa vidéo et a tranché : ce qu'il a remplacé est posé
+  // tel quel (plan.userSlides), ce qu'il a supprimé devient une fenêtre de
+  // VISAGE (plan.userBans — sa règle : « supprimer = l'avatar principal reprend
+  // l'écran »). Réservé avant tout le reste : rien ne déloge un choix explicite.
+  {
+    let nu = 0, nb = 0
+    for (const u of plan.userSlides || []) {
+      const a = r2(u.start || 0), b = r2(u.end ?? a + 1.5)
+      if (b - a >= 0.6 && add({ ...u, user: true }, a, b)) nu++
+    }
+    for (const u of plan.userBans || []) {
+      const a = r2(u.start || 0), b = r2(u.end ?? a + 1)
+      if (b - a < 0.6 || overlaps(a, b)) continue
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true })
+      claim(a, b); nb++
+    }
+    if (nu || nb) console.log(`▶ choix utilisateur : ${nu} remplacement(s) posé(s) · ${nb} suppression(s) rendue(s) au visage`)
+  }
+
   // ── LE RÉSULTAT MONTRÉ EST LE SIEN ──────────────────────────────────────────
   // Un asset utilisateur dont l'id dit « resultat » remplace la capture de démo
   // 99-resultat dans les scènes result : montrer le résultat d'un AUTRE serait
