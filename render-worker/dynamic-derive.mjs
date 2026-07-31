@@ -417,6 +417,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
   let placeServerAnims = () => {}
   let placeLocalAnims = () => {}
 
+  // ── LE RÉSULTAT MONTRÉ EST LE SIEN ──────────────────────────────────────────
+  // Un asset utilisateur dont l'id dit « resultat » remplace la capture de démo
+  // 99-resultat dans les scènes result : montrer le résultat d'un AUTRE serait
+  // faux — et le texte tapé dans la visite guidée décrit SON image (retour
+  // d'Axel 31/07 : « ce qui est écrit doit correspondre au résultat que tu
+  // montres après »).
+  {
+    const rk = Object.keys(opts.assetFiles || {}).find((k) => /result/i.test(k))
+    if (rk) for (const sl of plan.slides || []) if (sl.anim === 'result') sl.userFile = (opts.assetFiles || {})[rk]
+  }
+
   // ── 0 · LE HOOK EST UN VISAGE ───────────────────────────────────────────────
   // Une vidéo face caméra s'ouvre sur celui qui parle, pas sur une forme. La
   // fenêtre avatar du début était calculée en §3b, DANS LES ZONES LIBRES : les
