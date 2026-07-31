@@ -34,6 +34,10 @@ assertNoBackticks(BANK)
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const TARGET = join(HERE, '..', 'supabase', 'functions', 'orchestrate', 'index.ts')
+// …et la même banque part vers l'APP (app/anim-bank.json) : l'écran « Détails
+// du montage » y lit noms + descriptions pour proposer des remplacements par
+// famille sémantique. Une seule source (anim-bank.mjs), trois consommateurs.
+const APP_JSON = join(HERE, '..', 'app', 'anim-bank.json')
 
 const between = (src, tag, body) => {
   const open = `// <<< ANIM-BANK:${tag} — genere par render-worker/sync-anim-bank.mjs, ne pas editer >>>`
@@ -141,3 +145,6 @@ if (process.argv.includes('--check')) {
   console.log('✓ lexique auto : ' + paires.size + ' racines, ' +
     new Set([...paires.values()].flat()).size + '/' + BANK.length + ' animations appelables')
 }
+
+writeFileSync(APP_JSON, JSON.stringify(BANK.map((b) => ({ name: b.name, desc: b.desc }))))
+console.log('✓ app/anim-bank.json : ' + BANK.length + ' animations pour l\'écran Détails du montage')

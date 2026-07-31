@@ -606,6 +606,14 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       ], { stdio: 'inherit' })
     }
 
+    // ── LE PLAN DÉRIVÉ, PUBLIÉ À CÔTÉ DU MP4 ────────────────────────────────
+    // Le plan du chef est une PROPOSITION, la dérivation tranche : c'est donc le
+    // plan APRÈS dérivation qui dit ce que la vidéo montre vraiment. L'écran
+    // « Détails du montage » de l'app le lit pour lister chaque scène (anim,
+    // fenêtres avatar, médias, sfx) — convention `<sortie>.derived.json`,
+    // best-effort comme le poster.
+    try { writeFileSync(outPath + '.derived.json', JSON.stringify(plan)) } catch (_) {}
+
     const outDur = parseFloat(ffprobe(outPath, 'format=duration')) || 0
     console.log(`✅ ${outPath} — ${outDur.toFixed(1)}s, rendu total ${((Date.now() - t0) / 1000).toFixed(0)}s`)
     return { outPath, duration: outDur }
@@ -683,6 +691,11 @@ async function pollLoop() {
           await sb.storage.from('render-media')
             .upload(outKey + '.poster.jpg', readFileSync(poster), { contentType: 'image/jpeg', upsert: true })
         } catch (e) { console.warn('poster:', e.message) }
+        // le plan dérivé suit le MP4 (écran « Détails du montage ») — best-effort
+        try {
+          if (existsSync(out + '.derived.json')) await sb.storage.from('render-media')
+            .upload(outKey + '.derived.json', readFileSync(out + '.derived.json'), { contentType: 'application/json', upsert: true })
+        } catch (e) { console.warn('derived:', e.message) }
         // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
         await sb.from('render_jobs').update({ status: 'done', output_url: outKey, updated_at: new Date().toISOString() }).eq('id', job.id)
         console.log('✅ job', job.id, '→', outKey)
