@@ -105,11 +105,15 @@ function buildPanels(plan, D) {
   // SEULES les phrases avec un mot-clé deviennent un panneau. Les phrases de
   // liaison tapées à l'écran étaient exactement « les trucs typiques » qu'Axel a
   // refusés (7 captures) : la voix les porte, la scène précédente respire, point.
+  // Retour d'Axel (31/07, style apple) : « non, pas de mots sur une page !!!
+  // only animation » — vu sur « ton produit. » plein écran. En apple, AUCUN
+  // panneau typo : les fenêtres libres reviennent à la scène précédente qui
+  // respire (animations, visage). Le mode dynamic garde ses slams — c'est lui.
   const panels = [
     ...anims.map((a) => ({ kind: a.kind, t0: a.t0, t1: a.t1, slide: a.slide })),
-    ...phrases
+    ...(isApple(plan) ? [] : phrases
       .filter((ws) => ws.some((w) => w.accent || w.text.length >= 11))
-      .map((ws) => ({ kind: 'typo', t0: r2(Math.max(0, ws[0].start - 0.12)), t1: r2(ws[ws.length - 1].end + 0.3), words: ws })),
+      .map((ws) => ({ kind: 'typo', t0: r2(Math.max(0, ws[0].start - 0.12)), t1: r2(ws[ws.length - 1].end + 0.3), words: ws }))),
   ].sort((a, b) => a.t0 - b.t0)
 
   const out = []

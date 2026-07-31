@@ -472,12 +472,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     for (const b of brut) {
       if (b.__pose) continue
-      // UN MÉDIA DE HOOK N'EST PAS UN MÉDAILLON. Marqué `hook`, il est réservé au
-      // split d'ouverture — son animation en HAUT, le visage en BAS. Axel : « je
-      // parle en split screen, en haut le Claude x AvatarAds et en bas l'avatar ».
-      // Sans cette sortie, §0a l'accrochait en vignette sur le visage et le split
-      // ne le voyait jamais : on retombait sur la pastille dessinée.
-      if (b.hook) continue
+      // Retour d'Axel (31/07, en voyant le split rendu) : « le hook je le vois
+      // avec mon avatar principal en FULL écran et l'influenceuse en plus
+      // petit ». Le média de hook n'est donc PLUS réservé au split : il tombe
+      // dans la mécanique générale ci-dessous, qui l'accroche en MÉDAILLON sur
+      // la fenêtre du hook. Le split 50/50 ne reste que pour les MARQUES (§5).
       const src = files[b.assetId]
       if (!src) continue
       const a = r2(b.start || 0), e = r2(b.end ?? a + 3)
@@ -525,11 +524,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (let i = 0; i < words.length; i++) {
       for (const seq of FERME) {
         if (!suite(i, seq)) continue
-        // …et on remonte au DÉBUT de la phrase qu'elle conclut : l'énumération
-        // entière est le moment, pas ses trois derniers mots.
+        // …et on remonte au début de la PROPOSITION qu'elle conclut — plus au
+        // début de la phrase entière. Retour d'Axel (31/07) : « produit
+        // physique, coaching, formation → j'aurais voulu une animation » —
+        // l'énumération AVANT l'adresse a droit à son visuel, le visage ne
+        // prend que l'adresse elle-même. La virgule arrête donc la remontée.
         let a = i
         for (let k = i - 1; k >= 0 && i - k < 14; k--) {
-          if (/[.!?]$/.test(String(words[k].text)) || words[k + 1].start - words[k].end > 0.34) break
+          if (/[.!?,]$/.test(String(words[k].text)) || words[k + 1].start - words[k].end > 0.34) break
           a = k
         }
         const deb = Math.max(0, words[a].start - 0.15)
@@ -693,7 +695,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // "mon compte" ». Quand la voix nomme une entrée de la barre latérale et
       // que le parcours saute directement au contenu, on rétablit le clic : sans
       // lui le spectateur est téléporté et ne saura pas où trouver le bouton.
-      const tuto = plan.tuto.slice()
+      // Retour d'Axel (31/07) : « quand je dis "tu peux ajouter sous-titres
+      // etc", montre les Paramètres avancés ». La ligne REPLIÉE de 04-montageia
+      // ne montre rien — la MODALE ouverte (13-montage-avance) montre les vrais
+      // réglages (sous-titres, style visuel, musique). La zone 'mot-par-mot'
+      // sert d'ancre valide ; si la voix ne la justifie pas, la mécanique
+      // standard garde l'écran ENTIER sans cadre — c'est exactement ce qu'on veut.
+      const tuto = plan.tuto.map((t) => /parametres-avances/.test(String(t.zone || ''))
+        ? { ...t, screen: '13-montage-avance', zone: 'mot-par-mot' } : t)
       {
         // Certaines entrées ne sont PAS dans la barre latérale : « Connecter
         // Claude » vit au fond de la modale Mon compte. Axel : « il arrive déjà
@@ -978,6 +987,27 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (!isAnim(sl) || consumedByPlan.has(sl)) continue
         const an = String(sl.anim)
         const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.8)
+        // LE CONTENU DATÉ BAT L'ANIMATION ANONYME (retour d'Axel 31/07 :
+        // « produit physique, coaching, formation → j'aurais voulu une
+        // animation » — la carte dont les items s'allument SUR leurs mots EST
+        // cette animation, et la fiche générique qui la recouvrait la tuait).
+        // Le rival ne compte que s'il est POSABLE : sa fenêtre encore libre.
+        const rival = srv.find((s2) => s2 !== sl && !isAnim(s2) && s2.anim !== 'screen' && s2.anim !== 'ui'
+          && !consumedByPlan.has(s2)
+          && (s2.items || []).some((it) => it && it.text && Number(it.t) > 0)
+          && !overlaps(r2(s2.start || 0), r2(s2.end ?? (s2.start || 0) + 1.5))
+          && Math.min(b, s2.end ?? 0) - Math.max(a, s2.start ?? 0) > (b - a) * 0.6)
+        if (rival) {
+          console.log(`▶ ${an} s'efface devant « ${String(rival.title || '').slice(0, 34)} » : ses items claquent sur leurs mots`)
+          // …et la carte prend la fenêtre TOUT DE SUITE : laissée pour plus
+          // tard, les tables de beats re-posaient la même anim au mot près et
+          // re-bloquaient la carte qu'on vient de défendre
+          const ra = r2(rival.start || 0), rbPlan = r2(rival.end ?? ra + 1.5)
+          const rlast = Math.max(0, ...(rival.items || []).map((it) => Number(it && it.t) || 0))
+          const rb = r2(Math.min(D, Math.max(rbPlan, rlast + 0.4)))
+          if (add(rival, ra, rb) || (rb > rbPlan && add(rival, ra, rbPlan))) consumedByPlan.add(rival)
+          continue
+        }
         // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste
         if (add({ ...sl, title: '', text: '', items: [], ...(NEEDS[an] || {}) }, a, b)) {
           consumedByPlan.add(sl); placedAnim++
@@ -994,10 +1024,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
       for (const sl of srv) {
         if (consumedByPlan.has(sl) || isAnim(sl)) continue
         if (sl.anim === 'screen' || sl.anim === 'ui') continue
+        // même règle qu'en §4 (retour d'Axel 31/07) : en apple, une page-titre
+        // sans matière (banner sans items) ne se pose pas — only animation
+        if (plan.slideStyle === 'apple' && String(sl.type) === 'banner'
+          && !(sl.items || []).some((it) => String(it.text || '').trim())) continue
         const its = (sl.items || []).filter((it) => it && it.text)
         if (!its.length && !sl.title) continue
         const a = r2(sl.start || 0), b = r2(sl.end ?? a + 1.5)
-        if (add(sl, a, b)) { consumedByPlan.add(sl); n++ }
+        // la carte vit jusqu'à son DERNIER item : « formation » est daté à
+        // 15,1 s mais le chef fermait la carte à 14,8 — le mot claquait avant
+        // d'être dit. On tente la fenêtre étendue, sinon celle du plan.
+        const lastT = Math.max(0, ...its.map((it) => Number(it.t) || 0))
+        const b2 = r2(Math.min(D, Math.max(b, lastT + 0.4)))
+        if (add(sl, a, b2) || (b2 > b && add(sl, a, b))) { consumedByPlan.add(sl); n++ }
       }
       const tot = srv.length, anims = srv.filter(isAnim).length
       console.log(`▶ chef d'orchestre : ${placedAnim}/${anims} animations + ${n} carte(s) de texte`
@@ -1708,9 +1747,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
 
   const kept = []
   const blockers = [...out, ...avWinsAll]
-  let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0, dropCreux = 0
+  let dropUnrenderable = 0, dropCollide = 0, dropUnsaid = 0, dropCreux = 0, dropPages = 0
   for (let sl of srcSlides) {
     if (consumed.has(sl) || consumedByPlan.has(sl)) continue
+    // Retour d'Axel (31/07, style apple) : « "détermine ton identité" — non,
+    // pas de mots sur une page !!! only animation ». En apple, une page-titre
+    // sans matière (type banner : un titre, pas d'items) n'existe plus — sa
+    // fenêtre revient aux animations, aux beats ou au visage. Les panneaux à
+    // CONTENU (items datés, kpi, checklist) restent : eux portent de la matière.
+    if (plan.slideStyle === 'apple' && String(sl.type) === 'banner'
+      && !(sl.items || []).some((it) => String(it.text || '').trim())) { dropPages++; continue }
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) {
       // On jetait en silence : impossible de savoir CE QU'IL DEMANDE. Axel :
       // « on peut toujours créer l'animation qu'il veut si elle est pertinente
@@ -1769,10 +1815,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
   // JOURNAL. Ces rejets étaient silencieux : un plan entièrement jeté ressemblait
   // à un plan appliqué. Maintenant chaque scène écartée dit pourquoi.
-  if (dropUnrenderable || dropCollide || dropUnsaid || dropCreux) {
+  if (dropUnrenderable || dropCollide || dropUnsaid || dropCreux || dropPages) {
     console.log(`▶ scènes serveur écartées : ${dropUnrenderable} non rendables · `
       + `${dropCollide} en collision · ${dropUnsaid} dont aucun mot n'est prononcé · `
-      + `${dropCreux} réduites à un mot seul`)
+      + `${dropCreux} réduites à un mot seul`
+      + (dropPages ? ` · ${dropPages} page(s)-titre (apple : only animation)` : ''))
   }
 
   // ── 4b · les slides serveur se chevauchent aussi ENTRE EUX (card posée sur
@@ -1826,26 +1873,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // « au début tu mets un écran 9:16 avec l'avatar principal, puis l'animation
     // en plus petit ». Visage plein cadre + son animation en médaillon : c'est
     // exactement ce que le médaillon fait, et le split le lui interdisait.
-    if (first && (first.start || 0) < 0.6 && !first.duo && !(first.insets || []).length) {
+    // …et JAMAIS quand le média de hook est déjà en médaillon sur la fenêtre
+    // (retour d'Axel 31/07 : avatar plein écran + influenceuse en petit — le
+    // split couperait exactement ce qu'il demande de garder entier)
+    if (first && (first.start || 0) < 0.6 && !first.duo && !(first.insets || []).length
+      && !(hookWin && (hookWin.insets || []).length)) {
       const early = words.filter((w) => w.start < Math.min(4, first.end ?? 4))
       const hit = early.find((w) => BRANDS.includes(norm(w.text)))
-      // un média déclaré `hook` déclenche le split PAR LUI-MÊME : « cette
-      // influenceuse… elle n'existe pas » ne prononce aucune marque, et le média
-      // qui MONTRE l'influenceuse était jeté en silence parce que le split
-      // n'avait pas de mot déclencheur. Le média EST le sujet — pas besoin qu'un
-      // nom d'outil soit prononcé pour couper l'écran en deux.
-      const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
-      if (hit || hk) {
+      if (hit) {
         // le retour au plein cadre : le moment où il ARRÊTE de parler de l'outil
-        // pour s'adresser au spectateur — sans marque, c'est la fin déclarée du
-        // média de hook qui décide
-        const back = hit ? words.find((w) => w.start > hit.end
-          && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text))) : null
-        const cut = r2(Math.min(first.end ?? 4,
-          hit ? (back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2)
-              : Math.max(hk.end ?? 3.5, (first.start || 0) + 1.6)))
-        const brand = hit ? String(hit.text).replace(/[.,!?«»"]/g, '').trim() : ''
+        // pour s'adresser au spectateur
+        const back = words.find((w) => w.start > hit.end
+          && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text)))
+        const cut = r2(Math.min(first.end ?? 4, back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2))
+        const brand = String(hit.text).replace(/[.,!?«»"]/g, '').trim()
         // une vidéo (ou image) de marque déclarée `hook` remplace la pastille dessinée
+        const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
         const src = hk ? (opts.assetFiles || {})[hk.assetId] : ''
         if (cut > (first.start || 0) + 0.8) {
           // Le split crée DEUX fenêtres à partir d'UNE seule : la seconde doit
@@ -1857,7 +1900,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
             { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) }, clip: 0, clipFrom: 0 },
             ...((first.end ?? 0) - cut > 0.6
               ? [{ ...first, start: cut, clip: 0, clipFrom: r2(cut - (first.start || 0)) }] : []))
-          console.log(`▶ hook en split : ${brand || (hk && hk.assetId) || 'média'} + visage jusqu'à ${cut}s, puis plein cadre`)
+          console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
         }
       }
     }
