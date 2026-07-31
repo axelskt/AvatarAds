@@ -279,20 +279,35 @@ const carteHtml = (url: string, nom: string, mime: string) => {
 // On envoie les trois formes, de la plus riche à la plus sobre : le widget, le
 // lien de ressource, puis le texte. Un client qui ignore la première tombe sur
 // la suivante — on ne parie pas sur une seule.
-const toolMedia = (url: string, nom: string, mime: string, texte: string): ToolContent => ({
-  content: [
-    {
-      type: 'resource',
-      resource: {
-        uri: `ui://avatarads/${nom.replace(/[^a-z0-9.]/gi, '-')}`,
-        mimeType: 'text/html',
-        text: carteHtml(url, nom, mime),
-      },
+// ── « COMME HIGGSFIELD » (31/07, demande d'Axel) ────────────────────────────
+// Ce que fait réellement Higgsfield pour qu'un média « s'affiche dans le MCP » :
+// (1) un bloc `image` MCP (base64) — les clients Claude le rendent nativement
+// dans la carte de l'outil ; (2) demander AU MODÈLE d'écrire le markdown
+// `![...](url)` — c'est le seul chemin pour que le visuel descende dans le FIL
+// de la conversation (le rendu inline des ressources y est cassé côté client,
+// cf. anthropics/claude-ai-mcp#238 — on contourne, on ne re-creuse pas).
+// La vidéo n'a pas de bloc MCP : sa VIGNETTE (mcp_jobs.preview_url, 640 px)
+// joue ce rôle, et le fil affiche vignette-image + lien cliquable vers le MP4.
+const toolMedia = async (url: string, nom: string, mime: string, texte: string, apercuUrl?: string): Promise<ToolContent> => {
+  const contenu: Array<Record<string, unknown>> = []
+  const estVideo = mime.startsWith('video/')
+  const vignette = apercuUrl ? await blocImage(apercuUrl) : null
+  if (vignette) contenu.push(vignette)
+  contenu.push({
+    type: 'resource',
+    resource: {
+      uri: `ui://avatarads/${nom.replace(/[^a-z0-9.]/gi, '-')}`,
+      mimeType: 'text/html',
+      text: carteHtml(url, nom, mime),
     },
-    { type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom },
-    { type: 'text', text: texte },
-  ],
-})
+  })
+  contenu.push({ type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom })
+  const consigne = vignette && estVideo
+    ? `\n\nAffiche l'aperçu dans ta réponse en écrivant exactement :\n![aperçu](${apercuUrl})\n[▶ Voir la vidéo](${url})`
+    : ''
+  contenu.push({ type: 'text', text: texte + consigne })
+  return { content: contenu }
+}
 
 // ── Définition des outils ──
 function toolDefs(isOwner: boolean, requireConfirm = true) {
@@ -814,7 +829,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
-  if (job.status === 'done') return toolMedia(String(job.result_url), 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${job.result_url}`, String(job.preview_url || '') || undefined)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // Poll Google jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
@@ -998,7 +1013,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'avatar').maybeSingle()
   if (!job) return toolErr('Job avatar introuvable sur ce compte.')
-  if (job.status === 'done') return toolMedia(String(job.result_url), 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${job.result_url}`, String(job.preview_url || '') || undefined)
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
@@ -1380,7 +1395,7 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'montage').maybeSingle()
   if (!job) return toolErr('Job montage introuvable sur ce compte.')
-  if (job.status === 'done') return toolMedia(String(job.result_url), 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${job.result_url}`)
+  if (job.status === 'done') return toolMedia(String(job.result_url), 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${job.result_url}`, String(job.preview_url || '') || undefined)
   if (job.status === 'failed') return toolErr(`Rendu échoué : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // phase 1 (op_name vide) : le chef d'orchestre prépare encore le plan en tâche de fond
@@ -1419,8 +1434,23 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
     if (dl.error || !dl.data) return toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
     const bytes = new Uint8Array(await dl.data.arrayBuffer())
     const url = await deliverVideo(userId, job, bytes)
+    // Le POSTER fabriqué par le worker (convention : `<clé>.poster.jpg`, cf.
+    // worker.mjs). Ré-hébergé en public et mémorisé dans preview_url : le
+    // premier check l'affiche, les relectures le retrouvent. Best-effort —
+    // pas de poster (vieux rendu, worker pas encore à jour) = pas de vignette,
+    // jamais un échec.
+    let apercu: string | undefined
+    if (url) {
+      try {
+        const dp = await svc.storage.from('render-media').download(String(rj.output_url) + '.poster.jpg')
+        if (!dp.error && dp.data) {
+          apercu = await uploadMedia(userId, new Uint8Array(await dp.data.arrayBuffer()), 'jpg', 'image/jpeg')
+          await svc.from('mcp_jobs').update({ preview_url: apercu }).eq('id', job.id)
+        }
+      } catch { /* vignette best-effort */ }
+    }
     return url
-      ? toolMedia(url, 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${url}\n💡 Pour ajuster : get_montage_plan → modifie → render_montage_plan. Ou ouvre l'Éditeur sur ${APP_URL}`)
+      ? toolMedia(url, 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${url}\n💡 Pour ajuster : get_montage_plan → modifie → render_montage_plan. Ou ouvre l'Éditeur sur ${APP_URL}`, apercu)
       : toolText('⏳ Presque prêt — rappelle check_montage dans quelques secondes.')
   }
   return toolText(`⏳ Statut : ${rj.status} — rappelle check_montage dans ~1 minute.`)

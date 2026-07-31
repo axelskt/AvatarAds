@@ -661,6 +661,20 @@ async function pollLoop() {
         const { error: upErr } = await sb.storage.from('render-media')
           .upload(outKey, readFileSync(out), { contentType: 'video/mp4', upsert: true })
         if (upErr) throw new Error('upload: ' + upErr.message)
+        // ── LE POSTER DU MONTAGE (31/07, « comme Higgsfield ») ────────────────
+        // Une frame à 0,6 s, 640 px, posée A CÔTÉ du MP4 sous une clé de
+        // CONVENTION (`<clé>.poster.jpg`) — aucune migration. Le MCP la
+        // réhéberge en public et le fil de conversation peut enfin AFFICHER le
+        // montage (bloc image + markdown) au lieu d'un simple lien. Seul étage
+        // de la chaîne à avoir ffmpeg : c'est donc ici qu'elle se fabrique.
+        // Best-effort : un poster raté ne fait jamais échouer une livraison.
+        try {
+          const poster = out.replace(/\.mp4$/i, '') + '.poster.jpg'
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '0.6', '-i', out,
+            '-vframes', '1', '-vf', 'scale=640:-2', '-q:v', '4', poster])
+          await sb.storage.from('render-media')
+            .upload(outKey + '.poster.jpg', readFileSync(poster), { contentType: 'image/jpeg', upsert: true })
+        } catch (e) { console.warn('poster:', e.message) }
         // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
         await sb.from('render_jobs').update({ status: 'done', output_url: outKey, updated_at: new Date().toISOString() }).eq('id', job.id)
         console.log('✅ job', job.id, '→', outKey)
