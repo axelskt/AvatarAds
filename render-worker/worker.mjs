@@ -105,7 +105,14 @@ function loudnessOf(file) {
       '-af', 'ebur128=framelog=quiet', '-f', 'null', '-'], { encoding: 'utf8' })
     const hits = [...String(r.stderr || '').matchAll(/I:\s*(-?\d+(?:\.\d+)?)\s*LUFS/g)]
     const v = hits.length ? parseFloat(hits[hits.length - 1][1]) : NaN
-    return Number.isFinite(v) ? v : null
+    // Une voix ne mesure JAMAIS 0,0 LUFS ni quoi que ce soit au-dessus de
+    // -5 : c'est la valeur qu'ebur128 rend quand la mesure a échoué (piste
+    // vide, fichier trop court, démux raté). Le montage de prod du 30/07
+    // affichait « voix brute (0.0 LUFS) → loudnorm » — un capteur cassé qui
+    // envoyait TOUTES les voix, même déjà calées, vers la renormalisation
+    // dynamique. Mesure invalide = capteur muet, pas une fausse lecture.
+    if (!Number.isFinite(v) || v >= -5) return null
+    return v
   } catch (_) { return null }
 }
 
