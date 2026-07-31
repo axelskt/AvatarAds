@@ -645,6 +645,10 @@ async function pollLoop() {
         for (const a of job.assets || []) {
           // extension du chemin (as-x.jpg / as-x.mp4) — les b-roll peuvent être des clips
           const ext = (String(a.path).match(/\.(\w{2,4})$/) || [])[1] || 'jpg'
+          // l'asset d'id « avatar » est LA photo d'avatar : elle se cherche à la
+          // racine du job (avatar.png), pas dans assets/ — sans elle un montage
+          // lancé hors app (MCP) était toujours sans visage
+          if (a.id === 'avatar') { await dl(a.path, join(jobDir, 'avatar.png')); continue }
           await dl(a.path, join(jobDir, 'assets', a.id + '.' + ext))
         }
         // #119 · scènes avatar : téléchargées comme av0.mp4, av1.mp4… (ordre = plan.avatarSegments)
