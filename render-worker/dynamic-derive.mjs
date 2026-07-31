@@ -1570,16 +1570,48 @@ export function deriveDynamicSlides(plan, opts = {}) {
     let cur = 0
     for (const [a, b] of bornes) { if (a - cur >= SEUIL) creux.push([cur, a]); cur = Math.max(cur, b) }
     if (D - cur >= SEUIL) creux.push([cur, D])
-    let n = 0, etires = 0
+    let n = 0, etires = 0, animes = 0
     for (const [a, b] of creux) {
       const d = Math.min(b - 0.05, a + 6.5)
       if (d - a < SEUIL || overlaps(a, d)) continue
-      // Sans visage, la hiérarchie d'Axel descend d'un cran : le creux revient à
-      // la scène qui le précède (ou à celle qui le suit s'il ouvre la vidéo).
-      // Un panneau qui dure une seconde de plus vaut mieux qu'un écran nu — le
-      // rendu du 30/07 laissait le fond vide sur « clairement zéro compétence ».
+      // Sans visage, la hiérarchie d'Axel est : UNE ANIMATION d'abord, la scène
+      // voisine ensuite. Lui, sur le rendu du 31/07 (les mots géants « et
+      // entreprendre » seuls à l'écran pendant l'intro) : « les mots comme ça
+      // tout seul sont bannis, il faut mettre une animation ou l'avatar
+      // principal à la place — pas d'avatar ? mets une animation ». On repêche
+      // donc les beats du chef d'orchestre dont le mot tombe dans le creux :
+      // c'est SON idée pour ce moment-là, elle avait juste perdu la fenêtre.
+      // add() garde tous ses gardes-fous (banque, garde sémantique, doublons).
       if (noFace) {
         const fin = r2(b - 0.05)
+        let pose = null
+        for (const bt of (plan.beats || [])) {
+          const cible = norm(String(bt.word || '').trim())
+          if (!cible) continue
+          let hit = null
+          for (const w of words) {
+            if (w.start < a - 0.05 || w.end > d + 0.3) continue
+            const nw = norm(w.text)
+            // « argent » doit trouver « l'argent » : l'élision colle l'article au
+            // mot (l', d', qu'…). Égalité stricte OU le mot en fin de forme, avec
+            // au plus deux lettres devant — jamais une sous-chaîne libre (le
+            // piège « IA » dans « SasIA » est documenté plus haut).
+            if (nw === cible || (nw.endsWith(cible) && nw.length - cible.length <= 2)) { hit = w; break }
+          }
+          if (!hit) continue
+          pose = add({ anim: bt.anim, value: bt.value || '', items: bt.value ? [{ t: 0, text: String(bt.value) }] : [] },
+            r2(Math.max(a + 0.02, hit.start - 0.12)), r2(Math.min(d, hit.end + 1.5)))
+          if (process.env.DERIVE_DEBUG && !pose) console.log(`TROU  beat ${bt.anim} refusé sur « ${bt.word} » à ${r2(hit.start)}`)
+          if (pose) break
+        }
+        if (pose) {
+          // l'animation prend le creux entier : un sous-trou redeviendrait des
+          // mots géants, exactement ce qu'on vient d'interdire
+          if (pose.start > a + 0.1 && !overlaps(r2(a), pose.start)) { claim(r2(a), pose.start); pose.start = r2(a) }
+          if (pose.end < fin - 0.1 && !overlaps(pose.end, fin)) { claim(pose.end, fin); pose.end = fin }
+          animes++
+          continue
+        }
         const avant = out.filter((s) => s.end <= a + 0.06).sort((x, y) => y.end - x.end)[0]
         const apres = out.filter((s) => s.start >= b - 0.06).sort((x, y) => x.start - y.start)[0]
         if (avant) { avant.end = fin; claim(a, fin); etires++ }
@@ -1593,6 +1625,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       plan.avatarSegments.sort((x, y) => x.start - y.start)
       console.log(`▶ ${n} trou(s) comblé(s) par le visage`)
     }
+    if (animes) console.log(`▶ ${animes} trou(s) comblé(s) par une animation du chef d'orchestre (aucun visage)`)
     if (etires) console.log(`▶ ${etires} trou(s) rendu(s) à la scène voisine (aucun visage disponible)`)
   }
 

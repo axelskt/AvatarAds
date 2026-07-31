@@ -3062,11 +3062,20 @@ export function animJs(name, s, r2) {
         tl.to(o, { n: full.length, duration: ${r2(Math.min(1.4, dur))}, ease: 'none',
           onUpdate: function(){ if (el) el.childNodes[0].nodeValue = full.slice(0, Math.round(o.n)); } }, ${t0});
         if (cur) tl.to(cur, { autoAlpha: 0, duration: 0.28, repeat: ${Math.max(1, Math.round(dur / 0.56))}, yoyo: true, ease: 'none' }, ${t0}); })();`
-    case 'idea':
+    case 'idea': {
+      // Sa vie entière tenait en 0,94 s : au-delà, le bloc restait un carré
+      // orange statique — vu 2,8 s durant sur l'intro du 31/07, exactement
+      // l'aplat qu'Axel bannit (« si ça tient sur une image fixe… »). Quand la
+      // fenêtre est plus longue, le bloc RESPIRE : une pulsation lente, autant
+      // de cycles que la durée en laisse. Déterministe (repeat calculé), pas
+      // de nouveau design — juste l'empêcher de mourir à l'écran.
+      const rep = Math.max(0, Math.floor((dur - 1.3) / 1.6) * 2)
       return inOut + `
       tl.fromTo('#${id}an .an-bit', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.05, ease: 'power2.out', transformOrigin: '50% 50%' }, ${t0});
       tl.to('#${id}an .an-bit', { left: '50%', top: '50%', scale: 0.2, autoAlpha: 0, duration: 0.36, stagger: 0.04, ease: 'power2.in' }, ${r2(t0 + 0.34)});
-      tl.fromTo('#${id}co', { scale: 0.2, autoAlpha: 0, rotation: -25 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.34, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.6)});`
+      tl.fromTo('#${id}co', { scale: 0.2, autoAlpha: 0, rotation: -25 }, { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.34, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.6)});` + (rep ? `
+      tl.to('#${id}co', { scale: 1.07, rotation: 4, duration: 0.8, yoyo: true, repeat: ${rep}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 1.1)});` : '')
+    }
     case 'target':
       return inOut + `
       tl.fromTo('#${id}dot', { scale: 0.3, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.4)', transformOrigin: '50% 50%' }, ${t0});
