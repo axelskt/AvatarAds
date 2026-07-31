@@ -590,7 +590,14 @@ export function buildDynamicComposition(plan, opts = {}) {
         // l'avais laissée de côté : « je t'ai envoyé la vidéo à mettre en split
         // screen en haut, tu ne l'as pas mise ». Une pastille dessinée ne fait
         // pas le poids contre son animation.
-        if (duo.src) {
+        if (duo.src && /\.(png|jpe?g|webp)(\?|$)/i.test(duo.src)) {
+          // le média de hook peut être une PHOTO (Léna piscine) : un <video> sur
+          // un PNG ne décode rien — moitié haute noire. Même cadrage, même zoom
+          // lent, mais en fond d'image.
+          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
+            <div id="${id}bt" style="width:100%;height:100%;background:url('${esc(duo.src)}') center 30%/cover"></div></div>`
+          pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out',transformOrigin:'50% 30%'},${liveT0});`
+        } else if (duo.src) {
           inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
             <video id="${id}bt" class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
           pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out'},${liveT0});`

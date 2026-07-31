@@ -450,7 +450,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // ── 2. rendu visuel headless ──
     const visual = join(proj, 'visual.mp4')
     console.log(`▶ rendu visuel (${draft ? 'draft' : 'high'})…`)
-    sh(`npx -y ${HYPERFRAMES} render --quality ${draft ? 'draft' : 'high'} --output visual.mp4`, proj)
+    // RENDER_WORKERS : sur le Mac d'Axel, 8 workers Chrome (~256 Mo chacun) font
+    // mourir la capture quand il travaille à côté — 2 suffisent et tiennent.
+    // Railway garde le défaut auto.
+    const wk = process.env.RENDER_WORKERS ? ` --workers ${parseInt(process.env.RENDER_WORKERS, 10) || 2}` : ''
+    sh(`npx -y ${HYPERFRAMES} render --quality ${draft ? 'draft' : 'high'}${wk} --output visual.mp4`, proj)
     if (!existsSync(visual)) throw new Error('rendu visuel échoué (visual.mp4 absent)')
 
     // ── 3. mix audio ffmpeg : voix + SFX (adelay) + musique duckée en boucle ──

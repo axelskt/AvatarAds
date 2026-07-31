@@ -1868,7 +1868,9 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;left:50%;top:50%;width:${Math.round(w * 0.34)}px;height:${Math.round(w * 0.34)}px;margin-left:${-Math.round(w * 0.17)}px;margin-top:${-Math.round(w * 0.17)}px;border-radius:${Math.round(w * 0.08)}px;background:rgba(255,255,255,.28)"></span></span>
         <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.06)}px;width:${Math.round(w * 0.66)}px;height:${Math.max(4, Math.round(h * 0.032))}px;border-radius:99px;background:${P.ink};opacity:.55"></span>
         <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.12)}px;width:${Math.round(w * 0.42)}px;height:${Math.max(3, Math.round(h * 0.026))}px;border-radius:99px;background:${P.ink};opacity:.3"></span>
-        <span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.19)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">${txt(0, '39€')}</span>
+        ${txt(0, '')
+          ? `<span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.19)}px;font-family:'Archivo Black',sans-serif;font-size:${Math.round(h * 0.09)}px;color:${P.acc}">${txt(0, '')}</span>`
+          : `<span class="an-p an-pd" style="left:${Math.round(w * 0.09)}px;top:${iv + Math.round(h * 0.2)}px;width:${Math.round(w * 0.28)}px;height:${Math.round(h * 0.06)}px;border-radius:99px;background:${P.acc};opacity:.85"></span>`}
         <span class="an-p" id="${id}pdb" style="left:${Math.round(w * 0.09)}px;top:${h - Math.round(h * 0.17)}px;width:${Math.round(w * 0.82)}px;height:${Math.round(h * 0.11)}px;border-radius:99px;background:${P.acc};display:flex;align-items:center;justify-content:center;font-family:${SANS};font-weight:800;font-size:${Math.round(h * 0.05)}px;color:#FFFFFF">Ajouter au panier</span></div>`)
     }
     case 'cart': {
