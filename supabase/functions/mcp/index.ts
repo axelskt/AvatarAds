@@ -423,6 +423,19 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         type: 'object',
         properties: {
           audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max — ex. un audio nettoyé avec clean_audio." },
+          avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Elle est utilisée telle quelle sur les moments où la personne s'adresse à la caméra : aucun lipsync n'est généré, aucun crédit en plus. Sans elle, le montage se fait sans visage." },
+          media: {
+            type: 'array', maxItems: 6,
+            description: "Optionnel — jusqu'à 6 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
+            items: {
+              type: 'object',
+              properties: {
+                url: { type: 'string', description: 'URL publique du fichier (PNG/JPEG/WebP/MP4), 20 Mo max.' },
+                name: { type: 'string', description: "Ce que le média MONTRE, en clair — c'est ce qui guide son placement." },
+              },
+              required: ['url'],
+            },
+          },
           style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel des slides : dynamic (motion design continu, défaut), apple (épuré clair), glass (liquid glass), word (mot par mot), auto (choisi par l'IA)." },
           brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
           script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
@@ -1312,6 +1325,32 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   const script = String(args.script || '').trim().slice(0, 4000)
   const got = await fetchUserFile(audioUrl, MONTAGE_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "l'audio (audio_url)")
   if (typeof got === 'string') return toolErr(got)
+
+  // ── SA PHOTO ET SES MÉDIAS, LANCÉS DEPUIS CLAUDE ──────────────────────────
+  // Un montage MCP partait toujours SANS visage et SANS ses images : le worker
+  // sait les consommer (asset « avatar » à la racine, le reste en b-roll), le
+  // serveur MCP ne les envoyait simplement jamais. On les télécharge AVANT le
+  // débit : une URL cassée doit échouer sans rien coûter.
+  const avatarUrl = String(args.avatar_url || '').trim()
+  let avatarFile: { bytes: Uint8Array; contentType: string } | null = null
+  if (avatarUrl) {
+    const av = await fetchUserFile(avatarUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_url)")
+    if (typeof av === 'string') return toolErr(av)
+    avatarFile = av
+  }
+  const slug = (s: string, i: number) => (String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28)) || ('media' + i)
+  const medias: { id: string; name: string; kind: 'image' | 'video'; bytes: Uint8Array; contentType: string }[] = []
+  for (const [i, m] of (Array.isArray(args.media) ? args.media : []).slice(0, 6).entries()) {
+    const u = String((m as Record<string, unknown>)?.url || '').trim()
+    if (!u) continue
+    const nom = String((m as Record<string, unknown>)?.name || '').trim() || `media-${i + 1}`
+    const f = await fetchUserFile(u, MONTAGE_MAX_BYTES, /^(image\/(png|jpe?g|webp)|video\/mp4)$/, `le média « ${nom} »`)
+    if (typeof f === 'string') return toolErr(f)
+    const id = slug(nom, i)
+    if (id === 'avatar' || medias.some((x) => x.id === id)) continue
+    medias.push({ id, name: nom, kind: /^video\//.test(f.contentType) ? 'video' : 'image', bytes: f.bytes, contentType: f.contentType })
+  }
   const durRaw = Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)
   // format court assumé : au-delà de 90 s le montage perd son rythme (et coûte cher à rendre)
   if (durRaw > 90.5) {
@@ -1351,7 +1390,14 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       fd.append('duration', String(Math.round(durEst * 100) / 100))
       if (script) fd.append('script', script)
       if (brief) fd.append('brief', brief)
-      fd.append('options', JSON.stringify({ lang: 'fr' }))
+      fd.append('options', JSON.stringify({ lang: 'fr', hasAvatar: !!avatarFile }))
+      // le chef VOIT les médias (vision) et les place au moment que leur nom décrit
+      if (medias.length) {
+        fd.append('assets', JSON.stringify(medias.map((m) => ({ id: m.id, name: m.name, kind: m.kind }))))
+        for (const m of medias) {
+          fd.append('asset_' + m.id, new File([m.bytes as unknown as BlobPart], 'thumb', { type: m.contentType }))
+        }
+      }
       const or = await fetch(`${SUPABASE_URL}/functions/v1/orchestrate`, {
         method: 'POST', headers: { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY }, body: fd,
       })
@@ -1369,9 +1415,27 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       const { error: upErr } = await svc.storage.from('render-media').upload(inputPath, got.bytes, { contentType: got.contentType })
       if (upErr) { await failAndRefund(userId, mcpJob, "upload de l'audio : " + upErr.message); return }
 
+      // 2b) sa photo et ses médias montent au bucket : le worker les récupère
+      // par la liste `assets` (id « avatar » = photo d'avatar à la racine).
+      const assets: { id: string; path: string; kind: string }[] = []
+      if (avatarFile) {
+        const aExt = /png/.test(avatarFile.contentType) ? 'png' : /webp/.test(avatarFile.contentType) ? 'webp' : 'jpg'
+        const aPath = `${userId}/mcp-avatar-${Date.now()}.${aExt}`
+        const { error: aErr } = await svc.storage.from('render-media').upload(aPath, avatarFile.bytes, { contentType: avatarFile.contentType })
+        if (!aErr) assets.push({ id: 'avatar', path: aPath, kind: 'image' })
+        else console.warn('upload avatar:', aErr.message)
+      }
+      for (const m of medias) {
+        const mExt = m.kind === 'video' ? 'mp4' : /png/.test(m.contentType) ? 'png' : /webp/.test(m.contentType) ? 'webp' : 'jpg'
+        const mPath = `${userId}/mcp-as-${m.id}-${Date.now()}.${mExt}`
+        const { error: mErr } = await svc.storage.from('render-media').upload(mPath, m.bytes, { contentType: m.contentType })
+        if (!mErr) assets.push({ id: m.id, path: mPath, kind: m.kind })
+        else console.warn('upload média ' + m.id + ':', mErr.message)
+      }
+
       // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
       const { data: rj, error: rjErr } = await svc.from('render_jobs')
-        .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets: [] })
+        .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets })
         .select('id').single()
       if (rjErr || !rj) { await failAndRefund(userId, mcpJob, 'création du job de rendu impossible'); return }
       await svc.from('mcp_jobs').update({ op_name: String(rj.id), updated_at: new Date().toISOString() }).eq('id', mj.id)
