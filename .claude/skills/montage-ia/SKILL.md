@@ -114,6 +114,12 @@ Puis **regarder** : extraire une planche de vignettes et la lire.
 for t in 1 5 10 20 30 40 50 60; do ffmpeg -v error -y -ss $t -i out.mp4 -vframes 1 -vf scale=250:-1 f$t.jpg; done
 ```
 
+`DERIVE_DEBUG=1` journalise chaque réservation de fenêtre (`CLAIM`), chaque pose
+(`POSE`) et chaque rejet des gardes (`REJET doublon` / `REJET hors-ancre`) avec la
+ligne d'appel — c'est l'instrument qui a trouvé la réservation fantôme du 31/07
+(un beat doublon délogé par `fit()` volait la fenêtre de `gaugefill` sur son
+propre mot). L'ordre de réservation est invisible sans lui.
+
 Pour inspecter la décision sans rendre (rapide, gratuit) : appeler
 `deriveDynamicSlides(plan, { assetFiles })` et lister `plan.slides` + `plan.avatarSegments`
 triés par `start`, avec le mot le plus proche de chaque `start`.

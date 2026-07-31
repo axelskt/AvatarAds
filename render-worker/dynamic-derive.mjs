@@ -266,7 +266,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
   const out = []
   const taken = []        // fenêtres occupées, pour ne jamais superposer deux scènes
   const overlaps = (a, b) => taken.some((w) => a < w[1] - 0.05 && b > w[0] + 0.05)
-  const claim = (a, b) => { taken.push([a, b]) }
+  // DERIVE_DEBUG=1 : journalise chaque réservation avec sa ligne d'appel.
+  // C'est l'instrument qui a permis de trouver la réservation fantôme du 31/07
+  // — l'ordre de réservation décide de tout ici, et il est invisible sans ça.
+  const claim = (a, b) => {
+    if (process.env.DERIVE_DEBUG) {
+      const site = (new Error().stack.split('\n')[2] || '').trim().replace(/.*dynamic-derive\.mjs/, 'derive')
+      console.log(`CLAIM ${r2(a).toFixed(2).padStart(6)} → ${r2(b).toFixed(2).padStart(6)}  ${site}`)
+    }
+    taken.push([a, b])
+  }
   const consumed = new Set() // slides serveur transformées (promptbar…) → à retirer
 
   // Une scène qui déborde sur une fenêtre déjà prise est ROGNÉE, pas jetée —
@@ -300,6 +309,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // pour ce moment-la. Le refus ne doit pas coûter la fenêtre — sinon le trou
     // retombe sur le visage, ce qu'il reproche depuis le debut.
     const nom = String(slide && slide.anim || '')
+    // la fenêtre du MOT, telle que l'appelant la donne — avant que fit() et
+    // l'étirement ne la déplacent. Les deux gardes plus bas en ont besoin.
+    const a0 = a, b0 = b
     // ── LE GARDE-FOU VAUT AUSSI POUR LE CHEF D'ORCHESTRE ────────────────────
     // « le visuel EST le mot » : une animation ne se pose que si la phrase
     // prononcee pendant sa fenetre parle vraiment de son sujet. Ce controle ne
@@ -350,8 +362,34 @@ export function deriveDynamicSlides(plan, opts = {}) {
       return null
     }
     if (overlaps(a, b)) return null
+    // ── DEUX GARDES NÉES DE LA RÉSERVATION FANTÔME DU 31/07 ─────────────────
+    // Le chef d'orchestre donnait easyup DEUX fois : une slide (17,88→21,38) et
+    // un beat sur « zéro ». L'ancre du beat étant couverte par son jumeau,
+    // fit() le délogeait et l'étirement le faisait grandir ENTIÈREMENT hors de
+    // son mot — posé à 21,43→22,72, pile sur « cent pourcents des bénéfices »,
+    // en volant la fenêtre que gaugefill (demandé avec « 100% ») venait chercher
+    // sur SON mot. Même maladie mesurée sur salesphone (3,52→4,79 contre la
+    // carte 4,74→6,02) et tsunami (8,25→9,53 contre 9,48→11,25).
+    if (isAnimPanel(slide)) {
+      // 1 · UN DOUBLON ADJACENT DÉGAGE. La même animation deux fois dos à dos
+      //     n'apporte rien : la première posée garde la fenêtre.
+      if (nom && out.some((s) => s.anim === nom && a < s.end + 0.6 && b > s.start - 0.6)) {
+        if (process.env.DERIVE_DEBUG) console.log(`REJET doublon    ${nom} ${r2(a).toFixed(2)}→${r2(b).toFixed(2)}`)
+        return null
+      }
+      // 2 · L'ANCRE RESTE DANS LA FENÊTRE. L'étirement est fait pour grandir
+      //     AUTOUR du mot ; quand fit() a tout rogné, il grandissait à côté, et
+      //     l'animation s'affichait sur les mots de quelqu'un d'autre — « le
+      //     visuel EST le mot » interdit exactement ça.
+      const m0 = (a0 + b0) / 2
+      if (m0 < a - 0.1 || m0 > b + 0.1) {
+        if (process.env.DERIVE_DEBUG) console.log(`REJET hors-ancre ${nom} ${r2(a).toFixed(2)}→${r2(b).toFixed(2)} (mot à ${r2(m0)})`)
+        return null
+      }
+    }
     const s = { ...slide, start: r2(a), end: r2(b) }
     out.push(s)
+    if (process.env.DERIVE_DEBUG) console.log(`POSE  ${r2(a).toFixed(2).padStart(6)} → ${r2(b).toFixed(2).padStart(6)}  ${s.type || 'card'} ${s.anim || ''} ${(s.title || '').slice(0, 28)}`)
     claim(a, b); return s
   }
 
