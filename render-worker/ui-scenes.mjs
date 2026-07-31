@@ -415,7 +415,8 @@ export const UI_SCENES = {
 
   // ── résultat : mockup téléphone, la vidéo joue (l'image fournie) ───────────
   phone(id, t0, t1, tone, s) {
-    const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
+    // l'image de l'utilisateur (son résultat à lui) bat la capture de démo
+    const file = s.userFile || (s.screen ? 'tuto/' + s.screen + '.png' : '')
     const pw = 560, ph = 1130
     const html = `
       <div id="${id}ph" style="position:absolute;left:${(1080 - pw) / 2}px;top:420px;width:${pw}px;height:${ph}px;background:#0D0D12;border-radius:64px;padding:16px;box-sizing:border-box;box-shadow:0 60px 150px rgba(13,13,18,.45);opacity:0">
