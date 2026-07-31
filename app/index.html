@@ -12161,6 +12161,74 @@ function _mtDetScenes(){
   return rows;
 }
 
+// ── LA BANDE : toute la vidéo d'un coup d'œil ───────────────────────────────
+// Demande d'Axel (31/07) : « faut voir toute la bande vidéo au-dessus et on
+// peut sélectionner chaque moment ». Le MP4 final joue en haut, et sous lui
+// chaque scène est un bloc à sa place et à sa durée. Cliquer un bloc (ou
+// n'importe où sur la bande) déplace la lecture ET sélectionne la scène ; la
+// scène en cours s'allume toute seule pendant que ça joue.
+const _MT_DET_COUL = { avatar:'#28C795', anim:'var(--accent)', visite:'#7C6CF0', media:'#F5A623', texte:'#5B93E8', carte:'#5B93E8' };
+let _mtDetSel = -1;
+
+function _mtDetBarHtml(rows, dur){
+  const blocs = rows.map((r,i)=>{
+    const l = Math.max(0, Math.min(100, r.a/dur*100));
+    const w = Math.max(0.8, Math.min(100-l, (r.b-r.a)/dur*100));
+    const c = _MT_DET_COUL[r.kind] || 'var(--border-2)';
+    return '<span onclick="event.stopPropagation();_mtDetPick('+i+')" title="'+String(r.label).replace(/"/g,'')+'" '
+      +'id="mtDetB'+i+'" style="position:absolute;left:'+l+'%;width:'+w+'%;top:0;bottom:0;background:'+c+';opacity:'+(i===_mtDetSel?'1':'.5')+';'
+      +'border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;overflow:hidden;'
+      +(i===_mtDetSel?'outline:2px solid #fff;outline-offset:-2px;':'')+'transition:opacity .15s">'+r.icon+'</span>';
+  }).join('');
+  return '<div id="mtDetBar" onclick="_mtDetBarClick(event)" style="position:relative;height:38px;margin-top:10px;background:var(--surface-2);border-radius:7px;overflow:hidden;cursor:pointer">'
+    + blocs + '<span id="mtDetHead" style="position:absolute;top:-2px;bottom:-2px;left:0;width:2px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.7);pointer-events:none"></span></div>'
+    + '<div class="faint mono" style="display:flex;justify-content:space-between;font-size:10px;margin-top:5px"><span id="mtDetT">0:00</span><span>'+_mtDetFmt(dur)+'</span></div>';
+}
+// clic n'importe où sur la bande : on déplace la lecture, et la scène sous ce
+// moment devient la scène sélectionnée
+function _mtDetBarClick(ev){
+  const bar = document.getElementById('mtDetBar'); if(!bar) return;
+  const rect = bar.getBoundingClientRect(); if(rect.width < 4) return;
+  const dur = Number(_mtDet.derived.duration)||1;
+  const t = Math.max(0, Math.min(dur, (ev.clientX-rect.left)/rect.width*dur));
+  const v = document.getElementById('mtDetVid'); if(v && isFinite(v.duration)) v.currentTime = t;
+  const rows = _mtDetScenes();
+  const i = rows.findIndex(r => t >= r.a && t < r.b);
+  _mtDetSelect(i >= 0 ? i : -1, false);
+}
+// clic sur un bloc de la bande OU sur une carte de la liste : les deux se
+// répondent — la vidéo saute au moment, la carte se met en avant
+function _mtDetPick(i){
+  const r = _mtDetScenes()[i]; if(!r) return;
+  const v = document.getElementById('mtDetVid');
+  if(v && isFinite(v.duration)) v.currentTime = Math.min(r.a + 0.05, Math.max(0, v.duration - 0.05));
+  _mtDetSelect(i, true);
+}
+function _mtDetSelect(i, scroll){
+  const prev = _mtDetSel; _mtDetSel = i;
+  for(const k of [prev, i]){
+    if(k < 0) continue;
+    const b = document.getElementById('mtDetB'+k), c = document.getElementById('mtDetC'+k);
+    if(b){ b.style.opacity = (k===i?'1':'.5'); b.style.outline = k===i ? '2px solid #fff' : ''; b.style.outlineOffset = k===i ? '-2px' : ''; }
+    if(c){ c.style.borderColor = k===i ? 'var(--accent-line)' : 'var(--border)'; c.style.background = k===i ? 'var(--accent-soft)' : 'var(--panel-1)'; }
+  }
+  if(scroll && i >= 0){ const c = document.getElementById('mtDetC'+i); if(c) c.scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+}
+// la tête avance pendant la lecture et la scène en cours s'allume
+function _mtDetTick(){
+  const v = document.getElementById('mtDetVid'), h = document.getElementById('mtDetHead');
+  if(!v || !h || !_mtDet) return;
+  const dur = Number(_mtDet.derived.duration) || v.duration || 1;
+  const t = v.currentTime || 0;
+  h.style.left = Math.max(0, Math.min(100, t/dur*100)) + '%';
+  const lbl = document.getElementById('mtDetT'); if(lbl) lbl.textContent = _mtDetFmt(t);
+  if(!v.paused){
+    const rows = _mtDetScenes();
+    const i = rows.findIndex(r => t >= r.a && t < r.b);
+    if(i >= 0 && i !== _mtDetSel) _mtDetSelect(i, false);
+  }
+}
+
 function _mtDetRender(){
   const ov = document.getElementById('mtDetOv'); if(!ov||!_mtDet) return;
   const E = _mtDet.edits;
@@ -12173,12 +12241,14 @@ function _mtDetRender(){
     const state = ban ? '<span style="font-size:11px;font-weight:800;color:#E5484D">supprimée → avatar</span>'
       : rep ? '<span style="font-size:11px;font-weight:800;color:var(--accent-2)">→ '+rep.anim+'</span>' : '';
     const acts = (r.repl||r.del) && !ban ? '<div style="display:flex;gap:8px;flex:0 0 auto">'
-        +(r.repl&&!rep?'<button onclick="_mtDetTinder('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">Remplacer</button>':'')
-        +(rep?'<button onclick="_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">↺</button>':'')
-        +(r.del?'<button onclick="_mtDetBan('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;color:#E5484D">Supprimer</button>':'')
+        +(r.repl&&!rep?'<button onclick="event.stopPropagation();_mtDetTinder('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">Remplacer</button>':'')
+        +(rep?'<button onclick="event.stopPropagation();_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">↺</button>':'')
+        +(r.del?'<button onclick="event.stopPropagation();_mtDetBan('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;color:#E5484D">Supprimer</button>':'')
       +'</div>'
-      : (ban?'<button onclick="_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;flex:0 0 auto">↺ Annuler</button>':'');
-    return '<div class="card" style="padding:13px 15px;background:var(--panel-1);display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      : (ban?'<button onclick="event.stopPropagation();_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;flex:0 0 auto">↺ Annuler</button>':'');
+    const on = i === _mtDetSel;
+    return '<div class="card" id="mtDetC'+i+'" onclick="_mtDetPick('+i+')" style="padding:13px 15px;background:'+(on?'var(--accent-soft)':'var(--panel-1)')+';border-color:'+(on?'var(--accent-line)':'var(--border)')+';display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;scroll-margin-top:250px">'
+      +'<span style="width:4px;align-self:stretch;border-radius:99px;background:'+(_MT_DET_COUL[r.kind]||'var(--border-2)')+';flex:0 0 auto"></span>'
       +'<span style="font-size:19px;flex:0 0 auto">'+r.icon+'</span>'
       +'<div style="flex:1;min-width:150px">'
         +'<div style="font-size:13.5px;font-weight:700">'+r.label.replace(/</g,'&lt;')+' '+state+'</div>'
@@ -12199,12 +12269,25 @@ function _mtDetRender(){
     }).join('') : '';
   const nEdits = E.replaces.length + E.bans.length + Object.keys(E.moves).length;
   const devis = _mtDetDevis();
-  ov.innerHTML = '<div style="max-width:660px;margin:0 auto;padding:26px 18px 120px">'
-    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">'
-      +'<button onclick="_mtDetClose()" style="background:var(--surface);border:1px solid var(--border-2);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--text);cursor:pointer;flex:0 0 auto">✕</button>'
-      +'<div><div class="display" style="font-size:21px;font-weight:800">Détails du montage</div>'
-      +'<div class="faint" style="font-size:12px">Tout ce que l\'IA a posé. Remplace, supprime, déplace — puis régénère en une fois.</div></div></div>'
-    +'<div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">'+rowHtml+'</div>'
+  // LA VIDÉO EST LA RÉFÉRENCE, PAS UNE VIGNETTE : elle reste en haut pendant
+  // qu'on descend la liste, avec sa bande de scènes juste dessous.
+  const vurl = String((_mtDet.job && _mtDet.job.url) || '');
+  const head = '<div style="position:sticky;top:0;z-index:5;background:var(--bg);padding:18px 18px 12px;border-bottom:1px solid var(--border)">'
+    +'<div style="max-width:660px;margin:0 auto">'
+      +'<div style="display:flex;align-items:center;gap:12px">'
+        +'<button onclick="_mtDetClose()" style="background:var(--surface);border:1px solid var(--border-2);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--text);cursor:pointer;flex:0 0 auto">✕</button>'
+        +'<div style="flex:1;min-width:0"><div class="display" style="font-size:19px;font-weight:800">Détails du montage</div>'
+        +'<div class="faint" style="font-size:11.5px">Clique un moment de la bande pour t\'y placer, puis remplace ou supprime.</div></div></div>'
+      +(vurl
+        ? '<video id="mtDetVid" src="'+vurl+'" controls playsinline preload="metadata" ontimeupdate="_mtDetTick()" onseeked="_mtDetTick()" style="display:block;margin:12px auto 0;max-height:30vh;max-width:100%;border-radius:12px;background:#000"></video>'
+        : '<div class="faint" style="margin-top:12px;font-size:12px;text-align:center">Aperçu indisponible (lien expiré) — la bande reste utilisable</div>')
+      + _mtDetBarHtml(rows, dur)
+    +'</div></div>';
+  // une édition redessine l'écran : la lecture ne doit pas repartir de zéro
+  const vOld = document.getElementById('mtDetVid');
+  const wasT = vOld ? vOld.currentTime : 0, wasPlay = vOld ? !vOld.paused : false;
+  ov.innerHTML = head + '<div style="max-width:660px;margin:0 auto;padding:16px 18px 120px">'
+    +'<div style="display:flex;flex-direction:column;gap:9px">'+rowHtml+'</div>'
     +mediaHtml
     +'<div style="position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:13px 18px calc(13px + env(safe-area-inset-bottom))">'
       +'<div style="max-width:660px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
@@ -12213,16 +12296,20 @@ function _mtDetRender(){
       +'<button onclick="_mtDetRegen()" '+(nEdits?'':'disabled')+' class="btn btn-primary" style="padding:14px 22px;border-radius:12px;font-size:14.5px;font-weight:800;'+(nEdits?'':'opacity:.45;cursor:not-allowed')+'">Régénérer — '+(devis.lip+devis.video)+' cr</button>'
       +'</div></div>'
     +'</div>';
+  const vNew = document.getElementById('mtDetVid');
+  if(vNew && wasT > 0.05){ try{ vNew.currentTime = wasT; if(wasPlay) vNew.play().catch(()=>{}); }catch(_){} }
+  _mtDetTick();
 }
 
 function _mtDetDevis(){
-  // les clips lipsync existants sont RÉUTILISÉS (les fenêtres d'origine ne
-  // bougent pas) : lipsync 0 cr. Une scène supprimée passe en photo avatar
-  // animée — la vidéo, elle, se re-rend en entier hors fenêtres avatar.
-  const P = _mtDet.derived, dur = Number(P.duration)||0;
-  const av = (P.avatarSegments||[]).reduce((s,a)=>s+Math.max(0,(a.end||0)-(a.start||0)),0);
-  const perSec = (typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.hyperframesPerSec) || 1;
-  return { lip: 0, video: Math.max(1, Math.ceil(Math.max(0, dur-av)*perSec)) };
+  // LE PRIX D'UNE RELANCE, PAS D'UN NOUVEAU MONTAGE. Régénérer = le rendu
+  // serveur seul (`montageRender`, la relance bon marché : ni Claude, ni
+  // transcription — le plan existe déjà), PLUS le lipsync s'il faut vraiment
+  // fabriquer de nouvelles secondes de visage. Ici les clips existants sont
+  // réutilisés tels quels (les fenêtres d'origine ne bougent pas) et une scène
+  // supprimée retombe sur la photo d'avatar animée : lipsync 0 cr.
+  const video = (typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.montageRender) || 4;
+  return { lip: 0, video };
 }
 
 function _mtDetBan(i){
