@@ -67,6 +67,14 @@ function buildPanels(plan, D) {
     ...(plan.slides || [])
       .filter((s) => s.anim || s.type === 'punch')
       .map((s) => ({ kind: s.anim === 'ui' ? 'ui' : (s.anim || 'punch'), t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
+    // LES PANNEAUX A CONTENU (checklist, kpi, banner, carte titree) — ils
+    // n'etaient pas rendus du tout : leurs fenetres partaient au mode typo, des
+    // mots geants nus qu'Axel bannit (« peu d'investissement » plein ecran,
+    // 31/07). Ils deviennent des panneaux a part entiere, et leurs mots ne sont
+    // plus « libres » pour la typo.
+    ...(plan.slides || [])
+      .filter((s) => !s.anim && s.type !== 'punch' && (s.title || (s.items || []).some((it) => String(it.text || '').trim())))
+      .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
       .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets } })),
@@ -674,6 +682,60 @@ export function buildDynamicComposition(plan, opts = {}) {
         sfxAdd.push({ kind: a[0], t: r2(liveT0 + a[2]), vol: a[1] })
         if (p.kind === 'post') sfxAdd.push({ kind: 'mo-pop-1', t: r2(liveT0 + 1.05), vol: 0.65 })
       }
+
+    } else if (p.kind === 'content') {
+      // LA MATIERE AU LIEU DES MOTS GEANTS : eyebrow, titre, chiffre (kpi),
+      // lignes cochees — chaque ligne apparait SUR son mot quand le plan donne
+      // son timing (it.t), sinon en cascade. C'est le rendu qui manquait aux
+      // slides serveur gardees par la derivation.
+      const s = p.slide
+      const ACC = ap ? '#FF5A36' : '#FF6B35'
+      const parts = String(s.title || '').split(/\s*\/\s*/).filter(Boolean)
+      let y = 520
+      let html = ''
+      if (s.eyebrow) {
+        html += `<div id="${id}eb" style="position:absolute;left:0;right:0;top:${y}px;text-align:center;font-size:34px;font-weight:600;letter-spacing:.24em;color:${tone.mute};opacity:0">${esc(String(s.eyebrow).toUpperCase())}</div>`
+        y += 84
+      }
+      if (parts.length) {
+        const fz = fitSize(parts.reduce((a2, b2) => a2.length > b2.length ? a2 : b2, ''), W - 180, 58, 104)
+        html += `<div class="disp" id="${id}ti" style="position:absolute;left:70px;right:70px;top:${y}px;text-align:center;font-size:${fz}px;line-height:1.1;color:${tone.ink};opacity:0">${parts.map((l) => esc(l)).join('<br>')}</div>`
+        y += Math.round(fz * 1.16 * parts.length) + 46
+      }
+      const lignes = (s.items || []).filter((it) => String(it.text || '').trim())
+      if (s.type === 'kpi') {
+        const it0 = lignes[0] || {}
+        const val = String(it0.text || (String(s.center || '') + String(s.value || '')) || '').trim()
+        const lab = String(it0.label || s.sub || '').trim()
+        if (val) {
+          html += `<div class="disp" id="${id}kp" style="position:absolute;left:0;right:0;top:${y}px;text-align:center;font-size:186px;color:${ACC};opacity:0">${esc(val)}</div>`
+          y += 216
+        }
+        if (lab) {
+          html += `<div id="${id}kl" style="position:absolute;left:0;right:0;top:${y}px;text-align:center;font-size:44px;font-weight:600;letter-spacing:.12em;color:${tone.mute};opacity:0">${esc(lab.toUpperCase())}</div>`
+        }
+        pjs += `
+  tl.fromTo('#${id}kp',{scale:0.6,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'back.out(1.8)',transformOrigin:'50% 50%'},${r2(liveT0 + 0.3)});
+  tl.fromTo('#${id}kl',{y:14,opacity:0},{y:0,opacity:1,duration:0.28,ease:'power3.out'},${r2(liveT0 + 0.5)});`
+        sfxAdd.push({ kind: 'mo-pop-1', t: r2(liveT0 + 0.32), vol: 0.6 })
+      } else {
+        lignes.forEach((it, i2) => {
+          const ty = y + i2 * 104
+          html += `<div class="an-p" id="${id}l${i2}" style="left:150px;right:150px;top:${ty}px;height:84px;border-radius:22px;background:${ap ? 'rgba(17,17,17,.05)' : 'rgba(255,255,255,.08)'};opacity:0;display:flex;align-items:center;gap:22px;padding:0 30px">
+            <span style="width:40px;height:40px;border-radius:50%;background:${ACC};flex:0 0 auto;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l5 5L19 7"/></svg></span>
+            <span style="font-size:40px;font-weight:700;color:${tone.ink};letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(it.text))}</span></div>`
+          // la ligne claque SUR son mot quand le plan donne le timing — jamais
+          // avant le debut du panneau, jamais apres sa fin
+          const tAt = r2(Math.min(Math.max(liveT0 + 0.25 + i2 * 0.14, Number(it.t) || 0), t1 - 0.4))
+          pjs += `
+  tl.fromTo('#${id}l${i2}',{x:-36,opacity:0},{x:0,opacity:1,duration:0.3,ease:'power3.out'},${tAt});`
+          sfxAdd.push({ kind: 'mo-pop-2', t: r2(tAt + 0.04), vol: 0.42 })
+        })
+      }
+      inner += html
+      pjs += `
+  tl.fromTo('#${id}eb',{y:-18,opacity:0},{y:0,opacity:1,duration:0.3,ease:'power3.out'},${r2(liveT0 + 0.05)});
+  tl.fromTo('#${id}ti',{y:20,opacity:0,filter:'blur(8px)'},{y:0,opacity:1,filter:'blur(0px)',duration:0.42,ease:'power4.out'},${r2(liveT0 + 0.15)});`
 
     } else if (p.kind === 'punch') {
       // CTA : le verbe en haut, LE MOT à taper en géant, et la barre de
