@@ -715,8 +715,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // réglages (sous-titres, style visuel, musique). La zone 'mot-par-mot'
       // sert d'ancre valide ; si la voix ne la justifie pas, la mécanique
       // standard garde l'écran ENTIER sans cadre — c'est exactement ce qu'on veut.
-      const tuto = plan.tuto.map((t) => /parametres-avances/.test(String(t.zone || ''))
-        ? { ...t, screen: '13-montage-avance', zone: 'mot-par-mot' } : t)
+      const tuto = plan.tuto.map((t, i, arr) => {
+        if (/parametres-avances/.test(String(t.zone || ''))) return { ...t, screen: '13-montage-avance', zone: 'mot-par-mot' }
+        // zone:'menu' = « clique sur l'onglet <screen> ». La vraie zone est
+        // l'entrée de BARRE LATÉRALE, montrée depuis l'écran où l'on se trouve
+        // (l'accueil pour la première étape). Sans cette résolution, l'étape
+        // partait en « zone inconnue » — et l'onglet Montage IA, dernière étape
+        // du plan, n'était jamais montré (la mécanique NAV exige une étape
+        // suivante, qu'une fin de visite n'a pas).
+        if (String(t.zone) === 'menu') {
+          const prev = arr.slice(0, i).map((x) => String(x.screen || '')).reverse().find((s) => /^\d\d-/.test(s))
+          return { ...t, zone: String(t.screen || ''), screen: prev || ACCUEIL }
+        }
+        return t
+      })
       {
         // Certaines entrées ne sont PAS dans la barre latérale : « Connecter
         // Claude » vit au fond de la modale Mon compte. Axel : « il arrive déjà
@@ -902,7 +914,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
         let j = i
         while (j + 1 < steps.length && steps[j + 1].screen === steps[i].screen) j++
         const a = r2(Math.max(0, steps[i].t - 0.05))
-        const b = r2(Math.min(D, steps[j].end + (steps[j].type ? 1.6 : 0.9)))
+        // …et un écran CÈDE LA PLACE dès que la première étape du suivant
+        // arrive : le clic-menu gardait 0,9 s après son mot et repoussait
+        // l'écran d'après DERRIÈRE le mot qu'il illustre (« Photo réelle »
+        // encadrée 0,6 s après avoir été dite — retour d'Axel, 31/07)
+        const b = r2(Math.min(D, steps[j].end + (steps[j].type ? 1.6 : 0.9),
+          j + 1 < steps.length ? steps[j + 1].t - 0.05 : Infinity))
         const sl = add({ anim: 'screen', screen: steps[i].screen }, a, b)
         if (sl) {
           // UNE ÉTAPE RECALÉE VAUT MIEUX QU'UNE ÉTAPE PERDUE. `add` peut décaler
