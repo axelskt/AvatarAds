@@ -1829,15 +1829,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (first && (first.start || 0) < 0.6 && !first.duo && !(first.insets || []).length) {
       const early = words.filter((w) => w.start < Math.min(4, first.end ?? 4))
       const hit = early.find((w) => BRANDS.includes(norm(w.text)))
-      if (hit) {
+      // un média déclaré `hook` déclenche le split PAR LUI-MÊME : « cette
+      // influenceuse… elle n'existe pas » ne prononce aucune marque, et le média
+      // qui MONTRE l'influenceuse était jeté en silence parce que le split
+      // n'avait pas de mot déclencheur. Le média EST le sujet — pas besoin qu'un
+      // nom d'outil soit prononcé pour couper l'écran en deux.
+      const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
+      if (hit || hk) {
         // le retour au plein cadre : le moment où il ARRÊTE de parler de l'outil
-        // pour s'adresser au spectateur
-        const back = words.find((w) => w.start > hit.end
-          && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text)))
-        const cut = r2(Math.min(first.end ?? 4, back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2))
-        const brand = String(hit.text).replace(/[.,!?«»"]/g, '').trim()
-        // une vidéo de marque déclarée `hook` remplace la pastille dessinée
-        const hk = (plan.broll || []).find((b) => b.hook && (opts.assetFiles || {})[b.assetId])
+        // pour s'adresser au spectateur — sans marque, c'est la fin déclarée du
+        // média de hook qui décide
+        const back = hit ? words.find((w) => w.start > hit.end
+          && ['texplique', 'jexplique', 'montre', 'apprends', 'regarde', 'suis'].includes(norm(w.text))) : null
+        const cut = r2(Math.min(first.end ?? 4,
+          hit ? (back ? Math.max(back.start - 0.35, hit.end + 0.8) : hit.end + 2.2)
+              : Math.max(hk.end ?? 3.5, (first.start || 0) + 1.6)))
+        const brand = hit ? String(hit.text).replace(/[.,!?«»"]/g, '').trim() : ''
+        // une vidéo (ou image) de marque déclarée `hook` remplace la pastille dessinée
         const src = hk ? (opts.assetFiles || {})[hk.assetId] : ''
         if (cut > (first.start || 0) + 0.8) {
           // Le split crée DEUX fenêtres à partir d'UNE seule : la seconde doit
@@ -1849,7 +1857,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
             { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) }, clip: 0, clipFrom: 0 },
             ...((first.end ?? 0) - cut > 0.6
               ? [{ ...first, start: cut, clip: 0, clipFrom: r2(cut - (first.start || 0)) }] : []))
-          console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
+          console.log(`▶ hook en split : ${brand || (hk && hk.assetId) || 'média'} + visage jusqu'à ${cut}s, puis plein cadre`)
         }
       }
     }

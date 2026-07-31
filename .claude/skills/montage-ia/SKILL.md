@@ -110,9 +110,10 @@ node render-worker/worker.mjs --local <job> --output out.mp4 --draft
 
 - **Chromium meurt en pleine capture sur le Mac d'Axel** (« Protocol error …
   Target closed », à un pourcentage aléatoire) : c'est la pression RAM — le mode
-  auto lance 8 workers Chrome (~256 Mo chacun). Relancer avec
-  `PRODUCER_LOW_MEMORY_MODE=1` (1 worker, capture screenshot) : plus lent,
-  mais stable. Deux crashs consécutifs le 31/07 avant ce réglage.
+  auto lance 8 workers Chrome (~256 Mo chacun). Relancer avec `RENDER_WORKERS=2`
+  (branché dans worker.mjs) : 65 s rendues en ~73 s, stable. NE PAS utiliser
+  `PRODUCER_LOW_MEMORY_MODE=1` : son mode screenshot à 1 worker CALE (60 s sans
+  progression). Trois échecs le 31/07 avant ce réglage.
 - **Un média utilisateur sous 700 px de LARGE est écarté sans bruit**
   (« asset ignoré (trop basse résolution … serait flou) » dans le log seulement).
   Un `sips -Z 1080` sur un portrait 941×1672 donne 608 px de large → rejeté.
