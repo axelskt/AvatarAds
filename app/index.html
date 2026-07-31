@@ -10958,23 +10958,34 @@ async function mtLibToggle(id){
   mtLibRender(); mtLibSyncToMontage();
 }
 
-// les visuels cochés rejoignent les médias du montage — comme s'il venait de les déposer
+// Retour d'Axel (31/07) : « Ma marque » nourrit le MONTAGE, jamais l'interface.
+// L'ancienne version poussait les visuels auto dans « Tes visuels » dès l'ouverture :
+// 8 cases pleines d'office, l'utilisateur croit à un bug et n'a plus de place pour
+// les siens. Le pré-remplissage est mort — on purge même ce qu'une session
+// précédente aurait déjà poussé. Les visuels auto partent AU LANCEMENT via
+// _mtLaunchFiles(), invisibles côté UI.
 async function mtLibSyncToMontage(){
   if(typeof _edAi === 'undefined' || !_edAi) return;
-  for(const a of _mtLib){
+  _edAi.files=(_edAi.files||[]).filter(f=>!f.libId);
+  try{ _edAiRenderFiles(); _mtRenderMedia(); }catch(_){}
+}
+
+// le lot RÉEL d'un lancement : les fichiers déposés par l'utilisateur + les
+// visuels « Ma marque » en auto (ses fichiers passent devant, plafond 8 au total)
+async function _mtLaunchFiles(){
+  const lot=(typeof _edAi !== 'undefined' && _edAi && _edAi.files ? _edAi.files.slice() : []);
+  for(const a of (_mtLib||[])){
     if(a.kind==='audio' || a.auto===false || !a._url) continue;
-    if((_edAi.files||[]).some(f=>f.libId===a.id)) continue;
-    if((_edAi.files||[]).length >= 8) break;
+    if(lot.some(f=>f.libId===a.id)) continue;
+    if(lot.length >= 8) break;
     try{
       const blob=await (await fetch(a._url)).blob();
       const file=new File([blob], a.name||'visuel', { type: blob.type || (a.kind==='video'?'video/mp4':'image/jpeg') });
-      const isVid = a.kind==='video';
-      const item={ id:'lib'+a.id.slice(0,8), libId:a.id, file, url: isVid?'':URL.createObjectURL(file), isVideo:isVid };
-      _edAi.files.push(item);
-      if(isVid) _edAiVideoPoster(item);
-    }catch(_){ /* lien expiré : on réessaiera au prochain chargement */ }
+      const isVid=a.kind==='video';
+      lot.push({ id:'lib'+a.id.slice(0,8), libId:a.id, file, url: isVid?'':URL.createObjectURL(file), isVideo:isVid });
+    }catch(_){ /* lien expiré : tant pis pour ce visuel, le lancement continue */ }
   }
-  try{ _edAiRenderFiles(); _mtRenderMedia(); }catch(_){}
+  return lot;
 }
 
 // les sons de l'utilisateur entrent dans la banque de l'Éditeur (mêmes rouages que les sons fun)
@@ -11764,8 +11775,9 @@ async function _mtSegmentedGenerate(){
     const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
-    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
-    for(const a of _edAi.files){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
+    const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
+    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
+    for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
@@ -11830,7 +11842,7 @@ async function _mtSegmentedGenerate(){
     }
     const assets=[];
     for(const b of (plan.broll||[])){
-      const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
+      const a=_lot.find(x=>x.id===b.assetId); if(!a) continue;
       if(assets.some(x=>x.id===a.id)) continue;
       let up=a.file, ext='jpg', kind='image', ctype='image/jpeg';
       if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ up=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
@@ -11918,8 +11930,9 @@ async function _mtVideoGenerate(){
     fd.append('options', JSON.stringify({ lang:'fr' }));
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
-    fd.append('assets', JSON.stringify(_edAi.files.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
-    for(const a of _edAi.files){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
+    const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
+    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
+    for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
@@ -11954,7 +11967,7 @@ async function _mtVideoGenerate(){
     { const up=await sb.storage.from('render-media').upload(inPath, _mt.video, { contentType:_mt.video.type||'video/mp4', upsert:true }); if(up.error) throw new Error('upload : '+up.error.message); }
     const assets=[];
     for(const b of (plan.broll||[])){
-      const a=_edAi.files.find(x=>x.id===b.assetId); if(!a) continue;
+      const a=_lot.find(x=>x.id===b.assetId); if(!a) continue;
       if(assets.some(x=>x.id===a.id)) continue;
       let upf=a.file, ext='jpg', kind='image', ctype='image/jpeg';
       if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ upf=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
@@ -23679,7 +23692,7 @@ function _acDoneTogglePlay(){
 // étirer 150 barres, il doit en montrer 150 nouvelles — et normalisées sur le
 // max GLOBAL du fichier : un silence zoomé doit rester plat, pas devenir du
 // bruit plein cadre.
-let _acZoom = 1, _acZoomC = 0.5;   // niveau ×1..×16, centre de la fenêtre (ratio)
+let _acZoom = 1, _acZoomC = 0.5;   // niveau ×1..×32, centre de la fenêtre (ratio)
 function _acViewAB(){
   const w = 1 / _acZoom;
   const a = Math.max(0, Math.min(1 - w, _acZoomC - w / 2));
@@ -23721,11 +23734,11 @@ function _acZoomPaint(){
   if(au && isFinite(au.duration) && au.duration > 0) _acHeadSet('acDoneHead', au.currentTime / au.duration);
   _acCutPaint();
   const set = (id, on) => { const e = document.getElementById(id); if(e){ e.style.opacity = on ? '1' : '.4'; e.style.pointerEvents = on ? '' : 'none'; } };
-  set('acZoomOut', _acZoom > 1); set('acZoomIn', _acZoom < 16);
+  set('acZoomOut', _acZoom > 1); set('acZoomIn', _acZoom < 32);
   set('acZoomPanL', _acZoom > 1 && a > 0.0001); set('acZoomPanR', _acZoom > 1 && b < 0.9999);
 }
 function _acZoomStep(dir){
-  const z2 = Math.max(1, Math.min(16, dir > 0 ? _acZoom * 2 : _acZoom / 2));
+  const z2 = Math.max(1, Math.min(32, dir > 0 ? _acZoom * 2 : _acZoom / 2));
   if(z2 === _acZoom) return;
   // on zoome AUTOUR de la tête : c'est elle que l'utilisateur vient de poser
   if(dir > 0){ const au = window._acDoneAudio; if(au && isFinite(au.duration) && au.duration > 0) _acZoomC = au.currentTime / au.duration; }
