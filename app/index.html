@@ -12712,6 +12712,17 @@ function _mdTick(){
   if(!_md) return;
   const v=_mdVid();
   if(v && !v.paused) _md.time = v.currentTime||_md.time;
+  // les « Zoom sur un point » se VOIENT : la vidéo zoome sur le point pendant
+  // leur fenêtre (montée rapide, retombée douce — comme le moteur)
+  if(v){
+    const t0=_md.time;
+    const z=_md.marks.trans.find(x=>x.zoomPos&&!x.del&&t0>=x.t&&t0<x.t+0.8);
+    if(z){ const pr=(t0-z.t)/0.8;
+      const k=1+0.35*(pr<0.3?pr/0.3:1-(pr-0.3)/0.7);
+      v.style.transformOrigin=(z.zoomPos.cx*100)+'% '+(z.zoomPos.cy*100)+'%';
+      v.style.transform='scale('+k.toFixed(3)+')';
+    } else if(v.style.transform){ v.style.transform=''; v.style.transformOrigin=''; }
+  }
   const t=_md.time, dur=_md.dur;
   // curseurs + temps
   for(const id of ['mdCur','mdCurH','mdCurHit']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
@@ -12801,8 +12812,10 @@ function _mdPaintClipInfo(){
     const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')):'';
     if(key!==_md._ovKey){
       _md._ovKey=key;
-      if(!ed){ over.style.display='none'; over.innerHTML=''; }
+      if(!ed){ over.style.opacity='0'; setTimeout(()=>{ if(!_md._ovKey){ over.style.display='none'; over.innerHTML=''; } },200); }
       else{
+        const isLayerBg=(ed.replM&&ed.replM.layer)||ed.layer;
+        over.style.background=isLayerBg?'transparent':'#08070a';
         const badge=(txt)=>'<div style="position:absolute;left:8px;right:8px;bottom:8px;padding:5px 9px;border-radius:9px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);text-align:center">'
           +'<span class="mono" style="font-size:9.5px;color:#fff;letter-spacing:.04em">'+txt+'</span></div>';
         let h='';
@@ -12812,13 +12825,15 @@ function _mdPaintClipInfo(){
             +badge('🎬 lipsync à la régénération');
         } else if(ed.replM||(ed.added&&ed.n==='media'&&ed._mURL)){
           const pos=(ed.replM&&ed.replM.pos)||ed.pos||{x:.5,y:.5,w:.62};
+          const isLayer=(ed.replM&&ed.replM.layer)||ed.layer;
           const media=ed._mIsVid?'<video src="'+ed._mURL+'" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover"></video>'
             :'<img src="'+(ed._mURL||'')+'" style="width:100%;height:100%;object-fit:cover">';
           // dans un cadre 9:16, une carte 9:16 large de pos.w a une hauteur
-          // relative de pos.w aussi — top = centre − moitié de hauteur
-          h='<div style="position:absolute;inset:0;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)"></div>'
-            +'<div style="position:absolute;left:'+((pos.x-pos.w/2)*100)+'%;top:'+((pos.y-pos.w/2)*100)+'%;width:'+(pos.w*100)+'%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;box-shadow:0 14px 34px -12px rgba(0,0,0,.5)">'+media+'</div>'
-            +badge('après régénération');
+          // relative de pos.w aussi — top = centre − moitié de hauteur.
+          // en COUCHE, pas de fond : la scène du dessous reste visible.
+          h=(isLayer?'':'<div style="position:absolute;inset:0;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)"></div>')
+            +'<div style="position:absolute;left:'+((pos.x-pos.w/2)*100)+'%;top:'+((pos.y-pos.w/2)*100)+'%;width:'+(pos.w*100)+'%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;box-shadow:0 14px 34px -12px rgba(0,0,0,.5);animation:mdPopIn .42s cubic-bezier(.2,1.4,.3,1) both">'+media+'</div>'
+            +badge(isLayer?'posé par-dessus · après régénération':'après régénération');
         } else if(ed.replT||(ed.added&&ed.n==='carte')){
           const txt=ed.replT?ed.replT.text:(ed.userText||ed.t.replace(/^«\s?|\s?»$/g,''));
           h='<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)">'
@@ -12832,6 +12847,7 @@ function _mdPaintClipInfo(){
             +badge('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération');
         }
         over.innerHTML=h; over.style.display='block';
+        over.style.opacity='0'; requestAnimationFrame(()=>{ over.style.opacity='1'; });
         const v=over.querySelector('video'); if(v){ const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); }
       }
     }
@@ -13204,6 +13220,9 @@ function _mdPlaceHtml(){
       +'<span class="faint" style="font-size:11px;flex:0 0 auto">Taille</span>'
       +'<input type="range" min="20" max="92" value="'+Math.round(P.w*100)+'" oninput="_md.place.w=this.value/100;_mdPlacePaint()" class="ed-range" style="flex:1">'
     +'</div>'
+    +'<label class="row" style="gap:8px;align-items:center;width:min(300px,80vw);cursor:pointer">'
+      +'<input type="checkbox" '+(P.layer?'checked ':'')+'onchange="_md.place.layer=this.checked" style="accent-color:var(--accent);width:15px;height:15px">'
+      +'<span style="font-size:12px;color:var(--text-2)">Poser PAR-DESSUS la scène (la garder en dessous)</span></label>'
     +'<p class="faint center" style="font-size:11px;max-width:280px">Glisse la carte où tu veux — elle arrivera là, avec une transition propre.</p>'
     +'<div class="row" style="gap:10px;width:min(300px,80vw)">'
       +'<button onclick="_mdPlaceCancel()" class="btn btn-ghost" style="flex:0 0 auto">Annuler</button>'
@@ -13269,7 +13288,7 @@ function _mdPlaceOk(){
   _mdCommit();
   if(P.replaceScene){
     const sc=_md.scenes.find(x=>x.id===P.replaceScene);
-    if(sc){ sc.replM={ pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100} };
+    if(sc){ sc.replM={ pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100}, layer:!!P.layer };
       sc.repl=null; sc.replT=null; sc.del=false;
       _md.addedMedia[sc.id]=P.file;
       try{ if(sc._mURL) URL.revokeObjectURL(sc._mURL); }catch(_){}
@@ -13281,7 +13300,7 @@ function _mdPlaceOk(){
   const id='sc-add'+Date.now();
   const a=Math.max(0,Math.min(_md.dur-0.5,P.at)), b=Math.min(_md.dur,a+2.5);
   _md.addedMedia[id]=P.file;
-  _md.scenes.push({id,a,b,n:'media',t:P.file.name.replace(/\.[^.]+$/,''),d:'placé par toi',w:'',items:[],added:true,
+  _md.scenes.push({id,a,b,n:'media',t:P.file.name.replace(/\.[^.]+$/,''),d:P.layer?'posé par-dessus':'placé par toi',w:'',items:[],added:true,layer:!!P.layer,
     _mURL:P.url,_mIsVid:P.isVid,
     pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100}});
   _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id;
@@ -13944,7 +13963,9 @@ function _mdEnsureCss(){
     +'@keyframes mdaRot{0%,100%{transform:rotate(-4deg) scale(1.05)}50%{transform:rotate(4deg) scale(1.05)}}'
     +'@keyframes mdaFade{0%,100%{opacity:0}50%{opacity:1}}'
     +'#mdOv button{cursor:pointer;font-family:inherit}'
-    +'#mdOv button:not(.btn){border:none;background:none}';
+    +'#mdOv button:not(.btn){border:none;background:none}'
+    +'#mdClipOver{transition:opacity .22s ease}'
+    +'@keyframes mdPopIn{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}';
   document.head.appendChild(st);
 }
 
@@ -14343,9 +14364,10 @@ async function _mdRegen(){
       // posé en userSlide (pas en broll) : la POSITION choisie à l'écran est
       // respectée telle quelle par le moteur (slide.pos {x,y,w})
       const mpos=(s.replM&&s.replM.pos)||s.pos;
+      const mlayer=(s.replM&&s.replM.layer)||s.layer;
       (plan.userSlides=plan.userSlides||[]).push(Object.assign(
         {start:_mdR2(s.a),end:_mdR2(s.b),anim:'media',assetId:id},
-        mpos?{pos:mpos}:{}));
+        mpos?{pos:mpos}:{}, mlayer?{layer:true}:{}));
     }
     _mdRegenPaint(8);
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job',{method:'POST',headers:{...(await getAuthHeader()),'Content-Type':'application/json'},
