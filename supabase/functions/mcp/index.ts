@@ -1359,7 +1359,13 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   const slug = (s: string, i: number) => (String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28)) || ('media' + i)
   const medias: { id: string; name: string; kind: 'image' | 'video'; bytes: Uint8Array; contentType: string; thumb: Uint8Array | null }[] = []
-  for (const [i, m] of (Array.isArray(args.media) ? args.media : []).slice(0, 6).entries()) {
+  // TOLÉRER LE JSON SÉRIALISÉ. Un client MCP passe volontiers un tableau sous
+  // forme de chaîne ; avec un simple Array.isArray, tous les médias étaient
+  // silencieusement ignorés — le montage sortait sans eux et sans un mot.
+  let mediaArg: unknown = args.media
+  if (typeof mediaArg === 'string') { try { mediaArg = JSON.parse(mediaArg) } catch (_) { mediaArg = [] } }
+  if (mediaArg && !Array.isArray(mediaArg)) mediaArg = [mediaArg]
+  for (const [i, m] of (Array.isArray(mediaArg) ? mediaArg : []).slice(0, 6).entries()) {
     const u = String((m as Record<string, unknown>)?.url || '').trim()
     if (!u) continue
     const nom = String((m as Record<string, unknown>)?.name || '').trim() || `media-${i + 1}`
