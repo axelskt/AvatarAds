@@ -14,7 +14,7 @@
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
@@ -673,9 +673,34 @@ async function pollLoop() {
         const out = join(jobDir, 'final.mp4')
         await renderJob(jobDir, out)
 
+        // ── LE STOCKAGE PLAFONNE À 50 Mo ────────────────────────────────────
+        // Un montage de 65 s en qualité haute pèse 46 à 48 Mo — on frôlait la
+        // limite à chaque rendu, et le premier montage chargé en photos l'a
+        // franchie : « upload: The object exceeded the maximum allowed size »,
+        // vidéo perdue après trois minutes de travail. Au-delà du seuil on
+        // ré-encode à un débit qui RENTRE (la vidéo reste en 1080×1920 ; les
+        // réseaux ré-encodent de toute façon derrière). Perdre 20 % de débit
+        // vaut mieux que perdre le montage.
+        const MAX_UP = 44 * 1024 * 1024
+        let outFinal = out
+        if (statSync(out).size > MAX_UP) {
+          const dur = parseFloat(ffprobe(out, 'format=duration')) || 60
+          const kbps = Math.max(1500, Math.floor((MAX_UP * 8) / dur / 1000) - 160)
+          const petit = out.replace(/\.mp4$/i, '') + '-web.mp4'
+          console.log(`▶ ${(statSync(out).size / 1048576).toFixed(1)} Mo > limite : ré-encodage à ${kbps} kbit/s`)
+          try {
+            execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', out,
+              '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', kbps + 'k',
+              '-maxrate', Math.round(kbps * 1.3) + 'k', '-bufsize', Math.round(kbps * 2) + 'k',
+              '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
+              '-movflags', '+faststart', petit], { stdio: 'inherit' })
+            outFinal = petit
+            console.log(`▶ compressé → ${(statSync(petit).size / 1048576).toFixed(1)} Mo`)
+          } catch (e) { console.warn('compression:', e.message) }
+        }
         const outKey = `${job.user_id}/${job.id}.mp4`
         const { error: upErr } = await sb.storage.from('render-media')
-          .upload(outKey, readFileSync(out), { contentType: 'video/mp4', upsert: true })
+          .upload(outKey, readFileSync(outFinal), { contentType: 'video/mp4', upsert: true })
         if (upErr) throw new Error('upload: ' + upErr.message)
         // ── LE POSTER DU MONTAGE (31/07, « comme Higgsfield ») ────────────────
         // Une frame à 0,6 s, 640 px, posée A CÔTÉ du MP4 sous une clé de
