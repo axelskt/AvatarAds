@@ -12037,49 +12037,27 @@ function _mtVideoDone(finalUrl){
   _mtFinalUrl=finalUrl||null;
   _mtProg(100, 'Terminé !');
   const o=document.getElementById('mtProgOv'); if(!o) return;
-  // compte developer/owner : la carte de fin de la maquette Claude Design (1:1) —
-  // les autres gardent la carte actuelle jusqu'à validation d'Axel
-  if(typeof _aaIsDev==='function' && _aaIsDev()){
-    o.innerHTML='<div style="width:min(490px,92vw);display:flex;flex-direction:column;align-items:center;text-align:center">'
-      +'<div style="width:78px;height:78px;border-radius:24px;display:grid;place-items:center;margin-bottom:24px;background:rgba(40,199,149,.14);border:1px solid rgba(40,199,149,.4)">'
-        +'<span style="color:var(--green);display:flex"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>'
-      +'<div class="display" style="font-size:24px;font-weight:800">Ton MP4 monté est prêt</div>'
-      +'<p class="muted" style="font-size:14px;margin-top:10px;max-width:380px;line-height:1.5">Le téléchargement est lancé. « Ajuster » ouvre la vidéo montée dans l\'Éditeur.</p>'
-      +'<div class="col gap12" style="width:100%;max-width:420px;margin-top:26px;position:relative;z-index:2">'
-        +'<button onclick="_mtDownloadFinal()" class="btn btn-primary" style="width:100%;padding:15px;font-weight:800;font-size:16px">'
-          +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg> Télécharger le MP4</button>'
-        +'<div class="row gap12" style="width:100%">'
-          +'<button onclick="_mtOpenFinalInEditor()" class="btn btn-ghost grow" style="padding:14px">'
-            +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Ajuster dans l\'Éditeur</button>'
-          +'<button onclick="_mtDetOpen()" class="btn grow" style="padding:14px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">'
-            +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Voir le détail du montage</button>'
-        +'</div>'
-        +'<button onclick="toast(\'✎ Review guidée — bientôt : passe par « Voir le détail du montage »\')" class="btn-quiet btn-sm">✎ Faire une review avec mes consignes</button>'
-        +'<button onclick="_mtProg(-1);nav(\'montage\')" class="btn-quiet btn-sm">↺ Créer une autre vidéo</button>'
-        +'<button onclick="_mtPublishFinal()" class="btn-quiet btn-sm">📤 Publier partout <span style="font-size:10px;opacity:.6;font-family:var(--mono)">DEV</span></button>'
-      +'</div>'
-      + _mtBonusHtml()
-      +'</div>';
-    return;
-  }
+  // LA carte de fin (maquette Claude Design) — pour tout le monde depuis la
+  // validation d'Axel (02/08). « Publier partout » reste developer.
   o.innerHTML='<div style="width:min(490px,92vw);display:flex;flex-direction:column;align-items:center;text-align:center">'
-    +'<div style="width:84px;height:84px;border-radius:26px;display:grid;place-items:center;margin-bottom:26px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3)">'
-      +'<span style="color:#22c55e;display:flex"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>'
-    +'<div class="display" style="font-size:27px;font-weight:800;letter-spacing:-.01em;color:var(--text)">Ton MP4 monté est prêt</div>'
-    +'<p class="muted" style="font-size:14px;line-height:1.55;margin-top:10px;max-width:420px">Le téléchargement est lancé. « Ajuster » ouvre la vidéo montée dans l\'Éditeur.</p>'
-    +'<button onclick="_mtDownloadFinal()" class="btn btn-primary" style="width:100%;margin-top:26px;padding:16px;font-size:15.5px;font-weight:800;border-radius:14px">'
-      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg> Télécharger le MP4</button>'
-    +'<button onclick="_mtDetOpen()" class="btn" style="width:100%;margin-top:10px;padding:16px;font-size:15.5px;font-weight:700;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">'
-      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Détails du montage — réviser puis régénérer</button>'
-    +'<button onclick="_mtOpenFinalInEditor()" class="btn" style="width:100%;margin-top:10px;padding:16px;font-size:15.5px;font-weight:700;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);color:var(--text)">'
-      +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Ajuster dans l\'Éditeur</button>'
-    // 📤 Publier (#116) : importe le MP4 final dans le module Publier — compte developer uniquement
-    +((typeof _aaIsDev==='function' && _aaIsDev())
-      ? '<button onclick="_mtPublishFinal()" class="btn" style="width:100%;margin-top:10px;padding:16px;font-size:15.5px;font-weight:700;border-radius:14px;background:var(--surface);border:1px solid rgba(255,107,53,.45);color:var(--text)">'
-        +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Publier partout <span style="font-size:11px;opacity:.6;font-family:var(--mono)">DEV</span></button>'
-      : '')
-    +'<button onclick="_mtProg(-1);nav(\'montage\')" style="margin-top:18px;background:none;border:none;-webkit-appearance:none;appearance:none;color:var(--text-3);font-family:var(--font);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px">'
-      +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg> Créer une autre vidéo</button>'
+    +'<div style="width:78px;height:78px;border-radius:24px;display:grid;place-items:center;margin-bottom:24px;background:rgba(40,199,149,.14);border:1px solid rgba(40,199,149,.4)">'
+      +'<span style="color:var(--green);display:flex"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span></div>'
+    +'<div class="display" style="font-size:24px;font-weight:800">Ton MP4 monté est prêt</div>'
+    +'<p class="muted" style="font-size:14px;margin-top:10px;max-width:380px;line-height:1.5">Le téléchargement est lancé. « Ajuster » ouvre la vidéo montée dans l\'Éditeur.</p>'
+    +'<div class="col gap12" style="width:100%;max-width:420px;margin-top:26px;position:relative;z-index:2">'
+      +'<button onclick="_mtDownloadFinal()" class="btn btn-primary" style="width:100%;padding:15px;font-weight:800;font-size:16px">'
+        +'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg> Télécharger le MP4</button>'
+      +'<div class="row gap12" style="width:100%">'
+        +'<button onclick="_mtOpenFinalInEditor()" class="btn btn-ghost grow" style="padding:14px">'
+          +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Ajuster dans l\'Éditeur</button>'
+        +'<button onclick="_mtDetOpen()" class="btn grow" style="padding:14px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">'
+          +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Voir le détail du montage</button>'
+      +'</div>'
+      +'<button onclick="_mtProg(-1);nav(\'montage\')" class="btn-quiet btn-sm">↺ Créer une autre vidéo</button>'
+      +((typeof _aaIsDev==='function' && _aaIsDev())
+        ? '<button onclick="_mtPublishFinal()" class="btn-quiet btn-sm">📤 Publier partout <span style="font-size:10px;opacity:.6;font-family:var(--mono)">DEV</span></button>'
+        : '')
+    +'</div>'
     + _mtBonusHtml()
     +'</div>';
 }
@@ -12113,7 +12091,9 @@ async function _mtOpenFinalInEditor(){
 // La liste vient du plan DÉRIVÉ (<mp4>.derived.json, écrit par le worker) :
 // c'est lui la vérité de ce que montre la vidéo — le plan du chef n'est qu'une
 // proposition, la dérivation tranche.
-let _mtDet = null;   // { job, derived, bank, edits:{replaces:[],bans:[],moves:{}} }
+// v1 supprimée le 02/08/2026 : l'écran « Détails du montage » est la v2
+// (recopie 1:1 de la maquette Claude Design, module _md* ci-dessous),
+// ouverte à TOUS les comptes depuis la validation d'Axel.
 
 // entrée DEV de la barre latérale : ouvre l'écran sur le DERNIER montage
 // terminé du compte — l'interface exacte d'après un Montage IA, sans en
@@ -12128,323 +12108,8 @@ async function _mtDetDemo(){
   toast('⚠️ Aucun montage terminé sur ce compte — lance un Montage IA d\'abord');
 }
 
-async function _mtDetOpen(){
-  // compte developer/owner → la v2 (recopie 1:1 de la maquette Claude Design) ;
-  // les autres gardent la v1 jusqu'à validation d'Axel
-  if(typeof _aaIsDev==='function' && _aaIsDev() && typeof _mdOpen==='function'){ return _mdOpen(); }
-  const jobId = window._mtLastJobId;
-  if(!jobId){ toast('⚠️ Aucun montage récent — lance un montage d\'abord'); return; }
-  let ov = document.getElementById('mtDetOv');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.id = 'mtDetOv';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:720;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none';
-    document.body.appendChild(ov);
-  }
-  ov.style.display = 'block';
-  ov.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center"><div class="muted" style="font-size:14px">⏳ Lecture du montage…</div></div>';
-  try{
-    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
-    const d = await r.json().catch(()=>({}));
-    if(!d.ok || d.status!=='done') throw new Error(d.error||'montage introuvable');
-    // le plan dérivé est la référence ; s'il manque (vieux rendu), on retombe
-    // sur le plan du chef — moins fidèle, mais l'écran reste utilisable
-    let derived = null;
-    if(d.derived_url){ try{ derived = await (await fetch(d.derived_url)).json(); }catch(_){} }
-    if(!derived) derived = d.plan;
-    if(!derived || !Array.isArray(derived.slides)) throw new Error('plan illisible');
-    let bank = [];
-    try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
-    _mtDet = { jobId, job: d, derived, bank, edits: { replaces: [], bans: [], moves: {} } };
-    _mtDetRender();
-  }catch(e){
-    ov.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;padding:30px;text-align:center"><div><div style="font-size:15px;font-weight:700">⚠️ '+String(e.message||e).replace(/</g,'&lt;').slice(0,120)+'</div>'
-      +'<button onclick="_mtDetClose()" class="btn" style="margin-top:18px;padding:12px 26px;border-radius:12px;background:var(--surface);border:1px solid var(--border-2);color:var(--text);font-family:var(--font);cursor:pointer">Fermer</button></div></div>';
-  }
-}
-function _mtDetClose(){ const ov=document.getElementById('mtDetOv'); if(ov) ov.style.display='none'; }
+async function _mtDetOpen(){ return _mdOpen(); }
 
-// mot déclencheur = le premier mot prononcé dans la fenêtre de la scène
-function _mtDetWord(t){
-  const caps = (_mtDet.derived.captions||[]);
-  const w = caps.find(c => c.start >= t-0.25 && String(c.text||'').trim().length > 1) || caps.find(c => c.start >= t-0.8);
-  return w ? String(w.text).replace(/[.,!?«»]/g,'') : '';
-}
-const _mtDetFmt = (t) => { t=Math.max(0,t||0); const m=Math.floor(t/60), s=(t%60); return m+':'+(s<10?'0':'')+s.toFixed(1).replace('.0',''); };
-
-// la liste des scènes, depuis le plan DÉRIVÉ
-function _mtDetScenes(){
-  const P = _mtDet.derived, rows = [];
-  const bankNames = new Set((_mtDet.bank||[]).map(b=>b.name));
-  for(const sl of (P.slides||[])){
-    const a = Number(sl.start)||0, b = Number(sl.end)||a+1;
-    let kind='carte', label=String(sl.title||sl.type||'carte'), icon='🧩', repl=false, del=false;
-    if(sl.anim==='screen'||sl.anim==='ui'||sl.anim==='result'){ kind='visite'; icon='🖥️'; label = sl.anim==='ui' ? 'Navigateur' : (sl.anim==='result' ? 'Résultat généré' : 'Capture · '+String(sl.screen||'')); }
-    else if(sl.anim==='media'||sl.anim==='medias'){ kind='media'; icon='🖼️'; label = sl.anim==='medias' ? 'Tes photos ('+((sl.items||[]).length)+')' : 'Ton média'; }
-    else if(sl.anim){ kind='anim'; icon='✨'; label='Animation · '+sl.anim; repl = bankNames.has(sl.anim); del = true; }
-    else { kind='texte'; icon='📋'; label = String(sl.title||((sl.items||[]).map(i=>i.text).filter(Boolean).slice(0,3).join(' · '))||'Carte'); del = true; }
-    rows.push({ a, b, kind, icon, label, repl, del, anim: sl.anim||'', items: sl.items||[], word: _mtDetWord(a) });
-  }
-  for(const s of (P.avatarSegments||[])){
-    const a=Number(s.start)||0, b=Number(s.end)||a+1;
-    rows.push({ a, b, kind:'avatar', icon:'🧑', label:'Ton avatar parle'+((s.insets||[]).length?' · média en médaillon':''), repl:false, del:false, word:_mtDetWord(a) });
-  }
-  rows.sort((x,y)=>x.a-y.a);
-  const sfx = (P.sfx||[]);
-  for(const r of rows) r.sfx = sfx.filter(s=>s.t>=r.a && s.t<r.b).length;
-  return rows;
-}
-
-// ── LA BANDE : toute la vidéo d'un coup d'œil ───────────────────────────────
-// Demande d'Axel (31/07) : « faut voir toute la bande vidéo au-dessus et on
-// peut sélectionner chaque moment ». Le MP4 final joue en haut, et sous lui
-// chaque scène est un bloc à sa place et à sa durée. Cliquer un bloc (ou
-// n'importe où sur la bande) déplace la lecture ET sélectionne la scène ; la
-// scène en cours s'allume toute seule pendant que ça joue.
-const _MT_DET_COUL = { avatar:'#28C795', anim:'var(--accent)', visite:'#7C6CF0', media:'#F5A623', texte:'#5B93E8', carte:'#5B93E8' };
-let _mtDetSel = -1;
-
-function _mtDetBarHtml(rows, dur){
-  const blocs = rows.map((r,i)=>{
-    const l = Math.max(0, Math.min(100, r.a/dur*100));
-    const w = Math.max(0.8, Math.min(100-l, (r.b-r.a)/dur*100));
-    const c = _MT_DET_COUL[r.kind] || 'var(--border-2)';
-    return '<span onclick="event.stopPropagation();_mtDetPick('+i+')" title="'+String(r.label).replace(/"/g,'')+'" '
-      +'id="mtDetB'+i+'" style="position:absolute;left:'+l+'%;width:'+w+'%;top:0;bottom:0;background:'+c+';opacity:'+(i===_mtDetSel?'1':'.5')+';'
-      +'border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;overflow:hidden;'
-      +(i===_mtDetSel?'outline:2px solid #fff;outline-offset:-2px;':'')+'transition:opacity .15s">'+r.icon+'</span>';
-  }).join('');
-  return '<div id="mtDetBar" onclick="_mtDetBarClick(event)" style="position:relative;height:38px;margin-top:10px;background:var(--surface-2);border-radius:7px;overflow:hidden;cursor:pointer">'
-    + blocs + '<span id="mtDetHead" style="position:absolute;top:-2px;bottom:-2px;left:0;width:2px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.7);pointer-events:none"></span></div>'
-    + '<div class="faint mono" style="display:flex;justify-content:space-between;font-size:10px;margin-top:5px"><span id="mtDetT">0:00</span><span>'+_mtDetFmt(dur)+'</span></div>';
-}
-// clic n'importe où sur la bande : on déplace la lecture, et la scène sous ce
-// moment devient la scène sélectionnée
-function _mtDetBarClick(ev){
-  const bar = document.getElementById('mtDetBar'); if(!bar) return;
-  const rect = bar.getBoundingClientRect(); if(rect.width < 4) return;
-  const dur = Number(_mtDet.derived.duration)||1;
-  const t = Math.max(0, Math.min(dur, (ev.clientX-rect.left)/rect.width*dur));
-  const v = document.getElementById('mtDetVid'); if(v && isFinite(v.duration)) v.currentTime = t;
-  const rows = _mtDetScenes();
-  const i = rows.findIndex(r => t >= r.a && t < r.b);
-  _mtDetSelect(i >= 0 ? i : -1, false);
-}
-// clic sur un bloc de la bande OU sur une carte de la liste : les deux se
-// répondent — la vidéo saute au moment, la carte se met en avant
-function _mtDetPick(i){
-  const r = _mtDetScenes()[i]; if(!r) return;
-  const v = document.getElementById('mtDetVid');
-  if(v && isFinite(v.duration)) v.currentTime = Math.min(r.a + 0.05, Math.max(0, v.duration - 0.05));
-  _mtDetSelect(i, true);
-}
-function _mtDetSelect(i, scroll){
-  const prev = _mtDetSel; _mtDetSel = i;
-  for(const k of [prev, i]){
-    if(k < 0) continue;
-    const b = document.getElementById('mtDetB'+k), c = document.getElementById('mtDetC'+k);
-    if(b){ b.style.opacity = (k===i?'1':'.5'); b.style.outline = k===i ? '2px solid #fff' : ''; b.style.outlineOffset = k===i ? '-2px' : ''; }
-    if(c){ c.style.borderColor = k===i ? 'var(--accent-line)' : 'var(--border)'; c.style.background = k===i ? 'var(--accent-soft)' : 'var(--panel-1)'; }
-  }
-  if(scroll && i >= 0){ const c = document.getElementById('mtDetC'+i); if(c) c.scrollIntoView({ block:'nearest', behavior:'smooth' }); }
-}
-// la tête avance pendant la lecture et la scène en cours s'allume
-function _mtDetTick(){
-  const v = document.getElementById('mtDetVid'), h = document.getElementById('mtDetHead');
-  if(!v || !h || !_mtDet) return;
-  const dur = Number(_mtDet.derived.duration) || v.duration || 1;
-  const t = v.currentTime || 0;
-  h.style.left = Math.max(0, Math.min(100, t/dur*100)) + '%';
-  const lbl = document.getElementById('mtDetT'); if(lbl) lbl.textContent = _mtDetFmt(t);
-  if(!v.paused){
-    const rows = _mtDetScenes();
-    const i = rows.findIndex(r => t >= r.a && t < r.b);
-    if(i >= 0 && i !== _mtDetSel) _mtDetSelect(i, false);
-  }
-}
-
-function _mtDetRender(){
-  const ov = document.getElementById('mtDetOv'); if(!ov||!_mtDet) return;
-  const E = _mtDet.edits;
-  const rows = _mtDetScenes();
-  const dur = Number(_mtDet.derived.duration)||1;
-  const broll = (_mtDet.job.plan && _mtDet.job.plan.broll)||[];
-  const rowHtml = rows.map((r,i)=>{
-    const rep = E.replaces.find(x=>Math.abs(x.start-r.a)<0.05);
-    const ban = E.bans.find(x=>Math.abs(x.start-r.a)<0.05);
-    const state = ban ? '<span style="font-size:11px;font-weight:800;color:#E5484D">supprimée → avatar</span>'
-      : rep ? '<span style="font-size:11px;font-weight:800;color:var(--accent-2)">→ '+rep.anim+'</span>' : '';
-    const acts = (r.repl||r.del) && !ban ? '<div style="display:flex;gap:8px;flex:0 0 auto">'
-        +(r.repl&&!rep?'<button onclick="event.stopPropagation();_mtDetTinder('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">Remplacer</button>':'')
-        +(rep?'<button onclick="event.stopPropagation();_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px">↺</button>':'')
-        +(r.del?'<button onclick="event.stopPropagation();_mtDetBan('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;color:#E5484D">Supprimer</button>':'')
-      +'</div>'
-      : (ban?'<button onclick="event.stopPropagation();_mtDetUnedit('+i+')" class="btn btn-ghost btn-sm" style="padding:8px 13px;border-radius:9px;font-size:12px;flex:0 0 auto">↺ Annuler</button>':'');
-    const on = i === _mtDetSel;
-    return '<div class="card" id="mtDetC'+i+'" onclick="_mtDetPick('+i+')" style="padding:13px 15px;background:'+(on?'var(--accent-soft)':'var(--panel-1)')+';border-color:'+(on?'var(--accent-line)':'var(--border)')+';display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;scroll-margin-top:250px">'
-      +'<span style="width:4px;align-self:stretch;border-radius:99px;background:'+(_MT_DET_COUL[r.kind]||'var(--border-2)')+';flex:0 0 auto"></span>'
-      +'<span style="font-size:19px;flex:0 0 auto">'+r.icon+'</span>'
-      +'<div style="flex:1;min-width:150px">'
-        +'<div style="font-size:13.5px;font-weight:700">'+r.label.replace(/</g,'&lt;')+' '+state+'</div>'
-        +'<div class="faint mono" style="font-size:10.5px;margin-top:2px">'+_mtDetFmt(r.a)+' → '+_mtDetFmt(r.b)
-          +(r.word?' · sur « '+r.word.replace(/</g,'&lt;')+' »':'')+(r.sfx?' · '+r.sfx+' bruitage'+(r.sfx>1?'s':''):'')+'</div>'
-      +'</div>'+acts+'</div>';
-  }).join('');
-  // médias déplaçables : chaque b-roll du plan du chef a son curseur de timeline
-  const mediaHtml = broll.length ? '<div class="faint" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:22px 0 10px">Tes médias — place-les au moment précis</div>'
-    + broll.map((b,k)=>{
-      const cur = (E.moves[b.assetId]!=null) ? E.moves[b.assetId] : (Number(b.start)||0);
-      return '<div class="card" style="padding:13px 15px;background:var(--panel-1)">'
-        +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:17px">🖼️</span>'
-        +'<span style="font-size:13px;font-weight:700;flex:1;min-width:120px">'+String(b.assetId).replace(/</g,'&lt;')+'</span>'
-        +'<span class="mono" id="mtDetMv'+k+'" style="font-size:12px;color:var(--accent-2);font-weight:800">'+_mtDetFmt(cur)+'</span></div>'
-        +'<input type="range" min="0" max="'+(Math.max(0,dur-1)).toFixed(1)+'" step="0.1" value="'+cur+'" oninput="_mtDetMove('+k+', this.value)" style="width:100%;margin-top:10px;accent-color:var(--accent-2)">'
-      +'</div>';
-    }).join('') : '';
-  const nEdits = E.replaces.length + E.bans.length + Object.keys(E.moves).length;
-  const devis = _mtDetDevis();
-  // LA VIDÉO EST LA RÉFÉRENCE, PAS UNE VIGNETTE : elle reste en haut pendant
-  // qu'on descend la liste, avec sa bande de scènes juste dessous.
-  const vurl = String((_mtDet.job && _mtDet.job.url) || '');
-  const head = '<div style="position:sticky;top:0;z-index:5;background:var(--bg);padding:18px 18px 12px;border-bottom:1px solid var(--border)">'
-    +'<div style="max-width:660px;margin:0 auto">'
-      +'<div style="display:flex;align-items:center;gap:12px">'
-        +'<button onclick="_mtDetClose()" style="background:var(--surface);border:1px solid var(--border-2);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--text);cursor:pointer;flex:0 0 auto">✕</button>'
-        +'<div style="flex:1;min-width:0"><div class="display" style="font-size:19px;font-weight:800">Détails du montage</div>'
-        +'<div class="faint" style="font-size:11.5px">Clique un moment de la bande pour t\'y placer, puis remplace ou supprime.</div></div></div>'
-      +(vurl
-        ? '<video id="mtDetVid" src="'+vurl+'" controls playsinline preload="metadata" ontimeupdate="_mtDetTick()" onseeked="_mtDetTick()" style="display:block;margin:12px auto 0;max-height:30vh;max-width:100%;border-radius:12px;background:#000"></video>'
-        : '<div class="faint" style="margin-top:12px;font-size:12px;text-align:center">Aperçu indisponible (lien expiré) — la bande reste utilisable</div>')
-      + _mtDetBarHtml(rows, dur)
-    +'</div></div>';
-  // une édition redessine l'écran : la lecture ne doit pas repartir de zéro
-  const vOld = document.getElementById('mtDetVid');
-  const wasT = vOld ? vOld.currentTime : 0, wasPlay = vOld ? !vOld.paused : false;
-  ov.innerHTML = head + '<div style="max-width:660px;margin:0 auto;padding:16px 18px 120px">'
-    +'<div style="display:flex;flex-direction:column;gap:9px">'+rowHtml+'</div>'
-    +mediaHtml
-    +'<div style="position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:13px 18px calc(13px + env(safe-area-inset-bottom))">'
-      +'<div style="max-width:660px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
-      +'<div style="flex:1;min-width:170px"><div style="font-size:13px;font-weight:800">'+(nEdits?nEdits+' modification'+(nEdits>1?'s':''):'Aucune modification')+'</div>'
-      +'<div class="faint mono" style="font-size:10.5px">Lipsync : '+devis.lip+' cr (scènes réutilisées) · Vidéo : '+devis.video+' cr</div></div>'
-      +'<button onclick="_mtDetRegen()" '+(nEdits?'':'disabled')+' class="btn btn-primary" style="padding:14px 22px;border-radius:12px;font-size:14.5px;font-weight:800;'+(nEdits?'':'opacity:.45;cursor:not-allowed')+'">Régénérer — '+(devis.lip+devis.video)+' cr</button>'
-      +'</div></div>'
-    +'</div>';
-  const vNew = document.getElementById('mtDetVid');
-  if(vNew && wasT > 0.05){ try{ vNew.currentTime = wasT; if(wasPlay) vNew.play().catch(()=>{}); }catch(_){} }
-  _mtDetTick();
-}
-
-function _mtDetDevis(){
-  // LE PRIX D'UNE RELANCE, PAS D'UN NOUVEAU MONTAGE. Régénérer = le rendu
-  // serveur seul (`montageRender`, la relance bon marché : ni Claude, ni
-  // transcription — le plan existe déjà), PLUS le lipsync s'il faut vraiment
-  // fabriquer de nouvelles secondes de visage. Ici les clips existants sont
-  // réutilisés tels quels (les fenêtres d'origine ne bougent pas) et une scène
-  // supprimée retombe sur la photo d'avatar animée : lipsync 0 cr.
-  const video = (typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.montageRender) || 4;
-  return { lip: 0, video };
-}
-
-function _mtDetBan(i){
-  const r = _mtDetScenes()[i]; if(!r||!r.del) return;
-  _mtDet.edits.replaces = _mtDet.edits.replaces.filter(x=>Math.abs(x.start-r.a)>=0.05);
-  _mtDet.edits.bans.push({ start: r.a, end: r.b });
-  _mtDetRender();
-}
-function _mtDetUnedit(i){
-  const r = _mtDetScenes()[i]; if(!r) return;
-  _mtDet.edits.bans = _mtDet.edits.bans.filter(x=>Math.abs(x.start-r.a)>=0.05);
-  _mtDet.edits.replaces = _mtDet.edits.replaces.filter(x=>Math.abs(x.start-r.a)>=0.05);
-  _mtDetRender();
-}
-function _mtDetMove(k, v){
-  const b = ((_mtDet.job.plan&&_mtDet.job.plan.broll)||[])[k]; if(!b) return;
-  _mtDet.edits.moves[b.assetId] = Math.round(Number(v)*10)/10;
-  const el = document.getElementById('mtDetMv'+k); if(el) el.textContent = _mtDetFmt(Number(v));
-  // pas de re-render complet pendant le drag : le récap se met à jour au lâcher
-  clearTimeout(window._mtDetMvT); window._mtDetMvT = setTimeout(_mtDetRender, 600);
-}
-
-// ── le remplacement façon TINDER : on swipe les suggestions, les plus logiques
-// d'abord (recouvrement de mots entre la scène — son mot déclencheur, sa
-// description actuelle — et la description de chaque animation de la banque)
-function _mtDetTinder(i){
-  const r = _mtDetScenes()[i]; if(!r||!r.repl) return;
-  const norm = (s)=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const cur = (_mtDet.bank||[]).find(b=>b.name===r.anim);
-  const ctx = new Set(norm(r.word+' '+(cur?cur.desc:'')).split(/[^a-z0-9]+/).filter(w=>w.length>=4));
-  const sugg = (_mtDet.bank||[]).filter(b=>b.name!==r.anim)
-    .map(b=>{ const toks = norm(b.desc).split(/[^a-z0-9]+/); let sc=0; for(const t of new Set(toks)) if(t.length>=4 && ctx.has(t)) sc++; return { ...b, sc }; })
-    .sort((a,b)=>b.sc-a.sc).slice(0, 14);
-  let idx = 0;
-  let td = document.getElementById('mtDetTinder');
-  if(!td){ td = document.createElement('div'); td.id='mtDetTinder'; document.getElementById('mtDetOv').appendChild(td); }
-  td.style.cssText = 'position:fixed;inset:0;z-index:730;background:rgba(10,10,14,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px';
-  const paint = ()=>{
-    const s = sugg[idx];
-    if(!s){ td.remove(); toast('Plus de suggestions — la scène reste telle quelle'); return; }
-    td.innerHTML = '<div style="width:min(420px,92vw)">'
-      +'<div class="faint" style="text-align:center;font-size:12px;margin-bottom:12px">Remplacer « '+r.anim+' »'+(r.word?' sur « '+r.word.replace(/</g,'&lt;')+' »':'')+' · '+(idx+1)+'/'+sugg.length+'</div>'
-      +'<div id="mtDetCard" class="card" style="background:var(--panel-1);border:1px solid var(--border-2);border-radius:20px;padding:26px 22px;touch-action:none;cursor:grab;box-shadow:0 30px 80px rgba(0,0,0,.5)">'
-        +'<div style="font-size:15px;font-weight:800;color:var(--accent-2);margin-bottom:8px">✨ '+s.name+'</div>'
-        +'<div style="font-size:13px;line-height:1.55;color:var(--text)">'+String(s.desc).replace(/</g,'&lt;').slice(0,260)+'</div>'
-      +'</div>'
-      +'<div style="display:flex;gap:14px;justify-content:center;margin-top:18px">'
-        +'<button onclick="_mtDetSwipe(false)" style="width:64px;height:64px;border-radius:50%;background:var(--surface);border:1px solid var(--border-2);color:#E5484D;font-size:24px;cursor:pointer">✗</button>'
-        +'<button onclick="_mtDetTinderClose()" style="align-self:center;background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:12px;cursor:pointer">annuler</button>'
-        +'<button onclick="_mtDetSwipe(true)" style="width:64px;height:64px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer">✓</button>'
-      +'</div></div>';
-    // le swipe au doigt/souris : glisser à droite = accepter, à gauche = refuser
-    const card = document.getElementById('mtDetCard');
-    let x0=null, dx=0;
-    card.onpointerdown = (e)=>{ x0=e.clientX; card.setPointerCapture(e.pointerId); };
-    card.onpointermove = (e)=>{ if(x0==null) return; dx=e.clientX-x0; card.style.transform='translateX('+dx+'px) rotate('+(dx/18)+'deg)'; card.style.opacity=String(Math.max(.4,1-Math.abs(dx)/380)); };
-    card.onpointerup = ()=>{ if(x0==null) return; const d=dx; x0=null; dx=0;
-      if(Math.abs(d)>85){ window._mtDetSwipe(d>0); } else { card.style.transform=''; card.style.opacity='1'; } };
-  };
-  window._mtDetSwipe = (ok)=>{
-    const s = sugg[idx];
-    if(ok && s){
-      _mtDet.edits.bans = _mtDet.edits.bans.filter(x=>Math.abs(x.start-r.a)>=0.05);
-      _mtDet.edits.replaces.push({ start: r.a, end: r.b, anim: s.name, items: r.items });
-      td.remove(); _mtDetRender(); toast('✓ « '+s.name+' » remplacera « '+r.anim+' »');
-    } else { idx++; paint(); }
-  };
-  window._mtDetTinderClose = ()=>{ td.remove(); };
-  paint();
-}
-
-// ── RÉGÉNÉRER : le plan du chef + les choix de l'utilisateur, UN rendu payé ──
-async function _mtDetRegen(){
-  const E = _mtDet && _mtDet.edits; if(!E) return;
-  const n = E.replaces.length + E.bans.length + Object.keys(E.moves).length;
-  if(!n) return;
-  const devis = _mtDetDevis(), cost = devis.lip + devis.video;
-  const plan = JSON.parse(JSON.stringify(_mtDet.job.plan||{}));
-  plan.duration = plan.duration || _mtDet.derived.duration;
-  plan.userSlides = E.replaces;
-  plan.userBans = E.bans;
-  for(const b of (plan.broll||[])){
-    if(E.moves[b.assetId]!=null){ const d=(Number(b.end)||0)-(Number(b.start)||0); b.start=E.moves[b.assetId]; b.end=Math.round((b.start+Math.max(0.8,d))*100)/100; }
-  }
-  _mtDetClose();
-  creditsFlowBegin();
-  if(!(await spendCreditsFor(cost, 'montage'))) return;
-  _mtProg(8, 'Régénération avec tes personnalisations…');
-  try{
-    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
-      body: JSON.stringify({ action:'create', plan, input_video: _mtDet.job.input_video, assets: _mtDet.job.assets||[], avatar_clips: _mtDet.job.avatar_clips||[] }) });
-    const d = await r.json().catch(()=>({}));
-    if(!r.ok || !d.ok) throw new Error(d.error||('render-job '+r.status));
-    _mtProg(14, 'Rendu en cours… (1 à 3 min)');
-    _mtPollSegmented(d.job_id, (url)=>_mtVideoDone(url));
-  }catch(e){
-    await creditsFlowRefund('la régénération a échoué');
-    _mtProg(-1);
-    toast('⚠️ Régénération : '+String(e.message||e).slice(0,110));
-  }
-}
 // ── ⚙️ DÉTAILS DU MONTAGE V2 — recopie 1:1 de la maquette Claude Design ──────
 // (gen-montage-details.jsx). Bande multi-pistes (tiges hautes = ce qu'on voit,
 // tiges basses = ce qu'on entend/lit), vue rapprochée ±N s, liste ordonnée +
