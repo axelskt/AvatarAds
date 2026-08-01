@@ -10439,14 +10439,17 @@ const MZ_RHYTHM = [['auto','Auto'],['nerveux','Nerveux'],['pose','Posé']];
 const MZ_MOTION = [['still','Figé'],['gestures','Gestes naturels'],['alive','Scène vivante']];
 const MZ_TRANS  = [['cut','Coupe nette'],['whip','Balayage rapide'],['fondu','Fondu doux']];
 const MZ_BROLL  = ['Aucune','Légère · ~30 %','Équilibrée · ~60 %','Dense · ~90 % · Recommandé'];
+// 6e colonne `soon:true` = « bientôt disponible » (carte grisée, non cliquable) —
+// choix d'Axel 01/08 : Anim (ex-apple) est LE style validé, les autres reviennent
+// quand ils seront au niveau ; « autre » sera remplacé par un nouveau style.
 const MZ_VSTYLE = [
   ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
-  ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
+  ['apple','Anim','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
 
-  ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte'],
-  ['dynamic','Dynamique','motion design continu',['#101014','#FF5A36'],'Motion design continu type pub de studio : AUCUNE video source a l\'ecran, panneaux clair/sombre alternes par section, typographie GEANTE sur les mots cles (4-5x la taille des mots de liaison), transitions qui poussent (jamais de fondu), tout bouge en continu — objectif 95% du temps anime. Les images utilisateur et captures d\'ecran s\'integrent dans le flux comme des cartes qui traversent.'],
+  ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte',true],
+  ['dynamic','Dynamique','motion design continu',['#101014','#FF5A36'],'Motion design continu type pub de studio : AUCUNE video source a l\'ecran, panneaux clair/sombre alternes par section, typographie GEANTE sur les mots cles (4-5x la taille des mots de liaison), transitions qui poussent (jamais de fondu), tout bouge en continu — objectif 95% du temps anime. Les images utilisateur et captures d\'ecran s\'integrent dans le flux comme des cartes qui traversent.',true],
   ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
-  ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],''],   // en DERNIER : ouvre la zone de texte
+  ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],'',true],   // remplacé bientôt par un nouveau style
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
   subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' }; }
@@ -10543,18 +10546,21 @@ function mzAdvRender(){
   const ta=document.getElementById('mzStyleTxt'), gap=document.getElementById('mzStyleGap');
   if(ta){ ta.style.display = a.vstyle==='autre' ? '' : 'none'; if(a.vstyle==='autre' && ta.value!==a.styleTxt) ta.value=a.styleTxt||''; }
   if(gap) gap.style.display = a.vstyle==='autre' ? 'none' : '';
+  // un style passé « bientôt disponible » ne doit pas rester sélectionné
+  if(['glass','dynamic','autre'].indexOf(a.vstyle)>=0) a.vstyle='auto';
   const g=document.getElementById('mzStyleGrid');
-  if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols])=>{
+  if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols,,soon])=>{
     const on=a.vstyle===v;
-    return '<button type="button" onclick="mzAdvSet(\'vstyle\',\''+v+'\')" class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text);'
-      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
-      +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative">'
+    return '<button type="button" '+(soon?'disabled ':'onclick="mzAdvSet(\'vstyle\',\''+v+'\')" ')+'class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:'+(soon?'not-allowed':'pointer')+';font-family:var(--font);color:var(--text);'
+      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface);opacity:'+(soon?'.55':'1')+'">'
+      +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative;'+(soon?'filter:saturate(.4)':'')+'">'
+      +(soon?'<span class="mono" style="position:absolute;top:6px;right:6px;font-size:8.5px;letter-spacing:.06em;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff">BIENTÔT DISPONIBLE</span>':'')
       +'<span style="position:absolute;left:8px;bottom:6px;width:46%;height:6px;border-radius:3px;background:rgba(255,255,255,.85)"></span>'
       +'<span style="position:absolute;left:8px;bottom:15px;width:64%;height:6px;border-radius:3px;background:rgba(255,255,255,.55)"></span></span>'
       +'<span style="display:block;padding:9px 11px">'
       +'<span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">'+l+'</span>'
       +(on?'<span style="color:var(--accent-2);display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>':'')
-      +'</span><span class="faint" style="display:block;font-size:11px">'+sub+'</span></span></button>';
+      +'</span><span class="faint" style="display:block;font-size:11px">'+(soon?'bientôt disponible':sub)+'</span></span></button>';
   }).join('');
   const br=document.getElementById('mzBroll'), bl=document.getElementById('mzBrollLbl');
   if(br){ br.value=a.broll; br.style.background='linear-gradient(90deg,var(--accent) '+(a.broll/3*100)+'%,var(--surface-3) '+(a.broll/3*100)+'%)'; }
@@ -12579,7 +12585,7 @@ function _mdUndo(){ if(!_md.past.length) return; _md.future.push(_mdSnap()); con
 function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); const s=_md.future.pop(); _md.scenes=s.scenes; _md.marks=s.marks; _mdRender(); }
 function _mdMarkKind(id){ id=String(id); return id.indexOf('sfx')===0?'sfx':id.indexOf('tr')===0?'trans':id.indexOf('tx')===0?'texte':null; }
 function _mdNMods(){
-  const sc = _md.scenes.filter(s=>s.repl||s.del||s.added).length;
+  const sc = _md.scenes.filter(s=>s.repl||s.del||s.added||s.moved||s.resized).length;
   const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved).length,0);
   return sc+mk;
 }
@@ -12683,6 +12689,21 @@ function _mdSelect(id, scroll){
 }
 function _mdPick(id){ const s=_md.scenes.find(x=>x.id===id); if(!s) return; _mdPause(); _mdSeek(Math.min(s.a+0.05,_md.dur-0.05)); _mdSelect(id,true); }
 function _mdPaintSel(){
+  // les poignées d'étirement suivent la sélection SANS re-render complet
+  document.querySelectorAll('#mdOv [data-grip]').forEach(g=>g.remove());
+  const selS=_md.scenes.find(x=>x.id===_md.sel);
+  if(selS && selS.n!=='avatar' && !selS.del){
+    const bl=document.getElementById('mdB'+selS.id);
+    if(bl) for(const side of ['a','b']){
+      const g=document.createElement('div');
+      g.setAttribute('data-grip','');
+      g.title='Tire pour '+(side==='a'?'avancer le début':'étirer la fin');
+      g.style.cssText='position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center';
+      g.innerHTML='<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span>';
+      g.addEventListener('pointerdown',(ev)=>_mdResizeDown(ev,selS.id,side));
+      bl.appendChild(g);
+    }
+  }
   for(const s of _md.scenes){
     const meta=_MD_NATURE[s.n], on=s.id===_md.sel;
     const bl=document.getElementById('mdB'+s.id);
@@ -12820,12 +12841,20 @@ function _mdBandHtml(){
   const up=_mdUpItems(), down=_mdDownItems();
   const blocs=_md.scenes.map((s)=>{
     const meta=_MD_NATURE[s.n];
+    // la scène SÉLECTIONNÉE (hors avatar) montre deux poignées de bord :
+    // tirer = ÉTIRER ou raccourcir sa durée (retour Axel « il faut que l'on
+    // puisse étirer l'animation, le média… »)
+    const sel = s.id===_md.sel && s.n!=='avatar' && !s.del;
+    const grip = (side)=>'<div data-grip onpointerdown="_mdResizeDown(event,\''+s.id+'\',\''+side+'\')" title="Tire pour '+(side==='a'?'avancer le début':'étirer la fin')+'" '
+      +'style="position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center">'
+      +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
     return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\')" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
       +'style="width:'+((s.b-s.a)/dur*100)+'%;min-width:5px;border-radius:6px;position:relative;overflow:hidden;transition:.18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
       +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+meta.color+' 18%, var(--panel-1))')+';'
       +'border:1px solid color-mix(in srgb, '+meta.color+' 28%, transparent)">'
       +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,meta.color):'')
       +(s.del?'<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,71,87,.3) 0 4px,transparent 4px 8px)"></div>':'')
+      +(sel?grip('a')+grip('b'):'')
       +'</div>';
   }).join('');
   return ''
@@ -12874,6 +12903,27 @@ function _mdBandHtml(){
   +'</div>';
 }
 function _mdZoomSet(z){ _md.bandZoom=Math.max(1,Math.min(10,Math.round(z))); _mdRender(); }
+// tirer une poignée de bord = ÉTIRER/raccourcir la scène (min 0,6 s)
+function _mdResizeDown(ev, id, side){
+  ev.stopPropagation(); ev.preventDefault(); _mdPause();
+  const s=_md.scenes.find(x=>x.id===id); if(!s) return;
+  const host=document.getElementById('mdTrack'); if(!host) return;
+  const w=Math.max(120, host.getBoundingClientRect().width);   // garde-fou : jamais un ratio explosif sur un layout pas prêt
+  const st={x0:ev.clientX,a0:s.a,b0:s.b,moved:false};
+  _md.past.push(_mdSnap()); _md.future=[];
+  const bl=document.getElementById('mdB'+id);
+  const mv=(e)=>{ const dt=(e.clientX-st.x0)/w*_md.dur;
+    if(Math.abs(e.clientX-st.x0)>2) st.moved=true;
+    if(side==='a') s.a=Math.max(0,Math.min(st.b0-0.6,st.a0+dt));
+    else s.b=Math.min(_md.dur,Math.max(st.a0+0.6,st.b0+dt));
+    s.a=Math.round(s.a*100)/100; s.b=Math.round(s.b*100)/100;
+    if(bl) bl.style.width=((s.b-s.a)/_md.dur*100)+'%';
+  };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);
+    if(!st.moved){ _md.past.pop(); return; }
+    s.resized=true; _md.scenes.sort((x,y)=>x.a-y.a); _mdRender(); };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
 function _mdTrackDown(ev){
   if(_md.pop){ _md.pop=null; _mdRenderPop(); return; }
   _mdPause();
@@ -13258,8 +13308,10 @@ function _mdSuggest(scene){
   const ctx=new Set(norm(scene.w+' '+(cur?cur.desc:'')+' '+scene.d).split(/[^a-z0-9]+/).filter(w=>w.length>=4));
   return (_md.bank||[]).filter(b=>b.name!==scene.t)
     .map(b=>{ const toks=norm(b.desc).split(/[^a-z0-9]+/); let sc=0;
-      for(const t of new Set(toks)) if(t.length>=4&&ctx.has(t)) sc++; return {k:b.name,d:String(b.desc).split(/[.«]/)[0].trim(),sc}; })
-    .sort((a,b)=>b.sc-a.sc).slice(0,30);
+      for(const t of new Set(toks)) if(t.length>=4&&ctx.has(t)) sc++; return {k:b.name,d:String(b.desc).split(/[.«:]/)[0].trim().slice(0,90),sc}; })
+    // pertinentes d'abord, mais ALÉATOIRE à score égal — l'ordre change à
+    // chaque ouverture (retour Axel)
+    .map(x=>({x,r:Math.random()})).sort((a,b)=>(b.x.sc-a.x.sc)||(a.r-b.r)).map(o=>o.x).slice(0,30);
 }
 function _mdOpenSwipe(id){
   const s=_md.scenes.find(x=>x.id===id); if(!s) return;
@@ -13292,7 +13344,7 @@ function _mdSwipeHtml(){
           +'<span class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--text-3)">REMPLACER · '+_mdT(sw.scene.a)+'</span>'
           +'<span style="font-size:14.5px;font-weight:700">'+(sw.scene.w?'sur « '+_mdEsc(sw.scene.w)+' »':_mdEsc(sw.scene.t))+'</span></div>'
         +'<button onclick="_md.swipe=null;_mdRenderModals()" class="btn-quiet" style="font-size:20px;padding:2px 8px;cursor:pointer">✕</button></div>'
-      +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.1':'1 / 1')+';max-height:'+(mob?'min(340px,42vh)':'min(400px,44vh)')+';flex:0 0 auto">'
+      +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.35':'1 / 1.3')+';max-height:'+(mob?'min(460px,56vh)':'min(540px,60vh)')+';flex:0 0 auto">'
         +nexts.map((it,ix)=>{ const k=2-ix; return '<div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;transform:translateY('+(k*10)+'px) scale('+(1-k*0.045)+');z-index:'+(5-k)+';opacity:'+(0.5-k*0.12)+';'
           +'background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), var(--surface));border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px"></div>'; }).join('')
         +'<div id="mdSwCard" onpointerdown="_mdSwDown(event)" style="position:absolute;inset:0;border-radius:22px;overflow:hidden;touch-action:none;cursor:grab;z-index:5;'
@@ -13300,11 +13352,10 @@ function _mdSwipeHtml(){
           +'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px">'
           +'<span id="mdSwYes" style="position:absolute;top:18px;left:18px;padding:5px 11px;border-radius:8px;border:2px solid var(--green);color:var(--green);font-weight:900;font-size:14px;transform:rotate(-12deg);opacity:0">GARDER</span>'
           +'<span id="mdSwNo" style="position:absolute;top:18px;right:18px;padding:5px 11px;border-radius:8px;border:2px solid #ff4757;color:#ff6b7a;font-weight:900;font-size:14px;transform:rotate(12deg);opacity:0">PASSER</span>'
-          // l'aperçu se contraint en HAUTEUR : le nom et la description entière
-          // restent toujours visibles (retour Axel « le texte est coupé »)
-          +'<div style="height:46%;max-height:240px;min-height:90px;aspect-ratio:9 / 16;flex:0 1 auto">'+_mdAnimPrevHtml(item.k, item.d, true)+'</div>'
+          // TITRE SEUL, aperçu en GRAND (retour Axel) : la vraie animation parle
+          // d'elle-même, pas besoin de description ici
+          +'<div style="height:76%;max-height:380px;min-height:120px;aspect-ratio:9 / 16;flex:0 1 auto">'+_mdAnimPrevHtml(item.k, item.d, true)+'</div>'
           +'<span class="mono" style="font-size:18px;font-weight:600;color:var(--text);flex:0 0 auto">'+_mdEsc(item.k)+'</span>'
-          +'<p class="muted center" style="font-size:13px;line-height:1.45;max-width:250px;flex:0 0 auto">'+_mdEsc(item.d)+'</p>'
         +'</div>'
       +'</div>'
       +'<span class="mono" style="font-size:11px;color:var(--text-3);margin:12px 0 10px;flex:0 0 auto">'+(sw.i+1)+' / '+sw.list.length+' · glisse ou choisis</span>'
@@ -13373,10 +13424,14 @@ function _mdBankModalHtml(){
       +'<div style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:'+cols+';gap:8px">'+list.map(cell).join('')+'</div>'
     +'</div></div>';
 }
-function _mdBankSwipeMode(){ _md.bankModal.swipe=true; _md.bankModal.i=0; _mdRenderModals(); }
+// mélange (Fisher-Yates, copie) — « mets en aléatoire pour que l'ordre ne soit
+// pas toujours le même » (Axel 01/08)
+function _mdShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function _mdBankSwipeMode(){ _md.bankModal.swipe=true; _md.bankModal.i=0;
+  _md.bankModal.list=_mdShuffle(_mdBankDef(_md.bankModal.kind).items); _mdRenderModals(); }
 function _mdBankSwipeHtml(){
   const bm=_md.bankModal, b=_mdBankDef(bm.kind);
-  const items=b.items, i=bm.i||0, name=items[i%items.length];
+  const items=bm.list&&bm.list.length?bm.list:b.items, i=bm.i||0, name=items[i%items.length];
   let corps='';
   if(bm.kind==='animation'){ const bk=(_md.bank||[]).find(x=>x.name===name); corps=_mdAnimPrevHtml(name,bk?bk.desc:'',true); }
   else if(bm.kind==='trans') corps='<div style="width:100%;height:100%;border-radius:16px;overflow:hidden">'+_mdTransPrevHtml(name,'9 / 16')+'</div>';
@@ -13405,6 +13460,10 @@ function _mdBankSwipeHtml(){
 }
 function _mdBkDown(ev){
   const card=document.getElementById('mdBkCard'); if(!card) return;
+  // un BOUTON dans la carte (l'écoute d'un bruitage) garde son clic : la
+  // capture du pointeur le lui volait — c'était le « les previews des
+  // bruitages ne marchent pas » d'Axel (01/08)
+  if(ev.target && ev.target.closest && ev.target.closest('button')) return;
   card.setPointerCapture(ev.pointerId);
   const x0=ev.clientX; let dx=0;
   const inner=card.firstElementChild;
@@ -13670,6 +13729,17 @@ function _mdRender(){
     const cw=document.getElementById('mdCloseWrap');
     if(cw){ let acc2=0; cw.addEventListener('wheel',(e)=>{ e.preventDefault(); acc2+=e.deltaY;
       if(Math.abs(acc2)>110){ _md.zoomWin=Math.max(1,Math.min(10,_md.zoomWin+(acc2>0?1:-1))); acc2=0; _mdPaintCloseUp(); } },{passive:false}); } }
+  // PINCER sur le pavé tactile zoome la bande (retour Axel « je n'arrive pas à
+  // zoomer au trackpad ») : Safari envoie gesturestart/gesturechange (e.scale),
+  // pas des wheel. Écouté sur document une seule fois — les cibles détachées
+  // par un re-rendu continuent de matcher #mdBandWrap via closest.
+  if(!window._mdGestOn){ window._mdGestOn=true;
+    const inBand=(e)=>e.target&&e.target.closest&&e.target.closest('#mdBandWrap');
+    document.addEventListener('gesturestart',(e)=>{ if(!_md||!inBand(e)) return; e.preventDefault(); _md._gz0=_md.bandZoom; },{passive:false});
+    document.addEventListener('gesturechange',(e)=>{ if(!_md||!inBand(e)) return; e.preventDefault();
+      const z=Math.round((_md._gz0||1)*e.scale); if(z!==_md.bandZoom) _mdZoomSet(z); },{passive:false});
+    document.addEventListener('gestureend',(e)=>{ if(_md&&inBand(e)) e.preventDefault(); },{passive:false});
+  }
   // un clic hors popover le ferme (capture, une seule fois)
   if(!window._mdCloserOn){ window._mdCloserOn=true;
     document.addEventListener('pointerdown',(e)=>{ if(!_md||!_md.pop) return;
@@ -13733,16 +13803,15 @@ function _mdBuildRegenPlan(){
       const base=src?Object.assign({},src):{};
       delete base.userFile; delete base.src;   // chemins locaux du worker : jamais renvoyés
       userSlides.push(Object.assign(base,{anim:s.repl,start:_mdR2(s.a),end:_mdR2(s.b)}));
-      if(s.moved&&src&&Math.abs((Number(src.start)||0)-s.a)>0.2)
+      if((s.moved||s.resized)&&src&&(Math.abs((Number(src.start)||0)-s.a)>0.2||Math.abs((Number(src.end)||0)-s.b)>0.2))
         userBans.push({start:_mdR2(src.start),end:_mdR2(Number(src.end)||src.start+(s.b-s.a))});
       continue;
     }
-    if(s.moved&&src){
-      // un média déplacé = son broll retimé (le worker le replace proprement)
+    if((s.moved||s.resized)&&src){
+      // un média déplacé/étiré = son broll retimé (le worker le replace proprement)
       if(s.n==='media'&&s.assetId){
         const b=broll.find(x=>x.assetId===s.assetId);
-        if(b){ const len=(Number(b.end)||0)-(Number(b.start)||0);
-          b.start=_mdR2(s.a); b.end=_mdR2(s.a+Math.max(0.8,len)); }
+        if(b){ b.start=_mdR2(s.a); b.end=_mdR2(Math.max(s.a+0.8,s.b)); }
         continue;
       }
       const base=Object.assign({},src); delete base.userFile; delete base.src;

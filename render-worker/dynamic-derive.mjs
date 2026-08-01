@@ -322,7 +322,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // SaaS IA peut changer ta vie », le chef d'orchestre posait `logo` — et
     // l'ecran affichait « avatarads.fr » pendant qu'Axel dit « SaaS IA ».
     // Sa proposition n'est pas au-dessus de la regle.
-    if (EXIGE_GLOBAL[nom]) {
+    if (EXIGE_GLOBAL[nom] && !slide.user) {
+      // …mais un CHOIX EXPLICITE de l'écran « Détails du montage » passe : Axel
+      // a remplacé target par lineup et la garde le lui jetait (« j'ai mis
+      // lineup mais ça n'a pas marché », 01/08). L'utilisateur a vu sa vidéo et
+      // a tranché — le garde-fou vaut pour les propositions, pas pour lui.
       const dit = (plan.captions || []).filter((w) => w.start < b && w.end > a)
         .map((w) => w.text).join(' ')
       if (!EXIGE_GLOBAL[nom].test(dit)) {
@@ -335,7 +339,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (proche && !REFUSEES.has(proche)) slide = { ...slide, anim: proche }
       else return null
     }
-    ;[a, b] = fit(a, b)
+    ;[a, b] = slide.user ? [a, b] : fit(a, b)   // la fenêtre d'un choix explicite ne bouge pas
     // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
     // sportif » — laisse 0,4 s par mot : au plancher commun, les deux dernieres
     // photos disparaissaient et l'enumeration retombait sur du texte. Une photo
@@ -373,7 +377,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // en volant la fenêtre que gaugefill (demandé avec « 100% ») venait chercher
     // sur SON mot. Même maladie mesurée sur salesphone (3,52→4,79 contre la
     // carte 4,74→6,02) et tsunami (8,25→9,53 contre 9,48→11,25).
-    if (isAnimPanel(slide)) {
+    if (isAnimPanel(slide) && !slide.user) {
       // 1 · UN DOUBLON ADJACENT DÉGAGE. La même animation deux fois dos à dos
       //     n'apporte rien : la première posée garde la fenêtre.
       if (nom && out.some((s) => s.anim === nom && a < s.end + 0.6 && b > s.start - 0.6)) {
@@ -429,6 +433,25 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // un MÉDIA ajouté depuis « Détails du montage » arrive avec son assetId :
       // on résout le fichier local ici (le moteur lit slide.src, pas l'id)
       if (u.anim === 'media' && u.assetId && (opts.assetFiles || {})[u.assetId]) u.src = (opts.assetFiles || {})[u.assetId]
+      // ── LE CHEF D'ORCHESTRE PERSONNALISE SON CHOIX ──────────────────────────
+      // Une animation choisie dans la banque arrive NUE (pas d'items, pas de
+      // valeur) : lineup rendait une étagère vide pendant qu'Axel dit « produit
+      // physique, coaching, formation ». On la remplit avec CE QUI EST DIT dans
+      // sa fenêtre — la valeur = le nombre prononcé, les items = les mots forts,
+      // chacun sur SON instant (it.t absolu, la convention du pack).
+      if (u.anim && u.anim !== 'media') {
+        const caps = (plan.captions || []).filter((c) => c.start >= a - 0.05 && c.start < b)
+        if (!/\d/.test(String(u.value || ''))) {
+          const num = caps.map((c) => String(c.text)).find((t) => /\d/.test(t))
+          if (num) { u.value = num.replace(/[^\d]/g, ''); u.unit = u.unit || '' }
+        }
+        if (!(u.items || []).some((it) => String(it.text || '').trim())) {
+          const clean = (t) => String(t).replace(/[.,!?…«»]/g, '')
+          const forts = caps.filter((c) => c.accent || clean(c.text).length >= 5)
+          u.items = (forts.length ? forts : caps).slice(0, 4)
+            .map((c) => ({ t: r2(c.start), text: clean(c.text), label: '', value: '' }))
+        }
+      }
       if (b - a >= 0.6 && add({ ...u, user: true }, a, b)) nu++
     }
     for (const u of plan.userBans || []) {
