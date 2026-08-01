@@ -1,5 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+// ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
+// le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
+// d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
+// jamais l'image : il ne le place donc pas (vu le 31/07, broll vide).
+import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 
 // ── Serveur MCP AvatarAds ↔ Claude (#73) ──
 // Protocole MCP « Streamable HTTP » (JSON-RPC sur POST, réponses JSON, sans état).
@@ -1338,9 +1343,22 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     if (typeof av === 'string') return toolErr(av)
     avatarFile = av
   }
+  // 420 px de large, JPEG 72 — le format qu'envoie l'app, et qui tient sous les
+  // 400 Ko du chef. Renvoie null pour une vidéo ou un format non décodable :
+  // le chef se rabat alors sur le NOM du média, qui reste explicite.
+  const miniature = async (bytes: Uint8Array, type: string) => {
+    if (!/^image\/(png|jpe?g)$/.test(type)) return null
+    try {
+      const img = await Image.decode(bytes)
+      const w = Math.min(420, img.width)
+      const petite = img.resize(w, Image.RESIZE_AUTO)
+      const out = await petite.encodeJPEG(72)
+      return out.length <= 380_000 ? out : null
+    } catch (e) { console.warn('miniature:', (e as Error)?.message); return null }
+  }
   const slug = (s: string, i: number) => (String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28)) || ('media' + i)
-  const medias: { id: string; name: string; kind: 'image' | 'video'; bytes: Uint8Array; contentType: string }[] = []
+  const medias: { id: string; name: string; kind: 'image' | 'video'; bytes: Uint8Array; contentType: string; thumb: Uint8Array | null }[] = []
   for (const [i, m] of (Array.isArray(args.media) ? args.media : []).slice(0, 6).entries()) {
     const u = String((m as Record<string, unknown>)?.url || '').trim()
     if (!u) continue
@@ -1349,7 +1367,8 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     if (typeof f === 'string') return toolErr(f)
     const id = slug(nom, i)
     if (id === 'avatar' || medias.some((x) => x.id === id)) continue
-    medias.push({ id, name: nom, kind: /^video\//.test(f.contentType) ? 'video' : 'image', bytes: f.bytes, contentType: f.contentType })
+    medias.push({ id, name: nom, kind: /^video\//.test(f.contentType) ? 'video' : 'image', bytes: f.bytes, contentType: f.contentType,
+      thumb: await miniature(f.bytes, f.contentType) })
   }
   const durRaw = Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)
   // format court assumé : au-delà de 90 s le montage perd son rythme (et coûte cher à rendre)
@@ -1395,8 +1414,12 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       if (medias.length) {
         fd.append('assets', JSON.stringify(medias.map((m) => ({ id: m.id, name: m.name, kind: m.kind }))))
         for (const m of medias) {
-          fd.append('asset_' + m.id, new File([m.bytes as unknown as BlobPart], 'thumb', { type: m.contentType }))
+          // la MINIATURE, jamais l'original : au-delà de 400 Ko le chef ignore
+          // l'image et le média ne se place nulle part
+          if (m.thumb) fd.append('asset_' + m.id, new File([m.thumb as unknown as BlobPart], 'thumb.jpg', { type: 'image/jpeg' }))
+          else if (m.bytes.length <= 380_000) fd.append('asset_' + m.id, new File([m.bytes as unknown as BlobPart], 'thumb', { type: m.contentType }))
         }
+        console.log(`▶ médias envoyés au chef : ${medias.map((m) => m.id + (m.thumb ? '✓' : '✗')).join(', ')}`)
       }
       const or = await fetch(`${SUPABASE_URL}/functions/v1/orchestrate`, {
         method: 'POST', headers: { Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY }, body: fd,
