@@ -798,6 +798,27 @@ export function buildDynamicComposition(plan, opts = {}) {
       sfxAdd.push({ kind: 'mo-impact-2', t: r2(tAt), vol: 0.6 })
     }
 
+    // LA COUCHE MÉDIA POSÉE PAR-DESSUS (détails du montage : « le média se
+    // pose juste dessus, sans supprimer le module ») — carte flottante avec
+    // son arrivée, au-dessus du contenu du panneau.
+    if (p.slide && p.slide.overlayMedia) {
+      const om = p.slide.overlayMedia
+      const pos2 = om.pos || { x: 0.5, y: 0.5, w: 0.5 }
+      const cw2 = Math.round(W * Math.min(0.92, Math.max(0.18, Number(pos2.w) || 0.5)))
+      const ch2 = Math.round(cw2 * 16 / 9)
+      const cx2 = Math.round(Math.min(W - cw2, Math.max(0, Number(pos2.x) * W - cw2 / 2)))
+      const cy2 = Math.round(Math.min(H - ch2, Math.max(0, Number(pos2.y) * H - ch2 / 2)))
+      const vid2 = /\.(mp4|mov|webm|m4v)$/i.test(String(om.src || ''))
+      const t0m = r2(Math.max(liveT0, om.start != null ? om.start : liveT0))
+      const t1m = r2(Math.min(t1, om.end != null ? om.end : t1))
+      const corps2 = vid2
+        ? `<video class="clip" src="${esc(om.src)}" data-start="${t0m}" data-duration="${r2(Math.max(0.4, t1m - t0m))}" data-track-index="11" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+        : `<img src="${esc(om.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+      inner += `<div class="an-p" id="${id}om" style="left:${cx2}px;top:${cy2}px;width:${cw2}px;height:${ch2}px;border-radius:${Math.round(cw2 * 0.08)}px;overflow:hidden;box-shadow:0 34px 80px -22px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.08);z-index:9">${corps2}</div>`
+      pjs += `\n  tl.fromTo('#${id}om',{yPercent:8,scale:0.92,autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:0.42,ease:'back.out(1.5)',transformOrigin:'50% 50%'},${t0m});`
+      if (t1m < t1 - 0.35) pjs += `\n  tl.to('#${id}om',{scale:0.94,autoAlpha:0,duration:0.3,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t1m - 0.3)});`
+      sfxAdd.push({ kind: 'mo-pop-2', t: r2(t0m + 0.05), vol: 0.55 })
+    }
     html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${tone.bg};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
 
     // — poussée : direction alternée, l'entrant arrive légèrement flouté par sa

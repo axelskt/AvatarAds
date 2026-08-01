@@ -433,6 +433,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // un MÉDIA ajouté depuis « Détails du montage » arrive avec son assetId :
       // on résout le fichier local ici (le moteur lit slide.src, pas l'id)
       if (u.anim === 'media' && u.assetId && (opts.assetFiles || {})[u.assetId]) u.src = (opts.assetFiles || {})[u.assetId]
+      // media EN COUCHE (« le média se pose dessus, sans supprimer le module »)
+      // → jamais une scène à part : attaché à la fin à ce qui occupe la fenêtre
+      if (u.layer && u.anim === 'media' && u.src) { (plan.__mediaLayers = plan.__mediaLayers || []).push({ src: u.src, assetId: u.assetId, pos: u.pos, start: a, end: b }); continue }
       // ── LE CHEF D'ORCHESTRE PERSONNALISE SON CHOIX ──────────────────────────
       // Une animation choisie dans la banque arrive NUE (pas d'items, pas de
       // valeur) : lineup rendait une étagère vide pendant qu'Axel dit « produit
@@ -2011,4 +2014,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
       + (lost.length ? ` · absorbées : ${lost.map((s) => `${s.anim}@${s.start}s`).join(', ')}` : ''))
   }
   plan.slides = merged
+
+  // ── LES COUCHES MÉDIA S'ATTACHENT À LEUR HÔTE ──────────────────────────────
+  // Un panneau qui couvre la fenêtre reçoit slide.overlayMedia ; sinon c'est
+  // l'avatar qui la porte (le médaillon existant fait déjà le travail).
+  for (const L of plan.__mediaLayers || []) {
+    const host = (plan.slides || []).find((sl) => sl.start <= L.start + 0.05 && sl.end >= L.start + 0.3)
+    if (host) { host.overlayMedia = { src: L.src, pos: L.pos, start: L.start, end: L.end }; continue }
+    const seg = (plan.avatarSegments || []).find((sg) => sg.start <= L.start + 0.05 && sg.end >= L.start + 0.3)
+    if (seg) (seg.insets = seg.insets || []).push({ src: L.src, assetId: L.assetId, start: L.start, end: Math.min(L.end, seg.end) })
+  }
+  delete plan.__mediaLayers
 }
