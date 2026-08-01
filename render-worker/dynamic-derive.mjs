@@ -426,6 +426,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
     let nu = 0, nb = 0
     for (const u of plan.userSlides || []) {
       const a = r2(u.start || 0), b = r2(u.end ?? a + 1.5)
+      // un MÉDIA ajouté depuis « Détails du montage » arrive avec son assetId :
+      // on résout le fichier local ici (le moteur lit slide.src, pas l'id)
+      if (u.anim === 'media' && u.assetId && (opts.assetFiles || {})[u.assetId]) u.src = (opts.assetFiles || {})[u.assetId]
       if (b - a >= 0.6 && add({ ...u, user: true }, a, b)) nu++
     }
     for (const u of plan.userBans || []) {
