@@ -530,7 +530,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // s.vol : le moteur dynamique baisse ses sons de ponctuation (une poussée
       // s'entend à moitié, un clic à peine) — un bruitage plein volume sur chaque
       // geste rendait la piste répétitive et écrasait la voix.
-      filters.push(`[${idx}:a]adelay=${ms}|${ms},volume=${typeof s.vol === 'number' ? s.vol : SFX_VOL}[s${idx}]`)
+      // s.dur : « Définir la durée » (détails du montage) coupe le son à cette
+      // longueur, avec un petit fondu pour ne pas claquer.
+      const cut = typeof s.dur === 'number' && s.dur > 0.1
+        ? `atrim=0:${s.dur},afade=t=out:st=${Math.max(0, s.dur - 0.08).toFixed(2)}:d=0.08,`
+        : ''
+      filters.push(`[${idx}:a]${cut}adelay=${ms}|${ms},volume=${typeof s.vol === 'number' ? s.vol : SFX_VOL}[s${idx}]`)
       mixIns.push(`[s${idx}]`)
       idx++
     }
