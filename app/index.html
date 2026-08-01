@@ -12549,10 +12549,16 @@ function _mdBuildScenes(){
   const P = _md.derived, rows = [];
   const bank = _md.bank||[];
   const bankByName = {}; for(const b of bank) bankByName[b.name]=b;
-  const word = (t) => {
-    const caps=(P.captions||[]);
-    const w = caps.find(c=>c.start>=t-0.25 && String(c.text||'').trim().length>1) || caps.find(c=>c.start>=t-0.8);
-    return w ? String(w.text).replace(/[.,!?«»]/g,'') : '';
+  // le « sur … » et les suggestions s'appuient sur les MOTS FORTS de la
+  // fenêtre (accentués ou longs), pas sur le premier mot venu (« que ») —
+  // retour Axel : « les propositions pas ouf »
+  const word = (a,b) => {
+    const clean=(t)=>String(t).replace(/[.,!?«»]/g,'');
+    const caps=(P.captions||[]).filter(c=>c.start>=a-0.15&&c.start<(b||a+2.5));
+    const forts=caps.filter(c=>c.accent||clean(c.text).length>=5).slice(0,3);
+    if(forts.length) return forts.map(c=>clean(c.text)).join(' ');
+    const w=caps.find(c=>String(c.text||'').trim().length>1);
+    return w?clean(w.text):'';
   };
   let id = 0, si = -1;
   for(const sl of (P.slides||[])){
@@ -12565,11 +12571,11 @@ function _mdBuildScenes(){
     else if(sl.anim){ n='animation'; t=String(sl.anim);
       const bk=bankByName[sl.anim]; d = bk?String(bk.desc).split(/[.:«]/)[0].trim().toLowerCase().slice(0,60):''; }
     else { n='carte'; t=String(sl.title||((sl.items||[]).map(i=>i.text).filter(Boolean).slice(0,3).join(' · '))||'Carte'); d='panneau à contenu'; }
-    rows.push({ id:'sc'+(id++), a, b, n, t, d, w:word(a), items:sl.items||[], srcIdx:si, assetId:sl.assetId||'' });
+    rows.push({ id:'sc'+(id++), a, b, n, t, d, w:word(a,b), items:sl.items||[], srcIdx:si, assetId:sl.assetId||'' });
   }
   for(const s of (P.avatarSegments||[])){
     const a=Number(s.start)||0, b=Number(s.end)||a+1;
-    rows.push({ id:'sc'+(id++), a, b, n:'avatar', t:'Ton avatar parle', d:(s.insets||[]).length?'avec un média en médaillon':'plein écran', w:word(a), items:[] });
+    rows.push({ id:'sc'+(id++), a, b, n:'avatar', t:'Ton avatar parle', d:(s.insets||[]).length?'avec un média en médaillon':'plein écran', w:word(a,b), items:[] });
   }
   rows.sort((x,y)=>x.a-y.a);
   const sfx=(P.sfx||[]);
@@ -12607,7 +12613,7 @@ function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); con
 function _mdMarkKind(id){ id=String(id); return id.indexOf('sfx')===0?'sfx':id.indexOf('tr')===0?'trans':id.indexOf('tx')===0?'texte':null; }
 function _mdNMods(){
   const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized).length;
-  const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved).length,0);
+  const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved||x.resized).length,0);
   return sc+mk;
 }
 function _mdDevis(){
@@ -12637,6 +12643,13 @@ async function _mdOpen(){
     let bank=[]; try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
     // manifeste des aperçus RÉELS d'animations (rendus par le moteur)
     if(!window._mdPrevSet){ try{ window._mdPrevSet=new Set(await (await fetch('anim-previews/index.json')).json()); }catch(_){ window._mdPrevSet=new Set(); } }
+    // …et on les PRÉCHARGE tous en fond (~2 Mo, lots de 6) : le swipe devient
+    // instantané dès la deuxième seconde (retour Axel « 3-4 s à charger »)
+    if(!window._mdPrevWarm){ window._mdPrevWarm=true;
+      setTimeout(async()=>{ const names=[...window._mdPrevSet];
+        for(let i=0;i<names.length;i+=6){
+          await Promise.all(names.slice(i,i+6).map(n=>fetch('anim-previews/'+n+'.mp4').then(r=>r.blob()).then(b=>{ (window._mdPrevBlob=window._mdPrevBlob||{})[n]=URL.createObjectURL(b); }).catch(()=>{})));
+        } }, 800); }
     _md = { jobId, job:d, derived, bank, dur:Number(derived.duration)||60,
       sel:null, time:0, playing:false, bandZoom:5, zoomWin:3, detail:false, order:false, all:false,
       pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, addedMedia:{} };
@@ -12814,7 +12827,7 @@ function _mdPaintClipInfo(){
         } else {
           const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
           h=(window._mdPrevSet&&window._mdPrevSet.has(nm)
-            ?'<video src="anim-previews/'+nm+'.mp4" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+            ?'<video src="'+((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'))+'" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
             :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:13px">'+_mdEsc(ed.repl||ed.t)+'</span></div>')
             +badge('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération');
         }
@@ -12956,7 +12969,7 @@ function _mdBandHtml(){
       +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
     const col=_mdSceneColor(s);
     return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\')" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
-      +'style="width:'+((s.b-s.a)/dur*100)+'%;min-width:5px;border-radius:6px;position:relative;overflow:hidden;transition:.18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
+      +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;top:2px;bottom:2px;min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
       +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' 18%, var(--panel-1))')+';'
       +'border:1px solid color-mix(in srgb, '+col+' 28%, transparent)">'
       +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,col):'')
@@ -12989,7 +13002,7 @@ function _mdBandHtml(){
     +'<div id="mdBandWrap" style="overflow-x:'+(_md.bandZoom>1?'auto':'hidden')+';overflow-y:hidden;padding-bottom:1px;overscroll-behavior-x:contain">'
     +'<div id="mdBandInner" style="position:relative;width:'+(_md.bandZoom*100)+'%">'
       +'<div data-side="up" style="position:relative;height:'+ZONE+'px;margin-bottom:2px;z-index:4">'+up.map(it=>_mdStemHtml(it,'up',mob)).join('')+'</div>'
-      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" style="position:relative;height:'+(mob?40:50)+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel-1);border:1px solid var(--border);display:flex;gap:2px;padding:2px">'
+      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" title="Les espaces vides = ton avatar parle" style="position:relative;height:'+(mob?40:50)+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:color-mix(in srgb, var(--green) 7%, var(--panel-1));border:1px solid var(--border)">'
         +blocs
         +'<div id="mdCur" style="position:absolute;top:-6px;bottom:-6px;left:0;width:2.5px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 0 14px rgba(255,255,255,1);pointer-events:none;z-index:6;transform:translateX(-50%)">'
           +'<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.9))"></div>'
@@ -13004,12 +13017,53 @@ function _mdBandHtml(){
           +'<div style="width:15px;height:11px;border-radius:4px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.7)"></div></div>'
       +'</div>'
       +'<div data-side="down" style="position:relative;height:'+ZONE+'px;margin-top:2px;z-index:4">'+down.map(it=>_mdStemHtml(it,'down',mob)).join('')+'</div>'
+      +(_md.durEdit?(function(){
+        const de=_mdDurTarget(); if(!de) return '';
+        const trackTop=ZONE+2, trackH=(mob?40:50);
+        return '<div data-md-dur id="mdDurOv" style="position:absolute;left:'+(de.a/dur*100)+'%;width:'+((de.b-de.a)/dur*100)+'%;top:'+trackTop+'px;height:'+trackH+'px;z-index:8;background:color-mix(in srgb, var(--accent) 24%, transparent);border:2px solid var(--accent);border-radius:8px">'
+          +'<div data-md-dur onpointerdown="_mdDurDown(event,\'a\')" style="position:absolute;left:-7px;top:-4px;bottom:-4px;width:14px;cursor:ew-resize;touch-action:none;display:grid;place-items:center"><span style="width:5px;height:70%;border-radius:3px;background:var(--accent);box-shadow:0 0 6px rgba(0,0,0,.6)"></span></div>'
+          +'<div data-md-dur onpointerdown="_mdDurDown(event,\'b\')" style="position:absolute;right:-7px;top:-4px;bottom:-4px;width:14px;cursor:ew-resize;touch-action:none;display:grid;place-items:center"><span style="width:5px;height:70%;border-radius:3px;background:var(--accent);box-shadow:0 0 6px rgba(0,0,0,.6)"></span></div>'
+          +'<button data-md-dur onclick="_mdDurOk()" class="mono" style="position:absolute;top:-30px;left:50%;transform:translateX(-50%);padding:4px 12px;border-radius:8px;background:var(--accent);color:#1A0A02;font-size:10.5px;font-weight:800;box-shadow:0 6px 18px -6px var(--accent-glow);cursor:pointer;white-space:nowrap">Valider · '+_mdT(de.a)+'→'+_mdT(de.b)+'</button>'
+        +'</div>'; })():'')
     +'</div></div>'
     +'<div class="row" style="justify-content:space-between"><span class="mono faint" style="font-size:9.5px">0:00</span><span class="mono faint" style="font-size:9.5px">'+_mdT(dur)+'</span></div>'
     +'<div id="mdBandPop"></div>'
   +'</div>';
 }
 function _mdZoomSet(z){ _md.bandZoom=Math.max(1,Math.min(10,Math.round(z))); _mdRender(); }
+// ── « Définir la durée » : l'élément visé et ses bornes ──
+function _mdDurTarget(){
+  const de=_md.durEdit; if(!de) return null;
+  if(de.k==='texte'){ const m=_md.marks.texte.find(x=>x.id===de.id); return m?{a:m.a,b:m.b,m}:null; }
+  const sc=_md.scenes.find(x=>x.id===de.id); return sc?{a:sc.a,b:sc.b,sc}:null;
+}
+function _mdDurDown(ev, side){
+  ev.stopPropagation(); ev.preventDefault();
+  const de=_mdDurTarget(); if(!de) return;
+  const host=document.getElementById('mdTrack'); if(!host) return;
+  const w=Math.max(120,host.getBoundingClientRect().width);
+  const st={x0:ev.clientX,a0:de.a,b0:de.b};
+  const others=de.sc?_md.scenes.filter(x=>x.id!==de.sc.id&&!x.del):[];
+  const prevEnd=de.sc?Math.max(0,...others.filter(x=>x.b<=st.a0+0.01).map(x=>x.b)):0;
+  const nextStart=de.sc?Math.min(_md.dur,...others.filter(x=>x.a>=st.b0-0.01).map(x=>x.a)):_md.dur;
+  const mv=(e)=>{ const dt=(e.clientX-st.x0)/w*_md.dur;
+    let a=de.a,b=de.b;
+    if(side==='a') a=Math.max(prevEnd,Math.min(st.b0-0.4,st.a0+dt));
+    else b=Math.min(nextStart,Math.max(st.a0+0.4,st.b0+dt));
+    a=Math.round(a*100)/100; b=Math.round(b*100)/100;
+    if(de.sc){ de.sc.a=a; de.sc.b=b; de.sc.resized=true;
+      const bl=document.getElementById('mdB'+de.sc.id);
+      if(bl){ bl.style.left=(a/_md.dur*100)+'%'; bl.style.width=((b-a)/_md.dur*100)+'%'; } }
+    else { de.m.a=a; de.m.b=b; de.m.resized=true; de.m.moved=true; }
+    de.a=a; de.b=b;
+    const ov=document.getElementById('mdDurOv');
+    if(ov){ ov.style.left=(a/_md.dur*100)+'%'; ov.style.width=((b-a)/_md.dur*100)+'%';
+      const btn=ov.querySelector('button'); if(btn) btn.textContent='Valider · '+_mdT(a)+'→'+_mdT(b); }
+  };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
+function _mdDurOk(){ if(!_md.durEdit) return; _md.durEdit=null; _mdRender(); }
 // tirer une poignée de bord = ÉTIRER/raccourcir la scène (min 0,6 s)
 function _mdResizeDown(ev, id, side){
   ev.stopPropagation(); ev.preventDefault(); _mdPause();
@@ -13030,7 +13084,7 @@ function _mdResizeDown(ev, id, side){
     if(side==='a') s.a=Math.max(prevEnd,Math.min(st.b0-0.6,st.a0+dt));
     else s.b=Math.min(nextStart,Math.max(st.a0+0.6,st.b0+dt));
     s.a=Math.round(s.a*100)/100; s.b=Math.round(s.b*100)/100;
-    if(bl) bl.style.width=((s.b-s.a)/_md.dur*100)+'%';
+    if(bl){ bl.style.left=(s.a/_md.dur*100)+'%'; bl.style.width=((s.b-s.a)/_md.dur*100)+'%'; }
   };
   const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);
     if(!st.moved){ _md.past.pop(); return; }
@@ -13071,10 +13125,10 @@ function _mdRenderPop(){
   if(!target) return;
   const isScene=it.k==='scene';
   const acts = isScene
-    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl'],['Supprimer l\'animation','del']] : [['Remplacer','repl'],['Supprimer','del']])
+    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl'],['Définir la durée','dur'],['Supprimer l\'animation','del']] : [['Remplacer','repl'],['Définir la durée','dur'],['Supprimer','del']])
     : it.k==='sfx' ? [['Changer le bruitage','repl'],['Retirer le bruitage','del']]
     : it.k==='trans' ? [['Changer la transition','repl'],['Couper net','del']]
-    : [['Modifier le texte','repl'],['Retirer le texte','del']];
+    : [['Modifier le texte','repl'],['Définir la durée','dur'],['Retirer le texte','del']];
   const wrap=document.getElementById('mdBandWrap');
   const leftExpr = _md.pop.src==='zoom'
     ? 'clamp(100px, '+(((it.t-(_md.time-_md.zoomWin))/(_md.zoomWin*2))*100)+'%, calc(100% - 100px))'
@@ -13088,13 +13142,14 @@ function _mdRenderPop(){
         +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="transform:'+(_md.pop.side==='up'?'rotate(180deg)':'none')+'"><path d="M6 9l6 6 6-6"/></svg></button></div>'
     +acts.map(a=>'<button onclick="_mdPopAct(\''+a[1]+'\')" class="row" style="width:100%;gap:8px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:'+(a[1]==='del'?'#ff6b7a':'var(--text)')+';background:transparent;cursor:pointer" '
       +'onmouseenter="this.style.background=\''+(a[1]==='del'?'rgba(255,71,87,.12)':'var(--surface-3)')+'\'" onmouseleave="this.style.background=\'transparent\'">'
-      +(a[1]==='repl'?'⟳':'✕')+' '+a[0]+'</button>').join('')
+      +(a[1]==='repl'?'⟳':a[1]==='dur'?'⏱':'✕')+' '+a[0]+'</button>').join('')
     +'</div>';
   _mdPaintProximity();
 }
 function _mdPopAct(act){
   const it=_md.pop&&_md.pop.item; _md.pop=null; _mdRenderPop();
   if(!it) return;
+  if(act==='dur'){ _mdCommit(); _md.durEdit={id:it.id,k:it.k}; _mdRender(); return; }
   if(it.k==='scene'){
     if(act==='repl') _mdOpenSwipe(it.id);
     else { _mdCommit(); const s=_md.scenes.find(x=>x.id===it.id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
@@ -13326,8 +13381,9 @@ function _mdAnimPrevHtml(name, desc, big){
   // secours si le fichier manque.
   const nm=String(name).replace(/[^a-z0-9_-]/gi,'');
   if(window._mdPrevSet && window._mdPrevSet.has(nm)){
+    const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
     return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
-      +'<video data-prev src="anim-previews/'+nm+'.mp4" poster="anim-previews/'+nm+'.jpg" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
+      +'<video data-prev src="'+src+'" poster="anim-previews/'+nm+'.jpg" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
       +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
   }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
@@ -13479,13 +13535,13 @@ function _mdSwipeHtml(){
       +'<div class="row" style="width:100%;gap:8px;margin-bottom:10px;flex:0 0 auto">'
         +'<button onclick="_mdSwList()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
         +'<div class="grow" style="position:relative">'
-          +'<button onclick="event.stopPropagation();_md.swGate=!_md.swGate;_mdRenderModals()" class="row" style="width:100%;gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer">'
+          +'<button onclick="event.stopPropagation();_md.swGate=!_md.swGate;const m=document.getElementById(\'mdSwGateMenu\');if(m)m.style.display=_md.swGate?\'block\':\'none\'" class="row" style="width:100%;gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer">'
             +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Remplacer par autre chose</button>'
-          +(_md.swGate?'<div onclick="event.stopPropagation()" style="position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:190px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:13px;padding:6px;box-shadow:0 18px 44px -14px rgba(0,0,0,.9)">'
+          +('<div id="mdSwGateMenu" onclick="event.stopPropagation()" style="display:'+(_md.swGate?'block':'none')+';position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:190px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:13px;padding:6px;box-shadow:0 18px 44px -14px rgba(0,0,0,.9)">'
             +[['anim','Animation','spark','var(--accent)'],['media','Média','image','var(--amber)'],['sfx','Bruitage','wave',_MD_CYAN],['trans','Transition','trans','var(--violet)'],['texte','Texte','card','var(--blue)']]
               .map(x=>'<button onclick="_mdSwGate(\''+x[0]+'\')" class="row" style="width:100%;gap:9px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:var(--text);background:transparent;cursor:pointer" '
                 +'onmouseenter="this.style.background=\'var(--surface-3)\'" onmouseleave="this.style.background=\'transparent\'">'+_mdIco(x[2],12,x[3])+' '+x[1]+'</button>').join('')
-          +'</div>':'')
+          +'</div>')
         +'</div>'
       +'</div>'
       +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.35':'1 / 1.3')+';max-height:'+(mob?'min(460px,56vh)':'min(540px,60vh)')+';flex:0 0 auto">'
@@ -13635,7 +13691,7 @@ function _mdBankModalHtml(){
         +'<span class="mono faint" style="font-size:10px;margin-left:auto">à '+_mdT(bm.at)+'</span>'
         +'<button onclick="_md.bankModal=null;_mdRenderModals()" style="margin-left:6px;color:var(--text-3);font-size:16px;line-height:1;cursor:pointer;background:none;border:none">✕</button></div>'
       +'<div style="padding:10px 12px">'
-        +'<button onclick="_mdBankSwipeMode()" class="row" style="width:100%;gap:8px;align-items:center;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'
+        +'<button onclick="_mdBankToSwipe()" class="row" style="width:100%;gap:8px;align-items:center;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'
           +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l4 4-4 4M7 16l-4-4 4-4"/></svg> Passer en mode swipe</button>'
         +'<input autofocus value="'+_mdEsc(bm.q||'')+'" oninput="_md.bankModal.q=this.value;_mdRenderModals(true)" placeholder="Rechercher parmi '+b.items.length+'…" '
           +'style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px">'
@@ -13646,36 +13702,46 @@ function _mdBankModalHtml(){
 // mélange (Fisher-Yates, copie) — « mets en aléatoire pour que l'ordre ne soit
 // pas toujours le même » (Axel 01/08)
 function _mdShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+// depuis une grille de REMPLACEMENT d'animation, « swipe » = le vrai écran
+// Remplacer (la même interface partout — retour Axel)
+function _mdBankToSwipe(){
+  const bm=_md.bankModal;
+  if(bm&&bm.kind==='animation'&&bm.replaceScene){ const id=bm.replaceScene; _md.bankModal=null; _mdOpenSwipe(id); return; }
+  _mdBankSwipeMode();
+}
 function _mdBankSwipeMode(){ _md.bankModal.swipe=true; _md.bankModal.i=0;
   _md.bankModal.list=_mdShuffle(_mdBankDef(_md.bankModal.kind).items); _mdRenderModals(); }
 function _mdBankSwipeHtml(){
-  const bm=_md.bankModal, b=_mdBankDef(bm.kind);
+  const bm=_md.bankModal, b=_mdBankDef(bm.kind), mob=_mdIsMob();
   const items=bm.list&&bm.list.length?bm.list:b.items, i=bm.i||0, name=items[i%items.length];
-  let corps='';
-  if(bm.kind==='animation'){ const bk=(_md.bank||[]).find(x=>x.name===name); corps=_mdAnimPrevHtml(name,bk?bk.desc:'',true); }
-  else if(bm.kind==='trans') corps='<div style="width:100%;height:100%;border-radius:16px;overflow:hidden">'+_mdTransPrevHtml(name,'9 / 16')+'</div>';
-  else if(bm.kind==='texte') corps='<div style="width:100%;height:100%;border-radius:16px;overflow:hidden">'+_mdTextPrevHtml(name,'9 / 16')+'</div>';
-  else corps='<div style="width:100%;height:100%;border-radius:16px;display:grid;place-items:center;padding:22px;background:linear-gradient(160deg,#0d2a33,#0a1016);border:1px solid var(--border-2)">'+_mdSfxPrevHtml(name,b.c,true)+'</div>';
-  return '<div onclick="_md.bankModal=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.78);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">'
-    +'<div onclick="event.stopPropagation()" style="width:min(340px,92vw);margin:auto;display:flex;flex-direction:column;gap:10px;flex:0 0 auto">'
-      +'<div class="row" style="gap:9px;align-items:center">'+_mdIco(b.ico,15,b.c)
-        +'<span style="font-weight:700;font-size:14.5px">'+b.title+'</span>'
-        +'<span class="mono faint" style="font-size:10px;margin-left:auto">à '+_mdT(bm.at)+'</span>'
-        +'<button onclick="_md.bankModal=null;_mdRenderModals()" style="margin-left:6px;color:var(--text-3);font-size:16px;line-height:1;cursor:pointer;background:none;border:none">✕</button></div>'
-      +'<div id="mdBkCard" onpointerdown="_mdBkDown(event)" style="position:relative;height:min(52vh,430px);aspect-ratio:9 / 16;width:auto;max-width:100%;align-self:center;user-select:none;touch-action:pan-y;cursor:grab">'
-        +'<div style="position:absolute;inset:0;z-index:5">'+corps
-          +'<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 14px 13px;border-radius:0 0 16px 16px;background:linear-gradient(transparent,rgba(0,0,0,.85))">'
-            +'<div style="font-weight:800;font-size:16px">'+_mdEsc(name)+'</div>'
-            +'<div class="mono" style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">'+((i%items.length)+1)+' / '+items.length+' · glisse pour voir la suite</div></div>'
+  // le CORPS = un aperçu 9:16 centré, comme le swipe Remplacer (même gabarit
+  // pour les quatre banques — retour Axel « garde la même interface »)
+  let prev='';
+  if(bm.kind==='animation'){ const bk=(_md.bank||[]).find(x=>x.name===name); prev=_mdAnimPrevHtml(name,bk?bk.desc:'',true); }
+  else if(bm.kind==='trans') prev='<div style="width:100%;height:100%;border-radius:16px;overflow:hidden">'+_mdTransPrevHtml(name,'9 / 16')+'</div>';
+  else if(bm.kind==='texte') prev='<div style="width:100%;height:100%;border-radius:16px;overflow:hidden">'+_mdTextPrevHtml(name,'9 / 16')+'</div>';
+  else prev='<div style="width:100%;height:100%;border-radius:16px;display:grid;place-items:center;padding:18px;background:linear-gradient(160deg,#0d2a33,#0a1016);border:1px solid var(--border-2)">'+_mdSfxPrevHtml(name,b.c,true)+'</div>';
+  return '<div onclick="_md.bankModal=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6600;background:rgba(6,6,8,.86);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:'+(mob?18:24)+'px;overflow-y:auto;animation:aaRise .22s ease both">'
+    +'<div onclick="event.stopPropagation()" class="col" style="align-items:center;width:100%;max-width:400px;margin:auto;flex:0 0 auto">'
+      +'<div class="row" style="width:100%;justify-content:space-between;align-items:center;margin-bottom:12px;flex:0 0 auto">'
+        +'<div class="col" style="line-height:1.3">'
+          +'<span class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--text-3)">'+b.title.toUpperCase()+'</span>'
+          +'<span style="font-size:14.5px;font-weight:700">à '+_mdT(bm.at)+'</span></div>'
+        +'<button onclick="_md.bankModal=null;_mdRenderModals()" class="btn-quiet" style="font-size:20px;padding:2px 8px;cursor:pointer">✕</button></div>'
+      +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.35':'1 / 1.3')+';max-height:'+(mob?'min(460px,56vh)':'min(540px,60vh)')+';flex:0 0 auto">'
+        +'<div id="mdBkCard" onpointerdown="_mdBkDown(event)" style="position:absolute;inset:0;border-radius:22px;overflow:hidden;touch-action:none;cursor:grab;z-index:5;'
+          +'background:linear-gradient(165deg, color-mix(in srgb, '+b.c+' 22%, var(--surface)), var(--surface));border:1px solid var(--border-2);box-shadow:0 30px 70px -26px rgba(0,0,0,.9);'
+          +'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px">'
+          +'<div style="height:76%;max-height:380px;min-height:120px;aspect-ratio:9 / 16;flex:0 1 auto">'+prev+'</div>'
+          +'<span class="mono" style="font-size:18px;font-weight:600;color:var(--text);flex:0 0 auto">'+_mdEsc(name)+'</span>'
         +'</div>'
       +'</div>'
-      +'<button onclick="event.stopPropagation();_md.bankModal.swipe=false;_mdRenderModals()" class="row" style="gap:7px;align-items:center;justify-content:center;padding:8px 12px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;position:relative;z-index:10">'
+      +'<span class="mono" style="font-size:11px;color:var(--text-3);margin:12px 0 10px;flex:0 0 auto">'+((i%items.length)+1)+' / '+items.length+' · glisse ou choisis</span>'
+      +'<button onclick="event.stopPropagation();_md.bankModal.swipe=false;_mdRenderModals()" class="row" style="gap:7px;align-items:center;justify-content:center;padding:8px 14px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px">'
         +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
-      +'<div class="row" style="gap:16px;justify-content:center;align-items:center;position:relative;z-index:10">'
-        +'<button onclick="event.stopPropagation();_md.bankModal.i=((_md.bankModal.i||0)+1)%'+items.length+';_mdRenderModals()" title="Suivant" style="width:56px;height:56px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-2);border:1px solid rgba(255,71,87,.45);color:#ff6b7a;cursor:pointer">'
-          +'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
-        +'<button onclick="event.stopPropagation();_mdBankPick(\''+_mdEsc(name)+'\')" title="Choisir" style="width:66px;height:66px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;box-shadow:0 12px 30px -10px var(--accent-glow);cursor:pointer">'
-          +'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>'
+      +'<div class="row" style="gap:16px;align-items:center;flex:0 0 auto">'
+        +'<button onclick="event.stopPropagation();_md.bankModal.i=((_md.bankModal.i||0)+1)%'+items.length+';_mdRenderModals()" title="Suivant" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);border:1px solid rgba(255,71,87,.4);color:#ff6b7a;font-size:22px;cursor:pointer">✕</button>'
+        +'<button onclick="event.stopPropagation();_mdBankPick(\''+_mdEsc(name)+'\')" title="Choisir" style="width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:26px;font-weight:800;box-shadow:0 14px 34px -12px var(--accent-glow);cursor:pointer">✓</button>'
       +'</div>'
     +'</div></div>';
 }
@@ -13994,7 +14060,9 @@ function _mdRender(){
   }
   // un clic hors popover le ferme (capture, une seule fois)
   if(!window._mdCloserOn){ window._mdCloserOn=true;
-    document.addEventListener('pointerdown',(e)=>{ if(!_md||!_md.pop) return;
+    document.addEventListener('pointerdown',(e)=>{ if(!_md) return;
+      if(_md.durEdit && !(e.target&&e.target.closest&&e.target.closest('[data-md-dur]'))){ _mdDurOk(); }
+      if(!_md.pop) return;
       if(e.target&&e.target.closest&&e.target.closest('[data-md-pop]')) return;
       _md.pop=null; _mdRenderPop(); },true); }
   _mdPlayBtns(); _mdPaintSel(); _mdRenderPop(); _mdRenderModals(); _mdTick();
@@ -14116,6 +14184,10 @@ function _mdBuildRegenPlan(){
       if(m.newText){ const words=String(m.newText).trim().split(/\s+/).filter(Boolean);
         const dt=(m.b-m.a)/Math.max(1,words.length);
         words.forEach((w,i)=>plan.captions.push({text:w,start:_mdR2(m.a+i*dt),end:_mdR2(m.a+(i+1)*dt)}));
+      } else if(m.resized){
+        // durée changée : les mêmes mots, redistribués sur la nouvelle fenêtre
+        const dt=(m.b-m.a)/Math.max(1,caps.length);
+        caps.forEach((c,i)=>plan.captions.push({text:c.text,start:_mdR2(m.a+i*dt),end:_mdR2(m.a+(i+1)*dt),accent:!!c.accent}));
       } else { const shift=m.a-caps[0].start;
         for(const c of caps) plan.captions.push({text:c.text,start:_mdR2(c.start+shift),end:_mdR2(c.end+shift)});
       }
