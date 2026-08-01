@@ -564,8 +564,18 @@ export function buildDynamicComposition(plan, opts = {}) {
       // on voit que c'est un RÉSULTAT montré, pas la vidéo elle-même.
       const src = String(p.slide.src || '')
       const vid = /\.(mp4|mov|webm|m4v)$/i.test(src)
-      const cw = Math.round(W * 0.74), ch = Math.round(cw * 16 / 9)
-      const cx = Math.round((W - cw) / 2), cy = Math.round((H - ch) / 2)
+      // POSITION LIBRE (« Détails du montage ») : l'utilisateur a posé sa carte
+      // où il veut dans le cadre — pos {x,y,w} en fractions, x/y = centre.
+      // Sans pos : la carte centrée historique.
+      const pos = p.slide.pos && typeof p.slide.pos === 'object' ? p.slide.pos : null
+      const cw = Math.round(W * (pos && pos.w ? Math.min(0.95, Math.max(0.18, Number(pos.w))) : 0.74))
+      const ch = Math.round(cw * 16 / 9)
+      const cx = pos && pos.x != null
+        ? Math.round(Math.min(W - cw, Math.max(0, Number(pos.x) * W - cw / 2)))
+        : Math.round((W - cw) / 2)
+      const cy = pos && pos.y != null
+        ? Math.round(Math.min(H - ch, Math.max(0, Number(pos.y) * H - ch / 2)))
+        : Math.round((H - ch) / 2)
       const rad = Math.round(cw * 0.075)
       const card = (body) => `<div class="an-p" id="${id}md" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rad}px;overflow:hidden;box-shadow:0 40px 90px -20px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.06)">${body}</div>`
       if (vid) {

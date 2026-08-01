@@ -12608,6 +12608,8 @@ async function _mdOpen(){
     if(!derived) derived = d.plan;
     if(!derived || !Array.isArray(derived.slides)) throw new Error('plan illisible');
     let bank=[]; try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
+    // manifeste des aperçus RÉELS d'animations (rendus par le moteur)
+    if(!window._mdPrevSet){ try{ window._mdPrevSet=new Set(await (await fetch('anim-previews/index.json')).json()); }catch(_){ window._mdPrevSet=new Set(); } }
     _md = { jobId, job:d, derived, bank, dur:Number(derived.duration)||60,
       sel:null, time:0, playing:false, bandZoom:1, zoomWin:3, detail:false, order:false, all:false,
       pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, addedMedia:{} };
@@ -12636,7 +12638,13 @@ function _mdPlayBtns(){
     const svg = _md&&_md.playing
       ? '<svg width="WW" height="WW" viewBox="0 0 24 24" fill="FF"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>'
       : '<svg width="WW" height="WW" viewBox="0 0 24 24" fill="FF"><path d="M7 4l13 8-13 8z"/></svg>';
-    if(id==='mdPlayA') b.innerHTML = svg.replace(/WW/g,'17').replace('FF','#111');
+    if(id==='mdPlayA'){
+      // en LECTURE le rond blanc disparaît (il gâchait la vidéo — retour Axel) :
+      // toute la surface du clip reste cliquable et met en pause ; à l'arrêt le
+      // bouton play revient
+      b.style.display = (_md&&_md.playing) ? 'none' : 'grid';
+      b.innerHTML = svg.replace(/WW/g,'17').replace('FF','#111');
+    }
     else b.innerHTML = svg.replace(/WW/g,'10').replace('FF','currentColor') + (_md&&_md.playing?' Pause':' Lire');
   }
 }
@@ -12649,7 +12657,7 @@ function _mdTick(){
   if(v && !v.paused) _md.time = v.currentTime||_md.time;
   const t=_md.time, dur=_md.dur;
   // curseurs + temps
-  for(const id of ['mdCur','mdCurH']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
+  for(const id of ['mdCur','mdCurH','mdCurHit']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
   const tm=document.getElementById('mdTime'); if(tm) tm.innerHTML=_mdT(t)+'<span class="faint"> / '+_mdT(dur)+'</span>';
   const tz=document.getElementById('mdZoomTime'); if(tz) tz.textContent=_mdT(t);
   // scène en cours pendant la lecture
@@ -12659,7 +12667,7 @@ function _mdTick(){
   _mdPaintProximity();
   // auto-scroll du zoom bande
   const wrap=document.getElementById('mdBandWrap');
-  if(wrap && _md.bandZoom>1){ const target=(t/dur)*wrap.scrollWidth - wrap.clientWidth/2;
+  if(wrap && _md.bandZoom>1 && _md.playing){ const target=(t/dur)*wrap.scrollWidth - wrap.clientWidth/2;
     wrap.scrollLeft=Math.max(0,Math.min(wrap.scrollWidth-wrap.clientWidth,target)); }
   // vue rapprochée : re-render léger (fenêtre glissante)
   if(_md.detail) _mdPaintCloseUp();
@@ -12835,10 +12843,10 @@ function _mdBandHtml(){
           +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Ajouter</button>'
         +'<div id="mdAddPop"></div>'
       +'</div>'
-      +'<button onclick="_mdZoomSet(_md.bandZoom-0.5)" title="Dézoomer" style="width:24px;height:22px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer">'
+      +'<button onclick="_mdZoomSet(_md.bandZoom-1)" title="Dézoomer" style="width:24px;height:22px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer">'
         +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>'
       +'<span id="mdZoomLbl" class="mono" style="font-size:9.5px;color:var(--text-3);width:26px;text-align:center">'+_md.bandZoom+'×</span>'
-      +'<button onclick="_mdZoomSet(_md.bandZoom+0.5)" title="Zoomer" style="width:24px;height:22px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer">'
+      +'<button onclick="_mdZoomSet(_md.bandZoom+1)" title="Zoomer" style="width:24px;height:22px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer">'
         +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'
     +'</div>'
     // wrap scrollable
@@ -12851,6 +12859,9 @@ function _mdBandHtml(){
           +'<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.9))"></div>'
           +'<div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:8px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.9))"></div>'
         +'</div>'
+        // la BARRE BLANCHE se saisit (retour Axel) : zone de prise invisible de
+        // 18px autour de la ligne, glisser = déplacer le curseur où on veut
+        +'<div id="mdCurHit" onpointerdown="_mdTrackDown(event)" title="Glisse pour déplacer le curseur" style="position:absolute;top:0;bottom:0;left:0;width:18px;transform:translateX(-50%);z-index:7;cursor:ew-resize;touch-action:none"></div>'
       +'</div>'
       +'<div style="position:relative;height:16px;margin-top:1px;z-index:6;pointer-events:none">'
         +'<div id="mdCurH" onpointerdown="_mdTrackDown(event)" title="Glisse pour te déplacer dans la vidéo" style="position:absolute;left:0;top:0;transform:translateX(-50%);width:26px;height:16px;display:grid;place-items:center;pointer-events:auto;cursor:ew-resize;touch-action:none">'
@@ -12862,7 +12873,7 @@ function _mdBandHtml(){
     +'<div id="mdBandPop"></div>'
   +'</div>';
 }
-function _mdZoomSet(z){ _md.bandZoom=Math.max(1,Math.min(6,Math.round(z*2)/2)); _mdRender(); }
+function _mdZoomSet(z){ _md.bandZoom=Math.max(1,Math.min(10,Math.round(z))); _mdRender(); }
 function _mdTrackDown(ev){
   if(_md.pop){ _md.pop=null; _mdRenderPop(); return; }
   _mdPause();
@@ -12931,17 +12942,84 @@ function _mdPopAct(act){
 }
 function _mdRequestAdd(nature){
   if(nature==='media'){
-    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*,video/*';
-    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
-      _mdCommit();
-      const id='sc-add'+Date.now();
-      const a=Math.max(0,Math.min(_md.dur-0.5,_md.time)), b=Math.min(_md.dur,a+2.5);
-      _md.addedMedia[id]=f;
-      _md.scenes.push({id,a,b,n:'media',t:f.name.replace(/\.[^.]+$/,''),d:'ajouté par toi',w:'',items:[],added:true});
-      _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id; _mdRender(); };
+    // l'input reste ATTACHÉ au DOM et référencé : Safari perd le onchange d'un
+    // input détaché ramassé par le GC — c'était le « j'ai essayé de mettre un
+    // média, ça ne l'a pas mis » d'Axel
+    let inp=document.getElementById('mdFileInp');
+    if(inp) inp.remove();
+    inp=document.createElement('input'); inp.type='file'; inp.accept='image/*,video/*';
+    inp.id='mdFileInp'; inp.style.cssText='position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+    document.body.appendChild(inp);
+    window._mdFileKeep=inp;
+    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; inp.remove(); if(!f||!_md) return;
+      // puis on CHOISIT SA PLACE dans l'écran (drag + taille) avant de valider
+      _md.place={ file:f, url:URL.createObjectURL(f), isVid:/^video\//.test(f.type||''),
+        at:_md.time, x:0.5, y:0.5, w:0.62 };
+      _mdRenderModals();
+    };
     inp.click(); return;
   }
   _md.bankModal={kind:nature,at:_md.time}; _mdRenderModals();
+}
+// ── PLACER LE MÉDIA DANS L'ÉCRAN (drag pour déplacer, glissière pour la taille) ─
+function _mdPlaceHtml(){
+  const P=_md.place, mob=_mdIsMob();
+  const media=P.isVid
+    ? '<video src="'+P.url+'" muted playsinline autoplay loop style="width:100%;height:100%;object-fit:cover;display:block"></video>'
+    : '<img src="'+P.url+'" style="width:100%;height:100%;object-fit:cover;display:block">';
+  return '<div style="position:fixed;inset:0;z-index:6700;background:rgba(6,6,9,.85);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px">'
+    +'<div class="row" style="gap:9px;align-items:center;width:min(300px,80vw)">'+_mdIco('image',15,'var(--amber)')
+      +'<span style="font-weight:700;font-size:14.5px">Place ton média</span>'
+      +'<span class="mono faint" style="font-size:10px;margin-left:auto">à '+_mdT(P.at)+'</span></div>'
+    +'<div id="mdPlaceBox" style="position:relative;height:min(56vh,470px);aspect-ratio:9 / 16;border-radius:14px;overflow:hidden;background:#101014;border:1px solid var(--border-2);touch-action:none">'
+      +'<div id="mdPlaceBg" style="position:absolute;inset:0;background:linear-gradient(150deg,#1c1a22,#0d0c10)"></div>'
+      +'<div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:33.33% 33.33%"></div>'
+      +'<div id="mdPlaceCard" onpointerdown="_mdPlaceDown(event)" style="position:absolute;cursor:grab;border-radius:10px;overflow:hidden;box-shadow:0 20px 50px -14px rgba(0,0,0,.8),0 0 0 1.5px var(--amber);touch-action:none">'+media+'</div>'
+    +'</div>'
+    +'<div class="row" style="gap:10px;align-items:center;width:min(300px,80vw)">'
+      +'<span class="faint" style="font-size:11px;flex:0 0 auto">Taille</span>'
+      +'<input type="range" min="20" max="92" value="'+Math.round(P.w*100)+'" oninput="_md.place.w=this.value/100;_mdPlacePaint()" class="ed-range" style="flex:1">'
+    +'</div>'
+    +'<p class="faint center" style="font-size:11px;max-width:280px">Glisse la carte où tu veux — elle arrivera là, avec une transition propre.</p>'
+    +'<div class="row" style="gap:10px;width:min(300px,80vw)">'
+      +'<button onclick="_mdPlaceCancel()" class="btn btn-ghost" style="flex:0 0 auto">Annuler</button>'
+      +'<button onclick="_mdPlaceOk()" class="btn btn-primary" style="flex:1;font-weight:800">Ajouter ici</button>'
+    +'</div></div>';
+}
+function _mdPlacePaint(){
+  const P=_md&&_md.place, box=document.getElementById('mdPlaceBox'), card=document.getElementById('mdPlaceCard');
+  if(!P||!box||!card) return;
+  const r=box.getBoundingClientRect();
+  const cw=P.w*r.width, ch=cw*16/9;
+  const cx=Math.min(r.width-cw/2, Math.max(cw/2, P.x*r.width));
+  const cy=Math.min(r.height-ch/2, Math.max(ch/2, P.y*r.height));
+  card.style.width=cw+'px'; card.style.height=ch+'px';
+  card.style.left=(cx-cw/2)+'px'; card.style.top=(cy-ch/2)+'px';
+}
+function _mdPlaceDown(ev){
+  ev.preventDefault();
+  const box=document.getElementById('mdPlaceBox'); if(!box||!_md||!_md.place) return;
+  const r=box.getBoundingClientRect(), P=_md.place;
+  const x0=ev.clientX, y0=ev.clientY, px0=P.x, py0=P.y;
+  const mv=(e)=>{ P.x=Math.min(1,Math.max(0,px0+(e.clientX-x0)/r.width));
+    P.y=Math.min(1,Math.max(0,py0+(e.clientY-y0)/r.height)); _mdPlacePaint(); };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
+function _mdPlaceCancel(){ if(_md&&_md.place){ try{ URL.revokeObjectURL(_md.place.url); }catch(_){} _md.place=null; } _mdRenderModals(); }
+function _mdPlaceOk(){
+  const P=_md&&_md.place; if(!P) return;
+  _mdCommit();
+  const id='sc-add'+Date.now();
+  const a=Math.max(0,Math.min(_md.dur-0.5,P.at)), b=Math.min(_md.dur,a+2.5);
+  _md.addedMedia[id]=P.file;
+  _md.scenes.push({id,a,b,n:'media',t:P.file.name.replace(/\.[^.]+$/,''),d:'placé par toi',w:'',items:[],added:true,
+    pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100}});
+  _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id;
+  try{ URL.revokeObjectURL(P.url); }catch(_){}
+  _md.place=null;
+  _mdRender();
+  toast('🖼️ Média ajouté à '+_mdT(a)+' — il sera posé là à la régénération');
 }
 // ── VUE RAPPROCHÉE (±N s reliée à la bande) ─────────────────────────────────
 function _mdPaintCloseUp(){
@@ -13064,6 +13142,16 @@ function _mdCardUndo(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id);
   if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; } } _mdRender(); }
 // ── APERÇUS (animation / transition / texte / bruitage) ─────────────────────
 function _mdAnimPrevHtml(name, desc, big){
+  // la VRAIE animation en aperçu (retour Axel) : chaque anim de la banque a été
+  // rendue par le moteur lui-même (anim-previews/<nom>.mp4, manifeste
+  // index.json chargé à l'ouverture). La silhouette CSS ne sert plus que de
+  // secours si le fichier manque.
+  const nm=String(name).replace(/[^a-z0-9_-]/gi,'');
+  if(window._mdPrevSet && window._mdPrevSet.has(nm)){
+    return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
+      +'<video data-prev src="anim-previews/'+nm+'.mp4" muted loop playsinline preload="'+(big?'auto':'metadata')+'"'+(big?' autoplay':'')
+      +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
+  }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
   return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
     +'<div style="position:absolute;inset:0;animation:'+anim+';will-change:transform,filter,opacity;background:linear-gradient(150deg,#2b1a3f,#101018 55%,#3a1f14)">'
@@ -13118,8 +13206,21 @@ function _mdSfxPrevHtml(name, color, big){
     +(big?'<span class="mono" style="font-size:10.5px;color:var(--text-3)">écouter</span>':'')
     +_mdSfxBarsHtml(name,color,big)+'</div>';
 }
-// aperçu sonore par synthèse (les MP3 réels vivent côté worker, pas dans l'app)
+// aperçu sonore : le VRAI MP3 du worker (copié dans app/sfx/) — retour Axel
+// « faut brancher nos bruitages, pas ceux inventés pour le design ».
+// La synthèse ne reste qu'en secours si le fichier manque.
 function _mdSfxPlay(name, btn){
+  try{
+    const a=new Audio('sfx/'+String(name).replace(/[^a-z0-9-]/gi,'')+'.mp3');
+    a.volume=0.9;
+    a.onerror=()=>_mdSfxSynth(name);
+    const p=a.play();
+    if(p&&p.catch) p.catch(()=>_mdSfxSynth(name));
+    if(btn){ btn.style.background=btn.style.color; setTimeout(()=>{ btn.style.background='transparent'; },400); }
+    return;
+  }catch(_){ _mdSfxSynth(name, btn); }
+}
+function _mdSfxSynth(name, btn){
   try{
     const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
     const ctx=new AC(), fam=_mdSfxFam(name), now=ctx.currentTime;
@@ -13199,9 +13300,11 @@ function _mdSwipeHtml(){
           +'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px">'
           +'<span id="mdSwYes" style="position:absolute;top:18px;left:18px;padding:5px 11px;border-radius:8px;border:2px solid var(--green);color:var(--green);font-weight:900;font-size:14px;transform:rotate(-12deg);opacity:0">GARDER</span>'
           +'<span id="mdSwNo" style="position:absolute;top:18px;right:18px;padding:5px 11px;border-radius:8px;border:2px solid #ff4757;color:#ff6b7a;font-weight:900;font-size:14px;transform:rotate(12deg);opacity:0">PASSER</span>'
-          +'<div style="width:62%;max-width:180px">'+_mdAnimPrevHtml(item.k, item.d, true)+'</div>'
-          +'<span class="mono" style="font-size:19px;font-weight:600;color:var(--text)">'+_mdEsc(item.k)+'</span>'
-          +'<p class="muted center" style="font-size:13.5px;line-height:1.5;max-width:230px">'+_mdEsc(item.d)+'</p>'
+          // l'aperçu se contraint en HAUTEUR : le nom et la description entière
+          // restent toujours visibles (retour Axel « le texte est coupé »)
+          +'<div style="height:46%;max-height:240px;min-height:90px;aspect-ratio:9 / 16;flex:0 1 auto">'+_mdAnimPrevHtml(item.k, item.d, true)+'</div>'
+          +'<span class="mono" style="font-size:18px;font-weight:600;color:var(--text);flex:0 0 auto">'+_mdEsc(item.k)+'</span>'
+          +'<p class="muted center" style="font-size:13px;line-height:1.45;max-width:250px;flex:0 0 auto">'+_mdEsc(item.d)+'</p>'
         +'</div>'
       +'</div>'
       +'<span class="mono" style="font-size:11px;color:var(--text-3);margin:12px 0 10px;flex:0 0 auto">'+(sw.i+1)+' / '+sw.list.length+' · glisse ou choisis</span>'
@@ -13409,6 +13512,7 @@ function _mdVidEl(){
   if(_md.vidEl) return _md.vidEl;
   const v=document.createElement('video');
   v.id='mdVid'; v.src=_md.job.url||''; v.playsInline=true; v.setAttribute('playsinline',''); v.preload='auto';
+  v.crossOrigin='anonymous';   // permet de capturer la frame courante (placement média)
   v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#08070a';
   v.addEventListener('play',()=>{ if(_md){ _md.playing=true; _mdPlayBtns(); _mdRaf(); } });
   v.addEventListener('pause',()=>{ if(_md){ _md.playing=false; _mdPlayBtns(); } });
@@ -13551,7 +13655,17 @@ function _mdRender(){
   // molette : zoom de la bande (seuil 110, comme la maquette)
   const bw=document.getElementById('mdBandWrap');
   if(bw){ let acc=0; bw.addEventListener('wheel',(e)=>{ if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
-    e.preventDefault(); acc+=e.deltaY; if(Math.abs(acc)>110){ _mdZoomSet(_md.bandZoom+(acc<0?0.5:-0.5)); acc=0; } },{passive:false}); }
+    e.preventDefault(); acc+=e.deltaY; if(Math.abs(acc)>110){ _mdZoomSet(_md.bandZoom+(acc<0?1:-1)); acc=0; } },{passive:false});
+    // BALAYER la bande zoomée au doigt/à la souris (retour Axel) : glisser sur
+    // le fond (pas sur la piste, une tige ou le curseur) fait défiler
+    bw.addEventListener('pointerdown',(e)=>{
+      if(_md.bandZoom<=1) return;
+      if(e.target && e.target.closest && e.target.closest('#mdTrack,[data-stem],#mdCurH,#mdCurHit,button,[data-md-pop]')) return;
+      const x0=e.clientX, s0=bw.scrollLeft;
+      const mv=(ev)=>{ bw.scrollLeft=s0-(ev.clientX-x0); };
+      const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
+      window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+    }); }
   if(_md.detail){ _mdPaintCloseUp();
     const cw=document.getElementById('mdCloseWrap');
     if(cw){ let acc2=0; cw.addEventListener('wheel',(e)=>{ e.preventDefault(); acc2+=e.deltaY;
@@ -13571,9 +13685,32 @@ function _mdRenderModals(keepFocus){
   if(_md.bankModal) h+=_md.bankModal.swipe?_mdBankSwipeHtml():_mdBankModalHtml();
   if(_md.askText) h+=_mdAskTextHtml();
   if(_md.swipe) h+=_mdSwipeHtml();
+  if(_md.place) h+=_mdPlaceHtml();
   host.innerHTML=h;
+  if(_md.place){ _mdPlacePaint(); _mdPlaceBgPaint(); }
+  // les aperçus vidéo de la grille ne JOUENT que visibles (164 vidéos décodées
+  // en même temps mettraient Safari à genoux)
+  const prevs=host.querySelectorAll('video[data-prev]');
+  if(prevs.length){
+    if(window._mdPrevIO) window._mdPrevIO.disconnect();
+    window._mdPrevIO=new IntersectionObserver((es)=>{ for(const e of es){
+      const v=e.target;
+      if(e.isIntersecting){ const p=v.play(); if(p&&p.catch) p.catch(()=>{}); } else v.pause();
+    } },{threshold:0.2});
+    prevs.forEach(v=>window._mdPrevIO.observe(v));
+  }
   const inp=host.querySelector('input[autofocus],textarea[autofocus]');
   if(inp){ inp.focus(); if(keepFocus){ try{ inp.selectionStart=inp.selectionEnd=inp.value.length; }catch(_){} } }
+}
+// le fond du placement = la frame COURANTE de la vidéo (si le CORS le permet)
+function _mdPlaceBgPaint(){
+  try{
+    const v=_mdVid(), bg=document.getElementById('mdPlaceBg');
+    if(!v||!bg||!v.videoWidth) return;
+    const c=document.createElement('canvas'); c.width=270; c.height=480;
+    c.getContext('2d').drawImage(v,0,0,270,480);
+    bg.style.background='url('+c.toDataURL('image/jpeg',0.7)+') center/cover';
+  }catch(_){ /* frame inaccessible (CORS) : le fond neutre reste */ }
 }
 
 // ── RÉGÉNÉRER : le plan chef + TOUTES les décisions de l'écran ──────────────
@@ -13682,7 +13819,11 @@ async function _mdRegen(){
       const e=await sb.storage.from('render-media').upload(p2,f,{upsert:true,contentType:f.type||(isVid?'video/mp4':'image/jpeg')});
       if(e.error) throw new Error('upload média : '+e.error.message);
       assets.push({id,path:p2,kind:isVid?'video':'image'});
-      (plan.broll=plan.broll||[]).push({assetId:id,start:_mdR2(s.a),end:_mdR2(s.b)});
+      // posé en userSlide (pas en broll) : la POSITION choisie à l'écran est
+      // respectée telle quelle par le moteur (slide.pos {x,y,w})
+      (plan.userSlides=plan.userSlides||[]).push(Object.assign(
+        {start:_mdR2(s.a),end:_mdR2(s.b),anim:'media',assetId:id},
+        s.pos?{pos:s.pos}:{}));
     }
     _mdRegenPaint(8);
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job',{method:'POST',headers:{...(await getAuthHeader()),'Content-Type':'application/json'},
