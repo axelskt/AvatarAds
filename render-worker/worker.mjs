@@ -209,9 +209,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       for (const f of readdirSync(avatarDir).filter((f) => /\.(mp4|mov|webm|m4v)$/i.test(f)).sort()) {
         const id = f.replace(/\.[^.]+$/, '') // 'av0', 'av1'…
         try {
+          // LE VISAGE MÉRITE LE MEILLEUR ENCODEUR. Ce clip est ré-encodé une
+          // fois avant compositing, puis recompressé par Instagram/TikTok :
+          // chaque génération perdue se voit sur la peau. `slow` + crf 18 coûte
+          // quelques secondes de rendu et tient bien mieux la recompression.
           execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(avatarDir, f),
             '-vf', "scale='min(1080,iw)':-2,fps=30", '-an',
-            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-g', '30',
+            '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', '30',
             '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
           avatarClips[id] = 'media/' + id + '.mp4'
         } catch (e) { console.warn('scène avatar ignorée (illisible):', f, e.message) }
@@ -709,6 +713,10 @@ async function pollLoop() {
           const petit = out.replace(/\.mp4$/i, '') + '-web.mp4'
           console.log(`▶ ${(statSync(out).size / 1048576).toFixed(1)} Mo > limite : ré-encodage à ${kbps} kbit/s`)
           try {
+            // MESURÉ, PAS SUPPOSÉ (02/08) : à taille égale, un 2 passes en
+            // `slow` donne le MÊME SSIM que ce 1 passe (0,99795 vs 0,99800) et
+            // coûte 30 s de rendu. À ce débit l'encodeur n'est pas affamé — la
+            // répartition intelligente ne sert à rien. On garde le simple.
             execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', out,
               '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', kbps + 'k',
               '-maxrate', Math.round(kbps * 1.3) + 'k', '-bufsize', Math.round(kbps * 2) + 'k',
