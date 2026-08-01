@@ -519,6 +519,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     }
 
     for (const s of plan.sfx || []) {
+      // Axel a retiré boom/impact de la banque (01/08) mais le chef d'orchestre
+      // les propose encore dans ses plans : ils jouent leur jumeau gardé.
+      const SFX_ALIAS = { boom: 'cinematic-impact', impact: 'hit' }
+      if (SFX_ALIAS[s.kind] && !existsSync(join(HERE, 'assets', 'sfx', `${s.kind}.mp3`))) s = { ...s, kind: SFX_ALIAS[s.kind] }
       const f = join(HERE, 'assets', 'sfx', `${s.kind}.mp3`)
       if (!existsSync(f)) continue
       inputs.push('-i', f)
