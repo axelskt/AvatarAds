@@ -12053,7 +12053,8 @@ function _mtVideoDone(finalUrl){
         +'<button onclick="_mtDetOpen()" class="btn grow" style="padding:14px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700">'
           +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Voir le détail du montage</button>'
       +'</div>'
-      +'<button onclick="_mtProg(-1);nav(\'montage\')" class="btn-quiet btn-sm">↺ Créer une autre vidéo</button>'
+      +'<button onclick="_mtReviewOpen()" class="btn-quiet btn-sm" style="border:none;background:none">✎ Faire une review avec mes consignes</button>'
+      +'<button onclick="_mtProg(-1);nav(\'montage\')" class="btn-quiet btn-sm" style="border:none;background:none">↺ Créer une autre vidéo</button>'
       +((typeof _aaIsDev==='function' && _aaIsDev())
         ? '<button onclick="_mtPublishFinal()" class="btn-quiet btn-sm">📤 Publier partout <span style="font-size:10px;opacity:.6;font-family:var(--mono)">DEV</span></button>'
         : '')
@@ -12061,6 +12062,146 @@ function _mtVideoDone(finalUrl){
     + _mtBonusHtml()
     +'</div>';
 }
+// ── ✎ DEMANDER UNE REVIEW — recopie 1:1 de la maquette (gen-montage.jsx phase
+// « review »). L'utilisateur décrit EN FRANÇAIS ce qu'il veut changer, joint des
+// médias à intégrer, et l'IA relance un montage complet avec ses consignes :
+// pas de manipulation, une phrase suffit. L'originale est conservée.
+let _mtReview = { media: [], files: [] };
+
+function _mtReviewOpen(){
+  if(!_mtFinalUrl){ toast('⚠️ Lance un montage d\'abord'); return; }
+  _mtReview = { media: [], files: [] };
+  _mtReviewRender();
+}
+function _mtReviewBack(){ _mtVideoDone(_mtFinalUrl); }
+
+// une review RELANCE un montage complet (nouveau plan + nouveau rendu) : le
+// prix est celui d'un montage, pas un forfait — même formule que le CTA du
+// module, pour qu'aucun chiffre ne mente.
+function _mtReviewCost(){
+  const dur=(_mt&&_mt.mp3Dur)||0;
+  if(!dur) return CREDIT_COSTS.montageIA;
+  const omni=(window._mtLipModel||_mt.lipModel)==='omnihuman';
+  const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
+  const av=Math.min(10, Math.max(2, Math.round(dur*0.25)));   // ~25 % mesuré sur les montages réels
+  return Math.ceil(CREDIT_COSTS.montageIA + av*rate + Math.max(0,dur-av)*CREDIT_COSTS.hyperframesPerSec);
+}
+function _mtReviewEyebrow(t){
+  return '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px">'+t+'</div>';
+}
+function _mtReviewRender(keepText){
+  const o=document.getElementById('mtProgOv'); if(!o) return;
+  const mob=window.innerWidth<=768;
+  const txt=keepText!=null?keepText:(document.getElementById('mtRevTxt')||{}).value||'';
+  o.style.placeItems='stretch'; o.style.padding='0';
+  o.innerHTML=''
+    +'<div class="col" style="flex:1;min-height:0;width:100%">'
+      // entête : ← Retour · titre · vide (la maquette garde le titre centré)
+      +'<div class="row" style="flex:0 0 auto;padding:'+(mob?'14px 16px':'16px 40px')+';justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'
+        +'<button onclick="_mtReviewBack()" class="btn-quiet btn-sm" style="border:none;background:none">← Retour</button>'
+        +'<div class="display" style="font-size:'+(mob?16:18)+'px;font-weight:700">Demander une review</div>'
+        +'<span style="width:60px"></span>'
+      +'</div>'
+      +'<div class="scroll-y" style="flex:1;min-height:0;padding:'+(mob?'18px 16px 24px':'26px 40px 32px')+'">'
+        +'<div style="display:grid;grid-template-columns:'+(mob?'1fr':'minmax(0,300px) 1fr')+';gap:'+(mob?22:36)+'px;max-width:900px;margin:0 auto;align-items:stretch">'
+          // — la vidéo générée
+          +'<div>'+_mtReviewEyebrow('Ta vidéo générée')
+            +'<div style="position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;border:1px solid var(--border-2);background:#0b0910">'
+              +'<video id="mtRevVid" src="'+(_mtFinalUrl||'')+'" playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+              +'<button onclick="_mtRevPlay()" style="position:absolute;inset:0;display:grid;place-items:center;border:none;background:none;cursor:pointer">'
+                +'<span id="mtRevPlayBtn" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center">'
+                  +'<svg width="24" height="24" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></span></button>'
+              +'<span id="mtRevMeta" class="mono" style="position:absolute;bottom:10px;left:10px;font-size:10px;background:rgba(0,0,0,.6);padding:2px 7px;border-radius:6px;color:#fff">9:16</span>'
+            +'</div>'
+          +'</div>'
+          // — les consignes
+          +'<div class="col" style="min-height:0;justify-content:center">'
+            +_mtReviewEyebrow('Tes consignes de retouche')
+            +'<textarea id="mtRevTxt" class="field" style="min-height:'+(mob?110:150)+'px;resize:vertical" '
+              +'placeholder="Dis à l\'IA ce que tu veux changer. Ex : « Coupe le passage à 0:08, ajoute un zoom quand je parle du prix, remplace la musique par un truc plus calme, mets mon logo au début. »">'+_mdEsc(txt)+'</textarea>'
+            +'<div style="margin-top:22px">'
+              +_mtReviewEyebrow('Ajouter des images / vidéos à intégrer · optionnel')
+              +'<div class="row" style="gap:10px;align-items:stretch">'
+                +'<button onclick="_mtRevPick()" class="row gap10" style="flex:1;min-width:0;padding:14px 16px;border-radius:14px;align-items:center;cursor:pointer;'
+                  +'border:1.5px dashed var(--border-2);background:var(--surface);transition:.15s" '
+                  +'onmouseenter="this.style.borderColor=\'var(--accent-line)\'" onmouseleave="this.style.borderColor=\'var(--border-2)\'">'
+                  +'<span style="width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">'
+                    +'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>'
+                  +'<span class="col" style="line-height:1.3;text-align:left">'
+                    +'<span style="font-weight:700;font-size:14px">Glisser ou parcourir</span>'
+                    +'<span class="faint" style="font-size:11.5px">Images · vidéos · MP4, PNG, JPG</span></span>'
+                +'</button>'
+              +'</div>'
+              +(_mtReview.media.length
+                ? '<div class="row" style="gap:10px;flex-wrap:wrap;margin-top:12px">'
+                  +_mtReview.media.map((m,i)=>'<div style="position:relative;width:60px;height:60px;border-radius:11px;overflow:hidden;border:1px solid var(--border-2);background:#14121a">'
+                    +(m.url?'<img src="'+m.url+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
+                    +'<button onclick="_mtRevDel('+i+')" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:6px;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:11px;line-height:1;cursor:pointer">✕</button></div>').join('')
+                  +'</div>'
+                : '')
+            +'</div>'
+            +'<button onclick="_mtReviewRun()" class="btn btn-primary" style="width:100%;margin-top:26px;padding:'+(mob?'15px':'17px')+';font-weight:800;font-size:'+(mob?15.5:16.5)+'px;border-radius:16px;'
+              +'box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 44px -10px var(--accent-glow)">'
+              +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21M6.2 6.2l2.5 2.5M15.3 15.3l2.5 2.5M17.8 6.2l-2.5 2.5M8.7 15.3l-2.5 2.5"/></svg>'
+              +' Relancer avec mes retouches — '+_mtReviewCost()+' crédits</button>'
+            +'<p class="center faint mono" style="font-size:11px;margin-top:8px">Une nouvelle version est générée · l\'originale est conservée</p>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  // la durée réelle complète la pastille 9:16
+  const v=document.getElementById('mtRevVid');
+  if(v) v.addEventListener('loadedmetadata',()=>{ const m=document.getElementById('mtRevMeta');
+    if(m&&isFinite(v.duration)){ const s2=Math.round(v.duration); m.textContent=Math.floor(s2/60)+':'+String(s2%60).padStart(2,'0')+' · 9:16'; } });
+}
+function _mtRevPlay(){
+  const v=document.getElementById('mtRevVid'), b=document.getElementById('mtRevPlayBtn'); if(!v) return;
+  if(v.paused){ v.play().catch(()=>{}); if(b) b.style.display='none'; }
+  else { v.pause(); if(b) b.style.display='grid'; }
+}
+function _mtRevPick(){
+  let inp=document.getElementById('mtRevInp'); if(inp) inp.remove();
+  inp=document.createElement('input'); inp.type='file'; inp.accept='image/*,video/*'; inp.multiple=true;
+  inp.id='mtRevInp'; inp.style.cssText='position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  document.body.appendChild(inp);
+  inp.onchange=()=>{ const txt=(document.getElementById('mtRevTxt')||{}).value||'';
+    for(const f of Array.from(inp.files||[])){
+      _mtReview.files.push(f);
+      _mtReview.media.push({ url:URL.createObjectURL(f), name:f.name, isVid:/^video\//.test(f.type||'') });
+    }
+    inp.remove(); _mtReviewRender(txt); };
+  inp.click();
+}
+function _mtRevDel(i){
+  const txt=(document.getElementById('mtRevTxt')||{}).value||'';
+  try{ URL.revokeObjectURL(_mtReview.media[i].url); }catch(_){}
+  _mtReview.media.splice(i,1); _mtReview.files.splice(i,1);
+  _mtReviewRender(txt);
+}
+// relance un montage COMPLET avec les consignes en brief + les médias joints
+async function _mtReviewRun(){
+  const txt=((document.getElementById('mtRevTxt')||{}).value||'').trim();
+  if(!txt && !_mtReview.files.length){ toast('✎ Écris ce que tu veux changer'); return; }
+  if(!_mt || !_mt.mp3){ toast('⚠️ L\'audio d\'origine n\'est plus en mémoire — relance un montage'); return; }
+  // les médias joints entrent dans le lot du prochain montage (_mtLaunchFiles
+  // repart de _edAi.files) — même rouage que les visuels du module
+  if(typeof _edAi!=='undefined' && _edAi){
+    _edAi.files=_edAi.files||[];
+    for(let i=0;i<_mtReview.files.length;i++){
+      const f=_mtReview.files[i], m=_mtReview.media[i];
+      _edAi.files.push({ id:'rev'+Date.now()+i, file:f, url:(m&&!m.isVid?m.url:''), isVideo:!!(m&&m.isVid), name:f.name });
+    }
+  }
+  // la consigne devient le BRIEF du chef d'orchestre (champ `brief`, ≠ script :
+  // le script sert à l'alignement des sous-titres, le brief à l'intention)
+  const prev=String(_mt.brief||'').trim();
+  _mt.brief=(prev?prev+'\n\n':'')+'RETOUCHES DEMANDÉES SUR LA VERSION PRÉCÉDENTE : '+txt;
+  const ta=document.getElementById('mtBrief'); if(ta) ta.value=_mt.brief;
+  toast('✎ Relance avec tes consignes…');
+  _mtReview={media:[],files:[]};
+  montageGo();
+}
+
 // re-télécharge le MP4 final (le 1er téléchargement part tout seul à la fin du rendu)
 function _mtDownloadFinal(){
   if(!_mtFinalUrl){ toast('⚠️ Lien expiré — relance un montage'); return; }
