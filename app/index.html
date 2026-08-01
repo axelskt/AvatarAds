@@ -12467,7 +12467,9 @@ const _MD_SFX_BANK = ['whoosh','woosh','mo-whoosh-1','pop','mo-pop-1','mo-pop-2'
   'ding','message-tone','success','magic','bip','click','mouse-click','camera-click','camera-shutter','mo-tap-1',
   'mo-tick-1','mac-typing','impact','hit','boom','cinematic-impact','mo-impact-1','mo-impact-2','mo-impact-3','mo-sub-1',
   'riser','metallic-riser','punch-stop-riser','mo-riser-1','reverse-crash','mo-swipe-1','mo-swipe-2','flash','gear','knife-draw',
-  'heartbeat','iphone-charging','timer','robot','mo-outro-1'];
+  'heartbeat','iphone-charging','timer','robot','mo-outro-1',
+  // les 12 découpés de la vidéo d'Axel (01/08) — préfixe ed-, le tri se fera au catalogue
+  'ed-swish-1','ed-thud-1','ed-boom-1','ed-ticks-1','ed-whoosh-1','ed-rumble-1','ed-click-1','ed-riser-1','ed-hit-1','ed-pop-1','ed-thud-2','ed-sub-1'];
 // famille sonore (enveloppe de la forme d'onde + synthèse d'aperçu)
 function _mdSfxFam(n){
   n = String(n);
@@ -12481,6 +12483,18 @@ function _mdSfxFam(n){
   return 'Pop';
 }
 const _MD_TRANS_BANK = ['Coupe nette','Fondu enchaîné','Balayage rapide','Flash blanc'];
+// les animations qui ÉCRIVENT le texte de leurs items à l'écran (détectées en
+// rendant animHtml avec un marqueur) : pour celles-là on demande à l'utilisateur
+// quoi écrire, pré-rempli avec les mots de l'audio (retour Axel 01/08 « y'a
+// écrit "un", faudrait demander à l'user quoi écrire à la place »)
+const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free','trend','hook','profile','invoice','thumb','pay','sales','upgrade','discount','keyword','product','cart','portfolio','pnl','mrr','churn','onboarding','property','weight','quote','script','trendsound','loop','clipping','retake','preview','spike','brandeal','mediakit','inventory','stoploss','orderbook','deploy','uptime','leads','share','views','linkbio','salesphone','gaugefill','lineup','daypart']);
+// les mots FORTS prononcés dans une fenêtre (miroir du remplissage du worker)
+function _mdWordsIn(a,b){
+  const caps=(_md.derived.captions||[]).filter(c=>c.start>=a-0.05&&c.start<b);
+  const clean=(t)=>String(t).replace(/[.,!?…«»]/g,'');
+  const forts=caps.filter(c=>c.accent||clean(c.text).length>=5);
+  return (forts.length?forts:caps).slice(0,4).map(c=>({t:Math.round(c.start*100)/100,text:clean(c.text)}));
+}
 const _MD_TEXT_BANK = ['Accroche plein écran','Mot-clé surligné','Chiffre choc','Question','Call-to-action','Citation',
   'Compte à rebours','Liste à puces','Avant / après','Témoignage','Prix barré','Badge'];
 
@@ -12585,7 +12599,7 @@ function _mdUndo(){ if(!_md.past.length) return; _md.future.push(_mdSnap()); con
 function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); const s=_md.future.pop(); _md.scenes=s.scenes; _md.marks=s.marks; _mdRender(); }
 function _mdMarkKind(id){ id=String(id); return id.indexOf('sfx')===0?'sfx':id.indexOf('tr')===0?'trans':id.indexOf('tx')===0?'texte':null; }
 function _mdNMods(){
-  const sc = _md.scenes.filter(s=>s.repl||s.del||s.added||s.moved||s.resized).length;
+  const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized).length;
   const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved).length,0);
   return sc+mk;
 }
@@ -12621,6 +12635,7 @@ async function _mdOpen(){
       pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, addedMedia:{} };
     _md.scenes = _mdBuildScenes();
     _md.marks = _mdBuildMarks();
+    setTimeout(_mdAvatarStillMake, 900);
     // le splash affiche les VRAIS comptes, une demi-seconde, comme la maquette
     const st = document.getElementById('mdLoadStats');
     if(st) st.textContent = _md.scenes.length+' scènes · '+_md.marks.sfx.length+' bruitages · '+_md.marks.texte.length+' sous-titres';
@@ -12632,6 +12647,22 @@ async function _mdOpen(){
   }
 }
 function _mdClose(){ _mdPause(); const ov=document.getElementById('mdOv'); if(ov) ov.style.display='none'; _md&&(_md.pop=null); }
+// capture UNE frame d'un segment avatar : l'image qui remplace une scène supprimée
+function _mdAvatarStillMake(){
+  if(!_md||_md.avatarStill||_md._avTry) return; _md._avTry=true;
+  const seg=(_md.derived.avatarSegments||[])[0]; if(!seg) return;
+  try{
+    const v=document.createElement('video');
+    v.crossOrigin='anonymous'; v.muted=true; v.playsInline=true; v.preload='auto'; v.src=_md.job.url||'';
+    v.addEventListener('loadedmetadata',()=>{ try{ v.currentTime=Math.max(0.1,Math.min((v.duration||9)-0.1,(seg.start+seg.end)/2)); }catch(_){} });
+    v.addEventListener('seeked',()=>{ try{
+      const c=document.createElement('canvas'); c.width=270; c.height=480;
+      c.getContext('2d').drawImage(v,0,0,270,480);
+      _md.avatarStill=c.toDataURL('image/jpeg',0.75);
+      _md._ovKey=null; _mdPaintClipInfo();
+    }catch(_){ } v.src=''; });
+  }catch(_){}
+}
 
 // ── LECTURE : la vraie vidéo pilote le temps ─────────────────────────────────
 function _mdVid(){ return document.getElementById('mdVid'); }
@@ -12717,6 +12748,52 @@ function _mdPaintSel(){
   _mdPaintClipInfo();
 }
 function _mdPaintClipInfo(){
+  // « qu'on voit instantanément le résultat » (Axel 01/08) : quand le curseur
+  // est sur une scène ÉDITÉE, le clip montre ce qu'elle deviendra — la vraie
+  // preview de l'animation choisie, le média posé, le panneau de texte, ou
+  // l'avatar (photo) pour une suppression.
+  const over=document.getElementById('mdClipOver');
+  if(over){
+    const t=_md.time;
+    const ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&(x.del||x.repl||x.replM||x.replT||x.added));
+    const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')):'';
+    if(key!==_md._ovKey){
+      _md._ovKey=key;
+      if(!ed){ over.style.display='none'; over.innerHTML=''; }
+      else{
+        const badge=(txt)=>'<div style="position:absolute;left:8px;right:8px;bottom:8px;padding:5px 9px;border-radius:9px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);text-align:center">'
+          +'<span class="mono" style="font-size:9.5px;color:#fff;letter-spacing:.04em">'+txt+'</span></div>';
+        let h='';
+        if(ed.del){
+          h=(_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+            :'<div style="position:absolute;inset:0;background:linear-gradient(160deg,#1c1a22,#0d0c10)"></div>')
+            +badge('🎬 lipsync à la régénération');
+        } else if(ed.replM||(ed.added&&ed.n==='media'&&ed._mURL)){
+          const pos=(ed.replM&&ed.replM.pos)||ed.pos||{x:.5,y:.5,w:.62};
+          const media=ed._mIsVid?'<video src="'+ed._mURL+'" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover"></video>'
+            :'<img src="'+(ed._mURL||'')+'" style="width:100%;height:100%;object-fit:cover">';
+          // dans un cadre 9:16, une carte 9:16 large de pos.w a une hauteur
+          // relative de pos.w aussi — top = centre − moitié de hauteur
+          h='<div style="position:absolute;inset:0;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)"></div>'
+            +'<div style="position:absolute;left:'+((pos.x-pos.w/2)*100)+'%;top:'+((pos.y-pos.w/2)*100)+'%;width:'+(pos.w*100)+'%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;box-shadow:0 14px 34px -12px rgba(0,0,0,.5)">'+media+'</div>'
+            +badge('après régénération');
+        } else if(ed.replT||(ed.added&&ed.n==='carte')){
+          const txt=ed.replT?ed.replT.text:(ed.userText||ed.t.replace(/^«\s?|\s?»$/g,''));
+          h='<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)">'
+            +'<span style="font-weight:800;font-size:15px;color:#16130F;text-align:center;max-width:86%;line-height:1.25">'+_mdEsc(txt)+'</span></div>'
+            +badge('après régénération');
+        } else {
+          const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
+          h=(window._mdPrevSet&&window._mdPrevSet.has(nm)
+            ?'<video src="anim-previews/'+nm+'.mp4" muted loop autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+            :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:13px">'+_mdEsc(ed.repl||ed.t)+'</span></div>')
+            +badge('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération');
+        }
+        over.innerHTML=h; over.style.display='block';
+        const v=over.querySelector('video'); if(v){ const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); }
+      }
+    }
+  }
   const s=_md.scenes.find(x=>x.id===_md.sel);
   const halo=document.getElementById('mdClipHalo'), pill=document.getElementById('mdClipPill');
   if(halo) halo.style.background = s?'radial-gradient(160px 220px at 50% 45%, color-mix(in srgb, '+_MD_NATURE[s.n].color+' 55%, transparent), transparent 70%)':'none';
@@ -12986,7 +13063,8 @@ function _mdPopAct(act){
     if(act==='repl') _mdOpenSwipe(it.id);
     else { _mdCommit(); const s=_md.scenes.find(x=>x.id===it.id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
   } else {
-    if(act==='repl'){ if(it.k==='texte'&&false){} _md.bankModal={kind:it.k,at:it.t,mark:it.id}; _mdRenderModals(); }
+    if(act==='repl'){ _md.bankModal={kind:it.k,at:it.t,mark:it.id,swipe:true,i:0};
+      _md.bankModal.list=_mdShuffle(_mdBankDef(it.k).items); _mdRenderModals(); }
     else { _mdCommit(); const k=_mdMarkKind(it.id); _md.marks[k]=_md.marks[k].map(x=>x.id===it.id?Object.assign({},x,{del:true}):x); _mdRender(); }
   }
 }
@@ -13009,7 +13087,10 @@ function _mdRequestAdd(nature){
     };
     inp.click(); return;
   }
-  _md.bankModal={kind:nature,at:_md.time}; _mdRenderModals();
+  // en SWIPE par défaut (retour Axel), la grille reste à un clic (« Voir la liste »)
+  _md.bankModal={kind:nature,at:_md.time,swipe:true,i:0};
+  _md.bankModal.list=_mdShuffle(_mdBankDef(nature).items);
+  _mdRenderModals();
 }
 // ── PLACER LE MÉDIA DANS L'ÉCRAN (drag pour déplacer, glissière pour la taille) ─
 function _mdPlaceHtml(){
@@ -13060,13 +13141,24 @@ function _mdPlaceCancel(){ if(_md&&_md.place){ try{ URL.revokeObjectURL(_md.plac
 function _mdPlaceOk(){
   const P=_md&&_md.place; if(!P) return;
   _mdCommit();
+  if(P.replaceScene){
+    const sc=_md.scenes.find(x=>x.id===P.replaceScene);
+    if(sc){ sc.replM={ pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100} };
+      sc.repl=null; sc.replT=null; sc.del=false;
+      _md.addedMedia[sc.id]=P.file;
+      try{ if(sc._mURL) URL.revokeObjectURL(sc._mURL); }catch(_){}
+      sc._mURL=P.url; sc._mIsVid=P.isVid;
+    }
+    _md.place=null; _mdRender(); toast('🖼️ ton média remplace la scène');
+    return;
+  }
   const id='sc-add'+Date.now();
   const a=Math.max(0,Math.min(_md.dur-0.5,P.at)), b=Math.min(_md.dur,a+2.5);
   _md.addedMedia[id]=P.file;
   _md.scenes.push({id,a,b,n:'media',t:P.file.name.replace(/\.[^.]+$/,''),d:'placé par toi',w:'',items:[],added:true,
+    _mURL:P.url,_mIsVid:P.isVid,
     pos:{x:Math.round(P.x*100)/100,y:Math.round(P.y*100)/100,w:Math.round(P.w*100)/100}});
   _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id;
-  try{ URL.revokeObjectURL(P.url); }catch(_){}
   _md.place=null;
   _mdRender();
   toast('🖼️ Média ajouté à '+_mdT(a)+' — il sera posé là à la régénération');
@@ -13151,7 +13243,7 @@ function _mdZStemDown(ev, btn){
 
 // ── CARTE DE SCÈNE + LISTE ───────────────────────────────────────────────────
 function _mdCardHtml(s, i, compact){
-  const meta=_MD_NATURE[s.n], on=_md.sel===s.id, changed=s.repl||s.del;
+  const meta=_MD_NATURE[s.n], on=_md.sel===s.id, changed=s.repl||s.replM||s.replT||s.del;
   const mob=_mdIsMob();
   const title = s.n==='animation'
     ? '<span class="faint" style="font-size:12px">Animation</span> <span class="mono" style="font-size:13px;font-weight:600;color:'+(s.del?'var(--text-3)':'var(--text)')+';text-decoration:'+(s.del?'line-through':'none')+'">'+_mdEsc(s.repl||s.t)+'</span>'
@@ -13173,7 +13265,7 @@ function _mdCardHtml(s, i, compact){
         +'<span style="width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:color-mix(in srgb, '+meta.color+' 14%, transparent);border:1px solid color-mix(in srgb, '+meta.color+' 30%, transparent)">'+_mdIco(meta.ico,13,meta.color)+'</span>'
         +'<div class="col grow" style="gap:2px;min-width:0">'
           +'<div class="row" style="gap:7px;align-items:baseline;flex-wrap:wrap">'+title
-            +(s.repl?'<span class="pill" style="font-size:9px;padding:1px 6px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2)">remplacée</span>':'')
+            +((s.repl||s.replM||s.replT)?'<span class="pill" style="font-size:9px;padding:1px 6px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2)">'+(s.replM?'→ ton média':s.replT?'→ texte':'remplacée')+'</span>':'')
             +(s.del?'<span class="pill" style="font-size:9px;padding:1px 6px;background:rgba(255,71,87,.12);border-color:rgba(255,71,87,.35);color:#ff6b7a">→ avatar</span>':'')
             +(s.added?'<span class="pill" style="font-size:9px;padding:1px 6px;background:rgba(40,199,149,.12);border-color:rgba(40,199,149,.35);color:var(--green)">ajoutée</span>':'')
           +'</div>'
@@ -13189,7 +13281,7 @@ function _mdCardHtml(s, i, compact){
 }
 function _mdCardDel(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
 function _mdCardUndo(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id);
-  if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; } } _mdRender(); }
+  if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; s.replM=null; s.replT=null; s.userItems=null; delete _md.addedMedia[id]; } } _mdRender(); }
 // ── APERÇUS (animation / transition / texte / bruitage) ─────────────────────
 function _mdAnimPrevHtml(name, desc, big){
   // la VRAIE animation en aperçu (retour Axel) : chaque anim de la banque a été
@@ -13326,8 +13418,10 @@ function _mdSwipeDecide(yes){
   setTimeout(()=>{
     if(yes){ const item=sw.list[sw.i];
       _mdCommit(); const s=_md.scenes.find(x=>x.id===sw.scene.id);
-      if(s){ s.repl=item.k; s.del=false; }
-      _md.swipe=null; _mdRender(); toast('✓ « '+item.k+' » remplacera « '+sw.scene.t+' »');
+      if(s){ s.repl=item.k; s.del=false; s.replM=null; s.replT=null; }
+      _md.swipe=null; _mdRender();
+      if(s && _MD_TEXT_ANIMS.has(item.k)) _mdAskItemsOpen(s);
+      else toast('✓ « '+item.k+' » remplace « '+sw.scene.t+' »');
     } else { sw.i=Math.min(sw.list.length-1,sw.i+1);
       if(sw.i>=sw.list.length-1 && sw.list.length){ /* fin de pile */ }
       _mdRenderModals(); }
@@ -13344,6 +13438,13 @@ function _mdSwipeHtml(){
           +'<span class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--text-3)">REMPLACER · '+_mdT(sw.scene.a)+'</span>'
           +'<span style="font-size:14.5px;font-weight:700">'+(sw.scene.w?'sur « '+_mdEsc(sw.scene.w)+' »':_mdEsc(sw.scene.t))+'</span></div>'
         +'<button onclick="_md.swipe=null;_mdRenderModals()" class="btn-quiet" style="font-size:20px;padding:2px 8px;cursor:pointer">✕</button></div>'
+      // la PASSERELLE (retour Axel) : depuis le swipe on peut remplacer par la
+      // liste complète, par un média ou par un panneau de texte
+      +'<div class="row" style="width:100%;gap:8px;margin-bottom:10px;flex:0 0 auto">'
+        +'<button onclick="_mdSwList()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
+        +'<button onclick="_mdSwMedia()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer">'+_mdIco('image',12,'var(--amber)')+' Média</button>'
+        +'<button onclick="_mdSwText()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer">'+_mdIco('card',12,'var(--blue)')+' Texte</button>'
+      +'</div>'
       +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.35':'1 / 1.3')+';max-height:'+(mob?'min(460px,56vh)':'min(540px,60vh)')+';flex:0 0 auto">'
         +nexts.map((it,ix)=>{ const k=2-ix; return '<div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;transform:translateY('+(k*10)+'px) scale('+(1-k*0.045)+');z-index:'+(5-k)+';opacity:'+(0.5-k*0.12)+';'
           +'background:linear-gradient(165deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), var(--surface));border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px"></div>'; }).join('')
@@ -13364,6 +13465,55 @@ function _mdSwipeHtml(){
         +'<button onclick="_mdSwipeDecide(true)" style="width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:26px;font-weight:800;box-shadow:0 14px 34px -12px var(--accent-glow);cursor:pointer">✓</button>'
       +'</div>'
     +'</div></div>';
+}
+// passerelles depuis le swipe Remplacer
+function _mdSwList(){ const sw=_md.swipe; if(!sw) return; _md.swipe=null;
+  _md.bankModal={kind:'animation',at:sw.scene.a,replaceScene:sw.scene.id,swipe:false}; _mdRenderModals(); }
+function _mdSwText(){ const sw=_md.swipe; if(!sw) return; _md.swipe=null;
+  _md.bankModal={kind:'texte',at:sw.scene.a,replaceScene:sw.scene.id,swipe:true,i:0};
+  _md.bankModal.list=_mdShuffle(_mdBankDef('texte').items); _mdRenderModals(); }
+function _mdSwMedia(){ const sw=_md.swipe; if(!sw) return;
+  const sc=sw.scene; _md.swipe=null; _mdRenderModals();
+  let inp=document.getElementById('mdFileInp'); if(inp) inp.remove();
+  inp=document.createElement('input'); inp.type='file'; inp.accept='image/*,video/*';
+  inp.id='mdFileInp'; inp.style.cssText='position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  document.body.appendChild(inp); window._mdFileKeep=inp;
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; inp.remove(); if(!f||!_md) return;
+    _md.place={ file:f, url:URL.createObjectURL(f), isVid:/^video\//.test(f.type||''),
+      at:sc.a, x:0.5, y:0.5, w:0.62, replaceScene:sc.id };
+    _mdRenderModals(); };
+  inp.click();
+}
+// « Ce que l'animation affichera » : champs pré-remplis avec les mots de
+// l'audio de la fenêtre, éditables — l'IA cale chaque texte sur SON instant
+function _mdAskItemsOpen(sc){
+  const base=(sc.userItems&&sc.userItems.length)?sc.userItems:_mdWordsIn(sc.a,sc.b);
+  _md.askItems={ sceneId:sc.id, anim:sc.repl||sc.t,
+    fields:(base.length?base:[{t:Math.round((sc.a+0.3)*100)/100,text:''}]) };
+  _mdRenderModals();
+}
+function _mdAskItemsHtml(){
+  const ai=_md.askItems;
+  return '<div onclick="_md.askItems=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6750;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px">'
+    +'<div onclick="event.stopPropagation()" style="width:min(420px,94vw);background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)">'
+      +'<div class="row" style="gap:9px;align-items:center;margin-bottom:6px">'+_mdIco('spark',15,'var(--accent)')
+        +'<span style="font-weight:700;font-size:14.5px">Ce que l\'animation affichera</span>'
+        +'<span class="mono faint" style="font-size:10px;margin-left:auto">'+_mdEsc(ai.anim)+'</span></div>'
+      +'<p class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:12px">Pré-rempli avec ce que tu dis à ce moment-là — modifie librement, chaque texte apparaîtra sur son instant.</p>'
+      +ai.fields.map((f,i)=>'<div class="row" style="gap:8px;align-items:center;margin-bottom:8px">'
+        +'<span class="mono faint" style="font-size:10px;width:38px;flex:0 0 auto">'+_mdT(f.t)+'</span>'
+        +'<input id="mdAiF'+i+'" value="'+_mdEsc(f.text)+'" style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px"></div>').join('')
+      +'<div class="row" style="gap:10px;margin-top:12px">'
+        +'<button onclick="_md.askItems=null;_mdRenderModals();_mdRender()" class="btn btn-ghost" style="flex:0 0 auto">Garder tel quel</button>'
+        +'<button onclick="_mdAskItemsOk()" class="btn btn-primary" style="flex:1;font-weight:800">Valider</button></div>'
+    +'</div></div>';
+}
+function _mdAskItemsOk(){
+  const ai=_md.askItems; if(!ai) return;
+  const sc=_md.scenes.find(x=>x.id===ai.sceneId);
+  if(sc) sc.userItems=ai.fields.map((f,i)=>{ const inp=document.getElementById('mdAiF'+i);
+    return { t:f.t, text:(inp&&inp.value||f.text).trim() }; }).filter(x=>x.text);
+  _md.askItems=null; _mdRender();
 }
 function _mdSwDown(ev){
   const card=document.getElementById('mdSwCard'); if(!card) return;
@@ -13450,6 +13600,8 @@ function _mdBankSwipeHtml(){
             +'<div class="mono" style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">'+((i%items.length)+1)+' / '+items.length+' · glisse pour voir la suite</div></div>'
         +'</div>'
       +'</div>'
+      +'<button onclick="event.stopPropagation();_md.bankModal.swipe=false;_mdRenderModals()" class="row" style="gap:7px;align-items:center;justify-content:center;padding:8px 12px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;position:relative;z-index:10">'
+        +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
       +'<div class="row" style="gap:16px;justify-content:center;align-items:center;position:relative;z-index:10">'
         +'<button onclick="event.stopPropagation();_md.bankModal.i=((_md.bankModal.i||0)+1)%'+items.length+';_mdRenderModals()" title="Suivant" style="width:56px;height:56px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--surface-2);border:1px solid rgba(255,71,87,.45);color:#ff6b7a;cursor:pointer">'
           +'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
@@ -13477,7 +13629,16 @@ function _mdBkDown(ev){
 }
 function _mdBankPick(label){
   const bm=_md.bankModal; if(!bm) return;
-  if(bm.kind==='texte'){ _md.askText={style:label, at:bm.at, mark:bm.mark}; _md.bankModal=null; _mdRenderModals(); return; }
+  if(bm.kind==='texte'){ _md.askText={style:label, at:bm.at, mark:bm.mark, replaceScene:bm.replaceScene}; _md.bankModal=null; _mdRenderModals(); return; }
+  if(bm.replaceScene && bm.kind==='animation'){
+    _mdCommit();
+    const sc=_md.scenes.find(x=>x.id===bm.replaceScene);
+    if(sc){ sc.repl=label; sc.del=false; sc.replM=null; sc.replT=null; }
+    _md.bankModal=null;
+    if(sc && _MD_TEXT_ANIMS.has(label)){ _mdRender(); _mdAskItemsOpen(sc); }
+    else { _mdRender(); toast('✓ « '+label+' » remplace la scène'); }
+    return;
+  }
   _mdCommit();
   if(bm.mark){
     const k=_mdMarkKind(bm.mark);
@@ -13529,6 +13690,12 @@ function _mdAskTextOk(){
   const txt=(ta&&ta.value||'').trim();
   const label=txt?'« '+txt+' »':ask.style;
   _mdCommit();
+  if(ask.replaceScene){
+    const sc=_md.scenes.find(x=>x.id===ask.replaceScene);
+    if(sc){ sc.replT={style:ask.style, text:txt||ask.style}; sc.repl=null; sc.replM=null; sc.del=false; }
+    _md.askText=null; _mdRender(); toast('✓ le panneau de texte remplace la scène');
+    return;
+  }
   if(ask.mark){
     // modifier un bloc de sous-titres = réécrire ses mots (répartis sur le bloc)
     const m=_md.marks.texte.find(x=>x.id===ask.mark);
@@ -13674,7 +13841,8 @@ function _mdRender(){
         +'<div class="col" style="align-items:center">'
           +'<div style="position:relative;height:'+(mob?'min(210px,28vh)':'min(250px,33vh)')+';aspect-ratio:9 / 16;border-radius:16px;overflow:hidden;flex:0 0 auto;background:#08070a;border:1px solid var(--border-2);box-shadow:0 20px 46px -26px rgba(0,0,0,.9)">'
             +'<div id="mdVidSlot" style="position:absolute;inset:0"></div>'
-            +'<div id="mdClipHalo" style="position:absolute;inset:0;opacity:.45;pointer-events:none"></div>'
+            +'<div id="mdClipOver" style="position:absolute;inset:0;display:none;background:#08070a;z-index:1"></div>'
+            +'<div id="mdClipHalo" style="position:absolute;inset:0;opacity:.45;pointer-events:none;z-index:1"></div>'
             +'<button onclick="_mdTogglePlay()" style="position:absolute;inset:0;display:grid;place-items:center;z-index:2">'
               +'<span id="mdPlayA" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center"></span>'
             +'</button>'
@@ -13755,9 +13923,17 @@ function _mdRenderModals(keepFocus){
   if(_md.bankModal) h+=_md.bankModal.swipe?_mdBankSwipeHtml():_mdBankModalHtml();
   if(_md.askText) h+=_mdAskTextHtml();
   if(_md.swipe) h+=_mdSwipeHtml();
+  if(_md.askItems) h+=_mdAskItemsHtml();
   if(_md.place) h+=_mdPlaceHtml();
   host.innerHTML=h;
   if(_md.place){ _mdPlacePaint(); _mdPlaceBgPaint(); }
+  // en swipe BRUITAGES, le son de la carte se joue TOUT SEUL (retour Axel :
+  // « quand on fait la croix il faut que le bruitage se joue directement »)
+  if(_md.bankModal&&_md.bankModal.swipe&&_md.bankModal.kind==='sfx'){
+    const lst=_md.bankModal.list&&_md.bankModal.list.length?_md.bankModal.list:_mdBankDef('sfx').items;
+    const cur=lst[(_md.bankModal.i||0)%lst.length];
+    if(cur&&_md._sfxAuto!==((_md.bankModal.i||0)+'·'+cur)){ _md._sfxAuto=(_md.bankModal.i||0)+'·'+cur; _mdSfxPlay(cur); }
+  } else _md._sfxAuto=null;
   // les aperçus vidéo de la grille ne JOUENT que visibles (164 vidéos décodées
   // en même temps mettraient Safari à genoux)
   const prevs=host.querySelectorAll('video[data-prev]');
@@ -13794,15 +13970,25 @@ function _mdBuildRegenPlan(){
     const src=(s.srcIdx!=null&&D.slides)?D.slides[s.srcIdx]:null;
     if(s.del){ userBans.push({start:_mdR2(s.a),end:_mdR2(s.b)}); continue; }
     if(s.added){
-      if(s.n==='animation') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t});
+      if(s.n==='animation') userSlides.push(Object.assign({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t},
+        (s.userItems&&s.userItems.length)?{items:s.userItems.map(x=>({t:x.t,text:x.text,label:'',value:''}))}:{}));
       else if(s.n==='carte') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.userText||s.t).replace(/^«\s?|\s?»$/g,'')});
       // media ajouté : uploadé dans _mdRegen puis poussé dans broll
       continue;
     }
+    if(s.replT){
+      // panneau de texte à la place de la scène : posé tel quel, la fenêtre
+      // d'origine est réclamée par lui (le chef ne la re-remplit pas)
+      userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.replT.text),type:'card'});
+      continue;
+    }
+    // s.replM (média à la place) est traité à l'upload, dans _mdRegen
+    if(s.replM) continue;
     if(s.repl){
       const base=src?Object.assign({},src):{};
       delete base.userFile; delete base.src;   // chemins locaux du worker : jamais renvoyés
-      userSlides.push(Object.assign(base,{anim:s.repl,start:_mdR2(s.a),end:_mdR2(s.b)}));
+      const it=(s.userItems&&s.userItems.length)?{items:s.userItems.map(x=>({t:x.t,text:x.text,label:'',value:''}))}:{};
+      userSlides.push(Object.assign(base,{anim:s.repl,start:_mdR2(s.a),end:_mdR2(s.b)},it));
       if((s.moved||s.resized)&&src&&(Math.abs((Number(src.start)||0)-s.a)>0.2||Math.abs((Number(src.end)||0)-s.b)>0.2))
         userBans.push({start:_mdR2(src.start),end:_mdR2(Number(src.end)||src.start+(s.b-s.a))});
       continue;
@@ -13880,7 +14066,7 @@ async function _mdRegen(){
     const { data:{ user } }=await sb.auth.getUser();
     const assets=(_md.job.assets||[]).slice();
     for(const s of _md.scenes){
-      if(!(s.added&&s.n==='media'&&_md.addedMedia&&_md.addedMedia[s.id])) continue;
+      if(!(((s.added&&s.n==='media')||s.replM)&&_md.addedMedia&&_md.addedMedia[s.id])) continue;
       const f=_md.addedMedia[s.id];
       const isVid=/^video\//.test(f.type||'');
       const id='uadd'+String(s.id).replace(/[^a-z0-9]/gi,'').slice(-8);
@@ -13890,9 +14076,10 @@ async function _mdRegen(){
       assets.push({id,path:p2,kind:isVid?'video':'image'});
       // posé en userSlide (pas en broll) : la POSITION choisie à l'écran est
       // respectée telle quelle par le moteur (slide.pos {x,y,w})
+      const mpos=(s.replM&&s.replM.pos)||s.pos;
       (plan.userSlides=plan.userSlides||[]).push(Object.assign(
         {start:_mdR2(s.a),end:_mdR2(s.b),anim:'media',assetId:id},
-        s.pos?{pos:s.pos}:{}));
+        mpos?{pos:mpos}:{}));
     }
     _mdRegenPaint(8);
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job',{method:'POST',headers:{...(await getAuthHeader()),'Content-Type':'application/json'},
