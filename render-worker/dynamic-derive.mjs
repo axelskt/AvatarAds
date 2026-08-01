@@ -445,7 +445,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const num = caps.map((c) => String(c.text)).find((t) => /\d/.test(t))
           if (num) { u.value = num.replace(/[^\d]/g, ''); u.unit = u.unit || '' }
         }
-        if (!(u.items || []).some((it) => String(it.text || '').trim())) {
+        // des items PRÉSENTS sont un choix (même vides : « rien d'écrit » est
+        // une décision de l'utilisateur) — on ne remplit que l'ABSENCE
+        if (!(u.items || []).length) {
           const clean = (t) => String(t).replace(/[.,!?…«»]/g, '')
           const forts = caps.filter((c) => c.accent || clean(c.text).length >= 5)
           u.items = (forts.length ? forts : caps).slice(0, 4)
