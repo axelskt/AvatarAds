@@ -441,6 +441,17 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     }
 
     writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+
+    // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
+    // a construit cette liste en ÉCOUTANT le rendu précédent (supprimé, déplacé,
+    // ajouté depuis la banque) — le moteur vient d'en re-décider une pendant
+    // buildComposition, mais re-décider un choix explicite serait le défaire.
+    if (Array.isArray(plan.userSfx)) {
+      plan.sfx = plan.userSfx
+        .filter((s) => s && typeof s.t === 'number' && s.kind)
+        .map((s) => (typeof s.vol === 'number' ? { kind: String(s.kind), t: s.t, vol: s.vol } : { kind: String(s.kind), t: s.t }))
+      console.log(`▶ bruitages utilisateur : ${plan.sfx.length} posé(s) (détails du montage)`)
+    }
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-montage', name: 'aa-montage', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
