@@ -12465,11 +12465,11 @@ const _MD_CYAN = '#22D3EE';
 // que le plan utilise (plan.sfx[].kind)
 const _MD_SFX_BANK = ['whoosh','woosh','mo-whoosh-1','pop','mo-pop-1','mo-pop-2','mo-pop-3','snap','fahh','hu',
   'ding','message-tone','success','magic','bip','click','mouse-click','camera-click','camera-shutter','mo-tap-1',
-  'mo-tick-1','mac-typing','impact','hit','boom','cinematic-impact','mo-impact-1','mo-impact-2','mo-impact-3','mo-sub-1',
+  'mo-tick-1','mac-typing','hit','cinematic-impact','mo-impact-1','mo-impact-2','mo-impact-3','mo-sub-1',
   'riser','metallic-riser','punch-stop-riser','mo-riser-1','reverse-crash','mo-swipe-1','mo-swipe-2','flash','gear','knife-draw',
   'heartbeat','iphone-charging','timer','robot','mo-outro-1',
-  // les 12 découpés de la vidéo d'Axel (01/08) — préfixe ed-, le tri se fera au catalogue
-  'ed-swish-1','ed-thud-1','ed-boom-1','ed-ticks-1','ed-whoosh-1','ed-rumble-1','ed-click-1','ed-riser-1','ed-hit-1','ed-pop-1','ed-thud-2','ed-sub-1'];
+  // les découpés de la vidéo d'Axel (01/08), après son tri du 01/08 soir
+  'ed-swish-1','ed-thud-1','ed-boom-1','ed-click-1','ed-riser-1','ed-hit-1','ed-pop-1','ed-thud-2','ed-sub-1'];
 // famille sonore (enveloppe de la forme d'onde + synthèse d'aperçu)
 function _mdSfxFam(n){
   n = String(n);
@@ -12536,6 +12536,11 @@ let _md = null;   // { job, derived, bank, dur, scenes, marks, sel, time, playin
                   //   swipe, bankModal, askText, review, addedMediaFiles }
 
 function _mdIsMob(){ return window.innerWidth <= 768; }
+// TOUTE modification passe en ROUGE (retour Axel 01/08) : on voit d'un coup
+// d'œil ce qui a changé dans la bande
+const _MD_RED='#FF4757';
+function _mdSceneMod(s){ return !!(s.repl||s.replM||s.replT||s.added||s.moved||s.resized||s.userItems); }
+function _mdSceneColor(s){ return _mdSceneMod(s)?_MD_RED:_MD_NATURE[s.n].color; }
 
 // ── DONNÉES RÉELLES depuis le plan DÉRIVÉ ────────────────────────────────────
 function _mdBuildScenes(){
@@ -12631,7 +12636,7 @@ async function _mdOpen(){
     // manifeste des aperçus RÉELS d'animations (rendus par le moteur)
     if(!window._mdPrevSet){ try{ window._mdPrevSet=new Set(await (await fetch('anim-previews/index.json')).json()); }catch(_){ window._mdPrevSet=new Set(); } }
     _md = { jobId, job:d, derived, bank, dur:Number(derived.duration)||60,
-      sel:null, time:0, playing:false, bandZoom:1, zoomWin:3, detail:false, order:false, all:false,
+      sel:null, time:0, playing:false, bandZoom:5, zoomWin:3, detail:false, order:false, all:false,
       pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, addedMedia:{} };
     _md.scenes = _mdBuildScenes();
     _md.marks = _mdBuildMarks();
@@ -12736,10 +12741,10 @@ function _mdPaintSel(){
     }
   }
   for(const s of _md.scenes){
-    const meta=_MD_NATURE[s.n], on=s.id===_md.sel;
+    const meta=_MD_NATURE[s.n], on=s.id===_md.sel, col=_mdSceneColor(s);
     const bl=document.getElementById('mdB'+s.id);
-    if(bl){ bl.style.background = s.del?'var(--surface-2)':'color-mix(in srgb, '+meta.color+' '+(on?48:(_md.time>=s.a&&_md.time<s.b?34:18))+'%, var(--panel-1))';
-      bl.style.border='1px solid '+(on?meta.color:'color-mix(in srgb, '+meta.color+' 28%, transparent)'); }
+    if(bl){ bl.style.background = s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' '+(on?48:(_md.time>=s.a&&_md.time<s.b?34:18))+'%, var(--panel-1))';
+      bl.style.border='1px solid '+(on?col:'color-mix(in srgb, '+col+' 28%, transparent)'); }
     const c=document.getElementById('mdC'+s.id);
     if(c){ c.style.background=on?'var(--surface-2)':'var(--surface)';
       c.style.border='1px solid '+(on?'color-mix(in srgb, '+meta.color+' 50%, transparent)':'var(--border)');
@@ -12785,7 +12790,7 @@ function _mdPaintClipInfo(){
         } else {
           const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
           h=(window._mdPrevSet&&window._mdPrevSet.has(nm)
-            ?'<video src="anim-previews/'+nm+'.mp4" muted loop autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+            ?'<video src="anim-previews/'+nm+'.mp4" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
             :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:13px">'+_mdEsc(ed.repl||ed.t)+'</span></div>')
             +badge('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération');
         }
@@ -12804,7 +12809,7 @@ function _mdPaintClipInfo(){
 }
 // tiges : taille/hauteur selon la proximité du curseur (NEAR 4 s) — imperatif
 function _mdPaintProximity(){
-  const t=_md.time, mob=_mdIsMob(), NEAR=4, ZONE=mob?28:34;
+  const t=_md.time, mob=_mdIsMob(), NEAR=4, ZONE=mob?32:40;
   document.querySelectorAll('#mdOv [data-stem]').forEach((el)=>{
     const it=JSON.parse(el.getAttribute('data-stem'));
     const dist=Math.abs(t-it.t), on=dist<=NEAR, prox=on?1-dist/NEAR:0;
@@ -12835,14 +12840,14 @@ function _mdStack(arr, gap){ const last=[]; return arr.slice().sort((a,b)=>a.t-b
 function _mdUpItems(){
   return _mdStack([].concat(
     _md.scenes.map(s=>({t:s.a,k:'scene',id:s.id,del:!!s.del,n:s.repl||s.t,nat:s.n,
-      c:_MD_NATURE[s.n].color,ico:_MD_NATURE[s.n].ico,lab:s.n==='animation'?'Animation':_MD_NATURE[s.n].label})),
-    _md.marks.texte.filter(x=>!x.del).map(x=>({t:x.a,k:'texte',id:x.id,n:x.n,c:'var(--blue)',ico:'card',lab:'Texte'}))
+      c:_mdSceneColor(s),ico:_MD_NATURE[s.n].ico,lab:s.n==='animation'?'Animation':_MD_NATURE[s.n].label})),
+    _md.marks.texte.filter(x=>!x.del).map(x=>({t:x.a,k:'texte',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:'var(--blue)',ico:'card',lab:'Texte'}))
   ), 0.55/_md.bandZoom);
 }
 function _mdDownItems(){
   return _mdStack([].concat(
-    _md.marks.sfx.filter(x=>!x.del).map(x=>({t:x.t,k:'sfx',id:x.id,n:x.n,c:_MD_CYAN,ico:'wave',lab:'Bruitage'})),
-    _md.marks.trans.filter(x=>!x.del).map(x=>({t:x.t,k:'trans',id:x.id,n:x.n,c:'var(--violet)',ico:'trans',lab:'Transition'}))
+    _md.marks.sfx.filter(x=>!x.del).map(x=>({t:x.t,k:'sfx',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:_MD_CYAN,ico:'wave',lab:'Bruitage'})),
+    _md.marks.trans.filter(x=>!x.del).map(x=>({t:x.t,k:'trans',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:'var(--violet)',ico:'trans',lab:'Transition'}))
   ), 0.55/_md.bandZoom);
 }
 
@@ -12914,7 +12919,7 @@ function _mdPaintStemsPos(){
 }
 // ── RENDU : bande principale ─────────────────────────────────────────────────
 function _mdBandHtml(){
-  const mob=_mdIsMob(), ZONE=mob?28:34, dur=_md.dur;
+  const mob=_mdIsMob(), ZONE=mob?32:40, dur=_md.dur;
   const up=_mdUpItems(), down=_mdDownItems();
   const blocs=_md.scenes.map((s)=>{
     const meta=_MD_NATURE[s.n];
@@ -12925,11 +12930,12 @@ function _mdBandHtml(){
     const grip = (side)=>'<div data-grip onpointerdown="_mdResizeDown(event,\''+s.id+'\',\''+side+'\')" title="Tire pour '+(side==='a'?'avancer le début':'étirer la fin')+'" '
       +'style="position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center">'
       +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
+    const col=_mdSceneColor(s);
     return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\')" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
       +'style="width:'+((s.b-s.a)/dur*100)+'%;min-width:5px;border-radius:6px;position:relative;overflow:hidden;transition:.18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
-      +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+meta.color+' 18%, var(--panel-1))')+';'
-      +'border:1px solid color-mix(in srgb, '+meta.color+' 28%, transparent)">'
-      +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,meta.color):'')
+      +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' 18%, var(--panel-1))')+';'
+      +'border:1px solid color-mix(in srgb, '+col+' 28%, transparent)">'
+      +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,col):'')
       +(s.del?'<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,71,87,.3) 0 4px,transparent 4px 8px)"></div>':'')
       +(sel?grip('a')+grip('b'):'')
       +'</div>';
@@ -12959,7 +12965,7 @@ function _mdBandHtml(){
     +'<div id="mdBandWrap" style="overflow-x:'+(_md.bandZoom>1?'auto':'hidden')+';overflow-y:hidden;padding-bottom:1px;overscroll-behavior-x:contain">'
     +'<div id="mdBandInner" style="position:relative;width:'+(_md.bandZoom*100)+'%">'
       +'<div data-side="up" style="position:relative;height:'+ZONE+'px;margin-bottom:2px;z-index:4">'+up.map(it=>_mdStemHtml(it,'up',mob)).join('')+'</div>'
-      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" style="position:relative;height:'+(mob?32:38)+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel-1);border:1px solid var(--border);display:flex;gap:2px;padding:2px">'
+      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" style="position:relative;height:'+(mob?40:50)+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:var(--panel-1);border:1px solid var(--border);display:flex;gap:2px;padding:2px">'
         +blocs
         +'<div id="mdCur" style="position:absolute;top:-6px;bottom:-6px;left:0;width:2.5px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 0 14px rgba(255,255,255,1);pointer-events:none;z-index:6;transform:translateX(-50%)">'
           +'<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.9))"></div>'
@@ -13291,7 +13297,7 @@ function _mdAnimPrevHtml(name, desc, big){
   const nm=String(name).replace(/[^a-z0-9_-]/gi,'');
   if(window._mdPrevSet && window._mdPrevSet.has(nm)){
     return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
-      +'<video data-prev src="anim-previews/'+nm+'.mp4" muted loop playsinline preload="'+(big?'auto':'metadata')+'"'+(big?' autoplay':'')
+      +'<video data-prev src="anim-previews/'+nm+'.mp4" muted loop playsinline preload="auto"'+(big?' autoplay':'')
       +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
   }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
@@ -13442,8 +13448,15 @@ function _mdSwipeHtml(){
       // liste complète, par un média ou par un panneau de texte
       +'<div class="row" style="width:100%;gap:8px;margin-bottom:10px;flex:0 0 auto">'
         +'<button onclick="_mdSwList()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
-        +'<button onclick="_mdSwMedia()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer">'+_mdIco('image',12,'var(--amber)')+' Média</button>'
-        +'<button onclick="_mdSwText()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer">'+_mdIco('card',12,'var(--blue)')+' Texte</button>'
+        +'<div class="grow" style="position:relative">'
+          +'<button onclick="event.stopPropagation();_md.swGate=!_md.swGate;_mdRenderModals()" class="row" style="width:100%;gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer">'
+            +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Ajouter autre chose</button>'
+          +(_md.swGate?'<div onclick="event.stopPropagation()" style="position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:190px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:13px;padding:6px;box-shadow:0 18px 44px -14px rgba(0,0,0,.9)">'
+            +[['anim','Animation','spark','var(--accent)'],['media','Média','image','var(--amber)'],['sfx','Bruitage','wave',_MD_CYAN],['trans','Transition','trans','var(--violet)'],['texte','Texte','card','var(--blue)']]
+              .map(x=>'<button onclick="_mdSwGate(\''+x[0]+'\')" class="row" style="width:100%;gap:9px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:var(--text);background:transparent;cursor:pointer" '
+                +'onmouseenter="this.style.background=\'var(--surface-3)\'" onmouseleave="this.style.background=\'transparent\'">'+_mdIco(x[2],12,x[3])+' '+x[1]+'</button>').join('')
+          +'</div>':'')
+        +'</div>'
       +'</div>'
       +'<div style="position:relative;width:100%;aspect-ratio:'+(mob?'1 / 1.35':'1 / 1.3')+';max-height:'+(mob?'min(460px,56vh)':'min(540px,60vh)')+';flex:0 0 auto">'
         +nexts.map((it,ix)=>{ const k=2-ix; return '<div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;transform:translateY('+(k*10)+'px) scale('+(1-k*0.045)+');z-index:'+(5-k)+';opacity:'+(0.5-k*0.12)+';'
@@ -13465,6 +13478,20 @@ function _mdSwipeHtml(){
         +'<button onclick="_mdSwipeDecide(true)" style="width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-size:26px;font-weight:800;box-shadow:0 14px 34px -12px var(--accent-glow);cursor:pointer">✓</button>'
       +'</div>'
     +'</div></div>';
+}
+// le menu « Ajouter autre chose » du swipe : chaque catégorie ouvre SON swipe
+function _mdSwGate(kind){
+  const sw=_md.swipe; if(!sw) return;
+  _md.swGate=false;
+  if(kind==='anim'){ _mdRenderModals(); return; }          // on y est déjà
+  if(kind==='media'){ _mdSwMedia(); return; }              // remplace par un média placé
+  if(kind==='texte'){ _mdSwText(); return; }               // remplace par un panneau de texte
+  // bruitage / transition : un AJOUT à l'instant de la scène, en swipe
+  const at=sw.scene.a;
+  _md.swipe=null;
+  _md.bankModal={kind:kind,at:at,swipe:true,i:0};
+  _md.bankModal.list=_mdShuffle(_mdBankDef(kind).items);
+  _mdRenderModals();
 }
 // passerelles depuis le swipe Remplacer
 function _mdSwList(){ const sw=_md.swipe; if(!sw) return; _md.swipe=null;
@@ -13502,11 +13529,20 @@ function _mdAskItemsHtml(){
       +'<p class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:12px">Pré-rempli avec ce que tu dis à ce moment-là — modifie librement, chaque texte apparaîtra sur son instant.</p>'
       +ai.fields.map((f,i)=>'<div class="row" style="gap:8px;align-items:center;margin-bottom:8px">'
         +'<span class="mono faint" style="font-size:10px;width:38px;flex:0 0 auto">'+_mdT(f.t)+'</span>'
-        +'<input id="mdAiF'+i+'" value="'+_mdEsc(f.text)+'" style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px"></div>').join('')
+        +'<input id="mdAiF'+i+'" value="'+_mdEsc(f.text)+'" style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px">'
+        +'<button onclick="_mdAskItemsDel('+i+')" title="Supprimer cette ligne" style="width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text-3);cursor:pointer">✕</button></div>').join('')
       +'<div class="row" style="gap:10px;margin-top:12px">'
         +'<button onclick="_md.askItems=null;_mdRenderModals();_mdRender()" class="btn btn-ghost" style="flex:0 0 auto">Garder tel quel</button>'
         +'<button onclick="_mdAskItemsOk()" class="btn btn-primary" style="flex:1;font-weight:800">Valider</button></div>'
     +'</div></div>';
+}
+function _mdAskItemsDel(i){
+  const ai=_md.askItems; if(!ai) return;
+  // garder les éditions en cours avant de retirer la ligne
+  ai.fields=ai.fields.map((f,k)=>{ const inp=document.getElementById('mdAiF'+k);
+    return { t:f.t, text:(inp?inp.value:f.text) }; });
+  ai.fields.splice(i,1);
+  _mdRenderModals();
 }
 function _mdAskItemsOk(){
   const ai=_md.askItems; if(!ai) return;
@@ -13836,10 +13872,10 @@ function _mdRender(){
       +'<button onclick="_mdClose()" class="btn-quiet" style="font-size:20px;padding:4px 10px;flex:0 0 auto">✕</button>'
     +'</div>'
     +'<div id="mdScroll" style="flex:1 1 0;min-height:0;overflow:auto">'
-      +'<div class="col" style="max-width:820px;margin:0 auto;gap:14px;padding:'+(mob?'12px 14px 16px':'14px 26px 18px')+'">'
+      +'<div class="col" style="max-width:880px;margin:0 auto;gap:16px;padding:'+(mob?'12px 14px 16px':'14px 26px 18px')+'">'
         // le clip — la vraie vidéo, halo couleur de la scène sélectionnée
         +'<div class="col" style="align-items:center">'
-          +'<div style="position:relative;height:'+(mob?'min(210px,28vh)':'min(250px,33vh)')+';aspect-ratio:9 / 16;border-radius:16px;overflow:hidden;flex:0 0 auto;background:#08070a;border:1px solid var(--border-2);box-shadow:0 20px 46px -26px rgba(0,0,0,.9)">'
+          +'<div style="position:relative;height:'+(mob?'min(250px,32vh)':'min(350px,42vh)')+';aspect-ratio:9 / 16;border-radius:16px;overflow:hidden;flex:0 0 auto;background:#08070a;border:1px solid var(--border-2);box-shadow:0 20px 46px -26px rgba(0,0,0,.9)">'
             +'<div id="mdVidSlot" style="position:absolute;inset:0"></div>'
             +'<div id="mdClipOver" style="position:absolute;inset:0;display:none;background:#08070a;z-index:1"></div>'
             +'<div id="mdClipHalo" style="position:absolute;inset:0;opacity:.45;pointer-events:none;z-index:1"></div>'
@@ -13941,7 +13977,12 @@ function _mdRenderModals(keepFocus){
     if(window._mdPrevIO) window._mdPrevIO.disconnect();
     window._mdPrevIO=new IntersectionObserver((es)=>{ for(const e of es){
       const v=e.target;
-      if(e.isIntersecting){ const p=v.play(); if(p&&p.catch) p.catch(()=>{}); } else v.pause();
+      if(e.isIntersecting){
+        // l'attribut muted posé par innerHTML n'est pas toujours appliqué
+        // (WebKit) → autoplay refusé → cartes NOIRES. On force en JS.
+        v.muted=true; v.playsInline=true;
+        const p=v.play(); if(p&&p.catch) p.catch(()=>{ try{ v.currentTime=0.1; }catch(_){} });
+      } else v.pause();
     } },{threshold:0.2});
     prevs.forEach(v=>window._mdPrevIO.observe(v));
   }
