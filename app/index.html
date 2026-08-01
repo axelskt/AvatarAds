@@ -12487,6 +12487,8 @@ const _MD_TRANS_BANK = ['Coupe nette','Fondu enchaîné','Balayage rapide','Flas
 // rendant animHtml avec un marqueur) : pour celles-là on demande à l'utilisateur
 // quoi écrire, pré-rempli avec les mots de l'audio (retour Axel 01/08 « y'a
 // écrit "un", faudrait demander à l'user quoi écrire à la place »)
+// combien de textes chaque animation AFFICHE réellement (mesuré au marqueur)
+const _MD_TEXT_SLOTS = {"type":1,"upload":1,"daypart":1,"funnel":3,"flow":3,"quality":1,"free":1,"trend":1,"hook":1,"profile":1,"invoice":1,"thumb":2,"pay":1,"sales":3,"upgrade":1,"discount":3,"keyword":1,"product":1,"cart":1,"portfolio":2,"pnl":1,"mrr":1,"churn":1,"onboarding":1,"property":1,"weight":1,"quote":1,"script":1,"trendsound":1,"loop":1,"clipping":1,"retake":2,"preview":1,"spike":1,"brandeal":1,"mediakit":3,"inventory":1,"stoploss":1,"orderbook":1,"deploy":1,"uptime":1,"leads":1,"share":1,"views":1,"linkbio":2,"salesphone":4,"gaugefill":4,"lineup":4};
 const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free','trend','hook','profile','invoice','thumb','pay','sales','upgrade','discount','keyword','product','cart','portfolio','pnl','mrr','churn','onboarding','property','weight','quote','script','trendsound','loop','clipping','retake','preview','spike','brandeal','mediakit','inventory','stoploss','orderbook','deploy','uptime','leads','share','views','linkbio','salesphone','gaugefill','lineup','daypart']);
 // les mots FORTS prononcés dans une fenêtre (miroir du remplissage du worker)
 function _mdWordsIn(a,b){
@@ -12716,7 +12718,19 @@ function _mdTick(){
   // pill info du clip
   _mdPaintClipInfo();
 }
-function _mdRaf(){ if(!_md || !_md.playing) return; _mdTick(); requestAnimationFrame(_mdRaf); }
+function _mdRaf(){ if(!_md || !_md.playing) return; _mdTick(); _mdSfxLive(); requestAnimationFrame(_mdRaf); }
+// pendant la lecture, les bruitages AJOUTÉS/CHANGÉS se jouent à leur instant —
+// on entend tout de suite sa modification (l'ancien son, mixé dans la vidéo
+// d'origine, ne part qu'à la régénération)
+function _mdSfxLive(){
+  const t=_md.time, last=_md._sfxLiveT==null?t:_md._sfxLiveT;
+  _md._sfxLiveT=t;
+  if(t<last) return;   // seek arrière
+  for(const x of _md.marks.sfx){
+    if(x.del||!(x.mod||x.added||x.moved)) continue;
+    if(x.t>last&&x.t<=t) _mdSfxPlay(x.n);
+  }
+}
 
 // sélection : bande + cartes + clip se répondent
 function _mdSelect(id, scroll){
@@ -12760,7 +12774,17 @@ function _mdPaintClipInfo(){
   const over=document.getElementById('mdClipOver');
   if(over){
     const t=_md.time;
-    const ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&(x.del||x.repl||x.replM||x.replT||x.added));
+    let ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&(x.del||x.repl||x.replM||x.replT||x.added));
+    // un trou créé par une RÉDUCTION, sans rien dedans → l'avatar reprend
+    if(!ed){
+      const freed=_md.scenes.find(x=>{
+        if(!x.resized||x.srcIdx==null) return false;
+        const src=(_md.derived.slides||[])[x.srcIdx]; if(!src) return false;
+        const inGap=(t>=x.b&&t<(Number(src.end)||x.b))||(t>=(Number(src.start)||x.a)&&t<x.a);
+        return inGap && !_md.scenes.some(y=>y.id!==x.id&&!y.del&&t>=y.a&&t<y.b);
+      });
+      if(freed) ed={id:'gap'+freed.id, del:true, a:freed.b, b:freed.b};
+    }
     const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')):'';
     if(key!==_md._ovKey){
       _md._ovKey=key;
@@ -12995,10 +13019,16 @@ function _mdResizeDown(ev, id, side){
   const st={x0:ev.clientX,a0:s.a,b0:s.b,moved:false};
   _md.past.push(_mdSnap()); _md.future=[];
   const bl=document.getElementById('mdB'+id);
+  // bornes : la scène voisine la plus proche (une durée totale fixe ne
+  // s'étire pas par-dessus le reste — retour Axel ; l'espace LIBÉRÉ par une
+  // autre réduction, lui, est disponible)
+  const others=_md.scenes.filter(x=>x.id!==id&&!x.del);
+  const prevEnd=Math.max(0,...others.filter(x=>x.b<=st.a0+0.01).map(x=>x.b));
+  const nextStart=Math.min(_md.dur,...others.filter(x=>x.a>=st.b0-0.01).map(x=>x.a));
   const mv=(e)=>{ const dt=(e.clientX-st.x0)/w*_md.dur;
     if(Math.abs(e.clientX-st.x0)>2) st.moved=true;
-    if(side==='a') s.a=Math.max(0,Math.min(st.b0-0.6,st.a0+dt));
-    else s.b=Math.min(_md.dur,Math.max(st.a0+0.6,st.b0+dt));
+    if(side==='a') s.a=Math.max(prevEnd,Math.min(st.b0-0.6,st.a0+dt));
+    else s.b=Math.min(nextStart,Math.max(st.a0+0.6,st.b0+dt));
     s.a=Math.round(s.a*100)/100; s.b=Math.round(s.b*100)/100;
     if(bl) bl.style.width=((s.b-s.a)/_md.dur*100)+'%';
   };
@@ -13297,7 +13327,7 @@ function _mdAnimPrevHtml(name, desc, big){
   const nm=String(name).replace(/[^a-z0-9_-]/gi,'');
   if(window._mdPrevSet && window._mdPrevSet.has(nm)){
     return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
-      +'<video data-prev src="anim-previews/'+nm+'.mp4" muted loop playsinline preload="auto"'+(big?' autoplay':'')
+      +'<video data-prev src="anim-previews/'+nm+'.mp4" poster="anim-previews/'+nm+'.jpg" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
       +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
   }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
@@ -13450,7 +13480,7 @@ function _mdSwipeHtml(){
         +'<button onclick="_mdSwList()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
         +'<div class="grow" style="position:relative">'
           +'<button onclick="event.stopPropagation();_md.swGate=!_md.swGate;_mdRenderModals()" class="row" style="width:100%;gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer">'
-            +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Ajouter autre chose</button>'
+            +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Remplacer par autre chose</button>'
           +(_md.swGate?'<div onclick="event.stopPropagation()" style="position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:190px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:13px;padding:6px;box-shadow:0 18px 44px -14px rgba(0,0,0,.9)">'
             +[['anim','Animation','spark','var(--accent)'],['media','Média','image','var(--amber)'],['sfx','Bruitage','wave',_MD_CYAN],['trans','Transition','trans','var(--violet)'],['texte','Texte','card','var(--blue)']]
               .map(x=>'<button onclick="_mdSwGate(\''+x[0]+'\')" class="row" style="width:100%;gap:9px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:var(--text);background:transparent;cursor:pointer" '
@@ -13514,8 +13544,11 @@ function _mdSwMedia(){ const sw=_md.swipe; if(!sw) return;
 // « Ce que l'animation affichera » : champs pré-remplis avec les mots de
 // l'audio de la fenêtre, éditables — l'IA cale chaque texte sur SON instant
 function _mdAskItemsOpen(sc){
-  const base=(sc.userItems&&sc.userItems.length)?sc.userItems:_mdWordsIn(sc.a,sc.b);
-  _md.askItems={ sceneId:sc.id, anim:sc.repl||sc.t,
+  const anim=sc.repl||sc.t;
+  const nSlots=_MD_TEXT_SLOTS[anim]||4;
+  let base=(sc.userItems&&sc.userItems.length)?sc.userItems:_mdWordsIn(sc.a,sc.b);
+  base=base.slice(0,nSlots);
+  _md.askItems={ sceneId:sc.id, anim:anim,
     fields:(base.length?base:[{t:Math.round((sc.a+0.3)*100)/100,text:''}]) };
   _mdRenderModals();
 }
@@ -13548,7 +13581,7 @@ function _mdAskItemsOk(){
   const ai=_md.askItems; if(!ai) return;
   const sc=_md.scenes.find(x=>x.id===ai.sceneId);
   if(sc) sc.userItems=ai.fields.map((f,i)=>{ const inp=document.getElementById('mdAiF'+i);
-    return { t:f.t, text:(inp&&inp.value||f.text).trim() }; }).filter(x=>x.text);
+    return { t:f.t, text:(inp?inp.value:f.text).trim() }; });
   _md.askItems=null; _mdRender();
 }
 function _mdSwDown(ev){
@@ -13854,7 +13887,8 @@ function _mdRender(){
   _mdEnsureCss();
   const mob=_mdIsMob();
   const scrollKeep=(document.getElementById('mdScroll')||{}).scrollTop||0;
-  const legend=[_MD_NATURE.avatar,_MD_NATURE.visite,_MD_NATURE.animation,{label:'Bruitage',color:_MD_CYAN},{label:'Transition',color:'var(--violet)'},{label:'Texte',color:'var(--blue)'}]
+  const bandKeep=(document.getElementById('mdBandWrap')||{}).scrollLeft||0;
+  const legend=[_MD_NATURE.avatar,_MD_NATURE.visite,_MD_NATURE.animation,{label:'Bruitage',color:_MD_CYAN},{label:'Transition',color:'var(--violet)'},{label:'Texte',color:'var(--blue)'},{label:'Changement',color:_MD_RED}]
     .map(L=>'<span class="row" style="gap:4px;align-items:center;font-size:9.5px;color:var(--text-3);white-space:nowrap"><span style="width:6px;height:6px;border-radius:2px;background:'+L.color+'"></span>'+L.label+'</span>').join('');
   const togg=[[_md.detail,'_mdToggleDetail()','Détail de la bande','les pistes autour du curseur'],
               [_md.order,'_mdToggleOrder()','Dans l\'ordre','les '+_md.scenes.length+' actions du montage']]
@@ -13941,8 +13975,22 @@ function _mdRender(){
     const inBand=(e)=>e.target&&e.target.closest&&e.target.closest('#mdBandWrap');
     document.addEventListener('gesturestart',(e)=>{ if(!_md||!inBand(e)) return; e.preventDefault(); _md._gz0=_md.bandZoom; },{passive:false});
     document.addEventListener('gesturechange',(e)=>{ if(!_md||!inBand(e)) return; e.preventDefault();
-      const z=Math.round((_md._gz0||1)*e.scale); if(z!==_md.bandZoom) _mdZoomSet(z); },{passive:false});
-    document.addEventListener('gestureend',(e)=>{ if(_md&&inBand(e)) e.preventDefault(); },{passive:false});
+      const z=Math.max(1,Math.min(10,Math.round((_md._gz0||1)*e.scale)));
+      if(z===_md.bandZoom) return;
+      // fluide : tout est en % dans la bande — changer la LARGEUR suffit
+      // pendant le geste, le re-rendu complet attend la fin
+      const wrap=document.getElementById('mdBandWrap'), inner=document.getElementById('mdBandInner');
+      if(wrap&&inner){
+        const mid=(wrap.scrollLeft+wrap.clientWidth/2)/Math.max(1,inner.getBoundingClientRect().width);
+        _md.bandZoom=z; _md._gzDirty=true;
+        inner.style.width=(z*100)+'%';
+        wrap.style.overflowX=z>1?'auto':'hidden';
+        wrap.scrollLeft=Math.max(0, mid*inner.getBoundingClientRect().width - wrap.clientWidth/2);
+        const lbl=document.getElementById('mdZoomLbl'); if(lbl) lbl.textContent=z+'×';
+      } else { _md.bandZoom=z; _md._gzDirty=true; }
+    },{passive:false});
+    document.addEventListener('gestureend',(e)=>{ if(!_md) return; if(inBand(e)) e.preventDefault();
+      if(_md._gzDirty){ _md._gzDirty=false; _mdRender(); } },{passive:false});
   }
   // un clic hors popover le ferme (capture, une seule fois)
   if(!window._mdCloserOn){ window._mdCloserOn=true;
@@ -13951,6 +13999,8 @@ function _mdRender(){
       _md.pop=null; _mdRenderPop(); },true); }
   _mdPlayBtns(); _mdPaintSel(); _mdRenderPop(); _mdRenderModals(); _mdTick();
   const sc=document.getElementById('mdScroll'); if(sc) sc.scrollTop=scrollKeep;
+  // on ne repart plus au début de la bande à chaque modif (retour Axel)
+  if(bw&&bandKeep) bw.scrollLeft=bandKeep;
 }
 
 function _mdRenderModals(keepFocus){
