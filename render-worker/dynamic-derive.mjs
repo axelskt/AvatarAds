@@ -53,7 +53,9 @@ const EXIGE_GLOBAL = {
   daypart: /heure|heures|temps|jour|journ|minute/i,
   lowcost: /investi|mise|depart|départ|capital|cout|coût|budget|euro|€|prix/i,
   twopaths:/concurrence|concurrent|personne|seul|autres|tout le monde|different/i,
-  countup: /\d|cent|mille|pourcent/i,
+  // …et une DURÉE dite en lettres compte comme un chiffre : « en deux minutes »
+  // justifie pleinement un compteur (§0a-ter le convertit en secondes).
+  countup: /\d|cent|mille|pourcent|minute|seconde|heure/i,
   // ── PAQUET 12 (#147) ──
   // Le garde-fou est la seule chose qui empêche « le visuel EST le mot » de
   // redevenir « le visuel ressemble au mot ». Chaque motif reprend le vocabulaire
@@ -798,6 +800,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
   }
 
+  // ── 0a-ter · UNE DURÉE DITE EN LETTRES DEVIENT UN COMPTEUR ─────────────────
+  // « J'ai créé cette vidéo en DEUX MINUTES » : le chiffre est le sujet de la
+  // phrase, et c'est ce qui impressionne. Le compteur `countup` existait, mais
+  // son garde-fou exige un chiffre écrit — « deux minutes » n'en contient pas,
+  // donc rien ne se posait. Axel : « deux minutes, faut le traduire avec un
+  // compteur de genre 120 secondes ». On convertit donc la durée parlée en
+  // SECONDES : c'est l'unité qui rend la vitesse tangible (120 impressionne,
+  // 2 non).
+  {
+    const UNITES = { seconde: 1, secondes: 1, minute: 60, minutes: 60, heure: 3600, heures: 3600 }
+    for (let i = 1; i < words.length; i++) {
+      const u = UNITES[norm(words[i].text)]
+      if (!u) continue
+      const n = numOf(words[i - 1].text)
+      if (!n) continue
+      const sec = n * u
+      if (sec < 5 || sec > 86400) continue          // ni une pincée, ni une éternité
+      const a = r2(Math.max(0, words[i - 1].start - LEAD))
+      const b = r2(Math.min(D, words[i].end + 1.5))
+      if (b - a < 1.25) continue
+      if (add({ anim: 'countup', value: String(sec), unit: 'SECONDES',
+        items: [{ t: 0, text: String(sec) }] }, a, b)) {
+        console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → compteur ${sec} SECONDES (${a}s)`)
+      }
+    }
+  }
+
   // ── 0a-bis · « LE LIEN EN BIO » EST UNE PHRASE, PAS UNE DEVINETTE ───────────
   // Le chef d'orchestre posait ici un ENTONNOIR — trois barres chiffrées
   // 1000 / 240 / 38 qu'Axel n'a pas comprises (« c'est quoi ça, on comprend
@@ -979,12 +1008,43 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // logs ne le disait. Un rejet muet est un rejet qu'on ne corrige jamais.
       const jetees = []
       let cur = 0, dernierMot = -1
+      // ── « CRÉER TON COMPTE SUR AVATARADS » N'EST PAS UNE ÉTAPE DE L'APP ────
+      // C'est une NAVIGATION : on n'est pas encore dedans. La visite guidée
+      // s'ancrait pourtant sur ce premier « compte » et posait l'onglet Mon
+      // compte, volant la fenêtre au navigateur qui devait montrer la page
+      // d'accueil. Axel : « quand je dis "commence par créer ton compte sur
+      // AvatarAds", ça montre l'onglet Mon compte alors que ça devrait montrer
+      // la LP — c'est qu'après, quand je dis "ouvre Mon compte", qu'il doit
+      // mettre cette scène en visite guidée. »
+      // On repère donc les mots pris par une phrase de navigation, et la visite
+      // guidée cherche son mot APRÈS eux.
+      const motsNav = new Set()
+      {
+        const GO_NAV = ['aller', 'va', 'vas', 'rends', 'rendre', 'direction', 'creer', 'cree',
+          'crees', 'inscris', 'inscrire', 'commence', 'commencer', 'compte']
+        for (let j = 1; j < words.length - 1; j++) {
+          if (norm(words[j].text) !== 'sur') continue
+          const d = Math.max(0, j - 3)
+          if (!words.slice(d, j).some((w) => GO_NAV.includes(norm(w.text)))) continue
+          for (let k = d; k <= j + 1 && k < words.length; k++) motsNav.add(k)
+        }
+      }
       for (const t of tuto) {
         const zone = zoneNamed(t.screen, t.zone)
         if (!zone) { jetees.push(`${t.screen}/${t.zone} : zone inconnue de la capture`); continue }
         const w = String(t.word || '')
-        const hit = t.at || findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
+        let hit = t.at || findSeq(words, w, cur) || findAny(words, [w], cur) || like(w, cur)
           || findSeq(words, w) || findAny(words, [w]) || like(w, 0)
+        // …et si ce mot appartient à la phrase de navigation, on prend
+        // l'occurrence SUIVANTE : « créer ton compte sur X » revient à la LP,
+        // « ouvre Mon compte » à la visite guidée.
+        if (hit && !t.at && motsNav.has(hit.i)) {
+          const apres = findAny(words, [w], hit.i + 1) || like(w, hit.i + 1)
+          if (apres) {
+            console.log(`▶ visite guidée : « ${w} » à ${r2(hit.start)}s appartient à la navigation → on prend celui de ${r2(apres.start)}s`)
+            hit = apres
+          }
+        }
         if (!hit) { jetees.push(`${t.screen}/${t.zone} : « ${w} » introuvable dans la transcription`); continue }
         // DEUX CADRES SUR DEUX MOTS COLLÉS, C'EST UN CADRE DE TROP. Le plan
         // demandait « Image » puis « IA » — deux mots d'un même nom d'onglet —
@@ -2279,10 +2339,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // l'écran entier, sinon on ne lit rien (même arbitrage qu'en §0a).
       const dimR = (opts.assetDims || {})[b.assetId]
       const ratioR = dimR && dimR.h ? dimR.w / dimR.h : 0
-      const hote = (plan.slides || []).find((sl) => !sl.overlayMedia && sl.start <= a + 0.05 && sl.end >= a + 0.3)
+      // ── ON PREND LE PANNEAU QUI RECOUVRE LE PLUS, PAS CELUI QUI COMMENCE ───
+      // Chercher un panneau qui COMMENCE avant le média laissait tomber le cas
+      // le plus courant : le média démarre une fraction de seconde avant le
+      // panneau. Mesuré — la photo « meilleure qualité » à 7,20→9,78 s, la
+      // fenêtre avatar finissant à 7,48 s (0,28 s de recouvrement, trop peu
+      // pour l'héberger) et `quality` ne commençant qu'à 7,50 s. Aucun hôte,
+      // photo perdue, et `quality` a pris toute la place : « la photo de la
+      // fille a disparu ». On classe donc par RECOUVREMENT réel.
+      let hote = null, meilleur = 0
+      for (const sl of plan.slides || []) {
+        if (sl.overlayMedia) continue
+        const rec = Math.min(e, sl.end) - Math.max(a, sl.start)
+        if (rec > meilleur && rec >= 0.6) { meilleur = rec; hote = sl }
+      }
       if (hote) {
-        hote.overlayMedia = { src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) }
-        console.log(`▶ média « ${b.assetId} » repêché : posé en couche sur ${hote.anim || hote.type} (${a}→${e}s)`)
+        // la couche vit DANS son hôte, jamais avant lui : sinon elle est
+        // demandée à un instant où le panneau n'existe pas encore
+        const oa = r2(Math.max(a, hote.start)), ob = r2(Math.min(e, hote.end))
+        hote.overlayMedia = { src, assetId: b.assetId, ratio: ratioR, start: oa, end: ob }
+        console.log(`▶ média « ${b.assetId} » repêché : posé en couche sur ${hote.anim || hote.type} (${oa}→${ob}s)`)
         continue
       }
       const seg = (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
