@@ -52,6 +52,62 @@ const INTERDITS: [RegExp, string][] = [
   [/position\s*:\s*fixed|z-index\s*:\s*9{4,}/i, 'sort de son cadre'],
 ]
 
+// ── LE CENTRAGE NE SE DEMANDE PAS, IL SE CALCULE ───────────────────────────
+// Trois versions que la consigne dit « centre sur (465, 300) » et que le modèle
+// colle sa scène en haut à gauche. C'est normal : il écrit des coordonnées une
+// par une, sans jamais voir le résultat. On ne le lui redemande donc plus — on
+// mesure la boîte englobante de ce qu'il a écrit et on décale tout d'un bloc.
+// Pur calcul sur les styles inline, déterministe, et valable aussi bien pour
+// l'aperçu du navigateur que pour le rendu final.
+const CADRE_W = 930, CADRE_H = 600
+function recentrer(html: string): string {
+  const el = [...html.matchAll(/style\s*=\s*"([^"]*)"/gi)]
+  const nb = (css: string, prop: string): number | null => {
+    const m = css.match(new RegExp(prop + '\\s*:\\s*(-?[\\d.]+)px'))
+    return m ? parseFloat(m[1]) : null
+  }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  for (const m of el) {
+    const css = m[1]
+    if (!/position\s*:\s*absolute/.test(css)) continue
+    const l = nb(css, 'left'), t = nb(css, 'top')
+    if (l === null || t === null) continue
+    const w = nb(css, 'width') ?? 0, h = nb(css, 'height') ?? 0
+    x0 = Math.min(x0, l); y0 = Math.min(y0, t)
+    x1 = Math.max(x1, l + w); y1 = Math.max(y1, t + h)
+  }
+  if (!isFinite(x0) || !isFinite(y0) || x1 <= x0) return html
+  const dx = Math.round((CADRE_W - (x1 - x0)) / 2 - x0)
+  const dy = Math.round((CADRE_H - (y1 - y0)) / 2 - y0)
+  if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return html
+  // on décale CHAQUE élément positionné du même vecteur : la composition ne
+  // bouge pas d'un pixel les uns par rapport aux autres, elle se recentre.
+  return html.replace(/style\s*=\s*"([^"]*)"/gi, (tout, css: string) => {
+    if (!/position\s*:\s*absolute/.test(css)) return tout
+    const l = nb(css, 'left'), t = nb(css, 'top')
+    if (l === null || t === null) return tout
+    const neuf = css
+      .replace(/left\s*:\s*-?[\d.]+px/, `left:${Math.round(l + dx)}px`)
+      .replace(/top\s*:\s*-?[\d.]+px/, `top:${Math.round(t + dy)}px`)
+    return `style="${neuf}"`
+  })
+}
+
+// ── L'ANIMATION NE S'EFFACE PAS TOUTE SEULE ────────────────────────────────
+// Le modèle ajoute presque toujours un fondu de sortie sur ses propres
+// éléments : à 2,4 s l'écran est vide alors que la scène dure encore. Or le
+// moteur fait DÉJÀ disparaître l'ensemble du panneau à la fin (inOut). Ces
+// sorties-là sont donc du travail en double, et elles coupent la scène trop
+// tôt. On retire les tweens qui éteignent après 1,5 s.
+function tenirJusquAuBout(js: string): string {
+  return js.split('\n').filter((l) => {
+    if (!/autoAlpha\s*:\s*0|opacity\s*:\s*0/.test(l)) return true
+    if (/fromTo/.test(l)) return true                       // c'est une entrée
+    const m = l.match(/,\s*(?:__T0__\s*\+\s*)?([\d.]+)\s*\)\s*;?\s*$/)
+    return !(m && parseFloat(m[1]) >= 1.5)
+  }).join('\n')
+}
+
 function verifier(html: string, js: string): string | null {
   const tout = `${html}\n${js}`
     .replace(/xmlns(:\w+)?\s*=\s*["']https?:\/\/www\.w3\.org\/[^"']*["']/gi, '')
@@ -472,8 +528,8 @@ Deno.serve(async (req: Request) => {
     let a: Record<string, unknown>
     try { a = JSON.parse(m[0]) } catch { return json({ ok: false, erreur: 'JSON illisible' }) }
 
-    const html = String(a.html || '')
-    const js = String(a.js || '')
+    const html = recentrer(String(a.html || ''))
+    const js = tenirJusquAuBout(String(a.js || ''))
     const faute = verifier(html, js)
     if (faute) return json({ ok: false, erreur: `animation refusée : ${faute}` })
 
