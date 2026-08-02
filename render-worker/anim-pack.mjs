@@ -3283,7 +3283,13 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}lb', { y: ${FH(id, 0.05)}, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4, ease: 'back.out(2)' }, ${r2(t0 + 0.8)});`
     case 'blankfill':
       return inOut + `
-      tl.fromTo('#${id}an .an-cd', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.11, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.15)});`
+      // ── PAS UNE SEULE IMAGE DE PAGE BLANCHE ────────────────────────────────
+      // La page part vide et se remplit : avec 0,15 s d'attente puis 0,11 s
+      // entre chaque carte, la 6e n'arrivait qu'à 0,70 s — Axel, sur la v14 :
+      // « y'a un écran tout blanc pendant 2 secondes ». Les cartes entrent
+      // maintenant DÈS la première image et se posent en 0,35 s au total : on
+      // voit la page se remplir, jamais la page vide.
+      tl.fromTo('#${id}an .an-cd', { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, stagger: 0.055, ease: 'back.out(1.9)', transformOrigin: '50% 50%' }, ${t0});`
     case 'easyup':
     case 'easydown': {
       // v2 : la courbe se DESSINE (dash mesure a l'execution), l'aire suit, le

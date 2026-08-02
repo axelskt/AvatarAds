@@ -402,6 +402,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // qui porte une capture ou un média affiche l'image, pas l'animation restée
   // dans son champ `anim`. Sans ce filtre, un `chat` résiduel sur l'écran de
   // résultat (33 s) interdisait la vraie bulle de chat à 4,7 s.
+  // ── « ET VOILÀ, CLAUDE EST CONNECTÉ À AVATARADS » ────────────────────────
+  // Le plan de récompense de toute la démonstration. Axel, deux fois : « quand
+  // je dis "et voilà Claude est connecté à AvatarAds", ça serait bien de
+  // remettre les 2 logos ensemble avec la coche plutôt qu'un chat avec Claude ».
+  // `connect` a le droit de sortir une seconde fois : c'est la seule animation
+  // qui MONTRE la connexion, et ce moment-là ne se raconte pas autrement.
+  const estLaConnexion = (a, b) => {
+    const dit = (plan.captions || []).filter((w) => w.start < b && w.end > a).map((w) => w.text).join(' ')
+    return /(est|sont|maintenant)\s+connect/i.test(dit) || /et voil[àa].{0,24}connect/i.test(dit)
+  }
   const dejaVue = (n) => Boolean(n) && !REPETABLES.has(String(n))
     && out.some((s) => String(s.anim) === String(n) && !s.screen && !s.assetId && !(s.items || []).length)
   // Cherche, dans les mots réellement prononcés, une animation encore inédite
@@ -728,7 +738,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       //     Comme pour un garde-fou, on cherche d'abord une inédite qui colle
       //     aux mots prononcés : un doublon refusé ne doit pas rendre la fenêtre
       //     au visage.
-      if (nom && dejaVue(nom)) {
+      if (nom !== 'connect' && !slide.screen && !slide.assetId && estLaConnexion(a, b)) {
+        console.log(`▶ ${nom} → connect à ${r2(a)}s : « est connecté à » se montre par les deux logos et la coche`)
+        slide = { ...slide, anim: 'connect', assets: ['logo-avatarads', 'logo-claude'] }
+        nom = 'connect'
+        contexte = true
+      }
+      if (nom && dejaVue(nom) && !(nom === 'connect' && estLaConnexion(a, b))) {
         const dit2 = (plan.captions || []).filter((w) => w.start < b && w.end > a).map((w) => w.text).join(' ')
         const remp2 = chercheRemplacant(dit2, nom)
         if (remp2) {
@@ -1283,6 +1299,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // réglages (sous-titres, style visuel, musique). La zone 'mot-par-mot'
       // sert d'ancre valide ; si la voix ne la justifie pas, la mécanique
       // standard garde l'écran ENTIER sans cadre — c'est exactement ce qu'on veut.
+      // ── « ET VOILÀ, CLAUDE EST CONNECTÉ À AVATARADS » SE RÉSERVE D'ABORD ───
+      // Ce plan doit être posé AVANT la visite guidée : sinon la dernière
+      // capture s'étire par-dessus et il n'existe jamais (mesuré sur la v14 —
+      // l'écran « connecteur personnalisé » couvrait toute la phrase). Une
+      // capture n'a plus rien à montrer une fois son bouton cliqué ; cette
+      // phrase-là, si : c'est la récompense de tout le tutoriel.
+      {
+        const cs = plan.captions || []
+        const k = cs.findIndex((w, i) => /^connect/i.test(String(w.text || ''))
+          && i > 0 && /^(est|sont|maintenant)$/i.test(String(cs[i - 1].text || '')))
+        if (k > 0) {
+          const deb = r2(Math.max(0, cs[Math.max(0, k - 2)].start - 0.1))
+          let fin = r2(Math.min(D, cs[k].end + 1.6))
+          for (let m = k; m < cs.length && m - k < 8; m++) {
+            if (/[.!?]$/.test(String(cs[m].text || ''))) { fin = r2(Math.min(fin, cs[m].end + 0.15)); break }
+          }
+          if (fin - deb >= 1.2 && add({ anim: 'connect', assets: ['logo-avatarads', 'logo-claude'] }, deb, fin)) {
+            console.log(`▶ « est connecté » : les deux logos et la coche réservés (${deb}→${fin}s)`)
+          }
+        }
+      }
+
       const tuto = plan.tuto.map((t, i, arr) => {
         if (/parametres-avances/.test(String(t.zone || ''))) return { ...t, screen: '13-montage-avance', zone: 'mot-par-mot' }
         // zone:'menu' = « clique sur l'onglet <screen> ». La vraie zone est
@@ -2851,33 +2889,6 @@ export function deriveDynamicSlides(plan, opts = {}) {
       return false
     })
     if (plan.slides.length !== avant) console.log(`▶ ${avant - plan.slides.length} scène(s) trop courte(s) retirée(s)`)
-  }
-
-  // ── « CLAUDE » PRONONCÉ = LOGO CLAUDE À L'ÉCRAN ─────────────────────────────
-  // Règle d'Axel (02/08) : « à chaque fois que je dis "Claude" je veux voir le
-  // logo, même si c'est dans une animation, tu le rajoutes ». On marque donc
-  // chaque scène des instants où le mot tombe ; le moteur y pose la pastille
-  // par-dessus, sans rien déloger. Deux garde-fous : on ignore les scènes qui
-  // MONTRENT déjà Claude (les captures de son interface, `connect` et `copy`
-  // qui affichent ses logos) — y rajouter une pastille serait un doublon — et
-  // on n'en met qu'une par scène, sinon un passage qui répète le mot clignote.
-  {
-    const dits = (plan.captions || []).filter((w) => /^claude[.,!?]*$/i.test(String(w.text || '').trim()))
-    if (dits.length) {
-      let n = 0
-      for (const s of plan.slides || []) {
-        if (s.screen || s.ui) continue                         // sa propre interface : déjà lui
-        if (['connect', 'copy', 'logo', 'tools'].includes(String(s.anim))) continue
-        // La pastille peut ARRIVER AVANT le mot (elle est déjà là quand il le
-        // prononce, comme le média sur « regarde ça ») : un « Claude » qui tombe
-        // en toute fin de scène mérite donc quand même son logo.
-        const dedans = dits.filter((w) => w.start >= s.start - 0.05 && w.start <= s.end - 0.1)
-        if (!dedans.length) continue
-        s.claudeAt = [r2(dedans[0].start)]
-        n++
-      }
-      if (n) console.log(`▶ logo Claude posé sur ${n} scène(s) où le mot est prononcé (${dits.length} occurrence(s) au total)`)
-    }
   }
 
   // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────

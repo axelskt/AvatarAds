@@ -812,32 +812,26 @@ export function buildDynamicComposition(plan, opts = {}) {
     // LA COUCHE MÉDIA POSÉE PAR-DESSUS (détails du montage : « le média se
     // pose juste dessus, sans supprimer le module ») — carte flottante avec
     // son arrivée, au-dessus du contenu du panneau.
-    // ── QUAND IL DIT « CLAUDE », ON VOIT CLAUDE ─────────────────────────────
-    // Règle d'Axel (02/08) : « à chaque fois que je dis "Claude" je veux voir
-    // le logo, même si c'est dans une animation, tu le rajoutes ». C'est une
-    // marque citée à la voix : la montrer ancre le propos, et son absence
-    // rendait la moitié du script abstraite. La pastille se pose PAR-DESSUS,
-    // en haut à gauche, sans rien déloger — elle accompagne la scène.
-    for (const [q, tc] of (p.slide && p.slide.claudeAt || []).entries()) {
-      const d = Math.round(W * 0.13)
-      const cid = `${id}cl${q}`
-      // elle ARRIVE AVANT le mot : quand il dit « Claude », le logo est déjà là.
-      const ta = r2(Math.max(liveT0, tc - 0.45)), tb = r2(Math.min(t1, tc + 1.6))
-      if (tb - ta < 0.4) continue
-      // ⚠ SURTOUT PAS LA CLASSE `an-p`. Les animations du pack pilotent TOUS
-      // leurs éléments par le sélecteur `#<id> .an-p` — et l'id du panneau EST
-      // celui de l'animation. La pastille, posée dans le même panneau, se
-      // faisait donc attraper par leurs timelines (autoAlpha:0, staggers,
-      // décalages) et finissait invisible : « le logo n'est toujours pas
-      // visible au-dessus », v11 puis v12. Elle porte sa propre classe, son
-      // propre z-index, et ne dépend plus de personne.
-      inner += `<div class="cl-badge" id="${cid}" style="position:absolute;z-index:40;left:${Math.round(W * 0.07)}px;top:${Math.round(H * 0.09)}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.26)}px;overflow:hidden;background:#fff;box-shadow:0 14px 34px -8px rgba(0,0,0,.4),0 0 0 3px rgba(255,255,255,.9)">
-        <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>`
-      pjs += `\n  tl.fromTo('#${cid}',{scale:0.5,rotation:-10,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.36,ease:'back.out(1.8)',transformOrigin:'50% 50%'},${ta});`
-      pjs += `\n  tl.to('#${cid}',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(tb - 0.24)});`
-    }
-
+    // ── LA PASTILLE « CLAUDE » A ÉTÉ RETIRÉE ────────────────────────────────
+    // Elle avait été demandée le 02/08 (« à chaque fois que je dis Claude je veux
+    // voir le logo »), puis retirée le même soir en la voyant à l'écran : « en
+    // vrai le logo Claude est inutile, on ne comprend pas pourquoi il est là,
+    // supprime-le ». Un logo qui se pose sans raison lisible sur une animation
+    // qui parle d'autre chose ne dit rien — la conversation avec Claude, elle,
+    // se montre par l'animation `chat`, et la connexion par `connect`.
     if (p.slide && p.slide.overlayMedia) {
+      // ── LE MÉDIA PREND LE CADRE, IL NE SE POSE PAS DEVANT UNE ANIMATION ─────
+      // La couche avait été pensée pour « ne pas supprimer le module en dessous ».
+      // À l'écran, ça donne des morceaux d'animation qui dépassent de part et
+      // d'autre de la photo — Axel, sur la v14 : « y'a une animation juste
+      // derrière ici… ». On efface donc ce que l'animation avait dessiné : sa
+      // photo EST le visuel de ce moment, rien ne doit la concurrencer.
+      // (Les captures d'écran et les scènes UI gardent leur contenu : là, le
+      // média est un vrai médaillon posé sur une interface qu'on montre.)
+      if (!p.slide.screen && !p.slide.ui && String(p.kind) !== 'ui') {
+        inner = ''
+        pjs = ''
+      }
       const om = p.slide.overlayMedia
       const pos2 = om.pos || { x: 0.5, y: 0.5, w: 0.5 }
       const cw2 = Math.round(W * Math.min(0.92, Math.max(0.18, Number(pos2.w) || 0.5)))
