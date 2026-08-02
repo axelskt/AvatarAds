@@ -272,6 +272,13 @@ export const VOICE_ANIMS = [
   // clock→daypart, la grille des heures s'affichait avec « 2h » pendant que la
   // voix disait « quelques secondes » (Axel, 31/07 : « hors contexte »)
   { w: ['secondes', 'minutes', 'rapide', 'vite'],                                       anim: 'speed' },
+  // « une image, une vidéo ou même un montage » : c'est une ÉNUMÉRATION de ce
+  // qu'AvatarAds produit, et la banque n'avait rien pour elle — le chef posait
+  // `avatar` (un personnage qui se génère), que le garde-fou écarte à juste
+  // titre, et la phrase retombait sur le visage. `lineup` aligne les trois, et
+  // la dérivation remplit ses lignes avec les mots forts de la fenêtre : le
+  // visuel devient littéralement ce qu'il énumère.
+  { w: ['image', 'images', 'video', 'videos', 'montage', 'montages'],                    anim: 'lineup' },
   { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
   { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
   // Les deux animations decrites par Axel, cablees sur SES mots.
@@ -364,7 +371,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // Refusee par Axel ? On ne jette pas : on remplace par celle qu'il a validee
     // pour ce moment-la. Le refus ne doit pas coûter la fenêtre — sinon le trou
     // retombe sur le visage, ce qu'il reproche depuis le debut.
-    const nom = String(slide && slide.anim || '')
+    let nom = String(slide && slide.anim || '')
     // la fenêtre du MOT, telle que l'appelant la donne — avant que fit() et
     // l'étirement ne la déplacent. Les deux gardes plus bas en ont besoin.
     const a0 = a, b0 = b
@@ -383,8 +390,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const dansFenetre = (plan.captions || []).filter((w) => w.start < b && w.end > a)
       const dit = dansFenetre.map((w) => w.text).join(' ')
       if (!EXIGE_GLOBAL[nom].test(dit)) {
-        console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça`)
-        return null
+        // ── UN REFUS NE DOIT PAS CREUSER UN TROU ──────────────────────────
+        // Les garde-fous écartent l'animation qui ne correspond pas — c'est
+        // leur travail — mais ils ne mettaient RIEN à la place, et la fenêtre
+        // retombait sur le visage. Mesuré sur le Cartoon 18 : le chef proposait
+        // `avatar` sur « créer une IMAGE, une vidéo ou même un montage » ; le
+        // garde-fou l'a écarté (la phrase ne parle pas d'avatar, il avait
+        // raison) et ces 4,5 s sont devenues du visage muet. Axel : « pourquoi
+        // y'a pas d'animation à […] ? mets-en une ».
+        // On cherche donc un REMPLAÇANT dans les mots réellement prononcés, via
+        // la même table que les tables locales. Il doit passer son propre
+        // garde-fou : on remplace une erreur, on n'en fabrique pas une autre.
+        const dur = norm(dit)
+        let remp = null
+        for (const e of VOICE_ANIMS) {
+          if (!(e.w || []).some((m) => dur.includes(norm(m)))) continue
+          const cand = String(e.anim || '')
+          if (!cand || cand === nom || REFUSEES.has(cand) || !ANIMS.includes(cand)) continue
+          if (EXIGE_GLOBAL[cand] && !EXIGE_GLOBAL[cand].test(dit)) continue
+          remp = cand; break
+        }
+        if (!remp) {
+          console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça (aucun remplaçant)`)
+          return null
+        }
+        console.log(`▶ ${nom} écarté sur « ${dit.slice(0, 34)} » → remplacé par ${remp}`)
+        slide = { ...slide, anim: remp }
+        nom = remp
       }
       // ── ET ON SE CALE SUR LE MOT QUI VIENT DE LA JUSTIFIER ────────────────
       // Le chef d'orchestre donne à ses scènes des bornes qu'il ESTIME depuis
@@ -399,7 +431,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // On vient de tester chaque mot de la fenêtre ; on sait donc lequel a
       // déclenché. La scène commence sur LUI (0,12 s d'avance, comme les
       // beats), à condition qu'il reste assez de place derrière.
-      const declencheur = dansFenetre.find((w) => EXIGE_GLOBAL[nom].test(w.text))
+      // ⚠ `nom` a pu changer juste au-dessus (substitution) et le remplaçant
+      // n'a pas forcément de garde-fou : sans ce test, `.test` de `undefined`
+      // fait tomber toute la dérivation.
+      const motif = EXIGE_GLOBAL[nom]
+      const declencheur = motif ? dansFenetre.find((w) => motif.test(w.text)) : null
       if (declencheur) {
         const na = r2(Math.max(a, declencheur.start - 0.12))
         if (na > a + 0.08 && b - na >= 1.25 && !overlaps(na, b)) {
@@ -458,7 +494,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (isAnimPanel(slide) && b - a > 0.2) console.log(`▶ ${slide.anim} écarté : ${r2(b - a)}s même après étirement`)
       return null
     }
-    if (overlaps(a, b)) return null
+    // ── SEPT CENTIÈMES NE VALENT PAS UNE SCÈNE PERDUE ───────────────────────
+    // Deux idées qui se suivent de près se recouvrent d'un cheveu : `rocket`
+    // sur « sortir » finissait à 4,25 s et `type` sur « créer » commençait à
+    // 4,18 s — 0,07 s de chevauchement, et l'animation entière était jetée.
+    // Mesuré sur le Cartoon 18 : c'est ce qui laissait « tu peux maintenant
+    // créer n'importe quelle vidéo directement dans Claude » sans le moindre
+    // visuel. Quand la gêne est au BORD et qu'il reste de quoi faire une
+    // scène, on décale au lieu de renoncer.
+    if (overlaps(a, b)) {
+      let na = a
+      for (const w of taken) {
+        if (a < w[1] - 0.05 && b > w[0] + 0.05 && w[1] > na && w[1] - a <= 0.35) na = r2(w[1] + 0.02)
+      }
+      if (na > a && b - na >= floor && !overlaps(na, b)) {
+        console.log(`▶ ${nom} décalé de ${r2(na - a)}s pour libérer le bord (${a}→${na}s)`)
+        a = na
+      } else return null
+    }
     // ── DEUX GARDES NÉES DE LA RÉSERVATION FANTÔME DU 31/07 ─────────────────
     // Le chef d'orchestre donnait easyup DEUX fois : une slide (17,88→21,38) et
     // un beat sur « zéro ». L'ancre du beat étant couverte par son jumeau,
@@ -744,6 +797,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
       for (const seq of OUVRE) {
         if (!suite(i, seq) || i < 3) continue
+        // ── « MAINTENANT » N'OUVRE PAS TOUJOURS UN CHAPITRE ─────────────────
+        // La règle a été écrite pour « MAINTENANT, pour créer ton influenceur
+        // IA » : une annonce, où la voix ne désigne rien qu'on puisse montrer.
+        // Mais dans « tu peux MAINTENANT créer n'importe quelle vidéo
+        // directement dans Claude », c'est un adverbe au milieu d'une phrase —
+        // et cette phrase nomme des choses très concrètes. Elle réservait
+        // pourtant 3 s de visage muet, et le `type` du chef n'avait plus de
+        // place. Axel : « pourquoi y'a pas d'animations à "tu peux maintenant
+        // créer des vidéos directement dans Claude" ? mets-en une ».
+        // Un ouvreur de chapitre est en TÊTE de proposition : au plus un mot
+        // après une ponctuation ou un silence (« Bon maintenant, … »).
+        let tete = false
+        for (let k = 1; k <= 2 && i - k >= 0; k++) {
+          const p = words[i - k]
+          if (/[.!?,]$/.test(String(p.text)) || (words[i - k + 1].start - p.end) > 0.25) { tete = true; break }
+        }
+        if (!tete) continue
         // …jusqu'à la fin de la proposition qu'elle ouvre (la virgule suivante)
         let e = i
         for (let k = i + 1; k < words.length && k - i < 12; k++) {
