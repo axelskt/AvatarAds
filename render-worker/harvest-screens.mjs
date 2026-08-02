@@ -47,6 +47,7 @@ const SCREENS = [
   { slug: '07-enregistreur',     open: `nav('recorder')` },
   { slug: '08-parrainage',       open: `nav('affiliation')` },
   { slug: '09-cartoon',          open: `nav('cartoon')` },
+  { slug: '10-mon-compte',       open: `openAccountSettings()` },
   { slug: '11-connecter-claude', open: `openMcpModal()` },
   // ── LES PANNEAUX AVANCÉS ────────────────────────────────────────────────
   // Les captures ci-dessus montrent les panneaux REPLIÉS. Résultat : sur « tu

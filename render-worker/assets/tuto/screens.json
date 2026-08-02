@@ -2474,5 +2474,57 @@
         "h": 0.0693
       }
     ]
+  },
+  "10-mon-compte": {
+    "zones": [
+      {
+        "name": "btn-quiet",
+        "label": "✕",
+        "x": 0.6193,
+        "y": 0.1144,
+        "w": 0.0176,
+        "h": 0.0289
+      },
+      {
+        "name": "axel",
+        "label": "axel",
+        "x": 0.5,
+        "y": 0.2531,
+        "w": 0.2562,
+        "h": 0.0483
+      },
+      {
+        "name": "33-6-00-00-00-00",
+        "label": "+33 6 00 00 00 00",
+        "x": 0.5,
+        "y": 0.3472,
+        "w": 0.2562,
+        "h": 0.0556
+      },
+      {
+        "name": "definir-ou-changer-mon-mot-de-passe",
+        "label": "🔐 Définir ou changer mon mot de passe",
+        "x": 0.5,
+        "y": 0.4467,
+        "w": 0.2562,
+        "h": 0.0589
+      },
+      {
+        "name": "nouveau-email-com",
+        "label": "nouveau@email.com",
+        "x": 0.5,
+        "y": 0.7572,
+        "w": 0.2562,
+        "h": 0.0556
+      },
+      {
+        "name": "envoyer-le-lien-de-confirmation",
+        "label": "✉️ Envoyer le lien de confirmation",
+        "x": 0.5,
+        "y": 0.8882,
+        "w": 0.2562,
+        "h": 0.0589
+      }
+    ]
   }
 }
