@@ -1479,6 +1479,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
           jetees.push(`${t.screen}/${t.zone} : cette carte annonce la suite, elle ne se cadre pas ici`)
           continue
         }
+        // ── « JUSQU'À CONNECTER CLAUDE » MONTRE LE BOUTON, PAS LE MENU ──────
+        // Le chef ancrait cette étape sur l'entrée « Mon compte » de la barre
+        // latérale : on voyait le menu surligné pendant qu'Axel dit « descends
+        // tout en bas jusqu'à Connecter Claude », et le bouton dont il parle
+        // n'apparaissait nulle part. Axel, deux fois : « il manque l'étape où il
+        // montre le bouton Connecter Claude dans le menu AvatarAds ».
+        // Cette phrase-là désigne UN écran précis : la modale déroulée.
+        if (/^(claude|connecter|connect)/i.test(String(t.word || ''))
+          && String(t.screen) !== '12-connecter-claude-entree'
+          && /^(mon-compte|axel|menu|compte)/i.test(String(t.zone || ''))) {
+          console.log(`▶ visite guidée : « ${t.word} » → 12-connecter-claude-entree (c'est le BOUTON qu'il nomme, pas le menu)`)
+          t = { ...t, screen: '12-connecter-claude-entree', zone: 'connecter-claude' }
+        }
         const zone = zoneNamed(t.screen, t.zone)
         if (!zone) { jetees.push(`${t.screen}/${t.zone} : zone inconnue de la capture`); continue }
         const w = String(t.word || '')
@@ -2889,6 +2902,36 @@ export function deriveDynamicSlides(plan, opts = {}) {
       return false
     })
     if (plan.slides.length !== avant) console.log(`▶ ${avant - plan.slides.length} scène(s) trop courte(s) retirée(s)`)
+  }
+
+  // ── LE DERNIER FILET : PLUS AUCUN CREUX DE PLUS D'UNE SECONDE ─────────────
+  // §3b-bis remplit déjà les trous par le visage, mais il tourne AVANT la fusion
+  // des voisins, le rognage des scènes trop courtes et le ménage final : chacun
+  // peut rouvrir un creux derrière lui. Mesuré sur la v15 : 3,2 s de fond nu
+  // entre 34,4 s et 37,6 s, sur « il ne te reste plus qu'à lui demander de créer
+  // une image, une vidéo ou même un montage » — Axel : « entre 34 et 37 secondes
+  // y'a un écran blanc, l'animation n'a pas marché ».
+  // On repasse donc en TOUT DERNIER, une fois les bornes définitives, et on
+  // étire la scène d'avant (ou celle d'après) pour recouvrir. Un plan qui dure
+  // un peu trop n'a jamais choqué personne ; un fond vide, si.
+  {
+    const bornes = [
+      ...(plan.slides || []).map((s) => [s.start, s.end, s]),
+      ...(plan.avatarSegments || []).map((w) => [w.start, w.end, w]),
+    ].filter((x) => typeof x[0] === 'number' && typeof x[1] === 'number').sort((a, b) => a[0] - b[0])
+    let cur = 0, bouches = 0
+    for (const [a, , ] of bornes) {
+      if (a - cur >= 1.0) {
+        const avant = bornes.filter((x) => x[1] <= cur + 0.06).sort((x, y) => y[1] - x[1])[0]
+        const apres = bornes.find((x) => x[0] >= a - 0.06)
+        if (avant) { avant[2].end = r2(a); bouches++ }
+        else if (apres) { apres[2].start = r2(cur); bouches++ }
+      }
+      cur = Math.max(cur, bornes.filter((x) => x[0] <= a).reduce((m, x) => Math.max(m, x[1]), cur))
+    }
+    const dernier = bornes[bornes.length - 1]
+    if (dernier && D - dernier[1] >= 1.0) { dernier[2].end = r2(D); bouches++ }
+    if (bouches) console.log(`▶ ${bouches} creux de plus d'une seconde bouché(s) par la scène voisine`)
   }
 
   // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────
