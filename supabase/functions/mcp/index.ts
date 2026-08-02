@@ -498,6 +498,17 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         required: ['email'],
       },
     })
+    tools.push({
+      name: 'animations_demandees',
+      description: "ADMIN — ce qui MANQUE à la banque d'animations du Montage IA, classé par nombre de demandes. Chaque ligne vient d'un montage réel où le chef d'orchestre n'a rien trouvé à montrer. Sert à décider quelles animations fabriquer en premier. Lecture seule.",
+      inputSchema: {
+        type: 'object',
+        properties: {
+          limite: { type: 'number', description: 'Nombre de mots à remonter (défaut 20).' },
+          depuis_jours: { type: 'number', description: "Ne compter que les demandes des N derniers jours (défaut : tout)." },
+        },
+      },
+    })
   }
   // ── QUAND LE DEVIS EST DÉSACTIVÉ, ON RETIRE `confirm` DES SCHÉMAS ─────────
   // Axel avait décoché « demander confirmation » (require_confirm = false en
@@ -1679,6 +1690,38 @@ async function runListMedia(profile: Record<string, unknown>): Promise<ToolConte
   return toolText(`Derniers médias générés :\n${lines.join('\n')}`)
 }
 
+// ── #37 · LE BACKLOG DE LA BANQUE D'ANIMATIONS ────────────────────────────
+// Idée d'Axel : plutôt que de deviner quelles animations écrire, on laisse les
+// vrais montages nous le dire. À chaque fois que le rattrapage du chef
+// d'orchestre répond « rien dans la banque ne montre ça », la demande est
+// enregistrée avec le mot, la phrase et le nom qu'il proposerait.
+// Ici on la lit, classée par fréquence : c'est l'ordre dans lequel fabriquer.
+async function runAnimationsDemandees(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  if (!isUnlimited(profile)) return toolErr('Outil réservé au compte administrateur.')
+  const limite = Math.max(1, Math.min(60, Number(args.limite) || 20))
+  const jours = Number(args.depuis_jours) || 0
+  let q = svc.from('anim_demandes_top').select('*').limit(limite)
+  if (jours > 0) q = q.gte('derniere', new Date(Date.now() - jours * 86400000).toISOString())
+  const { data, error } = await q
+  if (error) return toolErr(`Lecture impossible : ${error.message}`)
+  if (!data || !data.length) {
+    return toolText("Aucune animation manquante enregistrée pour l'instant.\n(Chaque montage qui rencontre un mot que la banque ne sait pas dessiner en ajoute une.)")
+  }
+  const tot = data.reduce((n: number, r: Record<string, unknown>) => n + Number(r.demandes || 0), 0)
+  const lignes = data.map((r: Record<string, unknown>, i: number) => {
+    const d = Number(r.demandes || 0), u = Number(r.utilisateurs || 0)
+    return `${String(i + 1).padStart(2)}. « ${r.mot} » — ${d} demande${d > 1 ? 's' : ''}`
+      + `${u > 1 ? ` · ${u} utilisateurs` : ''}`
+      + `${r.nom_propose ? ` · nom proposé : \`${r.nom_propose}\`` : ''}`
+      + `${r.montre ? `\n      montre : ${r.montre}` : ''}`
+      + `${r.exemple ? `\n      entendu : « ${String(r.exemple).slice(0, 90)} »` : ''}`
+  }).join('\n')
+  return toolText(
+    `Animations manquantes — ${data.length} mot(s), ${tot} demande(s) au total${jours ? ` sur ${jours} jours` : ''}\n\n${lignes}\n\n`
+    + `Les trois premières sont celles à fabriquer en priorité : elles reviennent le plus souvent dans de vrais montages.`,
+  )
+}
+
 async function runAdminFindUser(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
   if (!isUnlimited(profile)) return toolErr('Outil réservé au compte administrateur.')
   const email = String(args.email || '').trim().toLowerCase()
@@ -1881,6 +1924,7 @@ serve(async (req) => {
       else if (name === 'render_montage_plan') out = await runRenderMontagePlan(profile, args, ctx)
       else if (name === 'list_media') out = await runListMedia(profile)
       else if (name === 'admin_find_user') out = await runAdminFindUser(profile, args)
+      else if (name === 'animations_demandees') out = await runAnimationsDemandees(profile, args)
       else return rpcError(id, -32602, `Outil inconnu : ${name}`)
       return rpcResult(id, out)
     }
