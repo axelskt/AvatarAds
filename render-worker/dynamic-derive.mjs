@@ -46,7 +46,7 @@ import { sujetsDe, estUneSuite } from './sujet-pack.mjs'
 // plutot que de jeter, on l'envoie vers la plus proche de la banque.
 // Ce qu'une phrase DOIT contenir pour meriter l'animation. S'applique a tout le
 // monde — mes tables comme le chef d'orchestre.
-const EXIGE_GLOBAL = {
+export const EXIGE_GLOBAL = {
   logo:    /logo|marque|avatarads/i,
   free:    /gratuit|offert|cadeau|sans payer|ne paie/i,
   versus:  /concurrence|concurrent|versus|contre|compar/i,
@@ -144,7 +144,7 @@ const REDIRECTIONS = {
 // l'animation step, mets l'avatar, c'est plus simple et cohérent ». Sans
 // redirection, la fenêtre retombe sur le visage — exactement ce qu'il demande.
 const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps'])
-const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
+export const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
 // L'avatar de la marque : une seule image pour le hook, les fenêtres visage et
