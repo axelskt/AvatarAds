@@ -614,7 +614,13 @@ const ANIM_CATALOGUE = `
 // <<< /ANIM-BANK:PROMPT >>>
 `
 
-type RapportRattrapage = { trous: string[]; propose: string[]; refus: string[]; pose: string[]; erreur?: string }
+// #37 · `manques` : les moments où AUCUNE animation de la banque ne convient.
+// C'est le signal le plus honnête qu'on ait — il vient de l'endroit exact où le
+// modèle, catalogue sous les yeux, préfère ne rien mettre plutôt que mentir.
+// Idée d'Axel : « le chef d'orchestre note l'idée d'animation et derrière nous
+// on la crée et on la valide pour l'ajouter à la banque ».
+type Manque = { mot: string; nom: string; montre: string; phrase: string }
+type RapportRattrapage = { trous: string[]; propose: string[]; refus: string[]; pose: string[]; manques?: Manque[]; erreur?: string }
 
 async function comblerTrous(
   trous: { start: number; end: number; dit: string }[],
@@ -638,6 +644,14 @@ REGLES
 · Choisis ce que les mots MONTRENT, pas ce qu'ils evoquent. Si le passage ne
   montre vraiment rien de precis, ecris `+ '`debut|SAUTE|`' + ` — un trou vaut mieux
   qu'une animation a cote.
+· MAIS s'il montre quelque chose de PRECIS que la liste ne sait pas dessiner
+  (un halterophile, une machine de salle de sport, une assiette, un chantier...),
+  ne saute pas : ecris `+ '`debut|MANQUE|mot|nom-court|ce que ca doit montrer`' + `.
+  `+ '`mot`' + ` = le mot prononce qui appelle ce visuel. `+ '`nom-court`' + ` = le nom que tu
+  donnerais a cette animation, en un mot, sans accent. `+ '`ce que ca doit montrer`' + ` =
+  une phrase, ce qu'on doit VOIR bouger a l'ecran.
+  Cette ligne ne produit rien dans la video : elle sert a fabriquer l'animation
+  manquante. Sers-t'en des que le passage merite un visuel qui n'existe pas.
 · Evite de reprendre une animation deja proposee dans cette meme liste.`
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -667,6 +681,20 @@ REGLES
     // animation inconnue, ou si le filtre anti-doublon l'a jetee.
     if (!isFinite(t)) { rapport.refus.push(`${p[0]} : instant illisible`); continue }
     if (an === 'saute') { rapport.refus.push(`${t}s : le modele prefere ne rien mettre`); continue }
+    if (an === 'manque') {
+      const trou = trous.find((h) => Math.abs(h.start - t) < 0.6)
+      const mot = (p[2] || '').slice(0, 40).trim()
+      if (mot) {
+        ;(rapport.manques = rapport.manques || []).push({
+          mot,
+          nom: (p[3] || '').slice(0, 40).trim(),
+          montre: (p[4] || '').slice(0, 200).trim(),
+          phrase: (trou?.dit || '').slice(0, 200),
+        })
+        rapport.refus.push(`${t}s : rien dans la banque pour « ${mot} » — demande enregistree`)
+      }
+      continue
+    }
     if (!animsDispo.includes(an)) { rapport.refus.push(`${t}s : « ${an} » indisponible (deja utilisee ou inconnue)`); continue }
     if (!trous.some((h) => Math.abs(h.start - t) < 0.6)) { rapport.refus.push(`${t}s : instant invente, hors des creux mesures`); continue }
     out.push({ start: t, anim: an, value: (p[2] || '').slice(0, 40) })
@@ -2555,6 +2583,38 @@ serve(async (req: Request) => {
         }
         plan.slides.sort((a, b) => a.start - b.start)
       }
+    }
+
+    // ── #37 · CE QUI MANQUE À LA BANQUE SE NOTE, IL NE SE DEVINE PAS ──────────
+    // Axel : « le chef d'orchestre note l'idée d'animation et derrière nous on la
+    // crée et on la valide pour l'ajouter à la banque ». On enregistre donc les
+    // moments où le rattrapage, catalogue sous les yeux, a répondu MANQUE. Au
+    // bout de quelques dizaines de montages, le classement par fréquence EST le
+    // backlog — écrit par les scripts réels des clients réels, pas deviné.
+    // L'écriture ne doit jamais faire échouer un montage : elle est isolée.
+    if ((rattrapage.manques || []).length) {
+      try {
+        const sbAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        )
+        let uid: string | null = null
+        if (token) {
+          const { data: u } = await createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            { global: { headers: { Authorization: `Bearer ${token}` } } },
+          ).auth.getUser()
+          uid = u?.user?.id ?? null
+        }
+        const lignes = (rattrapage.manques || []).slice(0, 8).map((m) => ({
+          mot: m.mot, nom: m.nom, montre: m.montre, phrase: m.phrase,
+          user_id: uid,
+        }))
+        const { error } = await sbAdmin.from('anim_demandes').insert(lignes)
+        if (error) console.warn('anim_demandes:', error.message)
+        else console.log(`▶ ${lignes.length} animation(s) manquante(s) enregistrée(s) : ${lignes.map((l) => l.mot).join(', ')}`)
+      } catch (e) { console.warn('anim_demandes:', String(e)) }
     }
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
