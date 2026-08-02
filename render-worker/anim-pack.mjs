@@ -12,9 +12,6 @@ import { SAFE, SAFE_CENTERED_W, WORD_SHAPES, SANS } from './visual-styles.mjs'
 // LE SUJET OUVERT — l'animation dont le sujet vient du mot prononcé, pour les
 // domaines que la banque fermée ne couvre pas (cf. sujet-pack.mjs).
 import { sujetHtml, sujetJs } from './sujet-pack.mjs'
-// #38 · l'animation DÉCRITE par un modèle (ou par l'utilisateur) et validée
-// avant d'entrer ici — cf. anim-spec.mjs.
-import { specHtml, specJs } from './anim-spec.mjs'
 
 // Emojis 3D utilisés par les scènes ci-dessous — exporté pour que le worker n'embarque
 // dans le projet de rendu que les fichiers réellement nécessaires.
@@ -132,10 +129,6 @@ export function animHtml(name, s, W, H, vs) {
     // qu'on ait écrit une animation pour chacun (cf. sujet-pack.mjs).
     case 'sujet':
       return box(sujetHtml(s, f, P, id))
-    // #38 · une animation décrite dans le format anim-spec : le contenu vient
-    // d'une `spec` validée, le dessin et les courbes restent les nôtres.
-    case 'spec':
-      return s.spec ? box(specHtml(s.spec, f, P, id)) : ''
 
     case 'split': {
       // Un vrai écran vertical qui se coupe en deux, avec deux contenus distincts :
@@ -3058,8 +3051,6 @@ export function animJs(name, s, r2) {
   switch (name) {
     case 'sujet':
       return inOut + sujetJs(s, id, t0, r2)
-    case 'spec':
-      return s.spec ? inOut + specJs({ ...s.spec, dur: s.dur }, id, t0, r2) : ''
 
     case 'split':
       return inOut + `
