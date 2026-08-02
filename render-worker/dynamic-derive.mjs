@@ -523,12 +523,34 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (overlaps(a, b)) {
       let na = a
       for (const w of taken) {
-        if (a < w[1] - 0.05 && b > w[0] + 0.05 && w[1] > na && w[1] - a <= 0.35) na = r2(w[1] + 0.02)
+        if (a < w[1] - 0.05 && b > w[0] + 0.05 && w[1] > na && w[1] - a <= 0.7) na = r2(w[1] + 0.02)
       }
       if (na > a && b - na >= floor && !overlaps(na, b)) {
         console.log(`▶ ${nom} décalé de ${r2(na - a)}s pour libérer le bord (${a}→${na}s)`)
         a = na
-      } else return null
+      } else {
+        // ── LA SCÈNE D'AVANT PEUT SE POUSSER, SI ELLE SURVIT ────────────────
+        // Deux idées trop rapprochées : la première prenait tout et la seconde
+        // n'existait jamais. Mesuré — « lancer un BUSINESS sans jamais passer
+        // devant une CAMÉRA » : `grow` occupait 44,48→46,27 et `faceless` se
+        // retrouvait avec 0,91 s, sous le plancher. Axel, quatre fois de
+        // suite : « sans jamais passer devant une caméra, toujours pas ».
+        // On propose donc à l'animation qui gêne de se rogner — mais seulement
+        // si elle garde de quoi exister ET si la nouvelle en profite vraiment.
+        // Personne n'est sacrifié : soit les deux tiennent, soit rien ne bouge.
+        const gene = out.filter((s) => a < s.end - 0.05 && b > s.start + 0.05)
+        const seul = gene.length === 1 ? gene[0] : null
+        if (seul && isAnimPanel(seul) && !seul.user && !seul.assetId && !seul.screen
+          && seul.start < a && seul.end > a) {
+          const finSeul = r2(a - 0.05)
+          if (finSeul - seul.start >= floor && b - a >= floor) {
+            const k = taken.findIndex((w) => Math.abs(w[0] - seul.start) < 0.01 && Math.abs(w[1] - seul.end) < 0.01)
+            console.log(`▶ ${seul.anim || seul.type} rogné (${seul.end}→${finSeul}s) pour que ${nom} tombe sur son mot`)
+            if (k >= 0) taken[k] = [seul.start, finSeul]
+            seul.end = finSeul
+          } else return null
+        } else return null
+      }
     }
     // ── DEUX GARDES NÉES DE LA RÉSERVATION FANTÔME DU 31/07 ─────────────────
     // Le chef d'orchestre donnait easyup DEUX fois : une slide (17,88→21,38) et
@@ -1135,6 +1157,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // logs ne le disait. Un rejet muet est un rejet qu'on ne corrige jamais.
       const jetees = []
       let cur = 0, dernierMot = -1
+      // ── SUR L'ÉCRAN « CONNECTER CLAUDE », SEULE LA CARTE 1 SE CADRE ────────
+      // Cet écran d'AvatarAds présente TROIS cartes : « 1 · Copie ta clé »,
+      // « 2 · Ouvre les Connecteurs », « 3 · Génère ». Les cartes 2 et 3 ne
+      // sont pas des gestes à faire ICI : elles annoncent ce qui se passe
+      // ENSUITE, dans Claude — et la visite guidée montre déjà les vrais
+      // écrans de Claude pour ça. Les encadrer, c'était illustrer deux fois la
+      // même étape et surtout prendre du retard : le cadre restait sur la
+      // carte 2 pendant qu'Axel disait « rends-toi dans les paramètres de
+      // Claude ». Lui, en voyant le rendu : « seul le step 1 doit être encadré,
+      // jamais le 2 ou le 3 […] ça désynchronise tout puisque je parle d'aller
+      // dans les paramètres Claude et je suis encore sur l'écran de copier la
+      // clé ».
+      const ZONES_INTERDITES = {
+        '11-connecter-claude': ['ouvrir-claude-connecteurs', 'commencer'],
+      }
       // ── « CRÉER TON COMPTE SUR AVATARADS » N'EST PAS UNE ÉTAPE DE L'APP ────
       // C'est une NAVIGATION : on n'est pas encore dedans. La visite guidée
       // s'ancrait pourtant sur ce premier « compte » et posait l'onglet Mon
@@ -1157,6 +1194,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
         }
       }
       for (const t of tuto) {
+        if ((ZONES_INTERDITES[String(t.screen)] || []).includes(String(t.zone))) {
+          jetees.push(`${t.screen}/${t.zone} : cette carte annonce la suite, elle ne se cadre pas ici`)
+          continue
+        }
         const zone = zoneNamed(t.screen, t.zone)
         if (!zone) { jetees.push(`${t.screen}/${t.zone} : zone inconnue de la capture`); continue }
         const w = String(t.word || '')
@@ -1306,6 +1347,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
               z = spotForWords(st.screen, duo, { sansMenu: true, min: 1.6 })
             }
             if (!z || (st.spot && z.label === st.spot.label)) continue
+            // le rattrapage n'a pas le droit d'aller chercher une zone
+            // interdite — sinon la carte 2 revient par la fenêtre
+            if ((ZONES_INTERDITES[String(st.screen)] || []).includes(String(z.name || ''))) continue
             // 0,8 s d'écart minimum, c'était refuser de suivre quelqu'un qui
             // parle vite : « Générer la clé ET TU LA COPIES » enchaîne deux
             // gestes en 0,66 s, et le second était jeté — l'écran restait figé
@@ -2365,7 +2409,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
       flat.push(sl)
     } else {
       const a = r2((last.end || 0) + 0.05)
-      if ((sl.end || 0) - a >= 0.8) flat.push({ ...sl, start: a })
+      if ((sl.end || 0) - a >= 0.8) { flat.push({ ...sl, start: a }); continue }
+      // ── AVANT DE JETER, ON DEMANDE À CELUI D'AVANT DE SE POUSSER ──────────
+      // La règle « le premier arrivé garde l'écran » condamnait la seconde
+      // scène même quand elle était calée sur SON mot et que la première avait
+      // déjà eu son temps. Mesuré sur le Cartoon 18 : `grow` (sur « business »)
+      // débordait sur « sans jamais passer devant une caméra », `faceless` se
+      // retrouvait à 0,73 s et disparaissait — Axel, trois fois de suite :
+      // « sans jamais passer devant une caméra, toujours pas ».
+      // On rogne donc le précédent, à condition qu'il lui reste de quoi
+      // exister. Personne n'est jeté tant que les deux peuvent tenir.
+      const finLast = r2(Math.max(last.start + 0.05, (sl.start || 0) - 0.05))
+      if (finLast - last.start >= 0.8 && (sl.end || 0) - (sl.start || 0) >= 0.8) {
+        console.log(`▶ ${last.anim || last.type} rogné (${last.end}→${finLast}s) pour laisser ${sl.anim || sl.type} tomber sur son mot`)
+        last.end = finLast
+        flat.push(sl)
+        continue
+      }
       // sinon : jeté — le précédent occupe déjà l'écran
     }
   }
