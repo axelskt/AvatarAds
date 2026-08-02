@@ -13442,6 +13442,11 @@ function _mdSwipeHtml(){
       // la PASSERELLE (retour Axel) : depuis le swipe on peut remplacer par la
       // liste complète, par un média ou par un panneau de texte
       +'<div class="row" style="width:100%;gap:8px;margin-bottom:10px;flex:0 0 auto">'
+        // #38 · CRÉER L'ANIMATION QUI MANQUE. Axel : « l'user appuie sur un bouton
+        // créer une animation, il arrive sur une zone de texte, l'IA crée et après
+        // lui propose l'animation ; s'il la garde elle est enregistrée ». Compte
+        // développeur pour l'instant : on le teste avant de l'ouvrir à tous.
+        +(_mdEstDev()?'<button onclick="_mdCreerOpen(\''+sw.scene.id+'\')" class="row" style="gap:6px;align-items:center;justify-content:center;padding:8px 11px;border-radius:9px;border:1px solid var(--accent);background:rgba(255,107,53,.10);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer;flex:0 0 auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></svg> Créer</button>':'')
         +'<button onclick="_mdSwList()" class="row grow" style="gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:11.5px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Voir la liste</button>'
         +'<div class="grow" style="position:relative">'
           +'<button onclick="event.stopPropagation();_md.swGate=!_md.swGate;const m=document.getElementById(\'mdSwGateMenu\');if(m)m.style.display=_md.swGate?\'block\':\'none\'" class="row" style="width:100%;gap:6px;align-items:center;justify-content:center;padding:8px 10px;border-radius:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:700;cursor:pointer">'
@@ -13489,6 +13494,137 @@ function _mdSwGate(kind){
   _mdRenderModals();
 }
 // passerelles depuis le swipe Remplacer
+// ══════════════════════════════════════════════════════════════════════════
+//  #38 · CRÉER SON ANIMATION — l'IA l'écrit, tu la vois, tu la gardes
+// ══════════════════════════════════════════════════════════════════════════
+// Axel : « l'user appuie sur un bouton créer une animation, il arrive sur une
+// zone de texte, l'IA crée et après lui propose l'animation ; s'il la garde elle
+// est enregistrée et il peut l'utiliser directement et plus tard, puisqu'elle
+// sera enregistrée dans "Ma marque" ».
+//
+// L'aperçu tourne ICI, dans une iframe isolée du navigateur : l'animation est du
+// HTML + GSAP, exactement comme les 164 de la banque, donc elle se joue dans une
+// page web sans passer par le serveur. Instantané, gratuit, et c'est le même
+// code qui partira au rendu final — ce que tu vois est ce que tu auras.
+//
+// L'iframe est en `sandbox="allow-scripts"` SANS `allow-same-origin` : le code
+// généré ne peut pas atteindre la page qui l'accueille, ni les cookies, ni la
+// session. La vérification côté serveur (anim-creer) a déjà refusé tout ce qui
+// touche au réseau, à l'horloge ou au document ; ceci en est la deuxième
+// serrure, celle du navigateur.
+function _mdEstDev(){ try{ return (currentMember?.plan==='developer') || !!currentMember?.is_owner; }catch(_){ return false; } }
+
+function _mdCreerOpen(sceneId){
+  const s=_md.scenes.find(x=>x.id===sceneId);
+  _md.creer={ sceneId, phrase:(s&&s.w)||'', etat:'saisie', anim:null, err:'' };
+  _md.swipe=null;
+  _mdRenderModals();
+  setTimeout(()=>{ const t=document.getElementById('mdCrTxt'); if(t) t.focus(); },60);
+}
+function _mdCreerFermer(){ _md.creer=null; _mdRenderModals(); }
+
+async function _mdCreerGo(){
+  const c=_md.creer; if(!c) return;
+  const txt=(document.getElementById('mdCrTxt')||{}).value||'';
+  if(txt.trim().length<6){ toast('Décris ce que tu veux voir bouger'); return; }
+  c.demande=txt.trim(); c.etat='travail'; c.err=''; _mdRenderModals();
+  try{
+    const r=await fetch(SUPABASE_URL+'/functions/v1/anim-creer',{
+      method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+SUPABASE_KEY },
+      body:JSON.stringify({ demande:c.demande, phrase:c.phrase })
+    });
+    const j=await r.json();
+    if(!j.ok){ c.etat='saisie'; c.err=j.erreur||'génération impossible'; _mdRenderModals(); return; }
+    c.anim=j.anim; c.etat='apercu'; _mdRenderModals();
+    setTimeout(_mdCreerJouer,40);
+  }catch(e){ c.etat='saisie'; c.err='réseau indisponible'; _mdRenderModals(); }
+}
+
+// L'aperçu : on écrit une page complète dans l'iframe, avec GSAP et la palette
+// du produit. `__ID__` et `__T0__` sont les deux marqueurs que le générateur
+// laisse dans le code ; le rendu serveur fait exactement la même substitution.
+function _mdCreerJouer(){
+  const c=_md.creer; if(!c||!c.anim) return;
+  const f=document.getElementById('mdCrFrame'); if(!f) return;
+  const html=String(c.anim.html||'').replace(/__ID__/g,'a');
+  const js=String(c.anim.js||'').replace(/__ID__/g,'a').replace(/__T0__/g,'0');
+  f.srcdoc='<!doctype html><html><head><meta charset="utf-8">'
+    +'<style>html,body{margin:0;overflow:hidden;background:transparent}'
+    +'.scene{position:relative;width:930px;height:600px;transform-origin:0 0}'
+    +'.an-p{position:absolute;will-change:transform,opacity}'
+    +'*{font-family:Inter,-apple-system,Helvetica,Arial,sans-serif}</style></head>'
+    +'<body><div class="scene" id="sc">'+html+'</div>'
+    +'<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"><\/script>'
+    +'<script>(function(){'
+    +'var sc=document.getElementById("sc");'
+    +'var k=Math.min(innerWidth/930,innerHeight/600);sc.style.transform="scale("+k+")";'
+    +'var tl=gsap.timeline({repeat:-1,repeatDelay:0.8});'
+    + js
+    +'})();<\/script></body></html>';
+}
+
+async function _mdCreerGarder(){
+  const c=_md.creer; if(!c||!c.anim) return;
+  c.etat='sauve'; _mdRenderModals();
+  try{
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) throw new Error('session');
+    // le nom doit rester unique dans SA marque : on suffixe si besoin
+    let nom=c.anim.nom||'animation';
+    const { data:deja } = await sb.from('brand_animations').select('nom').eq('user_id',user.id).eq('nom',nom).maybeSingle();
+    if(deja) nom=nom+'-'+String(Date.now()).slice(-4);
+    const { error } = await sb.from('brand_animations').insert({
+      user_id:user.id, nom, mots:c.anim.mots||[], montre:c.anim.montre||'',
+      demande:c.demande||'', html:c.anim.html, js:c.anim.js
+    });
+    if(error) throw error;
+    // …et elle prend tout de suite la place de la scène qu'on remplaçait
+    const sc=_md.scenes.find(x=>x.id===c.sceneId);
+    if(sc){ _mdCommit(); sc.repl='perso:'+nom; sc.del=false; sc.replM=null; sc.replT=null; }
+    _md.creer=null; _mdRender();
+    toast('✓ « '+nom+' » est dans Ma marque — réutilisable dans tous tes montages');
+  }catch(e){ c.etat='apercu'; c.err='enregistrement impossible'; _mdRenderModals(); }
+}
+
+function _mdCreerHtml(){
+  const c=_md.creer; if(!c) return '';
+  const esc=_mdEsc;
+  let corps='';
+  if(c.etat==='saisie'||c.etat==='travail'){
+    const occupe=c.etat==='travail';
+    corps='<div class="col" style="gap:10px">'
+      +(c.phrase?'<div class="mono" style="font-size:10.5px;color:var(--text-3)">SUR « '+esc(c.phrase)+' »</div>':'')
+      +'<textarea id="mdCrTxt" '+(occupe?'disabled':'')+' placeholder="Ce que tu veux voir bouger à l\'écran. Ex : trois machines de muscu qui s\'allument une par une avec une coche quand la série est finie."'
+      +' style="width:100%;min-height:104px;resize:vertical;padding:12px;border-radius:11px;border:1px solid var(--border-2);background:var(--bg-2);color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5">'+esc(c.demande||'')+'</textarea>'
+      +(c.err?'<div style="font-size:12px;color:var(--red)">'+esc(c.err)+'</div>':'')
+      +'<button onclick="_mdCreerGo()" '+(occupe?'disabled':'')+' class="btn" style="width:100%;padding:12px;border-radius:11px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;color:#fff;font-weight:800;font-size:13.5px;cursor:'+(occupe?'wait':'pointer')+'">'
+      +(occupe?'✨ L\'IA écrit ton animation…':'✨ Créer l\'animation')+'</button>'
+      +'<div class="mono" style="font-size:9.5px;color:var(--text-3);text-align:center">Elle sera enregistrée dans Ma marque si tu la gardes</div>'
+      +'</div>';
+  } else {
+    corps='<div class="col" style="gap:10px">'
+      +'<div style="position:relative;width:100%;aspect-ratio:930/600;border-radius:13px;overflow:hidden;border:1px solid var(--border-2);background:linear-gradient(155deg,#e9eefb 0%,#f4f0f6 45%,#fbeef0 100%)">'
+      +'<iframe id="mdCrFrame" sandbox="allow-scripts" style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe></div>'
+      +'<div class="col" style="gap:2px">'
+        +'<span style="font-size:13.5px;font-weight:700">'+esc(c.anim.nom||'')+'</span>'
+        +'<span style="font-size:11.5px;color:var(--text-3);line-height:1.4">'+esc(c.anim.montre||'')+'</span>'
+      +'</div>'
+      +(c.err?'<div style="font-size:12px;color:var(--red)">'+esc(c.err)+'</div>':'')
+      +'<div class="row" style="gap:8px">'
+        +'<button onclick="_md.creer.etat=\'saisie\';_mdRenderModals()" class="btn btn-ghost grow" style="padding:11px;border-radius:11px;font-size:13px;font-weight:600">↺ Refaire</button>'
+        +'<button onclick="_mdCreerGarder()" '+(c.etat==='sauve'?'disabled':'')+' class="btn grow" style="padding:11px;border-radius:11px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;color:#fff;font-weight:800;font-size:13px;cursor:pointer">'
+        +(c.etat==='sauve'?'…':'✓ Garder')+'</button>'
+      +'</div></div>';
+  }
+  return '<div onclick="_mdCreerFermer()" style="position:fixed;inset:0;z-index:6600;background:rgba(6,6,8,.86);backdrop-filter:blur(10px);display:flex;padding:18px;overflow:auto">'
+    +'<div onclick="event.stopPropagation()" class="col" style="width:100%;max-width:420px;margin:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:16px;gap:12px">'
+      +'<div class="row" style="justify-content:space-between;align-items:center">'
+        +'<div class="col" style="line-height:1.25">'
+          +'<span class="mono" style="font-size:10px;letter-spacing:.1em;color:var(--text-3)">CRÉER UNE ANIMATION</span>'
+          +'<span style="font-size:14.5px;font-weight:700">Décris ce que tu veux voir</span></div>'
+        +'<button onclick="_mdCreerFermer()" class="btn-quiet" style="font-size:20px;padding:2px 8px;cursor:pointer">✕</button></div>'
+      +corps+'</div></div>';
+}
 function _mdSwList(){ const sw=_md.swipe; if(!sw) return; _md.swipe=null;
   _md.bankModal={kind:'animation',at:sw.scene.a,replaceScene:sw.scene.id,swipe:false}; _mdRenderModals(); }
 function _mdSwText(){ const sw=_md.swipe; if(!sw) return; _md.swipe=null;
@@ -14037,7 +14173,11 @@ function _mdRenderModals(keepFocus){
   if(_md.askItems) h+=_mdAskItemsHtml();
   if(_md.zoomPick) h+=_mdZoomPickHtml();
   if(_md.place) h+=_mdPlaceHtml();
+  if(_md.creer) h+=_mdCreerHtml();   // #38 · créer son animation
   host.innerHTML=h;
+  // l'iframe est recréée à chaque rendu : on lui réinjecte l'animation, sinon
+  // l'aperçu disparaît dès qu'une autre modale se met à jour.
+  if(_md.creer && _md.creer.etat==='apercu') setTimeout(_mdCreerJouer,20);
   if(_md.place){ _mdPlacePaint(); _mdPlaceBgPaint(); }
   if(_md.zoomPick){ try{ const v=_mdVid(), bg=document.getElementById('mdZoomBg');
     if(v&&bg&&v.videoWidth){ const c=document.createElement('canvas'); c.width=270; c.height=480;
