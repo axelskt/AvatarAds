@@ -257,16 +257,21 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // On borne donc chaque segment sur la durée réelle du clip correspondant.
     if ((plan.avatarSegments || []).length && Object.keys(avatarClips).length) {
       plan.avatarSegments = plan.avatarSegments.map((w, i) => {
+        // ⚠️ l'indice d'origine se fige ICI, avant le filtre trois lignes plus
+        // bas : une fenêtre jetée (clip trop court) décalait toutes les
+        // suivantes d'un cran, et chacune jouait le clip lipsync de sa voisine.
+        // La dérivation et le remap post-dérivation lisent `w.clip` en priorité.
+        const tag = { ...w, clip: w.clip ?? i }
         const src = avatarClips['av' + i]
-        if (!src) return w
+        if (!src) return tag
         let dur = 0
         try {
           dur = Number(String(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
             'format=duration', '-of', 'csv=p=0', join(proj, src)])).trim()) || 0
-        } catch (_) { return w }
+        } catch (_) { return tag }
         const end = Math.min(w.end ?? (w.start + dur), w.start + dur)
         if (end < (w.end ?? 0) - 0.05) console.log(`▶ fenêtre avatar ${i} bornée à ${end.toFixed(2)}s (durée du clip)`)
-        return { ...w, end }
+        return { ...tag, end }
       }).filter((w) => (w.end - w.start) >= 0.6)
     }
 
@@ -351,7 +356,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         if (apres !== avant) { c.text = apres; corr++ }
       }
       if (corr) console.log(`▶ orthographe : ${corr} mot(s) corrigé(s) dans les sous-titres`)
-      try { deriveDynamicSlides(plan, { assetFiles, noFace }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
+      // hasClips : la dérivation doit savoir si des clips lipsync existent déjà.
+      // Sans clip (photo d'avatar, ou découpe de base.mp4), elle a le droit
+      // d'avancer la première fenêtre avatar jusqu'à 0 pour garantir le hook ;
+      // avec des clips, avancer la fenêtre ferait mentir les lèvres — la
+      // garantie vient alors d'orchestrate, avant la génération des clips.
+      try { deriveDynamicSlides(plan, { assetFiles, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
@@ -406,6 +416,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       const next = {}
       segs.forEach((w, i) => {
         const from = Number(w.clipFrom || 0)
+        // `w.clip` est posé par la dérivation : l'indice D'ORIGINE de la fenêtre
+        // (les clips av0, av1… ont été générés dans cet ordre-là), ou -1 pour
+        // une fenêtre qu'elle a créée (adresse directe, trou comblé) — aucune
+        // ne doit hériter du clip d'une voisine par simple position :
+        // 'av-1' n'existe pas, donc `!src` → photo d'avatar en repli.
         const srcId = 'av' + (w.clip ?? i)
         const src = avatarClips[srcId]
         if (!src) return

@@ -423,7 +423,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), puis le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), puis le moteur de rendu serveur produit le MP4 final 1080×1920. ⚠️ AUCUN débruitage n'est appliqué : la voix part telle quelle dans la vidéo. Pour un enregistrement brut (micro d'ordinateur, bruit de fond, souffle), passe d'abord l'audio par clean_audio (1 crédit/min) et donne ici l'URL nettoyée. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1478,6 +1478,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
 job_id : ${mj.id}
 Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend le MP4.
 Appelle check_montage avec ce job_id dans environ 2 minutes.
+⚠️ L'audio est monté TEL QUEL (aucun débruitage) : s'il s'agit d'un enregistrement brut et que le rendu sonne sale, relance avec un audio passé par clean_audio.
 💡 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
 }
 
