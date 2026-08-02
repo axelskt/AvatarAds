@@ -1,2530 +1,2478 @@
 {
- "01-imagesia": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7104,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "2200-img",
-    "label": "2200 img",
-    "x": 0.7877,
-    "y": 0.035,
-    "w": 0.0675,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "generation",
-    "label": "Génération",
-    "x": 0.2136,
-    "y": 0.1844,
-    "w": 0.0909,
-    "h": 0.0367
-   },
-   {
-    "name": "correction",
-    "label": "Correction",
-    "x": 0.3045,
-    "y": 0.1844,
-    "w": 0.0909,
-    "h": 0.0367
-   },
-   {
-    "name": "photo-reel-realiste",
-    "label": "Photo Réel · réaliste",
-    "x": 0.2158,
-    "y": 0.3119,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "pixar-3d-toy-story",
-    "label": "Pixar 3D · Toy Story",
-    "x": 0.3023,
-    "y": 0.3119,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "fruit-perso-fruit",
-    "label": "Fruit · perso fruit",
-    "x": 0.2158,
-    "y": 0.4103,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "ugc-reel-authentique",
-    "label": "UGC Réel · authentique",
-    "x": 0.3023,
-    "y": 0.4103,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "mascotte-de-marque",
-    "label": "Mascotte · de marque",
-    "x": 0.2158,
-    "y": 0.5086,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "autre-style-libre",
-    "label": "Autre · style libre",
-    "x": 0.3023,
-    "y": 0.5086,
-    "w": 0.0803,
-    "h": 0.0872
-   },
-   {
-    "name": "1-1",
-    "label": "1:1",
-    "x": 0.2014,
-    "y": 0.6683,
-    "w": 0.0515,
-    "h": 0.0767
-   },
-   {
-    "name": "9-16",
-    "label": "9:16",
-    "x": 0.2591,
-    "y": 0.6683,
-    "w": 0.0515,
-    "h": 0.0767
-   },
-   {
-    "name": "16-9",
-    "label": "16:9",
-    "x": 0.3168,
-    "y": 0.6683,
-    "w": 0.0515,
-    "h": 0.0767
-   },
-   {
-    "name": "standard",
-    "label": "Standard",
-    "x": 0.2034,
-    "y": 0.8261,
-    "w": 0.0556,
-    "h": 0.0167
-   },
-   {
-    "name": "premium",
-    "label": "Premium",
-    "x": 0.2591,
-    "y": 0.8261,
-    "w": 0.0556,
-    "h": 0.0167
-   },
-   {
-    "name": "4k",
-    "label": "4K",
-    "x": 0.3147,
-    "y": 0.8261,
-    "w": 0.0556,
-    "h": 0.0167
-   },
-   {
-    "name": "1",
-    "label": "1",
-    "x": 0.2055,
-    "y": 0.9406,
-    "w": 0.0535,
-    "h": 0.0367
-   },
-   {
-    "name": "2",
-    "label": "2",
-    "x": 0.2591,
-    "y": 0.9406,
-    "w": 0.0535,
-    "h": 0.0367
-   },
-   {
-    "name": "3",
-    "label": "3",
-    "x": 0.3126,
-    "y": 0.9406,
-    "w": 0.0535,
-    "h": 0.0367
-   },
-   {
-    "name": "image-de-reference",
-    "label": "Image de référence",
-    "x": 0.415,
-    "y": 0.8672,
-    "w": 0.075,
-    "h": 0.2301
-   },
-   {
-    "name": "decris-l-image-que-tu-veux-generer",
-    "label": "Décris l'image que tu veux générer…",
-    "x": 0.7238,
-    "y": 0.8127,
-    "w": 0.525,
-    "h": 0.1211
-   },
-   {
-    "name": "ameliorer",
-    "label": "Améliorer",
-    "x": 0.9469,
-    "y": 0.7827,
-    "w": 0.0663,
-    "h": 0.0389
-   },
-   {
-    "name": "entrepreneur-en-studio-moderne",
-    "label": "Entrepreneur en studio moderne, …",
-    "x": 0.5323,
-    "y": 0.9205,
-    "w": 0.1421,
-    "h": 0.0333
-   },
-   {
-    "name": "face-cam-ugc-outdoor-micro-crav",
-    "label": "Face cam UGC outdoor, micro-crav…",
-    "x": 0.6825,
-    "y": 0.9205,
-    "w": 0.1482,
-    "h": 0.0333
-   },
-   {
-    "name": "generer-l-image-3-cr",
-    "label": "Générer l'image · 3 cr",
-    "x": 0.9094,
-    "y": 0.9205,
-    "w": 0.1536,
-    "h": 0.0678
-   },
-   {
-    "name": "2200-9999-credits-images-ce-mois",
-    "label": "2200 / 9999 crédits images ce mois · +",
-    "x": 0.7238,
-    "y": 0.975,
-    "w": 0.525,
-    "h": 0.0144
-   }
-  ]
- },
- "02-express": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "realiste-avatar-reel",
-    "label": "Réaliste · avatar réel",
-    "x": 0.2177,
-    "y": 0.2504,
-    "w": 0.0816,
-    "h": 0.0693
-   },
-   {
-    "name": "cartoon-3d-style-pixar",
-    "label": "Cartoon 3D · style Pixar",
-    "x": 0.3042,
-    "y": 0.2504,
-    "w": 0.0816,
-    "h": 0.0693
-   },
-   {
-    "name": "ugc-reel-selfie-authentique",
-    "label": "UGC réel · selfie authentique",
-    "x": 0.2177,
-    "y": 0.3286,
-    "w": 0.0816,
-    "h": 0.0693
-   },
-   {
-    "name": "studio-produit-pub",
-    "label": "Studio · produit/pub",
-    "x": 0.3042,
-    "y": 0.3286,
-    "w": 0.0816,
-    "h": 0.0693
-   },
-   {
-    "name": "portrait-9-16",
-    "label": "📱 · Portrait · 9:16",
-    "x": 0.2177,
-    "y": 0.4773,
-    "w": 0.0816,
-    "h": 0.0636
-   },
-   {
-    "name": "paysage-16-9",
-    "label": "🖥 · Paysage · 16:9",
-    "x": 0.3042,
-    "y": 0.4773,
-    "w": 0.0816,
-    "h": 0.0636
-   },
-   {
-    "name": "720p",
-    "label": "720p",
-    "x": 0.2177,
-    "y": 0.7347,
-    "w": 0.0816,
-    "h": 0.0511
-   },
-   {
-    "name": "1080pdes-8-s",
-    "label": "1080pdès 8 s",
-    "x": 0.3042,
-    "y": 0.7347,
-    "w": 0.0816,
-    "h": 0.0511
-   },
-   {
-    "name": "voix-native-veo-audio-genere-avec-la-vid",
-    "label": "Voix native (Veo) · audio généré avec la vidéo",
-    "x": 0.2609,
-    "y": 0.8953,
-    "w": 0.1681,
-    "h": 0.0658
-   },
-   {
-    "name": "gemini-tts-voix-generee-11-timbres",
-    "label": "Gemini TTS · voix générée · 11 timbres",
-    "x": 0.2609,
-    "y": 0.9666,
-    "w": 0.1681,
-    "h": 0.0658
-   },
-   {
-    "name": "ajoute-tes-images-avatar-produit-perso",
-    "label": "Ajoute tes images · avatar · produit · perso",
-    "x": 0.4506,
-    "y": 0.7833,
-    "w": 0.1313,
-    "h": 0.2222
-   },
-   {
-    "name": "importer-depuis-la-bibliotheque",
-    "label": "Importer depuis · la bibliothèque",
-    "x": 0.4506,
-    "y": 0.9389,
-    "w": 0.1313,
-    "h": 0.0689
-   },
-   {
-    "name": "decris-ta-video-et-ce-que-le-perso-dit-a",
-    "label": "Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn",
-    "x": 0.7544,
-    "y": 0.7556,
-    "w": 0.4562,
-    "h": 0.1667
-   },
-   {
-    "name": "ameliorer",
-    "label": "✦ Améliorer",
-    "x": 0.5553,
-    "y": 0.8689,
-    "w": 0.0581,
-    "h": 0.0333
-   },
-   {
-    "name": "face-camera",
-    "label": "💬 Face caméra",
-    "x": 0.6248,
-    "y": 0.8689,
-    "w": 0.071,
-    "h": 0.0378
-   },
-   {
-    "name": "cartoon",
-    "label": "🧸 Cartoon",
-    "x": 0.693,
-    "y": 0.8689,
-    "w": 0.0555,
-    "h": 0.0378
-   },
-   {
-    "name": "fitness",
-    "label": "💪 Fitness",
-    "x": 0.7516,
-    "y": 0.8689,
-    "w": 0.0516,
-    "h": 0.0378
-   },
-   {
-    "name": "produit",
-    "label": "🛍 Produit",
-    "x": 0.8084,
-    "y": 0.8689,
-    "w": 0.052,
-    "h": 0.0378
-   },
-   {
-    "name": "generer-la-video",
-    "label": "Générer la vidéo",
-    "x": 0.8975,
-    "y": 0.935,
-    "w": 0.17,
-    "h": 0.0767
-   }
-  ]
- },
- "03-generateur": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "1-produit",
-    "label": "1 · Produit",
-    "x": 0.2097,
-    "y": 0.1938,
-    "w": 0.0457,
-    "h": 0.0289
-   },
-   {
-    "name": "2-avatar",
-    "label": "2 · Avatar",
-    "x": 0.3201,
-    "y": 0.1938,
-    "w": 0.0435,
-    "h": 0.0289
-   },
-   {
-    "name": "3-voix",
-    "label": "3 · Voix",
-    "x": 0.4255,
-    "y": 0.1938,
-    "w": 0.0357,
-    "h": 0.0289
-   },
-   {
-    "name": "4-style",
-    "label": "4 · Style",
-    "x": 0.5281,
-    "y": 0.1938,
-    "w": 0.038,
-    "h": 0.0289
-   },
-   {
-    "name": "5-generer",
-    "label": "5 · Générer",
-    "x": 0.6373,
-    "y": 0.1938,
-    "w": 0.0491,
-    "h": 0.0289
-   },
-   {
-    "name": "ex-dropacademy-funnelpro-monbusiness-ia",
-    "label": "Ex : DropAcademy, FunnelPro, MonBusiness IA…",
-    "x": 0.4244,
-    "y": 0.2902,
-    "w": 0.475,
-    "h": 0.0506
-   },
-   {
-    "name": "selectionner-un-hook-personne-ne-t-en-pa",
-    "label": "Sélectionner un hook... · Personne ne t'en parle mais actuel",
-    "x": 0.4244,
-    "y": 0.4785,
-    "w": 0.475,
-    "h": 0.0506
-   },
-   {
-    "name": "le-hook-apparaitra-ici-ou-ecris-le-tien-",
-    "label": "Le hook apparaîtra ici, ou écris le tien directement",
-    "x": 0.4244,
-    "y": 0.5479,
-    "w": 0.475,
-    "h": 0.0506
-   },
-   {
-    "name": "ecris-le-corps-de-ton-script-ici-le-hook",
-    "label": "Écris le corps de ton script ici… · Le hook et le CTA seront",
-    "x": 0.4244,
-    "y": 0.711,
-    "w": 0.475,
-    "h": 0.1667
-   },
-   {
-    "name": "selectionner-un-cta-commente-plan-et-je-",
-    "label": "Sélectionner un CTA... · Commente \"PLAN\" et je t'explique to",
-    "x": 0.4244,
-    "y": 0.874,
-    "w": 0.475,
-    "h": 0.0506
-   },
-   {
-    "name": "continuer",
-    "label": "Continuer →",
-    "x": 0.456,
-    "y": 0.9578,
-    "w": 0.4505,
-    "h": 0.0489
-   },
-   {
-    "name": "tiktok",
-    "label": "TikTok",
-    "x": 0.7597,
-    "y": 0.1183,
-    "w": 0.0375,
-    "h": 0.0256
-   },
-   {
-    "name": "reels",
-    "label": "Reels",
-    "x": 0.7978,
-    "y": 0.1183,
-    "w": 0.0338,
-    "h": 0.0256
-   },
-   {
-    "name": "facebook",
-    "label": "Facebook",
-    "x": 0.8397,
-    "y": 0.1183,
-    "w": 0.045,
-    "h": 0.0256
-   },
-   {
-    "name": "youtube",
-    "label": "YouTube",
-    "x": 0.8853,
-    "y": 0.1183,
-    "w": 0.0413,
-    "h": 0.0256
-   },
-   {
-    "name": "linkedin",
-    "label": "LinkedIn",
-    "x": 0.9309,
-    "y": 0.1183,
-    "w": 0.045,
-    "h": 0.0256
-   },
-   {
-    "name": "apercu-anime",
-    "label": "▶ Aperçu animé",
-    "x": 0.8472,
-    "y": 0.1656,
-    "w": 0.0815,
-    "h": 0.0356
-   }
-  ]
- },
- "04-montageia": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "gameplay-voix-ta-voix-ou-elevenlabs-sur-",
-    "label": "Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl",
-    "x": 0.4647,
-    "y": 0.2755,
-    "w": 0.2181,
-    "h": 0.0813
-   },
-   {
-    "name": "ma-video-importe-ta-video-l-ia-la-monte-",
-    "label": "Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr",
-    "x": 0.6903,
-    "y": 0.2755,
-    "w": 0.2181,
-    "h": 0.0813
-   },
-   {
-    "name": "importe-ta-voix-off-mp3-wav-m4a-l-ia-en-",
-    "label": "Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les ",
-    "x": 0.5775,
-    "y": 0.4118,
-    "w": 0.4437,
-    "h": 0.0934
-   },
-   {
-    "name": "ajoute-une-photo-d-avatar-sinon-100-game",
-    "label": "Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l",
-    "x": 0.5775,
-    "y": 0.5519,
-    "w": 0.4437,
-    "h": 0.0934
-   },
-   {
-    "name": "https-ton-site-com",
-    "label": "https://ton-site.com",
-    "x": 0.4637,
-    "y": 0.6731,
-    "w": 0.2162,
-    "h": 0.0556
-   },
-   {
-    "name": "0-8",
-    "label": "0/8",
-    "x": 0.6012,
-    "y": 0.6775,
-    "w": 0.0362,
-    "h": 0.0644
-   },
-   {
-    "name": "parametres-avances-sous-titres-mot-par-m",
-    "label": "Paramètres avancés · sous-titres mot-par-mot · musique auto",
-    "x": 0.5775,
-    "y": 0.7731,
-    "w": 0.4437,
-    "h": 0.0756
-   },
-   {
-    "name": "ajouter-un-script-brief-dis-a-l-ia-ce-qu",
-    "label": "Ajouter un script / brief · Dis à l'IA ce que la vidéo doit ",
-    "x": 0.5775,
-    "y": 0.8942,
-    "w": 0.4437,
-    "h": 0.0756
-   },
-   {
-    "name": "creer-ma-video-8-credits",
-    "label": "Créer ma vidéo — 8 crédits",
-    "x": 0.5775,
-    "y": 0.9522,
-    "w": 0.475,
-    "h": 0.0644
-   }
-  ]
- },
- "05-bibliotheque": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "importer",
-    "label": "Importer",
-    "x": 0.8564,
-    "y": 0.1183,
-    "w": 0.068,
-    "h": 0.0411
-   },
-   {
-    "name": "nouvelle-video",
-    "label": "Nouvelle vidéo",
-    "x": 0.9402,
-    "y": 0.1183,
-    "w": 0.0896,
-    "h": 0.0389
-   },
-   {
-    "name": "toutes",
-    "label": "Toutes",
-    "x": 0.1934,
-    "y": 0.2123,
-    "w": 0.0405,
-    "h": 0.0367
-   },
-   {
-    "name": "videos",
-    "label": "Vidéos",
-    "x": 0.2343,
-    "y": 0.2123,
-    "w": 0.0412,
-    "h": 0.0367
-   },
-   {
-    "name": "audio",
-    "label": "Audio",
-    "x": 0.2736,
-    "y": 0.2123,
-    "w": 0.0375,
-    "h": 0.0367
-   },
-   {
-    "name": "images",
-    "label": "Images",
-    "x": 0.3133,
-    "y": 0.2123,
-    "w": 0.0419,
-    "h": 0.0367
-   },
-   {
-    "name": "importer-une-video-avatar-mp4-hedra-ou-v",
-    "label": "Importer une vidéo avatar · MP4 Hedra ou vidéo existante → a",
-    "x": 0.2681,
-    "y": 0.5913,
-    "w": 0.1963,
-    "h": 0.6746
-   }
-  ]
- },
- "06-nettoyage-audio": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
-    "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
-    "x": 0.5775,
-    "y": 0.3805,
-    "w": 0.3638,
-    "h": 0.2778
-   },
-   {
-    "name": "parcourir",
-    "label": "Parcourir",
-    "x": 0.5775,
-    "y": 0.4382,
-    "w": 0.0697,
-    "h": 0.0444
-   },
-   {
-    "name": "standard-nettoyage-automatique",
-    "label": "Standard · nettoyage automatique",
-    "x": 0.4847,
-    "y": 0.6077,
-    "w": 0.1781,
-    "h": 0.1367
-   },
-   {
-    "name": "avance-traitement-renforce",
-    "label": "Avancé · traitement renforcé",
-    "x": 0.6703,
-    "y": 0.6077,
-    "w": 0.1781,
-    "h": 0.1367
-   },
-   {
-    "name": "parametres-avances-traitement-voix-silen",
-    "label": "Paramètres avancés · Traitement voix, silences, qualité",
-    "x": 0.5775,
-    "y": 0.7307,
-    "w": 0.3638,
-    "h": 0.0693
-   },
-   {
-    "name": "nettoyer-mon-audio",
-    "label": "Nettoyer mon audio",
-    "x": 0.5775,
-    "y": 0.8198,
-    "w": 0.3638,
-    "h": 0.0644
-   }
-  ]
- },
- "07-enregistreur": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "recmainbtn",
-    "label": "",
-    "x": 0.5775,
-    "y": 0.4096,
-    "w": 0.0462,
-    "h": 0.0822
-   },
-   {
-    "name": "importer-un-fichier-audio-video-mp4",
-    "label": "Importer un fichier audio / vidéo MP4",
-    "x": 0.5775,
-    "y": 0.5185,
-    "w": 0.1953,
-    "h": 0.0511
-   },
-   {
-    "name": "ecouter",
-    "label": "▶ Écouter",
-    "x": 0.3983,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
-   },
-   {
-    "name": "couper-ici",
-    "label": "Couper ici",
-    "x": 0.4913,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
-   },
-   {
-    "name": "supprimer",
-    "label": "Supprimer",
-    "x": 0.5842,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
-   },
-   {
-    "name": "remplacer",
-    "label": "✂️ Remplacer",
-    "x": 0.6772,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
-   },
-   {
-    "name": "silences-on",
-    "label": "🔇 Silences ON",
-    "x": 0.7634,
-    "y": 0.5952,
-    "w": 0.0745,
-    "h": 0.0489
-   },
-   {
-    "name": "wav",
-    "label": "WAV",
-    "x": 0.3653,
-    "y": 0.694,
-    "w": 0.0581,
-    "h": 0.0533
-   },
-   {
-    "name": "envoyer-vers-bibliotheque",
-    "label": "Envoyer vers bibliothèque",
-    "x": 0.4753,
-    "y": 0.694,
-    "w": 0.1519,
-    "h": 0.0533
-   },
-   {
-    "name": "utiliser-dans-le-generateur",
-    "label": "Utiliser dans le générateur",
-    "x": 0.7053,
-    "y": 0.694,
-    "w": 0.2269,
-    "h": 0.0533
-   }
-  ]
- },
- "08-parrainage": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "https-avatarads-iamanager-fr-ref-f0cae49",
-    "label": "https://avatarads.iamanager.fr/?ref=F0CAE49AE6",
-    "x": 0.5394,
-    "y": 0.5886,
-    "w": 0.29,
-    "h": 0.0533
-   },
-   {
-    "name": "copier",
-    "label": "Copier",
-    "x": 0.7262,
-    "y": 0.5886,
-    "w": 0.0688,
-    "h": 0.0533
-   },
-   {
-    "name": "twitter",
-    "label": "𝕏 Twitter",
-    "x": 0.4529,
-    "y": 0.6586,
-    "w": 0.1171,
-    "h": 0.0522
-   },
-   {
-    "name": "facebook",
-    "label": "📘 Facebook",
-    "x": 0.5775,
-    "y": 0.6586,
-    "w": 0.1171,
-    "h": 0.0556
-   },
-   {
-    "name": "tiktok",
-    "label": "🎵 TikTok",
-    "x": 0.7021,
-    "y": 0.6586,
-    "w": 0.1171,
-    "h": 0.0556
-   }
-  ]
- },
- "09-cartoon": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   }
-  ]
- },
- "10-mon-compte": {
-  "zones": [
-   {
-    "name": "btn-quiet",
-    "label": "✕",
-    "x": 0.6193,
-    "y": 0.1144,
-    "w": 0.0176,
-    "h": 0.0289
-   },
-   {
-    "name": "axel",
-    "label": "axel",
-    "x": 0.5,
-    "y": 0.2531,
-    "w": 0.2562,
-    "h": 0.0483
-   },
-   {
-    "name": "33-6-00-00-00-00",
-    "label": "+33 6 00 00 00 00",
-    "x": 0.5,
-    "y": 0.3472,
-    "w": 0.2562,
-    "h": 0.0556
-   },
-   {
-    "name": "definir-ou-changer-mon-mot-de-passe",
-    "label": "🔐 Définir ou changer mon mot de passe",
-    "x": 0.5,
-    "y": 0.4467,
-    "w": 0.2562,
-    "h": 0.0589
-   },
-   {
-    "name": "nouveau-email-com",
-    "label": "nouveau@email.com",
-    "x": 0.5,
-    "y": 0.7572,
-    "w": 0.2562,
-    "h": 0.0556
-   },
-   {
-    "name": "envoyer-le-lien-de-confirmation",
-    "label": "✉️ Envoyer le lien de confirmation",
-    "x": 0.5,
-    "y": 0.8882,
-    "w": 0.2562,
-    "h": 0.0589
-   }
-  ]
- },
- "11-connecter-claude": {
-  "zones": [
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9712,
-    "y": 0.0467,
-    "w": 0.025,
-    "h": 0.0444
-   },
-   {
-    "name": "generer-ma-cle",
-    "label": "Générer ma clé",
-    "x": 0.2842,
-    "y": 0.4415,
-    "w": 0.1721,
-    "h": 0.0533
-   },
-   {
-    "name": "ouvrir-claude-connecteurs",
-    "label": "Ouvrir Claude → Connecteurs",
-    "x": 0.5,
-    "y": 0.4415,
-    "w": 0.1721,
-    "h": 0.0533
-   },
-   {
-    "name": "commencer",
-    "label": "Commencer",
-    "x": 0.7158,
-    "y": 0.4415,
-    "w": 0.1721,
-    "h": 0.0533
-   }
-  ]
- },
- "20-claude-menu": {
-  "zones": [
-   {
-    "name": "menu-parametres",
-    "label": "Paramètres",
-    "x": 0.0845,
-    "y": 0.632,
-    "w": 0.151,
-    "h": 0.028
-   }
-  ],
-  "w": 2000,
-  "h": 1048
- },
- "21-claude-parametres": {
-  "zones": [
-   {
-    "name": "onglet-connecteurs",
-    "label": "Connecteurs",
-    "x": 0.28,
-    "y": 0.713,
-    "w": 0.103,
-    "h": 0.031
-   }
-  ],
-  "w": 2000,
-  "h": 1048
- },
- "22-claude-connecteurs": {
-  "zones": [
-   {
-    "name": "bouton-ajouter",
-    "label": "Ajouter",
-    "x": 0.72,
-    "y": 0.115,
-    "w": 0.055,
-    "h": 0.034
-   }
-  ],
-  "w": 2000,
-  "h": 1048
- },
- "23-claude-ajouter": {
-  "zones": [
-   {
-    "name": "bouton-ajouter",
-    "label": "Ajouter",
-    "x": 0.72,
-    "y": 0.114,
-    "w": 0.05,
-    "h": 0.032
-   },
-   {
-    "name": "menu-ajouter-personnalise",
-    "label": "Ajouter un connecteur personnalisé",
-    "x": 0.666,
-    "y": 0.199,
-    "w": 0.167,
-    "h": 0.03
-   }
-  ],
-  "w": 2000,
-  "h": 1048
- },
- "24-claude-personnalise": {
-  "zones": [
-   {
-    "name": "champ-nom",
-    "label": "AvatarAds",
-    "x": 0.499,
-    "y": 0.322,
-    "w": 0.283,
-    "h": 0.036
-   },
-   {
-    "name": "champ-url",
-    "label": "URL du serveur MCP distant",
-    "x": 0.499,
-    "y": 0.374,
-    "w": 0.283,
-    "h": 0.034
-   },
-   {
-    "name": "bouton-ajouter",
-    "label": "Ajouter",
-    "x": 0.621,
-    "y": 0.748,
-    "w": 0.043,
-    "h": 0.032
-   }
-  ],
-  "w": 2000,
-  "h": 1048
- },
- "12-connecter-claude-entree": {
-  "zones": [
-   {
-    "name": "connecter-claude",
-    "label": "Connecter Claude",
-    "x": 0.498,
-    "y": 0.655,
-    "w": 0.236,
-    "h": 0.077
-   }
-  ],
-  "w": 3416,
-  "h": 1686
- },
- "13-montage-avance": {
-  "zones": [
-   {
-    "name": "btn-quiet",
-    "label": "✕",
-    "x": 0.6638,
-    "y": 0.1283,
-    "w": 0.0186,
-    "h": 0.0322
-   },
-   {
-    "name": "mot-par-mot",
-    "label": "Mot par mot",
-    "x": 0.3863,
-    "y": 0.4517,
-    "w": 0.1125,
-    "h": 0.0411
-   },
-   {
-    "name": "karaoke",
-    "label": "Karaoké",
-    "x": 0.4953,
-    "y": 0.4517,
-    "w": 0.0981,
-    "h": 0.0411
-   },
-   {
-    "name": "ligne-complete",
-    "label": "Ligne complète",
-    "x": 0.6091,
-    "y": 0.4517,
-    "w": 0.1219,
-    "h": 0.0411
-   },
-   {
-    "name": "punch",
-    "label": "Punch",
-    "x": 0.372,
-    "y": 0.5439,
-    "w": 0.0841,
-    "h": 0.0411
-   },
-   {
-    "name": "neon",
-    "label": "Néon",
-    "x": 0.4582,
-    "y": 0.5439,
-    "w": 0.0808,
-    "h": 0.0411
-   },
-   {
-    "name": "auto",
-    "label": "Auto",
-    "x": 0.542,
-    "y": 0.5439,
-    "w": 0.0791,
-    "h": 0.0411
-   },
-   {
-    "name": "aucun",
-    "label": "Aucun",
-    "x": 0.6276,
-    "y": 0.5439,
-    "w": 0.0847,
-    "h": 0.0411
-   },
-   {
-    "name": "haut",
-    "label": "Haut",
-    "x": 0.3554,
-    "y": 0.6361,
-    "w": 0.0508,
-    "h": 0.0411
-   },
-   {
-    "name": "centre",
-    "label": "Centre",
-    "x": 0.4136,
-    "y": 0.6361,
-    "w": 0.0582,
-    "h": 0.0411
-   },
-   {
-    "name": "bas",
-    "label": "Bas",
-    "x": 0.4698,
-    "y": 0.6361,
-    "w": 0.0467,
-    "h": 0.0411
-   },
-   {
-    "name": "s",
-    "label": "S",
-    "x": 0.5325,
-    "y": 0.6361,
-    "w": 0.0513,
-    "h": 0.0411
-   },
-   {
-    "name": "m",
-    "label": "M",
-    "x": 0.5887,
-    "y": 0.6361,
-    "w": 0.0535,
-    "h": 0.0411
-   },
-   {
-    "name": "l",
-    "label": "L",
-    "x": 0.6446,
-    "y": 0.6361,
-    "w": 0.0508,
-    "h": 0.0411
-   },
-   {
-    "name": "emoji-auto-sur-les-mots-cles-ajoutes-sur",
-    "label": "Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps",
-    "x": 0.5,
-    "y": 0.7106,
-    "w": 0.3463,
-    "h": 0.0679
-   },
-   {
-    "name": "auto-ia-choisit",
-    "label": "Auto · IA choisit",
-    "x": 0.3825,
-    "y": 0.8807,
-    "w": 0.1113,
-    "h": 0.1167
-   },
-   {
-    "name": "apple-fond-clair-minimal",
-    "label": "Apple · fond clair, minimal",
-    "x": 0.5,
-    "y": 0.8807,
-    "w": 0.1113,
-    "h": 0.1167
-   },
-   {
-    "name": "liquid-glass-verre-depoli-reflets",
-    "label": "Liquid glass · verre dépoli, reflets",
-    "x": 0.6175,
-    "y": 0.8807,
-    "w": 0.1113,
-    "h": 0.1167
-   }
-  ]
- },
- "14-audio-avance": {
-  "zones": [
-   {
-    "name": "credits",
-    "label": "∞ crédits",
-    "x": 0.7854,
-    "y": 0.035,
-    "w": 0.0722,
-    "h": 0.0344
-   },
-   {
-    "name": "credits-2",
-    "label": "Crédits",
-    "x": 0.8595,
-    "y": 0.035,
-    "w": 0.061,
-    "h": 0.0422
-   },
-   {
-    "name": "a",
-    "label": "A",
-    "x": 0.915,
-    "y": 0.035,
-    "w": 0.0187,
-    "h": 0.0333
-   },
-   {
-    "name": "btn-quiet",
-    "label": "",
-    "x": 0.9762,
-    "y": 0.035,
-    "w": 0.02,
-    "h": 0.0333
-   },
-   {
-    "name": "generateur",
-    "label": "Générateur",
-    "x": 0.0772,
-    "y": 0.1272,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "bibliotheque",
-    "label": "Bibliothèque",
-    "x": 0.0772,
-    "y": 0.175,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "images-ia",
-    "label": "Images IA",
-    "x": 0.0772,
-    "y": 0.2228,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "enregistreur",
-    "label": "Enregistreur",
-    "x": 0.0772,
-    "y": 0.2706,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
-    "x": 0.0772,
-    "y": 0.3183,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "express",
-    "label": "Express",
-    "x": 0.0772,
-    "y": 0.4217,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "montage-ia-beta",
-    "label": "Montage IA · BÊTA",
-    "x": 0.0772,
-    "y": 0.4694,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "editeur-beta",
-    "label": "Éditeur · BETA",
-    "x": 0.0772,
-    "y": 0.5172,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "parrainage",
-    "label": "Parrainage",
-    "x": 0.0772,
-    "y": 0.565,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "publier-dev",
-    "label": "Publier · DEV",
-    "x": 0.0772,
-    "y": 0.6128,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "mon-compte",
-    "label": "Mon compte",
-    "x": 0.0772,
-    "y": 0.9206,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "report-bug",
-    "label": "Report bug",
-    "x": 0.0772,
-    "y": 0.9683,
-    "w": 0.1419,
-    "h": 0.0456
-   },
-   {
-    "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
-    "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
-    "x": 0.5775,
-    "y": 0.3805,
-    "w": 0.3638,
-    "h": 0.2778
-   },
-   {
-    "name": "parcourir",
-    "label": "Parcourir",
-    "x": 0.5775,
-    "y": 0.4382,
-    "w": 0.0697,
-    "h": 0.0444
-   },
-   {
-    "name": "standard-nettoyage-automatique",
-    "label": "Standard · nettoyage automatique",
-    "x": 0.4847,
-    "y": 0.6077,
-    "w": 0.1781,
-    "h": 0.1367
-   },
-   {
-    "name": "avance-traitement-renforce",
-    "label": "Avancé · traitement renforcé",
-    "x": 0.6703,
-    "y": 0.6077,
-    "w": 0.1781,
-    "h": 0.1367
-   },
-   {
-    "name": "parametres-avances-traitement-voix-silen",
-    "label": "Paramètres avancés · Traitement voix, silences, qualité",
-    "x": 0.5775,
-    "y": 0.7307,
-    "w": 0.3638,
-    "h": 0.0693
-   },
-   {
-    "name": "aucun-original",
-    "label": "Aucun · original",
-    "x": 0.439,
-    "y": 0.8459,
-    "w": 0.0867,
-    "h": 0.0722
-   },
-   {
-    "name": "naturel-equilibre",
-    "label": "Naturel · équilibré",
-    "x": 0.5313,
-    "y": 0.8459,
-    "w": 0.0867,
-    "h": 0.0722
-   },
-   {
-    "name": "podcast-chaleureux",
-    "label": "Podcast · chaleureux",
-    "x": 0.6237,
-    "y": 0.8459,
-    "w": 0.0867,
-    "h": 0.0722
-   },
-   {
-    "name": "punchy-nerveux",
-    "label": "Punchy · nerveux",
-    "x": 0.716,
-    "y": 0.8459,
-    "w": 0.0867,
-    "h": 0.0722
-   },
-   {
-    "name": "supprimer-les-silences-coupe-les-blancs-",
-    "label": "Supprimer les silences · Coupe les blancs entre les phrases",
-    "x": 0.5775,
-    "y": 0.9656,
-    "w": 0.3638,
-    "h": 0.0693
-   }
-  ]
- }
+  "01-imagesia": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7104,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "2200-img",
+        "label": "2200 img",
+        "x": 0.7877,
+        "y": 0.035,
+        "w": 0.0675,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "generation",
+        "label": "Génération",
+        "x": 0.2136,
+        "y": 0.1844,
+        "w": 0.0909,
+        "h": 0.0367
+      },
+      {
+        "name": "correction",
+        "label": "Correction",
+        "x": 0.3045,
+        "y": 0.1844,
+        "w": 0.0909,
+        "h": 0.0367
+      },
+      {
+        "name": "photo-reel-realiste",
+        "label": "Photo Réel · réaliste",
+        "x": 0.2158,
+        "y": 0.3119,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "pixar-3d-toy-story",
+        "label": "Pixar 3D · Toy Story",
+        "x": 0.3023,
+        "y": 0.3119,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "fruit-perso-fruit",
+        "label": "Fruit · perso fruit",
+        "x": 0.2158,
+        "y": 0.4103,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "ugc-reel-authentique",
+        "label": "UGC Réel · authentique",
+        "x": 0.3023,
+        "y": 0.4103,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "mascotte-de-marque",
+        "label": "Mascotte · de marque",
+        "x": 0.2158,
+        "y": 0.5086,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "autre-style-libre",
+        "label": "Autre · style libre",
+        "x": 0.3023,
+        "y": 0.5086,
+        "w": 0.0803,
+        "h": 0.0872
+      },
+      {
+        "name": "1-1",
+        "label": "1:1",
+        "x": 0.2014,
+        "y": 0.6683,
+        "w": 0.0515,
+        "h": 0.0767
+      },
+      {
+        "name": "9-16",
+        "label": "9:16",
+        "x": 0.2591,
+        "y": 0.6683,
+        "w": 0.0515,
+        "h": 0.0767
+      },
+      {
+        "name": "16-9",
+        "label": "16:9",
+        "x": 0.3168,
+        "y": 0.6683,
+        "w": 0.0515,
+        "h": 0.0767
+      },
+      {
+        "name": "standard",
+        "label": "Standard",
+        "x": 0.2034,
+        "y": 0.8261,
+        "w": 0.0556,
+        "h": 0.0167
+      },
+      {
+        "name": "premium",
+        "label": "Premium",
+        "x": 0.2591,
+        "y": 0.8261,
+        "w": 0.0556,
+        "h": 0.0167
+      },
+      {
+        "name": "4k",
+        "label": "4K",
+        "x": 0.3147,
+        "y": 0.8261,
+        "w": 0.0556,
+        "h": 0.0167
+      },
+      {
+        "name": "1",
+        "label": "1",
+        "x": 0.2055,
+        "y": 0.9406,
+        "w": 0.0535,
+        "h": 0.0367
+      },
+      {
+        "name": "2",
+        "label": "2",
+        "x": 0.2591,
+        "y": 0.9406,
+        "w": 0.0535,
+        "h": 0.0367
+      },
+      {
+        "name": "3",
+        "label": "3",
+        "x": 0.3126,
+        "y": 0.9406,
+        "w": 0.0535,
+        "h": 0.0367
+      },
+      {
+        "name": "image-de-reference",
+        "label": "Image de référence",
+        "x": 0.415,
+        "y": 0.8672,
+        "w": 0.075,
+        "h": 0.2301
+      },
+      {
+        "name": "decris-l-image-que-tu-veux-generer",
+        "label": "Décris l'image que tu veux générer…",
+        "x": 0.7238,
+        "y": 0.8127,
+        "w": 0.525,
+        "h": 0.1211
+      },
+      {
+        "name": "ameliorer",
+        "label": "Améliorer",
+        "x": 0.9469,
+        "y": 0.7827,
+        "w": 0.0663,
+        "h": 0.0389
+      },
+      {
+        "name": "entrepreneur-en-studio-moderne",
+        "label": "Entrepreneur en studio moderne, …",
+        "x": 0.5323,
+        "y": 0.9205,
+        "w": 0.1421,
+        "h": 0.0333
+      },
+      {
+        "name": "face-cam-ugc-outdoor-micro-crav",
+        "label": "Face cam UGC outdoor, micro-crav…",
+        "x": 0.6825,
+        "y": 0.9205,
+        "w": 0.1482,
+        "h": 0.0333
+      },
+      {
+        "name": "generer-l-image-3-cr",
+        "label": "Générer l'image · 3 cr",
+        "x": 0.9094,
+        "y": 0.9205,
+        "w": 0.1536,
+        "h": 0.0678
+      },
+      {
+        "name": "2200-9999-credits-images-ce-mois",
+        "label": "2200 / 9999 crédits images ce mois · +",
+        "x": 0.7238,
+        "y": 0.975,
+        "w": 0.525,
+        "h": 0.0144
+      }
+    ]
+  },
+  "02-express": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "realiste-avatar-reel",
+        "label": "Réaliste · avatar réel",
+        "x": 0.2177,
+        "y": 0.2504,
+        "w": 0.0816,
+        "h": 0.0693
+      },
+      {
+        "name": "cartoon-3d-style-pixar",
+        "label": "Cartoon 3D · style Pixar",
+        "x": 0.3042,
+        "y": 0.2504,
+        "w": 0.0816,
+        "h": 0.0693
+      },
+      {
+        "name": "ugc-reel-selfie-authentique",
+        "label": "UGC réel · selfie authentique",
+        "x": 0.2177,
+        "y": 0.3286,
+        "w": 0.0816,
+        "h": 0.0693
+      },
+      {
+        "name": "studio-produit-pub",
+        "label": "Studio · produit/pub",
+        "x": 0.3042,
+        "y": 0.3286,
+        "w": 0.0816,
+        "h": 0.0693
+      },
+      {
+        "name": "portrait-9-16",
+        "label": "📱 · Portrait · 9:16",
+        "x": 0.2177,
+        "y": 0.4773,
+        "w": 0.0816,
+        "h": 0.0636
+      },
+      {
+        "name": "paysage-16-9",
+        "label": "🖥 · Paysage · 16:9",
+        "x": 0.3042,
+        "y": 0.4773,
+        "w": 0.0816,
+        "h": 0.0636
+      },
+      {
+        "name": "720p",
+        "label": "720p",
+        "x": 0.2177,
+        "y": 0.7347,
+        "w": 0.0816,
+        "h": 0.0511
+      },
+      {
+        "name": "1080pdes-8-s",
+        "label": "1080pdès 8 s",
+        "x": 0.3042,
+        "y": 0.7347,
+        "w": 0.0816,
+        "h": 0.0511
+      },
+      {
+        "name": "voix-native-veo-audio-genere-avec-la-vid",
+        "label": "Voix native (Veo) · audio généré avec la vidéo",
+        "x": 0.2609,
+        "y": 0.8953,
+        "w": 0.1681,
+        "h": 0.0658
+      },
+      {
+        "name": "gemini-tts-voix-generee-11-timbres",
+        "label": "Gemini TTS · voix générée · 11 timbres",
+        "x": 0.2609,
+        "y": 0.9666,
+        "w": 0.1681,
+        "h": 0.0658
+      },
+      {
+        "name": "ajoute-tes-images-avatar-produit-perso",
+        "label": "Ajoute tes images · avatar · produit · perso",
+        "x": 0.4506,
+        "y": 0.7833,
+        "w": 0.1313,
+        "h": 0.2222
+      },
+      {
+        "name": "importer-depuis-la-bibliotheque",
+        "label": "Importer depuis · la bibliothèque",
+        "x": 0.4506,
+        "y": 0.9389,
+        "w": 0.1313,
+        "h": 0.0689
+      },
+      {
+        "name": "decris-ta-video-et-ce-que-le-perso-dit-a",
+        "label": "Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn",
+        "x": 0.7544,
+        "y": 0.7556,
+        "w": 0.4562,
+        "h": 0.1667
+      },
+      {
+        "name": "ameliorer",
+        "label": "✦ Améliorer",
+        "x": 0.5553,
+        "y": 0.8689,
+        "w": 0.0581,
+        "h": 0.0333
+      },
+      {
+        "name": "face-camera",
+        "label": "💬 Face caméra",
+        "x": 0.6248,
+        "y": 0.8689,
+        "w": 0.071,
+        "h": 0.0378
+      },
+      {
+        "name": "cartoon",
+        "label": "🧸 Cartoon",
+        "x": 0.693,
+        "y": 0.8689,
+        "w": 0.0555,
+        "h": 0.0378
+      },
+      {
+        "name": "fitness",
+        "label": "💪 Fitness",
+        "x": 0.7516,
+        "y": 0.8689,
+        "w": 0.0516,
+        "h": 0.0378
+      },
+      {
+        "name": "produit",
+        "label": "🛍 Produit",
+        "x": 0.8084,
+        "y": 0.8689,
+        "w": 0.052,
+        "h": 0.0378
+      },
+      {
+        "name": "generer-la-video",
+        "label": "Générer la vidéo",
+        "x": 0.8975,
+        "y": 0.935,
+        "w": 0.17,
+        "h": 0.0767
+      }
+    ]
+  },
+  "03-generateur": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "1-produit",
+        "label": "1 · Produit",
+        "x": 0.2097,
+        "y": 0.1938,
+        "w": 0.0457,
+        "h": 0.0289
+      },
+      {
+        "name": "2-avatar",
+        "label": "2 · Avatar",
+        "x": 0.3201,
+        "y": 0.1938,
+        "w": 0.0435,
+        "h": 0.0289
+      },
+      {
+        "name": "3-voix",
+        "label": "3 · Voix",
+        "x": 0.4255,
+        "y": 0.1938,
+        "w": 0.0357,
+        "h": 0.0289
+      },
+      {
+        "name": "4-style",
+        "label": "4 · Style",
+        "x": 0.5281,
+        "y": 0.1938,
+        "w": 0.038,
+        "h": 0.0289
+      },
+      {
+        "name": "5-generer",
+        "label": "5 · Générer",
+        "x": 0.6373,
+        "y": 0.1938,
+        "w": 0.0491,
+        "h": 0.0289
+      },
+      {
+        "name": "ex-dropacademy-funnelpro-monbusiness-ia",
+        "label": "Ex : DropAcademy, FunnelPro, MonBusiness IA…",
+        "x": 0.4244,
+        "y": 0.2902,
+        "w": 0.475,
+        "h": 0.0506
+      },
+      {
+        "name": "selectionner-un-hook-personne-ne-t-en-pa",
+        "label": "Sélectionner un hook... · Personne ne t'en parle mais actuel",
+        "x": 0.4244,
+        "y": 0.4785,
+        "w": 0.475,
+        "h": 0.0506
+      },
+      {
+        "name": "le-hook-apparaitra-ici-ou-ecris-le-tien-",
+        "label": "Le hook apparaîtra ici, ou écris le tien directement",
+        "x": 0.4244,
+        "y": 0.5479,
+        "w": 0.475,
+        "h": 0.0506
+      },
+      {
+        "name": "ecris-le-corps-de-ton-script-ici-le-hook",
+        "label": "Écris le corps de ton script ici… · Le hook et le CTA seront",
+        "x": 0.4244,
+        "y": 0.711,
+        "w": 0.475,
+        "h": 0.1667
+      },
+      {
+        "name": "selectionner-un-cta-commente-plan-et-je-",
+        "label": "Sélectionner un CTA... · Commente \"PLAN\" et je t'explique to",
+        "x": 0.4244,
+        "y": 0.874,
+        "w": 0.475,
+        "h": 0.0506
+      },
+      {
+        "name": "continuer",
+        "label": "Continuer →",
+        "x": 0.456,
+        "y": 0.9578,
+        "w": 0.4505,
+        "h": 0.0489
+      },
+      {
+        "name": "tiktok",
+        "label": "TikTok",
+        "x": 0.7597,
+        "y": 0.1183,
+        "w": 0.0375,
+        "h": 0.0256
+      },
+      {
+        "name": "reels",
+        "label": "Reels",
+        "x": 0.7978,
+        "y": 0.1183,
+        "w": 0.0338,
+        "h": 0.0256
+      },
+      {
+        "name": "facebook",
+        "label": "Facebook",
+        "x": 0.8397,
+        "y": 0.1183,
+        "w": 0.045,
+        "h": 0.0256
+      },
+      {
+        "name": "youtube",
+        "label": "YouTube",
+        "x": 0.8853,
+        "y": 0.1183,
+        "w": 0.0413,
+        "h": 0.0256
+      },
+      {
+        "name": "linkedin",
+        "label": "LinkedIn",
+        "x": 0.9309,
+        "y": 0.1183,
+        "w": 0.045,
+        "h": 0.0256
+      },
+      {
+        "name": "apercu-anime",
+        "label": "▶ Aperçu animé",
+        "x": 0.8472,
+        "y": 0.1656,
+        "w": 0.0815,
+        "h": 0.0356
+      }
+    ]
+  },
+  "04-montageia": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "gameplay-voix-ta-voix-ou-elevenlabs-sur-",
+        "label": "Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl",
+        "x": 0.4647,
+        "y": 0.2755,
+        "w": 0.2181,
+        "h": 0.0813
+      },
+      {
+        "name": "ma-video-importe-ta-video-l-ia-la-monte-",
+        "label": "Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr",
+        "x": 0.6903,
+        "y": 0.2755,
+        "w": 0.2181,
+        "h": 0.0813
+      },
+      {
+        "name": "importe-ta-voix-off-mp3-wav-m4a-l-ia-en-",
+        "label": "Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les ",
+        "x": 0.5775,
+        "y": 0.4118,
+        "w": 0.4437,
+        "h": 0.0934
+      },
+      {
+        "name": "ajoute-une-photo-d-avatar-sinon-100-game",
+        "label": "Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l",
+        "x": 0.5775,
+        "y": 0.5519,
+        "w": 0.4437,
+        "h": 0.0934
+      },
+      {
+        "name": "https-ton-site-com",
+        "label": "https://ton-site.com",
+        "x": 0.4637,
+        "y": 0.6731,
+        "w": 0.2162,
+        "h": 0.0556
+      },
+      {
+        "name": "0-8",
+        "label": "0/8",
+        "x": 0.6012,
+        "y": 0.6775,
+        "w": 0.0362,
+        "h": 0.0644
+      },
+      {
+        "name": "parametres-avances-sous-titres-mot-par-m",
+        "label": "Paramètres avancés · sous-titres mot-par-mot · musique auto",
+        "x": 0.5775,
+        "y": 0.7731,
+        "w": 0.4437,
+        "h": 0.0756
+      },
+      {
+        "name": "ajouter-un-script-brief-dis-a-l-ia-ce-qu",
+        "label": "Ajouter un script / brief · Dis à l'IA ce que la vidéo doit ",
+        "x": 0.5775,
+        "y": 0.8942,
+        "w": 0.4437,
+        "h": 0.0756
+      },
+      {
+        "name": "creer-ma-video-8-credits",
+        "label": "Créer ma vidéo — 8 crédits",
+        "x": 0.5775,
+        "y": 0.9522,
+        "w": 0.475,
+        "h": 0.0644
+      }
+    ]
+  },
+  "05-bibliotheque": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "importer",
+        "label": "Importer",
+        "x": 0.8564,
+        "y": 0.1183,
+        "w": 0.068,
+        "h": 0.0411
+      },
+      {
+        "name": "nouvelle-video",
+        "label": "Nouvelle vidéo",
+        "x": 0.9402,
+        "y": 0.1183,
+        "w": 0.0896,
+        "h": 0.0389
+      },
+      {
+        "name": "toutes",
+        "label": "Toutes",
+        "x": 0.1934,
+        "y": 0.2123,
+        "w": 0.0405,
+        "h": 0.0367
+      },
+      {
+        "name": "videos",
+        "label": "Vidéos",
+        "x": 0.2343,
+        "y": 0.2123,
+        "w": 0.0412,
+        "h": 0.0367
+      },
+      {
+        "name": "audio",
+        "label": "Audio",
+        "x": 0.2736,
+        "y": 0.2123,
+        "w": 0.0375,
+        "h": 0.0367
+      },
+      {
+        "name": "images",
+        "label": "Images",
+        "x": 0.3133,
+        "y": 0.2123,
+        "w": 0.0419,
+        "h": 0.0367
+      },
+      {
+        "name": "importer-une-video-avatar-mp4-hedra-ou-v",
+        "label": "Importer une vidéo avatar · MP4 Hedra ou vidéo existante → a",
+        "x": 0.2681,
+        "y": 0.5913,
+        "w": 0.1963,
+        "h": 0.6746
+      }
+    ]
+  },
+  "06-nettoyage-audio": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
+        "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
+        "x": 0.5775,
+        "y": 0.3805,
+        "w": 0.3638,
+        "h": 0.2778
+      },
+      {
+        "name": "parcourir",
+        "label": "Parcourir",
+        "x": 0.5775,
+        "y": 0.4382,
+        "w": 0.0697,
+        "h": 0.0444
+      },
+      {
+        "name": "standard-nettoyage-automatique",
+        "label": "Standard · nettoyage automatique",
+        "x": 0.4847,
+        "y": 0.6077,
+        "w": 0.1781,
+        "h": 0.1367
+      },
+      {
+        "name": "avance-traitement-renforce",
+        "label": "Avancé · traitement renforcé",
+        "x": 0.6703,
+        "y": 0.6077,
+        "w": 0.1781,
+        "h": 0.1367
+      },
+      {
+        "name": "parametres-avances-traitement-voix-silen",
+        "label": "Paramètres avancés · Traitement voix, silences, qualité",
+        "x": 0.5775,
+        "y": 0.7307,
+        "w": 0.3638,
+        "h": 0.0693
+      },
+      {
+        "name": "nettoyer-mon-audio",
+        "label": "Nettoyer mon audio",
+        "x": 0.5775,
+        "y": 0.8198,
+        "w": 0.3638,
+        "h": 0.0644
+      }
+    ]
+  },
+  "07-enregistreur": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "recmainbtn",
+        "label": "",
+        "x": 0.5775,
+        "y": 0.4096,
+        "w": 0.0462,
+        "h": 0.0822
+      },
+      {
+        "name": "importer-un-fichier-audio-video-mp4",
+        "label": "Importer un fichier audio / vidéo MP4",
+        "x": 0.5775,
+        "y": 0.5185,
+        "w": 0.1953,
+        "h": 0.0511
+      },
+      {
+        "name": "ecouter",
+        "label": "▶ Écouter",
+        "x": 0.3983,
+        "y": 0.5952,
+        "w": 0.0879,
+        "h": 0.0489
+      },
+      {
+        "name": "couper-ici",
+        "label": "Couper ici",
+        "x": 0.4913,
+        "y": 0.5952,
+        "w": 0.0879,
+        "h": 0.0489
+      },
+      {
+        "name": "supprimer",
+        "label": "Supprimer",
+        "x": 0.5842,
+        "y": 0.5952,
+        "w": 0.0879,
+        "h": 0.0489
+      },
+      {
+        "name": "remplacer",
+        "label": "✂️ Remplacer",
+        "x": 0.6772,
+        "y": 0.5952,
+        "w": 0.0879,
+        "h": 0.0489
+      },
+      {
+        "name": "silences-on",
+        "label": "🔇 Silences ON",
+        "x": 0.7634,
+        "y": 0.5952,
+        "w": 0.0745,
+        "h": 0.0489
+      },
+      {
+        "name": "wav",
+        "label": "WAV",
+        "x": 0.3653,
+        "y": 0.694,
+        "w": 0.0581,
+        "h": 0.0533
+      },
+      {
+        "name": "envoyer-vers-bibliotheque",
+        "label": "Envoyer vers bibliothèque",
+        "x": 0.4753,
+        "y": 0.694,
+        "w": 0.1519,
+        "h": 0.0533
+      },
+      {
+        "name": "utiliser-dans-le-generateur",
+        "label": "Utiliser dans le générateur",
+        "x": 0.7053,
+        "y": 0.694,
+        "w": 0.2269,
+        "h": 0.0533
+      }
+    ]
+  },
+  "08-parrainage": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "https-avatarads-iamanager-fr-ref-f0cae49",
+        "label": "https://avatarads.iamanager.fr/?ref=F0CAE49AE6",
+        "x": 0.5394,
+        "y": 0.5886,
+        "w": 0.29,
+        "h": 0.0533
+      },
+      {
+        "name": "copier",
+        "label": "Copier",
+        "x": 0.7262,
+        "y": 0.5886,
+        "w": 0.0688,
+        "h": 0.0533
+      },
+      {
+        "name": "twitter",
+        "label": "𝕏 Twitter",
+        "x": 0.4529,
+        "y": 0.6586,
+        "w": 0.1171,
+        "h": 0.0522
+      },
+      {
+        "name": "facebook",
+        "label": "📘 Facebook",
+        "x": 0.5775,
+        "y": 0.6586,
+        "w": 0.1171,
+        "h": 0.0556
+      },
+      {
+        "name": "tiktok",
+        "label": "🎵 TikTok",
+        "x": 0.7021,
+        "y": 0.6586,
+        "w": 0.1171,
+        "h": 0.0556
+      }
+    ]
+  },
+  "09-cartoon": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      }
+    ]
+  },
+  "11-connecter-claude": {
+    "zones": [
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9712,
+        "y": 0.0467,
+        "w": 0.025,
+        "h": 0.0444
+      },
+      {
+        "name": "generer-ma-cle",
+        "label": "Générer ma clé",
+        "x": 0.2842,
+        "y": 0.4415,
+        "w": 0.1721,
+        "h": 0.0533
+      },
+      {
+        "name": "ouvrir-claude-connecteurs",
+        "label": "Ouvrir Claude → Connecteurs",
+        "x": 0.5,
+        "y": 0.4415,
+        "w": 0.1721,
+        "h": 0.0533
+      },
+      {
+        "name": "commencer",
+        "label": "Commencer",
+        "x": 0.7158,
+        "y": 0.4415,
+        "w": 0.1721,
+        "h": 0.0533
+      }
+    ]
+  },
+  "20-claude-menu": {
+    "zones": [
+      {
+        "name": "menu-parametres",
+        "label": "Paramètres",
+        "x": 0.0845,
+        "y": 0.632,
+        "w": 0.151,
+        "h": 0.028
+      }
+    ],
+    "w": 2000,
+    "h": 1048
+  },
+  "21-claude-parametres": {
+    "zones": [
+      {
+        "name": "onglet-connecteurs",
+        "label": "Connecteurs",
+        "x": 0.28,
+        "y": 0.713,
+        "w": 0.103,
+        "h": 0.031
+      }
+    ],
+    "w": 2000,
+    "h": 1048
+  },
+  "22-claude-connecteurs": {
+    "zones": [
+      {
+        "name": "bouton-ajouter",
+        "label": "Ajouter",
+        "x": 0.72,
+        "y": 0.115,
+        "w": 0.055,
+        "h": 0.034
+      }
+    ],
+    "w": 2000,
+    "h": 1048
+  },
+  "23-claude-ajouter": {
+    "zones": [
+      {
+        "name": "bouton-ajouter",
+        "label": "Ajouter",
+        "x": 0.72,
+        "y": 0.114,
+        "w": 0.05,
+        "h": 0.032
+      },
+      {
+        "name": "menu-ajouter-personnalise",
+        "label": "Ajouter un connecteur personnalisé",
+        "x": 0.666,
+        "y": 0.199,
+        "w": 0.167,
+        "h": 0.03
+      }
+    ],
+    "w": 2000,
+    "h": 1048
+  },
+  "24-claude-personnalise": {
+    "zones": [
+      {
+        "name": "champ-nom",
+        "label": "AvatarAds",
+        "x": 0.499,
+        "y": 0.322,
+        "w": 0.283,
+        "h": 0.036
+      },
+      {
+        "name": "champ-url",
+        "label": "URL du serveur MCP distant",
+        "x": 0.499,
+        "y": 0.374,
+        "w": 0.283,
+        "h": 0.034
+      },
+      {
+        "name": "bouton-ajouter",
+        "label": "Ajouter",
+        "x": 0.621,
+        "y": 0.748,
+        "w": 0.043,
+        "h": 0.032
+      }
+    ],
+    "w": 2000,
+    "h": 1048
+  },
+  "12-connecter-claude-entree": {
+    "zones": [
+      {
+        "name": "connecter-claude",
+        "label": "Connecter Claude",
+        "x": 0.498,
+        "y": 0.655,
+        "w": 0.236,
+        "h": 0.077
+      }
+    ],
+    "w": 3416,
+    "h": 1686
+  },
+  "13-montage-avance": {
+    "zones": [
+      {
+        "name": "btn-quiet",
+        "label": "✕",
+        "x": 0.6638,
+        "y": 0.1283,
+        "w": 0.0186,
+        "h": 0.0322
+      },
+      {
+        "name": "mot-par-mot",
+        "label": "Mot par mot",
+        "x": 0.3863,
+        "y": 0.4517,
+        "w": 0.1125,
+        "h": 0.0411
+      },
+      {
+        "name": "karaoke",
+        "label": "Karaoké",
+        "x": 0.4953,
+        "y": 0.4517,
+        "w": 0.0981,
+        "h": 0.0411
+      },
+      {
+        "name": "ligne-complete",
+        "label": "Ligne complète",
+        "x": 0.6091,
+        "y": 0.4517,
+        "w": 0.1219,
+        "h": 0.0411
+      },
+      {
+        "name": "punch",
+        "label": "Punch",
+        "x": 0.372,
+        "y": 0.5439,
+        "w": 0.0841,
+        "h": 0.0411
+      },
+      {
+        "name": "neon",
+        "label": "Néon",
+        "x": 0.4582,
+        "y": 0.5439,
+        "w": 0.0808,
+        "h": 0.0411
+      },
+      {
+        "name": "auto",
+        "label": "Auto",
+        "x": 0.542,
+        "y": 0.5439,
+        "w": 0.0791,
+        "h": 0.0411
+      },
+      {
+        "name": "aucun",
+        "label": "Aucun",
+        "x": 0.6276,
+        "y": 0.5439,
+        "w": 0.0847,
+        "h": 0.0411
+      },
+      {
+        "name": "haut",
+        "label": "Haut",
+        "x": 0.3554,
+        "y": 0.6361,
+        "w": 0.0508,
+        "h": 0.0411
+      },
+      {
+        "name": "centre",
+        "label": "Centre",
+        "x": 0.4136,
+        "y": 0.6361,
+        "w": 0.0582,
+        "h": 0.0411
+      },
+      {
+        "name": "bas",
+        "label": "Bas",
+        "x": 0.4698,
+        "y": 0.6361,
+        "w": 0.0467,
+        "h": 0.0411
+      },
+      {
+        "name": "s",
+        "label": "S",
+        "x": 0.5325,
+        "y": 0.6361,
+        "w": 0.0513,
+        "h": 0.0411
+      },
+      {
+        "name": "m",
+        "label": "M",
+        "x": 0.5887,
+        "y": 0.6361,
+        "w": 0.0535,
+        "h": 0.0411
+      },
+      {
+        "name": "l",
+        "label": "L",
+        "x": 0.6446,
+        "y": 0.6361,
+        "w": 0.0508,
+        "h": 0.0411
+      },
+      {
+        "name": "emoji-auto-sur-les-mots-cles-ajoutes-sur",
+        "label": "Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps",
+        "x": 0.5,
+        "y": 0.7106,
+        "w": 0.3463,
+        "h": 0.0679
+      },
+      {
+        "name": "auto-ia-choisit",
+        "label": "Auto · IA choisit",
+        "x": 0.3825,
+        "y": 0.8807,
+        "w": 0.1113,
+        "h": 0.1167
+      },
+      {
+        "name": "apple-fond-clair-minimal",
+        "label": "Apple · fond clair, minimal",
+        "x": 0.5,
+        "y": 0.8807,
+        "w": 0.1113,
+        "h": 0.1167
+      },
+      {
+        "name": "liquid-glass-verre-depoli-reflets",
+        "label": "Liquid glass · verre dépoli, reflets",
+        "x": 0.6175,
+        "y": 0.8807,
+        "w": 0.1113,
+        "h": 0.1167
+      }
+    ]
+  },
+  "14-audio-avance": {
+    "zones": [
+      {
+        "name": "credits",
+        "label": "∞ crédits",
+        "x": 0.7854,
+        "y": 0.035,
+        "w": 0.0722,
+        "h": 0.0344
+      },
+      {
+        "name": "credits-2",
+        "label": "Crédits",
+        "x": 0.8595,
+        "y": 0.035,
+        "w": 0.061,
+        "h": 0.0422
+      },
+      {
+        "name": "a",
+        "label": "A",
+        "x": 0.915,
+        "y": 0.035,
+        "w": 0.0187,
+        "h": 0.0333
+      },
+      {
+        "name": "btn-quiet",
+        "label": "",
+        "x": 0.9762,
+        "y": 0.035,
+        "w": 0.02,
+        "h": 0.0333
+      },
+      {
+        "name": "generateur",
+        "label": "Générateur",
+        "x": 0.0772,
+        "y": 0.1272,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "bibliotheque",
+        "label": "Bibliothèque",
+        "x": 0.0772,
+        "y": 0.175,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "images-ia",
+        "label": "Images IA",
+        "x": 0.0772,
+        "y": 0.2228,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "enregistreur",
+        "label": "Enregistreur",
+        "x": 0.0772,
+        "y": 0.2706,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "nettoyage-audio",
+        "label": "Nettoyage audio",
+        "x": 0.0772,
+        "y": 0.3183,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "express",
+        "label": "Express",
+        "x": 0.0772,
+        "y": 0.4217,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "montage-ia-beta",
+        "label": "Montage IA · BÊTA",
+        "x": 0.0772,
+        "y": 0.4694,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "editeur-beta",
+        "label": "Éditeur · BETA",
+        "x": 0.0772,
+        "y": 0.5172,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "parrainage",
+        "label": "Parrainage",
+        "x": 0.0772,
+        "y": 0.565,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "publier-dev",
+        "label": "Publier · DEV",
+        "x": 0.0772,
+        "y": 0.6128,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "mon-compte",
+        "label": "Mon compte",
+        "x": 0.0772,
+        "y": 0.9206,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "report-bug",
+        "label": "Report bug",
+        "x": 0.0772,
+        "y": 0.9683,
+        "w": 0.1419,
+        "h": 0.0456
+      },
+      {
+        "name": "glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m",
+        "label": "Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco",
+        "x": 0.5775,
+        "y": 0.3805,
+        "w": 0.3638,
+        "h": 0.2778
+      },
+      {
+        "name": "parcourir",
+        "label": "Parcourir",
+        "x": 0.5775,
+        "y": 0.4382,
+        "w": 0.0697,
+        "h": 0.0444
+      },
+      {
+        "name": "standard-nettoyage-automatique",
+        "label": "Standard · nettoyage automatique",
+        "x": 0.4847,
+        "y": 0.6077,
+        "w": 0.1781,
+        "h": 0.1367
+      },
+      {
+        "name": "avance-traitement-renforce",
+        "label": "Avancé · traitement renforcé",
+        "x": 0.6703,
+        "y": 0.6077,
+        "w": 0.1781,
+        "h": 0.1367
+      },
+      {
+        "name": "parametres-avances-traitement-voix-silen",
+        "label": "Paramètres avancés · Traitement voix, silences, qualité",
+        "x": 0.5775,
+        "y": 0.7307,
+        "w": 0.3638,
+        "h": 0.0693
+      },
+      {
+        "name": "aucun-original",
+        "label": "Aucun · original",
+        "x": 0.439,
+        "y": 0.8459,
+        "w": 0.0867,
+        "h": 0.0722
+      },
+      {
+        "name": "naturel-equilibre",
+        "label": "Naturel · équilibré",
+        "x": 0.5313,
+        "y": 0.8459,
+        "w": 0.0867,
+        "h": 0.0722
+      },
+      {
+        "name": "podcast-chaleureux",
+        "label": "Podcast · chaleureux",
+        "x": 0.6237,
+        "y": 0.8459,
+        "w": 0.0867,
+        "h": 0.0722
+      },
+      {
+        "name": "punchy-nerveux",
+        "label": "Punchy · nerveux",
+        "x": 0.716,
+        "y": 0.8459,
+        "w": 0.0867,
+        "h": 0.0722
+      },
+      {
+        "name": "supprimer-les-silences-coupe-les-blancs-",
+        "label": "Supprimer les silences · Coupe les blancs entre les phrases",
+        "x": 0.5775,
+        "y": 0.9656,
+        "w": 0.3638,
+        "h": 0.0693
+      }
+    ]
+  }
 }

@@ -61,7 +61,7 @@ const MENU_LABEL = {
   '01-imagesia': /^images ia$/, '02-express': /^express$/, '03-generateur': /^generateur$/,
   '04-montageia': /^montage ia/, '05-bibliotheque': /^bibliotheque$/,
   '06-nettoyage-audio': /^nettoyage audio$/, '07-enregistreur': /^enregistreur$/,
-  '08-parrainage': /^parrainage$/, '09-cartoon': /^cartoon/, '10-mon-compte': /^mon compte$/,
+  '08-parrainage': /^parrainage$/, '09-cartoon': /^cartoon/,
 }
 
 const zonesOf = (screen) => (SCREENS[screen] || {}).zones || []
