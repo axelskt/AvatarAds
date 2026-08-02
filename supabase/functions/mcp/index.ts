@@ -1523,7 +1523,9 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
 job_id : ${mj.id}
 Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend le MP4.
 Appelle check_montage avec ce job_id dans environ 2 minutes.
-⚠️ L'audio est monté TEL QUEL (aucun débruitage) : s'il s'agit d'un enregistrement brut et que le rendu sonne sale, relance avec un audio passé par clean_audio.
+${nettoyer
+  ? `🔊 La voix est nettoyée avant le montage (isolation, −${coutClean} cr sur le total). Si ton audio est DÉJÀ traité, passe clean_audio: false — le repasser à l'isolation ne l'améliore pas.`
+  : `⚠️ Audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
 💡 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
 }
 
