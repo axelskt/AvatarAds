@@ -423,11 +423,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), puis le moteur de rendu serveur produit le MP4 final 1080×1920. ⚠️ AUCUN débruitage n'est appliqué : la voix part telle quelle dans la vidéo. Pour un enregistrement brut (micro d'ordinateur, bruit de fond, souffle), passe d'abord l'audio par clean_audio (1 crédit/min) et donne ici l'URL nettoyée. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
-          audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max — ex. un audio nettoyé avec clean_audio." },
+          audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
+          clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Elle est utilisée telle quelle sur les moments où la personne s'adresse à la caméra : aucun lipsync n'est généré, aucun crédit en plus. Sans elle, le montage se fait sans visage." },
           media: {
             type: 'array', maxItems: 6,
@@ -1107,6 +1108,27 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
 }
 
 // ── Nettoyage audio (ElevenLabs Voice Isolator) ──
+// ── L'ISOLATION DE VOIX, PARTAGÉE ───────────────────────────────────────────
+// Extraite de clean_audio pour que le Montage IA puisse l'appliquer lui-même.
+// Renvoie les octets nettoyés, ou une chaîne d'erreur (jamais d'exception :
+// l'appelant décide s'il abandonne ou s'il continue avec l'audio d'origine).
+async function isolerVoix(bytes: Uint8Array, contentType: string): Promise<Uint8Array | string> {
+  if (!ELEVEN_API_KEY) return 'configuration serveur incomplète'
+  const fd = new FormData()
+  fd.append('audio', new Blob([bytes as unknown as BlobPart], { type: contentType }), 'input.mp3')
+  const iso = await fetch('https://api.elevenlabs.io/v1/audio-isolation', {
+    method: 'POST', headers: { 'xi-api-key': ELEVEN_API_KEY }, body: fd,
+  })
+  if (!iso.ok) {
+    const err = await iso.text().catch(() => '')
+    return `ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}`
+  }
+  return new Uint8Array(await iso.arrayBuffer())
+}
+
+// Coût du nettoyage pour un fichier donné (~960 Ko/min en MP3 128 kbps).
+const coutNettoyage = (taille: number) => Math.max(1, Math.ceil(taille / 960_000)) * CLEAN_COST_PER_MIN
+
 async function runCleanAudio(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!ELEVEN_API_KEY) return toolErr('Nettoyage audio indisponible (configuration serveur incomplète).')
   const audioUrl = String(args.audio_url || '').trim()
@@ -1130,16 +1152,8 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
 
   let delivered = false
   try {
-    const fd = new FormData()
-    fd.append('audio', new Blob([got.bytes as unknown as BlobPart], { type: got.contentType }), 'input.mp3')
-    const iso = await fetch('https://api.elevenlabs.io/v1/audio-isolation', {
-      method: 'POST', headers: { 'xi-api-key': ELEVEN_API_KEY }, body: fd,
-    })
-    if (!iso.ok) {
-      const err = await iso.text().catch(() => '')
-      return toolErr(`Nettoyage échoué (ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
-    }
-    const cleaned = new Uint8Array(await iso.arrayBuffer())
+    const cleaned = await isolerVoix(got.bytes, got.contentType)
+    if (typeof cleaned === 'string') return toolErr(`Nettoyage échoué (${cleaned}) — crédits remboursés.`)
     const url = await uploadMedia(userId, cleaned, 'mp3', 'audio/mpeg')
     await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
     delivered = true
@@ -1382,13 +1396,26 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     return toolErr(`Audio trop long (~${Math.round(durRaw)} s) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.`)
   }
   const durEst = Math.max(5, durRaw)
-  const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST
+  // ── ON NETTOIE AVANT TOUT, TOUJOURS ─────────────────────────────────────────
+  // Règle d'Axel (02/08), après un montage rendu sur une prise brute : « ajoute
+  // la règle par défaut de nettoyer chaque audio avant toute chose ». Une voix
+  // sale ne se rattrape pas au montage — elle passe telle quelle dans le rendu
+  // final, et tout le travail visuel est jugé sur elle. Le nettoyage est donc
+  // le comportement NORMAL, pas une option qu'on pense à cocher.
+  // Son coût est ajouté au devis affiché avant le débit (jamais de crédit
+  // silencieux), et `clean_audio: false` reste possible pour un audio déjà
+  // traité — repasser un fichier propre à l'isolation ne l'améliore pas.
+  const nettoyer = args.clean_audio !== false
+  const coutClean = nettoyer ? coutNettoyage(got.bytes.length) : 0
+  const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST + coutClean
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
-  const gate = await preSpendGate(profile, ctx, args, cost, `Montage IA ~${Math.round(durEst)} s (style ${style})`, 'montage_ia')
+  const gate = await preSpendGate(profile, ctx, args, cost,
+    `Montage IA ~${Math.round(durEst)} s (style ${style})` + (nettoyer ? ` + nettoyage de la voix (${coutClean} cr)` : ''),
+    'montage_ia')
   if (gate) return gate
 
   const bal = await spendCredits(userId, cost)
@@ -1408,6 +1435,24 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
 
   bg((async () => {
     try {
+      // 0) LA VOIX, D'ABORD. Le nettoyage précède la transcription : le chef
+      // d'orchestre entend alors la même chose que le spectateur, et ses
+      // timings de mots sont calés sur l'audio réellement monté.
+      if (nettoyer) {
+        const propre = await isolerVoix(got.bytes, got.contentType)
+        if (typeof propre === 'string') {
+          // On ne fait pas échouer le montage pour ça — mais on rend les
+          // crédits du nettoyage et on le DIT dans le job, sinon l'utilisateur
+          // paie un service qu'il n'a pas eu sans jamais le savoir.
+          console.warn('nettoyage voix ignoré :', propre)
+          await refundCredits(userId, coutClean)
+          await svc.from('mcp_jobs').update({ error: `voix non nettoyée (${propre}) — ${coutClean} cr remboursés` }).eq('id', mcpJob.id)
+        } else {
+          got.bytes = propre
+          got.contentType = 'audio/mpeg'
+          console.log(`▶ voix isolée avant montage (${(propre.length / 1024).toFixed(0)} Ko)`)
+        }
+      }
       // 1) chef d'orchestre — clé anon : passe le gateway, sans lire la mémoire de marque
       const ext = /wav/.test(got.contentType) ? 'wav' : /mp4|m4a|aac/.test(got.contentType) ? 'm4a' : 'mp3'
       const fd = new FormData()
