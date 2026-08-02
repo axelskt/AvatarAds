@@ -88,11 +88,18 @@ const EXIGE_GLOBAL = {
   render:  /charge|chargement|génère|genere|génération|generation|calcul|rend\b|rendu|export|traite|patiente|laisse tourner|en cours|progress/i,
   result:  /résultat|resultat|ça donne|ca donne|voilà ce que|voila ce que|obtiens|sortie|fini|terminé|termine|rendu final/i,
   script:  /script|texte|écris|ecris|rédige|redige|dialogue|phrase|ce que tu vas dire/i,
+  // `type`, c'est du TEXTE QUI SE TAPE. Sans garde-fou il tombait sur « tu peux
+  // maintenant créer n'importe quelle vidéo dans Claude » et n'y montrait que
+  // trois barres grises — Axel : « ne correspond pas et ne montre rien du tout ».
+  // Écarté là, le remplaçant devient `chat` : on écrit dans Claude, Claude
+  // répond. C'est le geste qu'il décrit.
+  type:    /écri|ecri|tape|taper|saisi|texte|nom\b|titre|prompt|mot-clé|mot cle|colle|coller/i,
   voice:   /voix|micro|audio|son\b|parle|parler|enregistr|clone vocal|voix off/i,
   connect: /connect|connecté|connecte|relie|relié|branch|intègr|integr|liaison|lie\b|communiquent/i,
   avatar:  /avatar|personnage|visage|jumeau|clone/i,
   badge:   /certifi|validé|valide|garanti|vérifi|verifi|officiel|sceau|approuv/i,
-  chat:    /chat|conversation|discussion|message|demande|demander|prompt|écris-lui|ecris-lui/i,
+  // …et « dans CLAUDE » compte : écrire dans Claude, c'est une conversation.
+  chat:    /chat|conversation|discussion|message|demande|demander|prompt|écris-lui|ecris-lui|claude|chatgpt/i,
   copy:    /copie|copier|copies|colle|coller|presse-papier|clé|cle\b/i,
   settings: /paramètre|parametre|réglage|reglage|option|configur|préférence|preference/i,
   library: /bibliothèque|bibliotheque|collection|galerie|catalogue|page|pages|dossier/i,
@@ -278,6 +285,12 @@ export const VOICE_ANIMS = [
   // titre, et la phrase retombait sur le visage. `lineup` aligne les trois, et
   // la dérivation remplit ses lignes avec les mots forts de la fenêtre : le
   // visuel devient littéralement ce qu'il énumère.
+  // « tu peux maintenant créer n'importe quelle vidéo DANS CLAUDE » : ce qu'on
+  // montre, ce n'est pas le résultat, c'est le GESTE — on écrit dans Claude et
+  // Claude réfléchit. Axel : « mets l'animation quand tu écris dans Claude et
+  // Claude est en train de réfléchir plutôt ». Cette entrée passe AVANT
+  // l'énumération ci-dessous : « dans Claude » l'emporte sur « vidéo ».
+  { w: ['claude', 'chatgpt', 'demander', 'demande', 'prompt'],                           anim: 'chat' },
   { w: ['image', 'images', 'video', 'videos', 'montage', 'montages'],                    anim: 'lineup' },
   { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
   { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
@@ -1893,7 +1906,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (h2 && h2.start > hit.start) { fin = h2.start - 0.05; break }
       }
       let a = r2(Math.max(0, hit.start - 0.12))
-      const bb = r2(Math.min(D, fin, a + 1.9))
+      // ── LA SCÈNE TIENT JUSQU'AU BOUT DE LA PHRASE ─────────────────────────
+      // Le plafond de 1,9 s coupait au milieu d'une proposition : « créer
+      // n'importe quelle vidéo directement dans | Claude » — le mot qui donne
+      // son sens à l'image tombait 0,2 s APRÈS la fin de la fenêtre, et le
+      // choix d'animation se faisait donc sans lui. On laisse la scène courir
+      // jusqu'à la ponctuation suivante (2,6 s au maximum), toujours bornée
+      // par l'idée d'après : elle ne peut pas déborder sur la suivante.
+      let finPhrase = fin
+      for (let k = hit.i; k < words.length && k - hit.i < 10; k++) {
+        if (words[k].end - hit.start > 2.6) break
+        if (/[.!?]$/.test(String(words[k].text))) { finPhrase = Math.min(fin, words[k].end + 0.12); break }
+      }
+      const bb = r2(Math.min(D, finPhrase, a + 2.6))
       // ── QUAND LE MOT ARRIVE EN FIN DE PHRASE, ON REMONTE À LA PHRASE ───────
       // Le mot déclencheur est souvent le DERNIER de sa proposition : « sans
       // jamais passer devant une CAMÉRA », « à partir d'un AUDIO ». La fenêtre
@@ -2414,6 +2439,30 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (seg) (seg.insets = seg.insets || []).push({ src: L.src, assetId: L.assetId, start: L.start, end: Math.min(L.end, seg.end) })
   }
   delete plan.__mediaLayers
+
+  // ── « CLAUDE » PRONONCÉ = LOGO CLAUDE À L'ÉCRAN ─────────────────────────────
+  // Règle d'Axel (02/08) : « à chaque fois que je dis "Claude" je veux voir le
+  // logo, même si c'est dans une animation, tu le rajoutes ». On marque donc
+  // chaque scène des instants où le mot tombe ; le moteur y pose la pastille
+  // par-dessus, sans rien déloger. Deux garde-fous : on ignore les scènes qui
+  // MONTRENT déjà Claude (les captures de son interface, `connect` et `copy`
+  // qui affichent ses logos) — y rajouter une pastille serait un doublon — et
+  // on n'en met qu'une par scène, sinon un passage qui répète le mot clignote.
+  {
+    const dits = (plan.captions || []).filter((w) => /^claude[.,!?]*$/i.test(String(w.text || '').trim()))
+    if (dits.length) {
+      let n = 0
+      for (const s of plan.slides || []) {
+        if (s.screen || s.ui) continue                         // sa propre interface : déjà lui
+        if (['connect', 'copy', 'logo', 'tools'].includes(String(s.anim))) continue
+        const dedans = dits.filter((w) => w.start >= s.start + 0.1 && w.start <= s.end - 0.5)
+        if (!dedans.length) continue
+        s.claudeAt = [r2(dedans[0].start)]
+        n++
+      }
+      if (n) console.log(`▶ logo Claude posé sur ${n} scène(s) où le mot est prononcé (${dits.length} occurrence(s) au total)`)
+    }
+  }
 
   // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────
   // Un média accroché en médaillon (§0a) ne vit pas par lui-même : il est

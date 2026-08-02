@@ -11091,9 +11091,20 @@ async function mtSetMp3(f){
   const lbl = document.getElementById('mtMp3Name');
   try {
     const _lvl = _acLevel, _dn = _acDenoiseEnabled;
+    // ── TOUTES LES OPTIONS, TOUJOURS ─────────────────────────────────────
+    // `_acOpts` est relu du localStorage : si l'utilisateur a décoché une
+    // option dans l'onglet Nettoyage audio, le montage en héritait en
+    // silence. Axel (02/08) : « il faut que le nettoyage audio soit clean
+    // AVEC TOUTES LES OPTIONS SÉLECTIONNÉES, et ça doit être la première
+    // tâche qu'il fait ». Le montage n'est pas le module de nettoyage : il ne
+    // se règle pas, il livre la meilleure voix possible. On force donc les
+    // quatre traitements le temps de l'analyse, puis on rend ses réglages.
+    const _sv = { ..._acOpts };
+    Object.assign(_acOpts, { silences: true, denoise: true, voice: true, breath: true });
     _acLevel = 'normal'; _acDenoiseEnabled = true;        // niveau standard, jamais « Avancé »
     let r;
-    try { r = await _acCleanCore(f); } finally { _acLevel = _lvl; _acDenoiseEnabled = _dn; }
+    try { r = await _acCleanCore(f); }
+    finally { _acLevel = _lvl; _acDenoiseEnabled = _dn; Object.assign(_acOpts, _sv); }
     const removed = Math.round((r.decoded.duration - r.cleanBuf.duration) * 10) / 10;
     _mt.mp3 = new File([r.blob], f.name.replace(/\.[^.]+$/, '') + '-clean.wav', { type:'audio/wav' });
     _measure(_mt.mp3);
