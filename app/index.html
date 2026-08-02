@@ -1024,9 +1024,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <!-- ── OU : générer un gameplay IA à partir d'un audio (audio OBLIGATOIRE) ── -->
               <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:10px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
-              <button onclick="_genGpFromAudio()" style="width:100%;padding:11px 12px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:12px" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
-                <span style="font-size:12px;font-weight:800;color:var(--text)">✨ Génération d'un gameplay IA</span>
-                <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">à partir d'un audio — obligatoire</span>
+              <button onclick="toast('🚧 Génération d\'un gameplay IA — bientôt disponible')" style="width:100%;padding:11px 12px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);cursor:not-allowed;opacity:.55;transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;margin-bottom:12px">
+                <span style="font-size:12px;font-weight:800;color:var(--text)">✨ Génération d'un gameplay IA <span style="font-size:9px;font-family:var(--mono);font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(255,107,53,.16);color:var(--orange2);vertical-align:middle">BIENTÔT</span></span>
+                <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">à partir d'un audio — bientôt disponible</span>
               </button>
               <button onclick="swapSplit()" style="width:100%;padding:10px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:9px;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser clip ⇄ Avatar</button>
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:7px">Échange la position du clip et de l'avatar (haut / bas)</div>
@@ -1880,9 +1880,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </button>
                   <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:8px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
                   <!-- B · générer un gameplay IA depuis un audio (importable ici si absent) -->
-                  <button onclick="_genGpFromAudio()" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left">
-                    <span style="font-weight:800;font-size:12px">✨ Génération d'un gameplay IA</span>
-                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio — obligatoire</span>
+                  <button onclick="toast('🚧 Génération d\'un gameplay IA — bientôt disponible')" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;opacity:.55;cursor:not-allowed">
+                    <span style="font-weight:800;font-size:12px">✨ Génération d'un gameplay IA <span style="font-size:9px;font-family:var(--mono);font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(255,107,53,.16);color:var(--orange2);vertical-align:middle">BIENTÔT</span></span>
+                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio — bientôt disponible</span>
                   </button>
                   <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
                   <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>

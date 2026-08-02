@@ -388,6 +388,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // c'est le clignement. Les captures et les scènes UI, elles, restent lisibles
   // court : elles montrent quelque chose d'immobile.
   const isAnimPanel = (s) => Boolean(s.anim) && s.anim !== 'ui' && s.anim !== 'screen' && s.anim !== 'result'
+  // ── UNE ANIMATION NE SE VOIT QU'UNE FOIS ─────────────────────────────────
+  // Règle d'Axel (02/08). Trois familles y échappent, parce que ce ne sont pas
+  // des illustrations : les médias de l'utilisateur (il en a autant qu'il veut),
+  // les captures d'écran (une visite guidée montre plusieurs fois la même app)
+  // et les panneaux de repli, qui ne racontent rien de particulier.
+  const REPETABLES = new Set(['media', 'screen', 'ui', 'result', 'punch', 'blankfill'])
+  // ⚠ On ne compte que ce qui est RÉELLEMENT joué comme animation : une scène
+  // qui porte une capture ou un média affiche l'image, pas l'animation restée
+  // dans son champ `anim`. Sans ce filtre, un `chat` résiduel sur l'écran de
+  // résultat (33 s) interdisait la vraie bulle de chat à 4,7 s.
+  const dejaVue = (n) => Boolean(n) && !REPETABLES.has(String(n))
+    && out.some((s) => String(s.anim) === String(n) && !s.screen && !s.assetId && !(s.items || []).length)
+  // Cherche, dans les mots réellement prononcés, une animation encore inédite
+  // qui passe son propre garde-fou. Sert au refus d'un garde-fou comme au refus
+  // d'un doublon : dans les deux cas, on remplace — on ne creuse pas un trou.
+  const chercheRemplacant = (dit, exclu) => {
+    const dur = norm(dit)
+    for (const e of VOICE_ANIMS) {
+      if (!(e.w || []).some((m) => dur.includes(norm(m)))) continue
+      const cand = String(e.anim || '')
+      if (!cand || cand === exclu || REFUSEES.has(cand) || !ANIMS.includes(cand)) continue
+      if (EXIGE_GLOBAL[cand] && !EXIGE_GLOBAL[cand].test(dit)) continue
+      if (dejaVue(cand)) continue
+      return cand
+    }
+    return null
+  }
   const add = (slide, a, b) => {
     // Le filtre doit etre ICI, au seul passage obligé : filtrer la liste ANIMS
     // ne bloquait que mes tables de mots-clés, et les scènes proposées par le
@@ -399,6 +426,88 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // la fenêtre du MOT, telle que l'appelant la donne — avant que fit() et
     // l'étirement ne la déplacent. Les deux gardes plus bas en ont besoin.
     const a0 = a, b0 = b
+    let contexte = false   // choix dicté par le sujet de la phrase : il passe devant le garde-fou
+    // ── PARLER À CLAUDE, ÇA SE MONTRE PAR LA CONVERSATION ───────────────────
+    // « Tu peux maintenant créer n'importe quelle vidéo directement dans
+    // Claude » : le chef posait `export` (une icône MP4). Axel : « l'animation
+    // quand je dis créer n'importe quelle vidéo dans Claude ne correspond pas
+    // et ne montre rien du tout — mets l'animation quand tu écris dans Claude
+    // et Claude est en train de réfléchir plutôt ». La phrase ne parle pas d'un
+    // fichier, elle parle d'une DEMANDE faite à Claude. Le sujet gagne sur
+    // l'objet.
+    // ⚠ Jamais sur une scène qui porte une IMAGE : un média de l'utilisateur a
+    // bien un champ `anim`, et sans cette exclusion la photo de la fille s'est
+    // fait réécrire en `chat` — elle est repassée en médaillon sur la bulle au
+    // lieu d'être plein cadre. Ses médias ne se remplacent pas.
+    if (isAnimPanel(slide) && !slide.user && !slide.screen && !slide.assetId && !(slide.items || []).length
+      && !['media', 'medias', 'chat', 'connect', 'copy', 'type', 'script'].includes(nom)) {
+      // …et on lit la PHRASE ENTIÈRE, pas la fenêtre. « créer » et « Claude »
+      // sont aux deux bouts de « tu peux maintenant créer n'importe quelle
+      // vidéo directement dans Claude » : une fenêtre de 1,5 s n'en voit
+      // qu'un des deux, et le sujet de la phrase échappait au test.
+      const dit0 = (() => {
+        const cs = plan.captions || []
+        let i0 = cs.findIndex((w) => w.end > (a + b) / 2)
+        if (i0 < 0) return ''
+        while (i0 > 0 && !/[.!?]$/.test(String(cs[i0 - 1].text || ''))) i0--
+        let i1 = i0
+        while (i1 < cs.length - 1 && !/[.!?]$/.test(String(cs[i1].text || ''))) i1++
+        return cs.slice(i0, i1 + 1).map((w) => w.text).join(' ')
+      })()
+      if (/claude/i.test(dit0) && /(cr[ée]er|cr[ée]e|demande|demander|[ée]cri|prompt)/i.test(dit0)) {
+        // Si la conversation est DÉJÀ ouverte juste avant, on ne pose pas une
+        // deuxième bulle : on laisse la première courir jusqu'au bout de la
+        // phrase. Une phrase = une idée = un panneau.
+        const ouverte = out.filter((s) => String(s.anim) === 'chat' && !s.screen)
+          .find((s) => s.end >= a - 0.6 && s.end <= b)
+        // …MAIS JAMAIS AU-DELÀ DE SA PHRASE. Sans cette borne, la bulle s'est
+        // étirée de 3,37 à 10,35 s et a avalé la photo de la fille en médaillon,
+        // alors qu'Axel la veut plein cadre sur « regarde ça ». Une idée finit
+        // avec sa phrase.
+        const finDeLaPhrase = (() => {
+          const cs = plan.captions || []
+          const i = cs.findIndex((w) => w.end > (ouverte ? ouverte.start : a))
+          if (i < 0) return b
+          for (let k = i; k < cs.length; k++) if (/[.!?]$/.test(String(cs[k].text || ''))) return cs[k].end
+          return b
+        })()
+        if (ouverte && b > finDeLaPhrase + 0.1) {
+          if (process.env.DERIVE_DEBUG) console.log(`chat non étiré : ${r2(b)} dépasse la phrase (${r2(finDeLaPhrase)})`)
+        } else if (ouverte) {
+          const k = taken.findIndex((w) => Math.abs(w[0] - ouverte.start) < 0.01 && Math.abs(w[1] - ouverte.end) < 0.01)
+          console.log(`▶ ${nom} absorbé : la conversation avec Claude continue jusqu'à ${r2(b)}s`)
+          if (k >= 0) taken[k] = [ouverte.start, b]
+          ouverte.end = r2(b)
+          return null
+        }
+        // …ou juste APRÈS : la même phrase peut arriver ici en deux morceaux, et
+        // le second était posé le premier. On ouvre alors la bulle plus tôt au
+        // lieu d'en poser une seconde.
+        const suivante = out.filter((s) => String(s.anim) === 'chat' && !s.screen)
+          .find((s) => s.start <= b + 0.6 && s.start >= a)
+        if (suivante) {
+          const na = r2(Math.min(a, suivante.start))
+          if (!taken.some((w) => na < w[1] - 0.05 && suivante.start > w[0] + 0.05
+            && !(Math.abs(w[0] - suivante.start) < 0.01))) {
+            const k = taken.findIndex((w) => Math.abs(w[0] - suivante.start) < 0.01 && Math.abs(w[1] - suivante.end) < 0.01)
+            console.log(`▶ ${nom} absorbé : la conversation avec Claude s'ouvre dès ${na}s`)
+            if (k >= 0) taken[k] = [na, suivante.end]
+            suivante.start = na
+          }
+          return null
+        }
+        if (!dejaVue('chat')) {
+          console.log(`▶ ${nom} → chat : « ${dit0.slice(0, 40)} » demande quelque chose À Claude`)
+          slide = { ...slide, anim: 'chat' }
+          nom = 'chat'
+          // Ce choix vient du SUJET de la phrase, pas d'un mot-clé : le garde-fou
+          // de `chat` (qui exige d'entendre « Claude » dans la fenêtre) le
+          // rejetait aussitôt — « quelle vidéo directement dans » ne le contient
+          // pas, alors que la phrase entière parle bien de demander à Claude.
+          contexte = true
+        }
+      }
+    }
     // ── LE GARDE-FOU VAUT AUSSI POUR LE CHEF D'ORCHESTRE ────────────────────
     // « le visuel EST le mot » : une animation ne se pose que si la phrase
     // prononcee pendant sa fenetre parle vraiment de son sujet. Ce controle ne
@@ -406,7 +515,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // SaaS IA peut changer ta vie », le chef d'orchestre posait `logo` — et
     // l'ecran affichait « avatarads.fr » pendant qu'Axel dit « SaaS IA ».
     // Sa proposition n'est pas au-dessus de la regle.
-    if (EXIGE_GLOBAL[nom] && !slide.user) {
+    if (EXIGE_GLOBAL[nom] && !slide.user && !contexte) {
       // …mais un CHOIX EXPLICITE de l'écran « Détails du montage » passe : Axel
       // a remplacé target par lineup et la garde le lui jetait (« j'ai mis
       // lineup mais ça n'a pas marché », 01/08). L'utilisateur a vu sa vidéo et
@@ -425,23 +534,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // On cherche donc un REMPLAÇANT dans les mots réellement prononcés, via
         // la même table que les tables locales. Il doit passer son propre
         // garde-fou : on remplace une erreur, on n'en fabrique pas une autre.
-        const dur = norm(dit)
-        let remp = null
-        for (const e of VOICE_ANIMS) {
-          if (!(e.w || []).some((m) => dur.includes(norm(m)))) continue
-          const cand = String(e.anim || '')
-          if (!cand || cand === nom || REFUSEES.has(cand) || !ANIMS.includes(cand)) continue
-          if (EXIGE_GLOBAL[cand] && !EXIGE_GLOBAL[cand].test(dit)) continue
-          // ── PAS DEUX FOIS LA MÊME DANS LA MÊME MINUTE ────────────────────
-          // La table est parcourue dans l'ordre, donc le même remplaçant
-          // gagnait plusieurs fois de suite : Axel a eu `lineup` à 37 s ET à
-          // 42 s — « il faut garder celle à 42 s et changer celle à 37 s en
-          // trouvant autre chose ». Une animation vue il y a huit secondes
-          // n'est plus une surprise, c'est un tic. On passe au candidat
-          // suivant de la table.
-          if (out.some((s) => String(s.anim) === cand && Math.abs((s.start || 0) - a) < 12)) continue
-          remp = cand; break
-        }
+        const remp = chercheRemplacant(dit, nom)
         if (!remp) {
           console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça (aucun remplaçant)`)
           return null
@@ -575,11 +668,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // sur SON mot. Même maladie mesurée sur salesphone (3,52→4,79 contre la
     // carte 4,74→6,02) et tsunami (8,25→9,53 contre 9,48→11,25).
     if (isAnimPanel(slide) && !slide.user) {
-      // 1 · UN DOUBLON ADJACENT DÉGAGE. La même animation deux fois dos à dos
-      //     n'apporte rien : la première posée garde la fenêtre.
-      if (nom && out.some((s) => s.anim === nom && a < s.end + 0.6 && b > s.start - 0.6)) {
-        if (process.env.DERIVE_DEBUG) console.log(`REJET doublon    ${nom} ${r2(a).toFixed(2)}→${r2(b).toFixed(2)}`)
-        return null
+      // 1 · JAMAIS DEUX FOIS LA MÊME ANIMATION DANS LA VIDÉO. La garde ne valait
+      //     que pour deux poses DOS À DOS (0,6 s) : sur la v12, `chat` est
+      //     quand même sorti QUATRE fois — à 3,4 s, 6,1 s, 18,2 s et 33 s. Axel :
+      //     « la vidéo est chelou, il met l'animation chat avec Claude, après un
+      //     écran MP4, après il remet le chat avec Claude, ça va pas […] ajoute
+      //     une règle genre pas 2 fois la même animation dans la même vidéo ».
+      //     Revue une seconde fois, une animation n'illustre plus, elle meuble.
+      //     Comme pour un garde-fou, on cherche d'abord une inédite qui colle
+      //     aux mots prononcés : un doublon refusé ne doit pas rendre la fenêtre
+      //     au visage.
+      if (nom && dejaVue(nom)) {
+        const dit2 = (plan.captions || []).filter((w) => w.start < b && w.end > a).map((w) => w.text).join(' ')
+        const remp2 = chercheRemplacant(dit2, nom)
+        if (!remp2) {
+          console.log(`▶ ${nom} écarté : déjà vue à ${r2((out.find((s) => String(s.anim) === nom) || {}).start)}s (aucune inédite pour « ${dit2.slice(0, 30)} »)`)
+          return null
+        }
+        console.log(`▶ ${nom} déjà vue → remplacée par ${remp2} à ${r2(a)}s`)
+        slide = { ...slide, anim: remp2 }
+        nom = remp2
       }
       // 2 · L'ANCRE RESTE DANS LA FENÊTRE. L'étirement est fait pour grandir
       //     AUTOUR du mot ; quand fit() a tout rogné, il grandissait à côté, et
@@ -779,6 +887,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // (0,42 s), donc jamais vus, et le moteur les écartait un par un. La bonne
     // lecture d'une énumération, c'est de TOUT montrer en même temps et
     // d'allumer chaque photo sur SON mot. Le visuel reste le mot, et il tient.
+    // ── « REGARDE ÇA » EST L'ORDRE D'AFFICHER, PAS L'ANNONCE ────────────────
+    // Quand la voix DÉSIGNE quelque chose, l'image doit déjà être là : le
+    // spectateur suit le doigt, pas la légende. Mesuré sur la v12 — Axel dit
+    // « Regarde ça » à 6,32 s et la photo n'arrivait qu'à 7,50 s, sur
+    // « qualité » ; entre les deux il regardait une bulle de chat. Lui :
+    // « quand je dis "regarde ça" faudrait que l'image de la fille soit déjà
+    // là ». On remonte donc le média jusqu'au mot qui le désigne, quand il
+    // tombe dans les deux secondes qui précèdent.
+    {
+      const DESIGNE = /^(regarde|regardez|regardes|voil[àa]|voici|tiens|mate|matez|check)[.,!?]*$/i
+      for (const b of plan.broll || []) {
+        if (!files[b.assetId] || b.hook) continue
+        const cue = (plan.captions || []).filter((w) => w.start < b.start && w.start >= b.start - 2)
+          .find((w) => DESIGNE.test(String(w.text || '').trim()))
+        if (!cue) continue
+        const na = r2(Math.max(0, cue.start - 0.12))
+        if (na >= b.start - 0.15) continue
+        console.log(`▶ média avancé sur « ${cue.text} » : ${r2(b.start)}s → ${na}s (la voix le désigne)`)
+        b.start = na
+        if (b.end < na + 1.4) b.end = r2(na + 1.4)
+      }
+    }
     const brut = (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))
       .filter((b) => files[b.assetId])
     const paquets = []
@@ -1170,7 +1300,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // la vidéo montrait 13 s de visage à la place du tutoriel, et rien dans les
       // logs ne le disait. Un rejet muet est un rejet qu'on ne corrige jamais.
       const jetees = []
+      // ── UNE VISITE GUIDÉE NE COMMENCE PAS DANS L'ACCROCHE ───────────────────
+      // Mesuré sur la v12 : la 1ʳᵉ étape cherchait « Claude » depuis le mot 0 et
+      // tombait sur celui de l'ACCROCHE (2,5 s — « AvatarAds connecté à Claude
+      // vient de sortir »). L'écran qui montre le bouton « Connecter Claude »
+      // partait donc à 2,3 s, se faisait écraser par le visage du hook, et
+      // n'existait plus nulle part. Axel, deux fois : « il manque l'étape où il
+      // montre le bouton Connecter Claude dans le menu AvatarAds ».
+      // Le tutoriel, c'est la section de PREUVE : on démarre la recherche là, et
+      // à défaut juste après l'accroche. Les occurrences d'avant appartiennent
+      // au discours, pas au mode d'emploi.
       let cur = 0, dernierMot = -1
+      {
+        const preuve = (plan.sections || []).find((x) => String(x.role) === 'preuve')
+        const t0Tuto = preuve ? preuve.start : (plan.hook && plan.hook.end) || 0
+        if (t0Tuto > 0.5) {
+          const j = words.findIndex((w) => w.start >= t0Tuto - 0.2)
+          if (j > 0) {
+            cur = j
+            console.log(`▶ visite guidée : recherche à partir de ${r2(t0Tuto)}s (${preuve ? 'section preuve' : 'après l\'accroche'}), pas depuis le début`)
+          }
+        }
+      }
       // ── SUR L'ÉCRAN « CONNECTER CLAUDE », SEULE LA CARTE 1 SE CADRE ────────
       // Cet écran d'AvatarAds présente TROIS cartes : « 1 · Copie ta clé »,
       // « 2 · Ouvre les Connecteurs », « 3 · Génère ». Les cartes 2 et 3 ne
@@ -1966,6 +2117,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
       if (!hit) hit = findSeq(words, mot, curB)          // repli : expression de plusieurs mots
       if (!hit) { sautB++; continue }
+      // ── L'ACCROCHE APPARTIENT AU VISAGE, PAS AUX ANIMATIONS ────────────────
+      // Le hook est tenu par l'avatar (règle non négociable d'Axel). Une idée
+      // ancrée sur un mot de l'accroche ne peut donc pas s'y poser : fit() la
+      // pousse APRÈS, et elle atterrit sur des mots qui n'ont rien à voir.
+      // Mesuré sur la v12 : le beat `chat` visait « Claude » à 2,5 s (dans
+      // « AvatarAds connecté à Claude vient de sortir ») ; repoussé, il s'est
+      // affiché de 3,37 à 4,70 s sur « tu peux maintenant créer » — pendant que
+      // le vrai « dans Claude » de 6,02 s, lui, n'avait rien. Quand le mot est
+      // redit plus loin, c'est là que l'idée doit vivre.
+      const finHook = (plan.hook && plan.hook.end) || 0
+      if (finHook > 0.5 && hit.start < finHook) {
+        let apres = null
+        for (let k = hit.i + 1; k < words.length; k++) {
+          if (norme(words[k].text) === cible) { apres = { start: words[k].start, end: words[k].end, i: k }; break }
+        }
+        if (apres) {
+          console.log(`▶ ${b.anim} : « ${mot} » à ${r2(hit.start)}s est dans l'accroche → on prend celui de ${r2(apres.start)}s`)
+          hit = apres
+        }
+      }
       curB = hit.i + 1
       // le sujet de l'animation doit exister dans la phrase, sinon on ne pose rien
       const exige = EXIGE[String(b.anim)]
@@ -2592,7 +2763,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
       for (const s of plan.slides || []) {
         if (s.screen || s.ui) continue                         // sa propre interface : déjà lui
         if (['connect', 'copy', 'logo', 'tools'].includes(String(s.anim))) continue
-        const dedans = dits.filter((w) => w.start >= s.start + 0.1 && w.start <= s.end - 0.5)
+        // La pastille peut ARRIVER AVANT le mot (elle est déjà là quand il le
+        // prononce, comme le média sur « regarde ça ») : un « Claude » qui tombe
+        // en toute fin de scène mérite donc quand même son logo.
+        const dedans = dits.filter((w) => w.start >= s.start - 0.05 && w.start <= s.end - 0.1)
         if (!dedans.length) continue
         s.claudeAt = [r2(dedans[0].start)]
         n++
