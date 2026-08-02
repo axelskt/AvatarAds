@@ -461,7 +461,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'get_montage_plan',
-      description: "L'ÉDITEUR via Claude (lecture) : récupère le PLAN DE MONTAGE JSON d'un Montage IA (slides, textes, timings, zooms, bruitages, sous-titres). Modifie ce JSON puis appelle render_montage_plan pour re-rendre la vidéo ajustée. Gratuit.",
+      description: "LES DÉTAILS DU MONTAGE via Claude (lecture) : récupère le plan d'un Montage IA ET, si la vidéo est rendue, la liste scène par scène de ce qu'elle montre vraiment — l'animation réelle de chaque plan, son texte, ses bruitages, ses sections. C'est l'équivalent de l'écran « Détails du montage » de l'app. Sert à dire « remplace le lineup de la 3e scène » en sachant de quoi on parle. Enchaîne avec render_montage_plan pour appliquer. Gratuit.",
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id du montage dont tu veux le plan.' } },
@@ -475,7 +475,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         type: 'object',
         properties: {
           job_id: { type: 'string', description: "Le job_id du montage D'ORIGINE (son audio est réutilisé)." },
-          plan: { type: 'string', description: 'Le plan de montage complet, en JSON (chaîne) — version modifiée de celui retourné par get_montage_plan.' },
+          plan: { type: 'string', description: "Le plan de montage complet, en JSON (chaîne) — version modifiée de celui retourné par get_montage_plan. Pour retoucher des SCÈNES précises, ajoute-lui les champs de l'éditeur : userSlides (remplacer/ajouter une animation : [{start, end, anim, user:true, items:[{t, text}]}]), userBans (supprimer une scène : [{start, end}] — l'avatar reprend la fenêtre), userSfx (la liste FINALE des bruitages : [{t, kind, vol}]). Ces trois champs passent outre les garde-fous de la dérivation : un choix explicite n'est jamais rejeté." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['job_id', 'plan'],
@@ -1549,6 +1549,41 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   return toolText(`⏳ Statut : ${rj.status} — rappelle check_montage dans ~1 minute.`)
 }
 
+// ── LE PLAN DU CHEF NE DIT PAS CE QU'ON VOIT ────────────────────────────────
+// Le plan que renvoie le chef d'orchestre décrit des INTENTIONS (« ici une
+// carte, là un compteur »). C'est la dérivation, côté worker, qui choisit
+// l'animation réelle de chaque scène — et c'est ELLE que montre l'écran
+// « Détails du montage » dans l'app. Sans elle, depuis Claude on ne pouvait
+// pas dire « remplace le lineup de la 3e scène » : on ne savait pas qu'il y
+// avait un lineup. Le worker publie ce plan dérivé à côté du MP4
+// (`<sortie>.mp4.derived.json`) ; on le lit ici avec la clé de service.
+function resumeScenes(d: Record<string, unknown>): string {
+  const n2 = (x: unknown) => (Math.round(Number(x) * 100) / 100).toFixed(2).replace('.', ',')
+  const lignes: string[] = []
+  const av = (Array.isArray(d.avatarSegments) ? d.avatarSegments : []) as Record<string, unknown>[]
+  const sl = (Array.isArray(d.slides) ? d.slides : []) as Record<string, unknown>[]
+  const tout = [
+    ...av.map((s) => ({ a: Number(s.start) || 0, b: Number(s.end) || 0, quoi: 'AVATAR (lipsync)' })),
+    ...sl.map((s) => {
+      const items = (Array.isArray(s.items) ? s.items : []) as Record<string, unknown>[]
+      const mots = items.map((i) => String(i.text || i.label || '')).filter(Boolean).slice(0, 4)
+      const txt = [s.title, s.value, s.center, s.eyebrow].map((x) => String(x || '')).filter(Boolean)[0] || ''
+      return {
+        a: Number(s.start) || 0,
+        b: Number(s.end) || 0,
+        quoi: `${s.anim || s.type || '?'}${txt ? ` — « ${txt} »` : ''}${mots.length ? ` [${mots.join(' · ')}]` : ''}`,
+      }
+    }),
+  ].sort((x, y) => x.a - y.a)
+  tout.forEach((s, i) => lignes.push(
+    `${String(i + 1).padStart(2)} · ${n2(s.a)} → ${n2(s.b)} s  ${s.quoi}`))
+  const sfx = (Array.isArray(d.sfx) ? d.sfx : []) as Record<string, unknown>[]
+  if (sfx.length) lignes.push('', 'Bruitages : ' + sfx.map((s) => `${s.kind}@${n2(s.t)}s`).join(' · '))
+  const sec = (Array.isArray(d.sections) ? d.sections : []) as Record<string, unknown>[]
+  if (sec.length) lignes.push('Sections : ' + sec.map((s) => `${n2(s.t ?? s.start)}s`).join(' · '))
+  return lignes.join('\n')
+}
+
 async function runGetMontagePlan(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
   const jobId = String(args.job_id || '').trim()
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
@@ -1557,8 +1592,26 @@ async function runGetMontagePlan(profile: Record<string, unknown>, args: Record<
   if (!job) return toolErr('Job montage introuvable sur ce compte.')
   const { data: rj } = await svc.from('render_jobs').select('plan').eq('id', job.op_name).maybeSingle()
   if (!rj?.plan) return toolErr('Plan introuvable pour ce job.')
+
+  // le plan DÉRIVÉ, s'il existe (montage terminé) — c'est le contenu de
+  // l'écran « Détails du montage »
+  let details = ''
+  try {
+    const cle = `${String(profile.id)}/${job.op_name}.mp4.derived.json`
+    const { data: blob } = await svc.storage.from('render-media').download(cle)
+    if (blob) {
+      const d = JSON.parse(await blob.text()) as Record<string, unknown>
+      details = `\n\nCE QUE LA VIDÉO MONTRE RÉELLEMENT (plan dérivé — l'équivalent de l'écran « Détails du montage ») :\n${resumeScenes(d)}\n\n` +
+        `Pour CHANGER une scène, n'édite pas ce plan dérivé : ajoute au plan du chef (ci-dessus) les champs de l'éditeur, puis appelle render_montage_plan.\n` +
+        `  · userSlides : [{start, end, anim:"lineup", user:true, items:[{t, text}]}] — remplace/ajoute une animation (un userSlide échappe aux garde-fous de la dérivation)\n` +
+        `  · userBans   : [{start, end}] — supprime une scène (l'avatar reprend la fenêtre)\n` +
+        `  · userSfx    : [{t, kind, vol}] — la liste FINALE des bruitages (elle a le dernier mot)\n` +
+        `Plan dérivé complet si tu en as besoin :\n${JSON.stringify(d)}`
+    }
+  } catch (_) { /* montage pas encore rendu, ou dérivé absent : on sert le plan du chef seul */ }
+
   return toolText(
-    `Plan de montage du job ${jobId} (JSON). Modifie ce qu'il faut (textes, timings, slides, zooms, sfx…) en gardant la structure, puis appelle render_montage_plan avec le JSON complet :\n${JSON.stringify(rj.plan)}`)
+    `Plan de montage du job ${jobId} (JSON). Modifie ce qu'il faut (textes, timings, slides, zooms, sfx…) en gardant la structure, puis appelle render_montage_plan avec le JSON complet :\n${JSON.stringify(rj.plan)}${details}`)
 }
 
 async function runRenderMontagePlan(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {

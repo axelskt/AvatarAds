@@ -11422,18 +11422,38 @@ function _mtProg(pct, label){
         +'<div style="position:absolute;inset:-6px;border-radius:30px;border:1px solid var(--accent-line);opacity:.5;animation:mtRise 1.4s ease-in-out infinite alternate"></div></div>'
       +'<div class="display" style="font-size:22px;font-weight:800;color:var(--text)">L\'IA monte ta vidéo…</div>'
       +'<p id="mtProgLbl" class="muted mono" style="font-size:13px;margin-top:8px">'+_MT_STAGES[0]+'</p>'
-      +'<div style="width:100%;max-width:420px;height:8px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:26px"><div id="mtProgBar" style="height:100%;width:0%;border-radius:8px;transition:width .3s;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 0 16px var(--accent-glow)"></div></div>'
-      +'<div class="display" style="font-size:34px;font-weight:800;color:var(--accent-2);margin-top:14px"><span id="mtProgPct">0</span><span style="font-size:16px">%</span></div>'
-      +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:24px;width:100%;max-width:420px;text-align:left"></div>'
-      +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:340px;line-height:1.5">Garde cette page ouverte — le montage peut prendre quelques minutes.</p>'
+      // L'ANNEAU PLUTÔT QUE LA BARRE. Une barre dit « il reste tant » ; un
+      // anneau autour du chiffre dit « on en est là », ce qui se lit d'un coup
+      // d'oeil pendant qu'on fait autre chose. Le tracé est un cercle SVG dont
+      // on ne fait varier que le décalage du pointillé — donc une seule
+      // propriété animée, fluide même sur un vieux téléphone.
+      +'<div style="position:relative;width:172px;height:172px;margin-top:30px">'
+        +'<svg width="172" height="172" viewBox="0 0 172 172" style="transform:rotate(-90deg)">'
+          +'<circle cx="86" cy="86" r="76" fill="none" stroke="var(--surface-2)" stroke-width="9"/>'
+          +'<defs><linearGradient id="mtProgGrad" x1="0" y1="0" x2="1" y2="1">'
+            +'<stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent-2)"/>'
+          +'</linearGradient></defs>'
+          +'<circle id="mtProgRing" cx="86" cy="86" r="76" fill="none" stroke="url(#mtProgGrad)" stroke-width="9"'
+            +' stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5"'
+            +' style="transition:stroke-dashoffset .45s ease;filter:drop-shadow(0 0 10px var(--accent-glow))"/>'
+        +'</svg>'
+        +'<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<div class="display" style="font-size:42px;font-weight:800;color:var(--text);line-height:1"><span id="mtProgPct">0</span><span style="font-size:19px;color:var(--accent-2)">%</span></div>'
+          +'<div class="mono faint" style="font-size:10.5px;letter-spacing:.06em;text-transform:uppercase">en cours</div>'
+        +'</div>'
+      +'</div>'
+      +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:28px;width:100%;max-width:420px;text-align:left"></div>'
+      +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:360px;line-height:1.55">Garde cette page ouverte. Le rendu peut prendre un peu plus longtemps que prévu&nbsp;: on rend en 50&nbsp;images/seconde pour que le résultat soit à la qualité maximale.</p>'
       +'<button class="btn btn-quiet btn-sm" style="margin-top:14px;background:none;border:none;box-shadow:none;-webkit-appearance:none;appearance:none;color:var(--text-2);font-family:var(--font);font-size:13.5px;cursor:pointer" onclick="_mtAbortRun()">Annuler</button></div>';
     const host=document.querySelector('.layout .main')||document.body;
     if(getComputedStyle(host).position==='static') host.style.position='relative';
     host.appendChild(o);
   }
   const stage=Math.min(_MT_STAGES.length-1, Math.floor(pct/100*_MT_STAGES.length));
-  const b=document.getElementById('mtProgBar'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct'), st=document.getElementById('mtProgSteps');
-  if(b) b.style.width=Math.round(pct)+'%';
+  const b=document.getElementById('mtProgRing'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct'), st=document.getElementById('mtProgSteps');
+  // 2π×76 = 477,5 : le tour complet. À 0 % le pointillé est entièrement
+  // décalé (rien de visible), à 100 % il ne l'est plus du tout.
+  if(b) b.setAttribute('stroke-dashoffset', String(477.5*(1-Math.min(100,Math.max(0,pct))/100)));
   if(p) p.textContent=Math.round(pct);
   if(l) l.textContent = label || _MT_STAGES[stage];
   if(st) st.innerHTML=_MT_STAGES.map((s,i)=>{
