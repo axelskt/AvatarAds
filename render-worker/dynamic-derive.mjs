@@ -556,6 +556,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
         : (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
       if (hote) {
         ;(hote.insets = hote.insets || []).push({ src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) })
+        // …et on note qu'il DÉPEND de cette fenêtre : plus bas, les fenêtres
+        // avatar sont rebâties sous contrainte de budget et de collisions, et
+        // celle-ci peut très bien ne pas survivre. Le repêchage de la §4 s'en
+        // sert pour ne jamais perdre le média en route.
+        b.__inset = true
         med++
         continue
       }
@@ -1654,6 +1659,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // tomber sur leur propre réservation (`overlaps`) et disparaître.
     plan.avatarSegments = [...clamped, ...adresses2].sort((x, y) => x.start - y.start)
   }
+
   // …et s'il n'en reste presque rien (l'orchestrateur n'en propose souvent QU'UNE,
   // le hook), on complète dans les trous libres : « 3-4 vidéos de l'avatar »
   // demandées pour #149. Un visage vaut mieux qu'un mot seul à l'écran.
@@ -2025,4 +2031,53 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (seg) (seg.insets = seg.insets || []).push({ src: L.src, assetId: L.assetId, start: L.start, end: Math.min(L.end, seg.end) })
   }
   delete plan.__mediaLayers
+
+  // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────
+  // Un média accroché en médaillon (§0a) ne vit pas par lui-même : il est
+  // suspendu à une fenêtre avatar. Or ces fenêtres sont ensuite rebâties deux
+  // fois — sous contrainte de budget et de collisions, puis par le split de
+  // marque — et quand l'hôte saute, le média saute avec, sans une ligne de log.
+  //
+  // MESURÉ SUR CARTOON 18 (02/08). Le chef n'avait donné QU'UNE fenêtre avatar,
+  // de 4,24 à 48,42 s. Les deux médias d'Axel s'y sont accrochés, puis elle a
+  // été rognée à 6,5 s : leurs médaillons, posés à 0,98 s et 8,44 s, sont
+  // tombés hors cadre. Les deux fichiers étaient dans le plan, aucun des deux
+  // n'était à l'écran — le cadre s'affichait noir. Un montage qui perd les
+  // fichiers qu'on lui a donnés est pire qu'un montage sans eux : rien ne dit
+  // qu'il faut recommencer.
+  //
+  // Le repêchage est ICI, tout à la fin, et pas près de §0a : c'est le seul
+  // point où plus aucune étape ne peut défaire le travail. Il réutilise les
+  // deux accroches de `__mediaLayers` juste au-dessus — couche sur le panneau
+  // qui couvre l'instant, sinon médaillon sur l'avatar.
+  {
+    const vus = new Set()
+    for (const s of plan.slides || []) {
+      if (s.assetId) vus.add(s.assetId)
+      if (s.overlayMedia && s.overlayMedia.assetId) vus.add(s.overlayMedia.assetId)
+      for (const i of s.items || []) if (i.assetId) vus.add(i.assetId)
+    }
+    for (const w of plan.avatarSegments || []) for (const i of w.insets || []) vus.add(i.assetId)
+
+    for (const b of plan.broll || []) {
+      if (vus.has(b.assetId)) continue
+      const src = (opts.assetFiles || {})[b.assetId]
+      if (!src) continue   // fichier absent : rien à repêcher, le worker l'a déjà signalé
+      const a = r2(b.start || 0), e = r2(Math.max(b.end ?? a + 3, a + 1.2))
+      const hote = (plan.slides || []).find((sl) => sl.start <= a + 0.05 && sl.end >= a + 0.3)
+      if (hote) {
+        hote.overlayMedia = { src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) }
+        console.log(`▶ média « ${b.assetId} » repêché : posé en couche sur ${hote.anim || hote.type} (${a}→${e}s)`)
+        continue
+      }
+      const seg = (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
+      if (seg) {
+        ;(seg.insets = seg.insets || []).push({ src, assetId: b.assetId,
+          start: r2(Math.max(a, seg.start)), end: r2(Math.min(e, seg.end)) })
+        console.log(`▶ média « ${b.assetId} » repêché : médaillon sur l'avatar (${seg.start}→${seg.end}s)`)
+        continue
+      }
+      console.warn(`⚠ média « ${b.assetId} » PERDU : ni panneau ni fenêtre avatar à ${a}s`)
+    }
+  }
 }
