@@ -1299,6 +1299,35 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // réglages (sous-titres, style visuel, musique). La zone 'mot-par-mot'
       // sert d'ancre valide ; si la voix ne la justifie pas, la mécanique
       // standard garde l'écran ENTIER sans cadre — c'est exactement ce qu'on veut.
+      // ── PARLER À CLAUDE SE RÉSERVE AUSSI, ET C'EST LE PREMIER QUI GAGNE ────
+      // Axel, sur la v16 : « il n'a pas mis chat parce qu'il l'a mis à 36
+      // secondes ». Exact : la règle « jamais deux fois la même animation » a
+      // donné la bulle au SECOND moment, et « créer n'importe quelle vidéo
+      // directement dans Claude » — celui qui la mérite le plus — est retombé
+      // sur une icône MP4. Une règle d'unicité doit servir le premier arrivé.
+      {
+        const cs = plan.captions || []
+        let k = -1
+        for (let i = 0; i < cs.length; i++) {
+          if (!/^claude/i.test(String(cs[i].text || ''))) continue
+          const avant = cs.slice(Math.max(0, i - 9), i).map((w) => w.text).join(' ')
+          if (!/(cr[ée]er|cr[ée]e|demande|[ée]cri|prompt)/i.test(avant)) continue
+          k = i; break
+        }
+        if (k > 0) {
+          let d0 = k
+          for (let m = k - 1; m >= 0 && k - m < 9; m--) {
+            if (/[.!?]$/.test(String(cs[m].text || ''))) break
+            d0 = m
+          }
+          const deb = r2(Math.max(0, cs[d0].start - LEAD))
+          const fin = r2(Math.min(D, cs[k].end + 0.1))
+          if (fin - deb >= 1.2 && add({ anim: 'chat' }, deb, fin)) {
+            console.log(`▶ « demander à Claude » : la conversation réservée (${deb}→${fin}s)`)
+          }
+        }
+      }
+
       // ── « ET VOILÀ, CLAUDE EST CONNECTÉ À AVATARADS » SE RÉSERVE D'ABORD ───
       // Ce plan doit être posé AVANT la visite guidée : sinon la dernière
       // capture s'étire par-dessus et il n'existe jamais (mesuré sur la v14 —
@@ -2902,6 +2931,27 @@ export function deriveDynamicSlides(plan, opts = {}) {
       return false
     })
     if (plan.slides.length !== avant) console.log(`▶ ${avant - plan.slides.length} scène(s) trop courte(s) retirée(s)`)
+  }
+
+  // ── UNE CAPTURE REND LA MAIN QUAND SON DERNIER GESTE EST FAIT ─────────────
+  // Axel, sur la v16 : « il encadre toujours l'étape 2 pour "copie la clé",
+  // rends-toi ensuite dans les paramètres de Claude — il est encore resté bloqué
+  // sur "ouvre les Connecteurs", donc ce n'est pas synchronisé ».
+  // Une capture s'étirait jusqu'à la scène suivante, cadre figé sur le dernier
+  // bouton cliqué. Une fois le geste fait, elle n'a plus rien à dire : elle
+  // s'arrête une demi-seconde après, et ce qui suit reprend la fenêtre. Le filet
+  // à creux, juste en dessous, ne laissera pas de vide derrière elle.
+  {
+    let rendues = 0
+    for (const sc of plan.slides || []) {
+      const pas = (sc.steps || []).map((x) => Number(x.t) || 0).filter(Boolean)
+      if (!sc.screen || !pas.length) continue
+      const fin = r2(Math.max(...pas) + 0.75)
+      if (fin >= sc.end - 0.15 || fin - sc.start < 1.1) continue
+      sc.end = fin
+      rendues++
+    }
+    if (rendues) console.log(`▶ ${rendues} capture(s) rendue(s) après leur dernier geste (au lieu de tenir jusqu'à la scène suivante)`)
   }
 
   // ── UN VISAGE EN PAYSAGE SANS SLIDE AU-DESSUS, C'EST UN ÉCRAN VIDE ────────

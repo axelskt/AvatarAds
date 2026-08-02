@@ -90,11 +90,38 @@ INTERDITS ABSOLUS (l'animation est jetée sans être montrée)
 · aucun fetch, aucun setTimeout, aucun Date, aucun Math.random
 · aucun position:fixed
 
-CE QUI FAIT UNE BONNE ANIMATION ICI
-· Elle MONTRE la chose dont on parle : un objet reconnaissable qui bouge, pas une icône posée sur un fond.
-· Elle raconte en trois temps : quelque chose arrive, quelque chose se passe, quelque chose se conclut.
-· Le texte est rare et court. S'il y en a, il vient des mots de l'utilisateur, jamais d'un chiffre inventé.
-· Les formes sont grandes : on la regarde sur un téléphone, en scrollant.
+CE QUI FAIT UNE BONNE ANIMATION ICI — et c'est là que presque tout se joue
+
+1. TU DESSINES L'OBJET, TU NE LE SYMBOLISES PAS.
+   Une machine de musculation, c'est un montant, un siège, un bras de levier et
+   une pile de poids qui monte. Pas un rectangle avec une étiquette « machine ».
+   Un micro, c'est une capsule, une grille, un pied. Prends le temps de le
+   construire avec 6 à 15 formes : c'est ce qui sépare une vraie animation d'un
+   schéma. Sers-toi des bordures arrondies, des ombres douces, des dégradés.
+
+2. QUELQUE CHOSE DOIT SE TRANSFORMER, PAS SEULEMENT APPARAÎTRE.
+   Une forme qui arrive en fondu n'est pas une animation, c'est une apparition.
+   Ce qu'on veut voir : une barre qui se remplit, un curseur qui traverse et
+   clique, un objet qui se plie, une pile qui monte cran par cran, deux éléments
+   qui se rejoignent, un compteur qui grimpe, une onde qui ondule. Il faut un
+   MOUVEMENT INTERNE, entre 1 s et 2 s, qui raconte l'action du verbe.
+
+3. LE CADRE EST REMPLI.
+   930 × 600 : le sujet occupe au moins la moitié de cette surface, centré. Une
+   petite forme au milieu d'un grand vide fait pauvre sur un téléphone.
+
+4. TROIS TEMPS, PAS UN.
+   0 à 0,5 s : le décor arrive. 0,5 à 1,8 s : l'action se produit — c'est le
+   coeur. 1,8 à 2,4 s : la conclusion (une coche, un compteur qui s'arrête, une
+   pièce qui se pose).
+
+5. LE TEXTE EST RARE.
+   Au plus deux mots, et seulement s'ils viennent de la phrase prononcée. Jamais
+   un chiffre inventé. Une animation qui a besoin d'être légendée a raté.
+
+Ordre de grandeur : les animations du produit font 4 à 7 ko de HTML et 8 à 20
+tweens. Si tu écris moins de 2 ko ou moins de 6 tweens, c'est que tu as fait un
+schéma, pas une animation — recommence en dessinant vraiment l'objet.
 
 Réponds UNIQUEMENT par l'objet JSON, sans texte autour, sans balise de code.`
 
