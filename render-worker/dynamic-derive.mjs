@@ -2904,6 +2904,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (plan.slides.length !== avant) console.log(`▶ ${avant - plan.slides.length} scène(s) trop courte(s) retirée(s)`)
   }
 
+  // ── UN VISAGE EN PAYSAGE SANS SLIDE AU-DESSUS, C'EST UN ÉCRAN VIDE ────────
+  // Le format « paysage » place la personne dans la moitié BASSE, sous une
+  // slide — c'est une bande cinéma, pas un plan. Quand la slide qui devait
+  // l'accompagner a été refusée en cours de route, il reste une bande de visage
+  // sous un grand vide, et la dérivation, elle, comptait cette fenêtre comme
+  // occupée : aucun filet ne pouvait voir le trou. Sans slide au-dessus, la
+  // fenêtre repasse en portrait — le visage prend tout l'écran, et il n'y a
+  // plus rien à combler.
+  {
+    let redressees = 0
+    for (const w of plan.avatarSegments || []) {
+      if (String(w.format) !== 'paysage') continue
+      const dessus = (plan.slides || []).some((s) => s.start < w.end - 0.15 && s.end > w.start + 0.15)
+      if (dessus) continue
+      w.format = 'portrait'
+      redressees++
+    }
+    if (redressees) console.log(`▶ ${redressees} fenêtre(s) avatar en paysage sans slide → repassées en portrait`)
+  }
+
   // ── LE DERNIER FILET : PLUS AUCUN CREUX DE PLUS D'UNE SECONDE ─────────────
   // §3b-bis remplit déjà les trous par le visage, mais il tourne AVANT la fusion
   // des voisins, le rognage des scènes trop courtes et le ménage final : chacun
