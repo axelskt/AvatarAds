@@ -25,6 +25,22 @@ import { deriveClassicSlides } from './classic-derive.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
+
+// ── LA CADENCE DE TOUTE LA CHAÎNE ───────────────────────────────────────────
+// 50, et pas 30 ni 60. Deux raisons, toutes les deux mesurées le 02/08 :
+//   ① le visage. Hedra sort en 25 fps. 50 en est le double EXACT, donc chaque
+//      image du lipsync est tenue deux trames, toujours — aucune image
+//      inventée, aucun accroc. À 30 il faut en fabriquer une sur six, à 60 une
+//      sur trois, et dans les deux cas le motif est irrégulier.
+//   ② les animations. À 30 fps le moteur produit 25 images réellement
+//      distinctes par seconde ; à 50 il en produit 46. Le motion design est
+//      quasiment deux fois mieux échantillonné — c'est LE gain visible sur la
+//      qualité perçue, et le fichier final n'est pas plus lourd (plus
+//      d'images, mais plus de redondance entre elles : 36,3 Mo contre 35,9).
+// Prix : +47 % de temps de rendu (1 min 23 → 2 min 01 sur un montage de 44 s).
+// Le brouillon reste à 30 : il ne sert qu'à valider un placement.
+const FPS = 50
+const FPS_DRAFT = 30
 const MUSIC_BY_MOOD = { intense: 'music-2.mp3', dynamique: 'music-1.mp3', chill: 'music-3.mp3' }
 // volume par mood calibré sur la loudness mesurée de chaque piste (music-2 ≈ -5 LUFS,
 // music-1 ≈ -9.5, music-3 ≈ -11) → la voix reste TOUJOURS clairement au-dessus
@@ -142,7 +158,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // les slides du plan couvrent l'écran de toute façon (style dynamic & co)
       console.log('▶ base sans piste vidéo (audio seul) → fond noir 1080×1920')
       execFileSync('ffmpeg', ['-v', 'error', '-y',
-        '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:r=30', '-i', basePath,
+        '-f', 'lavfi', '-i', `color=c=black:s=1080x1920:r=${FPS}`, '-i', basePath,
         '-shortest', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21',
         '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', baseOut])
     } else if (baseW === 1080 && baseH === 1920) copyFileSync(basePath, baseOut)
@@ -150,7 +166,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       console.log(`▶ base ${baseW}×${baseH} → 1080×1920 (ffmpeg natif)…`)
       try {
         execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', basePath,
-          '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+          '-vf', `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=${FPS}`,
           '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
           '-c:a', 'copy', baseOut])
       } catch (e) {
@@ -213,9 +229,19 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
           // fois avant compositing, puis recompressé par Instagram/TikTok :
           // chaque génération perdue se voit sur la peau. `slow` + crf 18 coûte
           // quelques secondes de rendu et tient bien mieux la recompression.
+          //
+          // ── POURQUOI 50 ET PAS 30 (mesuré le 02/08) ───────────────────────
+          // Hedra livre du 25 fps. En visant 30, ffmpeg doit fabriquer 5 images
+          // sur 30 : sur 4 s de clip, 81 images sont tenues une trame et 20
+          // deux — un motif IRRÉGULIER, et c'est exactement ce que l'oeil lit
+          // comme un micro-accroc sur le visage. En visant 50, chaque image
+          // source est tenue exactement 2 trames, 100 fois sur 101 : la
+          // cadence est un multiple entier de la source, il n'y a plus rien à
+          // inventer. (60 serait PIRE que 30 : 25→60 donne 60 tenues de 2 et
+          // 40 de 3, soit 40 % d'irrégularité contre 20 %.)
           execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(avatarDir, f),
-            '-vf', "scale='min(1080,iw)':-2,fps=30", '-an',
-            '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', '30',
+            '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+            '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
             '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
           avatarClips[id] = 'media/' + id + '.mp4'
         } catch (e) { console.warn('scène avatar ignorée (illisible):', f, e.message) }
@@ -358,8 +384,8 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         const out = 'media/av' + i + '.mp4'
         try {
           execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(a), '-t', String(d + 2.5),
-            '-i', baseOut, '-vf', "scale='min(1080,iw)':-2,fps=30", '-an',
-            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-g', '30',
+            '-i', baseOut, '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-g', String(FPS),
             '-movflags', '+faststart', join(proj, out)])
           avatarClips['av' + i] = out
           n++
@@ -469,7 +495,8 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // mourir la capture quand il travaille à côté — 2 suffisent et tiennent.
     // Railway garde le défaut auto.
     const wk = process.env.RENDER_WORKERS ? ` --workers ${parseInt(process.env.RENDER_WORKERS, 10) || 2}` : ''
-    sh(`npx -y ${HYPERFRAMES} render --quality ${draft ? 'draft' : 'high'}${wk} --output visual.mp4`, proj)
+    const fps = draft ? FPS_DRAFT : FPS
+    sh(`npx -y ${HYPERFRAMES} render --quality ${draft ? 'draft' : 'high'} --fps ${fps}${wk} --output visual.mp4`, proj)
     if (!existsSync(visual)) throw new Error('rendu visuel échoué (visual.mp4 absent)')
 
     // ── 3. mix audio ffmpeg : voix + SFX (adelay) + musique duckée en boucle ──
