@@ -631,13 +631,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // animations du chef d'orchestre l'occupaient déjà et le hook sautait — Axel,
   // sur Cartoon 16 : « le hook je le vois plutôt en split screen avec Alex en
   // bas ». Elle est donc réservée en premier, avant tout le reste.
+  // ── LE HOOK DURE 3 À 4 SECONDES, PAS SIX ET DEMIE ─────────────────────────
+  // Axel (02/08) : « "tu peux maintenant créer n'importe quelle vidéo dans
+  // Claude" ce n'est plus le hook, le hook c'est 3-4 sec, là il aurait fallu
+  // une animation ». La réservation montait jusqu'à 6,5 s : elle avalait la
+  // phrase suivante, et aucune animation ne pouvait s'y poser puisque la
+  // fenêtre était déjà prise. Le visage garde l'ouverture — sa règle tient —
+  // mais il la garde le temps d'une ouverture.
+  const HOOK_MAX = 4.2
   let hookWin = null
   {
     const segs = (plan.avatarSegments || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
     const s0 = segs[0]
     if (s0 && (s0.start || 0) < 0.6) {
       const a = r2(s0.start || 0)
-      const b = r2(Math.min(s0.end ?? a + 4, a + 6.5, D))
+      const b = r2(Math.min(s0.end ?? a + 4, a + (hasClips ? 6.5 : HOOK_MAX), D))
+      // sans clip lipsync, on rogne AUSSI la fenêtre elle-même : sinon elle
+      // continue de s'afficher jusqu'à 6,5 s et la place reste occupée.
+      if (!hasClips && (s0.end ?? 0) > b) s0.end = b
       if (b - a >= 1.2) { hookWin = { start: a, end: b }; claim(a, b) }
     } else if (!noFace && !hasClips) {
       // ── LE FILET DU CHEMIN PHOTO (MCP) ──────────────────────────────────────
@@ -654,7 +665,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (s0) s0.start = 0
       else (plan.avatarSegments = plan.avatarSegments || []).push({ start: 0, end: r2(Math.min(4, D)), clip: -1 })
       const w0 = s0 || plan.avatarSegments[plan.avatarSegments.length - 1]
-      const b = r2(Math.min(w0.end ?? 4, 6.5, D))
+      const b = r2(Math.min(w0.end ?? 4, HOOK_MAX, D))
+      if ((w0.end ?? 0) > b) w0.end = b
       if (b >= 1.2) {
         hookWin = { start: 0, end: b }
         claim(0, b)

@@ -85,7 +85,9 @@ const LINEUP_KINDS = [
   ['colis', /produit|physique|article|colis|objet|marchandise|e ?-?commerce|boutique/i],
   ['personne', /coach|accompagn|consult|mentor|humain|appel|rendez/i],
   ['cours', /formation|cours|module|ebook|programme|academ|masterclass|tuto/i],
-  ['calque', /animation|motion|effet|anim/i],
+  ['image', /image|photo|visuel|illustration|miniature/i],
+  ['video', /vid[ée]o|clip|reel|short|film/i],
+  ['calque', /montage|animation|motion|effet|anim|calque/i],
   ['son', /bruitage|son(s)?\b|audio|musique|voix|sound/i],
   ['transition', /transition|encha|coupe/i],
 ]
@@ -1948,6 +1950,19 @@ export function animHtml(name, s, W, H, vs) {
           <span style="position:absolute;left:${Math.round(cw * 0.14)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.44)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.line}"></span>
           <span class="an-p" id="${ix}sl" style="left:${Math.round(cw * 0.42)}px;top:${Math.round(ch * 0.3)}px;width:${Math.round(cw * 0.44)}px;height:${Math.round(ch * 0.4)}px;border-radius:${Math.round(cw * 0.07)}px;background:${P.acc};box-shadow:-6px 0 14px rgba(0,0,0,.16)"></span>`,
         // repli générique : la carte à lignes muettes
+        // L'IMAGE : un cadre, une montagne et son soleil — le pictogramme
+        // universel d'une photo. Axel : « je ne veux pas de texte, uniquement
+        // des animations » — « image » tombait sur le colis générique.
+        image: (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.17)}px;top:${Math.round(ch * 0.26)}px;width:${Math.round(cw * 0.66)}px;height:${Math.round(ch * 0.5)}px;border-radius:${Math.round(cw * 0.08)}px;background:${P.soft};border:2px solid ${P.line};overflow:hidden">
+            <span style="position:absolute;left:14%;top:52%;width:44%;height:44%;background:${P.acc};opacity:.85;clip-path:polygon(0 100%,50% 12%,100% 100%)"></span>
+            <span style="position:absolute;left:48%;top:60%;width:38%;height:38%;background:${P.acc};opacity:.55;clip-path:polygon(0 100%,50% 20%,100% 100%)"></span>
+            <span style="position:absolute;right:16%;top:16%;width:18%;height:0;padding-bottom:18%;border-radius:50%;background:${P.acc}"></span>
+          </span>`,
+        // LA VIDÉO : l'écran et son triangle de lecture
+        video: (ix) => `
+          <span style="position:absolute;left:${Math.round(cw * 0.17)}px;top:${Math.round(ch * 0.28)}px;width:${Math.round(cw * 0.66)}px;height:${Math.round(ch * 0.46)}px;border-radius:${Math.round(cw * 0.08)}px;background:${P.ink};opacity:.92"></span>
+          <span style="position:absolute;left:${Math.round(cw * 0.42)}px;top:${Math.round(ch * 0.43)}px;width:0;height:0;border-left:${Math.round(cw * 0.17)}px solid #fff;border-top:${Math.round(ch * 0.08)}px solid transparent;border-bottom:${Math.round(ch * 0.08)}px solid transparent"></span>`,
         carte: (ix) => `
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.28)}px;width:${Math.round(cw * 0.64)}px;height:${Math.round(ch * 0.09)}px;border-radius:99px;background:${P.ink};opacity:.6"></span>
           <span style="position:absolute;left:${Math.round(cw * 0.18)}px;top:${Math.round(ch * 0.46)}px;width:${Math.round(cw * 0.5)}px;height:${Math.round(ch * 0.07)}px;border-radius:99px;background:${P.line}"></span>
