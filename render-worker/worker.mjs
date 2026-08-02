@@ -176,6 +176,22 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     }
 
     const assetFiles = {}
+    // ── LA FORME DU MÉDIA DÉCIDE DE SA PLACE ────────────────────────────
+    // Un média PAYSAGE (capture d'écran, démo d'app) posé en petit médaillon
+    // est illisible : Axel, en voyant sa démo AvatarAds×Claude à côté du
+    // visage — « on ne voit pas le mp4, laisse dans sa forme actuelle
+    // plutôt ». Un portrait (une personne qui parle) tient très bien en
+    // médaillon, lui. On remonte donc les dimensions à la dérivation, qui
+    // tranche entre médaillon et plein cadre.
+    const assetDims = {}
+    const mesure = (f) => {
+      try {
+        const out = String(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+          '-show_entries', 'stream=width,height', '-of', 'csv=p=0:s=x', f])).trim().split('x')
+        const w = Number(out[0]) || 0, h = Number(out[1]) || 0
+        return w && h ? { w, h } : null
+      } catch (_) { return null }
+    }
     const assetsDir = join(jobDir, 'assets')
     if (existsSync(assetsDir)) {
       for (const f of readdirSync(assetsDir)) {
@@ -190,11 +206,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
               '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20',
               '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
             assetFiles[id] = 'media/' + id + '.mp4'
+            assetDims[id] = mesure(src)
           } catch (e) {
             // clip illisible → première frame en JPEG, le rendu ne doit pas échouer
             try {
               execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-frames:v', '1', '-q:v', '3', join(proj, 'media', id + '.jpg')])
               assetFiles[id] = 'media/' + id + '.jpg'
+              assetDims[id] = mesure(src)
             } catch (_) { console.warn('asset b-roll ignoré (illisible):', f) }
           }
         } else {
@@ -212,6 +230,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
           } else {
             copyFileSync(src, join(proj, 'media', f))
             assetFiles[id] = 'media/' + f
+            assetDims[id] = mesure(src)
           }
         }
       }
@@ -361,7 +380,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // d'avancer la première fenêtre avatar jusqu'à 0 pour garantir le hook ;
       // avec des clips, avancer la fenêtre ferait mentir les lèvres — la
       // garantie vient alors d'orchestrate, avant la génération des clips.
-      try { deriveDynamicSlides(plan, { assetFiles, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
+      try { deriveDynamicSlides(plan, { assetFiles, assetDims, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot

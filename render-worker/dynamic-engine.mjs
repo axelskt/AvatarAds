@@ -657,10 +657,21 @@ export function buildDynamicComposition(plan, opts = {}) {
         // dur : une animation 16:9 (les deux logos côte à côte) s'y retrouvait
         // recadrée au centre, donc amputée de ses deux logos — exactement ce
         // qu'elle avait à montrer. `ratio` = largeur/hauteur de la source.
-        const iw = Math.round(W * 0.42)
         const rat = Number(ins.ratio) > 0 ? Number(ins.ratio) : 9 / 16
+        // ── UN PAYSAGE NE SE MET PAS DANS UN COIN ─────────────────────────
+        // À 42 % de large, un 16:9 fait 454×255 px sur du 1080 : une capture
+        // d'app y est illisible. Axel, en voyant sa démo AvatarAds×Claude à
+        // côté du visage — « on ne voit pas le mp4, laisse dans sa forme
+        // actuelle plutôt ». Un portrait, lui, reste très lisible en coin :
+        // c'est ce qu'il avait demandé le 31/07 pour l'influenceuse.
+        // Donc la forme décide : portrait au coin, paysage en BANDE pleine
+        // largeur, posée haut. Le visage reste visible dessous dans les deux
+        // cas — la règle « l'avatar ouvre toujours » n'est pas entamée.
+        const large = rat > 1.15
+        const iw = Math.round(W * (large ? 0.92 : 0.42))
         const ih = Math.round(iw / rat)
-        const ix = Math.round(W - iw - W * 0.06), iy = Math.round(H * 0.11)
+        const ix = large ? Math.round((W - iw) / 2) : Math.round(W - iw - W * 0.06)
+        const iy = Math.round(H * (large ? 0.13 : 0.11))
         const iid = id + 'in' + k
         const a = Math.max(liveT0, r2(ins.start)), b = Math.min(t1, r2(ins.end))
         if (b - a < 0.3) continue

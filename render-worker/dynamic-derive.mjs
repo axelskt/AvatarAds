@@ -69,6 +69,38 @@ const EXIGE_GLOBAL = {
   oneclick: /debutant|débutant|accessible|simple|facile|clic|clique|competence|compétence|connais rien|sans savoir|tout seul/i,
   tsunami: /vague|tsunami|raz|maree|marée|deferl|déferl|arrive|arrivera|vient|va tout/i,
   gaugefill: /benefic|bénéfic|pourcent|%|totalit|integralit|intégralit|tout pour|garde tout|100/i,
+
+  // ── PAQUET 13 (02/08) — CE QUI RESTAIT SANS GARDE-FOU ─────────────────────
+  // Douze animations étaient protégées, la banque en compte plus de cent. Les
+  // autres se posaient partout, et le résultat s'entend dans le verdict d'Axel
+  // sur le Cartoon 18 : « l'animation elle veut rien dire ». Trois mesurées ce
+  // jour-là, sur le plan réel du job 5fc556af :
+  //   · `render` — une BARRE DE CHARGEMENT à 6,55 s, sur le mot « dans ».
+  //     Axel : « l'animation montre juste un chargement, on doit l'utiliser
+  //     juste quand un audio dit le mot chargement, c'est tout. »
+  //   · `result` sur « Et » (de « Et voilà, Claude est connecté ») — la phrase
+  //     parle d'une LIAISON, pas d'un résultat qui s'affiche.
+  //   · `chat` sur « ne », `post` sur « sur ».
+  // Le motif reprend le vocabulaire de la DESCRIPTION de l'animation dans
+  // anim-bank, pas son thème : c'est la description qui dit ce qu'on voit.
+  render:  /charge|chargement|génère|genere|génération|generation|calcul|rend\b|rendu|export|traite|patiente|laisse tourner|en cours|progress/i,
+  result:  /résultat|resultat|ça donne|ca donne|voilà ce que|voila ce que|obtiens|sortie|fini|terminé|termine|rendu final/i,
+  script:  /script|texte|écris|ecris|rédige|redige|dialogue|phrase|ce que tu vas dire/i,
+  voice:   /voix|micro|audio|son\b|parle|parler|enregistr|clone vocal|voix off/i,
+  connect: /connect|connecté|connecte|relie|relié|branch|intègr|integr|liaison|lie\b|communiquent/i,
+  avatar:  /avatar|personnage|visage|jumeau|clone/i,
+  badge:   /certifi|validé|valide|garanti|vérifi|verifi|officiel|sceau|approuv/i,
+  chat:    /chat|conversation|discussion|message|demande|demander|prompt|écris-lui|ecris-lui/i,
+  copy:    /copie|copier|copies|colle|coller|presse-papier|clé|cle\b/i,
+  settings: /paramètre|parametre|réglage|reglage|option|configur|préférence|preference/i,
+  library: /bibliothèque|bibliotheque|collection|galerie|catalogue|page|pages|dossier/i,
+  post:    /poste|poster|publi|partage|partager|met en ligne|balance/i,
+  product: /produit|article|boutique|catalogue|vend|vente/i,
+  template: /modèle|modele|template|personnalis|préréglage|prereglage/i,
+  integrations: /connecteur|intègr|integr|plugin|extension|brancher|outil externe/i,
+  comment: /commentaire|commente|commande|réponds|reponds|réponse|reponse/i,
+  faceless: /caméra|camera|sans visage|sans montrer|anonyme|jamais te montrer|sans toi/i,
+  trend:   /tendance|croissance|monte|grimpe|explose|progress|business|décolle|decolle|chiffre/i,
 }
 
 const REDIRECTIONS = {
@@ -195,7 +227,6 @@ export const MODULES = [
   // #129 · le tuto « connecter le MCP » : deux écrans de plus, récoltés comme
   // les autres. « mon compte tout en bas » puis « connecter Cloud » — Scribe
   // transcrit systématiquement « Claude » en « Cloud », donc les deux formes.
-  { pat: ['mon compte'],            screen: '10-mon-compte' },
   { pat: ['connecter cloud', 'connecter claude', 'connecte claude'], screen: '11-connecter-claude' },
 ]
 // mot prononcé → élément de l'interface (positions dans screen-spots.mjs)
@@ -340,11 +371,32 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // a remplacé target par lineup et la garde le lui jetait (« j'ai mis
       // lineup mais ça n'a pas marché », 01/08). L'utilisateur a vu sa vidéo et
       // a tranché — le garde-fou vaut pour les propositions, pas pour lui.
-      const dit = (plan.captions || []).filter((w) => w.start < b && w.end > a)
-        .map((w) => w.text).join(' ')
+      const dansFenetre = (plan.captions || []).filter((w) => w.start < b && w.end > a)
+      const dit = dansFenetre.map((w) => w.text).join(' ')
       if (!EXIGE_GLOBAL[nom].test(dit)) {
         console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça`)
         return null
+      }
+      // ── ET ON SE CALE SUR LE MOT QUI VIENT DE LA JUSTIFIER ────────────────
+      // Le chef d'orchestre donne à ses scènes des bornes qu'il ESTIME depuis
+      // la transcription ; elles tombent à côté. Mesuré sur le Cartoon 18 :
+      // `render` s'ouvrait sur « dans », `result` sur « Et », `post` sur
+      // « sur » — des mots vides, alors que le mot qui justifie l'animation
+      // était deux ou trois mots plus loin. L'écart au mot le plus proche
+      // était pourtant de 20 ms : ce n'était pas un décalage de temps, c'était
+      // le mauvais mot. Axel : « la synchronisation n'est toujours pas
+      // parfaite, faut vraiment être parfait de ce côté. »
+      //
+      // On vient de tester chaque mot de la fenêtre ; on sait donc lequel a
+      // déclenché. La scène commence sur LUI (0,12 s d'avance, comme les
+      // beats), à condition qu'il reste assez de place derrière.
+      const declencheur = dansFenetre.find((w) => EXIGE_GLOBAL[nom].test(w.text))
+      if (declencheur) {
+        const na = r2(Math.max(a, declencheur.start - 0.12))
+        if (na > a + 0.08 && b - na >= 1.25 && !overlaps(na, b)) {
+          console.log(`▶ ${nom} recalé sur « ${declencheur.text} » : ${a}s → ${na}s`)
+          a = na
+        }
       }
     }
     if (REFUSEES.has(nom)) {
@@ -613,10 +665,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // la phrase qui la nomme. Axel : « tu gardes l'avatar principal qui parle
       // et tu ajoutes la vidéo en plus petit ». Elle s'accroche donc à la
       // fenêtre au lieu de lui disputer l'écran.
+      // ── UN PAYSAGE NE TIENT PAS EN MÉDAILLON ──────────────────────────────
+      // Le médaillon fait environ un tiers de la largeur. Un portrait (une
+      // personne qui parle) y reste parfaitement lisible — c'est ce qu'Axel
+      // avait demandé le 31/07 : « tu gardes l'avatar principal qui parle et tu
+      // ajoutes la vidéo en plus petit ». Une capture d'écran 16:9, elle,
+      // devient illisible : sa démo AvatarAds×Claude réduite au tiers, il n'a
+      // plus rien vu — « on ne voit pas le mp4, laisse dans sa forme actuelle
+      // plutôt » (02/08). La forme du fichier décide donc, pas une règle fixe.
+      const dim = (opts.assetDims || {})[b.assetId]
+      const ratio = dim && dim.h ? dim.w / dim.h : 0
       const hote = (hookWin && a < hookWin.end - 0.3 && e > hookWin.start + 0.3) ? hookWin
         : (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
       if (hote) {
-        ;(hote.insets = hote.insets || []).push({ src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) })
+        ;(hote.insets = hote.insets || []).push({ src, assetId: b.assetId, ratio,
+          start: a, end: r2(Math.min(e, hote.end)) })
         // …et on note qu'il DÉPEND de cette fenêtre : plus bas, les fenêtres
         // avatar sont rebâties sous contrainte de budget et de collisions, et
         // celle-ci peut très bien ne pas survivre. Le repêchage de la §4 s'en
@@ -2139,7 +2202,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (s.overlayMedia && s.overlayMedia.assetId) vus.add(s.overlayMedia.assetId)
       for (const i of s.items || []) if (i.assetId) vus.add(i.assetId)
     }
-    for (const w of plan.avatarSegments || []) for (const i of w.insets || []) vus.add(i.assetId)
+    // ── ÊTRE ACCROCHÉ NE SUFFIT PAS : IL FAUT ÊTRE DANS LE CADRE ────────────
+    // Un médaillon vit sur une fenêtre avatar. Quand cette fenêtre est rognée
+    // (budget, collisions, split), l'objet inset SURVIT au rognage — mais ses
+    // bornes tombent hors de la fenêtre, et le moteur ne dessine rien.
+    // Mesuré : la photo « meilleure qualité » était accrochée à 8,44→11,5 s sur
+    // une fenêtre ramenée à 0→6,53 s. Comptée présente, jamais affichée.
+    // On ne considère donc « vu » qu'un médaillon RÉELLEMENT dans sa fenêtre,
+    // et le repêchage plus bas s'occupe des autres.
+    for (const w of plan.avatarSegments || []) {
+      const gardes = []
+      for (const i of w.insets || []) {
+        const dedans = Math.min(i.end, w.end) - Math.max(i.start, w.start)
+        if (dedans >= 0.3) { vus.add(i.assetId); gardes.push(i) }
+        else console.warn(`⚠ médaillon « ${i.assetId} » hors de sa fenêtre (${i.start}→${i.end} vs ${w.start}→${w.end}) — repêché`)
+      }
+      if (gardes.length !== (w.insets || []).length) w.insets = gardes
+    }
 
     for (const b of plan.broll || []) {
       if (vus.has(b.assetId)) continue
@@ -2150,6 +2229,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // qu'UN overlayMedia — deux médias perdus au même instant, et le second
       // effaçait le premier en silence. L'hôte suivant (ou la fenêtre avatar)
       // prend le relais.
+      // Un paysage ne se pose ni en couche ni en médaillon : il lui faut
+      // l'écran entier, sinon on ne lit rien (même arbitrage qu'en §0a).
+      const dimR = (opts.assetDims || {})[b.assetId]
+      const ratioR = dimR && dimR.h ? dimR.w / dimR.h : 0
       const hote = (plan.slides || []).find((sl) => !sl.overlayMedia && sl.start <= a + 0.05 && sl.end >= a + 0.3)
       if (hote) {
         hote.overlayMedia = { src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) }
@@ -2158,7 +2241,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
       const seg = (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
       if (seg) {
-        ;(seg.insets = seg.insets || []).push({ src, assetId: b.assetId,
+        ;(seg.insets = seg.insets || []).push({ src, assetId: b.assetId, ratio: ratioR,
           start: r2(Math.max(a, seg.start)), end: r2(Math.min(e, seg.end)) })
         console.log(`▶ média « ${b.assetId} » repêché : médaillon sur l'avatar (${seg.start}→${seg.end}s)`)
         continue
