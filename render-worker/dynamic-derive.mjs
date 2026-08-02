@@ -285,6 +285,9 @@ export const VOICE_ANIMS = [
   { w: ['marque', 'marques', 'client', 'clients', 'communaute', 'audience', 'abonnes'], anim: 'network' },
   { w: ['euros', 'argent', 'prix', 'paye', 'payer', 'gagner'],                          anim: 'money' },
   { w: ['vues', 'millions', 'viral', 'virale', 'croissance', 'grandir'],                anim: 'grow' },
+  // « et même LANCER UN BUSINESS » : la courbe qui monte, demandée par Axel le
+  // 03/08. Elle passe avant `grow` parce qu'elle est plus haut dans la table.
+  { w: ['lancer un business', 'monter un business', 'lancer son business', 'creer un business'], anim: 'easyup' },
   { w: ['fake', 'faux', 'realisme', 'realiste'],                       anim: 'compare', pad: 2.1, photo: 'hook-qualite' },
   { w: ['outils', 'outil', 'methode', 'technique', 'strategie'], anim: 'tools', pad: 2.0, assets: ['logo-avatarads'] },
   // « en quelques secondes » parle de VITESSE, pas d'un créneau horaire — via
