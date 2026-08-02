@@ -95,6 +95,12 @@ const EXIGE_GLOBAL = {
   // répond. C'est le geste qu'il décrit.
   type:    /écri|ecri|tape|taper|saisi|texte|nom\b|titre|prompt|mot-clé|mot cle|colle|coller/i,
   voice:   /voix|micro|audio|son\b|parle|parler|enregistr|clone vocal|voix off/i,
+  // `record`, c'est un ENREGISTREMENT qui tourne — le point rouge et la forme
+  // d'onde. Sans garde-fou il tombait sur « tu peux maintenant CRÉER n'importe
+  // quelle vidéo dans Claude » : Axel, en le voyant — « y'a un truc
+  // d'enregistrement audio quand je crée n'importe quelle vidéo dans Claude,
+  // wtf ??? ». Il lui faut le vocabulaire du micro, pas celui de la création.
+  record:  /enregistr|micro|dicte|dicter|capture ta voix|parle dans|voix off|podcast/i,
   connect: /connect|connecté|connecte|relie|relié|branch|intègr|integr|liaison|lie\b|communiquent/i,
   avatar:  /avatar|personnage|visage|jumeau|clone/i,
   badge:   /certifi|validé|valide|garanti|vérifi|verifi|officiel|sceau|approuv/i,
@@ -1172,6 +1178,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const ZONES_INTERDITES = {
         '11-connecter-claude': ['ouvrir-claude-connecteurs', 'commencer'],
       }
+      // ── L'ÉCRAN AU PRÉNOM N'EXISTE PLUS, ET ON NE LE REGRETTE PAS ─────────
+      // `10-mon-compte` capturait le HAUT de la modale : le prénom d'Axel en
+      // clair, son téléphone, son e-mail — et pas le bouton « Connecter
+      // Claude », qui est plus bas. Axel : « supprime cette capture où y'a mon
+      // prénom, elle sert à rien, c'est toi qui a dû la mettre, dans site j'ai
+      // fait exprès de ne pas la mettre pour pas de confusion ». Elle est donc
+      // retirée de la banque.
+      // ⚠️ Mais un chef d'orchestre déjà en vol peut encore la demander (son
+      // prompt est mis en cache), et la première fois que je l'ai supprimée la
+      // visite s'est ouverte sur 3,3 s de vide. On ne jette donc pas l'étape :
+      // on la renvoie sur `12-connecter-claude-entree`, qui est LA MÊME modale
+      // déroulée — et qui, elle, contient le bouton dont il parle.
+      const ECRANS_REMPLACES = {
+        '10-mon-compte': { screen: '12-connecter-claude-entree', zone: 'connecter-claude' },
+      }
       // ── « CRÉER TON COMPTE SUR AVATARADS » N'EST PAS UNE ÉTAPE DE L'APP ────
       // C'est une NAVIGATION : on n'est pas encore dedans. La visite guidée
       // s'ancrait pourtant sur ce premier « compte » et posait l'onglet Mon
@@ -1193,7 +1214,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
           for (let k = d; k <= j + 1 && k < words.length; k++) motsNav.add(k)
         }
       }
-      for (const t of tuto) {
+      for (let t of tuto) {
+        const remp = ECRANS_REMPLACES[String(t.screen)]
+        if (remp) {
+          console.log(`▶ visite guidée : ${t.screen} retiré → ${remp.screen}/${remp.zone}`)
+          t = { ...t, screen: remp.screen, zone: remp.zone }
+        }
         if ((ZONES_INTERDITES[String(t.screen)] || []).includes(String(t.zone))) {
           jetees.push(`${t.screen}/${t.zone} : cette carte annonce la suite, elle ne se cadre pas ici`)
           continue
