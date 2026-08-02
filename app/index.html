@@ -6460,6 +6460,13 @@ function enterApp(profile){
   document.getElementById('memberBar').style.display = 'flex';
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier)
   if(window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  // ── ARRIVER DIRECTEMENT SUR UN MONTAGE ──────────────────────────────────
+  // `…/app/#montage=<job_id>` ouvre « Détails du montage » sur ce job. C'est ce
+  // que renvoie le MCP : depuis Claude on ne relit pas le plan en texte, on
+  // clique et on atterrit dans le vrai écran, avec la bande, les aperçus et la
+  // régénération. Le hash est effacé aussitôt pour qu'un rafraîchissement ne
+  // rouvre pas l'écran en boucle.
+  setTimeout(function(){ try{ _mdDeepLink(); }catch(e){} }, 200);
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
@@ -12442,9 +12449,25 @@ function _mdDevis(){
   return { lip:0, video:(typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.montageRender)||4 };
 }
 // ── OUVERTURE / CHARGEMENT ───────────────────────────────────────────────────
-async function _mdOpen(){
-  const jobId = window._mtLastJobId;
+// ── LE LIEN QUI OUVRE UN MONTAGE ────────────────────────────────────────────
+// `https://avatarads.fr/app/#montage=<job_id>`. Appelé une fois à l'entrée dans
+// l'app. On efface le hash AVANT d'ouvrir : sinon un rafraîchissement (ou le
+// bouton retour) rouvre l'écran indéfiniment.
+function _mdDeepLink(){
+  const m = /(?:^|[#&])montage=([0-9a-f-]{36})/i.exec(window.location.hash || '');
+  if(!m) return;
+  const jobId = m[1];
+  try{ history.replaceState(null, '', window.location.pathname + window.location.search); }catch(_){}
+  nav('montage');
+  _mdOpen(jobId);
+}
+
+// `jobId` explicite = ouverture depuis un LIEN (Claude via le MCP, un e-mail…).
+// Sans argument on reprend le dernier montage de la session, comme avant.
+async function _mdOpen(jobId){
+  jobId = jobId || window._mtLastJobId;
   if(!jobId){ toast('⚠️ Aucun montage récent — lance un montage d\'abord'); return; }
+  window._mtLastJobId = jobId;   // la régénération et la review repartent de celui-là
   let ov = document.getElementById('mdOv');
   if(!ov){ ov=document.createElement('div'); ov.id='mdOv';
     ov.style.cssText='position:fixed;inset:0;z-index:6000;background:var(--bg);display:none;flex-direction:column';
