@@ -20,10 +20,14 @@ import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
-import { deriveDynamicSlides } from './dynamic-derive.mjs'
+// EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
+// juger une correction avec EXACTEMENT le même garde-fou que le reste de la
+// chaîne, sinon elle rouvrirait par la fenêtre ce qu'on ferme à la porte.
+import { deriveDynamicSlides, EXIGE_GLOBAL as EXIGE_FINITION, ANIMS as ANIMS_DISPO } from './dynamic-derive.mjs'
 import { deriveClassicSlides } from './classic-derive.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+const r2 = (n) => Math.round(n * 100) / 100
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
 
 // ── LA CADENCE DE TOUTE LA CHAÎNE ───────────────────────────────────────────
@@ -381,6 +385,8 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // avec des clips, avancer la fenêtre ferait mentir les lèvres — la
       // garantie vient alors d'orchestrate, avant la génération des clips.
       try { deriveDynamicSlides(plan, { assetFiles, assetDims, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
+      // #24 · et maintenant il RELIT sa copie, sur le montage réel
+      try { await passeDeFinition(plan) } catch (e) { console.warn('finitions:', e.message) }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
@@ -708,6 +714,94 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
 }
 
 // ── mode poll Supabase : réclame les jobs queued, rend, uploade ──
+// ── #24 · LA PASSE DE FINITION ───────────────────────────────────────────────
+// Axel : « il faut qu'il voie son travail et fasse les finitions, c'est ça qui
+// manque ! » Le chef d'orchestre écrit son plan à l'aveugle : la dérivation
+// déplace, remplace et refuse ensuite la moitié de ses scènes, et il ne voit
+// JAMAIS le résultat. Les mêmes défauts revenaient donc d'une version à l'autre.
+//
+// On lui rend sa vidéo : la ligne de temps réelle, avec les mots prononcés en
+// face de chaque plan. Il ne peut que remplacer une animation qui ne correspond
+// pas, ou supprimer une scène qui ne montre rien. Les temps, les captures, les
+// médias et le visage lui sont interdits : ce sont des règles déterministes,
+// mesurées, qu'on ne rouvre pas à un modèle. On lui demande de juger le SENS —
+// ce que le code ne sait pas faire.
+//
+// Chaque correction repasse par les garde-fous de la dérivation : une finition
+// PROPOSE, elle n'impose pas. Et l'appel ne peut jamais faire échouer un
+// montage — sans réponse, le plan reste tel quel.
+async function passeDeFinition(plan) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return
+  const caps = plan.captions || []
+  const dit = (a, b) => caps.filter((w) => w.start < b && w.end > a).map((w) => w.text).join(' ')
+  const nomDe = (s) => s.screen ? `capture ${s.screen}`
+    : (s.assetId || s.overlayMedia) ? "média de l'utilisateur"
+    : s.anim ? `animation ${s.anim}` : (s.type || 'carte')
+  const scenes = (plan.slides || [])
+    .filter((s) => typeof s.start === 'number')
+    .sort((a, b) => a.start - b.start)
+    .map((s) => ({ start: r2(s.start), end: r2(s.end), quoi: nomDe(s), dit: dit(s.start, s.end) }))
+  if (scenes.length < 3) return
+
+  const ctrl = new AbortController()
+  const minuteur = setTimeout(() => ctrl.abort(), 25000)
+  let rep
+  try {
+    const res = await fetch(`${url}/functions/v1/finitions`, {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ scenes, anims: ANIMS_DISPO, duree: plan.duration || 0, brief: plan.__brief || '' }),
+    })
+    if (!res.ok) { console.warn(`\u25b6 finitions : HTTP ${res.status}`); return }
+    rep = await res.json()
+  } finally { clearTimeout(minuteur) }
+  const corr = (rep && rep.corrections) || []
+  for (const r of (rep && rep.refus) || []) console.log(`\u25b6 finition ignorée — ${r}`)
+  if (!corr.length) { console.log('\u25b6 finitions : rien à reprendre'); return }
+
+  let faites = 0
+  for (const c of corr) {
+    const s = (plan.slides || []).find((x) => Math.abs((x.start || 0) - c.t) < 0.05)
+    if (!s || s.screen || s.assetId || s.overlayMedia) continue
+    if (c.action === 'supprime') {
+      // …sauf si le trou retomberait sur RIEN. Un plan retiré doit laisser la
+      // place au visage ou à un voisin, jamais un vide.
+      const voisin = (plan.slides || []).find((x) => x !== s && x.end > s.start - 0.6 && x.start < s.end + 0.6)
+      const visage = (plan.avatarSegments || []).some((w) => w.start < s.end && w.end > s.start)
+      if (!voisin && !visage) { console.log(`\u25b6 finition refusée : retirer ${nomDe(s)} à ${s.start}s creuserait un trou`); continue }
+      console.log(`\u25b6 finition : ${nomDe(s)} retiré à ${s.start}s — ne montrait rien d'utile`)
+      plan.slides = plan.slides.filter((x) => x !== s)
+      faites++
+      continue
+    }
+    // ── ON NE TOUCHE PAS À UNE SCÈNE QUI PORTE UN CHIFFRE VENU DE SA VOIX ────
+    // « en deux minutes » produit un compteur qui affiche 120 SECONDES : la
+    // valeur vient de ce qu'il DIT. Changer l'animation sous elle laisserait le
+    // chiffre orphelin. Mesuré au premier essai : la passe proposait
+    // countup → speed sur cette phrase précise.
+    if ((s.items || []).some((it) => String((it && (it.value || it.text)) || '').trim())) {
+      console.log(`\u25b6 finition refusée : ${nomDe(s)} à ${s.start}s porte un chiffre venu de sa voix`)
+      continue
+    }
+    // le remplaçant doit passer le MÊME garde-fou que toutes les autres
+    const motif = EXIGE_FINITION[c.anim]
+    const phrase = dit(s.start, s.end)
+    if (motif && !motif.test(phrase)) {
+      console.log(`\u25b6 finition refusée : « ${c.anim} » à ${s.start}s — « ${phrase.slice(0, 34)} » ne parle pas de ça`)
+      continue
+    }
+    if ((plan.slides || []).some((x) => x !== s && String(x.anim) === c.anim && !x.screen && !x.assetId)) {
+      console.log(`\u25b6 finition refusée : « ${c.anim} » est déjà ailleurs dans la vidéo`)
+      continue
+    }
+    console.log(`\u25b6 finition : ${s.anim} → ${c.anim} à ${s.start}s`)
+    s.anim = c.anim
+    faites++
+  }
+  console.log(`\u25b6 finitions : ${faites}/${corr.length} correction(s) appliquée(s)`)
+}
+
 async function pollLoop() {
   const { createClient } = await import('@supabase/supabase-js')
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
