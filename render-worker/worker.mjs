@@ -470,10 +470,6 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // qui le crée, pour qu'une nouvelle animation à image ne le reperde pas.
     const ANIM_IMAGES = { tools: ['logo-avatarads', 'logo-claude'], connect: ['logo-avatarads', 'logo-claude'] }
     for (const sl of plan.slides || []) for (const n of ANIM_IMAGES[sl.anim] || []) wantedScreens.add(n)
-    // la pastille « il dit Claude » charge le même fichier en dur : sans ça, un
-    // montage qui cite Claude sans jamais poser `connect` ni `tools` affichait
-    // une image cassée à la place du logo.
-    if ((plan.slides || []).some((sl) => (sl.claudeAt || []).length)) wantedScreens.add('logo-claude')
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
       for (const name of wantedScreens) {
