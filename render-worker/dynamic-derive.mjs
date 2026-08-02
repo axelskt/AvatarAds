@@ -1892,8 +1892,31 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const h2 = findSeq(words, w2, curB) || findAny(words, [w2], curB)
         if (h2 && h2.start > hit.start) { fin = h2.start - 0.05; break }
       }
-      const a = r2(Math.max(0, hit.start - 0.12))
+      let a = r2(Math.max(0, hit.start - 0.12))
       const bb = r2(Math.min(D, fin, a + 1.9))
+      // ── QUAND LE MOT ARRIVE EN FIN DE PHRASE, ON REMONTE À LA PHRASE ───────
+      // Le mot déclencheur est souvent le DERNIER de sa proposition : « sans
+      // jamais passer devant une CAMÉRA », « à partir d'un AUDIO ». La fenêtre
+      // part alors du mot et bute aussitôt sur l'idée suivante — mesuré :
+      // `faceless écarté : 0,91 s même après étirement`, et Axel voyait un
+      // graphique de croissance à la place. Or l'animation illustre TOUTE la
+      // proposition, pas sa dernière syllabe : on peut donc l'ouvrir dès son
+      // début. On ne remonte QUE si la fenêtre est trop courte autrement, et
+      // jamais au-delà de la ponctuation précédente ni de 2 s.
+      if (bb - a < 1.25) {
+        let deb = hit.i
+        for (let k = hit.i - 1; k >= 0 && hit.i - k < 9; k--) {
+          if (/[.!?,]$/.test(String(words[k].text))) break
+          if (words[k + 1].start - words[k].end > 0.32) break
+          if (hit.start - words[k].start > 2.0) break
+          deb = k
+        }
+        const na = r2(Math.max(0, words[deb].start - 0.12))
+        if (na < a && bb - na >= 1.25 && !overlaps(na, bb)) {
+          console.log(`▶ ${b.anim} : « ${mot} » clôt sa phrase → ouvert dès « ${words[deb].text} » (${na}s au lieu de ${a}s)`)
+          a = na
+        }
+      }
       if (bb - a < 1.25) { sautB++; continue }   // sous 1,25 s c'est un flash, pas une scène
       if (add({ anim: b.anim, value: b.value || '', items: b.value ? [{ t: 0, text: String(b.value) }] : [] }, a, bb)) posB++
     }
