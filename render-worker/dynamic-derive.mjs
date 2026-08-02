@@ -131,7 +131,12 @@ const REDIRECTIONS = {
   seul: 'twopaths', different: 'twopaths', foule: 'twopaths',
   zero: 'blankfill', vide: 'blankfill', depart: 'blankfill',
 }
-const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free'])
+// `steps` rejoint la liste le 02/08 : les cartes « 1 / 2 / 3 » d'une méthode
+// racontent une procédure que la voix est déjà en train de raconter, et elles
+// arrivent forcément décalées d'une étape ou deux. Axel : « à la place de
+// l'animation step, mets l'avatar, c'est plus simple et cohérent ». Sans
+// redirection, la fenêtre retombe sur le visage — exactement ce qu'il demande.
+const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps'])
 const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
@@ -1913,10 +1918,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // choix d'animation se faisait donc sans lui. On laisse la scène courir
       // jusqu'à la ponctuation suivante (2,6 s au maximum), toujours bornée
       // par l'idée d'après : elle ne peut pas déborder sur la suivante.
-      let finPhrase = fin
+      // ⚠ …MAIS JAMAIS JUSQU'AU MOT DE L'IDÉE SUIVANTE. « lancer un business
+      // SANS JAMAIS PASSER DEVANT UNE CAMÉRA » est UNE phrase : en la laissant
+      // courir jusqu'au point, `grow` (sur « business ») avalait « caméra » et
+      // `faceless` n'avait plus de place — Axel, deux fois : « sans jamais
+      // passer devant une caméra, toujours pas ». On borne donc par le premier
+      // mot déclencheur d'un beat suivant, quel qu'il soit.
+      let stopBeat = D
+      for (const o of tousLesBeats) {
+        const m2 = norme(String(o.word || ''))
+        if (!m2) continue
+        for (let k = hit.i + 1; k < words.length; k++) {
+          if (norme(words[k].text) !== m2) continue
+          if (words[k].start > hit.start && words[k].start < stopBeat) stopBeat = words[k].start - 0.05
+          break
+        }
+      }
+      let finPhrase = Math.min(fin, stopBeat)
       for (let k = hit.i; k < words.length && k - hit.i < 10; k++) {
         if (words[k].end - hit.start > 2.6) break
-        if (/[.!?]$/.test(String(words[k].text))) { finPhrase = Math.min(fin, words[k].end + 0.12); break }
+        if (/[.!?]$/.test(String(words[k].text))) { finPhrase = Math.min(finPhrase, words[k].end + 0.12); break }
       }
       const bb = r2(Math.min(D, finPhrase, a + 2.6))
       // ── QUAND LE MOT ARRIVE EN FIN DE PHRASE, ON REMONTE À LA PHRASE ───────
