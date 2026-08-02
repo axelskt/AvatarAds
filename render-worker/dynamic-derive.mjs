@@ -26,6 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { ANIMS as ANIMS_BRUT } from './anim-pack.mjs'
+import { sujetsDe, estUneSuite } from './sujet-pack.mjs'
 
 // ── ANIMATIONS REFUSEES PAR AXEL ────────────────────────────────────────────
 // Sur la v7 (30/07/2026), animation par animation :
@@ -393,7 +394,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // des illustrations : les médias de l'utilisateur (il en a autant qu'il veut),
   // les captures d'écran (une visite guidée montre plusieurs fois la même app)
   // et les panneaux de repli, qui ne racontent rien de particulier.
-  const REPETABLES = new Set(['media', 'screen', 'ui', 'result', 'punch', 'blankfill'])
+  // `sujet` est répétable : ce n'est pas UNE animation mais une famille dont le
+  // contenu change à chaque fois. Son unicité se joue sur les sujets dessinés
+  // (`sujetsPoses`), pas sur son nom.
+  const REPETABLES = new Set(['media', 'screen', 'ui', 'result', 'punch', 'blankfill', 'sujet'])
   // ⚠ On ne compte que ce qui est RÉELLEMENT joué comme animation : une scène
   // qui porte une capture ou un média affiche l'image, pas l'animation restée
   // dans son champ `anim`. Sans ce filtre, un `chat` résiduel sur l'écran de
@@ -414,6 +418,41 @@ export function deriveDynamicSlides(plan, opts = {}) {
       return cand
     }
     return null
+  }
+  // La PHRASE qui entoure une fenêtre — bornée aux points, pas à 1,5 s. Deux
+  // décisions en ont besoin : le sujet d'une phrase (« demander à Claude ») et
+  // les scènes à sujet ouvert, qui lisent les mots pour choisir leurs icônes.
+  const phraseDe = (a, b) => {
+    const cs = plan.captions || []
+    let i0 = cs.findIndex((w) => w.end > (a + b) / 2)
+    if (i0 < 0) return ''
+    while (i0 > 0 && !/[.!?]$/.test(String(cs[i0 - 1].text || ''))) i0--
+    let i1 = i0
+    while (i1 < cs.length - 1 && !/[.!?]$/.test(String(cs[i1].text || ''))) i1++
+    return cs.slice(i0, i1 + 1).map((w) => w.text).join(' ')
+  }
+  // ── QUAND LA BANQUE NE SAIT RIEN DIRE, LE MOT LE DIT ───────────────────────
+  // Axel : « si demain un mec vient avec un thème qui n'a rien à voir — salle de
+  // sport, exercices, machines — l'IA sera bloquée et montrera des animations
+  // pas cohérentes ». La banque est écrite pour SON vocabulaire ; ailleurs, tous
+  // ces « aucun remplaçant » deviennent du visage muet ou, pire, une animation
+  // qui ment. Ici on fabrique une scène à partir des mots réellement prononcés :
+  // deux ou trois sujets dessinés, dans l'ordre où il les dit. Si on ne sait
+  // dessiner AUCUN de ses mots, on ne rend rien — un visuel faux serait pire.
+  const sujetsPoses = []
+  const sceneDuMot = (a, b) => {
+    const ph = phraseDe(a, b)
+    const su = sujetsDe(ph, 3)
+    if (!su.length) return null
+    // « pas deux fois la même animation » vaut ICI pour les ICÔNES : un
+    // calendrier vu deux fois dans la même vidéo, c'est le même tic. On retire
+    // donc les sujets déjà montrés, et on renonce s'il ne reste rien d'inédit.
+    const neufs = su.filter((x) => !sujetsPoses.includes(x.sujet))
+    if (!neufs.length) return null
+    for (const x of neufs) sujetsPoses.push(x.sujet)
+    su.length = 0
+    su.push(...neufs)
+    return { anim: 'sujet', sujets: su, motion: su.length > 1 && estUneSuite(ph) ? 'flow' : 'cascade' }
   }
   const add = (slide, a, b) => {
     // Le filtre doit etre ICI, au seul passage obligé : filtrer la liste ANIMS
@@ -536,12 +575,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // garde-fou : on remplace une erreur, on n'en fabrique pas une autre.
         const remp = chercheRemplacant(dit, nom)
         if (!remp) {
+          // …et si la banque ne sait rien proposer, on dessine ce qu'il dit.
+          const sc = sceneDuMot(a, b)
+          if (sc) {
+            console.log(`▶ ${nom} écarté sur « ${dit.slice(0, 30)} » → scène du mot : ${sc.sujets.map((x) => x.mot).join(' · ')}`)
+            slide = { ...slide, ...sc }
+            nom = 'sujet'
+            contexte = true
+          }
+        }
+        if (remp) {
+          console.log(`▶ ${nom} écarté sur « ${dit.slice(0, 34)} » → remplacé par ${remp}`)
+          slide = { ...slide, anim: remp }
+          nom = remp
+        } else if (nom !== 'sujet') {
           console.log(`▶ ${nom} écarté : « ${dit.slice(0, 42)} » ne parle pas de ça (aucun remplaçant)`)
           return null
         }
-        console.log(`▶ ${nom} écarté sur « ${dit.slice(0, 34)} » → remplacé par ${remp}`)
-        slide = { ...slide, anim: remp }
-        nom = remp
       }
       // ── ET ON SE CALE SUR LE MOT QUI VIENT DE LA JUSTIFIER ────────────────
       // Le chef d'orchestre donne à ses scènes des bornes qu'il ESTIME depuis
@@ -681,13 +731,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (nom && dejaVue(nom)) {
         const dit2 = (plan.captions || []).filter((w) => w.start < b && w.end > a).map((w) => w.text).join(' ')
         const remp2 = chercheRemplacant(dit2, nom)
-        if (!remp2) {
-          console.log(`▶ ${nom} écarté : déjà vue à ${r2((out.find((s) => String(s.anim) === nom) || {}).start)}s (aucune inédite pour « ${dit2.slice(0, 30)} »)`)
-          return null
+        if (remp2) {
+          console.log(`▶ ${nom} déjà vue → remplacée par ${remp2} à ${r2(a)}s`)
+          slide = { ...slide, anim: remp2 }
+          nom = remp2
+        } else {
+          // la banque est à court : on dessine les mots de la phrase.
+          const sc = sceneDuMot(a, b)
+          if (!sc) {
+            console.log(`▶ ${nom} écarté : déjà vue à ${r2((out.find((s) => String(s.anim) === nom) || {}).start)}s (aucune inédite pour « ${dit2.slice(0, 30)} »)`)
+            return null
+          }
+          console.log(`▶ ${nom} déjà vue → scène du mot à ${r2(a)}s : ${sc.sujets.map((x) => x.mot).join(' · ')}`)
+          slide = { ...slide, ...sc }
+          nom = 'sujet'
         }
-        console.log(`▶ ${nom} déjà vue → remplacée par ${remp2} à ${r2(a)}s`)
-        slide = { ...slide, anim: remp2 }
-        nom = remp2
       }
       // 2 · L'ANCRE RESTE DANS LA FENÊTRE. L'étirement est fait pour grandir
       //     AUTOUR du mot ; quand fit() a tout rogné, il grandissait à côté, et
@@ -2325,6 +2383,48 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // …et s'il n'en reste presque rien (l'orchestrateur n'en propose souvent QU'UNE,
   // le hook), on complète dans les trous libres : « 3-4 vidéos de l'avatar »
   // demandées pour #149. Un visage vaut mieux qu'un mot seul à l'écran.
+  // ── 3a-bis · CE QU'IL DIT, ON LE DESSINE ────────────────────────────────────
+  // La banque est écrite pour le vocabulaire d'AvatarAds. Chez un coach sportif,
+  // un restaurateur ou un artisan, presque toutes ses animations sont refusées à
+  // juste titre — et la vidéo devient un plan-séquence de visage. Axel : « l'IA
+  // sera bloquée et montrera des animations pas cohérentes du tout, et
+  // impossible de valider toutes les animations comme ça de chaque domaine ».
+  // Avant de rendre les creux au visage, on regarde donc si la PHRASE qu'on y
+  // entend contient des choses qu'on sait dessiner. Si oui, on les montre, dans
+  // l'ordre où il les dit. Si non, on ne fabrique rien : le visage reprend.
+  {
+    const finHook = (plan.hook && plan.hook.end) || 0
+    const occupe = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
+      .sort((a, b) => a[0] - b[0])
+    const creux = []
+    let c0 = 0
+    for (const [a, b] of occupe) { if (a - c0 >= 1.8) creux.push([c0, a]); c0 = Math.max(c0, b) }
+    if (D - c0 >= 1.8) creux.push([c0, D])
+    let n = 0
+    for (const [a, b] of creux) {
+      if (n >= 4) break
+      if (b <= finHook + 0.2) continue                 // l'accroche appartient au visage
+      // on découpe le creux à la phrase : une scène par idée, jamais à cheval
+      const cs = (plan.captions || []).filter((w) => w.start >= a - 0.1 && w.end <= b + 0.1)
+      if (!cs.length) continue
+      let d0 = Math.max(a, cs[0].start - LEAD)
+      for (let k = 0; k < cs.length && n < 4; k++) {
+        const finPhrase = /[.!?]$/.test(String(cs[k].text || '')) || k === cs.length - 1
+        if (!finPhrase) continue
+        const d1 = Math.min(b, cs[k].end + 0.1)
+        if (d1 - d0 >= 1.6) {
+          const sc = sceneDuMot(d0, d1)
+          if (sc && add(sc, d0, d1)) {
+            n++
+            console.log(`▶ scène du mot (${r2(d0)}→${r2(d1)}s) : ${sc.sujets.map((x) => x.mot).join(' · ')}`)
+          }
+        }
+        d0 = Math.min(b, cs[k].end + 0.02)
+      }
+    }
+    if (n) console.log(`▶ ${n} scène(s) dessinée(s) à partir des mots prononcés (hors banque)`)
+  }
+
   const avCovered = (plan.avatarSegments || []).reduce((n, w) => n + (w.end - w.start), 0)
   if (avCovered < D * 0.18) {
     const busy = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
@@ -2643,7 +2743,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const prev = merged[merged.length - 1]
     const same = prev && (
       (sl.screen && prev.screen === sl.screen) ||
-      (!sl.screen && !prev.screen && sl.anim && prev.anim === sl.anim && sl.ui === prev.ui)
+      // ⚠ deux scènes à SUJET OUVERT portent le même nom d'animation mais ne
+      // montrent pas la même chose : les fusionner faisait disparaître les
+      // icônes de la seconde (mesuré sur le banc « salle de sport » — « séries,
+      // finition, machines » avalées par « programme, séances »).
+      (!sl.screen && !prev.screen && sl.anim && prev.anim === sl.anim && sl.ui === prev.ui
+        && !(sl.anim === 'sujet' || prev.anim === 'sujet'))
     )
     if (same && (sl.start || 0) - (prev.end || 0) < 2.2) { prev.end = Math.max(prev.end, sl.end); continue }
     merged.push(sl)

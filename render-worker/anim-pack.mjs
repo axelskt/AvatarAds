@@ -9,6 +9,9 @@
 // zone visuelle, au-dessus de la bande du sous-titre.
 
 import { SAFE, SAFE_CENTERED_W, WORD_SHAPES, SANS } from './visual-styles.mjs'
+// LE SUJET OUVERT — l'animation dont le sujet vient du mot prononcé, pour les
+// domaines que la banque fermée ne couvre pas (cf. sujet-pack.mjs).
+import { sujetHtml, sujetJs } from './sujet-pack.mjs'
 
 // Emojis 3D utilisés par les scènes ci-dessous — exporté pour que le worker n'embarque
 // dans le projet de rendu que les fichiers réellement nécessaires.
@@ -119,6 +122,14 @@ export function animHtml(name, s, W, H, vs) {
   const grad = (deg = 150) => `linear-gradient(${deg}deg,rgba(255,255,255,.22),rgba(0,0,0,.30)),${P.acc}`
 
   switch (name) {
+    // ── LE SUJET VIENT DE CE QUI EST DIT ──────────────────────────────────
+    // Le seul cas où le CONTENU de l'animation n'est pas écrit d'avance : les
+    // icônes sont choisies d'après les mots prononcés. C'est ce qui rend le
+    // Montage IA utilisable par un coach sportif ou un restaurateur sans
+    // qu'on ait écrit une animation pour chacun (cf. sujet-pack.mjs).
+    case 'sujet':
+      return box(sujetHtml(s, f, P, id))
+
     case 'split': {
       // Un vrai écran vertical qui se coupe en deux, avec deux contenus distincts :
       // deux rectangles qui glissent ne montrent pas un split screen, ils le suggèrent.
@@ -3038,6 +3049,9 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, ${t0});
       tl.to('#${id}an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, ${r2(end - 0.2)});`
   switch (name) {
+    case 'sujet':
+      return inOut + sujetJs(s, id, t0, r2)
+
     case 'split':
       return inOut + `
       tl.fromTo('#${id}ph', { scale: 0.88, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.8)' }, ${t0});
