@@ -1027,7 +1027,7 @@ SFX : whoosh sur chaque entree/sortie de b-roll et zoom marquant, click/pop sur 
 SCENES AVATAR (lipsync segmente, economie MAXIMALE) : dans avatarSegments, liste les fenetres ou l'on VOIT la personne parler face camera. Le lipsync ne sera genere QUE sur ces fenetres (chaque seconde d'avatar coute cher), donc mets une scene avatar UNIQUEMENT quand voir le visage a un vrai impact. Chaque scene porte un format :
 - format "portrait" (9:16) = la personne PLEIN ECRAN, en dehors des slides. C'est le format du hook et des temps forts.
 - format "paysage" (16:9) = la personne dans la moitie basse PENDANT une slide (bande cinema sous la slide). Utilise-le quand le passage est incarne (la personne explique, temoigne) ; sinon laisse le gameplay sous la slide (aucune scene = hyperframes seul).
-ALTERNE selon l'AUDIO : le HOOK est presque toujours une scene portrait (le visage cree la confiance des la 1re seconde) — et PARFOIS une seule scene (le hook) suffit pour toute la video. Le CTA n'a PAS besoin d'etre une scene avatar : une carte motion-design (slide card) peut porter l'action. 1 a 6 scenes au total selon la dynamique. Une scene portrait ne chevauche JAMAIS une slide ; une scene paysage est TOUJOURS pendant une slide. Bornes calees sur des fins de phrase. Si le montage est 100% gameplay/voix off (aucun visage), avatarSegments = [].
+ALTERNE selon l'AUDIO : REGLE ABSOLUE — des que tu mets au moins une scene avatar, la PREMIERE commence a 0 : l'avatar principal est TOUJOURS dans le hook (le visage cree la confiance des la 1re seconde, en portrait). PARFOIS une seule scene (le hook) suffit pour toute la video. Le CTA n'a PAS besoin d'etre une scene avatar : une carte motion-design (slide card) peut porter l'action. 1 a 6 scenes au total selon la dynamique. Une scene portrait ne chevauche JAMAIS une slide ; une scene paysage est TOUJOURS pendant une slide. Bornes calees sur des fins de phrase. Si le montage est 100% gameplay/voix off (aucun visage), avatarSegments = [].
 
 HOOK TEXTE : si les 3 premieres secondes contiennent une accroche forte, un texte MAJUSCULES de 5 mots max qui la resume (start 0, end <= 3). Sinon null.
 
@@ -1698,6 +1698,21 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     const last = avatarSegments[avatarSegments.length - 1]
     if (last && a.start <= last.end + 0.1 && last.format === a.format) last.end = Math.max(last.end, a.end)
     else avatarSegments.push({ ...a })
+  }
+  // ── L'AVATAR PRINCIPAL EST TOUJOURS DANS LE HOOK ──────────────────────────
+  // Règle non négociable d'Axel, vue cassée sur Cartoon 18 (02/08) : le modèle
+  // avait ouvert sa première fenêtre à 4,24 s, et la vidéo s'ouvrait sur une
+  // carte vide au lieu du visage. Le VERROU est ici et pas seulement dans le
+  // prompt : c'est à partir de ces fenêtres que l'app génère les clips lipsync
+  // (av0, av1…, mappés par indice) — une fois les clips générés, plus personne
+  // en aval ne peut avancer la fenêtre sans faire mentir les lèvres. Dès qu'il
+  // y a au moins une scène avatar, la première couvre donc le début : on étire
+  // une première fenêtre portrait proche, sinon on en insère une dédiée au hook.
+  if (avatarSegments.length && avatarSegments[0].start > 0) {
+    const first = avatarSegments[0]
+    if (first.format === 'portrait' && first.start <= 8) first.start = 0
+    else if (first.start > 0.6) avatarSegments.unshift({ start: 0, end: r2(Math.min(first.start, 4)), format: 'portrait' })
+    else first.start = 0
   }
 
   // Un bruitage SOULIGNE quelque chose. S'il tombe sur un instant ou rien ne bouge

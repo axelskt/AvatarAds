@@ -260,6 +260,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ici, il recevait le plan BRUT — 19 panneaux au lieu de 14, captures non
   // pilotées, animations non ancrées. La peau était claire, la matière non.
   if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple') return
+  // ── CHAQUE FENÊTRE D'ORIGINE GARDE SON CLIP ────────────────────────────────
+  // L'app génère les clips lipsync av0, av1… AVANT cette dérivation, un par
+  // fenêtre du plan d'orchestrate, et le worker les remappe ensuite PAR INDICE
+  // (`w.clip ?? i`). Or cette dérivation supprime, scinde et INSÈRE des
+  // fenêtres (adresses directes, trous comblés) : au premier décalage, chaque
+  // fenêtre jouait le clip de sa voisine — un visage dont les lèvres disent
+  // les mots d'un autre passage. On fige donc ici l'indice d'origine sur
+  // chaque fenêtre du plan ; toute fenêtre créée par la dérivation portera
+  // `clip: -1` (« aucun clip ne m'appartient » → photo d'avatar en repli).
+  ;(plan.avatarSegments || []).forEach((w, i) => { if (w.clip == null) w.clip = i })
+  // le worker sait s'il a des clips lipsync sous la main ; le moteur (appel de
+  // repli depuis dynamic-engine) le déduit de ses propres options.
+  const hasClips = opts.hasClips ?? Object.keys(opts.avatarClips || {}).length > 0
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(c.end) }))
@@ -338,6 +351,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const proche = REDIRECTIONS[nom]
       if (proche && !REFUSEES.has(proche)) slide = { ...slide, anim: proche }
       else return null
+    }
+    // ── UNE CAPTURE SANS FICHIER N'EST PAS UNE SCÈNE ────────────────────────
+    // `screen` et `result` sont dans la banque (le chef a le droit de les
+    // demander), mais ce ne sont pas des animations : ce sont des IMAGES. Le
+    // chef les propose aussi en beat, sans capture — mesuré sur Cartoon 18 :
+    // `screen@Regarde` a rendu 1,65 s de carte cadrée sur une image cassée
+    // (src vide), et le `result` du chef 3,15 s de téléphone noir. Un panneau
+    // qui encadre du vide est pire que pas de panneau : rien d'autre ne peut
+    // prendre la fenêtre.
+    if (String(slide.anim) === 'screen' && !slide.screen) {
+      console.log('▶ screen écarté : aucune capture à montrer')
+      return null
+    }
+    if (String(slide.anim) === 'result' && !slide.screen && !slide.userFile) {
+      console.log('▶ result écarté : ni capture ni résultat utilisateur à montrer')
+      return null
     }
     ;[a, b] = slide.user ? [a, b] : fit(a, b)   // la fenêtre d'un choix explicite ne bouge pas
     // SON MEDIA A DROIT AU FLASH. Une enumeration — « homme, femme, coach
@@ -462,7 +491,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const u of plan.userBans || []) {
       const a = r2(u.start || 0), b = r2(u.end ?? a + 1)
       if (b - a < 0.6 || overlaps(a, b)) continue
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true })
+      // clip: -1 — fenêtre née ici, aucun clip lipsync ne lui appartient (le
+      // worker mappe les clips par indice : sans cette marque, elle volait
+      // celui de la fenêtre suivante et les lèvres disaient d'autres mots)
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true, clip: -1 })
       claim(a, b); nb++
     }
     if (nu || nb) console.log(`▶ choix utilisateur : ${nu} remplacement(s) posé(s) · ${nb} suppression(s) rendue(s) au visage`)
@@ -487,11 +519,40 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // bas ». Elle est donc réservée en premier, avant tout le reste.
   let hookWin = null
   {
-    const s0 = (plan.avatarSegments || [])[0]
+    const segs = (plan.avatarSegments || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))
+    const s0 = segs[0]
     if (s0 && (s0.start || 0) < 0.6) {
       const a = r2(s0.start || 0)
       const b = r2(Math.min(s0.end ?? a + 4, a + 6.5, D))
       if (b - a >= 1.2) { hookWin = { start: a, end: b }; claim(a, b) }
+    } else if (!noFace && !hasClips) {
+      // ── LE FILET DU CHEMIN PHOTO (MCP) ──────────────────────────────────────
+      // RÈGLE NON NÉGOCIABLE d'Axel : « l'avatar principal doit TOUJOURS être
+      // dans le hook ». Mesuré sur Cartoon 18 (02/08) : le chef d'orchestre a
+      // donné UNE fenêtre géante 4,24 → 48,42 s — elle commence après 0,6 s,
+      // donc la réservation ci-dessus ne s'armait pas, et la vidéo s'ouvrait
+      // sur une carte `zoompunch` vide au lieu de son visage. Ici il n'y a PAS
+      // de clip lipsync (photo d'avatar en zoom lent, ou découpe de sa propre
+      // vidéo) : avancer la fenêtre à 0 ne désynchronise rien. On étire donc
+      // la première fenêtre jusqu'au début — et s'il n'y en a aucune, on en
+      // crée une (`clip: -1` : aucun clip ne lui appartient, photo en repli).
+      const retard = s0 ? r2(s0.start || 0) : null
+      if (s0) s0.start = 0
+      else (plan.avatarSegments = plan.avatarSegments || []).push({ start: 0, end: r2(Math.min(4, D)), clip: -1 })
+      const w0 = s0 || plan.avatarSegments[plan.avatarSegments.length - 1]
+      const b = r2(Math.min(w0.end ?? 4, 6.5, D))
+      if (b >= 1.2) {
+        hookWin = { start: 0, end: b }
+        claim(0, b)
+        console.log(`▶ hook : l'avatar principal ramené à l'ouverture (0→${b}s — le chef le faisait entrer ${retard === null ? 'jamais' : 'à ' + retard + 's'})`)
+      }
+    } else if (s0 && hasClips) {
+      // Avec des clips lipsync déjà générés, on ne peut PAS avancer la fenêtre :
+      // le clip couvre d'autres mots, les lèvres mentiraient. La vraie garantie
+      // est en amont (orchestrate force une fenêtre qui couvre le début, AVANT
+      // la génération des clips) — si on passe ici, c'est un plan d'avant le
+      // correctif : on le dit au lieu de le taire.
+      console.warn(`⚠ hook sans visage : première fenêtre avatar à ${r2(s0.start || 0)}s et clips lipsync déjà générés — plan d'orchestrate antérieur au correctif`)
     }
   }
 
@@ -627,7 +688,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const [a, b] of adresses.sort((x, y) => x[0] - y[0])) {
       if (noFace) break                       // pas de visage à rendre l'écran à
       if (overlaps(a, b)) continue
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true })
+      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true, clip: -1 })
       claim(a, b); n2++
     }
     if (n2) console.log(`▶ ${n2} adresse(s) directe(s) : le visage reprend l'écran`)
@@ -1510,7 +1572,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       twopaths: /concurrence|concurrent|personne|seul|autres|tout le monde/i,
     }
     const phraseAutour = (i) => words.slice(Math.max(0, i - 5), i + 8).map((w) => w.text).join(' ')
-    const beats = tousLesBeats.filter((b) => ANIMS.includes(String(b.anim || '')))
+    // `screen` et `result` sont dans la banque mais un BEAT n'apporte aucune
+    // capture : les tenter ici ne produit que des cadres vides (garde d'add(),
+    // mesuré sur Cartoon 18). On ne gaspille pas leur mot — il reste au visage.
+    const CAPTURES = new Set(['screen', 'result'])
+    const beats = tousLesBeats.filter((b) => ANIMS.includes(String(b.anim || '')) && !CAPTURES.has(String(b.anim || '')))
     for (let i = 0; i < beats.length; i++) {
       const b = beats[i]
       const mot = String(b.word || '').trim()
@@ -1683,7 +1749,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (g[1] - g[0] < 2.0) continue
       if (placed.some((t) => Math.abs(t - g[0]) < 6)) continue
       const len = Math.min(4.5, room, g[1] - g[0])
-      avWins.push({ start: r2(g[0]), end: r2(g[0] + len) })
+      // clip: -1 : respiration ajoutée ici, pas de clip lipsync à elle
+      avWins.push({ start: r2(g[0]), end: r2(g[0] + len), clip: -1 })
       placed.push(g[0]); room -= len
     }
     // FUSION, pas remplacement : la fenêtre du hook venue du plan reste
@@ -1727,6 +1794,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
         const fin = r2(b - 0.05)
         let pose = null
         for (const bt of (plan.beats || [])) {
+          // même règle qu'en §2c : un beat `screen`/`result` n'a pas de capture,
+          // il rendrait un cadre vide — add() le refuserait de toute façon.
+          if (['screen', 'result'].includes(String(bt.anim || ''))) continue
           const cible = norm(String(bt.word || '').trim())
           if (!cible) continue
           let hit = null
@@ -1759,7 +1829,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
         else if (apres) { apres.start = r2(a); claim(a, fin); etires++ }
         continue
       }
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true })
+      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true, clip: -1 })
       claim(a, d); n++
     }
     if (n) {
@@ -1873,6 +1944,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
         console.log(`▶ « ${voulu} » demandé par le chef d'orchestre : absent de la banque`)
         dropUnrenderable++; continue
       }
+    }
+    // même garde qu'en add() : une capture sans fichier repassait par ICI quand
+    // placeServerAnims l'avait refusée — et le cadre vide revenait par la
+    // fenêtre après être sorti par la porte.
+    if ((sl.anim === 'screen' && !sl.screen) || (sl.anim === 'result' && !sl.screen && !sl.userFile)) {
+      console.log(`▶ ${sl.anim} écarté (§4) : aucune capture à montrer`)
+      dropUnrenderable++; continue
     }
     // ⚠️ ICI se trouvait la ligne qui jetait TOUTE animation serveur sans texte.
     // Comme une scène d'animation n'en a jamais — l'animation EST le visuel —
@@ -1999,9 +2077,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
           // n'existe pas et retombait sur la photo fixe — le visage cessait de
           // parler pile au milieu du hook.
           segs.splice(0, 1,
-            { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) }, clip: 0, clipFrom: 0 },
+            // `first.clip ?? 0` et plus `0` en dur : la fenêtre d'origine porte
+            // désormais son indice de clip — le split doit rejouer LE SIEN,
+            // pas systématiquement av0 (faux dès que le hook n'est pas la
+            // première fenêtre du plan d'orchestrate).
+            { ...first, end: cut, duo: { brand, ...(src ? { src } : {}) }, clip: first.clip ?? 0, clipFrom: 0 },
             ...((first.end ?? 0) - cut > 0.6
-              ? [{ ...first, start: cut, clip: 0, clipFrom: r2(cut - (first.start || 0)) }] : []))
+              ? [{ ...first, start: cut, clip: first.clip ?? 0, clipFrom: r2(cut - (first.start || 0)) }] : []))
           console.log(`▶ hook en split : ${brand} + visage jusqu'à ${cut}s, puis plein cadre`)
         }
       }
@@ -2064,7 +2146,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const src = (opts.assetFiles || {})[b.assetId]
       if (!src) continue   // fichier absent : rien à repêcher, le worker l'a déjà signalé
       const a = r2(b.start || 0), e = r2(Math.max(b.end ?? a + 3, a + 1.2))
-      const hote = (plan.slides || []).find((sl) => sl.start <= a + 0.05 && sl.end >= a + 0.3)
+      // …mais jamais par-dessus une couche déjà posée : un panneau ne porte
+      // qu'UN overlayMedia — deux médias perdus au même instant, et le second
+      // effaçait le premier en silence. L'hôte suivant (ou la fenêtre avatar)
+      // prend le relais.
+      const hote = (plan.slides || []).find((sl) => !sl.overlayMedia && sl.start <= a + 0.05 && sl.end >= a + 0.3)
       if (hote) {
         hote.overlayMedia = { src, assetId: b.assetId, start: a, end: r2(Math.min(e, hote.end)) }
         console.log(`▶ média « ${b.assetId} » repêché : posé en couche sur ${hote.anim || hote.type} (${a}→${e}s)`)
