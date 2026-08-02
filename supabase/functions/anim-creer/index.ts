@@ -106,9 +106,12 @@ CE QUI FAIT UNE BONNE ANIMATION ICI — et c'est là que presque tout se joue
    qui se rejoignent, un compteur qui grimpe, une onde qui ondule. Il faut un
    MOUVEMENT INTERNE, entre 1 s et 2 s, qui raconte l'action du verbe.
 
-3. LE CADRE EST REMPLI.
-   930 × 600 : le sujet occupe au moins la moitié de cette surface, centré. Une
-   petite forme au milieu d'un grand vide fait pauvre sur un téléphone.
+3. LE CADRE EST REMPLI, ET LA SCÈNE EST CENTRÉE SUR (465, 300).
+   C'est le centre exact de la zone. Avant d'écrire, calcule la largeur et la
+   hauteur totales de ta composition, puis place-la pour que son milieu tombe
+   sur ce point : une scène collée en haut à gauche laisse les deux tiers de
+   l'écran vides, et sur un téléphone ça ne se rattrape pas. Vise 700 à 850 px
+   de large et 350 à 500 px de haut pour l'ensemble.
 
 4. TROIS TEMPS, PAS UN.
    0 à 0,5 s : le décor arrive. 0,5 à 1,8 s : l'action se produit — c'est le
@@ -122,6 +125,49 @@ CE QUI FAIT UNE BONNE ANIMATION ICI — et c'est là que presque tout se joue
 Ordre de grandeur : les animations du produit font 4 à 7 ko de HTML et 8 à 20
 tweens. Si tu écris moins de 2 ko ou moins de 6 tweens, c'est que tu as fait un
 schéma, pas une animation — recommence en dessinant vraiment l'objet.
+
+DEUX ANIMATIONS DU PRODUIT, EN ENTIER — c'est le niveau à tenir
+Axel : « faut qu'il ait accès aux 164 animations pour qu'il voie le style ».
+Lis-les vraiment : la densité des formes, les ombres, les rayons, les tailles,
+la façon dont le mouvement raconte l'action. Écris au même niveau. Ne les copie
+pas — c'est le SOIN qu'on te demande de reprendre, pas le dessin.
+
+--- EXEMPLE : timeline ---
+HTML :
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:20px;top:79px;width:168px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:191px;top:79px;width:143px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:337px;top:79px;width:155px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:495px;top:79px;width:131px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span>
+        <span class="an-p" style="left:20px;top:223px;width:609px;height:111px;border-radius:20px;background:rgba(17,17,17,.10);overflow:hidden"><span style="position:absolute;left:12px;top:46px;width:5px;height:20px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:31px;top:12px;width:5px;height:87px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:50px;top:44px;width:5px;height:24px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:69px;top:13px;width:5px;height:86px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:88px;top:42px;width:5px;height:28px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:107px;top:13px;width:5px;height:86px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:126px;top:40px;width:5px;height:32px;border-radius:99px;background:#111111;opacity:.6"></span><span style="position:absolute;left:145px;top:13px;width:5px;height:85px;border-radius:99px;background:#111111;opacity:.6"></span><spa
+
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, __T0__ + 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.04,ease:'power2.out'},__T0__ + 0.05);
+      tl.fromTo('#__ID__tp',{x:0},{x:()=>document.getElementById('__ID__an').getBoundingClientRect().width*0.9,duration:1.8,ease:'none'},0.35);
+
+--- EXEMPLE : connect ---
+HTML :
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
+        <div class="an-p" id="__ID__c1" style="left:50px;top:165px;width:227px;height:227px;border-radius:54px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
+          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+        <div class="an-p" id="__ID__c2" style="left:372px;top:165px;width:227px;height:227px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45))">
+          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>
+        <span id="__ID__cw" style="position:absolute;left:325px;top:279px;width:95px;height:12px;margin-left:-48px;margin-top:-6px;border-radius:99px;background:#111111;transform-origin:50% 50%"></span>
+        <span id="__ID__ck" style="position:absolute;left:325px;top:279px;width:73px;height:73px;margin-left:-36px;margin-top:-36px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0;box-shadow:0 12px 34px rgba(34,197,94,.5)">
+          <svg width="58%" height="58%" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg></span></div>
+
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, __T0__ + 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__c1', { xPercent: -70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, __T0__ + 0.05);
+      tl.fromTo('#__ID__c2', { xPercent: 70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, __T0__ + 0.05);
+      tl.fromTo('#__ID__cw', { scaleX: 0, autoAlpha: 0 }, { scaleX: 1, autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, 0.43);
+      tl.to(['#__ID__c1', '#__ID__c2'], { x: 0, duration: 0.14, ease: 'power2.in' }, 0.61);
+      tl.fromTo('#__ID__ck', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration:
 
 Réponds UNIQUEMENT par l'objet JSON, sans texte autour, sans balise de code.`
 

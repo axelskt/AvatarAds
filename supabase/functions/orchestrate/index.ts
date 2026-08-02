@@ -2394,6 +2394,30 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
 // propres de la marque sont connus (fiche + site + brief) : on retablit ceux qui sont
 // clairement le meme mot, sans jamais reecrire ce que la personne a reellement dit.
 function fixBrandWords(words: Word[], terms: string[]): Word[] {
+  // ── UNE MARQUE EN UN SEUL MOT, MÊME QUAND IL LA DIT EN DEUX ────────────────
+  // Scribe entend « Avatar » puis « Ads » : deux mots, deux sous-titres, et le
+  // nom de la marque coupé en deux à l'écran pendant toute la vidéo. Axel :
+  // « à chaque fois y'a écrit "Avatar Ads", faut que ça soit "AvatarAds" ».
+  // On recolle donc les paires qui composent un terme de marque connu, en
+  // gardant le début du premier mot et la fin du second : le sous-titre couvre
+  // exactement la même durée qu'avant, il n'y a pas de décalage.
+  {
+    const colles = [...new Set(terms.map((t) => t.trim()).filter((t) => /^[A-Z][a-z]+[A-Z]/.test(t)))]
+    for (const t of colles) {
+      const parts = t.split(/(?=[A-Z])/).filter(Boolean)
+      if (parts.length !== 2) continue
+      const [a, b] = parts.map((x) => norm(x))
+      for (let i = words.length - 2; i >= 0; i--) {
+        if (norm(words[i].text) !== a) continue
+        const suite = String(words[i + 1].text || '')
+        if (norm(suite.replace(/[.,!?;:]+$/, '')) !== b) continue
+        const ponct = (suite.match(/[.,!?;:]+$/) || [''])[0]
+        words = [...words.slice(0, i),
+          { ...words[i], text: t + ponct, end: words[i + 1].end },
+          ...words.slice(i + 2)]
+      }
+    }
+  }
   const known = [...new Set(terms.map((t) => t.trim()).filter(Boolean))]
     .map((t) => ({ t, k: norm(t) }))
     .filter((x) => x.k.length >= 5)
