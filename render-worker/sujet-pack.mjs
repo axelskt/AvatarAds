@@ -152,7 +152,11 @@ export function sujetHtml(s, f, P, id) {
   if (!sujets.length) return ''
   const n = sujets.length
   const flow = n > 1 && String(s.motion) === 'flow'
-  const carte = (k, d, x, y, ic) => `<div class="an-p" id="${id}s${k}" style="left:${x}px;top:${y}px;width:${d}px;height:${d}px;`
+  // `position:absolute` en dur EN PLUS de la classe : la classe vient d'animCss(),
+  // qui n'est injecté que par la composition finale. Sans ça, tout aperçu hors
+  // rendu (banc, maquette) empile les cartes en colonne — et un jour où animCss
+  // ne serait pas chargé, la vidéo aussi.
+  const carte = (k, d, x, y, ic) => `<div class="an-p" id="${id}s${k}" style="position:absolute;left:${x}px;top:${y}px;width:${d}px;height:${d}px;`
     + `border-radius:${Math.round(d * 0.26)}px;background:${P.soft};border:2px solid ${P.line};`
     + `display:flex;align-items:center;justify-content:center;box-shadow:0 20px 44px -18px rgba(0,0,0,.28)">`
     + sujetSvg(ic, Math.round(d * 0.5), P.acc, 1.7) + '</div>'
@@ -171,7 +175,7 @@ export function sujetHtml(s, f, P, id) {
     for (let k = 0; k < n - 1; k++) {
       const ax = x0 + (k + 1) * d + k * gap
       const ay = y + Math.round(d / 2) - Math.round(gap * 0.4)
-      h += `<svg class="an-p" id="${id}f${k}" style="left:${ax}px;top:${ay}px;width:${gap}px;height:${Math.round(gap * 0.8)}px" `
+      h += `<svg class="an-p" id="${id}f${k}" style="position:absolute;left:${ax}px;top:${ay}px;width:${gap}px;height:${Math.round(gap * 0.8)}px" `
         + `viewBox="0 0 24 20" fill="none" stroke="${P.mute}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">`
         + '<path d="M2 10h18M14.5 4.8 20.5 10l-6 5.2"/></svg>'
     }
