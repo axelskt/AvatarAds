@@ -209,7 +209,14 @@ const PICKS = {
 // SYNCHRO : un visuel doit arriver juste AVANT le mot qu'il illustre — 0,15 s,
 // le temps que l'œil l'attrape. Au-delà il tombe sur le mot de liaison d'avant
 // (Axel : les scènes démarraient sur « dans », « le », « et », « qu'à »).
-export const LEAD = 0.15
+// ── L'ÉCRAN ARRIVE AVANT LE MOT ─────────────────────────────────────────────
+// 0,15 s, c'était le temps qu'il faut à l'écran pour APPARAÎTRE : le spectateur
+// le découvrait donc pendant le mot, jamais avant. Sur une visite guidée
+// débitée vite — « Clique sur Générer la clé et tu la copies », neuf mots en
+// 1,6 s — ça se lit comme un retard permanent. Axel : « faut qu'il prévoie
+// avant que je le dise ». 0,32 s laisse le panneau se poser et l'oeil s'y
+// installer avant que le mot tombe, sans mordre sur la phrase d'avant.
+export const LEAD = 0.32
 
 // ── LE VOCABULAIRE PARTAGÉ ──────────────────────────────────────────────────
 // Ces tables décrivent CE QUE LA VOIX DÉSIGNE, pas comment on le dessine : elles
@@ -1047,7 +1054,39 @@ export function deriveDynamicSlides(plan, opts = {}) {
           ecran = ACCUEIL
           spot = zoneNamed(ACCUEIL, spot.name)
         }
-        steps.push({ screen: ecran, t: r2(Math.max(0, hit.start - LEAD)), end: hit.end,
+        // ── ON SE CALE SUR LE PREMIER MOT DU LIBELLÉ, PAS SUR LE DERNIER ────
+        // Le chef d'orchestre donne UN mot déclencheur par étape, et il choisit
+        // souvent le nom (« clé ») alors que la phrase commence par le verbe :
+        // « Clique sur GÉNÉRER la clé ». Mesuré sur le Cartoon 18 : il dit
+        // « Générer » à 19,74 s, le cadre arrivait à 20,48 s — trois quarts de
+        // seconde de retard, sur une phrase débitée en une seconde et demie.
+        // Axel : « faut qu'il prévoie avant que je le dise […] parce que je le
+        // dis rapidement, du coup ce n'est pas synchronisé ».
+        // Le libellé du bouton, lui, est connu (« Générer ma clé ») : on cherche
+        // donc, juste avant le mot du chef, le premier mot de ce libellé
+        // réellement prononcé, et on part de LUI.
+        let anc = hit.start
+        const lib = String((spot && spot.label) || '').toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        // ⚠ « Générer ma clé » ne laisse QU'UN mot utile après avoir écarté les
+        // outils (« ma ») et les mots trop courts — exiger deux mots revenait à
+        // ne jamais recaler l'étape la plus mal calée du tuto. Un seul suffit :
+        // c'est lui qui ouvre la phrase.
+        const motsLib = lib.split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        if (motsLib.length >= 1) {
+          const norm = (x) => String(x).toLowerCase().normalize('NFD')
+            .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+          // fenêtre courte AVANT le mot du chef : on ne remonte pas à une autre
+          // phrase, juste au début de celle-ci
+          for (const w of words) {
+            if (w.start >= hit.start || w.start < hit.start - 2.2) continue
+            if (motsLib.includes(norm(w.text))) { anc = w.start; break }
+          }
+          if (anc < hit.start - 0.05) {
+            console.log(`▶ visite guidée : « ${spot.label} » calé sur le début de la phrase (${r2(anc)}s au lieu de ${r2(hit.start)}s)`)
+          }
+        }
+        steps.push({ screen: ecran, t: r2(Math.max(0, anc - LEAD)), end: hit.end,
           spot, ...(t.text ? { type: String(t.text) } : {}) })
       }
       // ── CE QU'IL NOMME PENDANT LA CAPTURE OBTIENT SON CADRE ─────────────────
@@ -1080,7 +1119,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
               z = spotForWords(st.screen, duo, { sansMenu: true, min: 1.6 })
             }
             if (!z || (st.spot && z.label === st.spot.label)) continue
-            if (steps.some((o) => Math.abs(o.t - (w.start - LEAD)) < 0.8)) continue
+            // 0,8 s d'écart minimum, c'était refuser de suivre quelqu'un qui
+            // parle vite : « Générer la clé ET TU LA COPIES » enchaîne deux
+            // gestes en 0,66 s, et le second était jeté — l'écran restait figé
+            // sur le premier pendant qu'Axel décrivait le suivant. Ce ne sont
+            // pas deux panneaux mais deux positions de caméra sur le MÊME
+            // écran : elles peuvent s'enchaîner vite. Axel : « genre au mot à
+            // mot parce que je le dis rapidement ».
+            if (steps.some((o) => Math.abs(o.t - (w.start - LEAD)) < 0.45)) continue
             steps.push({ screen: st.screen, t: r2(Math.max(0, w.start - LEAD)), end: w.end, spot: z })
             ajouts++
             break                                  // un cadre par intervalle suffit
