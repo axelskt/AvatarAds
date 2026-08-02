@@ -680,6 +680,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const files = opts.assetFiles || {}
     let n = 0, med = 0
+    // ── UN MÉDIA FOURNI EST TOUJOURS PLACÉ. LE CHEF CHOISIT L'INSTANT ─────────
+    // Règle d'Axel (02/08) : « les médias que l'user envoie doivent être placés
+    // à 100 %, le chef d'orchestre choisit juste le moment le plus propice ».
+    // Trois montages de suite l'ont prouvée nécessaire : avec exactement le
+    // même brief, le chef a repris la démo AvatarAds×Claude deux fois puis l'a
+    // oubliée la troisième — « sur la vidéo il n'y a plus le mp4 dans le hook ».
+    // Un fichier qu'on a pris la peine de fournir ne peut pas dépendre de
+    // l'humeur d'un modèle. S'il manque au plan, on lui fabrique un moment.
+    {
+      const auPlan = new Set((plan.broll || []).map((b) => b.assetId))
+      for (const id of Object.keys(files)) {
+        if (auPlan.has(id)) continue
+        // Son NOM dit ce qu'il montre : c'est aussi ce qui indique QUAND.
+        const mots = norm(id).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        let quand = null
+        if (/hook|intro|debut/.test(norm(id))) {
+          quand = [0.4, Math.min(4.2, D)]                 // le hook : dès l'ouverture
+        } else {
+          // le premier moment où la voix prononce un des mots de son nom
+          const w = words.find((x) => mots.includes(norm(x.text)))
+          if (w) quand = [r2(Math.max(0, w.start - LEAD)), r2(Math.min(D, w.start + 2.8))]
+        }
+        if (!quand || quand[1] - quand[0] < 1.2) continue
+        ;(plan.broll = plan.broll || []).push({ start: quand[0], end: quand[1], assetId: id, __force: true })
+        console.log(`▶ média « ${id} » absent du plan du chef → placé d'office (${quand[0]}→${quand[1]}s)`)
+      }
+    }
     // ── UNE ÉNUMÉRATION = UN PANNEAU, PAS TROIS ────────────────────────────────
     // « Homme, femme, coach sportif » : trois mots en 1,3 s. Une photo par mot
     // donnerait des panneaux de 0,3 s — plus courts que la transition elle-même
@@ -2409,6 +2436,38 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // l'écran entier, sinon on ne lit rien (même arbitrage qu'en §0a).
       const dimR = (opts.assetDims || {})[b.assetId]
       const ratioR = dimR && dimR.h ? dimR.w / dimR.h : 0
+      // ── LA PHOTO PREND L'ÉCRAN, L'ANIMATION CÈDE ──────────────────────────
+      // Poser le média en COUCHE sur une animation laisse celle-ci tourner
+      // derrière : Axel, en voyant sa photo par-dessus le `lineup` — « pourquoi
+      // cette animation est là aussi derrière la fille ??? ». Une photo de
+      // résultat est une preuve : elle se regarde seule. On essaie donc d'abord
+      // de lui donner tout l'écran, en délogeant l'animation qui l'occupait —
+      // une animation fabriquée ne vaut pas le fichier qu'Axel a fourni.
+      {
+        const vire = []
+        for (let i = out.length - 1; i >= 0; i--) {
+          const s = out[i]
+          if (!(a < s.end - 0.05 && e > s.start + 0.05)) continue
+          if (s.user || s.assetId || s.overlayMedia || String(s.anim) === 'media') continue
+          if (s.screen || String(s.anim) === 'ui') continue      // la visite guidée ne cède pas
+          vire.push({ s, i })
+        }
+        if (vire.length) {
+          for (const { s, i } of vire) {
+            out.splice(i, 1)
+            const k = taken.findIndex((w) => Math.abs(w[0] - s.start) < 0.01 && Math.abs(w[1] - s.end) < 0.01)
+            if (k >= 0) taken.splice(k, 1)
+          }
+          if (add({ anim: 'media', src, assetId: b.assetId, hero: !!b.hero, user: true }, a, e)) {
+            console.log(`▶ média « ${b.assetId} » en PLEIN CADRE (${a}→${e}s) — ${vire.map((v) => v.s.anim || v.s.type).join(', ')} lui cède la place`)
+            continue
+          }
+          // ça n'a pas pris : on rend leur place aux animations délogées
+          for (const { s } of vire) { out.push(s); claim(s.start, s.end) }
+          out.sort((x, y) => x.start - y.start)
+        }
+      }
+
       // ── ON PREND LE PANNEAU QUI RECOUVRE LE PLUS, PAS CELUI QUI COMMENCE ───
       // Chercher un panneau qui COMMENCE avant le média laissait tomber le cas
       // le plus courant : le média démarre une fraction de seconde avant le
