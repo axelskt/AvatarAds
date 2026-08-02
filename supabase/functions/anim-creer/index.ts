@@ -126,94 +126,140 @@ Ordre de grandeur : les animations du produit font 4 à 7 ko de HTML et 8 à 20
 tweens. Si tu écris moins de 2 ko ou moins de 6 tweens, c'est que tu as fait un
 schéma, pas une animation — recommence en dessinant vraiment l'objet.
 
-ONZE ANIMATIONS DU PRODUIT — c'est le niveau à tenir, et l'ÉCART entre elles
-Axel : « pourquoi que deux de mes animations, pourquoi pas toutes comme ça il
-voit ce qu'on attend vraiment ? ». Les voici, choisies pour être les plus
-différentes possible : une scène qui se construit, un geste qui se joue, une
-comparaison, une conversation, une copie, un alignement, une courbe, un envoi,
-une recherche, un anonymat, une voix. Lis-les VRAIMENT : la densité de formes,
-les ombres, les rayons, les tailles, et surtout la façon dont chacune trouve un
-mouvement propre à ce qu'elle raconte. Ne les copie pas — reprends ce soin, et
-trouve le mouvement juste pour CE qu'on te demande.
+VINGT ANIMATIONS DU PRODUIT — la direction artistique, en entier
+Axel : « donne-lui plus de contexte, genre une vingtaine, pour qu'il voie
+exactement le design et la DA qu'on attend ». Les voici : les vingt plus riches
+de la banque, celles qui ont le plus de matière à l'écran.
 
---- timeline ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:20px;top:79px;width:168px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
-          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:191px;top:79px;width:143px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
-          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:337px;top:79px;width:155px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
-          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:495px;top:79px;width:131px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
-          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span>
-        <span class="an-p" style="left:20px;top:223px;width:609px;height:111px;border-radius:20px;background:rgba(17,17,17,.10);overflow:hidden"><span style="position:absolute;left:12px;top:46px;width:5px;height:20px;border-radius:99px;background:#111111;opacity:.6"></span><span styl
+Regarde-les comme un directeur artistique, pas comme un développeur. Ce qu'il
+faut en retirer : la DENSITÉ (une scène, c'est dix à trente éléments, pas
+trois), les ombres portées longues et douces, les rayons généreux, les
+épaisseurs de trait franches, les gris très clairs (#EFEFF4, #E4E4EC) qui
+laissent l'orange ressortir seul, et surtout la manière dont chacune invente un
+mouvement PROPRE à ce qu'elle raconte au lieu de faire apparaître des formes.
+
+Ne les copie pas. Reprends ce niveau de soin, et trouve le mouvement juste pour
+ce qu'on te demande.
+
+--- comment ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p an-kk" id="__ID__kk0" style="left:8px;top:300px;width:56px;height:74px;border-radius:12px;background:rgba(17,17,17,.10);border:1px solid rgba(17,17,17,.20);display:flex;align-items:center;justify-content:center;font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:600;font-size:26px;color:#111111;overflow:hidden">A<span id="__ID__kh0" style="position:absolute;inset:0;background:#FF5A36;opacity:0"></span></span><span class="an-p an-kk" id="__ID__kk1" style="left:72px;top:300px;width:56px;height:74px;border-radius:12px;background:rgba(17,17,17,.10);border:1px solid rgba(17,17,17,.20);display:flex;align-items:center;justify-content:center;font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:600;font-size:26px;color:#111111;overflow:hidden">Z<span id="__ID__kh1" style="position:absolute;inset:0;background:#FF5A36;opacity:0"></span></span><span class="an-p an-kk" id="__ID__kk2" style="left:136px;top:300px;width:56px;height:74px;border-radius:12px;background:rgba(17,17,17,.10);border:1px solid rgba(17,17,17,.20);display:flex;align-items:center;justify-content:center;font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:600;font-size:26px;color:#111111;overf
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.04,ease:'power2.out'},0.05);
-      tl.fromTo('#__ID__tp',{x:0},{x:()=>document.getElementById('__ID__an').getBoundingClientRect().width*0.9,duration:1.8,ease:'none'},0.35);
+      tl.fromTo('#__ID__an .an-kk',{y:()=>document.getElementById('__ID__an').getBoundingClientRect().height*0.06,autoAlpha:0},{y:0,autoAlpha:1,duration:0.3,stagger:0.006,ease:'power2.out'},0.05);
+      tl.fromTo('#__ID__cf',{y:-14,autoAlpha:0},{y:0,autoAlpha:1,durati
 
---- connect ---
+--- qr ---
 <div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
-        <div class="an-p" id="__ID__c1" style="left:50px;top:165px;width:227px;height:227px;border-radius:54px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
-          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
-        <div class="an-p" id="__ID__c2" style="left:372px;top:165px;width:227px;height:227px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45))">
-          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>
-        <span id="__ID__cw" style="position:absolute;left:325px;top:279px;width:95px;height:12px;margin-left:-48px;margin-top:-6px;border-radius:99px;background:#111111;transform-origin:50% 50%"></span>
-        <span id="__ID__ck" style="position:absolute;left:325px;top:279px;width:73px;height:73px;margin-left:-36px;margin-top:-36px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0;box-shadow:0 12px 34px rgba(34,197,94,.5)">
-          <svg width="58%" height="58%" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg></span></div>
+        <span class="an-p" id="__ID__qb" style="left:38px;top:136px;width:285px;height:285px;background:#FFFFFF;border-radius:23px;overflow:hidden;padding:0"><span style="position:absolute;left:22px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:44px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:66px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:88px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:110px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:132px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:154px;top:22px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:22px;top:44px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:154px;top:44px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:22px;top:66px;width:22px;height:22px;background:#111111"></span><span style="position:absolute;left:66px;top:66px;width:22px;height:22px;background:#111111"></span><sp
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__c1', { xPercent: -70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, 0.05);
-      tl.fromTo('#__ID__c2', { xPercent: 70, autoAlpha: 0 }, { xPercent: 0, autoAlpha: 1, duration: 0.42, ease: 'power3.out' }, 0.05);
-      tl.fromTo('#__ID__cw', { scaleX: 0, autoAlpha: 0 },
+      tl.fromTo('#__ID__qb',{scale:0.86,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(1.9)'},0.05);
+      tl.fromTo('#__ID__ql',{y:0,autoAlpha:0.9},{y:()=>document.getElementById('__ID__qb').offsetHeight,autoAlpha:0.9,duration:0.5,ease:'power1.inOut'},
 
---- compare ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><div class="an-p" id="__ID__c1" style="left:0;top:0;width:285px;height:100%;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);border-radius:45px"></div><div class="an-p" id="__ID__c2" style="left:363px;top:0;width:285px;height:100%;background:#FF5A36;border-radius:45px"></div></div>
+--- crowd ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><div class="an-p an-cw" style="left:14px;top:90px;width:62px;height:62px;opacity:0">
+          <span style="position:absolute;left:25%;top:0;width:50%;height:50%;border-radius:50%;background:rgba(17,17,17,.10)"></span>
+          <span style="position:absolute;left:8%;top:56%;width:84%;height:44%;border-radius:19px 19px 0 0;background:rgba(17,17,17,.10)"></span></div><div class="an-p an-cw" style="left:107px;top:90px;width:62px;height:62px;opacity:0">
+          <span style="position:absolute;left:25%;top:0;width:50%;height:50%;border-radius:50%;background:rgba(17,17,17,.10)"></span>
+          <span style="position:absolute;left:8%;top:56%;width:84%;height:44%;border-radius:19px 19px 0 0;background:rgba(17,17,17,.10)"></span></div><div class="an-p an-cw" style="left:200px;top:90px;width:62px;height:62px;opacity:0">
+          <span style="position:absolute;left:25%;top:0;width:50%;height:50%;border-radius:50%;background:#FF5A36"></span>
+          <span style="position:absolute;left:8%;top:56%;width:84%;height:44%;border-radius:19px 19px 0 0;background:#FF5A36"></span></div><div class="an-p an-cw" style="left:293px;top:90px;width:62px;height:62px;opacity:0">
+          <span style="position:absolute;left:25%;top:0;width:50%;height:50%;border-radius:50
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__c1', { y: 0, autoAlpha: 0 }, { y: 24, autoAlpha: 1, duration: 0.45, ease: 'power2.out' }, 0.05);
-      tl.fromTo('#__ID__c2', { y: 0, autoAlpha: 0 }, { y: -24, autoAlpha: 1, duration: 0.45, ease: 'back.out(1.6)' }, 0.2);
-      tl.fromTo('#__ID__gl', { x: '-3%' }, { x: '5%', duration: 0.28, repeat: 3, yo
+      tl.fromTo('#__ID__an .an-cw',{scale:0.4,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,stagger:{each:0.022,from:'center'},ease:'back.out(2)',transformOrigin:'50% 100%'},0.05);
 
---- chat ---
+--- salesphone ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><div class="an-ph" id="__ID__ph" style="left:190px;top:6px;width:268px;height:546px;border-radius:35px;background:#0B0B0D;border:6px solid #26262B;overflow:hidden;box-shadow:0 28px 60px -18px rgba(0,0,0,.45)">
+        <span style="position:absolute;inset:8px;border-radius:30px;background:linear-gradient(165deg,#2A2F3A,#12141A 62%,#0B0B0D)"></span>
+        <span style="position:absolute;left:50%;top:13px;transform:translateX(-50%);width:86px;height:24px;border-radius:99px;background:#000"></span>
+        <span style="position:absolute;left:0;right:0;top:46px;text-align:center;font-family:Inter,Helvetica,Arial,sans-serif;font-weight:300;font-size:51px;color:#fff;letter-spacing:-.02em">9:41</span>
+        <span class="an-p" id="__ID__bdg" style="left:111px;top:448px;width:46px;height:46px;border-radius:50%;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-weight:800;font-size:26px;color:#fff">0</span>
+        <span class="an-p an-sn" id="__ID__sn0" style="left:19px;top:101px;width:230px;height:58px;border-radius:17px;background:rgba(255,255,255,.94);box-shadow:0 10px 26px rgba(0,0,0,.22)">
+          <span style="position:absolute;left:12px;top:13px;width:32px;height:32px;border-radius:9px;bac
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      var CNT__ID__ = {v:0};
+      var SET__ID__ = (function(){ var el=document.getElementById('__ID__bdg');
+        return function(){ if(el) el.textContent = Math.round(CNT__ID__.v); }; })();
+      tl.fromTo('#__ID__ph',{y:()=>document.getElementById('__ID__an').get
+
+--- music ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p"  style="left:33px;top:81px;width:583px;height:134px;border-radius:29px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);overflow:hidden"><span style="position:absolute;left:17px;top:57px;width:6px;height:21px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:39px;top:15px;width:6px;height:104px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:61px;top:51px;width:6px;height:33px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:83px;top:16px;width:6px;height:103px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:105px;top:45px;width:6px;height:45px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:127px;top:18px;width:6px;height:99px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:149px;top:39px;width:6px;height:56px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:171px;top:20px;width:6px;height:95px;border-radius:99px;background:#111111;opacity:0.7"></span><span style="position:absolute;left:193px;top:3
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.05,ease:'power2.out'},0.05);
+      tl.fromTo('#__ID__mt',{x:()=>document.getElementById('__ID__an').getBoundingClientRect().width*0.5,autoAlpha:0},{x:0,autoAlpha:1,duration:0.36,ease:
+
+--- gaugefill ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:110px;top:56px;width:84px;height:446px;border-radius:39px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20)"></span>
+        <span class="an-p" id="__ID__gfill" style="left:110px;top:56px;width:84px;height:446px;border-radius:39px;background:#FF5A36;transform-origin:50% 100%"></span>
+        <span class="an-p" style="left:74px;top:500px;width:26px;height:4px;border-radius:99px;background:#111111;opacity:.3"></span>
+          <span style="position:absolute;left:0;top:485px;width:66px;text-align:right;font-family:Inter,sans-serif;font-weight:700;font-size:29px;color:#111111;opacity:.45">0</span><span class="an-p" style="left:74px;top:277px;width:26px;height:4px;border-radius:99px;background:#111111;opacity:.3"></span>
+          <span style="position:absolute;left:0;top:262px;width:66px;text-align:right;font-family:Inter,sans-serif;font-weight:700;font-size:29px;color:#111111;opacity:.45">50</span><span class="an-p" style="left:74px;top:54px;width:26px;height:4px;border-radius:99px;background:#111111;opacity:.3"></span>
+          <span style="position:absolute;left:0;top:39px;width:66px;text-align:right;font-family:Inter,sans-serif;font-weight:700;font-size:29px;color:#111111;opacity:.45">100</span>
+   
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__gfill',{scaleY:0},{scaleY:1,duration:1.39,ease:'power1.inOut',transformOrigin:'50% 100%'},0.25);
+      (function(){ var el=document.getElementById('__ID__gnum'); if(!el) return;
+        var target=(el.getAttribute('data-pct')||'100 %'), n=parse
+
+--- clipping ---
 <div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
-        <!-- Axel : « chat pareil, on peut ajouter bruitage de clavier ». La question
-             ne doit pas apparaître d'un bloc : on l'ÉCRIT, et le son de frappe se
-             pose sur cet intervalle comme pour « search » et « comment ».
-             (Aucun accent grave ici : ce commentaire vit DANS un template literal.) -->
-        <div class="an-p" id="__ID__cq" style="left:96px;top:28px;width:500px;min-height:145px;border-radius:61px 61px 18px 61px;background:#FF5A36;display:flex;align-items:center;padding:0 41px;box-sizing:border-box">
-          <span id="__ID__cqt" style="font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:800;font-size:55px;letter-spacing:-.015em;color:#FFFFFF;line-height:1.18"><span class="an-cq2" style="opacity:0">A</span><span class="an-cq2" style="opacity:0">u</span><span class="an-cq2" style="opacity:0">d</span><span class="an-cq2" style="opacity:0">i</span><span class="an-cq2" style="opacity:0">o</span></span>
-          <span id="__ID__cqc" style="width:2px;height:44px;background:#FFFFFF;border-radius:2px;margin-left:2px"></span></div>
-        <div class="an-p" id="__ID__ca" style="left:52px;top:223px;width:468px;height:232px;border-radius:61px 61px 61px 18px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20)">
-          <span style="position:absolute;left:8%;top:13%;width:58px;height:58px"><svg viewBox="-28 -28 56 
+        <span class="an-p" style="left:33px;top:162px;width:583px;height:234px;border-radius:19px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);overflow:hidden"><span class="an-p an-cp" id="__ID__cp0" style="left:17px;top:50%;width:8px;height:70px;margin-top:-35px;border-radius:99px;background:#111111;opacity:0.5;transform-origin:50% 50%"></span><span class="an-p an-cp" id="__ID__cp1" style="left:36px;top:50%;width:8px;height:138px;margin-top:-69px;border-radius:99px;background:#111111;opacity:0.5;transform-origin:50% 50%"></span><span class="an-p an-cp" id="__ID__cp2" style="left:55px;top:50%;width:8px;height:106px;margin-top:-53px;border-radius:99px;background:#111111;opacity:0.5;transform-origin:50% 50%"></span><span class="an-p an-cp" id="__ID__cp3" style="left:74px;top:50%;width:8px;height:118px;margin-top:-59px;border-radius:99px;background:#111111;opacity:0.5;transform-origin:50% 50%"></span><span class="an-p an-cp" id="__ID__cp4" style="left:93px;top:50%;width:8px;height:132px;margin-top:-66px;border-radius:99px;background:#111111;opacity:0.5;transform-origin:50% 50%"></span><span class="an-p an-cp" id="__ID__cp5" style="left:112px;top:50%;width:8px;height:85px;margin-top:-43px;border-radius:99px;background:#111111;op
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__cq',{x:60,autoAlpha:0},{x:0,autoAlpha:1,duration:0.28,ease:'back.out(1.6)'},0.05);
-      tl.fromTo('#__ID__an .an-cq2',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:0.035},0.29);
-      tl.fromTo('#__ID__cqc',{autoAlpha:1},{autoAlpha:0.1,duration:0.24,repeat:4,yoyo:true},0.29);
-      tl.to('#__ID__cqc
+      tl.fromTo('#__ID__an .an-cp', { scaleY: 0.2 }, { scaleY: 1, duration: 0.3, stagger: 0.012, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an .an-cp', { scaleY: 0.55, duration: 0.34, ease: 'power2.inOut' }, 0.77);
+      tl.fromTo('#__ID__cpw', { autoAlpha: 0, y
 
---- copy ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
-        <div class="an-p" id="__ID__k" style="left:52px;top:28px;width:544px;height:92px;border-radius:31px;background:#FFFFFF;display:flex;align-items:center;gap:26px;padding:0 37px;box-sizing:border-box;box-shadow:0 22px 54px rgba(0,0,0,.42)">
-          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#FF5A36" stroke-width="2.3" stroke-linecap="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v4"/></svg>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:31px;color:#141418;letter-spacing:.02em;white-space:nowrap">sk-ava-••••-7X4F</span>
-        </div>
-        <span id="__ID__cp" style="position:absolute;left:50%;top:145px;margin-left:-87px;width:174px;height:66px;border-radius:99px;background:#22C55E;display:flex;align-items:center;justify-content:center;gap:15px;color:#fff;font-family:'Archivo Black',sans-serif;font-size:25px;opacity:0">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg>COPIÉ</span>
-        <div class="an-p" id="__ID__cl" style="left:213px;top:334px;width:223px;height:223px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45));opacity:0">
-          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:bloc
+--- tsunami ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><svg class="an-p" id="__ID__svg" style="left:0;top:0" width="648" height="557" viewBox="0 0 648 557">
+          <rect x="0" y="479" width="648" height="78" fill="#FF5A36" opacity=".30"/>
+          <g class="an-wg" id="__ID__wg0" opacity="0" data-org="130 479">
+          <path d="M0 479
+          C 57 470, 98 410, 161 407
+          C 210 405, 241 431, 205 446
+          C 236 457, 251 470, 259 479 Z" fill="#FF5A36"/>
+          <path d="M78 436
+          C 114 408, 186 403, 220 429
+          C 233 440, 218 446, 205 446" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+        </g>
+          <g class="an-wg" id="__ID__wg1" opacity="0" data-org="221 479">
+          <path d="M0 479
+          C 97 458, 168 308, 273 301
+          C 357 296, 410 362, 348 397
+          C 401 426, 428 458, 441 479 Z" fill="#FF5A36"/>
+          <path d="M132 372
+          C 194 303, 318 290, 375 354
+          C 397 383, 370 397, 348 397" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" opacity=".85"/>
+        </g>
+          <g class="an-wg" id="__ID__wg2" opacity="0" data-org="324 479">
+          <path d="M0 479
+          C 143 438, 246 148, 402 134
+          C 525 124, 603 251, 512 320
+          C 590 376, 629 438, 64
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__k',{y:-40,scale:0.9,autoAlpha:0},{y:0,scale:1,autoAlpha:1,duration:0.36,ease:'back.out(1.6)'},0.05);
-      tl.fromTo('#__ID__cp',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.26,ease:'back.out(3)',transformOrigin:'50% 50%'},0.45);
-      tl.fromTo('#__ID__cl',{scale:0.72,autoAlpha:0},{scale:1,a
+      tl.fromTo('#__ID__wg0',{x:()=>document.getElementById('__ID__an').getBoundingClientRect().width*-0.16,autoAlpha:0},{x:0,autoAlpha:1,duration:0.42,ease:'power2.out'},0.05);
+      tl.to('#__ID__wg0',{x:()=>document.getElementById('__ID__an').getBoundingClientRect(
 
 --- lineup ---
 <div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:26px;top:410px;width:596px;height:4px;border-radius:99px;background:#111111;opacity:.35"></span><span class="an-p an-lu" id="__ID__l0" style="left:58px;top:179px;width:156px;height:200px;border-radius:22px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);opacity:0;overflow:visible">
@@ -222,14 +268,44 @@ JS :
           <span style="position:absolute;left:44px;top:64px;width:0;height:0;border-top:34px solid transparent;border-bottom:34px solid transparent;border-right:34px solid #111111"></span>
           <span class="an-p" id="__ID__l0w1" style="left:87px;top:68px;width:22px;height:60px;border:4px solid #FF5A36;border-left:none;border-radius:0 99px 99px 0;background:transparent;opacity:0"></span>
           <span class="an-p" id="__ID__l0w2" style="left:109px;top:54px;width:28px;height:88px;border:4px solid #FF5A36;border-left:none;border-radius:0 99px 99px 0;background:transparent;opacity:0"></span>
-          <span class="an-p" id="__ID__l0ck" style="left:auto;right:-8px;top:-8px;width:37px;height:37px;border-radius:50%;background:#FF5A36;opacity:0;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25)">
-            <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#fff" stroke-
+          <span class="an-p" id="__ID__l0ck" style="left:auto;right:-8px;top:-8px;width:37px;height:37px;border-radius:50%;background:#FF5A36;opacity:0;display:flex;align-items:center;justify-
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
       tl.fromTo('#__ID__l0', { y: 64, scale: 0.6, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.4, ease: 'back.out(2)', transformOrigin: '50% 100%' }, 0.35);
-      tl.fromTo('#__ID__l0ck', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.26, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, 0.
+      tl.fromTo('#__ID__l0ck', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0
+
+--- timeline ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:20px;top:79px;width:168px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:191px;top:79px;width:143px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:337px;top:79px;width:155px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span><span class="an-p" style="left:495px;top:79px;width:131px;height:111px;border-radius:20px;background:rgba(17,17,17,.20);overflow:hidden">
+          <span style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#11111122 0 2px,transparent 2px 38px)"></span></span>
+        <span class="an-p" style="left:20px;top:223px;width:609px;height:111px;border-radius:20px;background:rgba(17,17,17,.10);overfl
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{autoAlpha:0},{autoAlpha:1,duration:0.24,stagger:0.04,ease:'power2.out'},0.05);
+      tl.fromTo('#__ID__tp',{x:0},{x:()=>document.getElementById('__ID__an').getBoundingClientRect().width*0.9,duration:1.8,ease:'none'},0.35);
+
+--- easydown ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
+        <span class="an-p" style="left:78px;top:479px;width:492px;height:3px;border-radius:99px;background:#111111;opacity:.4"></span>
+        <span class="an-p" style="left:78px;top:78px;width:3px;height:401px;border-radius:99px;background:#111111;opacity:.4"></span>
+        <span class="an-p" style="left:65px;top:344px;width:13px;height:2px;background:#111111;opacity:.35"></span>
+          <span class="an-p" style="left:78px;top:345px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:241px;top:479px;width:2px;height:10px;background:#111111;opacity:.35"></span><span class="an-p" style="left:65px;top:211px;width:13px;height:2px;background:#111111;opacity:.35"></span>
+          <span class="an-p" style="left:78px;top:212px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:405px;top:479px;width:2px;height:10px;background:#111111;opacity:.35"></span><span class="an-p" style="left:65px;top:77px;width:13px;height:2px;background:#111111;opacity:.35"></span>
+          <span class="an-p" style="left:78px;top:78px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:569px;top:479px;width:2px;height:10px;background:#111111;opacity:
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      (function(){ var p = document.getElementById('__ID__line');
+        if (p && p.getTotalLength) { var L = p.getTotalLength();
+          p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L;
+          tl.to(p, { strokeDashoffset: 0, duration: 1.3, e
 
 --- easyup ---
 <div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
@@ -238,9 +314,7 @@ JS :
         <span class="an-p" style="left:65px;top:344px;width:13px;height:2px;background:#111111;opacity:.35"></span>
           <span class="an-p" style="left:78px;top:345px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:241px;top:479px;width:2px;height:10px;background:#111111;opacity:.35"></span><span class="an-p" style="left:65px;top:211px;width:13px;height:2px;background:#111111;opacity:.35"></span>
           <span class="an-p" style="left:78px;top:212px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:405px;top:479px;width:2px;height:10px;background:#111111;opacity:.35"></span><span class="an-p" style="left:65px;top:77px;width:13px;height:2px;background:#111111;opacity:.35"></span>
-          <span class="an-p" style="left:78px;top:78px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:569px;top:479px;width:2px;height:10px;background:#111111;opacity:.35"></span>
-        <svg class="an-p" style="left:0;top:0" width="648" height="557" viewBox="0 0 648 557">
-          <path id="__ID__area" d="M78 455
+          <span class="an-p" style="left:78px;top:78px;width:492px;height:1px;background:#111111;opacity:.08"></span><span class="an-p" style="left:569px;top:479px;width:2px;height:10px;background:#111111;opacity:
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
@@ -248,60 +322,115 @@ JS :
       (function(){ var p = document.getElementById('__ID__line');
         if (p && p.getTotalLength) { var L = p.getTotalLength();
           p.style.strokeDasharray = L + ' ' + L; p.style.strokeDashoffset = L;
-          tl.to(p, { strokeDashoffset: 0, duration: 1.3, ease: 'power1.inOut' }, 0.3);
-          var mv = { t: 0 }, do
+          tl.to(p, { strokeDashoffset: 0, duration: 1.3, e
 
---- post ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><div class="an-p an-pt" id="__ID__p0" style="left:96px;top:0;width:123px;height:123px;border-radius:34px;background:#0E0E13;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(0,0,0,.4)">
-          <svg viewBox="0 0 24 24" width="52%" height="52%"><path d="M9 18.2a2.6 2.6 0 102.6 2.6V7.4l6.4-1.6v9.1a2.6 2.6 0 102.6 2.6V2.5L9 4.9z" fill="#fff"/></svg>
-          <span id="__ID__k0" style="position:absolute;right:-12px;bottom:-12px;width:52px;height:52px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0">
-            <svg viewBox="0 0 24 24" width="62%" height="62%"><path d="M5 12.6l4.4 4.4L19 7.4" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div><div class="an-p an-pt" id="__ID__p1" style="left:263px;top:0;width:123px;height:123px;border-radius:34px;background:linear-gradient(135deg,#F9A03F,#E1306C 55%,#833AB4);display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(0,0,0,.4)">
-          <svg viewBox="0 0 24 24" width="52%" height="52%"><rect x="3.6" y="5.4" width="16.8" height="13.6" rx="4.2" fill="none" stroke="#fff" stroke-width="2.1"/><circle cx="12" cy="12.2" r="3.5" fill="none" stroke="#fff" stroke-width="2.1"/></svg>
-          <span id="__ID__k1" style="position:absolute;right:-12px;bottom:-12px;width:52px;height:52px;
+--- oneclick ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" id="__ID__wrap" style="left:123px;top:148px;width:402px;height:245px;perspective:1400px">
+          <span class="an-p" id="__ID__lid" style="left:0;top:0;width:402px;height:245px;border-radius:11px 11px 0 0;background:#FFFFFF;border:2px solid rgba(17,17,17,.20);border-bottom:none;overflow:hidden;transform-origin:50% 100%;box-shadow:0 18px 40px -20px rgba(0,0,0,.35)">
+            <span class="an-p" id="__ID__ui1" style="left:0;top:0;width:402px;height:245px">
+        <span style="position:absolute;left:22px;top:22px;display:flex;gap:8px">
+          <span style="width:9px;height:9px;border-radius:50%;background:#FF5F57;display:inline-block"></span><span style="width:9px;height:9px;border-radius:50%;background:#FEBC2E;display:inline-block"></span><span style="width:9px;height:9px;border-radius:50%;background:#28C840;display:inline-block"></span>
+        </span>
+        <span style="position:absolute;left:22px;top:64px;width:62%;height:9px;border-radius:99px;background:#111111;opacity:0.3"></span><span style="position:absolute;left:22px;top:91px;width:44%;height:9px;border-radius:99px;background:#111111;opacity:0.18"></span><span style="position:absolute;left:22px;top:118px;width:52%;height:9px;border-radius:99px;background:#111111
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__an .an-pt', { y: -30, scale: 0.7, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.09, ease: 'back.out(2)', transformOrigin: '50% 50%' }, 0.05);
-      tl.fromTo('#__ID__vd', { yPercent: 45, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'power3.out' }, 0.21);
-
---- search ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
-        <span class="an-p" style="left:110px;top:72px;width:428px;height:84px;border-radius:25px;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);display:flex;align-items:center;padding:0 29px;box-sizing:border-box;gap:18px">
-          <svg viewBox="0 0 24 24" style="width:37px;height:37px;flex:none" fill="none" stroke="rgba(17,17,17,.20)" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
-          <span id="__ID__sq" style="font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:800;font-size:30px;color:#111111;white-space:nowrap"><span class="an-sl2" style="opacity:0">A</span><span class="an-sl2" style="opacity:0">u</span><span class="an-sl2" style="opacity:0">d</span><span class="an-sl2" style="opacity:0">i</span><span class="an-sl2" style="opacity:0">o</span></span>
-          <span id="__ID__ty" style="width:3px;height:32px;border-radius:99px;background:#FF5A36"></span></span><span class="an-p an-res" id="__ID__r0" style="left:110px;top:201px;width:428px;height:60px;border-radius:17px;background:#FF5A36"></span><span class="an-p an-res" id="__ID__r1" style="left:110px;top:305px;width:377px;height:60px;border-radius:17px;background:rgba(17,17,17,.10)"></span><span class="an-p an-res" id="__ID__r2" style="left:110px;top:409px;width:325px;height:60px;border-radius:17px;background:rgba(17,17,17,
-JS :
-
-      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
-      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__an .an-sl2', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, stagger: 0.055 }, 0.05);
-      tl.fromTo('#__ID__ty', { autoAlpha: 1 }, { autoAlpha: 0.15, duration: 0.24, repeat: 4, yoyo: true }, 0.05);
-      tl.to('#__ID__ty', { autoAlpha: 0, duration: 0.12 }, 0.77);
-      tl.fromTo('#__ID__an .an-res',
-
---- faceless ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" id="__ID__hd" style="left:212px;top:56px;width:223px;height:223px;border-radius:50%;background:#FF5A36"></span>
-        <span class="an-p" id="__ID__e1" style="left:266px;top:130px;width:40px;height:40px;border-radius:50%;background:#FFFFFF"></span><span class="an-p" id="__ID__e2" style="left:342px;top:130px;width:40px;height:40px;border-radius:50%;background:#FFFFFF"></span>
-        <span class="an-p" id="__ID__bd" style="left:186px;top:310px;width:277px;height:167px;border-radius:138px 138px 0 0;background:#FF5A36"></span>
-        <span class="an-p" id="__ID__br" style="left:188px;top:121px;width:272px;height:58px;border-radius:13px;background:#111111"></span></div>
-JS :
-
-      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
-      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
-      tl.fromTo('#__ID__hd', { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: 'back.out(2)', transformOrigin: '50% 50%' }, 0.05);
-      tl.fromTo('#__ID__bd', { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.3, ease: 'power2.out' }, 0.13);
-      tl.fromTo(['#__ID__e1', '#__ID__e2'], { aut
+      tl.fromTo('#__ID__base',{scaleX:0.7,autoAlpha:0},{scaleX:1,autoAlpha:1,duration:0.28,ease:'back.out(1.6)',transformOrigin:'50% 50%'},0.05);
+      tl.fromTo('#__ID__lid',{rotationX:-92,autoAlpha:0},{rotationX:0,autoAlpha:1,duration:0.62,ease:'back.out(1.1)',trans
 
 --- voice ---
-<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" id="__ID__mic" style="left:0;top:179px;width:111px;height:167px;border-radius:99px;background:#111111"></span><span class="an-p" style="left:47px;top:345px;width:18px;height:56px;background:#111111"></span><span class="an-b w1" id="__ID__w12" style="left:58px;top:74px;width:16px;height:208px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w13" style="left:87px;top:113.5px;width:16px;height:129px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w14" style="left:116px;top:112.5px;width:16px;height:131px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w15" style="left:145px;top:74px;width:16px;height:208px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w16" style="left:174px;top:88.5px;width:16px;height:179px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w17" style="left:203px;top:143.5px;width:16px;height:69px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w18" style="left:232px;top:87px;width:16px;height:182px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w19" style="left:261px;top:74.5px;width:16px;height:207px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w110" style="left:290px;top:114.5px;width:16px;height:127px;background:#11111
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" id="__ID__mic" style="left:0;top:179px;width:111px;height:167px;border-radius:99px;background:#111111"></span><span class="an-p" style="left:47px;top:345px;width:18px;height:56px;background:#111111"></span><span class="an-b w1" id="__ID__w12" style="left:58px;top:74px;width:16px;height:208px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w13" style="left:87px;top:113.5px;width:16px;height:129px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w14" style="left:116px;top:112.5px;width:16px;height:131px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w15" style="left:145px;top:74px;width:16px;height:208px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w16" style="left:174px;top:88.5px;width:16px;height:179px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w17" style="left:203px;top:143.5px;width:16px;height:69px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w18" style="left:232px;top:87px;width:16px;height:182px;background:#111111;border-radius:99px"></span><span class="an-b w1" id="__ID__w19" style="left:261px;top:74.5px;width:16px;height:207px;backg
 JS :
 
       tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
       tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
       tl.fromTo('#__ID__an .w1', { scaleY: 0.15 }, { scaleY: 1, duration: 0.5, stagger: 0.02, ease: 'back.out(2)', transformOrigin: '50% 50%' }, 0.05);
-      tl.fromTo('#__ID__an .w2', { scaleY: 0.15, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.5, stagger: 0.02, ease: 'back.out(2)', transformOrigin: '50% 50%' }, 0.4
+      tl.fromTo('#__ID__an .w2', { scaleY: 0.15, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: 0.5, stagger: 
 
+--- booking ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:33px;top:0;width:107px;height:67px;border-radius:19px;background:rgba(17,17,17,.10);display:flex;align-items:center;justify-content:center">
+          <span style="width:45px;height:11px;border-radius:99px;background:#111111;opacity:.42"></span></span><span class="an-p" style="left:152px;top:0;width:107px;height:67px;border-radius:19px;background:rgba(17,17,17,.10);display:flex;align-items:center;justify-content:center">
+          <span style="width:45px;height:11px;border-radius:99px;background:#111111;opacity:.42"></span></span><span class="an-p" style="left:271px;top:0;width:107px;height:67px;border-radius:19px;background:rgba(17,17,17,.10);display:flex;align-items:center;justify-content:center">
+          <span style="width:45px;height:11px;border-radius:99px;background:#111111;opacity:.42"></span></span><span class="an-p" style="left:390px;top:0;width:107px;height:67px;border-radius:19px;background:rgba(17,17,17,.10);display:flex;align-items:center;justify-content:center">
+          <span style="width:45px;height:11px;border-radius:99px;background:#111111;opacity:.42"></span></span><span class="an-p" style="left:509px;top:0;width:107px;height:67px;border-radius:19px;background:rgba(17,17,17,.10);display:flex;al
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{scale:0.86,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,stagger:0.012,ease:'power3.out',transformOrigin:'50% 50%'},0.05);
+      tl.fromTo('#__ID__bk12',{scale:1},{scale:1.18,duration:0.3,ease:'back.out(2.6)',transformOrigin:'50% 5
+
+--- schedule ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p" style="left:26px;top:97px;width:138px;height:111px;border-radius:22px;background:rgba(17,17,17,.10);border:2px dashed rgba(17,17,17,.20)"></span>
+        <span class="an-p" style="left:179px;top:97px;width:138px;height:111px;border-radius:22px;background:rgba(17,17,17,.10);border:2px dashed rgba(17,17,17,.20)"></span>
+        <span class="an-p an-sc" id="__ID__sc1" style="left:179px;top:97px;width:138px;height:111px;border-radius:22px;background:#FF5A36;overflow:hidden">
+          <span style="position:absolute;left:14%;top:22%;width:62%;height:9px;border-radius:99px;background:rgba(255,255,255,.9)"></span>
+          <span style="position:absolute;left:14%;top:44%;width:40%;height:8px;border-radius:99px;background:rgba(255,255,255,.6)"></span>
+          <span style="position:absolute;left:14%;bottom:16%;width:41px;height:18px;border-radius:99px;background:rgba(255,255,255,.24)"></span></span><span class="an-p" style="left:332px;top:97px;width:138px;height:111px;border-radius:22px;background:rgba(17,17,17,.10);border:2px dashed rgba(17,17,17,.20)"></span>
+        <span class="an-p" style="left:485px;top:97px;width:138px;height:111px;border-radius:22px;background:rgba(17,17,17,.10);border:2px dashed rgba(17,17,17,.20)"></span>
+  
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{scale:0.88,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.24,stagger:0.02,ease:'power3.out',transformOrigin:'50% 50%'},0.05);
+      tl.fromTo('#__ID__an .an-sc',{y:()=>document.getElementById('__ID__an').getBoundingClientRect().height*
+
+--- views ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
+        <div class="an-p" id="__ID__vw" style="left:202px;top:28px;width:245px;height:421px;border-radius:29px;overflow:hidden;background:rgba(17,17,17,.10);border:2px solid rgba(17,17,17,.20);box-shadow:0 20px 46px rgba(0,0,0,.24)">
+          <span style="position:absolute;inset:0;background:linear-gradient(150deg,rgba(255,255,255,.22),rgba(0,0,0,.30)),#FF5A36"></span>
+          <span style="position:absolute;left:0;bottom:0;width:100%;height:8px;background:rgba(255,255,255,.3)">
+            <span class="an-p" id="__ID__vwp" style="left:0;top:0;width:100%;height:100%;background:#FF5A36;transform-origin:0% 50%;transform:scaleX(0)"></span></span>
+          <svg class="an-p" id="__ID__vwt" viewBox="0 0 24 24" style="left:50%;margin-left:-32px;top:50%;margin-top:-32px;width:64px;height:64px" fill="#FFFFFF" opacity=".9"><path d="M8 5v14l11-7z"/></svg></div>
+        <span class="an-p" id="__ID__vwn" style="left:0;top:471px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:78px;color:#FF5A36;transform-origin:50% 50%">Montage</span>
+        <span class="an-p" style="left:0;top:560px;width:100%;text-align:center;font-family:'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;font-weight:800;letter-spacing:.14em;font-size:
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__vw',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},0.05);
+      tl.to('#__ID__vwt',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},0.35);
+      tl.to('#__ID__vwp',{scaleX:1,dura
+
+--- algorithm ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><span class="an-p an-ag" id="__ID__ag0" style="left:46px;top:-127px;width:170px;height:255px;border-radius:27px;background:rgba(17,17,17,.20);opacity:0.4;overflow:hidden">
+          <span style="position:absolute;left:50%;margin-left:-24px;top:22%;width:48px;height:48px;border-radius:50%;background:#FFFFFF;opacity:0.3"></span>
+          <span style="position:absolute;left:14%;bottom:16%;width:72%;height:9px;border-radius:99px;background:#FFFFFF;opacity:0.22"></span></span><span class="an-p an-ag" id="__ID__ag1" style="left:239px;top:-127px;width:170px;height:255px;border-radius:27px;background:rgba(17,17,17,.20);opacity:0.4;overflow:hidden">
+          <span style="position:absolute;left:50%;margin-left:-24px;top:22%;width:48px;height:48px;border-radius:50%;background:#FFFFFF;opacity:0.3"></span>
+          <span style="position:absolute;left:14%;bottom:16%;width:72%;height:9px;border-radius:99px;background:#FFFFFF;opacity:0.22"></span></span><span class="an-p an-ag" id="__ID__ag2" style="left:432px;top:-127px;width:170px;height:255px;border-radius:27px;background:rgba(17,17,17,.20);opacity:0.4;overflow:hidden">
+          <span style="position:absolute;left:50%;margin-left:-24px;top:22%;width:48px;height:48px;border-radius:50%;background:#FFFFFF;op
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__ag4',{scale:0.6,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.2)',transformOrigin:'50% 50%'},0.05);
+      tl.fromTo(['#__ID__ag1','#__ID__ag3','#__ID__ag5','#__ID__ag7'],{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:0.4,duration:
+
+--- trendsound ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px">
+        <span class="an-p" id="__ID__tsc" style="left:33px;top:33px;width:583px;height:145px;border-radius:35px;background:#FF5A36;overflow:hidden"><span class="an-p an-tw2" style="left:35px;top:58px;width:7px;height:29px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:57px;top:22px;width:7px;height:101px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:79px;top:49px;width:7px;height:48px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:101px;top:25px;width:7px;height:96px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:123px;top:40px;width:7px;height:65px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:145px;top:29px;width:7px;height:87px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="an-p an-tw2" style="left:167px;top:33px;width:7px;height:80px;border-radius:99px;background:#FFFFFF;opacity:.85;transform-origin:50% 50%"></span><span class="
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__tsc',{y:-18,autoAlpha:0},{y:0,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},0.05);
+      tl.fromTo('#__ID__an .an-tw2',{scaleY:0.25},{scaleY:1,duration:0.24,stagger:{each:0.02,yoyo:true,repeat:4},ease:'sine.inOut'},0.31);
+      tl.fromTo('#__
+
+--- deadline ---
+<div class="an" id="__ID__an" style="left:216px;top:288px;width:648px;height:557px"><div class="an-p" style="left:143px;top:123px;width:363px;height:312px;border-radius:18px;background:#FFFFFF;box-shadow:0 22px 54px rgba(0,0,0,.35);overflow:hidden">
+        <span style="position:absolute;left:0;top:0;width:100%;height:51px;background:#FF5A36"></span><span  style="position:absolute;left:8px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:60px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:112px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:164px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:216px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:268px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:320px;top:94px;width:35px;height:31px;border-radius:8px;background:rgba(17,17,17,.10)"></span><span  style="position:absolute;left:8px;top:139px;width:35px;height:31px;border-rad
+JS :
+
+      tl.fromTo('#__ID__an', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power2.out' }, 0.05);
+      tl.to('#__ID__an', { autoAlpha: 0, duration: 0.18, ease: 'power2.in' }, 2.2);
+      tl.fromTo('#__ID__an .an-p',{y:40,autoAlpha:0},{y:0,autoAlpha:1,duration:0.4,ease:'power3.out'},0.05);
+      tl.fromTo('#__ID__dl',{scale:1},{scale:1.55,duration:0.34,ease:'back.out(2.6)',transformOrigin:'50% 50%'},0.5);
+      tl.to('#__ID__dl',{scale:1.35,durat
+
+Réponds UNIQUEMENT par l'objet JSON, sans texte autour, sans balise de code.
 `
 
 Deno.serve(async (req: Request) => {
