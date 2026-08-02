@@ -347,6 +347,20 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       } catch (e) { console.warn('photo avatar illisible :', e.message) }
       break
     }
+    // ── #42 · LE LIPSYNC, SCÈNE PAR SCÈNE ────────────────────────────────────
+    // Axel : « il faut qu'il appelle l'API Hedra pour le faire, et faut qu'il
+    // génère scène par scène, pas tout l'audio ». L'app le fait déjà ainsi ; le
+    // chemin MCP posait une image fixe. C'est ici que ça se répare, et pas dans
+    // l'edge function : découper l'audio demande ffmpeg, que seul le worker a.
+    // On ne génère QUE sur les fenêtres `avatarSegments` — c'est ce qui rend le
+    // coût tenable (1,5 cr/s sur 12 s de visage, pas sur 50 s de vidéo).
+    if (plan.__lipsync && avatarPhoto && !Object.keys(avatarClips).length) {
+      try {
+        const n = await genererLipsync(plan, proj, jobDir, avatarClips)
+        if (n) console.log(`▶ lipsync : ${n} scène(s) générée(s) chez Hedra`)
+      } catch (e) { console.warn('lipsync :', e.message) }
+    }
+
     // `noFace` : vider `avatarSegments` ne suffisait pas — la dérivation en
     // recréait juste après (adresse directe, respiration, trou comblé) et chacune
     // retombait sur la photo de démo. Il faut le lui DIRE.
@@ -800,6 +814,105 @@ async function passeDeFinition(plan) {
     faites++
   }
   console.log(`\u25b6 finitions : ${faites}/${corr.length} correction(s) appliquée(s)`)
+}
+
+// ── #42 · LIPSYNC SCÈNE PAR SCÈNE (Hedra Character-3) ───────────────────────
+// Le worker est le seul endroit de la chaîne qui ait ffmpeg : il peut donc
+// découper l'audio sur chaque fenêtre avatar, ce qu'une edge function ne sait
+// pas faire. La clé Hedra ne bouge pas d'un pouce : tout passe par
+// `hedra-proxy`, qui la détient déjà côté Supabase.
+//
+// Une scène qui échoue ne fait PAS échouer le montage : on garde la photo fixe
+// pour cette fenêtre-là et on continue. Un visage figé vaut mieux qu'aucune
+// vidéo livrée.
+const HEDRA_MODEL_ID = process.env.HEDRA_MODEL_ID || 'd1dd37a3-e39a-4854-a298-6510289f9cf2'
+
+async function hedraProxy(chemin, init = {}) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  return fetch(`${url}/functions/v1/hedra-proxy?path=${encodeURIComponent(chemin)}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${key}`, apikey: key, ...(init.headers || {}) },
+  })
+}
+
+async function hedraAsset(type, nom, buf, mime) {
+  const r1 = await hedraProxy('/assets', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: nom, type }),
+  })
+  if (!r1.ok) return null
+  const a = await r1.json().catch(() => ({}))
+  if (!a.id) return null
+  const fd = new FormData()
+  fd.append('file', new Blob([buf], { type: mime }), nom)
+  const r2 = await hedraProxy(`/assets/${a.id}/upload`, { method: 'POST', body: fd })
+  return r2.ok ? a.id : null
+}
+
+async function genererLipsync(plan, proj, jobDir, avatarClips) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return 0
+  const segs = (plan.avatarSegments || []).filter((w) => (w.end - w.start) >= 1)
+  if (!segs.length) return 0
+  const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
+  if (!existsSync(voix)) return 0
+
+  const photo = readFileSync(join(proj, 'media', 'avatar.png'))
+  const imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
+  if (!imageId) { console.warn('lipsync : upload de la photo refusé'); return 0 }
+
+  let faits = 0
+  for (const [i, w] of segs.entries()) {
+    // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
+    // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
+    // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
+    const dur = Math.max(3.3, w.end - w.start)
+    const mp3 = join(proj, `ls${i}.mp3`)
+    try {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
+        '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
+    } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); continue }
+
+    const audioId = await hedraAsset('audio', `voice${i}.mp3`, readFileSync(mp3), 'audio/mpeg')
+    if (!audioId) { console.warn(`lipsync scène ${i} : upload audio refusé`); continue }
+
+    const gen = await hedraProxy('/generations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'video', ai_model_id: HEDRA_MODEL_ID, audio_id: audioId,
+        start_keyframe_id: imageId,
+        generated_video_inputs: {
+          text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
+          aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
+          character_orientation: 'video', resolution: '1080p',
+        },
+      }),
+    })
+    if (!gen.ok) { console.warn(`lipsync scène ${i} : Hedra ${gen.status}`); continue }
+    const g = await gen.json().catch(() => ({}))
+    if (!g.id) { console.warn(`lipsync scène ${i} : pas d'identifiant`); continue }
+
+    // polling — Character-3 rend en 1 à 3 min pour une scène courte
+    let url = ''
+    for (let k = 0; k < 90; k++) {
+      await new Promise((r) => setTimeout(r, 4000))
+      const st = await hedraProxy(`/generations/${g.id}/status`, { method: 'GET' })
+      if (!st.ok) continue
+      const d = await st.json().catch(() => ({}))
+      const s = String(d.status || '').toLowerCase()
+      if (s === 'complete' || s === 'completed' || s === 'succeeded') { url = d.url || d.video_url || d.output_url || ''; break }
+      if (s === 'error' || s === 'failed') { console.warn(`lipsync scène ${i} : ${d.error || 'échec Hedra'}`); break }
+    }
+    if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); continue }
+
+    const res = await fetch(url)
+    if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); continue }
+    const out = join(proj, 'media', `av${i}.mp4`)
+    writeFileSync(out, Buffer.from(await res.arrayBuffer()))
+    avatarClips['av' + i] = 'media/av' + i + '.mp4'
+    faits++
+    console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'})`)
+  }
+  return faits
 }
 
 async function pollLoop() {

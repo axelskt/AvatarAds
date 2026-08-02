@@ -429,7 +429,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         properties: {
           audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
-          avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Elle est utilisée telle quelle sur les moments où la personne s'adresse à la caméra : aucun lipsync n'est généré, aucun crédit en plus. Sans elle, le montage se fait sans visage." },
+          avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
+          lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte ~1,5 crédit par seconde de visage. Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
           media: {
             type: 'array', maxItems: 6,
             description: "Optionnel — jusqu'à 6 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
@@ -1517,6 +1518,15 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
         if (!mErr) assets.push({ id: m.id, path: mPath, kind: m.kind })
         else console.warn('upload média ' + m.id + ':', mErr.message)
       }
+
+      // ── #42 · LE VISAGE PARLE, SI ON LE DEMANDE ────────────────────────────
+      // Axel : « faut qu'il appelle l'API Hedra et qu'il génère scène par scène,
+      // pas tout l'audio » — et, pour ses propres tests : « continue à m'envoyer
+      // juste une image, et quand je te dis passe au lipsync tu peux ». D'où le
+      // défaut à false : itérer sur un montage ne doit pas brûler des crédits de
+      // lipsync à chaque essai. Le drapeau voyage dans le plan ; c'est le worker
+      // qui découpe et appelle Hedra, parce que lui seul a ffmpeg.
+      if (args.lipsync === true) (plan as Record<string, unknown>).__lipsync = true
 
       // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
       const { data: rj, error: rjErr } = await svc.from('render_jobs')
