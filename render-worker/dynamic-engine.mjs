@@ -821,9 +821,17 @@ export function buildDynamicComposition(plan, opts = {}) {
     for (const [q, tc] of (p.slide && p.slide.claudeAt || []).entries()) {
       const d = Math.round(W * 0.13)
       const cid = `${id}cl${q}`
-      const ta = r2(Math.max(liveT0, tc - 0.1)), tb = r2(Math.min(t1, tc + 1.5))
-      if (tb - ta < 0.35) continue
-      inner += `<div class="an-p" id="${cid}" style="left:${Math.round(W * 0.07)}px;top:${Math.round(H * 0.09)}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.26)}px;overflow:hidden;background:#fff;box-shadow:0 14px 34px -8px rgba(0,0,0,.4),0 0 0 3px rgba(255,255,255,.9)">
+      // elle ARRIVE AVANT le mot : quand il dit « Claude », le logo est déjà là.
+      const ta = r2(Math.max(liveT0, tc - 0.45)), tb = r2(Math.min(t1, tc + 1.6))
+      if (tb - ta < 0.4) continue
+      // ⚠ SURTOUT PAS LA CLASSE `an-p`. Les animations du pack pilotent TOUS
+      // leurs éléments par le sélecteur `#<id> .an-p` — et l'id du panneau EST
+      // celui de l'animation. La pastille, posée dans le même panneau, se
+      // faisait donc attraper par leurs timelines (autoAlpha:0, staggers,
+      // décalages) et finissait invisible : « le logo n'est toujours pas
+      // visible au-dessus », v11 puis v12. Elle porte sa propre classe, son
+      // propre z-index, et ne dépend plus de personne.
+      inner += `<div class="cl-badge" id="${cid}" style="position:absolute;z-index:40;left:${Math.round(W * 0.07)}px;top:${Math.round(H * 0.09)}px;width:${d}px;height:${d}px;border-radius:${Math.round(d * 0.26)}px;overflow:hidden;background:#fff;box-shadow:0 14px 34px -8px rgba(0,0,0,.4),0 0 0 3px rgba(255,255,255,.9)">
         <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>`
       pjs += `\n  tl.fromTo('#${cid}',{scale:0.5,rotation:-10,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.36,ease:'back.out(1.8)',transformOrigin:'50% 50%'},${ta});`
       pjs += `\n  tl.to('#${cid}',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(tb - 0.24)});`
