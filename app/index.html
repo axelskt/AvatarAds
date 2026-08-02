@@ -12081,7 +12081,7 @@ function _mtReviewBack(){ _mtVideoDone(_mtFinalUrl); }
 // ⚠️ Tant que la review REJOUE tout le pipeline (plan + lipsync + rendu), ces
 // 4 crédits ne couvrent pas le coût réel : il faudra réutiliser les clips
 // lipsync existants comme le fait la régénération (l'audio ne change pas).
-function _mtReviewCost(){ return CREDIT_COSTS.montageRender; }
+function _mtReviewCost(){ return 6; }   // 6 cr (Axel, 02/08) : au-dessus des 4 de la simple relance — une review repasse par le chef d'orchestre
 function _mtReviewEyebrow(t){
   return '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px">'+t+'</div>';
 }
