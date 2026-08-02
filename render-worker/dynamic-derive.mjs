@@ -432,6 +432,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const cand = String(e.anim || '')
           if (!cand || cand === nom || REFUSEES.has(cand) || !ANIMS.includes(cand)) continue
           if (EXIGE_GLOBAL[cand] && !EXIGE_GLOBAL[cand].test(dit)) continue
+          // ── PAS DEUX FOIS LA MÊME DANS LA MÊME MINUTE ────────────────────
+          // La table est parcourue dans l'ordre, donc le même remplaçant
+          // gagnait plusieurs fois de suite : Axel a eu `lineup` à 37 s ET à
+          // 42 s — « il faut garder celle à 42 s et changer celle à 37 s en
+          // trouvant autre chose ». Une animation vue il y a huit secondes
+          // n'est plus une surprise, c'est un tic. On passe au candidat
+          // suivant de la table.
+          if (out.some((s) => String(s.anim) === cand && Math.abs((s.start || 0) - a) < 12)) continue
           remp = cand; break
         }
         if (!remp) {
@@ -2546,6 +2554,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (seg) (seg.insets = seg.insets || []).push({ src: L.src, assetId: L.assetId, start: L.start, end: Math.min(L.end, seg.end) })
   }
   delete plan.__mediaLayers
+
+  // ── CE QU'ON N'A PAS LE TEMPS DE VOIR NE DOIT PAS ÊTRE À L'ÉCRAN ───────────
+  // Une animation a besoin d'entrer (0,2 s), de jouer, puis de sortir (0,18 s).
+  // Sous 1,1 s il ne reste rien à jouer : on voit un objet apparaître et
+  // disparaître, à moitié dessiné. Axel, à 34 s du Cartoon 18 : « il met une
+  // animation incomplète qui ne sert à rien puisqu'elle reste 1 seconde, on a
+  // même pas le temps de la voir ». Les plancher existants s'appliquent à la
+  // POSE ; ceux-ci sont des scènes rognées APRÈS coup par un voisin. On fait
+  // donc le ménage à la toute fin, une fois toutes les bornes figées.
+  // Les captures et les médias échappent à la règle : une image reste lisible
+  // en une seconde, c'est le mouvement qui ne l'est pas.
+  {
+    const avant = (plan.slides || []).length
+    plan.slides = (plan.slides || []).filter((s) => {
+      const d = (s.end || 0) - (s.start || 0)
+      if (d >= 1.1) return true
+      if (s.screen || s.assetId || s.overlayMedia || String(s.anim) === 'media' || s.ui) return true
+      console.log(`▶ ${s.anim || s.type} écarté : ${r2(d)}s à l'écran, rogné par son voisin — on ne le verrait pas`)
+      return false
+    })
+    if (plan.slides.length !== avant) console.log(`▶ ${avant - plan.slides.length} scène(s) trop courte(s) retirée(s)`)
+  }
 
   // ── « CLAUDE » PRONONCÉ = LOGO CLAUDE À L'ÉCRAN ─────────────────────────────
   // Règle d'Axel (02/08) : « à chaque fois que je dis "Claude" je veux voir le
