@@ -2475,7 +2475,13 @@ serve(async (req: Request) => {
     const form = await req.formData()
     const audio = form.get('audio')
     if (!(audio instanceof File)) return json({ error: 'Champ "audio" manquant' }, 400)
-    if (audio.size > MAX_AUDIO_BYTES) return json({ error: 'Audio trop lourd (max 20 Mo)' }, 400)
+    if (audio.size > MAX_AUDIO_BYTES) return json({ error: 'Fichier trop lourd (max 20 Mo)' }, 400)
+    // ── SCRIBE SAIT LIRE UNE VIDÉO, LE NAVIGATEUR NON ────────────────────────
+    // Le champ « audio » peut désormais être le MP4 de l'utilisateur : Scribe
+    // en extrait la piste lui-même. C'est ce qui a remplacé l'extraction dans
+    // Safari, qui rendait un WAV muet sur certains conteneurs AAC — sans jamais
+    // le dire. On accepte donc aussi les types vidéo ici.
+    if (audio.size < 1024) return json({ error: 'Fichier audio vide ou illisible' }, 400)
 
     const duration = clamp(Number(form.get('duration')) || 0, 1, MAX_DURATION)
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
