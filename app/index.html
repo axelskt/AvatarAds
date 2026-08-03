@@ -11853,6 +11853,7 @@ async function _mtSegmentedGenerate(){
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
+    clearInterval(_tic);
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     // ── PAS DE VOIX, PAS DE MONTAGE ──────────────────────────────────────────
     // Mesuré sur la vidéo de test d'Axel (03/08) : la transcription revenait
@@ -11993,6 +11994,7 @@ async function _mtVideoGenerate(){
   if((_mt.mp3Dur||0) > 90.5){ toast('⚠️ Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
   if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
   _mtProg(6, 'Analyse de ta vidéo…');
+  let _tic = null;
   try{
     // durée réelle
     let dur=0;
@@ -12003,7 +12005,19 @@ async function _mtVideoGenerate(){
     if(!dur || !isFinite(dur) || dur<1) throw new Error('Vidéo trop courte ou illisible');
 
     // audio (WAV) + frames extraits DIRECTEMENT du fichier (aucun Éditeur)
-    _mtProg(16, 'L\'IA écoute et regarde ta vidéo… (~30 s)');
+    // ── UNE ATTENTE SE COMPTE, ELLE NE SE DEVINE PAS ────────────────────────
+    // Axel a annulé quatre fois de suite en croyant que c'était planté : la
+    // barre reste à 16 % pendant TOUT l'appel au chef d'orchestre — 1 à 2 min
+    // mesurées dans les logs — et l'écran annonçait « ~30 s ». Un chiffre qui
+    // ne bouge pas devant une promesse tenue en 30 s se lit comme une panne.
+    // On affiche donc le temps écoulé, seconde par seconde, avec la vraie
+    // fourchette. Tant que ça compte, c'est que ça vit.
+    _mtProg(16, "L'IA écoute et regarde ta vidéo… 0 s / 1 à 2 min");
+    const _t0 = Date.now();
+    _tic = setInterval(() => {
+      const s = Math.round((Date.now() - _t0) / 1000);
+      _mtProg(16 + Math.min(14, s / 9), `L'IA écoute et regarde ta vidéo… ${s} s / 1 à 2 min`);
+    }, 1000);
     // ── AUCUNE ÉTAPE NE PEUT ATTENDRE POUR TOUJOURS ─────────────────────────
     // Axel, 03/08, bloqué à 16 % : « je ne sais même pas si le montage est mort
     // ou pas ». Ces deux appels décodent la vidéo DANS le navigateur — Safari
@@ -12098,7 +12112,7 @@ async function _mtVideoGenerate(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
     _mtPollSegmented(d.job_id, _mtVideoDone);
-  }catch(e){ console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
+  }catch(e){ try{ clearInterval(_tic); }catch(_){} console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
 }
 // 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
 // montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
