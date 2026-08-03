@@ -11313,9 +11313,13 @@ function _mtRapport(plan){
   if (!(plan.broll||[]).length && fournis.length) alerte.push('Aucun de tes médias n\'a trouvé sa place dans le montage.');
 
   return new Promise((ok) => {
+    // rien ne doit rester devant une question posée à l'utilisateur
+    try { if (typeof _mtProgPause === 'function') _mtProgPause(); } catch(_) {}
     let m = document.getElementById('mtRapportModal'); if (m) m.remove();
     m = document.createElement('div'); m.id = 'mtRapportModal';
-    m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.74);backdrop-filter:blur(6px);display:grid;place-items:center;padding:14px';
+    // 9800 > 9700 : le rapport passe DEVANT l'écran de progression, même si
+    // quelqu'un oublie un jour de l'éteindre avant de l'ouvrir.
+    m.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.74);backdrop-filter:blur(6px);display:grid;place-items:center;padding:14px';
     const rows = lignes.map(l => {
       const coul = l.cls === 'v' ? 'var(--accent-2)' : l.cls === 't' ? 'var(--text-3)' : 'var(--text2)';
       const quand = l.t == null ? (l.mot ? 'sur « '+l.mot+' »' : '—') : f(l.t);
@@ -11489,6 +11493,23 @@ function _mtHorloge(on){
   const auRetour = () => { if(!document.hidden) peindre() };
   document.addEventListener('visibilitychange', auRetour);
   window._mtClockOff = () => document.removeEventListener('visibilitychange', auRetour);
+}
+// ── L'ÉCRAN DE CHARGEMENT DOIT S'EFFACER DEVANT LA RÉPONSE ───────────────────
+// Axel, 03/08, 7 min 57 affichées : son rapport « Ce que l'IA va montrer » était
+// DÉJÀ ouvert derrière — visible sur sa capture, sous l'écran de progression.
+// Le chef d'orchestre avait répondu en 45 secondes.
+//
+// La cause : `_mtProgPause()` n'existait pas. Le code l'appelait derrière un
+// `typeof === 'function'`, qui avale l'absence sans un mot, et l'écran de
+// chargement (z-index 9700) restait posé sur le rapport (9600). Un garde-fou
+// qui masque un appel manquant ne protège personne : il transforme un bug
+// bruyant en bug invisible, et celui-ci a coûté à Axel une nuit entière de
+// tests qu'il croyait bloqués.
+//
+// Elle existe maintenant, et le rapport passe aussi au-dessus par sécurité.
+function _mtProgPause(){
+  const o = document.getElementById('mtProgOv'); if (o) o.remove();
+  _mtHorloge(false);
 }
 function _mtProg(pct, label){
   let o=document.getElementById('mtProgOv');
