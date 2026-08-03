@@ -898,7 +898,15 @@ export function animHtml(name, s, W, H, vs) {
       const val = brut
       const unit = String(s.unit || '')
       if (!/\d/.test(val)) return ''   // pas de nombre prononcé → pas de compteur
-      const fs = Math.round(f.h * 0.30)
+      // ── UN CHIFFRE QUI DÉBORDE NE SE LIT PLUS ────────────────────────────
+      // Axel, 03/08 : « 10000 » sortait du cadre, coupé des deux côtés. La
+      // taille était fixe — 30 % de la hauteur — quel que soit le nombre de
+      // chiffres. Trois chiffres passaient, cinq débordaient. On la borne donc
+      // par la LARGEUR disponible : environ 0,62 em par caractère pour une
+      // graisse grasse, et on garde 14 % de marge. Cette borne ne fait que
+      // réduire — un petit nombre garde exactement la taille d'avant.
+      const nCar = ((val.replace(/[^0-9]/g, '') || '0').length) * 1.28   // +séparateurs de milliers
+      const fs = Math.min(Math.round(f.h * 0.30), Math.round((f.w * 0.86) / (nCar * 0.62)))
       return box(`<div class="an-cu" id="${id}cu">
         <span class="an-cun" id="${id}cun" style="font-size:${fs}px;color:${P.ink}">0</span>
         ${unit ? `<span class="an-cuu" id="${id}cuu" style="font-size:${Math.round(fs * 0.34)}px;color:${P.acc}">${esc(unit)}</span>` : ''}
