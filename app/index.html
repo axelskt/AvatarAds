@@ -1714,7 +1714,21 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <summary style="cursor:pointer;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:10px;user-select:none"><span>⚙️ Réglages avancés <span style="font-weight:400;color:var(--text3);font-family:var(--mono);font-size:10px">couleurs · taille · position · étirement</span></span><span class="adv-caret" style="font-size:11px;color:var(--text3);transition:transform .2s">▾</span></summary>
             <div style="margin-top:12px">
             <!-- COULEURS -->
-            <div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <!-- ── RÉGLAGES AVANCÉS · repliés (règle n°4 du handoff) ────────────
+                 Couleurs, taille, positions, étirements, mots par groupe et
+                 minutage : indispensables mais secondaires. Dépliés en
+                 permanence, ils noyaient les 8 styles et le transcript. -->
+            <div class="card" id="subAdvCard" style="padding:0;overflow:hidden;margin-bottom:22px">
+              <button type="button" onclick="_toggleSubAdv()" class="row" style="width:100%;justify-content:space-between;align-items:center;padding:15px 16px;text-align:left;background:none;border:none;cursor:pointer;font-family:var(--font);color:inherit">
+                <span class="row gap10" style="align-items:center;flex-wrap:wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M9 7h6v4a3 3 0 01-3 3 3 3 0 01-3-3z"/></svg>
+                  <span style="font-weight:600;font-size:14.5px">Réglages avancés</span>
+                  <span class="mono faint" style="font-size:11.5px">couleurs · taille · position · étirement</span>
+                </span>
+                <svg id="subAdvChev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;transition:.2s"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+              <div id="subAdvBody" style="display:none;padding:4px 16px 18px;border-top:1px solid var(--border)">
+<div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">🎨 Couleurs</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                 <div>
@@ -1803,12 +1817,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <input type="hidden" id="secPerGroupRow">
 
             <!-- ANIMATIONS -->
+            </div>
+            </div>
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
                   <span style="font-size:16px">✨</span>
                   <div>
-                    <div style="font-size:12px;font-weight:700">Animations des sous-titres</div>
+                    <div style="font-size:12px;font-weight:700">Animation des sous-titres</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="animLabel">Aucune</div>
                   </div>
                 </div>
@@ -1817,11 +1833,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="animMenu" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                   <div class="sub-card anim-card on" id="anim-none" onclick="pickAnim(this,'none','Aucune')"><div class="sub-name">Aucune</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">A B C</div></div>
-                  <div class="sub-card anim-card" id="anim-pop" onclick="pickAnim(this,'pop','Pop 💥')"><div class="sub-name">Pop 💥</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↗ A ↗ B</div></div>
-                  <div class="sub-card anim-card" id="anim-bounce" onclick="pickAnim(this,'bounce','Bounce ⬆️')"><div class="sub-name">Bounce ⬆️</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↑ A ↑ B</div></div>
-                  <div class="sub-card anim-card" id="anim-slide" onclick="pickAnim(this,'slide','Slide →')"><div class="sub-name">Slide →</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">→ A → B</div></div>
-                  <div class="sub-card anim-card" id="anim-fade" onclick="pickAnim(this,'fade','Fade')"><div class="sub-name">Fade 🌫️</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">░ A ░ B</div></div>
-                  <div class="sub-card anim-card" id="anim-karaoke" onclick="pickAnim(this,'karaoke','Karaoké 🎤')"><div class="sub-name">Karaoké 🎤</div><div class="sub-preview" style="font-size:10px;font-family:var(--mono)"><span style="color:var(--orange2)">A</span><span style="color:var(--text3)"> B C</span></div></div>
+                  <div class="sub-card anim-card" id="anim-pop" onclick="pickAnim(this,'pop','Pop')"><div class="sub-name">Pop</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↗ A ↗ B</div></div>
+                  <div class="sub-card anim-card" id="anim-bounce" onclick="pickAnim(this,'bounce','Bounce')"><div class="sub-name">Bounce</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↑ A ↑ B</div></div>
+                  <div class="sub-card anim-card" id="anim-slide" onclick="pickAnim(this,'slide','Slide')"><div class="sub-name">Slide</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">→ A → B</div></div>
+                  <div class="sub-card anim-card" id="anim-fade" onclick="pickAnim(this,'fade','Fade')"><div class="sub-name">Fade</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">A · B</div></div>
+                  <div class="sub-card anim-card" id="anim-karaoke" onclick="pickAnim(this,'karaoke','Karaoké')"><div class="sub-name">Karaoké</div><div class="sub-preview" style="font-size:10px;font-family:var(--mono)"><span style="color:var(--orange2)">A</span><span style="color:var(--text3)"> B C</span></div></div>
                 </div>
               </div>
             </div>
@@ -15094,6 +15110,18 @@ function _syncSilenceGpDropzone(){
   if(hasOwn){ drop.style.display='none'; if(info) info.style.display='block'; auto.style.display='none'; }
   else if(hasSplit){ drop.style.display='none'; if(info) info.style.display='none'; auto.style.display='block'; }
   else { drop.style.display=''; if(info) info.style.display='none'; auto.style.display='none'; }
+}
+
+// Réglages avancés des sous-titres : repliés par défaut. Les sliders sont
+// initialisés à l'ouverture — un input range mesuré dans un conteneur masqué
+// rend une largeur nulle, et son remplissage se peint alors à côté de la plaque.
+function _toggleSubAdv(){
+  const b = document.getElementById('subAdvBody'), c = document.getElementById('subAdvChev');
+  if (!b) return;
+  const ouvert = b.style.display !== 'none';
+  b.style.display = ouvert ? 'none' : 'block';
+  if (c) c.style.transform = ouvert ? '' : 'rotate(90deg)';
+  if (!ouvert && typeof _aaInitSliders === 'function') setTimeout(_aaInitSliders, 0);
 }
 
 // ── LE DÉCOR : PLEIN ÉCRAN OU SPLIT ────────────────────────────────────────
