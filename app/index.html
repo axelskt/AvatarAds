@@ -1038,6 +1038,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                  un bouton vers la galerie complète. Elle ne s'affiche que si
                  « Un avatar IA » est la source choisie ; _remplirGrilleAvatars()
                  la peuple à la première ouverture, pas au chargement de la page. -->
+            <!-- Canal de secours pour la génération : selAvatar porte déjà le choix,
+                 mais quatre lectures et trois écritures visent CE champ — il n'existait
+                 nulle part dans le document, si bien que pickLibraryAvatarFromModal
+                 écrivait le chemin de l'avatar dans le vide. Tous les accès étaient
+                 gardés, donc rien ne plantait : le canal était juste mort en silence. -->
+            <input type="hidden" id="f-avatarimg" value="">
+
             <div id="avLibInline" style="display:none">
               <div id="avLibGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
               <button type="button" class="btn btn-ghost" style="width:100%" onclick="openAvatarModal()">Voir les 49 avatars →</button>
@@ -1070,7 +1077,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button onclick="openClipPickerModal()" style="padding:5px 11px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Choisir</button>
                 </div>
                 <div id="clipSelectedBadge" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
-                  <span id="clipSelEmo" style="font-size:18px">🎬</span>
+                  <span id="clipSelEmo" style="font-size:18px;display:grid;place-items:center;color:var(--orange2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg></span>
                   <div style="flex:1;min-width:0">
                     <span id="clipSelectedLabel" style="font-size:12px;font-weight:700;color:var(--orange2);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"></span>
                     <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire</div>
@@ -1122,7 +1129,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <div style="display:flex;gap:6px;margin-top:6px">
                 <button onclick="openAvatarPresetPicker()" style="flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">↩ Avatars sauvegardés</button>
-                <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">💾 Sauvegarder avatar</button>
+                <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Sauvegarder avatar</button>
               </div>
             </div>
 
@@ -1154,7 +1161,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- Ratio Avatar / Gameplay — visible seulement si split actif -->
             <div id="avSplitRatioRow" style="display:none;margin-bottom:12px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">🎮 Ratio Avatar / Gameplay</div>
+                <div class="flbl" style="font-size:10px;margin:0">Ratio Avatar / Gameplay</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="splitRatioVal2">35 / 65</span>
               </div>
               <input type="range" id="splitRatio2" class="aa-slider" min="20" max="70" value="35" step="5"
@@ -1225,7 +1232,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- Bannière vidéo bibliothèque active -->
             <div id="voice-bypass-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;align-items:center;gap:10px">
-              <span style="font-size:20px">🎬</span>
+              <span style="display:grid;place-items:center;color:var(--text-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg></span>
               <div style="flex:1">
                 <div style="font-size:13px;font-weight:700;color:var(--green)">Vidéo bibliothèque chargée</div>
                 <div id="voiceBypassName" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">—</div>
@@ -1244,8 +1251,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- MODE VOIX SELECTOR — contrôle segmenté (réf. spec) -->
             <div class="seg" style="display:none" data-note="selecteur Clone/Preset vs Audio MP4 retire le 04/08 : la voix de synthese est abandonnee, il ne reste qu une source">
-              <button id="voiceModeBtnClone" class="on" onclick="selectVoiceMode('clone')" style="flex:1">🎙 Clone / Preset</button>
-              <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="flex:1">🎬 Audio MP4</button>
+              <button id="voiceModeBtnClone" class="on" onclick="selectVoiceMode('clone')" style="flex:1">Clone / Preset</button>
+              <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="flex:1">Audio MP4</button>
             </div>
 
             <!-- ══ TOGGLE silences voix IA (ElevenLabs) — tout en haut pour ne pas le confondre avec le nettoyeur manuel ══ -->
@@ -1266,7 +1273,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- CLONE TA VOIX -->
             <div id="voice-clone-section" class="fld" style="margin-bottom:20px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">🎤 Clone ta voix — upload un extrait</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Clone ta voix — upload un extrait</div>
               <div id="voiceDropzone" onclick="document.getElementById('voiceFileIn').click()"
                 ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
                 ondragleave="ev=>{this.classList.remove('av-drag')}"
@@ -1288,13 +1295,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- TRANSCRIPT depuis l'audio -->
               <div id="voiceTranscriptWrap" style="display:none;margin-top:12px">
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">📝 Transcript de l'audio — colle ou tape le texte dit dans la vidéo</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">Transcript de l'audio — colle ou tape le texte dit dans la vidéo</div>
                 <textarea id="voiceTranscriptTA" placeholder="Ex : de fauché à +5 chiffres par mois grâce à mon business…" oninput="syncVoiceTranscript(this.value)" style="width:100%;box-sizing:border-box;min-height:70px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;resize:none;overflow-y:auto;line-height:1.5;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='rgba(255,107,53,0.4)'" onblur="this.style.borderColor='var(--border)'"></textarea>
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px">→ Ce texte sera utilisé comme sous-titres à l'étape Style</div>
               </div>
 
               <div id="savedVoiceBanner" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;display:none;align-items:center;gap:10px">
-                <span style="font-size:20px">🎙️</span>
+                <span style="display:grid;place-items:center;color:var(--text-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0M12 17v4"/></svg></span>
                 <div style="flex:1">
                   <div style="font-size:12px;font-weight:700;color:var(--text1)" id="savedVoiceLabel">Voix clonée sauvegardée</div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="savedVoiceDate"></div>
@@ -1418,7 +1425,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
                     <button onclick="previewMp4Audio()" id="mp4PreviewBtn" style="flex:1;padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s">▶ Écouter la sélection</button>
                     <button onclick="resetMp4Trim()" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s">↺ Reset</button>
-                    <button onclick="toggleMp4Mute()" id="mp4MuteBtn" style="display:none;padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" title="Activer/couper le son">🔊</button>
+                    <button onclick="toggleMp4Mute()" id="mp4MuteBtn" style="display:none;padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" title="Activer/couper le son"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg></button>
                   </div>
                   <!-- hidden elements kept for JS compat -->
                   <canvas id="mp4WaveCanvas" style="display:none"></canvas>
@@ -1576,7 +1583,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" style="margin-bottom:18px">
               <div onclick="toggleSubtitles()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;cursor:pointer;transition:all .15s" id="subtitlesToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:20px">💬</span>
+                  <span style="display:grid;place-items:center;color:var(--text-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.2A8.4 8.4 0 013 11.5a8.4 8.4 0 019-8.4 8.4 8.4 0 019 8.4z"/></svg></span>
                   <div>
                     <div style="font-size:13px;font-weight:700">Sous-titres</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="subtitlesToggleLabel">Activés — style Hormozi</div>
@@ -1673,7 +1680,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <!-- INVERSER + AVATAR AU-DESSUS -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center">
                   <button onclick="swapSplit()" title="Inverser les positions" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-align:center" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">↕ Inverser</button>
-                  <button id="avOverlayBtn" onclick="toggleAvatarOverlay()" title="Avatar flotte au-dessus du gameplay (non rogné)" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-align:center" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!avOverlayOn)this.style.borderColor='var(--border2)';if(!avOverlayOn)this.style.color='var(--text2)'">📌 Avatar dessus</button>
+                  <button id="avOverlayBtn" onclick="toggleAvatarOverlay()" title="Avatar flotte au-dessus du gameplay (non rogné)" style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-align:center" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!avOverlayOn)this.style.borderColor='var(--border2)';if(!avOverlayOn)this.style.color='var(--text2)'">Avatar dessus</button>
                 </div>
               </div>
             </div>
@@ -1693,7 +1700,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">PASSE</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;background:#FF2D2D;padding:1px 9px;border-radius:7px">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-iman" onclick="pickSub(this,'iman')">
-                  <div class="sub-name">Punch 👊</div>
+                  <div class="sub-name">Punch</div>
                   <div class="sub-preview"><span style="font-family:'Arial Black',sans-serif;font-size:24px;color:#fff;font-weight:900;text-transform:uppercase;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 2px 0 #000,0 -2px 0 #000">ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-tiktok" onclick="pickSub(this,'tiktok')">
@@ -1713,7 +1720,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="sub-preview"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;color:#fff;font-weight:800;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 2px 0 #000,0 -2px 0 #000,2px 0 0 #000,-2px 0 0 #000;text-transform:uppercase;letter-spacing:.3px">PASSE ACTION</span></div>
                 </div>
                 <div class="sub-card style-card" id="sc-karaoke" onclick="pickSub(this,'karaoke')">
-                  <div class="sub-name">Karaoke 🎤</div>
+                  <div class="sub-name">Karaoke</div>
                   <div class="sub-preview" style="gap:6px"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#fff;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000">OÙ TA</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;color:#0A2540;background:#5FD0EC;padding:1px 9px;border-radius:7px">MATURITÉ</span></div>
                 </div>
               </div>
@@ -1739,7 +1746,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </button>
               <div id="subAdvBody" style="display:none;padding:4px 16px 18px;border-top:1px solid var(--border)">
 <div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">🎨 Couleurs</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Couleurs</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                 <div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 1 (accentué)</div>
@@ -1813,7 +1820,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
                 <button onclick="resetSubStyle()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↺ Défaut</button>
                 <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
-                <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">💾 Sauvegarder preset</button>
+                <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Sauvegarder preset</button>
               </div>
             </div>
             </div>
@@ -15367,7 +15374,7 @@ function clearVoiceMode(){
   if(cloneSection) cloneSection.classList.remove('dimmed');
   if(presetSection) presetSection.classList.remove('dimmed');
 }
-const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'White', karaoke:'Karaoke 🎤' };
+const SUB_STYLE_LABELS = { hormozi:'Hormozi', mrbeast:'MrBeast', iman:'Iman', tiktok:'TikTok Pills', neon:'Néon', podcast:'Podcast', badis:'White', karaoke:'Karaoke' };
 function _subStyleLabel(s){ return SUB_STYLE_LABELS[s] || (s ? s.charAt(0).toUpperCase()+s.slice(1) : 'Hormozi'); }
 const SUB_STYLE_COLORS = {
   hormozi:{c1:'#FFE500',c2:'#ffffff'},
@@ -15567,7 +15574,7 @@ function openAvatarPresetPicker(){
   const list = document.getElementById('avatarPresetList');
   if(!list) return;
   if(!presets.length){
-    list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Aucun avatar sauvegardé.<br>Charge une photo et clique "💾 Sauvegarder avatar".</div>';
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:24px">Aucun avatar sauvegardé.<br>Charge une photo et clique "Sauvegarder avatar".</div>';
   } else {
     list.innerHTML = presets.map((p,i) => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s"
@@ -16387,12 +16394,12 @@ function toggleAvatarOverlay(){
     // Avatar flotte au-dessus du gameplay — overflow visible, z-index élevé
     if(avZone){ avZone.style.overflow = 'visible'; avZone.style.zIndex = '10'; }
     if(avImg){ avImg.style.zIndex = '100'; }
-    if(btn){ btn.style.background = 'var(--orange)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--orange)'; btn.textContent = '📌 Avatar dessus ✓'; }
+    if(btn){ btn.style.background = 'var(--orange)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--orange)'; btn.textContent = 'Avatar dessus ✓'; }
     toast('📌 Avatar flotte au-dessus du gameplay');
   } else {
     if(avZone){ avZone.style.overflow = 'hidden'; avZone.style.zIndex = ''; }
     if(avImg){ avImg.style.zIndex = '2'; }
-    if(btn){ btn.style.background = 'var(--bg4)'; btn.style.color = 'var(--text2)'; btn.style.borderColor = 'var(--border2)'; btn.textContent = '📌 Avatar dessus'; }
+    if(btn){ btn.style.background = 'var(--bg4)'; btn.style.color = 'var(--text2)'; btn.style.borderColor = 'var(--border2)'; btn.textContent = 'Avatar dessus'; }
     toast('Avatar rogné par sa zone');
   }
 }
@@ -17262,7 +17269,7 @@ function toggleMp4AudioOption(force){
       if(cloneResults) cloneResults.style.display = 'none';
       const status = document.getElementById('cloneStatus');
       if(status){ status.textContent = '↺ Voix clone annulée — audio MP4 utilisé à la place'; status.style.display='block'; status.style.color='var(--orange2)'; }
-      toast('🎬 Audio MP4 activé — clone voix annulé');
+      toast('Audio MP4 activé — clone voix annulé');
     }
     // Show ElevenLabs bypass notice
     const elSections = document.getElementById('voice-el-sections');
