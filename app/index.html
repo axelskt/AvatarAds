@@ -11864,7 +11864,6 @@ async function _mtSegmentedGenerate(){
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
-    clearInterval(_tic);
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     // ── PAS DE VOIX, PAS DE MONTAGE ──────────────────────────────────────────
     // Mesuré sur la vidéo de test d'Axel (03/08) : la transcription revenait
@@ -12091,6 +12090,14 @@ async function _mtVideoGenerate(){
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
+    // ── UN COMPTEUR QUI SURVIT À SON ATTENTE DEVIENT UN MENTEUR ─────────────
+    // Axel, 03/08, 615 s affichées : il avait DÉJÀ eu son rapport et lancé le
+    // rendu. L'analyse était finie depuis longtemps — mais l'intervalle
+    // continuait de repeindre « L'IA écoute et regarde ta vidéo… » par-dessus
+    // les étapes du rendu, et de clouer l'anneau à 44 %. Le travail avançait,
+    // l'écran racontait l'étape d'avant. On l'éteint ici, et une seule fois :
+    // c'est le point exact où l'attente qu'il mesurait se termine.
+    clearInterval(_tic); _tic = null;
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan,
                  _words: (od.transcript && od.transcript.words) || [] };
