@@ -25,6 +25,7 @@ import { buildComposition } from './build-composition.mjs'
 // chaîne, sinon elle rouvrirait par la fenêtre ce qu'on ferme à la porte.
 import { deriveDynamicSlides, EXIGE_GLOBAL as EXIGE_FINITION, ANIMS as ANIMS_DISPO } from './dynamic-derive.mjs'
 import { deriveClassicSlides } from './classic-derive.mjs'
+import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cache.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -1037,6 +1038,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // saturer un conteneur qui rend déjà une vidéo à côté.
   const PARALLELE = 4
   let faits = 0
+  let depense = 0, economie = 0   // crédits Hedra, pour que la facture soit lisible dans la trace
   const file = segs.map((w, i) => ({ w, i }))
   const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
     for (;;) {
@@ -1070,7 +1072,24 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
         '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
     } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); return false }
 
-    const audioId = await hedraAsset('audio', `voice${i}.mp3`, readFileSync(mp3), 'audio/mpeg')
+    // ── LE CACHE PASSE AVANT LA CAISSE ──────────────────────────────────────
+    // Découper l'audio est gratuit et local ; c'est seulement APRÈS qu'on sait
+    // quels octets partent chez Hedra, donc c'est ici — et pas plus haut — que
+    // la clé peut être calculée. Un hit rend la scène instantanée ET gratuite.
+    const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
+    const audioBuf = readFileSync(mp3)
+    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_MODEL_ID)
+    const cout = Math.round(dur * HEDRA_CR_SEC)
+    const dejaPaye = await cacheLire(cle)
+    if (dejaPaye) {
+      writeFileSync(join(proj, 'media', `av${i}.mp4`), dejaPaye)
+      avatarClips['av' + i] = 'media/av' + i + '.mp4'
+      economie += cout
+      console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
+      return true
+    }
+
+    const audioId = await hedraAsset('audio', `voice${i}.mp3`, audioBuf, 'audio/mpeg')
     if (!audioId) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
 
     const gen = await hedraProxy('/generations', {
@@ -1105,14 +1124,20 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     const res = await fetch(url)
     if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); return false }
     const out = join(proj, 'media', `av${i}.mp4`)
-    writeFileSync(out, Buffer.from(await res.arrayBuffer()))
+    const clip = Buffer.from(await res.arrayBuffer())
+    writeFileSync(out, clip)
     avatarClips['av' + i] = 'media/av' + i + '.mp4'
-    console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'})`)
+    // Payé une fois : on le range AVANT de rendre la main, pour que le prochain
+    // passage — relance, régénération, autre réplica — le trouve.
+    await cacheEcrire(cle, clip, dur)
+    depense += cout
+    console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}) — ${cout} crédits`)
     return true
   }
 
   console.log(`▶ lipsync : ${segs.length} scène(s) lancée(s) en parallèle (${PARALLELE} à la fois)`)
   await Promise.all(equipes)
+  console.log(`▶ lipsync : ${depense} crédit(s) Hedra dépensé(s)${economie ? `, ${economie} économisé(s) par le cache` : ''}`)
   return faits
 }
 
