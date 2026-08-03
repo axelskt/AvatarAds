@@ -18223,8 +18223,11 @@ document.addEventListener('mousemove', e=>{
     const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
     if(pos.includes('t')) clip.t = Math.max(0, Math.min(45, clip0.t + dy));
     if(pos.includes('b')) clip.b = Math.max(0, Math.min(45, clip0.b - dy));
-    if(pos.includes('l')) clip.l = Math.max(0, Math.min(45, clip0.l + dx));
-    if(pos.includes('r')) clip.r = Math.max(0, Math.min(45, clip0.r - dx));
+    // ⚠ pas de rognage latéral : il rétrécit l'image sans rien révéler et laisse
+    // deux bandes noires sur les côtés. Même raison que le verrouillage du
+    // glissement horizontal juste en dessous.
+    if(pos.includes('l')) clip.l = 0;
+    if(pos.includes('r')) clip.r = 0;
     applyClip(zone);
     return;
   }
@@ -18235,12 +18238,22 @@ document.addEventListener('mousemove', e=>{
   const scale = dispW / 393;
   const dx = (e.clientX - _drag.x0) / scale;
   const dy = (e.clientY - _drag.y0) / scale;
+  // ── LA VIDÉO COULISSE, ELLE NE SORT PAS DU CADRE ──────────────────────────
+  // Axel, 03/08 : « on peut sortir le clip comme ça, du coup ça peut casser une
+  // vidéo ; faudrait que la vidéo reste et coulisse juste en haut ou en bas,
+  // pas sur le côté ».
+  // Le déplacement horizontal allait de −800 à +800 px : on pouvait pousser le
+  // clip entièrement hors du cadre et ne garder qu'une bande noire — invisible
+  // à l'aperçu tant qu'on ne regarde pas le bord, mais bien présente dans le
+  // MP4 téléchargé.
+  // Or la vidéo remplit DÉJÀ toute la largeur (object-fit: cover) : la déplacer
+  // latéralement ne peut que découvrir du vide, jamais montrer autre chose. Le
+  // seul recadrage qui a du sens est vertical — choisir la hauteur du visage ou
+  // de l'action. On verrouille donc X et on laisse Y libre.
   if(_drag.zone==='av'){
-    cfg.avCropX = Math.max(-800, Math.min(800, _drag.cx0 + dx));
     cfg.avCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
     updateAvatarCrop();
   } else {
-    cfg.gpCropX = Math.max(-800, Math.min(800, _drag.cx0 + dx));
     cfg.gpCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
     updateGpCrop();
   }
