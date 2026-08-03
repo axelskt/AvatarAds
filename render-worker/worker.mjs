@@ -163,6 +163,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   const baseDur = parseFloat(ffprobe(basePath, 'format=duration')) || plan.duration || 10
   plan.duration = Math.round(Math.min(plan.duration || baseDur, baseDur) * 100) / 100
 
+  // Une base sans piste vidéo (montage parti d'un MP3) ne mérite pas de
+  // sous-couche : le worker lui fabrique un fond noir, l'empiler n'ajouterait
+  // qu'un décodage pour rien. Le drapeau vit ICI, dans la portée de renderJob —
+  // `baseW` est mesuré dans un bloc interne et n'y est pas visible.
+  let baseAUneImage = false
+
   // ── 1. projet HyperFrames temporaire ──
   const proj = mkdtempSync(join(tmpdir(), 'aa-render-'))
   try {
@@ -172,7 +178,9 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // prenait des minutes en WASM côté client. On ne touche pas à l'audio (la voix).
     const baseOut = join(proj, 'media', 'base.mp4')
     let baseW = 0, baseH = 0
+    // retenu pour plus bas : une base sans image ne mérite pas de sous-couche
     try { const d = ffprobe(basePath, 'stream=width,height').split(','); baseW = parseInt(d[0], 10) || 0; baseH = parseInt(d[1], 10) || 0 } catch (_) { /* probe optionnel */ }
+    baseAUneImage = baseW > 0
     if (!baseW) {
       // job AUDIO SEUL (Montage IA via MCP : pas de clip filmé) → fond noir 1080×1920,
       // les slides du plan couvrent l'écran de toute façon (style dynamic & co)
@@ -541,7 +549,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       }
     }
 
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+    // la sous-couche n'a de sens que si la base porte VRAIMENT une image : sur un
+    // montage parti d'un MP3, base.mp4 est un fond noir fabriqué ici même, et
+    // l'empiler ne ferait qu'ajouter un décodage vidéo pour rien.
+    const sousCouche = existsSync(join(proj, 'media', 'base.mp4')) && baseAUneImage ? 'media/base.mp4' : ''
+    if (sousCouche) console.log('▶ sous-couche : la vidéo source tapisse toute la durée — aucun aplat possible')
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, baseVideo: sousCouche, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
 
     // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
     // a construit cette liste en ÉCOUTANT le rendu précédent (supprimé, déplacé,
