@@ -1233,7 +1233,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
 
             <!-- MODE VOIX SELECTOR — contrôle segmenté (réf. spec) -->
-            <div class="seg" style="display:flex;width:100%;margin-bottom:14px">
+            <div class="seg" style="display:none" data-note="selecteur Clone/Preset vs Audio MP4 retire le 04/08 : la voix de synthese est abandonnee, il ne reste qu une source">
               <button id="voiceModeBtnClone" class="on" onclick="selectVoiceMode('clone')" style="flex:1">🎙 Clone / Preset</button>
               <button id="voiceModeBtnMp4" onclick="selectVoiceMode('mp4')" style="flex:1">🎬 Audio MP4</button>
             </div>
@@ -1252,7 +1252,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </label>
             </div>
 
-            <div id="voice-el-sections">
+            <div id="voice-el-sections" style="display:none">
 
             <!-- CLONE TA VOIX -->
             <div id="voice-clone-section" class="fld" style="margin-bottom:20px">
@@ -1374,7 +1374,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div id="mp4AudioThumb" style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;opacity:.4"></div>
                 </div>
               </div>
-              <div id="mp4AudioPanel" style="display:none;margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+              <div id="mp4AudioPanel" style="margin-top:10px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
                 <!-- Dropzone -->
                 <div id="mp4AudioDropzone" onclick="document.getElementById('mp4AudioFileIn').click()"
                   ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
@@ -10487,6 +10487,12 @@ function updateSteps(){
   if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
   // Sous-titres : auto-activés à l'arrivée sur Style (désormais l'étape 3)
   if(step>=3){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  // Voix : une seule source depuis l'abandon de la synthèse. Le mode « clone /
+  // preset » était le défaut au chargement ; sans ce forçage l'étape s'ouvrirait
+  // sur un sélecteur masqué et un panneau fichier inerte.
+  if(step===2 && typeof selectVoiceMode==='function'){
+    try{ selectVoiceMode('mp4'); }catch(e){ console.warn('mode voix :', e); }
+  }
   // Récapitulatif : relu à CHAQUE arrivée sur l'étape 4, jamais mis en cache —
   // on peut revenir en arrière changer le décor puis revancer, et l'écran doit
   // dire la vérité au moment où l'utilisateur appuie sur « Générer ma vidéo ».
