@@ -2743,6 +2743,25 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // CONTENU (items datés, kpi, checklist) restent : eux portent de la matière.
     if (plan.slideStyle === 'apple' && String(sl.type) === 'banner'
       && !(sl.items || []).some((it) => String(it.text || '').trim())) { dropPages++; continue }
+    // ── UNE ANIMATION BANNIE RESTE BANNIE, MÊME AVEC DU TEXTE DESSUS ─────────
+    // Axel, 03/08 : « il met des animations qu'on est censé avoir supprimé ».
+    // Vérifié sur son montage : `target` et `check` posées, toutes deux dans
+    // REFUSEES depuis des semaines.
+    //
+    // REFUSEES ne filtrait que le CATALOGUE proposé au chef d'orchestre — une
+    // interdiction à l'entrée, sans videur à la porte. Et le seul contrôle au
+    // placement était `!RENDERABLE.has(anim) && !hasContent(sl)` : une animation
+    // bannie qui portait du texte passait par le `&& !hasContent`. C'est
+    // exactement par là qu'elles sont entrées.
+    //
+    // On ne jette pas la scène pour autant : son CONTENU peut être bon (une
+    // checklist, un chiffre). On lui retire seulement son animation interdite et
+    // on la laisse redevenir un panneau de texte ; si elle est vide, les règles
+    // qui suivent l'écarteront comme n'importe quelle scène creuse.
+    if (sl.anim && REFUSEES.has(String(sl.anim))) {
+      console.log(`▶ « ${sl.anim} » est bannie (REFUSEES) → animation retirée à ${r2(sl.start)}s${hasContent(sl) ? ', le contenu reste' : ', scène vide'}`)
+      sl = { ...sl, anim: '' }
+    }
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) {
       // On jetait en silence : impossible de savoir CE QU'IL DEMANDE. Axel :
       // « on peut toujours créer l'animation qu'il veut si elle est pertinente
