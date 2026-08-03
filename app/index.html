@@ -1862,33 +1862,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- ⚡ Split Screen actif : deux façons de générer, au même endroit que le clip -->
-            <div id="genSplitActions" style="display:none;margin-bottom:8px">
-              <button id="genSplitQuickBtn" onclick="startGeneration()" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.3);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''">⚡ Générer la vidéo split screen <span style="font-weight:600;font-size:11px;opacity:.85">— avatar + gameplay</span></button>
-              <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:8px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
-              <div style="background:var(--bg3);border:1px solid var(--border);border-radius:11px;overflow:hidden">
-                <div onclick="_genGpOnlyToggle()" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;cursor:pointer" onmouseover="this.parentElement.style.borderColor='var(--border2)'" onmouseout="this.parentElement.style.borderColor='var(--border)'">
-                  <div style="font-size:12px;font-weight:800">🎮 Clip gameplay seul <span style="font-weight:600;font-size:10.5px;color:var(--text3)">— sans avatar · 0 crédit de lipsync</span></div>
-                  <span id="genGpOnlyChev" style="color:var(--text3);font-size:11px;flex-shrink:0">▾</span>
-                </div>
-                <div id="genGpOnlyBody" style="display:none;padding:0 12px 12px">
-                  <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-bottom:10px">Ta voix off porte le clip gameplay (+ sous-titres). Idéal avec le Montage IA.</div>
-                  <!-- A · réutiliser un clip gameplay de la bibliothèque -->
-                  <button onclick="openClipPickerModal()" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left">
-                    <span style="font-weight:800;font-size:12px">🎮 Clip gameplay</span>
-                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">Choisis un clip dans la bibliothèque</span>
-                  </button>
-                  <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin:8px 0">—&nbsp;&nbsp;ou&nbsp;&nbsp;—</div>
-                  <!-- B · générer un gameplay IA depuis un audio (importable ici si absent) -->
-                  <button onclick="toast('🚧 Génération d\'un gameplay IA — bientôt disponible')" class="btn btn-ghost btn-sm" style="width:100%;padding:11px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;opacity:.55;cursor:not-allowed">
-                    <span style="font-weight:800;font-size:12px">✨ Génération d'un gameplay IA <span style="font-size:9px;font-family:var(--mono);font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(255,107,53,.16);color:var(--orange2);vertical-align:middle">BIENTÔT</span></span>
-                    <span style="font-weight:600;font-size:10.5px;color:var(--text3)">à partir d'un audio — bientôt disponible</span>
-                  </button>
-                  <input type="file" id="genGpOnlyMp3" accept="audio/*,video/*" style="display:none" onchange="genGameplayOnly('mp3', this.files[0]);this.value=''">
-                  <div style="text-align:center;margin-top:9px"><button onclick="genGameplayOnly('el')" class="btn btn-quiet btn-sm" style="font-size:10.5px;padding:4px 8px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">ou avec la voix ElevenLabs de ton script</button></div>
-                </div>
-              </div>
-            </div>
+            <!-- ── RETIRÉ LE 03/08 : « Générer la vidéo split screen » et « Clip
+                 gameplay seul » ──────────────────────────────────────────────
+                 Axel : « supprime "générer le split screen" et le "clip gameplay
+                 seul" aussi, et ajoute à la to-do voir ce qu'on fait avec ça ».
+                 Les deux entrées encombraient l'étape Style sans être le chemin
+                 principal — on génère par le bouton « Générer la vidéo » en bas.
+                 Le CODE reste en place (startGeneration, _genGpOnlyToggle,
+                 genGameplayOnly, openClipPickerModal) : c'est l'ACCÈS qui est
+                 retiré, pas la fonctionnalité. Voir tâche #46 pour l'arbitrage. -->
 
           </div>
 
