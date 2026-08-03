@@ -967,8 +967,16 @@ export function buildDynamicComposition(plan, opts = {}) {
       const avant = grp.length
       for (let i = grp.length - 1; i >= 0; i--) {
         const mid = (grp[i].a + grp[i].b) / 2
-        const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
-        const couvre = pan && pan.kind !== 'avclip' && pan.kind !== 'media'
+        // ⚠ `find` retournait le PREMIER panneau couvrant l'instant. Or la
+        // fenêtre visage d'Axel s'étend sur toute la vidéo (0 → 19,55 s) : son
+        // panneau gagnait toujours, même quand une animation jouait par-dessus,
+        // et le filtre concluait « on voit sa vidéo » partout. Résultat : plus
+        // aucun sous-titre, y compris sous le compteur — son « gros blanc » de
+        // 13 à 16 s.
+        // La bonne question n'est pas « quel panneau vient en premier » mais
+        // « EST-CE QU'UN panneau couvre l'image à cet instant ». D'où le some().
+        const couvre = panels.some((p) => mid >= p.t0 && mid < p.t1
+          && p.kind !== 'avclip' && p.kind !== 'media')
         if (!couvre) grp.splice(i, 1)
       }
       console.log(`▶ sous-titres déjà incrustés dans la source : ${grp.length}/${avant} groupes gardés (uniquement sous les panneaux)`)
