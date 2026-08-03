@@ -11243,7 +11243,18 @@ const _MT_LIB = {
 const _mtLibelle = (a) => _MT_LIB[a] || ('animation « ' + a + ' »');
 
 function _mtRapport(plan){
-  const caps = (plan.captions || []).filter(c => String(c.text||'').trim());
+  // ── « LES LOGS NE CORRESPONDENT PAS DU TOUT À LA VIDÉO » (Axel, 03/08) ──────
+  // L'écran affichait « — » sur chaque ligne et criait « tu ne dis rien à cet
+  // instant » sur chaque animation, sur un montage pourtant correct.
+  // La cause : il lisait `plan.captions`. Or orchestrate renvoie captions:[]
+  // QUAND LA VIDÉO A DÉJÀ DES SOUS-TITRES INCRUSTÉS — il refuse d'en réécrire
+  // par-dessus, et il a raison. Une liste de sous-titres vide ne veut pas dire
+  // que personne ne parle : la transcription, elle, est toujours là, à côté,
+  // dans `transcript.words`. On la prend en premier, les sous-titres ne servent
+  // plus que de repli.
+  const caps = (Array.isArray(plan._words) && plan._words.length ? plan._words : (plan.captions || []))
+    .map(c => ({ text: String((c && (c.text ?? c.word)) || '').trim(), start: c && c.start, end: c && c.end }))
+    .filter(c => c.text && isFinite(c.start));
   const dit = (a, b) => caps.filter(c => c.start >= a - 0.35 && c.start <= b + 0.1)
     .map(c => c.text).join(' ').trim().slice(0, 74) || '—';
   const f = (t) => (Math.round(t*10)/10).toFixed(1).replace('.', ',') + ' s';
@@ -11864,10 +11875,15 @@ async function _mtSegmentedGenerate(){
     // Tout le Montage IA repose sur les mots : sans eux il n'y a pas de montage,
     // il y a un diaporama. On s'arrête, on le DIT, et on rend les crédits.
     {
-      const _mots = (od.plan.captions || []).filter(w => String(w && w.text || '').trim()).length;
+      // même piège : sur une vidéo à sous-titres incrustés, captions est vide
+      // alors que la voix est parfaitement là. On compte les MOTS TRANSCRITS.
+      const _src = (od.transcript && od.transcript.words && od.transcript.words.length)
+        ? od.transcript.words : (od.plan.captions || []);
+      const _mots = _src.filter(w => String(w && (w.text ?? w.word) || '').trim()).length;
       if (_mots < 3) throw new Error("Aucune parole détectée dans ta vidéo — le Montage IA se cale sur ce que tu DIS. Vérifie que la piste audio contient bien ta voix (et pas seulement de la musique), ou réexporte ta vidéo avec l'audio.");
     }
-    const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    const plan={ duration: Math.round(dur*100)/100, ...od.plan,
+                 _words: (od.transcript && od.transcript.words) || [] };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
     if (typeof _mtProgPause === 'function') _mtProgPause();
@@ -12060,7 +12076,10 @@ async function _mtVideoGenerate(){
 
     // chef d'orchestre → plan de montage
     const fd=new FormData();
-    fd.append('audio', wav, 'timeline.wav');
+    // On envoie le MP4 tel quel : il doit donc porter SON nom et SON type.
+    // Il partait sous l'étiquette « timeline.wav » — Scribe s'en sort, mais on
+    // ne demande pas à un service de deviner ce qu'on lui a mal nommé.
+    fd.append('audio', wav, (wav === _mt.video ? (_mt.video.name || 'source.mp4') : 'timeline.wav'));
     fd.append('duration', String(Math.round(dur*100)/100));
     frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
@@ -12073,7 +12092,8 @@ async function _mtVideoGenerate(){
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
-    const plan={ duration: Math.round(dur*100)/100, ...od.plan };
+    const plan={ duration: Math.round(dur*100)/100, ...od.plan,
+                 _words: (od.transcript && od.transcript.words) || [] };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
     if (typeof _mtProgPause === 'function') _mtProgPause();
