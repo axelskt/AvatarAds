@@ -12554,6 +12554,22 @@ async function _mtDetDemo(){
 
 async function _mtDetOpen(){ return _mdOpen(); }
 
+// ── OUVRIR « DÉTAILS DU MONTAGE » SUR N'IMPORTE QUEL MONTAGE ─────────────────
+// Axel, 03/08 : « faut prendre la version montage 0313, faire le lipsync sur
+// toutes les scènes et juste enlever faceless à la fin ». Or l'écran n'ouvre
+// que le DERNIER montage terminé : celui qu'il veut reprendre datait de la
+// nuit, il était donc hors d'atteinte.
+// Reprendre un ancien montage est pourtant le cas le plus naturel — c'est même
+// tout l'intérêt de garder les plans. Depuis la console :
+//     ouvrirMontage('6ec67c72-2442-41a7-bcc1-cb72a56db103')
+// L'écran s'ouvre dessus, avec sa bande, ses scènes et ses clips lipsync déjà
+// générés (donc réutilisés à 0 crédit).
+window.ouvrirMontage = function(jobId){
+  if(!jobId){ toast('⚠️ Donne l\'identifiant du montage'); return; }
+  window._mtLastJobId = String(jobId).trim();
+  return _mdOpen(window._mtLastJobId);
+};
+
 // ── ⚙️ DÉTAILS DU MONTAGE V2 — recopie 1:1 de la maquette Claude Design ──────
 // (gen-montage-details.jsx). Bande multi-pistes (tiges hautes = ce qu'on voit,
 // tiges basses = ce qu'on entend/lit), vue rapprochée ±N s, liste ordonnée +
