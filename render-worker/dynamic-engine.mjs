@@ -479,8 +479,19 @@ export function buildDynamicComposition(plan, opts = {}) {
       const source = [s.value, s.center, s.title, (s.items || [])[0] && (s.items || [])[0].text]
         .map((x) => String(x == null ? '' : x)).find((x) => /\d/.test(x)) || '0'
       const val = parseInt(source.replace(/\D/g, ''), 10) || 0
+      // ── LA TAILLE DÉPEND DU NOMBRE DE CHIFFRES ──────────────────────────
+      // Axel, trois fois : « 10000 ne respecte toujours pas la safezone ».
+      // 330 px en dur : trois chiffres tenaient, cinq débordaient de chaque
+      // côté. J'ai corrigé la même faute dans anim-pack ce matin — sans effet,
+      // parce que c'est CETTE branche qui rend le compteur, et le commentaire
+      // juste au-dessus le disait déjà. Deuxième fois que ce piège se referme.
+      // On borne par la largeur : ~0,78 em par chiffre en graisse display, et
+      // 72 % du cadre, soit 14 % de marge de chaque côté. La borne ne fait que
+      // réduire — « 100 » garde exactement ses 330 px.
+      const nCar = Math.max(1, String(val).length) * 1.28   // +séparateurs de milliers
+      const fzN = Math.min(330, Math.round((W * 0.72) / (nCar * 0.78)))
       inner += `<div class="stack">
-        <div class="disp" id="${id}n" style="font-size:330px;color:${tone.ink};opacity:0">0</div>
+        <div class="disp" id="${id}n" style="font-size:${fzN}px;color:${tone.ink};opacity:0">0</div>
         <div id="${id}u" style="font-family:'JetBrains Mono',monospace;font-size:44px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || '')}</div></div>`
       pjs += `
   var ${id}v = { n: 0 };

@@ -367,8 +367,26 @@ export function animHtml(name, s, W, H, vs) {
     // ══ PAQUET 2 — L'ARGENT, L'OUTIL, LA MÉTHODE ════════════════════════════
     case 'roi': {
       // « 1 € investi, 5 € qui reviennent » : ce qui entre, ce qui sort.
+      // ── LES DEUX CHIFFRES VIENNENT DE CE QUI EST DIT ─────────────────────
+      // Axel, 03/08 : sur « entre une et deux heures par jour », l'animation
+      // affichait 1 € → 5 €. Son diagnostic était le bon : « elle aurait pu
+      // correspondre s'ils avaient pu modifier les chiffres et mettre heure au
+      // lieu du signe € ». Le choix de l'animation était juste — deux nombres
+      // qu'on compare — mais son contenu était écrit en dur, donc faux.
+      // On lit donc les deux nombres et l'unité dans ce que porte la scène.
+      // Sans rien trouver, on retombe sur 1 €/5 € : le sens d'origine.
+      const texteRoi = [s.value, s.center, s.title, ...(s.items || []).map((it) => it && it.text)]
+        .map((x) => String(x == null ? '' : x)).join(' ')
+      const nbs = (texteRoi.match(/\d+(?:[.,]\d+)?/g) || []).slice(0, 2)
+      const uniteRoi = String(s.unit || '').trim()
+        || (/\bh\b|heure/i.test(texteRoi) ? 'h'
+          : /%|pour ?cent/i.test(texteRoi) ? '%'
+          : /€|euro/i.test(texteRoi) ? '€'
+          : /\bmin\b|minute/i.test(texteRoi) ? 'min' : '')
+      const gaucheRoi = nbs[0] ? nbs[0] + uniteRoi : '1€'
+      const droiteRoi = nbs[1] ? nbs[1] + uniteRoi : (nbs[0] ? nbs[0] + uniteRoi : '5€')
       const bw = Math.round(f.w * 0.18), y = Math.round(f.h / 2)
-      const mk = (x, n, big) => `<div class="an-p" id="${id}ro${n}" style="left:${x}px;top:${y - Math.round(bw*0.34)}px;width:${bw}px;height:${Math.round(bw*0.68)}px;border-radius:${Math.round(bw*0.12)}px;background:${big ? P.acc : P.soft};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(bw*0.34)}px;color:${big ? '#fff' : P.ink}">${big ? '5€' : '1€'}</div>`
+      const mk = (x, n, big) => `<div class="an-p" id="${id}ro${n}" style="left:${x}px;top:${y - Math.round(bw*0.34)}px;width:${bw}px;height:${Math.round(bw*0.68)}px;border-radius:${Math.round(bw*0.12)}px;background:${big ? P.acc : P.soft};display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(bw*0.34 * Math.min(1, 2.6 / Math.max(2, (big ? droiteRoi : gaucheRoi).length)))}px;color:${big ? '#fff' : P.ink}">${esc(big ? droiteRoi : gaucheRoi)}</div>`
       return box(mk(Math.round(f.w * 0.1), 0, false) + mk(Math.round(f.w * 0.66), 1, true) + `
         <svg style="position:absolute;left:${Math.round(f.w*0.32)}px;top:${y - 24}px;width:${Math.round(f.w*0.3)}px;height:48px;overflow:visible">
           <path id="${id}roa" d="M4 24 H ${Math.round(f.w*0.3) - 22}" fill="none" stroke="${P.acc}" stroke-width="6" stroke-linecap="round"/>
