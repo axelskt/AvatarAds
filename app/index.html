@@ -11854,6 +11854,18 @@ async function _mtSegmentedGenerate(){
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
+    // ── PAS DE VOIX, PAS DE MONTAGE ──────────────────────────────────────────
+    // Mesuré sur la vidéo de test d'Axel (03/08) : la transcription revenait
+    // VIDE — chaque ligne de l'écran de relecture affichait « — » et neuf
+    // avertissements disaient « alors que tu ne dis rien à cet instant ». Le
+    // chef d'orchestre avait quand même produit un plan, posé au hasard, et on
+    // s'apprêtait à rendre 50 s de visuels qui n'illustrent rien.
+    // Tout le Montage IA repose sur les mots : sans eux il n'y a pas de montage,
+    // il y a un diaporama. On s'arrête, on le DIT, et on rend les crédits.
+    {
+      const _mots = (od.plan.captions || []).filter(w => String(w && w.text || '').trim()).length;
+      if (_mots < 3) throw new Error("Aucune parole détectée dans ta vidéo — le Montage IA se cale sur ce que tu DIS. Vérifie que la piste audio contient bien ta voix (et pas seulement de la musique), ou réexporte ta vidéo avec l'audio.");
+    }
     const plan={ duration: Math.round(dur*100)/100, ...od.plan };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
