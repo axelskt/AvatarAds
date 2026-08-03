@@ -12014,10 +12014,17 @@ async function _mtVideoGenerate(){
     // fourchette. Tant que ça compte, c'est que ça vit.
     _mtProg(16, "L'IA écoute et regarde ta vidéo… 0 s / 1 à 2 min");
     const _t0 = Date.now();
+    // Axel : « faut que la barre avance ou montre signe de vie, parce que là il
+    // ne se passe rien et les users vont être exactement comme moi ». La barre
+    // progresse donc VISIBLEMENT pendant l'attente — 16 % → 44 % étalés sur les
+    // deux minutes — et se rafraîchit trois fois par seconde. Ce n'est pas une
+    // vraie mesure d'avancement (le serveur ne nous en donne pas), et c'est
+    // assumé : ce qu'on montre, c'est que le travail est vivant.
     _tic = setInterval(() => {
-      const s = Math.round((Date.now() - _t0) / 1000);
-      _mtProg(16 + Math.min(14, s / 9), `L'IA écoute et regarde ta vidéo… ${s} s / 1 à 2 min`);
-    }, 1000);
+      const s = (Date.now() - _t0) / 1000;
+      const pct = 16 + 28 * (1 - Math.exp(-s / 42));   // avance vite, puis ralentit
+      _mtProg(pct, `L'IA écoute et regarde ta vidéo… ${Math.round(s)} s / 1 à 2 min`);
+    }, 330);
     // ── AUCUNE ÉTAPE NE PEUT ATTENDRE POUR TOUJOURS ─────────────────────────
     // Axel, 03/08, bloqué à 16 % : « je ne sais même pas si le montage est mort
     // ou pas ». Ces deux appels décodent la vidéo DANS le navigateur — Safari
