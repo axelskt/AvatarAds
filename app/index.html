@@ -11990,8 +11990,28 @@ async function _mtVideoGenerate(){
 
     // audio (WAV) + frames extraits DIRECTEMENT du fichier (aucun Éditeur)
     _mtProg(16, 'L\'IA écoute et regarde ta vidéo… (~30 s)');
-    const wav=await _mtAudioSliceWav(_mt.video, 0, dur);
-    const frames=await _mtFramesFromVideo(_mt.video, 8);
+    // ── AUCUNE ÉTAPE NE PEUT ATTENDRE POUR TOUJOURS ─────────────────────────
+    // Axel, 03/08, bloqué à 16 % : « je ne sais même pas si le montage est mort
+    // ou pas ». Ces deux appels décodent la vidéo DANS le navigateur — Safari
+    // rend la main quand il veut, et sur certains fichiers jamais : ni erreur,
+    // ni fin, la barre reste figée. Un montage qui échoue doit le DIRE et
+    // rendre les crédits ; il n'a pas le droit de faire attendre indéfiniment.
+    const _limite = (p, ms, quoi) => Promise.race([
+      p, new Promise((_, rej) => setTimeout(() => rej(new Error('⏱ ' + quoi)), ms)),
+    ]);
+    let wav;
+    try {
+      wav = await _limite(_mtAudioSliceWav(_mt.video, 0, dur), 60000, "l'audio de ta vidéo n'a pas pu être lu (60 s)");
+    } catch(e) {
+      throw new Error("Impossible de lire la piste audio de ta vidéo. Vérifie qu'elle en a bien une, ou réexporte-la en MP4 (H.264 + AAC).");
+    }
+    if(!wav || !wav.size) throw new Error("Ta vidéo ne contient pas de piste audio : le Montage IA a besoin de ta voix.");
+    // Les images, elles, sont un CONFORT : elles aident le chef d'orchestre à
+    // voir ce que montre la vidéo. S'il ne les obtient pas, on continue sans —
+    // mieux vaut un montage guidé par la seule voix que pas de montage du tout.
+    let frames = [];
+    try { frames = await _limite(_mtFramesFromVideo(_mt.video, 8), 45000, 'les images'); }
+    catch(e) { console.warn('images non extraites, on continue sans :', e.message); }
 
     // chef d'orchestre → plan de montage
     const fd=new FormData();

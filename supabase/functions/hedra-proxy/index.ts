@@ -39,14 +39,33 @@ serve(async (req: Request) => {
     })
   }
 
+  // ── LE MOTEUR DE RENDU A LE DROIT D'ENTRER ────────────────────────────────
+  // Le worker génère le lipsync scène par scène et doit donc parler à Hedra.
+  // Il n'a pas de session utilisateur — il tourne sur Railway — mais il détient
+  // la clé de service, qui ne quitte jamais le serveur et vaut plus qu'un JWT
+  // d'utilisateur. Mesuré le 03/08 : sans cette porte, tous ses appels
+  // repartaient en 401 et aucun clip n'était généré, en silence.
+  // ⚠ Comparaison à longueur constante : un `===` sur un secret laisse fuiter
+  // sa longueur et ses premiers octets par le temps de réponse.
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const memeSecret = (a: string, b: string) => {
+    if (!a || !b || a.length !== b.length) return false
+    let d = 0
+    for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i)
+    return d === 0
+  }
+  const estLeMoteur = memeSecret(token, service)
+
   const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? ''
   const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
   const supabase = createClient(supabaseUrl, supabaseAnon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
 
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) {
+  const { data: { user }, error: authErr } = estLeMoteur
+    ? { data: { user: { id: 'render-worker' } }, error: null }
+    : await supabase.auth.getUser()
+  if (!estLeMoteur && (authErr || !user)) {
     return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
       status: 401,
       headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -54,13 +73,15 @@ serve(async (req: Request) => {
   }
 
   // ── Récupérer le plan de l'utilisateur ──
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('plan, is_owner')
-    .eq('id', user.id)
-    .single()
+  // Le moteur de rendu n'a pas de profil : il travaille pour un job déjà payé,
+  // et le contrôle de plan a eu lieu au lancement du montage. Il passe donc en
+  // « developer » — jamais en BYOK, qui exigerait une clé personnelle qu'il n'a
+  // pas et ne doit pas avoir.
+  const { data: profile } = estLeMoteur || !user
+    ? { data: null }
+    : await supabase.from('profiles').select('plan, is_owner').eq('id', user.id).single()
 
-  const userPlan = (profile?.plan || 'free').toLowerCase()
+  const userPlan = estLeMoteur ? 'developer' : (profile?.plan || 'free').toLowerCase()
 
   // ── Clé Hedra : user BYOK ou plateforme ──
   const userKey    = req.headers.get('x-user-hedra-key') ?? ''
