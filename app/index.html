@@ -991,8 +991,50 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- STEP 2 -->
           <div id="fs-1" style="display:none">
 
+            <!-- ── QUI PARLE ? · sélecteur de source (maquette Claude Design) ──
+                 Une seule question à cette étape. Le décor (plein écran ou split)
+                 est décidé à l'étape Style, où il vit déjà — le doublon qui ouvrait
+                 cette étape est masqué juste en dessous, ses identifiants restant
+                 en place pour le code qui synchronise les deux commandes. -->
+            <div class="flbl" style="font-size:11px;margin-bottom:11px">Qui parle dans ta vidéo ?</div>
+            <div class="row gap12" id="avSrcCards" style="margin-bottom:20px;align-items:stretch;flex-wrap:wrap">
+              <button type="button" onclick="_setAvatarSource('photo')" data-src="photo" class="av-src on" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;font-family:var(--font);color:inherit">
+                <div class="row" style="justify-content:space-between;align-items:center;width:100%">
+                  <span class="av-src-ico" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+                  <svg class="av-src-chk" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-weight:700;font-size:14.5px">Ma photo</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Ton portrait devient un avatar animé</span>
+                </div>
+              </button>
+              <button type="button" onclick="_setAvatarSource('video')" data-src="video" class="av-src" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);color:inherit">
+                <div class="row" style="justify-content:space-between;align-items:center;width:100%">
+                  <span class="av-src-ico" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg></span>
+                  <svg class="av-src-chk" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-weight:700;font-size:14.5px">Ma vidéo existante</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo déjà générée · 0 crédit</span>
+                </div>
+              </button>
+              <button type="button" onclick="_setAvatarSource('library')" data-src="library" class="av-src" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);color:inherit">
+                <div class="row" style="justify-content:space-between;align-items:center;width:100%">
+                  <span class="av-src-ico" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                  <svg class="av-src-chk" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-weight:700;font-size:14.5px">Un avatar IA</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">49 visages prêts à l'emploi</span>
+                </div>
+              </button>
+            </div>
+
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
-            <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
+            <div onclick="toggleSplit()" id="splitToggleStep2" style="display:none;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
               <div style="display:flex;align-items:center;gap:10px">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                 <div>
@@ -15010,6 +15052,42 @@ function _syncSilenceGpDropzone(){
   if(hasOwn){ drop.style.display='none'; if(info) info.style.display='block'; auto.style.display='none'; }
   else if(hasSplit){ drop.style.display='none'; if(info) info.style.display='none'; auto.style.display='block'; }
   else { drop.style.display=''; if(info) info.style.display='none'; auto.style.display='none'; }
+}
+
+// ── QUI PARLE : UNE SOURCE À LA FOIS ───────────────────────────────────────
+// Les trois cartes de la maquette pilotent les panneaux qui existaient déjà —
+// la zone de dépôt photo, le panneau « vidéo existante » (bypass Hedra) et la
+// galerie d'avatars. On ne reconstruit pas ces panneaux : ils portent tout le
+// câblage (upload, quota, aperçu), et le remplacer aurait été le meilleur moyen
+// de casser ce qui marche pour un gain purement visuel.
+let _avSource = 'photo';
+function _setAvatarSource(src){
+  _avSource = src;
+  document.querySelectorAll('#avSrcCards .av-src').forEach((b) => {
+    const on = b.dataset.src === src;
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
+    const ico = b.querySelector('.av-src-ico');
+    if (ico){ ico.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
+              ico.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+              const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
+    const chk = b.querySelector('.av-src-chk'); if (chk) chk.style.display = on ? '' : 'none';
+  });
+  const aff = (id, vu) => { const e = document.getElementById(id); if (e) e.style.display = vu ? '' : 'none'; };
+  // photo : la zone de dépôt (ou l'aperçu si une photo est déjà chargée)
+  const aPhoto = !!document.getElementById('avatarPreviewWrap')
+              && document.getElementById('avatarPreviewWrap').dataset.charge === '1';
+  aff('avatarDropzone',    src === 'photo' && !aPhoto);
+  aff('avatarPreviewWrap', src === 'photo' &&  aPhoto);
+  aff('saveAvatarPresetBtn', src === 'photo');
+  // vidéo existante : le panneau bypass Hedra, sans sa ligne d'interrupteur
+  aff('bypassHedraToggleRow', false);
+  aff('bypassHedraPanel',  src === 'video');
+  if (src === 'video' && typeof window._bypassHedraOn !== 'undefined') window._bypassHedraOn = true;
+  if (src !== 'video') window._bypassHedraOn = false;
+  // galerie : la grille inline de la maquette n'existe pas encore côté app, on
+  // ouvre la galerie déjà en place plutôt que de laisser l'étape vide.
+  if (src === 'library' && typeof openAvatarModal === 'function') openAvatarModal();
 }
 
 // ── LE RÉCAPITULATIF DIT CE QUI VA RÉELLEMENT ÊTRE FACTURÉ ─────────────────
