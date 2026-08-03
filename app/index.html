@@ -1033,6 +1033,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </button>
             </div>
 
+            <!-- ── GALERIE D'AVATARS EN LIGNE (maquette Claude Design) ────────
+                 Grille 3 colonnes, vignettes en ratio 3/4, nom sous l'image, et
+                 un bouton vers la galerie complète. Elle ne s'affiche que si
+                 « Un avatar IA » est la source choisie ; _remplirGrilleAvatars()
+                 la peuple à la première ouverture, pas au chargement de la page. -->
+            <div id="avLibInline" style="display:none">
+              <div id="avLibGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
+              <button type="button" class="btn btn-ghost" style="width:100%" onclick="openAvatarModal()">Voir les 49 avatars →</button>
+            </div>
+
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
             <div onclick="toggleSplit()" id="splitToggleStep2" style="display:none;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
               <div style="display:flex;align-items:center;gap:10px">
@@ -15180,9 +15190,48 @@ function _setAvatarSource(src){
   aff('bypassHedraPanel',  src === 'video');
   if (src === 'video' && typeof window._bypassHedraOn !== 'undefined') window._bypassHedraOn = true;
   if (src !== 'video') window._bypassHedraOn = false;
-  // galerie : la grille inline de la maquette n'existe pas encore côté app, on
-  // ouvre la galerie déjà en place plutôt que de laisser l'étape vide.
-  if (src === 'library' && typeof openAvatarModal === 'function') openAvatarModal();
+  aff('avLibInline', src === 'library');
+  if (src === 'library') _remplirGrilleAvatars();
+}
+
+// La grille se peuple à la PREMIÈRE ouverture, pas au chargement de la page :
+// 49 vignettes chargées d'emblée pour une source que l'utilisateur ne choisira
+// peut-être pas, c'est de la bande passante jetée. On en montre six — deux
+// rangées pleines — et le bouton mène à la galerie complète.
+function _remplirGrilleAvatars(){
+  const g = document.getElementById('avLibGrid');
+  if (!g || g.children.length || typeof _AV_LIST === 'undefined') return;
+  const PRENOMS = ['Sofia','Liam','Emma','Noah','Clara','Hugo'];
+  _AV_LIST.slice(0, 6).forEach((av, i) => {
+    const prenom = av.prenom || PRENOMS[i] || av.name;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'av-lib-c';
+    b.dataset.path = av.path;
+    b.style.cssText = 'text-align:left;border-radius:14px;padding:0;overflow:hidden;transition:.16s;cursor:pointer;'
+                    + 'border:1px solid var(--border);background:none;font-family:var(--font);color:inherit';
+    b.innerHTML =
+      '<div style="aspect-ratio:3/4;background:var(--panel-1);display:grid;place-items:center;overflow:hidden">'
+      + '<img src="' + av.path + '" loading="lazy" alt="' + prenom + '" '
+      + 'style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display=\'none\'"></div>'
+      + '<div class="row" style="justify-content:space-between;padding:9px 11px;background:var(--surface)">'
+      + '<span style="display:flex;flex-direction:column;line-height:1.25">'
+      + '<span style="font-size:13px;font-weight:600">' + prenom + '</span>'
+      + '<span class="faint" style="font-size:11px">' + (av.genre === 'f' ? 'Féminin' : 'Masculin') + '</span></span>'
+      + '<svg class="av-lib-chk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none;flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg></div>';
+    b.onclick = () => {
+      // on réutilise le sélecteur de la modale : lui seul renseigne selAvatar,
+      // le preview et le champ caché lus par la génération.
+      if (typeof pickLibraryAvatarFromModal === 'function') pickLibraryAvatarFromModal(b, av.path, prenom);
+      g.querySelectorAll('.av-lib-c').forEach((x) => {
+        const on = x === b;
+        x.style.border    = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+        x.style.boxShadow = on ? '0 0 0 3px var(--accent-soft)' : 'none';
+        const c = x.querySelector('.av-lib-chk'); if (c) c.style.display = on ? '' : 'none';
+      });
+    };
+    g.appendChild(b);
+  });
 }
 
 // ── LE RÉCAPITULATIF DIT CE QUI VA RÉELLEMENT ÊTRE FACTURÉ ─────────────────
