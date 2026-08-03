@@ -753,10 +753,21 @@ async function passeDeFinition(plan) {
   const nomDe = (s) => s.screen ? `capture ${s.screen}`
     : (s.assetId || s.overlayMedia) ? "média de l'utilisateur"
     : s.anim ? `animation ${s.anim}` : (s.type || 'carte')
+  // ── IL DOIT VOIR TOUTE LA VIDÉO, PAS SEULEMENT SES ANIMATIONS ────────────
+  // Axel, 03/08 : « mets-lui plus de pouvoir pour la finition ». Jusqu'ici on ne
+  // lui montrait que les slides : les moments où l'on voit seulement la personne
+  // parler étaient des trous dans son rapport, donc invisibles pour lui. Il ne
+  // pouvait qu'enlever, jamais remarquer qu'il MANQUE quelque chose.
+  // On lui donne la ligne de temps complète, visage compris. Ces fenêtres-là
+  // sont les seules où il a le droit d'ajouter.
+  const visages = (plan.avatarSegments || [])
+    .filter((w) => typeof w.start === 'number' && (w.end - w.start) >= 1.2)
+    .map((w) => ({ start: r2(w.start), end: r2(w.end), quoi: 'ton visage qui parle', dit: dit(w.start, w.end) }))
   const scenes = (plan.slides || [])
     .filter((s) => typeof s.start === 'number')
-    .sort((a, b) => a.start - b.start)
     .map((s) => ({ start: r2(s.start), end: r2(s.end), quoi: nomDe(s), dit: dit(s.start, s.end) }))
+    .concat(visages)
+    .sort((a, b) => a.start - b.start)
   if (scenes.length < 3) return
 
   const ctrl = new AbortController()
@@ -777,6 +788,23 @@ async function passeDeFinition(plan) {
 
   let faites = 0
   for (const c of corr) {
+    // ── L'AJOUT : une animation sur une fenêtre de visage qui l'appelle ──────
+    // Le relecteur ne peut ajouter que là où l'on ne voit QUE la personne
+    // parler, et seulement si le mot prononcé réclame une image. On vérifie
+    // quand même trois choses avant de le suivre : la fenêtre existe, elle est
+    // assez longue, et rien n'y joue déjà. Une finition propose ; elle ne passe
+    // jamais devant les règles.
+    if (c.action === 'ajoute') {
+      const w = (plan.avatarSegments || []).find((x) => Math.abs((x.start || 0) - c.t) < 0.05)
+      if (!w) { console.log(`▶ finition refusée : aucune fenêtre visage à ${c.t}s`); continue }
+      if ((w.end - w.start) < 1.2) { console.log(`▶ finition refusée : fenêtre visage de ${r2(w.end - w.start)}s trop courte à ${c.t}s`); continue }
+      const occupe = (plan.slides || []).some((x) => x.start < w.end - 0.15 && x.end > w.start + 0.15)
+      if (occupe) { console.log(`▶ finition refusée : ${c.anim} à ${c.t}s — une scène joue déjà là`); continue }
+      plan.slides = (plan.slides || []).concat([{ start: r2(w.start), end: r2(w.end), anim: c.anim, __finition: true }])
+      console.log(`▶ finition : « ${c.anim} » AJOUTÉE à ${r2(w.start)}→${r2(w.end)}s — le visage seul n'illustrait pas ce qui est dit`)
+      faites++
+      continue
+    }
     const s = (plan.slides || []).find((x) => Math.abs((x.start || 0) - c.t) < 0.05)
     if (!s || s.screen || s.assetId || s.overlayMedia) continue
     if (c.action === 'supprime') {
