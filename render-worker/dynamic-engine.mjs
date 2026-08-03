@@ -1021,6 +1021,28 @@ export function buildDynamicComposition(plan, opts = {}) {
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
   }
 
+  // ── LA VIDÉO EN SOUS-COUCHE : PLUS JAMAIS D'APLAT ────────────────────────
+  // Axel, 03/08 : « on met une sous-couche qui est la vidéo originale pour
+  // éviter les blancs, sauf si le blanc est fait exprès pour une transition ».
+  //
+  // Vérifié : la vidéo n'apparaissait QUE dans des panneaux — fenêtres avatar,
+  // médias. Tout instant qu'aucun panneau ne couvrait montrait l'aplat de fond
+  // du <body>. La dérivation comble bien les trous (§3b-bis rend au visage, §3c
+  // étire les voisines), mais elle y arrive par des règles : il suffit qu'une
+  // d'elles échoue pour qu'un aplat traverse la vidéo finale.
+  //
+  // Une sous-couche permanente change la nature du problème : ce n'est plus une
+  // règle de plus à faire tenir, c'est un filet. Ce qui n'est couvert par rien
+  // montre sa vidéo, à sa seconde, en mouvement. Les panneaux ont leur propre
+  // fond et la recouvrent exactement comme avant — rien d'existant ne change.
+  //
+  // track-index 0 : la couche la plus basse. Muette, puisque la voix vient du
+  // mixage audio final. Absente si le job n'a pas de base filmée (montage à
+  // partir d'un MP3 : le worker fabrique alors un fond noir, inutile à empiler).
+  const sousCouche = opts.baseVideo
+    ? `<video class="clip" src="${esc(opts.baseVideo)}" data-start="0" data-duration="${D}" data-track-index="0" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>\n`
+    : ''
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1058,7 +1080,7 @@ export function buildDynamicComposition(plan, opts = {}) {
 </style>
 </head>
 <body>
-<div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${html}
+<div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${sousCouche}${html}
 ${capHtml}
 </div>
 <script>
