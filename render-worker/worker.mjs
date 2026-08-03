@@ -875,7 +875,20 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     for (;;) {
       const t = file.shift()
       if (!t) return
-      try { if (await uneScene(t.w, t.i)) faits++ } catch (e) { console.warn(`lipsync scène ${t.i} :`, e.message) }
+      // ── UN ÉCHEC DE LIPSYNC DOIT SE VOIR ────────────────────────────────
+      // Axel : « le lipsync n'est pas fait partout ». Impossible de savoir
+      // pourquoi : chaque scène qui échouait le faisait en silence, et le
+      // montage sortait avec une photo figée sans qu'une ligne ne le dise.
+      // On journalise donc CHAQUE scène — réussie ou non, avec sa raison — et
+      // on retente une fois : la plupart des refus d'Hedra sont transitoires
+      // (file d'attente, expiration de l'upload), pas structurels.
+      let ok = false, pourquoi = ''
+      for (let essai = 1; essai <= 2 && !ok; essai++) {
+        try { ok = await uneScene(t.w, t.i) } catch (e) { pourquoi = e.message }
+        if (!ok && essai === 1) console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : 1er essai manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
+      }
+      if (ok) { faits++; console.log(`✓ lipsync scène ${t.i} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
+      else console.warn(`✗ lipsync scène ${t.i} ABANDONNÉE : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})${pourquoi ? ' — ' + pourquoi : ''} → la photo restera figée sur cette fenêtre`)
     }
   })
 
