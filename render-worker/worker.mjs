@@ -1042,6 +1042,41 @@ async function pollLoop() {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) { console.error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants (.env)'); process.exit(1) }
   const sb = createClient(url, key, { auth: { persistSession: false } })
+
+  // ── UN MOTEUR QUI S'ARRÊTE REND SON JOB À LA FILE ─────────────────────────
+  // Mesuré trois fois aujourd'hui, dont une sur un rendu d'Axel en cours : un
+  // déploiement Railway redémarre le conteneur, le worker meurt au milieu de
+  // son travail, et le job reste marqué « rendering » pour l'éternité. L'écran
+  // d'Axel affichait 96 % sur un rendu qui n'existait plus.
+  //
+  // Je m'étais promis deux fois de ne pas déployer pendant un rendu. La
+  // promesse n'a pas tenu — et c'est normal : une règle qui dépend de la
+  // vigilance de quelqu'un finit toujours par céder. On corrige donc le
+  // système, pas l'intention.
+  //
+  // Railway envoie SIGTERM avant de couper. On l'écoute, on remet le job en
+  // file d'attente — pas en échec : le travail n'a pas raté, il a été
+  // interrompu — et le conteneur suivant le reprend depuis le début. Pour
+  // l'utilisateur, un déploiement ne coûte plus qu'un peu d'attente.
+  let jobEnCours = null
+  let extinction = false
+  const rendreLaMain = async (sig) => {
+    if (extinction) return
+    extinction = true
+    if (jobEnCours) {
+      try {
+        await sb.from('render_jobs')
+          .update({ status: 'queued', updated_at: new Date().toISOString() })
+          .eq('id', jobEnCours).eq('status', 'rendering')
+        console.log(`↩ ${sig} : job ${jobEnCours} remis en file — le prochain moteur le reprend`)
+      } catch (e) { console.warn(`↩ ${sig} : impossible de libérer le job —`, e.message) }
+    } else {
+      console.log(`↩ ${sig} : aucun job en cours, arrêt propre`)
+    }
+    process.exit(0)
+  }
+  process.on('SIGTERM', () => { rendreLaMain('SIGTERM') })
+  process.on('SIGINT', () => { rendreLaMain('SIGINT') })
   console.log('🎼 render-worker en écoute (poll 5 s)…')
 
   for (;;) {
@@ -1057,6 +1092,7 @@ async function pollLoop() {
         .eq('id', job.id).eq('status', 'queued').select('id')
       if (!claimed || !claimed.length) continue
 
+      jobEnCours = job.id
       const trace = ouvrirTrace()
       const tDebut = Date.now()
       console.log('▶ job', job.id)
@@ -1148,6 +1184,7 @@ async function pollLoop() {
         console.error('✗ job', job.id, e.message)
         await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
       } finally {
+        jobEnCours = null
         // la console reprend sa forme normale même si l'écriture a échoué :
         // un collecteur laissé branché contaminerait le job suivant.
         try { trace.fermer() } catch (_) {}
