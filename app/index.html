@@ -1804,12 +1804,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Qualité d'export MP4</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px" id="qualityBtnsStep4">
-                <button onclick="setQuality(720,this)" class="qual-btn on" data-q="720" style="padding:9px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
-                  <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Recommandé</div>
-                  <div style="font-weight:700;padding:4px 0">720p</div>
+                <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="padding:9px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
+                  <div style="font-weight:700;padding:4px 0">720p</div><div style="font-size:9px;margin-top:-3px">Économique</div>
                 </button>
-                <button onclick="setQuality(1080,this)" class="qual-btn" data-q="1080" style="padding:9px 4px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                  <div style="font-weight:700">1080p</div><div style="font-size:9px;margin-top:1px">+2 cr</div>
+                <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" style="padding:9px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
+                  <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Meilleure qualité</div>
+                  <div style="font-weight:700;padding:4px 0 0">1080p</div><div style="font-size:9px;margin-top:-3px">+0,5 cr/s</div>
                 </button>
               </div>
             </div>
@@ -5849,7 +5849,16 @@ const CREDIT_COSTS = {
   // crédit le moins cher (Élite90, 0,068 €) : 0,55 € encaissés, ×4. Les tarifs
   // lipsync à la seconde ne bougent pas (avatarPerSec 1, omniPerSec 5).
   montageIA: 8,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
-  export1080: 2,          // 📐 export 1080p du Générateur (720p gratuit)
+  // 📐 QUALITÉ DE GÉNÉRATION — le 1080p se paie à la seconde (720p gratuit).
+  // Avant le 03/08 c'était +2 crédits forfaitaires, et surtout ce bouton ne
+  // réglait QUE l'encodeur du navigateur : la génération Hedra partait en 1080p
+  // en dur, quoi que l'utilisateur choisisse. On facturait donc un ré-encodage
+  // local — qui ne coûte rien — pendant qu'on payait le 1080p sur 100 % des
+  // vidéos. Le bouton pilote désormais la résolution envoyée à Hedra, donc le
+  // prix correspond enfin à une dépense réelle.
+  // Coût mesuré : le 1080p vaut 1,75 crédit Hedra de plus par seconde ≈ 0,9
+  // centime. À 0,5 crédit/s facturé, la marge sur l'option est de ~90 %.
+  hd1080PerSec: 0.5,
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
   hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
 };
@@ -18862,14 +18871,20 @@ async function startGeneration(){
     const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
     const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
+    // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
+    // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
+    // et le supplément 1080p se serait greffé sur la liste d'opérations de la
+    // génération PRÉCÉDENTE — donc remboursé au mauvais moment en cas d'échec.
+    creditsFlowBegin();
     if(_rate > 0){
-      creditsFlowBegin();  // #122 : remboursable si la génération échoue
       const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
       if(!ok) return;
     }
-    // 📐 export 1080p facturé (720p gratuit)
+    // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
+    // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
     if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
-      if(!(await spendCreditsFor(CREDIT_COSTS.export1080, 'export 1080p'))) return;
+      const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
+      if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))) return;
     }
   }
 
@@ -19397,7 +19412,14 @@ async function callHedra(audioBlob){
         text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
         aspect_ratio: aspectRatio,
         character_orientation: 'video',
-        resolution: '1080p'
+        // ── LE CHOIX DE L'UTILISATEUR ARRIVE ENFIN JUSQU'ICI ─────────────────
+        // Cette ligne était figée à '1080p'. Le sélecteur « Qualité » ne réglait
+        // que l'encodeur WebCodecs du navigateur : on facturait un ré-encodage
+        // local (qui ne coûte rien) pendant qu'on payait le 1080p chez Hedra sur
+        // TOUTES les vidéos, y compris celles exportées en 720p. Maintenant que
+        // la résolution voyage jusqu'au fournisseur, « Économique » économise
+        // pour de vrai et le supplément 1080p correspond à une dépense.
+        resolution: (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p'
       }
     };
     if(imageId) genBody.start_keyframe_id = imageId;
@@ -20052,7 +20074,16 @@ function downloadVideo(){
 
 // ══════════════════════════════════════════════════════════════════
 // ── Qualité d'export ──
-let _composeQuality = 720; // défaut 720p (540p retiré — trop bas) ; 1080p = Pro+
+// 1080p PAR DÉFAUT depuis le 03/08 : la meilleure qualité est ce qu'on propose
+// d'emblée, le 720p devient l'option « Économique ». La valeur définitive est
+// arrêtée par _updateQualityLocks() une fois le plan connu — Free et Starter
+// n'ont pas droit au 1080p et retombent sur 720p.
+let _composeQuality = 1080;
+// L'utilisateur a-t-il tranché lui-même ? Tant que non, le défaut se REPOSE à
+// chaque synchro. Sans ce drapeau, l'ancien test « _composeQuality >= 720 ?
+// garder : défaut » gardait la valeur en place dès le premier passage, et
+// changer le défaut n'aurait strictement rien fait.
+let _qualiteChoisie = false;
 
 // Affiche le verrou 🔒 sur les qualités inaccessibles et met à jour le défaut
 function _updateDurationLock(plan){
@@ -20105,10 +20136,10 @@ function _updateQualityLocks(plan){
     }
   });
 
-  // 720p par défaut pour tous ; Pro/Élite peuvent monter à 1080p
-  const defaultQ = 720;
+  // 1080p par défaut, plafonné à 720p pour les plans qui n'y ont pas droit.
+  const defaultQ = 1080;
   const maxQ     = can1080 ? 1080 : 720;
-  _composeQuality = Math.min(_composeQuality >= 720 ? _composeQuality : defaultQ, maxQ);
+  _composeQuality = Math.min(_qualiteChoisie ? _composeQuality : defaultQ, maxQ);
   // Sync visuel des boutons
   document.querySelectorAll('.qual-btn').forEach(b => {
     const bq = parseInt(b.dataset.q||'0');
@@ -20125,8 +20156,10 @@ function setQuality(q, btn){
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const can1080 = ['pro','elite','developer'].includes(plan);
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
-  if(q === 1080 && _composeQuality !== 1080) toast('📐 1080p : +' + CREDIT_COSTS.export1080 + ' crédits à la génération (720p gratuit)');
+  if(q === 1080 && _composeQuality !== 1080) toast('📐 1080p : +' + CREDIT_COSTS.hd1080PerSec + ' crédit par seconde (720p gratuit)');
+  if(q === 720  && _composeQuality !== 720)  toast('💸 720p : la génération ne coûte que le tarif de base');
   _composeQuality = q;
+  _qualiteChoisie = true;   // à partir d'ici le défaut ne se réimpose plus
   // Sync tous les boutons qual-btn par data-q
   document.querySelectorAll('.qual-btn').forEach(b=>{
     const bq = parseInt(b.dataset.q || '0');
