@@ -11856,7 +11856,7 @@ async function _mtFramesFromVideo(blob, n){
       for(let i=0;i<n;i++){
         const t=D*(i+0.5)/n;
         try{ await seek(t);
-          cv.width=Math.min(512, v.videoWidth||512); cv.height=Math.round(cv.width*((v.videoHeight||910)/(v.videoWidth||512)));
+          cv.width=Math.min(400, v.videoWidth||400); cv.height=Math.round(cv.width*((v.videoHeight||910)/(v.videoWidth||400)));
           cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
           const b=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.72));
           if(b) out.push({ t:Math.round(t*10)/10, blob:b });
@@ -12133,7 +12133,18 @@ async function _mtVideoGenerate(){
     // voir ce que montre la vidéo. S'il ne les obtient pas, on continue sans —
     // mieux vaut un montage guidé par la seule voix que pas de montage du tout.
     let frames = [];
-    try { frames = await _limite(_mtFramesFromVideo(_mt.video, 8), 18000, 'les images'); }
+    // ── QUATRE IMAGES SUFFISENT, HUIT COÛTENT SEPT MINUTES ──────────────────
+    // Mesuré le 03/08 sur la MÊME vidéo de 19,6 s : l'appel rejoué en direct
+    // sans image répond en 37 secondes ; depuis l'app, avec huit images, il met
+    // 4 à 7 minutes. Axel a annulé deux fois d'affilée, et il avait raison —
+    // sept minutes d'attente pour une vidéo de vingt secondes, aucun client ne
+    // patiente.
+    // Les images servent au chef d'orchestre à VOIR ce que la vidéo montre :
+    // une capture d'écran, un produit en main, un visage. Quatre vues bien
+    // réparties le disent aussi bien que huit — au-delà, on paie du temps
+    // d'analyse pour des variations de la même scène. Le son, lui, porte
+    // l'essentiel du sens et n'a pas bougé.
+    try { frames = await _limite(_mtFramesFromVideo(_mt.video, 4), 18000, 'les images'); }
     catch(e) { console.warn('images non extraites, on continue sans :', e.message); }
 
     // chef d'orchestre → plan de montage
