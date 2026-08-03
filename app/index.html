@@ -1582,7 +1582,37 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- SPLIT SCREEN -->
             <div class="fld" style="margin-bottom:18px">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" onclick="toggleSplit()" id="splitToggleRow">
+              <!-- ── LE DÉCOR · deux cartes (maquette Claude Design) ──────────────
+                 Remplace l'interrupteur « Split Screen » : un choix entre deux
+                 mises en scène se lit mieux en deux cartes qu'en bascule, et
+                 c'est la forme retenue dans la maquette. L'ancienne ligne est
+                 conservée juste après, masquée : toggleSplit() et le code de
+                 synchronisation lisent encore splitToggleRow et splitToggle. -->
+            <div class="row gap12" id="decorCards" style="margin-bottom:14px;align-items:stretch;flex-wrap:wrap">
+              <button type="button" onclick="_setDecor(false)" data-decor="full" class="decor-c" style="flex:1 1 200px;min-width:180px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)">
+                <div class="row" style="justify-content:space-between;align-items:center;width:100%">
+                  <span class="decor-ico" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                  <svg class="decor-chk" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-weight:700;font-size:14.5px">Avatar plein écran</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Ton avatar occupe toute l'image</span>
+                </div>
+              </button>
+              <button type="button" onclick="_setDecor(true)" data-decor="split" class="decor-c" style="flex:1 1 200px;min-width:180px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)">
+                <div class="row" style="justify-content:space-between;align-items:center;width:100%">
+                  <span class="decor-ico" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></span>
+                  <svg class="decor-chk" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font-weight:700;font-size:14.5px">Split screen</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Avatar en haut · gameplay en bas</span>
+                </div>
+              </button>
+            </div>
+            <div style="display:none;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" onclick="toggleSplit()" id="splitToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                   <div>
@@ -10487,6 +10517,9 @@ function updateSteps(){
   if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
   // Sous-titres : auto-activés à l'arrivée sur Style (désormais l'étape 3)
   if(step>=3){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  // les cartes de décor reflètent l'état réel du split, y compris s'il a été
+  // changé ailleurs (preview, raccourci) pendant qu'on était sur une autre étape
+  if(step===3 && typeof _syncDecorCards==='function') _syncDecorCards();
   // Voix : une seule source depuis l'abandon de la synthèse. Le mode « clone /
   // preset » était le défaut au chargement ; sans ce forçage l'étape s'ouvrirait
   // sur un sélecteur masqué et un panneau fichier inerte.
@@ -15058,6 +15091,31 @@ function _syncSilenceGpDropzone(){
   if(hasOwn){ drop.style.display='none'; if(info) info.style.display='block'; auto.style.display='none'; }
   else if(hasSplit){ drop.style.display='none'; if(info) info.style.display='none'; auto.style.display='block'; }
   else { drop.style.display=''; if(info) info.style.display='none'; auto.style.display='none'; }
+}
+
+// ── LE DÉCOR : PLEIN ÉCRAN OU SPLIT ────────────────────────────────────────
+// Les deux cartes remplacent l'interrupteur, mais c'est toujours toggleSplit()
+// qui fait le travail — lui seul sait afficher les réglages, recalculer le
+// preview et prévenir le moteur. On se contente donc de l'appeler quand l'état
+// demandé diffère de l'état courant, puis de refléter le résultat RÉEL sur les
+// cartes : si toggleSplit refuse (plan, clip manquant), les cartes ne mentent pas.
+function _setDecor(split){
+  if (typeof splitEnabled !== 'undefined' && !!splitEnabled !== !!split
+      && typeof toggleSplit === 'function') toggleSplit();
+  _syncDecorCards();
+}
+function _syncDecorCards(){
+  const split = (typeof splitEnabled !== 'undefined') && !!splitEnabled;
+  document.querySelectorAll('#decorCards .decor-c').forEach((b) => {
+    const on = (b.dataset.decor === 'split') === split;
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
+    const ico = b.querySelector('.decor-ico');
+    if (ico){ ico.style.background  = on ? 'var(--accent)' : 'var(--surface-2)';
+              ico.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+              const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
+    const chk = b.querySelector('.decor-chk'); if (chk) chk.style.display = on ? '' : 'none';
+  });
 }
 
 // ── QUI PARLE : UNE SOURCE À LA FOIS ───────────────────────────────────────
