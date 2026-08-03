@@ -143,6 +143,25 @@ const REDIRECTIONS = {
 // arrivent forcément décalées d'une étape ou deux. Axel : « à la place de
 // l'animation step, mets l'avatar, c'est plus simple et cohérent ». Sans
 // redirection, la fenêtre retombe sur le visage — exactement ce qu'il demande.
+// ── LES MOTS QUI NE MONTRENT RIEN ───────────────────────────────────────────
+// Ce ne sont pas des mots « faibles » : ce sont des mots qui n'ont pas d'image.
+// « Pourquoi » est un mot fort dans une phrase, mais on ne peut pas le dessiner.
+// Une fenêtre qui n'en contient QUE ne demande pas un visuel, elle demande un
+// visage. La liste reste courte et volontairement incomplète : un seul mot
+// porteur suffit à autoriser l'animation, donc une omission ne coûte rien —
+// alors qu'un mot ajouté à tort coûterait une animation légitime.
+const LIAISONS = new Set([
+  'voici', 'voila', 'pourquoi', 'comment', 'alors', 'donc', 'mais', 'ensuite',
+  'apres', 'avant', 'puis', 'aussi', 'encore', 'deja', 'juste', 'genre',
+  'vraiment', 'simplement', 'surtout', 'meme', 'bref', 'enfin', 'bien',
+  'cest', 'cela', 'celui', 'celle', 'ceux', 'quand', 'parce', 'pour', 'avec',
+  'sans', 'dans', 'chez', 'entre', 'plus', 'moins', 'tres', 'trop', 'peut',
+  'etre', 'avoir', 'faire', 'dire', 'aller', 'venir', 'vous', 'nous', 'elle',
+  'ils', 'elles', 'leur', 'leurs', 'notre', 'votre', 'mon', 'ton', 'son',
+  'que', 'qui', 'quoi', 'dont', 'les', 'des', 'une', 'ses', 'ces', 'tout',
+  'toute', 'tous', 'toutes', 'chaque', 'autre', 'autres',
+])
+
 const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps'])
 export const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
@@ -648,6 +667,36 @@ export function deriveDynamicSlides(plan, opts = {}) {
     if (REFUSEES.has(nom)) {
       console.log(`▶ « ${nom} » bannie : refusée à ${r2(a)}s — la fenêtre revient au visage`)
       return null
+    }
+    // ── UNE PHRASE DE LIAISON NE SE DESSINE PAS ─────────────────────────────
+    // Axel, 03/08 : « "et voici pourquoi", les transitions comme ça faudrait
+    // qu'elles soient mises en avatar par défaut puisqu'elles ne racontent rien,
+    // aucune animation ne peut imager ça ».
+    //
+    // C'est le principe qui manquait. Jusqu'ici le moteur cherchait un visuel
+    // pour CHAQUE fenêtre, y compris celles où la voix ne nomme rien : « et
+    // voici pourquoi », « du coup », « alors voilà ». Il finissait par poser la
+    // moins mauvaise animation — donc une animation au hasard, exactement ce
+    // qu'il reproche depuis deux jours.
+    //
+    // Une fenêtre qui ne contient QUE des mots de liaison n'a pas de visuel à
+    // trouver : elle a un visage à montrer. On refuse, et §3b-bis la rend à
+    // l'avatar. Le refus est journalisé pour qu'on puisse mesurer combien de
+    // fenêtres partent ainsi.
+    //
+    // Le test est volontairement strict : il suffit d'UN mot porteur — un nom,
+    // un verbe d'action, un chiffre — pour que l'animation reste autorisée. On
+    // ne refuse que le vide.
+    if (!slide.user && !slide.screen && !slide.assetId && !(slide.items || []).length) {
+      const dedans = words.filter((w) => w.start >= a0 - 0.2 && w.start <= b0 + 0.1)
+      const porteur = dedans.some((w) => {
+        const n = norm(w.text)
+        return n.length >= 4 && !LIAISONS.has(n)
+      })
+      if (dedans.length && !porteur) {
+        console.log(`▶ ${nom} refusée à ${r2(a)}s : « ${dedans.map((w) => w.text).join(' ')} » ne nomme rien — la fenêtre revient au visage`)
+        return null
+      }
     }
     // ── UNE CAPTURE SANS FICHIER N'EST PAS UNE SCÈNE ────────────────────────
     // `screen` et `result` sont dans la banque (le chef a le droit de les
