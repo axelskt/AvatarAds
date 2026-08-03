@@ -11465,9 +11465,34 @@ function _mtAbortRun(){ window._mtAborted=true;
   if(window._mtTicIv){ clearInterval(window._mtTicIv); window._mtTicIv=null; }
   if(window._mtTicOff){ window._mtTicOff(); window._mtTicOff=null; }
   _mtProg(-1); creditsFlowRefund('tu as annulé le montage'); toast('Montage annulé'); }
+// ── LE MINUTEUR VIT AUSSI LONGTEMPS QUE L'ÉCRAN ──────────────────────────────
+// Axel : « il faut que le minuteur soit tout le temps là ». Il ne comptait que
+// pendant l'analyse — deux minutes — puis se taisait pendant le rendu, qui en
+// dure huit à dix. C'est exactement l'inverse de ce qu'il faut : plus l'attente
+// est longue, plus il faut une preuve de vie.
+// Le compteur appartient donc désormais à l'écran de progression lui-même : il
+// démarre à sa création, s'arrête à sa fermeture, et traverse toutes les phases
+// sans que chaque étape ait à s'en occuper. Il se repeint au retour d'onglet,
+// parce que les navigateurs gèlent les minuteurs en arrière-plan.
+function _mtHorloge(on){
+  if(window._mtClockIv){ clearInterval(window._mtClockIv); window._mtClockIv=null; }
+  if(window._mtClockOff){ window._mtClockOff(); window._mtClockOff=null; }
+  if(!on) return;
+  const t0 = Date.now();
+  const peindre = () => {
+    const el = document.getElementById('mtProgTime'); if(!el) return;
+    const s = Math.round((Date.now()-t0)/1000);
+    el.textContent = s<60 ? `${s} s` : `${Math.floor(s/60)} min ${String(s%60).padStart(2,'0')}`;
+  };
+  peindre();
+  window._mtClockIv = setInterval(peindre, 1000);
+  const auRetour = () => { if(!document.hidden) peindre() };
+  document.addEventListener('visibilitychange', auRetour);
+  window._mtClockOff = () => document.removeEventListener('visibilitychange', auRetour);
+}
 function _mtProg(pct, label){
   let o=document.getElementById('mtProgOv');
-  if(pct<0){ if(o) o.remove(); return; }
+  if(pct<0){ if(o) o.remove(); _mtHorloge(false); return; }
   if(!o){
     o=document.createElement('div'); o.id='mtProgOv';
     // l'écran vit DANS la zone de contenu (sidebar + topbar restent visibles, comme la maquette)
@@ -11508,6 +11533,7 @@ function _mtProg(pct, label){
         +'<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
           +'<div class="display" style="font-size:42px;font-weight:800;color:var(--text);line-height:1"><span id="mtProgPct">0</span><span style="font-size:19px;color:var(--accent-2)">%</span></div>'
           +'<div class="mono faint" style="font-size:10.5px;letter-spacing:.06em;text-transform:uppercase">en cours</div>'
+          +'<div id="mtProgTime" class="mono" style="font-size:12.5px;color:var(--accent-2);margin-top:3px;font-variant-numeric:tabular-nums">0 s</div>'
         +'</div>'
       +'</div>'
       +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:28px;width:100%;max-width:420px;text-align:left"></div>'
@@ -11516,6 +11542,7 @@ function _mtProg(pct, label){
     const host=document.querySelector('.layout .main')||document.body;
     if(getComputedStyle(host).position==='static') host.style.position='relative';
     host.appendChild(o);
+    _mtHorloge(true);
   }
   const stage=Math.min(_MT_STAGES.length-1, Math.floor(pct/100*_MT_STAGES.length));
   const b=document.getElementById('mtProgRing'), l=document.getElementById('mtProgLbl'), p=document.getElementById('mtProgPct'), st=document.getElementById('mtProgSteps');
@@ -12049,7 +12076,7 @@ async function _mtVideoGenerate(){
     // ne bouge pas devant une promesse tenue en 30 s se lit comme une panne.
     // On affiche donc le temps écoulé, seconde par seconde, avec la vraie
     // fourchette. Tant que ça compte, c'est que ça vit.
-    _mtProg(16, "L'IA écoute et regarde ta vidéo… 0 s / 1 à 2 min");
+    _mtProg(16, "L'IA écoute et regarde ta vidéo… (1 à 2 min)");
     const _t0 = Date.now();
     // Axel : « faut que la barre avance ou montre signe de vie, parce que là il
     // ne se passe rien et les users vont être exactement comme moi ». La barre
@@ -12070,7 +12097,7 @@ async function _mtVideoGenerate(){
       if (window._mtAborted) { clearInterval(_tic); _tic = window._mtTicIv = null; return }
       const s = (Date.now() - _t0) / 1000;
       const pct = 16 + 28 * (1 - Math.exp(-s / 42));   // avance vite, puis ralentit
-      _mtProg(pct, `L'IA écoute et regarde ta vidéo… ${Math.round(s)} s / 1 à 2 min`);
+      _mtProg(pct, "L'IA écoute et regarde ta vidéo… (1 à 2 min)");
     };
     _tic = window._mtTicIv = setInterval(peindre, 330);
     const auRetour = () => { if (!document.hidden && _tic) peindre() };
