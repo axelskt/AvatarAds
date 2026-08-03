@@ -958,6 +958,40 @@ export function deriveDynamicSlides(plan, opts = {}) {
         console.log(`▶ média « ${id} » absent du plan du chef → placé d'office (${quand[0]}→${quand[1]}s)`)
       }
     }
+    // ── UN MÉDIA VA SUR SA PREMIÈRE MENTION, PAS SUR LA DERNIÈRE ─────────────
+    // Axel, 03/08 : « pourquoi le mp4 Claude × AvatarAds se retrouve là ????? »
+    // Son fichier `demo-avatarads-connecte-a-claude.mp4` était posé à 33,9 s, sur
+    // un « à AvatarAds » de fin, alors qu'il prononce « Claude » et « AvatarAds »
+    // dès l'ouverture. Le chef d'orchestre l'avait bien placé — la règle du
+    // placement d'office ne se déclenche donc pas — mais il avait choisi la
+    // DERNIÈRE occurrence du mot au lieu de la première.
+    //
+    // Or un média répond à une attente : il doit arriver quand le spectateur se
+    // demande « à quoi ça ressemble ? », c'est-à-dire au moment où le sujet est
+    // ANNONCÉ. Trente secondes plus tard, la question est passée et l'image
+    // ressemble à un cheveu sur la soupe.
+    //
+    // On ne déplace que si l'écart est franc (plus de 4 s) et que la première
+    // mention porte un mot du NOM du fichier — jamais sur une coïncidence de
+    // mot court, d'où le filtre à plus de 3 lettres déjà appliqué plus haut.
+    {
+      const files2 = opts.assetFiles || {}
+      for (const b of plan.broll || []) {
+        if (!files2[b.assetId] || b.hook || b.__force) continue
+        const mots = norm(b.assetId).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        if (!mots.length) continue
+        const prem = (plan.captions || []).find((w) => mots.includes(norm(String(w.text || ''))))
+        if (!prem) continue
+        const cible = r2(Math.max(0, prem.start - LEAD))
+        const ecart = (b.start || 0) - cible
+        if (ecart <= 4) continue                       // déjà proche : on ne touche à rien
+        const duree = Math.max(1.4, (b.end || 0) - (b.start || 0))
+        console.log(`▶ média « ${b.assetId} » remonté sur sa 1re mention « ${prem.text} » : ${r2(b.start)}s → ${cible}s (il était ${r2(ecart)}s trop tard)`)
+        b.start = cible
+        b.end = r2(Math.min(D, cible + duree))
+      }
+    }
+
     // ── UNE ÉNUMÉRATION = UN PANNEAU, PAS TROIS ────────────────────────────────
     // « Homme, femme, coach sportif » : trois mots en 1,3 s. Une photo par mot
     // donnerait des panneaux de 0,3 s — plus courts que la transition elle-même
