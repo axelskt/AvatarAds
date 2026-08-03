@@ -567,23 +567,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // possible, et le moteur n'a qu'à poser un clip qui joue depuis son début.
     const fonds = []
     if (baseAUneImage && existsSync(join(proj, 'media', 'base.mp4'))) {
-      const D = plan.duration || 0
-      const couvert = [
-        ...(plan.slides || []), ...(plan.avatarSegments || []), ...(plan.broll || []),
-      ].filter((x) => x && typeof x.start === 'number' && typeof x.end === 'number' && x.end > x.start)
-        .map((x) => [Math.max(0, x.start), Math.min(D, x.end)])
-        .sort((a, b) => a[0] - b[0])
-      // fusion des intervalles qui se touchent, puis complément
-      const fusion = []
-      for (const [a, b] of couvert) {
-        const last = fusion[fusion.length - 1]
-        if (last && a <= last[1] + 0.04) last[1] = Math.max(last[1], b)
-        else fusion.push([a, b])
-      }
-      let t = 0
+      // Deux passes. La première ne sert qu'à MESURER : on construit la
+      // composition à vide pour que le moteur nous rende la liste de ce qu'il
+      // pose vraiment — la dérivation rejette la moitié des scènes proposées,
+      // et c'est elle qui décide, pas le plan d'origine.
       const trous = []
-      for (const [a, b] of fusion) { if (a - t > 0.25) trous.push([r2(t), r2(a)]); t = Math.max(t, b) }
-      if (D - t > 0.25) trous.push([r2(t), r2(D)])
+      buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, trous, logoFile: '' })
 
       trous.forEach(([a, b], i) => {
         const out = 'media/fond' + i + '.mp4'
@@ -994,8 +983,42 @@ async function hedraAsset(type, nom, buf, mime) {
   return r2.ok ? a.id : null
 }
 
+// ── UNE FENÊTRE TROP LONGUE SE DÉCOUPE AVANT D'ÊTRE ENVOYÉE ─────────────────
+// Mesuré le 03/08 sur un montage de 50 s : le chef d'orchestre n'avait proposé
+// QU'UNE fenêtre avatar, de 0 à 50,4 s. Deux conséquences, toutes les deux
+// visibles par Axel :
+//   ① Hedra n'en a rendu qu'un fragment — « le lipsync n'est présent que dans
+//      le hook ». Le reste de la fenêtre retombait sur la photo fixe.
+//   ② elle est partie SEULE, donc aucun parallélisme : 6 min 19 d'attente sur
+//      les 15 minutes du montage, pour un seul clip.
+// On tranche donc les fenêtres au-delà de 15 s. Chaque tranche devient une
+// fenêtre à part entière — le moteur les rend l'une après l'autre, bord à bord,
+// donc le spectateur ne voit aucune coupure — et les quatre premières partent
+// ensemble. Le visage parle du début à la fin, et l'attente est divisée.
+const LIPSYNC_MAX = 15
+function trancherFenetres(plan) {
+  const segs = plan.avatarSegments || []
+  if (!segs.length) return 0
+  const out = []
+  let coupes = 0
+  for (const w of segs) {
+    const d = (w.end || 0) - (w.start || 0)
+    if (d <= LIPSYNC_MAX + 2) { out.push(w); continue }
+    const n = Math.ceil(d / LIPSYNC_MAX)
+    const pas = d / n
+    for (let i = 0; i < n; i++) {
+      out.push({ ...w, start: r2(w.start + i * pas), end: r2(i === n - 1 ? w.end : w.start + (i + 1) * pas) })
+    }
+    coupes++
+    console.log(`▶ fenêtre avatar ${r2(w.start)}→${r2(w.end)}s (${r2(d)}s) tranchée en ${n} — Hedra ne rend pas d'un bloc au-delà de ${LIPSYNC_MAX}s`)
+  }
+  if (coupes) plan.avatarSegments = out
+  return coupes
+}
+
 async function genererLipsync(plan, proj, jobDir, avatarClips) {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return 0
+  trancherFenetres(plan)
   const segs = (plan.avatarSegments || []).filter((w) => (w.end - w.start) >= 1)
   if (!segs.length) return 0
   const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
