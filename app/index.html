@@ -13127,10 +13127,16 @@ function _mdBandHtml(){
   const up=_mdUpItems(), down=_mdDownItems();
   const blocs=_md.scenes.map((s)=>{
     const meta=_MD_NATURE[s.n];
-    // la scène SÉLECTIONNÉE (hors avatar) montre deux poignées de bord :
-    // tirer = ÉTIRER ou raccourcir sa durée (retour Axel « il faut que l'on
-    // puisse étirer l'animation, le média… »)
-    const sel = s.id===_md.sel && s.n!=='avatar' && !s.del;
+    // la scène SÉLECTIONNÉE montre deux poignées de bord : tirer = étirer ou
+    // raccourcir sa durée (retour Axel « il faut que l'on puisse étirer
+    // l'animation, le média… »).
+    // Les scènes AVATAR en étaient exclues — Axel, 03/08 : « pour la zone verte
+    // là, y'a pas de poignées, rajoute-les ». L'exclusion venait d'une prudence
+    // (ces fenêtres portent les clips lipsync), mais elle empêchait le geste le
+    // plus naturel de l'écran : rogner un plan de visage pour laisser voir autre
+    // chose. Le rognage reste borné par les scènes voisines comme partout
+    // ailleurs, et la régénération recalera les clips sur les nouvelles bornes.
+    const sel = s.id===_md.sel && !s.del;
     const grip = (side)=>'<div data-grip onpointerdown="_mdResizeDown(event,\''+s.id+'\',\''+side+'\')" title="Tire pour '+(side==='a'?'avancer le début':'étirer la fin')+'" '
       +'style="position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center">'
       +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
@@ -13260,6 +13266,42 @@ function _mdResizeDown(ev, id, side){
     s.resized=true; _md.scenes.sort((x,y)=>x.a-y.a); _mdRender(); };
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
+// ── LE CLAVIER FAIT CE QUE LA SOURIS FAIT ────────────────────────────────────
+// Axel : « ajoute aussi les raccourcis clavier pour supprimer depuis le clavier,
+// ça me soûle ». Sur un écran où l'on enchaîne vingt corrections, aller chercher
+// un bouton à chaque fois use plus que le travail lui-même.
+//   ⌫ / Suppr   supprime la scène sélectionnée (ou la rétablit si déjà barrée)
+//   ⌘Z / ⌘⇧Z    annuler / refaire
+//   Espace      lecture / pause
+//   ← →         recule / avance d'un dixième (⇧ : une seconde)
+//   Échap       ferme la fiche ouverte
+// Les raccourcis se taisent dès qu'on écrit dans un champ : on ne supprime pas
+// une scène parce que quelqu'un tape « supprimer » dans une zone de texte.
+function _mdClavier(e){
+  if(!_md || !document.getElementById('mdOv')) return;
+  const t=e.target, tag=(t&&t.tagName||'').toUpperCase();
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)) return;
+  const k=e.key;
+  if((k==='Backspace'||k==='Delete') && _md.sel){
+    const sc=_md.scenes.find(x=>x.id===_md.sel);
+    if(sc){ e.preventDefault(); _mdCommit();
+      sc.del=!sc.del; if(sc.del) sc.repl=null;
+      toast(sc.del?'Scène supprimée — ⌘Z pour annuler':'Scène rétablie');
+      _mdRender(); }
+    return;
+  }
+  if((e.metaKey||e.ctrlKey) && k.toLowerCase()==='z'){
+    e.preventDefault(); if(e.shiftKey) _mdRedo && _mdRedo(); else _mdUndo && _mdUndo(); return;
+  }
+  if(k===' '){ e.preventDefault(); _mdTogglePlay(); return; }
+  if(k==='ArrowLeft'||k==='ArrowRight'){
+    e.preventDefault(); const pas=e.shiftKey?1:0.1;
+    _mdSeek(_md.time + (k==='ArrowRight'?pas:-pas)); return;
+  }
+  if(k==='Escape' && _md.pop){ e.preventDefault(); _md.pop=null; _mdRenderPop(); }
+}
+if(!window._mdClavierPose){ window._mdClavierPose=true; document.addEventListener('keydown', _mdClavier); }
+
 function _mdTrackDown(ev){
   if(_md.pop){ _md.pop=null; _mdRenderPop(); return; }
   _mdPause();
@@ -14042,7 +14084,21 @@ function _mdBankModalHtml(){
         +'<input autofocus value="'+_mdEsc(bm.q||'')+'" oninput="_md.bankModal.q=this.value;_mdRenderModals(true)" placeholder="Rechercher parmi '+b.items.length+'…" '
           +'style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px">'
       +'</div>'
-      +'<div style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:'+cols+';gap:8px">'+list.map(cell).join('')+'</div>'
+      // ── PAR PAQUETS DE 30 ────────────────────────────────────────────────
+      // Axel, deux fois : « les 164 animations mettent très longtemps à charger,
+      // fais genre 30 par 30 ». Chaque vignette est une vidéo : en afficher 164
+      // d'un coup, c'est 164 lecteurs que le navigateur ouvre ensemble, et
+      // l'écran reste blanc le temps qu'ils s'installent.
+      // On en pose 30, et le paquet suivant arrive quand on approche du bas —
+      // sans bouton à cliquer, sans rupture de défilement.
+      +'<div id="mdBankGrid" onscroll="_mdBankPlus(event)" style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:'+cols+';gap:8px">'
+        +list.slice(0, bm.n || 30).map(cell).join('')
+        +(list.length > (bm.n || 30)
+          ? '<div id="mdBankPlus" style="grid-column:1/-1;padding:14px;text-align:center">'
+            +'<button onclick="_mdBankPlus()" class="btn btn-quiet btn-sm">Voir les '
+            + Math.min(30, list.length - (bm.n || 30)) + ' suivantes · ' + (bm.n || 30) + '/' + list.length + '</button></div>'
+          : '')
+      +'</div>'
     +'</div></div>';
 }
 // mélange (Fisher-Yates, copie) — « mets en aléatoire pour que l'ordre ne soit
@@ -14053,6 +14109,20 @@ function _mdSwapBody(fullHtml, bodyId){
   const t=document.createElement('template'); t.innerHTML=fullHtml;
   const nb=t.content.querySelector('#'+bodyId);
   if(nb) host.replaceWith(nb); else _mdRenderModals();
+}
+// Le paquet suivant : au clic, ou dès qu'on arrive à 300 px du bas. On ne
+// remplace que la grille (_mdSwapBody), donc le défilement ne saute pas.
+function _mdBankPlus(ev){
+  if(!_md || !_md.bankModal) return;
+  if(ev && ev.type==='scroll'){
+    const el=ev.target;
+    if(el.scrollHeight - el.scrollTop - el.clientHeight > 300) return;
+    if(_md.bankModal._chargeEnCours) return;
+    _md.bankModal._chargeEnCours=true;
+    setTimeout(()=>{ if(_md&&_md.bankModal) _md.bankModal._chargeEnCours=false; }, 400);
+  }
+  _md.bankModal.n = (_md.bankModal.n || 30) + 30;
+  _mdRenderModals(true);
 }
 function _mdShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 // depuis une grille de REMPLACEMENT d'animation, « swipe » = le vrai écran
