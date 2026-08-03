@@ -11479,7 +11479,7 @@ function _mtProg(pct, label){
         +'</div>'
       +'</div>'
       +'<div id="mtProgSteps" style="display:flex;flex-direction:column;gap:8px;margin-top:28px;width:100%;max-width:420px;text-align:left"></div>'
-      +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:360px;line-height:1.55">Garde cette page ouverte. Le rendu peut prendre un peu plus longtemps que prévu&nbsp;: on rend en 50&nbsp;images/seconde pour que le résultat soit à la qualité maximale.</p>'
+      +'<p class="faint" style="font-size:12px;margin-top:24px;max-width:360px;line-height:1.55">Garde cette page ouverte. Le rendu peut prendre quelques minutes.</p>'
       +'<button class="btn btn-quiet btn-sm" style="margin-top:14px;background:none;border:none;box-shadow:none;-webkit-appearance:none;appearance:none;color:var(--text-2);font-family:var(--font);font-size:13.5px;cursor:pointer" onclick="_mtAbortRun()">Annuler</button></div>';
     const host=document.querySelector('.layout .main')||document.body;
     if(getComputedStyle(host).position==='static') host.style.position='relative';
@@ -12003,7 +12003,7 @@ async function _mtVideoGenerate(){
     ]);
     let wav;
     try {
-      wav = await _limite(_mtAudioSliceWav(_mt.video, 0, dur), 60000, "l'audio de ta vidéo n'a pas pu être lu (60 s)");
+      wav = await _limite(_mtAudioSliceWav(_mt.video, 0, dur), 22000, "l'audio de ta vidéo n'a pas pu être lu (22 s)");
     } catch(e) {
       throw new Error("Impossible de lire la piste audio de ta vidéo. Vérifie qu'elle en a bien une, ou réexporte-la en MP4 (H.264 + AAC).");
     }
@@ -12012,7 +12012,7 @@ async function _mtVideoGenerate(){
     // voir ce que montre la vidéo. S'il ne les obtient pas, on continue sans —
     // mieux vaut un montage guidé par la seule voix que pas de montage du tout.
     let frames = [];
-    try { frames = await _limite(_mtFramesFromVideo(_mt.video, 8), 45000, 'les images'); }
+    try { frames = await _limite(_mtFramesFromVideo(_mt.video, 8), 18000, 'les images'); }
     catch(e) { console.warn('images non extraites, on continue sans :', e.message); }
 
     // chef d'orchestre → plan de montage
