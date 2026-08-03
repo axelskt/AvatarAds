@@ -47,14 +47,26 @@ serve(async (req: Request) => {
   // repartaient en 401 et aucun clip n'était généré, en silence.
   // ⚠ Comparaison à longueur constante : un `===` sur un secret laisse fuiter
   // sa longueur et ses premiers octets par le temps de réponse.
-  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  const memeSecret = (a: string, b: string) => {
-    if (!a || !b || a.length !== b.length) return false
-    let d = 0
-    for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i)
-    return d === 0
-  }
-  const estLeMoteur = memeSecret(token, service)
+  // Première tentative (02/08) : comparer le jeton reçu à SUPABASE_SERVICE_ROLE_KEY.
+  // Mesuré le 03/08 : ça échoue. Les deux valeurs ont divergé — celle injectée
+  // dans la fonction n'est pas celle que Railway détient. Comparer deux secrets
+  // censés être identiques, c'est parier sur un alignement qu'on ne contrôle
+  // pas ; une rotation de clé suffit à tout casser, en silence et en 401.
+  //
+  // La passerelle Supabase vérifie DÉJÀ la signature du jeton (verify_jwt est
+  // actif sur cette fonction). Autrement dit : si l'exécution arrive jusqu'ici,
+  // le jeton est authentique — signé avec le secret du projet. Il ne reste donc
+  // qu'à lire ce qu'il déclare. Un jeton de service porte role='service_role',
+  // et personne ne peut en forger un sans le secret.
+  const roleDuJeton = (() => {
+    try {
+      const p = token.split('.')[1]
+      if (!p) return ''
+      const b = p.replace(/-/g, '+').replace(/_/g, '/')
+      return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
+    } catch { return '' }
+  })()
+  const estLeMoteur = roleDuJeton === 'service_role'
 
   const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? ''
   const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
