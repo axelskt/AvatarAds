@@ -11242,6 +11242,21 @@ const _MT_LIB = {
 };
 const _mtLibelle = (a) => _MT_LIB[a] || ('animation « ' + a + ' »');
 
+// ── LE RAPPORT NE BARRE PLUS LA ROUTE ────────────────────────────────────────
+// Axel, 03/08 : « en vrai il ne sert pas à grand-chose le rapport, supprime-le,
+// faut que ça aille direct à l'écran de téléchargement sans passer par un
+// aperçu ». Une étape de validation qui s'intercale à chaque montage coûte plus
+// d'attention qu'elle n'en fait gagner quand le montage est bon — et il l'est
+// devenu.
+//
+// Ce qu'on perd, et il faut le savoir : le rapport était le seul moment où une
+// erreur se corrigeait sans payer. Désormais une animation à côté coûte un
+// rendu complet. C'est un choix assumé, pas un oubli.
+//
+// La fonction reste écrite et fonctionnelle : repasser MT_RAPPORT à true la
+// remet en service, sans rien réécrire.
+const MT_RAPPORT = false;
+
 function _mtRapport(plan){
   // ── « LES LOGS NE CORRESPONDENT PAS DU TOUT À LA VIDÉO » (Axel, 03/08) ──────
   // L'écran affichait « — » sur chaque ligne et criait « tu ne dis rien à cet
@@ -11954,8 +11969,8 @@ async function _mtSegmentedGenerate(){
                  _words: (od.transcript && od.transcript.words) || [] };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
-    if (typeof _mtProgPause === 'function') _mtProgPause();
-    if (!(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
+    if (MT_RAPPORT && typeof _mtProgPause === 'function') _mtProgPause();
+    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
@@ -12202,8 +12217,8 @@ async function _mtVideoGenerate(){
                  _words: (od.transcript && od.transcript.words) || [] };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
-    if (typeof _mtProgPause === 'function') _mtProgPause();
-    if (!(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
+    if (MT_RAPPORT && typeof _mtProgPause === 'function') _mtProgPause();
+    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
