@@ -14243,7 +14243,16 @@ function _mdEnsureCss(){
 function _mdVidEl(){
   if(_md.vidEl) return _md.vidEl;
   const v=document.createElement('video');
-  v.id='mdVid'; v.src=_md.job.url||''; v.playsInline=true; v.setAttribute('playsinline',''); v.preload='auto';
+  // ── L'APERÇU MONTRE LA SOURCE, PAS LE MONTAGE PRÉCÉDENT ─────────────────
+  // Axel : « faudrait que la vidéo tourne en fond sans qu'on la voie, et quand
+  // on écarte, qu'elle prenne le relais ». Tant que l'aperçu lisait le montage
+  // rendu, écarter une scène ne révélait rien : sous les panneaux se trouvait
+  // le résultat précédent, avec ses animations déjà incrustées.
+  // Avec la source, l'aperçu simule enfin ce que la régénération produira — le
+  // moteur pose la vidéo en couche du dessous et les panneaux par-dessus, donc
+  // un trou montre la vidéo à sa seconde exacte, en mouvement.
+  // Repli sur le montage rendu si la source n'est pas signable (vieux job).
+  v.id='mdVid'; v.src=_md.job.source_url||_md.job.url||''; v.playsInline=true; v.setAttribute('playsinline',''); v.preload='auto';
   v.crossOrigin='anonymous';   // permet de capturer la frame courante (placement média)
   v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#08070a';
   v.addEventListener('play',()=>{ if(_md){ _md.playing=true; _mdPlayBtns(); _mdRaf(); } });
