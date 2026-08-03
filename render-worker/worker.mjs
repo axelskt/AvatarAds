@@ -112,7 +112,23 @@ const BEDS = ['grave', 'tension', 'montee']
 const args = process.argv.slice(2)
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args[i + 1] ?? true) : null }
 
-function sh(cmd, cwd) { execSync(cmd, { cwd, stdio: 'inherit' }) }
+// ── UNE COMMANDE QUI ÉCHOUE DOIT DIRE POURQUOI ──────────────────────────────
+// Mesuré le 03/08 sur un job perdu : le rendu a planté et tout ce qu'on a gardé
+// était « Command failed: npx -y hyperframes render … ». La vraie erreur était
+// partie sur la sortie d'erreur du processus enfant, que `stdio:'inherit'`
+// envoie directement dans Railway — donc hors de la trace, donc perdue.
+// On garde la sortie standard en direct (la progression du rendu reste
+// lisible) et on CAPTE la sortie d'erreur, pour la recracher dans la trace au
+// moment où ça casse. Douze dernières lignes : c'est là que se trouve la cause.
+function sh(cmd, cwd) {
+  try {
+    execSync(cmd, { cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024 })
+  } catch (e) {
+    const err = String((e && e.stderr) || '').trim()
+    if (err) console.error('✗ ' + cmd.slice(0, 90) + ' →\n' + err.split('\n').slice(-12).join('\n').slice(0, 1600))
+    throw e
+  }
+}
 function ffprobe(file, entries) {
   return execFileSync('ffprobe', ['-v', 'error', '-show_entries', entries, '-of', 'csv=p=0', file]).toString().trim()
 }
