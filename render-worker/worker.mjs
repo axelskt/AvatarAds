@@ -552,9 +552,52 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // la sous-couche n'a de sens que si la base porte VRAIMENT une image : sur un
     // montage parti d'un MP3, base.mp4 est un fond noir fabriqué ici même, et
     // l'empiler ne ferait qu'ajouter un décodage vidéo pour rien.
-    const sousCouche = existsSync(join(proj, 'media', 'base.mp4')) && baseAUneImage ? 'media/base.mp4' : ''
-    if (sousCouche) console.log('▶ sous-couche : la vidéo source tapisse toute la durée — aucun aplat possible')
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, baseVideo: sousCouche, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+    // ── LA SOUS-COUCHE NE COUVRE QUE LES TROUS ────────────────────────────
+    // Première version : la vidéo tournait sur TOUTE la durée, en couche 0.
+    // Résultat mesuré sur le rendu suivant — plus de 18 minutes au lieu de 8 à 9.
+    // Normal : 2 500 images à rendre, et sur chacune une image de vidéo en plus
+    // à décoder, du début à la fin, y compris sous les panneaux qui la
+    // masquent entièrement. Axel : « ne poser la vidéo que sur les intervalles
+    // réellement découverts, même résultat visuel, sans décodage permanent ».
+    //
+    // On calcule donc ce qui est DÉJÀ couvert — slides, fenêtres avatar,
+    // médias — et on ne pose la vidéo que dans le complément. Chaque trou est
+    // pré-découpé par ffmpeg à son timecode, exactement comme les fenêtres
+    // avatar le sont depuis le début : mécanisme éprouvé, aucun décalage
+    // possible, et le moteur n'a qu'à poser un clip qui joue depuis son début.
+    const fonds = []
+    if (baseAUneImage && existsSync(join(proj, 'media', 'base.mp4'))) {
+      const D = plan.duration || 0
+      const couvert = [
+        ...(plan.slides || []), ...(plan.avatarSegments || []), ...(plan.broll || []),
+      ].filter((x) => x && typeof x.start === 'number' && typeof x.end === 'number' && x.end > x.start)
+        .map((x) => [Math.max(0, x.start), Math.min(D, x.end)])
+        .sort((a, b) => a[0] - b[0])
+      // fusion des intervalles qui se touchent, puis complément
+      const fusion = []
+      for (const [a, b] of couvert) {
+        const last = fusion[fusion.length - 1]
+        if (last && a <= last[1] + 0.04) last[1] = Math.max(last[1], b)
+        else fusion.push([a, b])
+      }
+      let t = 0
+      const trous = []
+      for (const [a, b] of fusion) { if (a - t > 0.25) trous.push([r2(t), r2(a)]); t = Math.max(t, b) }
+      if (D - t > 0.25) trous.push([r2(t), r2(D)])
+
+      trous.forEach(([a, b], i) => {
+        const out = 'media/fond' + i + '.mp4'
+        try {
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(a), '-t', String(r2(b - a)),
+            '-i', join(proj, 'media', 'base.mp4'), '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+            '-preset', 'veryfast', join(proj, out)])
+          fonds.push({ start: a, end: b, src: out })
+        } catch (e) { console.warn(`sous-couche ${a}→${b}s :`, e.message) }
+      })
+      if (fonds.length) console.log(`▶ sous-couche : ${fonds.length} trou(s) tapissé(s) par sa vidéo — ${fonds.map((f) => `${f.start}→${f.end}s`).join(', ')}`)
+      else console.log('▶ sous-couche : aucun trou à combler, tout est déjà couvert')
+    }
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, fonds, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
 
     // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
     // a construit cette liste en ÉCOUTANT le rendu précédent (supprimé, déplacé,
