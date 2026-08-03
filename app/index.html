@@ -13806,8 +13806,13 @@ async function _mdCreerGo(){
   if(txt.trim().length<6){ toast('Décris ce que tu veux voir bouger'); return; }
   c.demande=txt.trim(); c.etat='travail'; c.err=''; _mdRenderModals();
   try{
+    // ── LE SERVEUR DOIT SAVOIR QUI DEMANDE ────────────────────────────────
+    // On envoyait la clé anonyme : anim-creer ne pouvait donc identifier
+    // personne, et le quota (2 starter / 5 pro / 8 elite par mois) n'aurait eu
+    // aucun compte à tenir. Le jeton de session, lui, dit qui appelle — et
+    // c'est le serveur, pas le navigateur, qui décide si c'est gratuit.
     const r=await fetch(SUPABASE_URL+'/functions/v1/anim-creer',{
-      method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+SUPABASE_KEY },
+      method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
       body:JSON.stringify({ demande:c.demande, phrase:c.phrase })
     });
     const j=await r.json();
