@@ -12855,6 +12855,7 @@ function _mdPlayBtns(){
   }
 }
 function _mdSeek(t){ if(!_md) return; t=Math.max(0,Math.min(_md.dur,t)); _md.time=t;
+  try{ _mdPeindreAnim(t); }catch(_){}
   const v=_mdVid(); if(v && isFinite(v.duration)) { try{ v.currentTime=t; }catch(_){} }
   _mdTick(); }
 function _mdTick(){
@@ -12873,6 +12874,7 @@ function _mdTick(){
     } else if(v.style.transform){ v.style.transform=''; v.style.transformOrigin=''; }
   }
   const t=_md.time, dur=_md.dur;
+  try{ _mdPeindreAnim(t); }catch(_){ /* l'aperçu ne casse jamais la lecture */ }
   // curseurs + temps
   for(const id of ['mdCur','mdCurH','mdCurHit']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
   const tm=document.getElementById('mdTime'); if(tm) tm.innerHTML=_mdT(t)+'<span class="faint"> / '+_mdT(dur)+'</span>';
@@ -14280,6 +14282,46 @@ function _mdVidEl(){
   v.addEventListener('pause',()=>{ if(_md){ _md.playing=false; _mdPlayBtns(); } });
   v.addEventListener('ended',()=>{ if(_md){ _md.playing=false; _mdPlayBtns(); } });
   _md.vidEl=v; return v;
+}
+
+// ── LA VIDÉO DESSOUS, L'ANIMATION DESSUS ────────────────────────────────────
+// Axel : « quand on rogne avec les poignées, par défaut que ce soit la vidéo
+// originale en dessous sans montage, et si l'user met une animation par-dessus
+// c'est l'animation qui est prioritaire ».
+//
+// C'est l'ordre exact du moteur au rendu, et l'aperçu ne le simulait pas : il
+// se contentait de lire UNE vidéo. Tant qu'il lisait le montage rendu, les
+// animations étaient visibles parce qu'incrustées — mais rogner ne révélait
+// rien. En basculant sur la source j'ai gagné le dessous et perdu le dessus.
+//
+// On ajoute donc la couche manquante : les aperçus d'animation que l'app
+// possède déjà (anim-previews/<nom>.mp4) se posent au-dessus de la source
+// pendant la fenêtre de leur scène, et disparaissent dès qu'on rogne. Les deux
+// moitiés de sa demande sont là.
+function _mdAnimOv(){
+  let o=document.getElementById('mdAnimOv');
+  if(!o && _md && _md.vidEl && _md.vidEl.parentNode){
+    o=document.createElement('video'); o.id='mdAnimOv';
+    o.muted=true; o.loop=true; o.playsInline=true; o.setAttribute('playsinline','');
+    o.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'
+      +'background:#08070a;display:none;pointer-events:none;z-index:3';
+    _md.vidEl.parentNode.appendChild(o);
+  }
+  return o;
+}
+function _mdPeindreAnim(t){
+  const o=_mdAnimOv(); if(!o) return;
+  // la scène qui couvre l'instant ET qui porte une animation jouable
+  const sc=(_md.scenes||[]).find(x=>!x.del && t>=x.a && t<x.b && x.n==='animation' && x.t);
+  const nom=sc ? String(sc.t).trim() : '';
+  const dispo=nom && window._mdPrevSet && window._mdPrevSet.has(nom);
+  if(!dispo){ if(o.style.display!=='none'){ o.style.display='none'; try{ o.pause(); }catch(_){} o.removeAttribute('src'); } return; }
+  const src=(window._mdPrevBlob&&window._mdPrevBlob[nom])||('anim-previews/'+nom+'.mp4');
+  if(o.getAttribute('data-anim')!==nom){
+    o.setAttribute('data-anim',nom); o.src=src;
+    try{ o.currentTime=0; o.play().catch(()=>{}); }catch(_){}
+  }
+  if(o.style.display==='none') o.style.display='';
 }
 
 function _mdStatsHtml(){
