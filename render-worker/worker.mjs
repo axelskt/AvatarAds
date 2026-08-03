@@ -745,6 +745,50 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
 // Chaque correction repasse par les garde-fous de la dérivation : une finition
 // PROPOSE, elle n'impose pas. Et l'appel ne peut jamais faire échouer un
 // montage — sans réponse, le plan reste tel quel.
+// ── LA TRACE D'UN MONTAGE SE GARDE ───────────────────────────────────────────
+// Axel, 03/08, jour du premier client : « faut garder tous les logs et qu'ils
+// soient classés correctement pour collecter un max de datas et réparer /
+// améliorer ». Jusqu'ici le moteur écrivait sur la sortie standard de Railway,
+// qui l'efface — et que je n'ai réussi à interroger qu'une fois sur trois
+// aujourd'hui. Chaque montage raté était une information perdue.
+//
+// Plutôt que de réécrire les cent lignes de log existantes, on les CAPTE : le
+// moteur raconte déjà tout ce qu'il fait, il suffit de l'écouter et de classer.
+// Chaque ligne est rangée par phase, ce qui rend les vraies questions
+// interrogeables en SQL — quelles animations sont refusées le plus souvent,
+// combien de fenêtres lipsync échouent, quels médias ne trouvent jamais leur
+// place. C'est la matière de l'amélioration continue qu'il demande.
+const PHASES = [
+  [/banni|refus|écart|ecart|absent de la banque/i, 'refus'],
+  [/lipsync/i, 'lipsync'],
+  [/finition/i, 'finition'],
+  [/média|media|broll/i, 'media'],
+  [/sous-titre/i, 'soustitres'],
+  [/capture|tuto|écran|ecran/i, 'tuto'],
+  [/visage|avatar/i, 'visage'],
+  [/rendu|render|ffmpeg|upload/i, 'rendu'],
+]
+function ouvrirTrace() {
+  const evts = []
+  const vrai = { log: console.log, warn: console.warn, error: console.error }
+  const capte = (niveau) => (...a) => {
+    try {
+      const msg = a.map((x) => (typeof x === 'string' ? x : String(x))).join(' ')
+      // 900 lignes suffisent largement pour un montage ; au-delà c'est une
+      // boucle, et on préfère une trace tronquée à une ligne de 4 Mo en base.
+      if (evts.length < 900) {
+        const phase = (PHASES.find(([re]) => re.test(msg)) || [null, 'autre'])[1]
+        evts.push({ t: Math.round(Date.now() / 1000), niveau, phase, msg: msg.slice(0, 400) })
+      }
+    } catch (_) { /* une trace ne casse jamais un rendu */ }
+    vrai[niveau](...a)
+  }
+  console.log = capte('log'); console.warn = capte('warn'); console.error = capte('error')
+  return {
+    fermer() { console.log = vrai.log; console.warn = vrai.warn; console.error = vrai.error; return evts },
+  }
+}
+
 async function passeDeFinition(plan) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return
@@ -997,6 +1041,8 @@ async function pollLoop() {
         .eq('id', job.id).eq('status', 'queued').select('id')
       if (!claimed || !claimed.length) continue
 
+      const trace = ouvrirTrace()
+      const tDebut = Date.now()
       console.log('▶ job', job.id)
       const jobDir = mkdtempSync(join(tmpdir(), 'aa-job-'))
       try {
@@ -1080,12 +1126,15 @@ async function pollLoop() {
             .upload(outKey + '.derived.json', readFileSync(out + '.derived.json'), { contentType: 'application/json', upsert: true })
         } catch (e) { console.warn('derived:', e.message) }
         // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
-        await sb.from('render_jobs').update({ status: 'done', output_url: outKey, updated_at: new Date().toISOString() }).eq('id', job.id)
-        console.log('✅ job', job.id, '→', outKey)
+        console.log(`✅ job ${job.id} → ${outKey} (${Math.round((Date.now() - tDebut) / 1000)}s)`)
+        await sb.from('render_jobs').update({ status: 'done', output_url: outKey, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
       } catch (e) {
         console.error('✗ job', job.id, e.message)
-        await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+        await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
       } finally {
+        // la console reprend sa forme normale même si l'écriture a échoué :
+        // un collecteur laissé branché contaminerait le job suivant.
+        try { trace.fermer() } catch (_) {}
         rmSync(jobDir, { recursive: true, force: true })
       }
     } catch (e) {
