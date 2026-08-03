@@ -2350,9 +2350,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- Roue de progression + chronomètre -->
           <div style="text-align:center">
             <div style="position:relative;width:128px;height:128px;margin:0 auto 10px">
-              <svg width="128" height="128" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
-                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg4)" stroke-width="8"/>
-                <circle id="genRingFill" cx="60" cy="60" r="52" fill="none" stroke="url(#genRingGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s ease"/>
+              <svg width="140" height="140" viewBox="0 0 140 140" style="transform:rotate(-90deg)">
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--bg4)" stroke-width="9"/>
+                <circle id="genRingFill" cx="70" cy="70" r="54" fill="none" stroke="url(#genRingGrad)" stroke-width="9" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" style="transition:stroke-dashoffset .6s ease"/>
                 <defs><linearGradient id="genRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
               </svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
@@ -2361,7 +2361,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
             <div style="font-size:17px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px">Génération en cours…</div>
-            <div style="font-size:11px;font-family:var(--mono);color:var(--text-3)">On réduit ton temps d'attente au maximum ⚡</div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text-3)">On réduit ton temps d'attente au maximum</div>
           </div>
 
           <!-- Warning -->
@@ -2373,7 +2373,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- Étapes -->
           <div class="genprog" id="genprog">
             <div class="gp-step" id="gp1"><div class="gp-icon">📝</div>Analyse du script</div>
-            <div class="gp-step" id="gp2"><div class="gp-icon">🎙️</div>Audio (ElevenLabs)</div>
+            <div class="gp-step" id="gp2"><div class="gp-icon">🎙️</div>Ton audio</div>
             <div class="gp-step" id="gp3"><div class="gp-icon">🤖</div>Lipsync avatar (Hedra)</div>
             <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:4px auto 0">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
@@ -21891,7 +21891,11 @@ function _setGenRing(pct){
   const ring=document.getElementById('genRingFill');
   const txt=document.getElementById('genRingPct');
   if(txt) txt.textContent=Math.round(pct)+'%';
-  if(ring){ const C=2*Math.PI*52; ring.style.strokeDashoffset=String(C*(1-pct/100)); }
+  // Le rayon est lu SUR le cercle : une valeur figée ici et le rayon changé
+  // dans le balisage, et l'anneau n'atteint jamais 100 % — la barre qui ment.
+  if(ring){ const r=parseFloat(ring.getAttribute("r"))||54; const C=2*Math.PI*r;
+            ring.setAttribute("stroke-dasharray", String(C));
+            ring.style.strokeDashoffset=String(C*(1-pct/100)); }
 }
 function _updateGenRing(){
   let done=0, hasOn=false;
