@@ -1902,8 +1902,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div style="font-weight:700;padding:4px 0">720p</div><div style="font-size:9px;margin-top:-3px">Économique</div>
                 </button>
                 <button onclick="setQuality(1080,this)" class="qual-btn on" data-q="1080" style="padding:9px 4px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.5);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center;position:relative">
-                  <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Meilleure qualité</div>
-                  <div style="font-weight:700;padding:4px 0 0">1080p</div><div style="font-size:9px;margin-top:-3px">+0,5 cr/s</div>
+                  <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:7px;font-family:var(--mono);font-weight:800;padding:1px 6px;border-radius:20px;white-space:nowrap">Recommandé</div>
+                  <div style="font-weight:700;padding:4px 0 0">1080p</div><div style="font-size:9px;margin-top:-3px">Meilleure qualité · 0,5 cr/s</div>
                 </button>
               </div>
             </div>
@@ -20414,8 +20414,8 @@ function setQuality(q, btn){
   const plan = (currentMember?.plan || 'free').toLowerCase();
   const can1080 = ['pro','elite','developer'].includes(plan);
   if(q === 1080 && !can1080){ toast('⚠️ 1080p réservé aux plans Pro & Élite');       openUpgradeModal(); return; }
-  if(q === 1080 && _composeQuality !== 1080) toast('📐 1080p : +' + CREDIT_COSTS.hd1080PerSec + ' crédit par seconde (720p gratuit)');
-  if(q === 720  && _composeQuality !== 720)  toast('💸 720p : la génération ne coûte que le tarif de base');
+  if(q === 1080 && _composeQuality !== 1080) toast('1080p · meilleure qualité — ' + CREDIT_COSTS.hd1080PerSec + ' crédit par seconde (720p gratuit)');
+  if(q === 720  && _composeQuality !== 720)  toast('720p · économique — la génération ne coûte que le tarif de base');
   _composeQuality = q;
   _qualiteChoisie = true;   // à partir d'ici le défaut ne se réimpose plus
   // Sync tous les boutons qual-btn par data-q
