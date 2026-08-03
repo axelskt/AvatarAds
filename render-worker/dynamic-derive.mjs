@@ -2767,13 +2767,29 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // « on peut toujours créer l'animation qu'il veut si elle est pertinente
       // ou on la redirige vers la plus proche ». Encore faut-il connaître le
       // nom. On le journalise, et on tente une redirection par synonyme.
+      // ── ON NE REMPLACE PLUS PAR « LA PLUS PROCHE » ──────────────────────
+      // Axel, 03/08 : « il met des animations au hasard même si ça ne
+      // correspond pas », puis : « non, il ne faut pas prendre la plus proche
+      // dans le catalogue ».
+      //
+      // La redirection partait d'une bonne intention — ne pas perdre la fenêtre
+      // quand le chef demande une animation absente. Mais « la plus proche »
+      // n'est proche que dans une table écrite à la main : `check` devenait
+      // `blankfill`, `zero` devenait `blankfill`, `free` aussi. Trois idées
+      // différentes finissaient sur le même visuel, qui n'en disait aucune. Un
+      // à-peu-près répété devient du hasard.
+      //
+      // Une animation demandée qui n'existe pas est donc simplement abandonnée.
+      // La fenêtre n'est pas perdue pour autant : §3b-bis la rend au VISAGE, et
+      // les scènes voisines s'étirent dessus (§3c). Un plan sur la personne qui
+      // parle vaut mieux qu'un visuel qui ne veut rien dire — c'est vrai pour le
+      // spectateur, et c'est ce qu'Axel demande depuis le début.
+      //
+      // On garde la trace du nom demandé : c'est la matière de #37, la file des
+      // animations à créer.
       const voulu = String(sl.anim)
-      const proche = REDIRECTIONS[voulu]
-      if (proche && RENDERABLE.has(proche)) {
-        console.log(`▶ « ${voulu} » n'existe pas → redirigé vers « ${proche} »`)
-        sl = { ...sl, anim: proche }
-      } else {
-        console.log(`▶ « ${voulu} » demandé par le chef d'orchestre : absent de la banque`)
+      {
+        console.log(`▶ « ${voulu} » demandé par le chef d'orchestre : absent de la banque → fenêtre rendue au visage (aucune substitution)`)
         dropUnrenderable++; continue
       }
     }
