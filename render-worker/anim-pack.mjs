@@ -905,8 +905,14 @@ export function animHtml(name, s, W, H, vs) {
       // par la LARGEUR disponible : environ 0,62 em par caractère pour une
       // graisse grasse, et on garde 14 % de marge. Cette borne ne fait que
       // réduire — un petit nombre garde exactement la taille d'avant.
+      // Axel, 03/08, sur « 10000 » : « ne respecte pas la safezone ». Ma
+      // première borne était trop optimiste sur deux points — 0,62 em par
+      // caractère pour une graisse display (les chiffres d'un gras sont plus
+      // larges que ça), et 86 % de la largeur alors qu'une zone sûre verticale
+      // s'arrête bien avant les bords. On resserre : 0,78 em par caractère, et
+      // 72 % de la largeur, ce qui laisse 14 % de marge de chaque côté.
       const nCar = ((val.replace(/[^0-9]/g, '') || '0').length) * 1.28   // +séparateurs de milliers
-      const fs = Math.min(Math.round(f.h * 0.30), Math.round((f.w * 0.86) / (nCar * 0.62)))
+      const fs = Math.min(Math.round(f.h * 0.30), Math.round((f.w * 0.72) / (nCar * 0.78)))
       return box(`<div class="an-cu" id="${id}cu">
         <span class="an-cun" id="${id}cun" style="font-size:${fs}px;color:${P.ink}">0</span>
         ${unit ? `<span class="an-cuu" id="${id}cuu" style="font-size:${Math.round(fs * 0.34)}px;color:${P.acc}">${esc(unit)}</span>` : ''}

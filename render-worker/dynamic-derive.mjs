@@ -632,10 +632,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
         }
       }
     }
+    // ── LA PORTE UNIQUE : UNE BANNIE NE PASSE PAS, ET NE SE REMPLACE PAS ────
+    // Axel, 03/08 : « toujours aussi [l'animation de l'écran 4] qu'était censé
+    // être bannie ». C'était `calendar` — une grille de calendrier —, bannie
+    // depuis des semaines. J'avais retiré la substitution dans la boucle du
+    // chef d'orchestre, mais PAS ici : cette porte-ci la remplaçait encore par
+    // « la plus proche », et quand aucune proche n'existait, elle la laissait
+    // simplement passer telle quelle. C'est par là que `steps`, `calendar` et
+    // `clock` sont entrées dans le montage de 15:51.
+    //
+    // Deux leçons, écrites pour la prochaine fois : un filtre posé ailleurs que
+    // sur le passage obligé ne filtre rien, et un `else` qui laisse passer par
+    // défaut est un trou, pas un garde-fou. Ici on refuse, sans remplacement —
+    // la fenêtre revient au visage (§3b-bis) ou aux scènes voisines (§3c).
     if (REFUSEES.has(nom)) {
-      const proche = REDIRECTIONS[nom]
-      if (proche && !REFUSEES.has(proche)) slide = { ...slide, anim: proche }
-      else return null
+      console.log(`▶ « ${nom} » bannie : refusée à ${r2(a)}s — la fenêtre revient au visage`)
+      return null
     }
     // ── UNE CAPTURE SANS FICHIER N'EST PAS UNE SCÈNE ────────────────────────
     // `screen` et `result` sont dans la banque (le chef a le droit de les
