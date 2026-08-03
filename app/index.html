@@ -3721,7 +3721,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
                 <button id="mtSrcGame" onclick="mtSetSrc('gameplay')" class="mt-src on">
                   <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></span><span style="font-weight:700;font-size:15px">Gameplay + voix</span></div>
-                  <span class="faint" style="font-size:12px;line-height:1.35">Ta voix (ou ElevenLabs) sur un clip gameplay hypnotique</span>
+                  <span class="faint" style="font-size:12px;line-height:1.35">Ta voix sur un clip gameplay</span>
                 </button>
                 <button id="mtSrcVideo" onclick="mtSetSrc('mavideo')" class="mt-src">
                   <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span style="font-weight:700;font-size:15px">Ma vidéo</span></div>
@@ -3795,7 +3795,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div class="mt-eyebrow">Tes visuels</div>
                   <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
                   <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
-                  <p class="faint" style="font-size:11px;margin-top:7px">Jusqu'à 8 images/clips, placés au meilleur moment.</p>
                 </div>
               </div>
 
@@ -10459,7 +10458,9 @@ const MZ_VSTYLE = [
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],'',true],   // remplacé bientôt par un nouveau style
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
-  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' }; }
+  subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, avatarDens:2, punch:true, sfx:true, motion:'gestures' }; }
+// Ce qu'on annonce au chef d'orchestre : à quel point on veut voir la personne.
+const MZ_AVATAR_DENS = ['Jamais · 100 % animations', 'Rare · 1 ou 2 passages', 'Équilibré · Recommandé', 'Très présent · il porte la vidéo'];
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
 // 🔌 « Connecter Claude » — la section vivait dépliée dans « Mon compte » et y
@@ -10569,9 +10570,16 @@ function mzAdvRender(){
       +(on?'<span style="color:var(--accent-2);display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>':'')
       +'</span><span class="faint" style="display:block;font-size:11px">'+(soon?'bientôt disponible':sub)+'</span></span></button>';
   }).join('');
-  const br=document.getElementById('mzBroll'), bl=document.getElementById('mzBrollLbl');
-  if(br){ br.value=a.broll; br.style.background='linear-gradient(90deg,var(--accent) '+(a.broll/3*100)+'%,var(--surface-3) '+(a.broll/3*100)+'%)'; }
-  if(bl) bl.textContent=MZ_BROLL[a.broll];
+  // ── LE CURSEUR PILOTE LE VISAGE, PLUS LE B-ROLL ──────────────────────────
+  // Axel : « le b-roll dans tous les cas on le met par défaut, on n'y touche
+  // pas ». Sa quantité n'a jamais été une décision d'utilisateur — on en veut
+  // toujours le maximum. Ce qui change le ressenti d'une vidéo, c'est la
+  // fréquence à laquelle on VOIT la personne. `broll` reste donc à 3, en
+  // silence, et le curseur pilote `avatarDens`.
+  const br=document.getElementById('mzAvatarDens'), bl=document.getElementById('mzAvatarLbl');
+  const d=(a.avatarDens==null?2:a.avatarDens);
+  if(br){ br.value=d; br.style.background='linear-gradient(90deg,var(--accent) '+(d/3*100)+'%,var(--surface-3) '+(d/3*100)+'%)'; }
+  if(bl) bl.textContent=MZ_AVATAR_DENS[d];
   mzPreviewRender(); mzAdvSummary();
 }
 function mzAdvSummary(){
@@ -10591,6 +10599,14 @@ function _mtAdvDirectives(){
   if(a.styleTxt && a.styleTxt.trim()) out.push('STYLE DEMANDE : '+a.styleTxt.trim().slice(0,200));
   if(a.rhythm==='nerveux') out.push('RYTHME : un changement visuel toutes les 2 a 3s.');
   if(a.rhythm==='pose')    out.push('RYTHME : un changement visuel toutes les 4 a 6s, on laisse respirer.');
+  // ── CE QU'ON DIT AU CHEF SUR LA PRÉSENCE DU VISAGE ────────────────────────
+  // Le curseur ne règle plus le b-roll (toujours dense) mais la fréquence à
+  // laquelle on voit la personne. C'est une consigne de MISE EN SCÈNE, elle a
+  // donc sa place dans le brief, pas dans un post-traitement.
+  const _dens = (a.avatarDens == null ? 2 : a.avatarDens);
+  if(_dens===0) out.push("AVATAR : la personne n'apparaît JAMAIS — avatarSegments = []. 100 % animations et captures.");
+  if(_dens===1) out.push("AVATAR : la personne apparaît PEU — 1 ou 2 fenêtres au maximum, dont le hook.");
+  if(_dens===3) out.push("AVATAR : la personne PORTE la vidéo — 5 ou 6 fenêtres, elle revient entre chaque idée.");
   if(a.broll===0) out.push('B-ROLL : aucun (broll = []).');
   if(a.broll===3) out.push('B-ROLL : dense — OBJECTIF DE COUVERTURE : un visuel (image, b-roll, slide ou animation) a l\'ecran pendant au moins 90% de la video. Aucun passage de plus de 2s sans rien.');
   if(a.punch===false) out.push('ZOOMS : aucun (zooms = []).');
@@ -29962,9 +29978,9 @@ window.mPreviewClose=function(){
         </div>
 
         <div style="margin-bottom:22px">
-          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Images d'illustration (b-roll)</div><span class="mono" id="mzBrollLbl" style="font-size:12px;color:var(--accent-2)">Dense · ~90 % · Recommandé</span></div>
-          <input type="range" id="mzBroll" class="ed-range" min="0" max="3" step="1" value="3" oninput="mzAdvSet('broll',+this.value)" style="width:100%">
-          <p class="faint" style="font-size:11px;margin-top:8px">Quantité d'images/clips ajoutés par-dessus ta voix pour illustrer tes propos.</p>
+          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Présence de ton visage</div><span class="mono" id="mzAvatarLbl" style="font-size:11px;color:var(--text-3)"></span></div>
+          <input type="range" id="mzAvatarDens" class="ed-range" min="0" max="3" step="1" value="2" oninput="mzAdvSet('avatarDens',+this.value)" style="width:100%">
+          <p class="faint" style="font-size:11px;margin-top:8px">À quelle fréquence on te voit parler entre les animations.</p>
         </div>
 
         <div class="col" style="gap:13px;margin-bottom:24px">
