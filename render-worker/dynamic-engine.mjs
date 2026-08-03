@@ -1039,9 +1039,12 @@ export function buildDynamicComposition(plan, opts = {}) {
   // track-index 0 : la couche la plus basse. Muette, puisque la voix vient du
   // mixage audio final. Absente si le job n'a pas de base filmée (montage à
   // partir d'un MP3 : le worker fabrique alors un fond noir, inutile à empiler).
-  const sousCouche = opts.baseVideo
-    ? `<video class="clip" src="${esc(opts.baseVideo)}" data-start="0" data-duration="${D}" data-track-index="0" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>\n`
-    : ''
+  // Un clip par trou, pré-découpé au bon timecode par le worker — donc chacun
+  // joue depuis son propre début, sans décalage à gérer ici. Couche 0 : sous
+  // tout le reste. Muets : la voix vient du mixage audio final.
+  const sousCouche = (opts.fonds || [])
+    .map((f) => `<video class="clip" src="${esc(f.src)}" data-start="${r2(f.start)}" data-duration="${r2((f.end ?? f.start) - f.start)}" data-track-index="0" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`)
+    .join('\n')
 
   return `<!DOCTYPE html>
 <html lang="fr">
