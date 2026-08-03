@@ -11838,7 +11838,7 @@ async function _mtSegmentedGenerate(){
     const wav=await _mtAudioSliceWav(_mt.mp3, 0, dur);
     const frames=await _mtFramesFromVideo(baseBlob, 6);
     const fd=new FormData();
-    fd.append('audio', wav, 'timeline.wav');
+    fd.append('audio', wav, (_mt.video.name || 'source.mp4'));
     fd.append('duration', String(Math.round(dur*100)/100));
     frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
@@ -12013,13 +12013,23 @@ async function _mtVideoGenerate(){
     const _limite = (p, ms, quoi) => Promise.race([
       p, new Promise((_, rej) => setTimeout(() => rej(new Error('⏱ ' + quoi)), ms)),
     ]);
-    let wav;
-    try {
-      wav = await _limite(_mtAudioSliceWav(_mt.video, 0, dur), 22000, "l'audio de ta vidéo n'a pas pu être lu (22 s)");
-    } catch(e) {
-      throw new Error("Impossible de lire la piste audio de ta vidéo. Vérifie qu'elle en a bien une, ou réexporte-la en MP4 (H.264 + AAC).");
+    // ── ON N'EXTRAIT PLUS L'AUDIO DANS LE NAVIGATEUR ────────────────────────
+    // Mesuré sur la vidéo de test d'Axel (03/08) : AAC 44,1 kHz stéréo,
+    // −24,8 dB de moyenne — un son parfaitement normal. Et pourtant Safari en
+    // sortait un WAV muet, ou ne rendait jamais la main : `decodeAudioData` sur
+    // de l'AAC dans un conteneur MP4 est un point faible connu, silencieux.
+    // Résultat : blocage à 16 %, puis une transcription vide et un plan posé au
+    // hasard.
+    // Or Scribe accepte les fichiers VIDÉO et en extrait l'audio lui-même. On
+    // lui envoie donc le MP4 tel quel : plus de décodage navigateur, plus de
+    // dépendance à Safari, et le même résultat sur toutes les machines.
+    // (Le WAV navigateur ne sert plus que de repli au-delà de 20 Mo, la limite
+    // d'envoi — au-delà, on demande une vidéo plus courte plutôt que de risquer
+    // le blocage.)
+    let wav = _mt.video;
+    if (_mt.video.size > 19.5 * 1024 * 1024) {
+      throw new Error("Ta vidéo dépasse 20 Mo. Réexporte-la plus légère (720p suffit) ou raccourcis-la : au-delà, l'analyse ne passe pas.");
     }
-    if(!wav || !wav.size) throw new Error("Ta vidéo ne contient pas de piste audio : le Montage IA a besoin de ta voix.");
     // Les images, elles, sont un CONFORT : elles aident le chef d'orchestre à
     // voir ce que montre la vidéo. S'il ne les obtient pas, on continue sans —
     // mieux vaut un montage guidé par la seule voix que pas de montage du tout.
