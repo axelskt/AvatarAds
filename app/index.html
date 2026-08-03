@@ -12297,6 +12297,17 @@ function _mtVideoDone(finalUrl){
   _mtFinalUrl=finalUrl||null;
   _mtProg(100, 'Terminé !');
   const o=document.getElementById('mtProgOv'); if(!o) return;
+  // ── UN ÉCRAN QUI REVIENT DOIT REVENIR ENTIER ─────────────────────────────
+  // Axel, 03/08 : « quand tu cliques sur "faire une review avec mes consignes"
+  // et que tu fais retour, ça fait ça ». La carte de fin se retrouvait collée
+  // en haut à gauche.
+  // La review met le conteneur en pleine page — placeItems:stretch, padding:0 —
+  // pour dérouler son formulaire, et le retour ne remplaçait que le CONTENU.
+  // Les réglages de mise en page restaient donc là, appliqués à une carte qui,
+  // elle, attend d'être centrée. Une vue qui modifie son conteneur doit le
+  // rendre dans l'état où elle l'a trouvé : c'est ici la seule porte de sortie,
+  // donc c'est ici qu'on restaure.
+  o.style.placeItems='center'; o.style.padding='24px';
   // LA carte de fin (maquette Claude Design) — pour tout le monde depuis la
   // validation d'Axel (02/08). « Publier partout » reste developer.
   o.innerHTML='<div style="width:min(490px,92vw);display:flex;flex-direction:column;align-items:center;text-align:center">'
