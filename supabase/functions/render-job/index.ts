@@ -117,9 +117,24 @@ serve(async (req: Request) => {
           .createSignedUrl(job.output_url + '.derived.json', 3600)
         derived_url = dsigned?.signedUrl ?? null
       }
+      // ── L'APERÇU A BESOIN DE LA VIDÉO D'ORIGINE, PAS DU MONTAGE ───────────
+      // Axel, 03/08 : « quand j'écarte et que du coup y'a la vidéo par défaut,
+      // la vidéo ne bouge pas ; faudrait qu'elle tourne en fond et prenne le
+      // relais ». L'éditeur lisait le montage DÉJÀ RENDU : sous les panneaux
+      // qu'il déplace, il n'y avait donc pas sa vidéo mais le résultat
+      // précédent, animations incrustées comprises. Écarter une scène ne
+      // pouvait rien révéler.
+      // On signe la source pour que l'aperçu montre ce que le rendu montrera
+      // vraiment dans les trous : sa vidéo, à sa seconde, en mouvement.
+      let source_url: string | null = null
+      if (job.input_video) {
+        const { data: ssigned } = await service.storage.from('render-media')
+          .createSignedUrl(job.input_video, 3600)
+        source_url = ssigned?.signedUrl ?? null
+      }
       // plan/input/assets/clips : ce qu'il faut pour RÉGÉNÉRER avec des
       // personnalisations sans que le client ait à garder d'état local
-      return json({ ok: true, status: job.status, url, derived_url, error: job.error,
+      return json({ ok: true, status: job.status, url, derived_url, source_url, error: job.error,
         plan: job.plan, input_video: job.input_video, assets: job.assets, avatar_clips: job.avatar_clips })
     }
 
