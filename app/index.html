@@ -10638,7 +10638,12 @@ function mtSaveSite(){
   if(m && m.value.trim()!==v) m.value=v;
   try{
     if(v){ localStorage.setItem('aa_user_site', v); localStorage.setItem('aa_user_site_ts', String(Date.now())); }
-    else { localStorage.removeItem('aa_user_site_ts'); }
+    // Axel : « on ne peut pas modifier "mon site" une fois qu'il est mis ; si on
+    // supprime et qu'on met autre chose, ça refuse et l'ancien revient ».
+    // On n'effaçait que l'horodatage, jamais la VALEUR — et la lecture de
+    // secours (`localStorage.getItem('aa_user_site')` au lancement du montage)
+    // la ressuscitait aussitôt. Un champ vidé doit l'être partout.
+    else { localStorage.removeItem('aa_user_site_ts'); localStorage.removeItem('aa_user_site'); }
   }catch(_){}
 }
 /* La barre d'action reste visible dès l'arrivée : elle est fixée au bas de la
@@ -12052,6 +12057,7 @@ async function _mtSegmentedGenerate(){
 function _mtPollSegmented(jobId, onDone){
   let n=0;
   window._mtAborted=false;
+  const _tRendu = Date.now();   // repère du rendu : la barre s'étale dessus
   const iv=setInterval(async ()=>{
     if(window._mtAborted){ clearInterval(iv); return; }
     if(++n>180){ clearInterval(iv); _mtProg(-1); await creditsFlowRefund('le rendu a été trop long'); toast('⚠️ Rendu trop long — réessaie plus tard'); return; }
@@ -12074,7 +12080,19 @@ function _mtPollSegmented(jobId, onDone){
         await creditsFlowRefund('le rendu a échoué');
         toast('⚠️ Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
       } else {
-        _mtProg(Math.min(99, 92+n*0.35), 'Rendu final sur le serveur…');
+        // Axel : « ça reste bloqué longtemps à 99 %, faudrait que le chargement
+        // aille de 1 à 99 % en 3 min 30 / 4 minutes ». La barre partait de 92 %
+        // dès la première seconde du rendu et grattait 0,35 % par sondage :
+        // elle atteignait 99 % en une minute puis restait plantée là pendant
+        // les huit suivantes. Un chiffre qui arrive trop vite à la fin est pire
+        // qu'un chiffre qui n'avance pas — il promet une seconde d'attente et
+        // en fait patienter cinq cents.
+        // Elle s'étale donc sur la VRAIE durée d'un rendu, mesurée entre 3 et
+        // 9 minutes : 45 % → 99 % sur quatre minutes, en ralentissant vers la
+        // fin. Ce n'est pas un avancement réel — le serveur ne nous en donne
+        // pas — mais c'est une attente honnêtement représentée.
+        const _sr = (Date.now() - _tRendu) / 1000;
+        _mtProg(45 + 54 * (1 - Math.exp(-_sr / 105)), 'Rendu final sur le serveur…');
       }
     }catch(_){ /* réseau : on retentera au prochain tick */ }
   }, 5000);
@@ -12712,6 +12730,14 @@ async function _mdOpen(jobId){
   jobId = jobId || window._mtLastJobId;
   if(!jobId){ toast('⚠️ Aucun montage récent — lance un montage d\'abord'); return; }
   window._mtLastJobId = jobId;   // la régénération et la review repartent de celui-là
+  // ── ON N'OUVRE PAS UN ÉCRAN DERRIÈRE UN AUTRE ───────────────────────────
+  // Axel, 03/08 : « j'ai cliqué sur "voir le détail du montage", l'écran est
+  // bien en arrière mais celui-là reste là ». mdOv est en z-index 6000, la
+  // carte de fin en 9700 : le détail s'ouvrait donc systématiquement DESSOUS.
+  // C'est la même faute que le rapport caché ce matin — un écran qui en ouvre
+  // un autre doit d'abord retirer le sien, sinon l'empilement décide à sa
+  // place, et l'ordre des z-index n'est jamais celui qu'on croit.
+  try { if (typeof _mtProgPause === 'function') _mtProgPause(); } catch(_) {}
   let ov = document.getElementById('mdOv');
   if(!ov){ ov=document.createElement('div'); ov.id='mdOv';
     ov.style.cssText='position:fixed;inset:0;z-index:6000;background:var(--bg);display:none;flex-direction:column';
