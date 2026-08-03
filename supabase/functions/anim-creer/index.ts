@@ -23,6 +23,8 @@
 // l'aperçu soit joué — l'utilisateur ne voit jamais une animation dangereuse,
 // et l'aperçu tourne dans une iframe isolée, côté navigateur, gratuitement.
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -502,6 +504,50 @@ Deno.serve(async (req: Request) => {
   const demande = String(body.demande || '').trim().slice(0, 400)
   if (demande.length < 4) return json({ error: 'Décris ce que tu veux voir.' }, 400)
   const phrase = String(body.phrase || '').trim().slice(0, 300)
+
+  // ── LE QUOTA SE COMPTE EN TENTATIVES, PAS EN ANIMATIONS GARDÉES ───────────
+  // Axel, 03/08 : « 2 pour starter, 5 pour pro, 8 pour élite, au-delà 1 crédit ».
+  // J'avais proposé de ne facturer que les animations gardées — il m'a repris,
+  // à juste titre : personne ne garderait, et la génération deviendrait
+  // illimitée et gratuite. Chaque LANCEMENT compte.
+  //
+  // Tout se décide ici, jamais côté client : le navigateur peut mentir sur le
+  // plan comme sur le compteur. Même principe que les crédits.
+  const QUOTA: Record<string, number> = { starter: 2, pro: 5, elite: 8, developer: 999, byok: 999 }
+  const url = Deno.env.get('SUPABASE_URL') ?? ''
+  const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  const srv = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const jeton = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
+  const sbUser = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jeton}` } } })
+  const { data: { user } } = await sbUser.auth.getUser()
+  if (!user) return json({ ok: false, erreur: 'Reconnecte-toi puis réessaie.' }, 401)
+
+  const sbAdmin = createClient(url, srv, { auth: { persistSession: false } })
+  const { data: profil } = await sbAdmin.from('profiles').select('plan').eq('id', user.id).single()
+  const plan = String(profil?.plan || 'free').toLowerCase()
+  const gratuites = QUOTA[plan] ?? 0
+
+  // « ce mois-ci » = depuis le 1er du mois courant, pas 30 jours glissants :
+  // c'est ce que l'utilisateur comprend quand on lui dit « 5 par mois ».
+  const debutMois = new Date()
+  debutMois.setUTCDate(1); debutMois.setUTCHours(0, 0, 0, 0)
+  const { count } = await sbAdmin.from('anim_creations')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).gte('created_at', debutMois.toISOString())
+  const dejaFaites = count ?? 0
+  const doitPayer = dejaFaites >= gratuites
+
+  if (doitPayer) {
+    const { error: eSpend } = await sbAdmin.rpc('spend_credits', {
+      p_user: user.id, p_amount: 1, p_reason: 'création d\'animation',
+    })
+    if (eSpend) {
+      return json({ ok: false, erreur: `Tes ${gratuites} créations gratuites du mois sont utilisées, et il te faut 1 crédit pour continuer.` }, 402)
+    }
+  }
+  // on inscrit la tentative AVANT de générer : un échec de Claude a quand même
+  // consommé le quota si on l'a facturé, et le compte doit rester juste.
+  await sbAdmin.from('anim_creations').insert({ user_id: user.id, demande, facturee: doitPayer })
 
   const user = `Ce que je veux voir : ${demande}`
     + (phrase ? `\n\nLa phrase prononcée à ce moment-là : « ${phrase} »` : '')
