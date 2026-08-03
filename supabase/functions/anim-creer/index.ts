@@ -528,15 +528,57 @@ Deno.serve(async (req: Request) => {
     let a: Record<string, unknown>
     try { a = JSON.parse(m[0]) } catch { return json({ ok: false, erreur: 'JSON illisible' }) }
 
-    const html = recentrer(String(a.html || ''))
-    const js = tenirJusquAuBout(String(a.js || ''))
+    // ── LA DEUXIÈME PASSE — c'est elle qui fait la différence ───────────────
+    // Axel : « ce qui manque, c'est la boucle. Quand j'écris une animation, je
+    // la rends, je la regarde, je corrige. Lui écrit à l'aveugle, une seule
+    // fois. » Exactement. On lui remet donc son propre code sous les yeux avec
+    // les trois questions qui comptent, et il réécrit. Ça double la latence
+    // (une dizaine de secondes), ça ne change rien au prix, et c'est ce qui
+    // sépare un schéma d'une animation.
+    let brut = a
+    try {
+      const relu = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL, max_tokens: 8000, output_config: { effort: 'low' },
+          system: CONSIGNE,
+          messages: [
+            { role: 'user', content: user },
+            { role: 'assistant', content: JSON.stringify(a) },
+            { role: 'user', content: `Regarde ton animation comme si tu la voyais jouer sur un téléphone, et réponds-toi honnêtement :
+
+1. L'OBJET EST-IL RECONNAISSABLE ? Si on retire la légende, est-ce qu'on identifie la chose sans hésiter ? Un disque plein n'est pas une lune, un rectangle n'est pas une machine. Si non : redessine-le avec ses vraies parties.
+2. QUELQUE CHOSE SE TRANSFORME-T-IL ? Des formes qui apparaissent en fondu ne sont pas une animation. Il faut un mouvement INTERNE qui raconte le verbe — quelque chose se remplit, bascule, s'assemble, se met en marche. Si non : trouve-le.
+3. LE CADRE EST-IL REMPLI ? Le sujet doit occuper au moins la moitié des 930 × 600. Si non : agrandis.
+4. EST-CE AU NIVEAU DES VINGT EXEMPLES ? Même densité, mêmes ombres, mêmes rayons, mêmes épaisseurs. Si non : ajoute la matière qui manque.
+
+Réécris l'animation en corrigeant ce que tu viens de trouver. Même format JSON, rien d'autre. Ne te contente pas de retoucher : si le dessin est faible, refais-le.` },
+          ],
+        }),
+      })
+      if (relu.ok) {
+        const d2 = await relu.json()
+        const t2 = String((d2?.content || []).map((c: { text?: string }) => c?.text || '').join('\n'))
+        const m2 = t2.match(/\{[\s\S]*\}/)
+        if (m2) {
+          const a2 = JSON.parse(m2[0])
+          // on ne garde la reprise que si elle est au moins aussi fournie :
+          // une deuxième passe qui APPAUVRIT le dessin n'a rien corrigé.
+          if (String(a2.html || '').length >= String(a.html || '').length * 0.85) brut = a2
+        }
+      }
+    } catch (_) { /* la relecture est un bonus : sans elle, on garde le premier jet */ }
+
+    const html = recentrer(String(brut.html || ''))
+    const js = tenirJusquAuBout(String(brut.js || ''))
     const faute = verifier(html, js)
     if (faute) return json({ ok: false, erreur: `animation refusée : ${faute}` })
 
-    const nom = String(a.nom || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40) || 'sans-nom'
-    const mots = (Array.isArray(a.mots) ? a.mots : []).map((x) => String(x).toLowerCase().trim())
+    const nom = String(brut.nom || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40) || 'sans-nom'
+    const mots = (Array.isArray(brut.mots) ? brut.mots : []).map((x) => String(x).toLowerCase().trim())
       .filter((x) => x.length >= 3).slice(0, 8)
-    return json({ ok: true, anim: { nom, mots, montre: String(a.montre || '').slice(0, 160), html, js } })
+    return json({ ok: true, anim: { nom, mots, montre: String(brut.montre || '').slice(0, 160), html, js } })
   } catch (e) {
     return json({ ok: false, erreur: String(e).slice(0, 200) })
   }

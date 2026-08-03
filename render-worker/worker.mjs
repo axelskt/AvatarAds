@@ -354,6 +354,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // l'edge function : découper l'audio demande ffmpeg, que seul le worker a.
     // On ne génère QUE sur les fenêtres `avatarSegments` — c'est ce qui rend le
     // coût tenable (1,5 cr/s sur 12 s de visage, pas sur 50 s de vidéo).
+    if (plan.__lipsync) console.log(`▶ lipsync demandé — photo ${avatarPhoto ? 'oui' : 'NON'}, clips existants ${Object.keys(avatarClips).length}, fenêtres ${(plan.avatarSegments || []).length}`)
     if (plan.__lipsync && avatarPhoto && !Object.keys(avatarClips).length) {
       try {
         const n = await genererLipsync(plan, proj, jobDir, avatarClips)
@@ -860,8 +861,25 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
   if (!imageId) { console.warn('lipsync : upload de la photo refusé'); return 0 }
 
+  // ── TOUTES LES SCÈNES EN MÊME TEMPS ──────────────────────────────────────
+  // Axel : « on peut pas faire tourner plusieurs clips d'un coup pour aller plus
+  // vite avec Hedra ? ça nous ferait gagner beaucoup de temps ». Oui — et c'est
+  // le gain le plus net de la chaîne : une par une, 4 ou 5 scènes à 1-3 min font
+  // 10 à 15 minutes ; lancées ensemble, on attend le clip le plus long.
+  // Plafond à 4 pour ne pas se faire limiter par l'API, et surtout pour ne pas
+  // saturer un conteneur qui rend déjà une vidéo à côté.
+  const PARALLELE = 4
   let faits = 0
-  for (const [i, w] of segs.entries()) {
+  const file = segs.map((w, i) => ({ w, i }))
+  const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
+    for (;;) {
+      const t = file.shift()
+      if (!t) return
+      try { if (await uneScene(t.w, t.i)) faits++ } catch (e) { console.warn(`lipsync scène ${t.i} :`, e.message) }
+    }
+  })
+
+  async function uneScene(w, i) {
     // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
     // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
     // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
@@ -870,10 +888,10 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     try {
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
         '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
-    } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); continue }
+    } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); return false }
 
     const audioId = await hedraAsset('audio', `voice${i}.mp3`, readFileSync(mp3), 'audio/mpeg')
-    if (!audioId) { console.warn(`lipsync scène ${i} : upload audio refusé`); continue }
+    if (!audioId) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
 
     const gen = await hedraProxy('/generations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -887,9 +905,9 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
         },
       }),
     })
-    if (!gen.ok) { console.warn(`lipsync scène ${i} : Hedra ${gen.status}`); continue }
+    if (!gen.ok) { console.warn(`lipsync scène ${i} : Hedra ${gen.status}`); return false }
     const g = await gen.json().catch(() => ({}))
-    if (!g.id) { console.warn(`lipsync scène ${i} : pas d'identifiant`); continue }
+    if (!g.id) { console.warn(`lipsync scène ${i} : pas d'identifiant`); return false }
 
     // polling — Character-3 rend en 1 à 3 min pour une scène courte
     let url = ''
@@ -902,16 +920,19 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       if (s === 'complete' || s === 'completed' || s === 'succeeded') { url = d.url || d.video_url || d.output_url || ''; break }
       if (s === 'error' || s === 'failed') { console.warn(`lipsync scène ${i} : ${d.error || 'échec Hedra'}`); break }
     }
-    if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); continue }
+    if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); return false }
 
     const res = await fetch(url)
-    if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); continue }
+    if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); return false }
     const out = join(proj, 'media', `av${i}.mp4`)
     writeFileSync(out, Buffer.from(await res.arrayBuffer()))
     avatarClips['av' + i] = 'media/av' + i + '.mp4'
-    faits++
     console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'})`)
+    return true
   }
+
+  console.log(`▶ lipsync : ${segs.length} scène(s) lancée(s) en parallèle (${PARALLELE} à la fois)`)
+  await Promise.all(equipes)
   return faits
 }
 

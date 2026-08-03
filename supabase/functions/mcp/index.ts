@@ -1526,7 +1526,15 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // défaut à false : itérer sur un montage ne doit pas brûler des crédits de
       // lipsync à chaque essai. Le drapeau voyage dans le plan ; c'est le worker
       // qui découpe et appelle Hedra, parce que lui seul a ffmpeg.
-      if (args.lipsync === true) (plan as Record<string, unknown>).__lipsync = true
+      // ⚠ ET AUSSI DEPUIS LE BRIEF. Mesuré : le premier essai n'a jamais activé le
+      // lipsync parce que le client MCP avait en cache le schéma d'AVANT l'ajout
+      // du paramètre — il l'a donc retiré de l'appel avant de l'envoyer, en
+      // silence. Un marqueur dans le brief passe partout, quel que soit l'âge du
+      // schéma côté client. Ceinture et bretelles, pour une option qui coûte des
+      // crédits : mieux vaut deux chemins qu'un qui échoue sans le dire.
+      const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
+      if (veutLipsync) (plan as Record<string, unknown>).__lipsync = true
+      console.log(`▶ lipsync demandé : ${veutLipsync} (param ${args.lipsync}, brief ${/\[LIPSYNC\]/i.test(brief)})`)
 
       // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
       const { data: rj, error: rjErr } = await svc.from('render_jobs')
