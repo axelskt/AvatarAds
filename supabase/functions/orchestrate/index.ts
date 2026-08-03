@@ -1081,8 +1081,8 @@ Tous les timestamps entre 0 et la duree, 2 decimales. Reponds uniquement dans le
   for (const a of assets) {
     if (!a.thumb) continue
     const label = a.kind === 'video'
-      ? `Clip VIDEO utilisateur (b-roll ANIME - il sera JOUE dans la carte) assetId="${a.id}" (${a.name}) - voici sa premiere image :`
-      : `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name}) :`
+      ? `Clip VIDEO utilisateur (b-roll ANIME - il sera JOUE dans la carte) assetId="${a.id}" (${a.name})${(a as { auto?: boolean }).auto ? ' [PROPOSE - de sa bibliotheque, PAS choisi pour cette video : ne le place QUE si son nom correspond a ce qui est dit ; sinon ignore-le]' : ' [CHOISI pour cette video : place-le]'} - voici sa premiere image :`
+      : `Image utilisateur (b-roll a placer) assetId="${a.id}" (${a.name})${(a as { auto?: boolean }).auto ? ' [PROPOSE - de sa bibliotheque, PAS choisi pour cette video : ne la place QUE si son nom correspond a ce qui est dit ; sinon ignore-la]' : ' [CHOISIE pour cette video : place-la]'} :`
     content.push({ type: 'text', text: label })
     content.push({ type: 'image', source: { type: 'base64', media_type: a.thumb.media, data: a.thumb.b64 } })
   }
@@ -1112,7 +1112,8 @@ Sers-t'en pour : choisir quoi illustrer en priorite, le ton, l'ordre des idees, 
   }
   content.push({
     type: 'text',
-    text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur a placer : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
+    text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
+UN VISUEL MARQUE [PROPOSE] VIENT DE SA BIBLIOTHEQUE, PAS DE CETTE VIDEO. Il n'a rien choisi pour ce montage-ci : ces fichiers sont la par commodite. Ne les place QUE si leur nom repond a un mot reellement prononce. Une capture d'application au milieu d'une video qui parle d'autre chose est pire que pas d'image du tout — dans le doute, ignore-les.
 
 Transcription (mot[debut-fin]) :
 ${transcriptCompact}
@@ -2500,7 +2501,7 @@ serve(async (req: Request) => {
     let assetsMeta: { id: string; name: string; kind: string }[] = []
     try { assetsMeta = JSON.parse(String(form.get('assets') || '[]')) } catch (_) { /* aucun */ }
     assetsMeta = (Array.isArray(assetsMeta) ? assetsMeta : []).slice(0, MAX_ASSETS)
-      .map((a) => ({ id: String(a.id || '').slice(0, 40), name: String(a.name || 'image').slice(0, 80), kind: a.kind === 'video' ? 'video' : 'image' }))
+      .map((a) => ({ id: String(a.id || '').slice(0, 40), name: String(a.name || 'image').slice(0, 80), kind: a.kind === 'video' ? 'video' : 'image', auto: a.auto === true }))
       .filter((a) => a.id)
     const assets = []
     for (const meta of assetsMeta) {

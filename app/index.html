@@ -11949,7 +11949,16 @@ async function _mtSegmentedGenerate(){
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
     const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
-    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
+    // ── UN VISUEL DE « MA MARQUE » EST PROPOSÉ, PAS IMPOSÉ ────────────────────
+    // Axel, 03/08 : « y'a un écran Claude qui s'affiche je sais pas pourquoi ».
+    // Il avait mis 0 visuel sur 8. Les deux qui apparaissaient venaient de sa
+    // bibliothèque, attachée automatiquement à CHAQUE montage — donc une
+    // capture d'AvatarAds au milieu d'une vidéo sur les jobs étudiants.
+    // La commodité est bonne (ne pas avoir à re-sélectionner ses visuels), mais
+    // elle ne doit pas forcer un fichier hors-sujet dans le montage. On marque
+    // donc leur origine : ceux qu'il a CHOISIS se placent toujours, ceux qui
+    // viennent de la bibliothèque seulement si leur nom répond à ce qu'il dit.
+    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image', auto: String(a.id||'').startsWith('lib') }))));
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
@@ -12214,7 +12223,16 @@ async function _mtVideoGenerate(){
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
     const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
-    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image' }))));
+    // ── UN VISUEL DE « MA MARQUE » EST PROPOSÉ, PAS IMPOSÉ ────────────────────
+    // Axel, 03/08 : « y'a un écran Claude qui s'affiche je sais pas pourquoi ».
+    // Il avait mis 0 visuel sur 8. Les deux qui apparaissaient venaient de sa
+    // bibliothèque, attachée automatiquement à CHAQUE montage — donc une
+    // capture d'AvatarAds au milieu d'une vidéo sur les jobs étudiants.
+    // La commodité est bonne (ne pas avoir à re-sélectionner ses visuels), mais
+    // elle ne doit pas forcer un fichier hors-sujet dans le montage. On marque
+    // donc leur origine : ceux qu'il a CHOISIS se placent toujours, ceux qui
+    // viennent de la bibliothèque seulement si leur nom répond à ce qu'il dit.
+    fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image', auto: String(a.id||'').startsWith('lib') }))));
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
