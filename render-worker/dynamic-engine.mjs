@@ -881,7 +881,23 @@ export function buildDynamicComposition(plan, opts = {}) {
       if (t1m < t1 - 0.35) pjs += `\n  tl.to('#${id}om',{scale:0.94,autoAlpha:0,duration:0.3,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t1m - 0.3)});`
       sfxAdd.push({ kind: 'mo-pop-2', t: r2(t0m + 0.05), vol: 0.55 })
     }
-    html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${tone.bg};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
+    // ── UNE CAPTURE SOMBRE A BESOIN D'UN FOND CLAIR ────────────────────────
+    // Axel, 03/08, trois fois : « y'a des écrans blancs, des écrans noirs, faut
+    // régler ça ». Mesuré sur deux de ses montages : 19 % puis 22 % de la vidéo
+    // avec un écran quasi noir — et CHAQUE plage correspond à une capture de
+    // son app. Mesuré aussi sur les fichiers sources : ses captures d'interface
+    // sont sombres à 87-99,8 %, sans un seul pixel clair.
+    //
+    // Sur un fond sombre, une capture sombre ne se distingue de rien : l'écran
+    // paraît vide. Sur un fond clair, la même capture devient un OBJET qu'on
+    // regarde — on voit ses bords, on comprend que c'est un écran d'application.
+    // C'est déjà le principe retenu pour les médias de l'utilisateur (« toujours
+    // posé sur un fond clair »), il manquait aux captures.
+    //
+    // On n'éclaircit pas la capture — ce serait la trahir. On change ce qu'il y
+    // a autour.
+    const fondPanneau = p.kind === 'screen' && !isApple(plan) ? '#F2F1EE' : tone.bg
+    html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${fondPanneau};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
 
     // — poussée : direction alternée, l'entrant arrive légèrement flouté par sa
     //   vitesse et se pose ; whoosh SEULEMENT sur les panneaux illustrés, en
@@ -1042,6 +1058,31 @@ export function buildDynamicComposition(plan, opts = {}) {
   // Un clip par trou, pré-découpé au bon timecode par le worker — donc chacun
   // joue depuis son propre début, sans décalage à gérer ici. Couche 0 : sous
   // tout le reste. Muets : la voix vient du mixage audio final.
+  // ── LES TROUS SE MESURENT SUR CE QUI EST POSÉ, PAS SUR CE QUI EST PROPOSÉ ──
+  // Axel, 03/08 : « y'a des blancs partout ». Ma première version calculait la
+  // couverture côté worker, sur `plan.slides` — les scènes PROPOSÉES par le chef
+  // d'orchestre. Or la dérivation en rejette la moitié : sur son montage,
+  // « 9/18 des scènes dans la vidéo ». Le calcul voyait donc une vidéo pleine
+  // là où le rendu avait neuf trous, et concluait « rien à combler ».
+  // Seul cet endroit-ci connaît la vérité : `panels` est la liste de ce qui sera
+  // RÉELLEMENT à l'écran. On la publie pour que le worker découpe les bons
+  // intervalles, en deux passes — une pour mesurer, une pour rendre.
+  if (Array.isArray(opts.trous)) {
+    const couvert = panels
+      .filter((p) => p && typeof p.t0 === 'number' && p.t1 > p.t0)
+      .map((p) => [Math.max(0, p.t0), Math.min(D, p.t1)])
+      .sort((a, b) => a[0] - b[0])
+    const fusion = []
+    for (const [a, b] of couvert) {
+      const last = fusion[fusion.length - 1]
+      if (last && a <= last[1] + 0.04) last[1] = Math.max(last[1], b)
+      else fusion.push([a, b])
+    }
+    let t = 0
+    for (const [a, b] of fusion) { if (a - t > 0.25) opts.trous.push([r2(t), r2(a)]); t = Math.max(t, b) }
+    if (D - t > 0.25) opts.trous.push([r2(t), r2(D)])
+  }
+
   const sousCouche = (opts.fonds || [])
     .map((f) => `<video class="clip" src="${esc(f.src)}" data-start="${r2(f.start)}" data-duration="${r2((f.end ?? f.start) - f.start)}" data-track-index="0" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`)
     .join('\n')
