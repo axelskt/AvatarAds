@@ -11455,7 +11455,15 @@ async function montageGo(){
 // overlay de progression dédié au flux segmenté (pct<0 → ferme)
 // écran de génération (design maquette MzRunning) : baguette pulsée, 5 étapes, barre + %
 const _MT_STAGES=['Analyse de ta source','Découpe des temps forts','Génération des sous-titres','Placement du b-roll & effets','Montage & rendu final'];
-function _mtAbortRun(){ window._mtAborted=true; if(window._mtPollIv){ clearInterval(window._mtPollIv); window._mtPollIv=null; } _mtProg(-1); creditsFlowRefund('tu as annulé le montage'); toast('Montage annulé'); }
+// ── ANNULER DOIT ÉTEINDRE TOUT CE QUI PEINT À L'ÉCRAN ────────────────────────
+// Axel, 03/08 : « je n'arrive pas à annuler le montage, je suis bloqué ». Il
+// cliquait bien, l'écran se fermait bien — et 330 ms plus tard le compteur de
+// l'analyse le rouvrait. Un bouton Annuler qui ne coupe qu'une partie des
+// minuteurs n'annule rien : il faut couper TOUT ce qui peut repeindre.
+function _mtAbortRun(){ window._mtAborted=true;
+  if(window._mtPollIv){ clearInterval(window._mtPollIv); window._mtPollIv=null; }
+  if(window._mtTicIv){ clearInterval(window._mtTicIv); window._mtTicIv=null; }
+  _mtProg(-1); creditsFlowRefund('tu as annulé le montage'); toast('Montage annulé'); }
 function _mtProg(pct, label){
   let o=document.getElementById('mtProgOv');
   if(pct<0){ if(o) o.remove(); return; }
@@ -12008,6 +12016,7 @@ async function _mtVideoGenerate(){
   try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
   if((_mt.mp3Dur||0) > 90.5){ toast('⚠️ Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
   if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
+  window._mtAborted = false;   // un nouveau montage n'hérite pas de l'annulation du précédent
   _mtProg(6, 'Analyse de ta vidéo…');
   let _tic = null;
   try{
@@ -12035,7 +12044,10 @@ async function _mtVideoGenerate(){
     // deux minutes — et se rafraîchit trois fois par seconde. Ce n'est pas une
     // vraie mesure d'avancement (le serveur ne nous en donne pas), et c'est
     // assumé : ce qu'on montre, c'est que le travail est vivant.
-    _tic = setInterval(() => {
+    _tic = window._mtTicIv = setInterval(() => {
+      // ceinture ET bretelles : si l'utilisateur a annulé, on se tait, même si
+      // personne n'est venu nous éteindre.
+      if (window._mtAborted) { clearInterval(_tic); _tic = window._mtTicIv = null; return }
       const s = (Date.now() - _t0) / 1000;
       const pct = 16 + 28 * (1 - Math.exp(-s / 42));   // avance vite, puis ralentit
       _mtProg(pct, `L'IA écoute et regarde ta vidéo… ${Math.round(s)} s / 1 à 2 min`);
@@ -12097,7 +12109,10 @@ async function _mtVideoGenerate(){
     // les étapes du rendu, et de clouer l'anneau à 44 %. Le travail avançait,
     // l'écran racontait l'étape d'avant. On l'éteint ici, et une seule fois :
     // c'est le point exact où l'attente qu'il mesurait se termine.
-    clearInterval(_tic); _tic = null;
+    clearInterval(_tic); _tic = window._mtTicIv = null;
+    // annulé pendant l'attente ? on s'arrête là : pas de rapport, pas de rendu.
+    // Les crédits ont déjà été rendus par _mtAbortRun.
+    if(window._mtAborted) return;
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan,
                  _words: (od.transcript && od.transcript.words) || [] };
@@ -12146,7 +12161,7 @@ async function _mtVideoGenerate(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
     _mtPollSegmented(d.job_id, _mtVideoDone);
-  }catch(e){ try{ clearInterval(_tic); }catch(_){} console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
+  }catch(e){ try{ clearInterval(_tic); window._mtTicIv=null; }catch(_){} console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('⚠️ Montage IA : '+String(e.message||e).slice(0,120)); }
 }
 // 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
 // montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
