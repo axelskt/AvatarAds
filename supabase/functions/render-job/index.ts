@@ -59,10 +59,28 @@ serve(async (req: Request) => {
         .map((p: string) => String(p || ''))
         .filter((p: string) => p.startsWith(user.id + '/'))
 
-      // garde-fou : pas plus de 2 jobs en attente/rendu par utilisateur
+    // ── UN JOB MORT NE BLOQUE PLUS LA FILE ──────────────────────────────────
+    // Axel, 03/08 : « pourquoi ça met ça wtf ? je n'ai pas de rendu en cours ».
+    // Il en avait deux — laissés en « rendering » depuis 19 h et 17 h, tués par
+    // un redémarrage de Railway au milieu de leur travail. Personne ne les a
+    // jamais enterrés : le worker ne peut pas écrire son propre certificat de
+    // décès quand il meurt.
+    //
+    // Le garde-fou les comptait, et deux cadavres suffisaient à verrouiller le
+    // Montage IA pour toujours. Un rendu dépasse rarement 9 minutes et jamais
+    // 45 ; au-delà, le job est mort, pas occupé. On ne compte donc que les
+    // rendus RÉCENTS. Les vieux sont marqués échoués au passage, pour que la
+    // liste dise la vérité et que le compteur ne les revoie plus.
+    {
+      const limite = new Date(Date.now() - 45 * 60 * 1000).toISOString()
+      await service.from('render_jobs')
+        .update({ status: 'failed', error: 'moteur interrompu pendant le rendu — job clos automatiquement' })
+        .eq('user_id', user.id).in('status', ['queued', 'rendering']).lt('created_at', limite)
+
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id).in('status', ['queued', 'rendering'])
+        .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('created_at', limite)
       if ((count ?? 0) >= 2) return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
+    }
 
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
