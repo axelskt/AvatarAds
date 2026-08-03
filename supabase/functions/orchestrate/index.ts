@@ -2648,13 +2648,23 @@ serve(async (req: Request) => {
     }
 
     // 6. sous-titres mot-à-mot — sauf si la vidéo en a déjà d'incrustés (détection visuelle)
-    const captions = plan.detected.subtitles ? [] : buildCaptions(fixedWords, plan.accents, duration)
+    // ── DES SOUS-TITRES INCRUSTÉS NE COUVRENT PAS LES ANIMATIONS ────────────
+    // Axel, 03/08 : « y'a pas non plus de sous-titres dans l'animation ».
+    // Sa source est un ancien montage : elle porte déjà ses sous-titres, donc on
+    // renvoyait captions:[] pour ne pas en écrire par-dessus. C'était juste —
+    // mais seulement sur les plans où on le VOIT. Dès qu'une animation occupe
+    // l'écran, sa vidéo est cachée, ses sous-titres incrustés avec, et il ne
+    // reste plus rien à lire.
+    // On les fabrique donc toujours, et on laisse au moteur le soin de ne les
+    // afficher que là où la source ne se voit plus.
+    const captions = buildCaptions(fixedWords, plan.accents, duration)
+    const subsSurPanneaux = !!plan.detected.subtitles
 
     return json({
       ok: true,
       version: '1.5',
       model: CLAUDE_MODEL,
-      plan: { ...plan, captions },
+      plan: { ...plan, captions, subsSurPanneaux },
       transcript: { text: scribe.text, words, aligned: !!script },
       rattrapage: { ...rattrapage, visiteGuideeRefusee: TUTO_REFUS.slice() },
       usage,

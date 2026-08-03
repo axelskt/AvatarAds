@@ -152,7 +152,22 @@ function buildPanels(plan, D) {
 // ── 2 · CONTENU D'UN PANNEAU TYPO : une seule déclaration ───────────────────
 // Accent présent → LE mot en slam (et rien d'autre, ou 2 mots de contexte au-
 // dessus). Pas d'accent → la phrase courte se TAPE au centre, caret orange.
-function typoContent(id, p, tone, liveT0) {
+function typoContent(id, p, tone, liveT0, avecSubs) {
+  // ── LE SLAM RÉPÉTAIT LA BANDE DE SOUS-TITRES ─────────────────────────────
+  // Axel, 03/08 : « il met toujours le texte comme ça, faut bannir ça » — un
+  // mot en très gros au centre, pendant que la bande écrivait le même mot en
+  // bas au même instant. « business » géant sur « un business sans ».
+  //
+  // Le slam avait un sens quand la bande n'existait pas : il PORTAIT la phrase.
+  // Depuis que les sous-titres mot-à-mot sont là en permanence, il ne fait plus
+  // que la redire, deux fois plus gros. Deux écritures du même mot au même
+  // instant, ce n'est pas de l'emphase, c'est du bruit — et ça mange une
+  // fenêtre qui pourrait montrer le visage.
+  //
+  // On rend donc la scène vide quand les sous-titres tournent : la règle
+  // « jamais de panneau typo nu » qui suit s'en charge, la fenêtre revient au
+  // visage ou à la scène voisine.
+  if (avecSubs) return { html: '', js: '', sfx: [] }
   const ws = p.words
   // Mots que la voix porte déjà et qui ne VEULENT RIEN DIRE à l'écran — Axel :
   // « "sélectionner" écrit en sous-titres ne sert à rien », « "finir
@@ -376,6 +391,12 @@ function screenContent(id, s, tone, liveT0, t1, W) {
 
 // ── 3 · GÉNÉRATION ──────────────────────────────────────────────────────────
 export function buildDynamicComposition(plan, opts = {}) {
+  // Les sous-titres tournent-ils sur cette vidéo ? Le slam en dépend : il ne
+  // doit exister que là où la bande n'écrit rien. (Défini ICI, dans la fonction
+  // qui appelle typoContent — la première version était dans buildPanels, une
+  // autre portée : le module se chargeait sans broncher et chaque rendu aurait
+  // planté sur un ReferenceError.)
+  const subsActifs = !!(plan.captions && plan.captions.length && plan.subtitles !== false)
   const W = opts.width || 1080
   const H = opts.height || 1920
   const D = r2(Math.max(1, plan.duration))
@@ -435,7 +456,7 @@ export function buildDynamicComposition(plan, opts = {}) {
 
     // — contenu par type
     if (p.kind === 'typo') {
-      const c = typoContent(id, p, tone, liveT0)
+      const c = typoContent(id, p, tone, liveT0, subsActifs)
       inner += c.html; pjs += c.js; sfxAdd.push(...c.sfx)
 
     } else if (p.kind === 'ui') {
@@ -935,6 +956,23 @@ export function buildDynamicComposition(plan, opts = {}) {
       g.b = r2(Math.min(D, g.mots[g.mots.length - 1].end + 0.16,
         suiv ? suiv.mots[0].start - 0.04 : D))
     })
+    // ── QUAND LA SOURCE PORTE DÉJÀ SES SOUS-TITRES ──────────────────────────
+    // `subsSurPanneaux` vient d'orchestrate : la vidéo d'origine a des
+    // sous-titres incrustés. On ne double donc PAS ceux qu'on voit déjà — mais
+    // sur les scènes où un panneau couvre l'image, les siens ont disparu avec
+    // elle, et c'est là qu'il faut prendre le relais. On ne garde que ces
+    // groupes-là ; sur le visage, sa propre incrustation suffit.
+    const surPanneauSeulement = plan.subsSurPanneaux === true
+    if (surPanneauSeulement) {
+      const avant = grp.length
+      for (let i = grp.length - 1; i >= 0; i--) {
+        const mid = (grp[i].a + grp[i].b) / 2
+        const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
+        const couvre = pan && pan.kind !== 'avclip' && pan.kind !== 'media'
+        if (!couvre) grp.splice(i, 1)
+      }
+      console.log(`▶ sous-titres déjà incrustés dans la source : ${grp.length}/${avant} groupes gardés (uniquement sous les panneaux)`)
+    }
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
