@@ -2394,6 +2394,64 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
 // Scribe entend « avataria » pour « AvatarAds », « lypsync » pour « lipsync »… Les noms
 // propres de la marque sont connus (fiche + site + brief) : on retablit ceux qui sont
 // clairement le meme mot, sans jamais reecrire ce que la personne a reellement dit.
+// ── UNE TRANSCRIPTION SE RELIT AVANT DE S'AFFICHER ──────────────────────────
+// Axel, 03/08 : « c'est "IA LEBD" pas "L'IA EBD" », et « le transcripteur oublie
+// les apostrophes, fais attention quand même ». Vérifié en base : le mot stocké
+// était littéralement « dinvestissement », alors que la virgule de « stock, »
+// était bien là. Ce n'est donc pas notre code qui nettoie — c'est Scribe qui
+// rend les élisions sans apostrophe, de façon irrégulière (il écrit « L'IA »
+// correctement deux lignes plus loin).
+//
+// Aucune règle mécanique ne répare ça : « d + voyelle → d' » transforme aussi
+// « documentation » en « d'ocumentation ». Il faut un lecteur qui comprenne le
+// français. On lui donne le texte et le nom de la marque, on lui demande UNIQUEMENT
+// l'orthographe — même nombre de mots, même ordre, aucune reformulation.
+//
+// Garde-fou strict : si le nombre de mots change d'un seul, on jette la
+// correction et on garde la transcription brute. Un sous-titre décalé est bien
+// pire qu'une apostrophe manquante, puisque toute la vidéo se cale dessus.
+async function relireTranscription(words: Word[], contexte: string, cle: string): Promise<Word[]> {
+  if (!cle || words.length < 3 || words.length > 900) return words
+  const texte = words.map((w) => w.text).join(' ')
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': cle, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL, max_tokens: 4000, output_config: { effort: 'low' },
+        system: `Tu relis une transcription automatique en français. Tu corriges UNIQUEMENT l'orthographe :
+— les apostrophes d'élision que le transcripteur avale (« dinvestissement » → « d'investissement », « lIA » → « l'IA », « jai » → « j'ai »)
+— les noms propres et noms de marque mal entendus
+— les majuscules des noms propres
+
+INTERDIT : reformuler, ajouter, supprimer, fusionner ou séparer des mots. Le nombre de mots doit être EXACTEMENT le même, dans le MÊME ordre. La ponctuation de fin de mot se garde telle quelle.
+
+${contexte ? 'Noms propres et marques de cette personne, à écrire exactement ainsi :\n' + contexte.slice(0, 600) : ''}
+
+Réponds avec le texte corrigé, et rien d'autre.`,
+        messages: [{ role: 'user', content: texte }],
+      }),
+    })
+    if (!res.ok) { console.warn(`▶ relecture : Claude ${res.status}, transcription gardée telle quelle`); return words }
+    const data = await res.json()
+    const corrige = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join(' ')).trim()
+    const mots = corrige.split(/\s+/).filter(Boolean)
+    if (mots.length !== words.length) {
+      console.warn(`▶ relecture écartée : ${mots.length} mots rendus pour ${words.length} attendus — la transcription brute est gardée`)
+      return words
+    }
+    const exemples: string[] = []
+    const out = words.map((w, i) => {
+      if (mots[i] !== w.text && exemples.length < 4) exemples.push(`« ${w.text} » → « ${mots[i]} »`)
+      return { ...w, text: mots[i] }
+    })
+    const changes = words.reduce((n, w, i) => n + (mots[i] !== w.text ? 1 : 0), 0)
+    console.log(changes ? `▶ relecture : ${changes} mot(s) corrigé(s) — ${exemples.join(', ')}`
+                        : '▶ relecture : rien à corriger')
+    return out
+  } catch (e) { console.warn('▶ relecture impossible :', String(e).slice(0, 120)); return words }
+}
+
 function fixBrandWords(words: Word[], terms: string[]): Word[] {
   // ── UNE MARQUE EN UN SEUL MOT, MÊME QUAND IL LA DIT EN DEUX ────────────────
   // Scribe entend « Avatar » puis « Ads » : deux mots, deux sous-titres, et le
@@ -2548,8 +2606,22 @@ serve(async (req: Request) => {
     // 3. alignement forcé si script fourni (texte exact + timing réel)
     const words = script ? alignScript(script, scribe.words, duration) : scribe.words
 
+    // ── LA RELECTURE PASSE AVANT LE PLAN ────────────────────────────────────
+    // Le chef d'orchestre décide sur les MOTS : s'il lit « L'IA EBD », il place
+    // ses animations sur un nom qui n'existe pas. La correction doit donc
+    // arriver avant lui, pas seulement avant les sous-titres.
+    // ⚠ la clé se relit ici : `anthKey` n'existe que dans transcribe() et
+    // claudePlan(), pas dans ce handler. Vérifié avant déploiement — c'est la
+    // même erreur de portée que subsActifs ce matin, qui n'aurait pété qu'au
+    // premier rendu.
+    const motsRelus = await relireTranscription(
+      words,
+      [brief, mem.text, website].filter(Boolean).join(' · '),
+      Deno.env.get('ANTHROPIC_API_KEY') ?? '',
+    )
+
     // 4. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, words, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text)
+    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text)
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
@@ -2562,7 +2634,7 @@ serve(async (req: Request) => {
     // n'etait pas pose alors qu'il apparaissait bien dans les sous-titres — Axel :
     // « il ne met pas le logo, il met une animation ». Les deux voient desormais
     // exactement les memes mots.
-    const fixedWords = fixBrandWords(words, brandTerms(mem.text, siteContext, brief))
+    const fixedWords = fixBrandWords(motsRelus, brandTerms(mem.text, siteContext, brief))
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), fixedWords, brief + '\n' + mem.text, filters !== 'low', brandName)
     if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
 
@@ -2666,7 +2738,7 @@ serve(async (req: Request) => {
       version: '1.5',
       model: CLAUDE_MODEL,
       plan: { ...plan, captions, subsSurPanneaux },
-      transcript: { text: scribe.text, words, aligned: !!script },
+      transcript: { text: fixedWords.map((w) => w.text).join(' '), words: fixedWords, aligned: !!script },
       rattrapage: { ...rattrapage, visiteGuideeRefusee: TUTO_REFUS.slice() },
       usage,
     })
