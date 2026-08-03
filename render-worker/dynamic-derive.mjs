@@ -649,6 +649,36 @@ export function deriveDynamicSlides(plan, opts = {}) {
           console.log(`▶ ${nom} recalé sur « ${declencheur.text} » : ${a}s → ${na}s`)
           a = na
         }
+      } else {
+        // ── UN PLAN CHANGE SUR UN MOT, JAMAIS AU MILIEU ─────────────────────
+        // Axel, 03/08 : « je dis "et voici pourquoi" et à ce moment-là ça
+        // devrait changer de frame, pourquoi ça n'a pas changé ? »
+        //
+        // Le recalage ci-dessus ne s'appliquait qu'aux animations portant un
+        // mot OBLIGATOIRE déclaré. Toutes les autres — la majorité — gardaient
+        // le temps approximatif du chef d'orchestre, qui raisonne en phrases et
+        // arrondit. Une scène pouvait donc démarrer à 7,63 s quand le mot qui
+        // la justifie commence à 7,50 : treize centièmes de décalage, invisibles
+        // sur le papier, mais l'œil les voit comme un montage mou.
+        //
+        // On aligne donc TOUTE scène sur le début du mot le plus proche, dans
+        // une fenêtre de ±0,35 s — au-delà, ce n'est plus un arrondi, c'est un
+        // autre moment, et on ne touche à rien. Les 0,12 s d'avance sont les
+        // mêmes que pour les beats : l'image doit être là quand le mot tombe,
+        // pas après.
+        let meilleur = null, ecart = 0.36
+        for (const w of words) {
+          const d = Math.abs(w.start - a)
+          if (d < ecart) { ecart = d; meilleur = w }
+          if (w.start > a + 0.4) break
+        }
+        if (meilleur) {
+          const na = r2(Math.max(0, meilleur.start - 0.12))
+          if (Math.abs(na - a) > 0.04 && b - na >= 1.25 && !overlaps(na, b)) {
+            console.log(`▶ ${nom} aligné sur « ${meilleur.text} » : ${a}s → ${na}s (${r2(Math.abs(na - a))}s de décalage rattrapé)`)
+            a = na
+          }
+        }
       }
     }
     // ── LA PORTE UNIQUE : UNE BANNIE NE PASSE PAS, ET NE SE REMPLACE PAS ────
