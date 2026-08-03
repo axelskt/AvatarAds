@@ -3008,21 +3008,21 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- ACTIONS BOTTOM -->
         <div style="display:flex;gap:8px">
-          <button id="recDownloadBtn" onclick="recDownload()" disabled style="padding:14px 20px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" title="Télécharger en WAV">
+          <button id="recDownloadBtn" onclick="recDownload()" disabled style="flex:1;padding:14px 22px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap" title="Télécharger l'enregistrement" onmouseover="if(!this.disabled)this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1v8M3.5 6l3 3 3-3M1.5 10.5v.5a1 1 0 001 1h9a1 1 0 001-1v-.5"/></svg>
-            WAV
+            Télécharger
           </button>
           <button id="recLibBtn" onclick="recSaveToLibrary()" disabled style="flex:1;padding:14px 22px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap" title="Envoyer vers la bibliothèque" onmouseover="if(!this.disabled)this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5"/><path d="M4.5 4.5h4M4.5 6.5h4M4.5 8.5h2.5"/></svg>
             Envoyer vers bibliothèque
           </button>
-          <button onclick="openBugReport()" style="padding:14px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px" title="Signaler un bug" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="5" height="8" rx="2.5"/><path d="M5 5.5H2.5M5 8H2.5M10 5.5h2.5M10 8h2.5M7.5 3V1M6 1.8l1 1.2M9 1.8l-1 1.2"/></svg>
-          </button>
-          <button id="recUseBtn" onclick="recUseInGenerator()" disabled style="flex:1.7;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 34px -8px var(--accent-glow)" onmouseover="if(!this.disabled)this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5,1 5,6.5 2,6.5 8.5,12 8.5,6.5 11,6.5"/></svg>
-            Utiliser dans le générateur
-          </button>
+          <!-- bouton « signaler un bug » retiré (Axel, 03/08) : le point d'entrée reste dans la barre latérale -->
+          
+          <!-- ── « Utiliser dans le générateur » retiré (Axel, 03/08) ──────────────
+               Le chemin naturel depuis un enregistrement est « Envoyer vers
+               bibliothèque », d'où tout le reste de l'app sait le reprendre.
+               La fonction recUseInGenerator() reste en place : c'est l'accès
+               qui disparaît, pas la possibilité. -->
         </div>
 
       </div>
@@ -9591,7 +9591,20 @@ async function recStartRecording(){
     const src = recCtx.createMediaStreamSource(recStream);
     src.connect(recLiveAnalyser);
     recChunks=[];
-    recMediaRecorder = new MediaRecorder(recStream, {mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    // ── ON N'IMPOSE PAS UN FORMAT QUE LE NAVIGATEUR NE CONNAÎT PAS ────────
+    // Axel, 03/08 : « l'enregistreur vocal est bugué ». Le code testait deux
+    // formats WebM et, si aucun n'était supporté, passait quand même
+    // 'audio/webm' au constructeur. Safari ne supporte NI l'un NI l'autre — il
+    // enregistre en audio/mp4. Le constructeur levait donc une exception et
+    // l'enregistreur ne démarrait pas du tout sur son navigateur.
+    // On prend maintenant le premier format réellement supporté ; en dernier
+    // recours on laisse le navigateur choisir seul (constructeur sans options),
+    // ce qui marche partout.
+    const _recFormats = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2', 'audio/ogg;codecs=opus'];
+    const _recMime = _recFormats.find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch(_) { return false; } }) || '';
+    recMediaRecorder = _recMime ? new MediaRecorder(recStream, { mimeType: _recMime }) : new MediaRecorder(recStream);
+    window._recMimeUtilise = recMediaRecorder.mimeType || _recMime || 'audio/webm';
+    console.log('🎙 enregistrement en', window._recMimeUtilise);
     recMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recChunks.push(e.data); };
     recMediaRecorder.onstop = recOnStop;
     recMediaRecorder.start(100);
@@ -9612,7 +9625,10 @@ function recStopRecording(){
 }
 
 async function recOnStop(){
-  const blob = new Blob(recChunks, {type:'audio/webm'});
+  // le type RÉEL de ce qui a été capté — 'audio/webm' en dur produisait un
+  // fichier mal étiqueté sur Safari, illisible ailleurs.
+  const blob = new Blob(recChunks, { type: window._recMimeUtilise || 'audio/webm' });
+  window._recBlobOrigine = blob;   // gardé tel quel : c'est déjà de l'audio compressé
   const arrBuf = await blob.arrayBuffer();
   recRawBuffer = await recCtx.decodeAudioData(arrBuf);
   const processed = recSilenceOn ? _recRemoveSilence(recRawBuffer) : recRawBuffer;
@@ -9852,12 +9868,30 @@ function recToggleSilence(){
 }
 
 // ── Téléchargement ──
+// ── ON TÉLÉCHARGE L'ENREGISTREMENT, PAS SA CONVERSION ───────────────────────
+// Axel : « mets un bouton télécharger à la place de WAV, et c'est mieux si
+// c'est du MP3 ». Le navigateur ne sait pas encoder du MP3 — mais il n'en a pas
+// besoin : MediaRecorder capte DÉJÀ en compressé (AAC dans un .m4a sur Safari,
+// Opus dans un .webm ailleurs). On rendait ce fichier en le ré-encodant en WAV,
+// soit dix mégaoctets pour une minute de voix, alors que l'original en fait un.
+// On rend donc l'original. Une seule exception : si les silences ont été coupés,
+// le montage n'existe que dans le buffer traité — là, le WAV reste la seule
+// sortie fidèle.
 function recDownload(){
   if(!recAudioBuffer) return;
-  const wav=_recToWav(recAudioBuffer);
-  const url=URL.createObjectURL(wav);
-  const a=document.createElement('a'); a.href=url; a.download='enregistrement-avatarads.wav'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  const brut = window._recBlobOrigine;
+  const coupe = recSilenceOn && recRawBuffer && recAudioBuffer
+    && (recRawBuffer.duration - recAudioBuffer.duration) > 0.3;
+  const blob = (!coupe && brut && brut.size) ? brut : _recToWav(recAudioBuffer);
+  const type = String(blob.type || '');
+  const ext = type.includes('mp4') || type.includes('aac') ? 'm4a'
+            : type.includes('ogg') ? 'ogg'
+            : type.includes('webm') ? 'webm' : 'wav';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'enregistrement-avatarads.' + ext; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Téléchargé en .' + ext + (ext === 'wav' ? ' (silences coupés : le WAV garde le montage)' : ''));
 }
 
 // ── Utiliser dans le générateur ──
@@ -29966,8 +30000,12 @@ function edBandDrag(ov,track,e,mode){
   .lib-view .ph{flex-wrap:wrap;gap:10px}
   .lib-view h2.display{font-size:24px !important}
   /* Enregistreur : rangée d'actions qui déborde → wrap */
-  #v-recorder div:has(>#recUseBtn){flex-wrap:wrap}
-  #recUseBtn{flex:1 1 100% !important}
+  /* la barre d'actions de l'enregistreur passe à la ligne sur mobile — ciblée
+     sur le bouton « Envoyer vers bibliothèque » depuis que « Utiliser dans le
+     générateur » a été retiré (03/08) : l'ancienne règle visait #recUseBtn et
+     ne s'appliquait donc plus à rien. */
+  #v-recorder div:has(>#recLibBtn){flex-wrap:wrap}
+  #recLibBtn{flex:1 1 100% !important}
   /* Express : cartes explicatives 1-2-3 en colonne */
   #expResultPlaceholder div[style*="repeat(3,1fr)"]{grid-template-columns:1fr !important}
   /* Grilles 3 colonnes génériques trop larges → 2 colonnes (sauf formats) */
