@@ -808,29 +808,34 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div class="gen-left">
         <div style="padding:26px 40px 6px;flex-shrink:0;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
           <div style="min-width:0">
-            <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/5</div>
-            <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Décris ton produit</h2>
+            <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/4</div>
+            <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Qui parle ?</h2>
           </div>
           <button id="mPrevBtn" onclick="mPreviewOpen()" style="display:none;flex:0 0 auto;align-items:center;gap:6px;padding:9px 13px;border-radius:11px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-weight:700;font-size:13px;font-family:var(--font);cursor:pointer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg> Aperçu
           </button>
         </div>
         <div class="steps-bar">
-          <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Produit</div>
+          <!-- ── QUATRE ÉTAPES DEPUIS LE 04/08 ──────────────────────────────
+               L'étape « Produit » a été supprimée dans la maquette Claude Design :
+               sans voix de synthèse, le script n'avait plus de lecteur. Ce qu'elle
+               portait est reparti là où il sert — le transcript à l'étape Style
+               (il fiabilise la reconnaissance des sous-titres), l'accroche et le
+               CTA dans Publier, le nom du business dans « Ma marque ». -->
+          <div class="step on" id="st-1" onclick="goToStep(1)" style="cursor:pointer"><div class="step-n">1</div>Avatar</div>
           <div class="step-line"></div>
-          <div class="step" id="st-2" onclick="goToStep(2)" style="cursor:pointer"><div class="step-n">2</div>Avatar</div>
+          <div class="step" id="st-2" onclick="goToStep(2)" style="cursor:pointer"><div class="step-n">2</div>Voix</div>
           <div class="step-line"></div>
-          <div class="step" id="st-3" onclick="goToStep(3)" style="cursor:pointer"><div class="step-n">3</div>Voix</div>
+          <div class="step" id="st-3" onclick="goToStep(3)" style="cursor:pointer"><div class="step-n">3</div>Style</div>
           <div class="step-line"></div>
-          <div class="step" id="st-4" onclick="goToStep(4)" style="cursor:pointer"><div class="step-n">4</div>Style</div>
-          <div class="step-line"></div>
-          <div class="step" id="st-5" onclick="goToStep(5)" style="cursor:pointer"><div class="step-n">5</div>Générer</div>
+          <div class="step" id="st-4" onclick="goToStep(4)" style="cursor:pointer"><div class="step-n">4</div>Générer</div>
         </div>
 
         <div class="gen-form">
 
           <!-- STEP 1 -->
-          <div id="fs-1">
+          <div id="fs-legacy-produit" style="display:none" data-note="ancienne etape Produit retiree du parcours le 04/08 — champs conserves le temps de les reloger">
+<div id="fs-1-ancien">
             <div class="fld" style="margin-bottom:18px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px">Nom de ton business</div>
               <input type="text" id="bizNameInput" placeholder="Ex : DropAcademy, FunnelPro, MonBusiness IA…" oninput="setBizName(this.value)" style="font-size:13px;padding:12px 14px;border-radius:10px">
@@ -981,9 +986,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- RESET TOTAL — uniquement ici (1er onglet Produit), visible -->
             <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="width:100%;margin-top:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:none;border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:all .2s" onmouseover="this.style.color='#ff4757'" onmouseout="this.style.color='var(--text3)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Réinitialiser totalement</button>
           </div>
+</div>
 
           <!-- STEP 2 -->
-          <div id="fs-2" style="display:none">
+          <div id="fs-1" style="display:none">
 
             <!-- SPLIT SCREEN TOGGLE (synchronisé avec l'étape 4) -->
             <div onclick="toggleSplit()" id="splitToggleStep2" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;margin-bottom:16px" onmouseover="if(!splitEnabled)this.style.borderColor='var(--border2)'" onmouseout="if(!splitEnabled)this.style.borderColor='var(--border)'">
@@ -1163,7 +1169,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div><!-- /fs-2 -->
 
           <!-- STEP 3 -->
-          <div id="fs-3" style="display:none">
+          <div id="fs-2" style="display:none">
 
             <!-- Bannière vidéo bibliothèque active -->
             <div id="voice-bypass-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;align-items:center;gap:10px">
@@ -1512,7 +1518,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- STEP 4 -->
-          <div id="fs-4" style="display:none">
+          <div id="fs-3" style="display:none">
 
             <!-- SOUS-TITRES ON/OFF -->
             <div class="fld" style="margin-bottom:18px">
@@ -1872,6 +1878,46 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                  genGameplayOnly, openClipPickerModal) : c'est l'ACCÈS qui est
                  retiré, pas la fonctionnalité. Voir tâche #46 pour l'arbitrage. -->
 
+          </div>
+
+          <!-- ── ÉTAPE 4 · GÉNÈRE TA VIDÉO (maquette Claude Design) ──────────
+               Un récapitulatif avant de dépenser : l'utilisateur relit ses cinq
+               décisions, voit le coût, puis lance. Les valeurs sont remplies par
+               _majRecap() à chaque arrivée sur l'étape. -->
+          <div id="fs-4" style="display:none">
+            <h3 class="display" style="font-size:23px;font-weight:700;margin-bottom:4px">Récapitulatif</h3>
+            <p class="faint" style="font-size:14px;margin-bottom:20px">Vérifie avant de lancer la génération.</p>
+
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px">
+              <div class="card" style="padding:14px 16px">
+                <div class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Avatar</div>
+                <div id="recapAvatar" style="font-size:15px;font-weight:600">—</div>
+              </div>
+              <div class="card" style="padding:14px 16px">
+                <div class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Audio</div>
+                <div id="recapAudio" style="font-size:15px;font-weight:600">—</div>
+              </div>
+              <div class="card" style="padding:14px 16px">
+                <div class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Décor</div>
+                <div id="recapDecor" style="font-size:15px;font-weight:600">—</div>
+              </div>
+              <div class="card" style="padding:14px 16px">
+                <div class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Sous-titres</div>
+                <div id="recapSubs" style="font-size:15px;font-weight:600">—</div>
+              </div>
+              <div class="card" style="padding:14px 16px">
+                <div class="mono" style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Export</div>
+                <div id="recapExport" style="font-size:15px;font-weight:600">—</div>
+              </div>
+            </div>
+
+            <div class="row gap12" style="align-items:center;padding:14px 16px;border-radius:14px;margin-bottom:18px;
+                 border:1px solid var(--accent-line);background:var(--accent-soft)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>
+              <span style="font-size:14px;color:var(--text-2)">Coût estimé : <strong id="recapCout" style="color:var(--text)">—</strong></span>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%" onclick="startGeneration()">Générer ma vidéo</button>
           </div>
 
         </div><!-- /gen-form -->
@@ -2279,7 +2325,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div id="genStatusCard" class="result-card" style="display:none">
               <div class="result-title" style="display:flex;align-items:center;justify-content:space-between">
                 <span>⚙️ Statut</span>
-                <button onclick="document.getElementById('genStatusCard').style.display='none';document.getElementById('hedraManualCard').style.display='none';goToStep(4)" title="Fermer et revenir au preview" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;transition:color .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+                <button onclick="document.getElementById('genStatusCard').style.display='none';document.getElementById('hedraManualCard').style.display='none';goToStep(3)" title="Fermer et revenir au preview" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;transition:color .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
               </div>
               <div class="hedra-status" id="hedraStatus">En attente de génération...</div>
             </div>
@@ -2331,7 +2377,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <!-- Message no-avatar -->
               <div id="hedraNoAvatarMsg" style="display:none;font-size:12px;font-family:var(--mono);color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
                 Aucun avatar sélectionné. <strong style="color:var(--orange2)">Retourne à l'étape Avatar</strong> et choisis un avatar pour générer ta vidéo lipsync.
-                <br><button onclick="goToStep(2)" style="margin-top:8px;padding:6px 14px;background:var(--orange);border:none;border-radius:7px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">← Étape Avatar</button>
+                <br><button onclick="goToStep(1)" style="margin-top:8px;padding:6px 14px;background:var(--orange);border:none;border-radius:7px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">← Étape Avatar</button>
               </div>
 
               <!-- Réessayer — bouton principal -->
@@ -7703,12 +7749,12 @@ async function useImageAsAvatar(){
     const file = new File([blob], 'avatarads-ia.' + ext, { type: blob.type });
     // Applique comme avatar (même chemin que l'import manuel)
     handleAvatarFile(file);
-    // Navigue vers le générateur → Step 2 (Avatar)
+    // Navigue vers le générateur → étape 1 (Avatar) depuis le 04/08
     const navEl = document.querySelector('.nav-i[onclick*="generator"]') || document.querySelector('.nav-i');
     nav('generator', navEl);
     await new Promise(r => setTimeout(r, 80));
-    goToStep(2);
-    toast('✅ Avatar chargé — configure ton script & ta voix, puis clique Générer');
+    goToStep(1);
+    toast('✅ Avatar chargé — ajoute ta voix, puis clique Générer');
   } catch(e){
     console.error('useImageAsAvatar:', e);
     toast('⚠️ Impossible de charger l\'image — télécharge-la manuellement puis importe-la');
@@ -9959,7 +10005,7 @@ async function recUseInGenerator(){
   const navEl=document.querySelector('.nav-i[onclick*="generator"]');
   nav('generator',navEl);
   await new Promise(r=>setTimeout(r,80));
-  goToStep(3);
+  goToStep(2);
   toast('✅ Audio injecté — passe à l\'étape Génération');
 }
 
@@ -10386,16 +10432,23 @@ function updateSteps(){
   // Étape Voix : le choix « Audio MP4 » RESTE sélectionné même sans fichier (fix : il « disparaissait »
   // à chaque retour sur l'étape) — la garde fichier est faite à la génération, pas ici
   // En-tête refonte : eyebrow + titre display par étape
-  var _stepTitles=['Décris ton produit','Choisis ton avatar','Donne-lui une voix','Peaufine le style','Lance la génération'];
+  // Libellés de la maquette Claude Design — copy validée, ne pas reformuler.
+  // L'étape 5 n'existe plus dans la barre : c'est l'état interne « rendu en
+  // cours / résultat », d'où le clamp sur 4 dans les compteurs.
+  var _stepTitles=['Qui parle ?','Sa voix','Le style','Génère ta vidéo'];
   var _eyb=document.getElementById('genStepEyebrow');
   var _ttl=document.getElementById('genStepTitle');
-  if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+step+'/5';
-  if(_ttl) _ttl.textContent=_stepTitles[step-1]||'';
-  // Mobile : petite marge sous le bouton uniquement à l'étape 1 (Produit)
+  if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+Math.min(step,4)+'/4';
+  if(_ttl) _ttl.textContent=_stepTitles[Math.min(step,4)-1]||'';
+  // Mobile : petite marge sous le bouton uniquement à la première étape
   var _gf=document.getElementById('genFooter');
   if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
-  // Sous-titres : auto-activés à l'arrivée sur Style (4) et restent visibles si on revient en arrière
-  if(step>=4){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  // Sous-titres : auto-activés à l'arrivée sur Style (désormais l'étape 3)
+  if(step>=3){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  // Récapitulatif : relu à CHAQUE arrivée sur l'étape 4, jamais mis en cache —
+  // on peut revenir en arrière changer le décor puis revancer, et l'écran doit
+  // dire la vérité au moment où l'utilisateur appuie sur « Générer ma vidéo ».
+  if(step===4 && typeof _majRecap==='function') _majRecap();
   else if(typeof _syncSubsPreviewVisibility==='function'){ _syncSubsPreviewVisibility(); }
   if(step===5){ _showResultArea(); _updateReuseBar(); return; }
   for(let i=1;i<=5;i++){
@@ -10411,7 +10464,7 @@ function updateSteps(){
   const btn=document.getElementById('mainBtn');
   const back=document.getElementById('backBtn');
   back.style.display=step>1?'block':'none';
-  const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+step+' / 5';
+  const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+Math.min(step,4)+' / 4';
   if(typeof _aaInitSliders==='function') setTimeout(_aaInitSliders, 0);
   btn.style.display='block';
   btn.onclick=handleMainBtn;
@@ -14959,6 +15012,38 @@ function _syncSilenceGpDropzone(){
   else { drop.style.display=''; if(info) info.style.display='none'; auto.style.display='none'; }
 }
 
+// ── LE RÉCAPITULATIF DIT CE QUI VA RÉELLEMENT ÊTRE FACTURÉ ─────────────────
+// Les cinq lignes reprennent les décisions des trois étapes précédentes, et le
+// coût est calculé avec le MÊME barème que le débit réel (avatarPerSec + le
+// supplément 1080p) : un écart entre l'annonce et le débit est la faute la plus
+// chère qu'on puisse commettre ici.
+function _majRecap(){
+  const txt = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+
+  const aAvatar = !!(selAvatar?.localFile || selAvatar?.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
+  txt('recapAvatar', selAvatar?.name || (aAvatar ? 'Photo importée' : 'Aucun · audio sur gameplay'));
+
+  const aFichier = !!(window.mp4AudioFile || (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled));
+  txt('recapAudio', aFichier ? 'Fichier importé' : 'Aucun fichier');
+
+  txt('recapDecor', (typeof _splitOn!=='undefined' && _splitOn) ? 'Split screen' : 'Plein écran');
+
+  const subsOn = document.getElementById('subsToggle')?.checked
+              ?? (typeof subsEnabled!=='undefined' ? subsEnabled : true);
+  const styleLbl = (typeof _subStyleName==='function' && _subStyleName()) || document.querySelector('.sub-style.on')?.dataset?.label || 'Hormozi';
+  txt('recapSubs', subsOn ? styleLbl : 'Désactivés');
+
+  const q = (typeof _composeQuality!=='undefined' && _composeQuality>=1080) ? '1080p' : '720p';
+  txt('recapExport', q);
+
+  // même calcul que le débit : lipsync à la seconde + supplément 1080p
+  const dur   = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
+  const base  = aAvatar ? CREDIT_COSTS.avatarPerSec * dur : 0;
+  const surHD = q === '1080p' ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
+  const total = Math.max(1, Math.round(base + surHD));
+  txt('recapCout', total + ' crédit' + (total > 1 ? 's' : '') + ' vidéo');
+}
+
 function goToStep(n){
   // Accessible : étapes déjà visitées ou résultats si vidéo disponible
   const maxStep = results.hedraUrl ? 5 : step;
@@ -14980,7 +15065,7 @@ function nextStep(){
     step++;
     updateSteps();
     // Si on arrive à l'étape 4 (Style) et qu'un transcript est en attente, le charger
-    if(step===4 && pendingTranscript && pendingTranscript.trim()){
+    if(step===3 && pendingTranscript && pendingTranscript.trim()){
       populateWordEditor(pendingTranscript);
     }
   }
