@@ -3092,8 +3092,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);display:grid;place-items:center">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ff8a94" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h0"/></svg>
             </div>
-            <div style="font-weight:700;font-size:16px;margin-bottom:6px">Refusée par les deux moteurs</div>
-            <div class="faint" style="font-size:13px;line-height:1.55;margin-bottom:18px">OpenAI <b style="color:var(--text-2)">et</b> Nano Banana Pro ont refusé cette image. Essaie une <b style="color:var(--text-2)">autre photo de référence</b> (cadrage plus serré, tenue moins suggestive) et/ou un <b style="color:var(--text-2)">autre prompt</b>. Tes crédits ont été remboursés.</div>
+            <div style="font-weight:700;font-size:16px;margin-bottom:6px">Image refusée par le moteur</div>
+            <div class="faint" style="font-size:13px;line-height:1.55;margin-bottom:18px">Le filtre du moteur d'images a refusé cette photo. Essaie une <b style="color:var(--text-2)">autre photo de référence</b> (cadrage plus serré, tenue moins suggestive) et/ou un <b style="color:var(--text-2)">autre prompt</b>. Tes crédits ont été remboursés.</div>
             <button onclick="document.getElementById('imgBothRefused').style.display='none';_imgIdleShow(true)" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border-3)'" onmouseout="this.style.borderColor='var(--border-2)'">Compris</button>
           </div>
         </div>
@@ -5742,7 +5742,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-img-presets-off-bothrefused'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-img-4K-nano-direct'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9589,34 +9589,55 @@ async function generateImage(){
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
-      // OpenAI /edits refuse souvent du contenu pourtant non explicite (filtre très
-      // strict, même en modération 'low'). Repli automatique sur Nano Banana Pro
-      // (Gemini), dont le filtre laisse passer le contenu influenceur : même crédit,
-      // et le toast dit quel moteur a rendu (cf. philosophie « repli systématique »).
+      // Routage moteur selon la qualité : 4K → Nano Banana Pro en direct (évite le
+      // filtre OpenAI, coût couvert par les 5 cr) ; Standard/Premium → gpt-image, avec
+      // proposition de repli Nano (5 cr) si OpenAI refuse. Le filtre OpenAI /edits
+      // refuse souvent du contenu non explicite, même en modération 'low'.
       let url;
-      try {
-        url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
-      } catch(_edErr){
-        const _em = String((_edErr && _edErr.message) || _edErr);
-        const _isRefus = /safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em);
-        if(_isRefus){
-          // Le filtre OpenAI refuse (même en modération 'low'). On ne bascule PAS en
-          // douce (Nano coûte plus cher) : on rembourse le crédit et on PROPOSE le repli
-          // Nano Banana Pro 4K (5 cr) — l'utilisateur décide s'il veut re-payer.
-          await creditsFlowRefund('OpenAI a refusé');
-          _imgProgStop(); overlay.style.display='none';
-          btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
-          _imgShowNanoOffer(editPrompt, size);
-          return;
+      const _is4K = (_imgEffectiveQuality() === 'high');
+      if(_is4K){
+        // 4K = Nano Banana Pro EN DIRECT (demande d'Axel). C'est le meilleur moteur,
+        // il évite le filtre OpenAI, et les 5 cr du 4K couvrent son coût (~0,22 €).
+        try {
+          const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+          const _asp = _NB_FMT_ASPECT[size] || '9:16';
+          _imgProgStart('Nano Banana Pro (4K)… (~30s)');
+          url = await _nbEdit(token, _refUrl, editPrompt, _asp, '4K');
+        } catch(_nbErr){
+          const _m = String((_nbErr && _nbErr.message) || _nbErr);
+          if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m)){
+            await creditsFlowRefund('Nano Banana Pro a refusé');
+            _imgProgStop(); overlay.style.display='none';
+            btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
+            const r=document.getElementById('imgResult'); if(r) r.style.display='none';
+            _imgIdleShow(false);
+            const bad=document.getElementById('imgBothRefused'); if(bad){ bad.style.display='block'; try{ bad.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
+            return;
+          }
+          throw _nbErr;
         }
-        throw _edErr;
+      } else {
+        // Standard / Premium = gpt-image. Sur refus OpenAI → on propose le repli Nano (5 cr).
+        try {
+          url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+        } catch(_edErr){
+          const _em = String((_edErr && _edErr.message) || _edErr);
+          if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em)){
+            await creditsFlowRefund('OpenAI a refusé');
+            _imgProgStop(); overlay.style.display='none';
+            btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
+            _imgShowNanoOffer(editPrompt, size);
+            return;
+          }
+          throw _edErr;
+        }
       }
       _imgMonthIncrement();
       _imgShowSingle(url, size);
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('✅ Image générée' + (_is4K ? ' via Nano Banana Pro (4K)' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
