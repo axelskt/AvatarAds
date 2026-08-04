@@ -15160,25 +15160,38 @@ function _setAvatarSource(src){
     b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
     b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
     const ico = b.querySelector('.av-src-ico');
-    if (ico){ ico.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
+    if (ico){ ico.style.background  = on ? 'var(--accent)' : 'var(--surface-2)';
               ico.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
               const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
     const chk = b.querySelector('.av-src-chk'); if (chk) chk.style.display = on ? '' : 'none';
   });
-  const aff = (id, vu) => { const e = document.getElementById(id); if (e) e.style.display = vu ? '' : 'none'; };
-  // photo : la zone de dépôt (ou l'aperçu si une photo est déjà chargée)
-  const aPhoto = !!document.getElementById('avatarPreviewWrap')
-              && document.getElementById('avatarPreviewWrap').dataset.charge === '1';
-  aff('avatarDropzone',    src === 'photo' && !aPhoto);
-  aff('avatarPreviewWrap', src === 'photo' &&  aPhoto);
-  aff('saveAvatarPresetBtn', src === 'photo');
-  // vidéo existante : le panneau bypass Hedra, sans sa ligne d'interrupteur
-  aff('bypassHedraToggleRow', false);
-  aff('bypassHedraPanel',  src === 'video');
-  if (src === 'video' && typeof window._bypassHedraOn !== 'undefined') window._bypassHedraOn = true;
-  if (src !== 'video') window._bypassHedraOn = false;
-  aff('avLibInline', src === 'library');
+
+  // ── LES GROUPES SE REPÈRENT À LEURS INTERTITRES ─────────────────────────
+  // La première version ne visait que quelques identifiants isolés
+  // (avatarDropzone, bypassHedraPanel) et laissait tout le reste affiché :
+  // les curseurs de taille, « Voir les avatars IA », la zone vidéo. On voyait
+  // donc les deux sources en même temps, ce que la maquette ne fait jamais.
+  // On délimite désormais par les deux séparateurs qui structurent déjà
+  // l'étape — « ta photo avatar » et « ou réutilise une vidéo existante » —
+  // ce qui suit la structure au lieu d'énumérer des identifiants qui bougent.
+  const enfants = [...document.getElementById('fs-1').children];
+  const iPhoto = enfants.findIndex((e) => /ta photo avatar/i.test(e.textContent || ''));
+  const iVideo = enfants.findIndex((e) => /ou r\u00e9utilise une vid\u00e9o existante/i.test(e.textContent || ''));
+  if (iPhoto >= 0 && iVideo > iPhoto) {
+    enfants.forEach((e, i) => {
+      if (i < iPhoto || e.id === 'avSrcCards' || e.id === 'avLibInline' || e.id === 'f-avatarimg') return;
+      // le ratio du split a sa propre logique d'affichage : on n'y touche pas
+      if (e.id === 'avSplitRatioRow' || e.id === 'splitToggleStep2' || e.id === 'splitPanelStep2') return;
+      const groupe = i < iVideo ? 'photo' : 'video';
+      e.style.display = (groupe === src) ? '' : 'none';
+    });
+  }
+
+  document.getElementById('avLibInline').style.display = src === 'library' ? '' : 'none';
   if (src === 'library') _remplirGrilleAvatars();
+
+  // le mode « vidéo existante » doit être connu de la génération
+  window._bypassHedraOn = (src === 'video');
 }
 
 // La grille se peuple à la PREMIÈRE ouverture, pas au chargement de la page :
