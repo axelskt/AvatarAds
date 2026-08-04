@@ -5717,7 +5717,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-zoomgameplay-imgfallback-nano'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-imgfallback-gated-refund'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9583,13 +9583,20 @@ async function generateImage(){
         url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
       } catch(_edErr){
         const _em = String((_edErr && _edErr.message) || _edErr);
-        if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em)){
+        const _isRefus = /safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em);
+        // Le repli Nano Banana Pro coûte ~0,12 €/image (autant que gpt-image HIGH).
+        // On ne bascule QUE si le crédit débité le couvre : Premium (3 cr) et 4K (5 cr)
+        // oui ; Standard (1 cr ≈ 0,07 € au tarif Élite) non — sinon on rembourse à perte.
+        // Sur Standard refusé, on rembourse le crédit (catch principal) et on guide.
+        if(_isRefus && _imgEffectiveQuality() !== 'low'){
           _imgEngine = 'Nano Banana Pro';
           _imgProgStart('OpenAI a refusé — nouvel essai via Nano Banana Pro…');
           toast('⚠️ OpenAI a refusé — nouvel essai via Nano Banana Pro…');
           const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
           const _asp = _NB_FMT_ASPECT[size] || '9:16';
           url = await _nbEdit(token, _refUrl, editPrompt, _asp, '2K');
+        } else if(_isRefus){
+          throw new Error('OpenAI a refusé cette image en qualité Standard. Repasse en Premium ou 4K et relance : l\'app basculera alors sur Nano Banana Pro, qui accepte ce type de contenu.');
         } else {
           throw _edErr;
         }
@@ -9682,6 +9689,9 @@ async function generateImage(){
     _updateImgQuotaLabel();
   } catch(e){
     console.error('generateImage:', e);
+    // #122 : un refus/erreur de génération ne doit JAMAIS coûter un crédit (le
+    // débit se fait avant l'appel moteur). Le catch principal ne remboursait pas.
+    try{ await creditsFlowRefund('génération refusée'); }catch(_){}
     toast('⚠️ ' + _imgFriendlyErr(e.message));
   } finally {
     _imgProgStop();
