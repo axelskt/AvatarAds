@@ -1583,7 +1583,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="fld" style="margin-bottom:18px">
               <div onclick="toggleSubtitles()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;cursor:pointer;transition:all .15s" id="subtitlesToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="display:grid;place-items:center;color:var(--text-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.2A8.4 8.4 0 013 11.5a8.4 8.4 0 019-8.4 8.4 8.4 0 019 8.4z"/></svg></span>
+                  <span style="font-size:20px">💬</span>
                   <div>
                     <div style="font-size:13px;font-weight:700">Sous-titres</div>
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="subtitlesToggleLabel">Activés — style Hormozi</div>
@@ -1731,21 +1731,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <summary style="cursor:pointer;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:10px;user-select:none"><span>⚙️ Réglages avancés <span style="font-weight:400;color:var(--text3);font-family:var(--mono);font-size:10px">couleurs · taille · position · étirement</span></span><span class="adv-caret" style="font-size:11px;color:var(--text3);transition:transform .2s">▾</span></summary>
             <div style="margin-top:12px">
             <!-- COULEURS -->
-            <!-- ── RÉGLAGES AVANCÉS · repliés (règle n°4 du handoff) ────────────
-                 Couleurs, taille, positions, étirements, mots par groupe et
-                 minutage : indispensables mais secondaires. Dépliés en
-                 permanence, ils noyaient les 8 styles et le transcript. -->
-            <div class="card" id="subAdvCard" style="padding:0;overflow:hidden;margin-bottom:22px">
-              <button type="button" onclick="_toggleSubAdv()" class="row" style="width:100%;justify-content:space-between;align-items:center;padding:15px 16px;text-align:left;background:none;border:none;cursor:pointer;font-family:var(--font);color:inherit">
-                <span class="row gap10" style="align-items:center;flex-wrap:wrap">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M9 7h6v4a3 3 0 01-3 3 3 3 0 01-3-3z"/></svg>
-                  <span style="font-weight:600;font-size:14.5px">Réglages avancés</span>
-                  <span class="mono faint" style="font-size:11.5px">couleurs · taille · position · étirement</span>
-                </span>
-                <svg id="subAdvChev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;transition:.2s"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
-              <div id="subAdvBody" style="display:none;padding:4px 16px 18px;border-top:1px solid var(--border)">
-<div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Couleurs</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                 <div>
@@ -1834,8 +1820,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <input type="hidden" id="secPerGroupRow">
 
             <!-- ANIMATIONS -->
-            </div>
-            </div>
             <div class="fld" style="margin-bottom:16px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
                 <div style="display:flex;align-items:center;gap:10px">
@@ -1985,10 +1969,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
           </div>
 
-          <!-- ── ÉTAPE 4 · GÉNÈRE TA VIDÉO (maquette Claude Design) ──────────
-               Un récapitulatif avant de dépenser : l'utilisateur relit ses cinq
-               décisions, voit le coût, puis lance. Les valeurs sont remplies par
-               _majRecap() à chaque arrivée sur l'étape. -->
           <div id="fs-4" style="display:none">
             <h3 class="display" style="font-size:23px;font-weight:700;margin-bottom:4px">Récapitulatif</h3>
             <p class="faint" style="font-size:14px;margin-bottom:20px">Vérifie avant de lancer la génération.</p>
