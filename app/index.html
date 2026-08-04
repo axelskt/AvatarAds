@@ -15182,10 +15182,10 @@ function _epurerVoix(){
     // On masque l'élément, et son parent SEULEMENT s'il n'enveloppe que lui —
     // sinon on emporte tout le bloc « Supprimer les silences » avec.
     if (!e) return;
-    const par = e.parentElement;
-    if (par && par.children.length <= 2 && par.id !== 'silenceToolPanel'
-        && !par.classList.contains('fld') && par.id !== 'fs-2') par.style.display = 'none';
-    else e.style.display = 'none';
+    // On ne remonte JAMAIS au parent quand il abrite d'autres commandes :
+    // « Sauvegarder avatar » partage sa rangée avec « Mes avatars sauvegardés »,
+    // et masquer la rangée faisait disparaître les deux.
+    e.style.display = 'none';
   });
 
   // les trois intertitres de la maquette
@@ -15269,7 +15269,10 @@ function _setAvatarSource(src){
     const lignes = txt.split('\n').map((x) => x.trim()).filter(Boolean);
     const tete = (lignes[0] && lignes[0].length > 2) ? lignes[0] : (lignes.slice(0, 2).join(' '));
     if (RETIRES.some((r) => r.test(tete))) { e.style.display = 'none'; return; }
-    e.querySelectorAll('button, a, .fld > div').forEach((x) => {
+    // Uniquement des boutons et des liens : le sélecteur '.fld > div' attrapait
+    // la RANGÉE des deux boutons d'avatars, et « Mes avatars sauvegardés »
+    // disparaissait avec « Sauvegarder avatar ».
+    e.querySelectorAll('button, a').forEach((x) => {
       if (x.children.length > 2) return;
       const t = (x.textContent || '').trim();
       if (t && t.length < 70 && RETIRES.some((r) => r.test(t))) x.style.display = 'none';
@@ -16970,7 +16973,12 @@ function _updateBypassUI(){
       info.textContent = '⛔ Upgrade ton plan pour accéder à cette fonctionnalité.';
       info.style.color = 'var(--red)';
     } else {
-      info.textContent = `✅ Mode actif — ${rem} re-composition${rem!==1?'s':''} restante${rem!==1?'s':''} ce mois (${lim} max/${_getPlanName()}).`;
+      // Copy de la maquette. L'ancien message — « Mode actif — N/N max/Plan » —
+      // était un état de débogage : il annonçait un mode plutôt que le bénéfice.
+      info.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        + 'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px">'
+        + '<path d="M20 6L9 17l-5-5"/></svg>Aucun crédit avatar consommé · ' + rem + ' re-composition'
+        + (rem!==1?'s':'') + ' restante' + (rem!==1?'s':'') + ' ce mois';
       info.style.color = rem <= 2 ? 'var(--orange2)' : 'var(--green)';
     }
   }
