@@ -1633,22 +1633,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- STEP 4 -->
           <div id="fs-3" style="display:none">
 
-            <!-- SOUS-TITRES ON/OFF -->
-            <div class="fld" style="margin-bottom:18px">
-              <div onclick="toggleSubtitles()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;cursor:pointer;transition:all .15s" id="subtitlesToggleRow">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:20px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.2A8.4 8.4 0 013 11.5a8.4 8.4 0 019-8.4 8.4 8.4 0 019 8.4z"/></svg></span>
-                  <div>
-                    <div style="font-size:13px;font-weight:700">Sous-titres</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="subtitlesToggleLabel">Activés — style Hormozi</div>
-                  </div>
-                </div>
-                <div id="subtitlesSwitch" style="width:42px;height:24px;background:var(--orange);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-                  <div id="subtitlesThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:21px;transition:all .25px"></div>
-                </div>
-              </div>
-            </div>
-
             <!-- FORMAT : sélecteur retiré (toujours 9:16 TikTok/Reels — cfg.format défaut 'portrait') -->
 
             <!-- SPLIT SCREEN -->
@@ -1738,6 +1722,24 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
               </div>
             </div>
+
+            <!-- SOUS-TITRES ON/OFF -->
+            <div class="fld" style="margin-bottom:18px">
+              <div onclick="toggleSubtitles()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;cursor:pointer;transition:all .15s" id="subtitlesToggleRow">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:20px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.2A8.4 8.4 0 013 11.5a8.4 8.4 0 019-8.4 8.4 8.4 0 019 8.4z"/></svg></span>
+                  <div>
+                    <div style="font-size:13px;font-weight:700">Sous-titres</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="subtitlesToggleLabel">Activés — style Hormozi</div>
+                  </div>
+                </div>
+                <div id="subtitlesSwitch" style="width:42px;height:24px;background:var(--orange);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="subtitlesThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:21px;transition:all .25px"></div>
+                </div>
+              </div>
+            </div>
+
+            
 
             <!-- STYLE SOUS-TITRES -->
             <div class="fld" style="margin-bottom:16px">
