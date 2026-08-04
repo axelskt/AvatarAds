@@ -5742,7 +5742,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-img-btnfix-nano-block'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-poignees-avatar'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -13332,7 +13332,11 @@ function _mdPaintSel(){
   // les poignées d'étirement suivent la sélection SANS re-render complet
   document.querySelectorAll('#mdOv [data-grip]').forEach(g=>g.remove());
   const selS=_md.scenes.find(x=>x.id===_md.sel);
-  if(selS && selS.n!=='avatar' && !selS.del){
+  // Les scènes AVATAR ont DROIT aux poignées (Axel, 03/08 : « pour la zone verte,
+  // rajoute les poignées »). _mdBandHtml les posait déjà, mais ce chemin rapide
+  // (sélection sans re-render) gardait l'ancienne exclusion → les poignées
+  // disparaissaient dès qu'on sélectionnait un bloc avatar. On aligne les deux.
+  if(selS && !selS.del){
     const bl=document.getElementById('mdB'+selS.id);
     if(bl) for(const side of ['a','b']){
       const g=document.createElement('div');
