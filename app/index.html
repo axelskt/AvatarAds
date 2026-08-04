@@ -10546,6 +10546,13 @@ function updateSteps(){
   // Voix : une seule source depuis l'abandon de la synthèse. Le mode « clone /
   // preset » était le défaut au chargement ; sans ce forçage l'étape s'ouvrirait
   // sur un sélecteur masqué et un panneau fichier inerte.
+  // L'étape Avatar se filtre À L'OUVERTURE, pas seulement au clic sur une
+  // carte : sans cet appel, la première vue montrait TOUT — curseurs,
+  // galerie, bloc vidéo — et ne s'épurait qu'après une interaction.
+  if(step===1 && typeof _setAvatarSource==='function'){
+    try{ _setAvatarSource(typeof _avSource!=='undefined' ? _avSource : 'photo'); }
+    catch(e){ console.warn('source avatar :', e); }
+  }
   if(step===2 && typeof _epurerVoix==='function') _epurerVoix();
   if(step===2 && typeof selectVoiceMode==='function'){
     try{ selectVoiceMode('mp4'); }catch(e){ console.warn('mode voix :', e); }
