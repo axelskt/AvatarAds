@@ -990,6 +990,37 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
           <!-- STEP 2 -->
           <div id="fs-1" style="display:none">
+            <!-- ═══ REBÂTI 1:1 D'APRÈS LE JSX (StepAvatar) — 04/08 ═══
+                 Le legacy est juste après, masqué : tous ses IDs et handlers
+                 restent joignables, ces panneaux propres délèguent aux inputs
+                 fichier legacy. Aucune classe .ph (dans l'app c'est un
+                 en-tête de page, pas une zone de dépôt). -->
+            <div id="av2" class="rise">
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">Qui parle dans ta vidéo ?</div>
+              <div class="row gap12" id="avCards2" style="margin-bottom:20px;align-items:stretch;flex-wrap:wrap">
+                <button type="button" onclick="_avPick('photo')" data-src="photo" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style=""><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Ma photo</span><span class="faint" style="font-size:12px;line-height:1.4">Ton portrait devient un avatar animé</span></div></button>
+                <button type="button" onclick="_avPick('video')" data-src="video" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Ma vidéo existante</span><span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo déjà générée · 0 crédit</span></div></button>
+                <button type="button" onclick="_avPick('library')" data-src="library" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Un avatar IA</span><span class="faint" style="font-size:12px;line-height:1.4">49 visages prêts à l'emploi</span></div></button>
+              </div>
+              <input type="file" id="avPhotoIn2" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0]);_avReflect();this.value=''">
+              <input type="file" id="avVideoIn2" accept="video/*" style="display:none" onchange="_avVideoPick(this.files[0]);this.value=''">
+              <div id="avPanePhoto">
+                <div id="avPhotoZone" onclick="document.getElementById('avPhotoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleAvatarFile(f);_avReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta photo ici</div><div class="faint" style="font-size:11.5px">PNG · JPG · WEBP — portrait recommandé</div><button type="button" onclick="event.stopPropagation();document.getElementById('avPhotoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
+                <button type="button" onclick="openAvatarPresetPicker()" class="btn btn-ghost" style="width:100%;margin-top:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px">↩ Mes avatars sauvegardés</button>
+              </div>
+              <div id="avPaneVideo" style="display:none">
+                <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — vidéo Hedra ou autre avatar</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
+                <button type="button" onclick="openLibVideoPicker()" class="btn btn-ghost" style="width:100%;margin-top:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque</button>
+                <div class="row" style="padding:11px 14px;gap:10px;align-items:center;margin-top:12px;border:1px solid rgba(40,199,149,.3);background:rgba(40,199,149,.07);border-radius:var(--r-lg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span style="font-size:12.5px" id="avVideoQuota">Aucun crédit avatar consommé · 70 re-compositions restantes ce mois</span></div>
+              </div>
+              <div id="avPaneLib" style="display:none">
+                <div id="avLibGrid2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
+                <button type="button" class="btn btn-ghost" style="width:100%" onclick="openAvatarModal()">Voir les 49 avatars →</button>
+              </div>
+              <button type="button" class="btn btn-quiet btn-sm" style="width:100%;margin-top:22px" onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (avatar, voix, gameplay, style).'))location.reload()">Réinitialiser totalement</button>
+            </div>
+
+            <div id="fs1Legacy" style="display:none">
 
             <!-- ── QUI PARLE ? · sélecteur de source (maquette Claude Design) ──
                  Une seule question à cette étape. Le décor (plein écran ou split)
@@ -1232,10 +1263,25 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (avatar, voix, gameplay, style).')) location.reload()"
               style="width:100%;margin-top:18px;padding:12px;background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:13.5px;cursor:pointer;transition:color .15s"
               onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">Réinitialiser totalement</button>
+          </div>
           </div><!-- /fs-2 -->
 
           <!-- STEP 3 -->
           <div id="fs-2" style="display:none">
+            <!-- ═══ REBÂTI 1:1 D'APRÈS LE JSX (StepVoix) — 04/08 ═══ -->
+            <div id="vox2" class="rise">
+              <input type="file" id="voxFileIn2" accept="audio/*,video/*" style="display:none" onchange="window.mp4AudioEnabled=true;window.mp4AudioFile=this.files[0];handleMp4AudioFile(this.files[0]);_voxReflect();this.value=''">
+              <input type="file" id="voxGpIn2" accept="video/*" style="display:none" onchange="handleSilenceGameplayFile(this.files[0]);_voxGpReflect();this.value=''">
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">① Ton fichier audio</div>
+              <div style="margin-bottom:14px"><div id="voxFileZone" onclick="document.getElementById('voxFileIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){window.mp4AudioEnabled=true;window.mp4AudioFile=f;handleMp4AudioFile(f);_voxReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV · MP3 · WAV · M4A</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxFileIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">② Nettoyage <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
+              <div class="col gap10" style="margin-bottom:12px"><div class="row" id="voxSilRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxSilIco" style="flex:0 0 auto"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Supprimer les silences</span><span class="faint" style="font-size:12px">Coupe les blancs, les hésitations et les bruits de fond · volume constant</span></div></div><button type="button" id="voxSilSw" onclick="_voxToggleSil()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
+              <div style="margin-bottom:0"><div class="row" id="voxGpRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxGpIco" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Le gameplay suit ton audio</span><span class="faint" style="font-size:12px">Quand ta voix est coupée, le gameplay est coupé au même endroit</span></div></div><button type="button" id="voxGpSw" onclick="_voxToggleGp()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
+              <div id="voxGpZoneWrap" class="rise" style="display:none;margin-top:12px"><div id="voxGpZone" onclick="document.getElementById('voxGpIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleSilenceGameplayFile(f);_voxGpReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton gameplay ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxGpIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
+            </div>
+
+            <div id="fs2Legacy" style="display:none">
 
             <!-- Bannière vidéo bibliothèque active -->
             <div id="voice-bypass-active" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.25);border-radius:10px;align-items:center;gap:10px">
@@ -1581,6 +1627,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- /GAMEPLAY SIZE -->
 
+          </div>
           </div>
 
           <!-- STEP 4 -->
@@ -10543,20 +10590,10 @@ function updateSteps(){
   // les cartes de décor reflètent l'état réel du split, y compris s'il a été
   // changé ailleurs (preview, raccourci) pendant qu'on était sur une autre étape
   if(step===3 && typeof _syncDecorCards==='function') _syncDecorCards();
-  // Voix : une seule source depuis l'abandon de la synthèse. Le mode « clone /
-  // preset » était le défaut au chargement ; sans ce forçage l'étape s'ouvrirait
-  // sur un sélecteur masqué et un panneau fichier inerte.
-  // L'étape Avatar se filtre À L'OUVERTURE, pas seulement au clic sur une
-  // carte : sans cet appel, la première vue montrait TOUT — curseurs,
-  // galerie, bloc vidéo — et ne s'épurait qu'après une interaction.
-  if(step===1 && typeof _setAvatarSource==='function'){
-    try{ _setAvatarSource(typeof _avSource!=='undefined' ? _avSource : 'photo'); }
-    catch(e){ console.warn('source avatar :', e); }
-  }
-  if(step===2 && typeof _epurerVoix==='function') _epurerVoix();
-  if(step===2 && typeof selectVoiceMode==='function'){
-    try{ selectVoiceMode('mp4'); }catch(e){ console.warn('mode voix :', e); }
-  }
+  // Étapes Avatar et Voix : markup rebâti 1:1 (av2 / vox2). Le legacy est masqué
+  // et sert de câblage — ces init reflètent l'état courant sur les panneaux propres.
+  if(step===1 && typeof _avEnter==='function') _avEnter();
+  if(step===2 && typeof _voxEnter==='function') _voxEnter();
   // Récapitulatif : relu à CHAQUE arrivée sur l'étape 4, jamais mis en cache —
   // on peut revenir en arrière changer le décor puis revancer, et l'écran doit
   // dire la vérité au moment où l'utilisateur appuie sur « Générer ma vidéo ».
@@ -15335,6 +15372,105 @@ function _remplirGrilleAvatars(){
     };
     g.appendChild(b);
   });
+}
+
+// ══ ÉTAPES AVATAR & VOIX REBÂTIES 1:1 — pilotage des panneaux propres ══════
+// Le markup legacy (fs1Legacy / fs2Legacy) reste dans le DOM, masqué : tous ses
+// IDs et handlers répondent encore, ces fonctions ne font que refléter l'état
+// sur les panneaux dessinés d'après le JSX.
+let _avSrc2 = 'photo';
+function _avPick(src){
+  _avSrc2 = src;
+  document.querySelectorAll('#avCards2 .av-card2').forEach((b) => {
+    const on = b.dataset.src === src;
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
+    const ico = b.querySelector('.av-ico2');
+    if (ico){ ico.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
+              ico.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+              const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
+    const chk = b.querySelector('.av-chk2'); if (chk) chk.style.display = on ? '' : 'none';
+  });
+  const aff = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
+  aff('avPanePhoto', src === 'photo');
+  aff('avPaneVideo', src === 'video');
+  aff('avPaneLib',   src === 'library');
+  // le mode « vidéo existante » = bypass Hedra ; on aligne le drapeau lu à la génération
+  window._bypassHedraOn = (src === 'video');
+  if (src === 'library') _avLibGrid();
+}
+// choix d'une vidéo avatar existante : bypass ON, puis le handler legacy complet
+function _avVideoPick(file){
+  if (!file) return;
+  window._bypassHedraOn = true;
+  try { handleBypassHedraFile(file); } catch (e) { console.warn('bypass :', e); }
+  const z = document.getElementById('avVideoZone');
+  if (z){ z.querySelector('div').textContent = file.name.slice(0, 40); }
+}
+// après upload photo : vignette dans la zone
+function _avReflect(){
+  const z = document.getElementById('avPhotoZone');
+  if (!z || !(selAvatar && selAvatar.localUrl)) return;
+  z.style.borderStyle = 'solid'; z.style.borderColor = 'var(--accent-line)';
+  z.innerHTML = '<img src="' + selAvatar.localUrl + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;display:block">'
+    + '<div style="font-weight:700;font-size:14px;color:var(--text)">Photo chargée</div>'
+    + '<button type="button" onclick="event.stopPropagation();document.getElementById(\'avPhotoIn2\').click()" class="btn btn-sm" '
+    + 'style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">Changer</button>';
+}
+// galerie inline : six vignettes réelles depuis _AV_LIST (le reste dans la modale)
+function _avLibGrid(){
+  const g = document.getElementById('avLibGrid2');
+  if (!g || g.children.length || typeof _AV_LIST === 'undefined') return;
+  const NOMS = ['Sofia','Liam','Emma','Noah','Clara','Hugo'];
+  _AV_LIST.slice(0, 6).forEach((a, i) => {
+    const nom = a.prenom || NOMS[i] || a.name;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.style.cssText = 'text-align:left;border-radius:14px;padding:0;overflow:hidden;transition:.16s;cursor:pointer;border:1px solid var(--border);background:none;font-family:var(--font);color:inherit';
+    b.innerHTML = '<div style="aspect-ratio:3/4;background:var(--panel-1);overflow:hidden"><img src="' + a.path
+      + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display=\'none\'"></div>'
+      + '<div class="row" style="justify-content:space-between;padding:9px 11px;background:var(--surface)">'
+      + '<span class="col" style="line-height:1.25"><span style="font-size:13px;font-weight:600">' + nom + '</span>'
+      + '<span class="faint" style="font-size:11px">' + (a.genre === 'f' ? 'Féminin' : 'Masculin') + '</span></span></div>';
+    b.onclick = () => {
+      if (typeof pickLibraryAvatarFromModal === 'function') pickLibraryAvatarFromModal(b, a.path, nom);
+      g.querySelectorAll('button').forEach((x) => { x.style.border = x === b ? '2px solid var(--accent)' : '1px solid var(--border)'; x.style.boxShadow = x === b ? '0 0 0 3px var(--accent-soft)' : 'none'; });
+    };
+    g.appendChild(b);
+  });
+}
+function _avEnter(){ _avPick(_avSrc2); if (selAvatar && selAvatar.localUrl) _avReflect(); }
+
+// ── VOIX ───────────────────────────────────────────────────────────────────
+let _voxSilOn = true, _voxGpOn = false;
+function _voxSetSw(rid, on){
+  const sw = document.getElementById(rid + 'Sw'), ico = document.getElementById(rid + 'Ico');
+  if (sw){ sw.style.background = on ? 'var(--accent)' : 'var(--surface-3)'; sw.style.justifyContent = on ? 'flex-end' : 'flex-start'; }
+  if (ico) ico.setAttribute('stroke', on ? 'var(--accent-2)' : 'var(--text-3)');
+}
+function _voxToggleSil(){
+  _voxSilOn = !_voxSilOn; _voxSetSw('voxSil', _voxSilOn);
+  // le legacy porte le vrai drapeau de débruitage
+  if (typeof _genDenoiseEnabled !== 'undefined' && !!_genDenoiseEnabled !== _voxSilOn
+      && typeof _genToggleDenoise === 'function') _genToggleDenoise();
+}
+function _voxToggleGp(){
+  _voxGpOn = !_voxGpOn; _voxSetSw('voxGp', _voxGpOn);
+  const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
+}
+function _voxReflect(){
+  const z = document.getElementById('voxFileZone');
+  if (!z || !window.mp4AudioFile) return;
+  z.style.borderStyle = 'solid'; z.style.borderColor = 'var(--accent-line)';
+  z.querySelector('div').textContent = window.mp4AudioFile.name.slice(0, 44);
+}
+function _voxGpReflect(){
+  const z = document.getElementById('voxGpZone'); if (z) z.querySelector('div').textContent = 'Gameplay chargé';
+}
+function _voxEnter(){
+  _voxSetSw('voxSil', _voxSilOn); _voxSetSw('voxGp', _voxGpOn);
+  const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
+  if (window.mp4AudioFile) _voxReflect();
 }
 
 // ── LE RÉCAPITULATIF DIT CE QUI VA RÉELLEMENT ÊTRE FACTURÉ ─────────────────
