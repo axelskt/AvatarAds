@@ -5742,7 +5742,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-img-4K-nano-direct'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-img-btnfix-nano-block'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9171,10 +9171,11 @@ const _IMG_SUGGEST_FIX = [
   'change la couleur du t-shirt en rouge',
 ];
 function _imgInitSuggestions(){
-  // Puces d'exemples de prompt retirées à la demande d'Axel (04/08).
+  // Puces d'exemples de prompt retirées (Axel, 04/08). On VIDE le conteneur mais on
+  // NE le masque PAS : il reste un espaceur flex:1 pour que « Générer » garde sa
+  // place à droite (la ligne est en justify-content:space-between).
   const c = document.getElementById('imgSuggestions'); if(!c) return;
   c.innerHTML = '';
-  c.style.display = 'none';
 }
 
 function initImageGen(){
@@ -9428,7 +9429,15 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   }
   if(d?.error) throw new Error(d.error.message || String(d.error));
   const b64 = _nbExtractImage(d);
-  if(!b64) throw new Error('Aucune image renvoyée par Nano Banana Pro');
+  if(!b64){
+    // Gemini bloque le contenu sensible en renvoyant une réponse SANS image (et sans
+    // champ error) : on remonte la raison (SAFETY, PROHIBITED_CONTENT…) ET le mot
+    // « refusé » pour que l'appelant le traite comme un refus (→ carte « change de
+    // photo/prompt » + remboursement), pas comme une panne technique.
+    const _br = (d && d.promptFeedback && d.promptFeedback.blockReason)
+             || (d && d.candidates && d.candidates[0] && d.candidates[0].finishReason) || '';
+    throw new Error('Nano Banana Pro a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
+  }
   return 'data:image/jpeg;base64,' + b64;
 }
 // Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
