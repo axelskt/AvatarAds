@@ -164,32 +164,6 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   const baseDur = parseFloat(ffprobe(basePath, 'format=duration')) || plan.duration || 10
   plan.duration = Math.round(Math.min(plan.duration || baseDur, baseDur) * 100) / 100
 
-  // ── L'AVATAR OUVRE, PUIS LE CONTENU PREND LA MAIN ──────────────────────────
-  // Le chef d'orchestre pose parfois des fenêtres avatar TARD dans la vidéo. La
-  // dérivation ne sait pas les remplir en contenu (elle jette l'animation pour
-  // collision avec la fenêtre avatar) → la fenêtre sort VIDE, et on a PAYÉ le
-  // clip Hedra pour rien. Mesuré sur le montage 3df63a0d : 3 clips sur 5 générés
-  // puis jetés, 3 « blancs » à l'écran. On ne garde donc que le HOOK — le premier
-  // bloc de fenêtres avatar ; toute fenêtre qui commence après un grand silence
-  // (> 6 s) est rendue au contenu (règle d'Axel : « l'avatar ouvre toujours », et
-  // il veut une vraie animation à la place, pas le visage qui revient). Un
-  // re-rendu EXPLICITE de l'éditeur (userSlides/userBans) n'est pas touché : là,
-  // l'utilisateur décide fenêtre par fenêtre.
-  if (Array.isArray(plan.avatarSegments) && plan.avatarSegments.length > 1
-      && !(plan.userSlides && plan.userSlides.length) && !(plan.userBans && plan.userBans.length)) {
-    const segs = plan.avatarSegments.slice().sort((a, b) => (a.start || 0) - (b.start || 0))
-    const GAP_HOOK = 6
-    const hook = [segs[0]]
-    for (let i = 1; i < segs.length; i++) {
-      if ((segs[i].start || 0) - (hook[hook.length - 1].end || 0) <= GAP_HOOK) hook.push(segs[i])
-      else break
-    }
-    if (hook.length < segs.length) {
-      console.log(`▶ avatar borné au hook : ${hook.length}/${segs.length} fenêtre(s) gardées — ${segs.length - hook.length} tardive(s) rendue(s) au contenu (pas de lipsync payé dessus)`)
-      plan.avatarSegments = hook
-    }
-  }
-
   // Une base sans piste vidéo (montage parti d'un MP3) ne mérite pas de
   // sous-couche : le worker lui fabrique un fond noir, l'empiler n'ajouterait
   // qu'un décodage pour rien. Le drapeau vit ICI, dans la portée de renderJob —
