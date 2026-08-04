@@ -340,12 +340,12 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* SUBTITLE STYLE */
 .sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sub-card{border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 8px;cursor:pointer;transition:all .15s;background:var(--bg3)}
+.sub-card{border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer;transition:all .15s;background:var(--surface);display:flex;flex-direction:column}
 .sub-card:hover{border-color:var(--border2)}
-.sub-card.on{border-color:var(--orange);background:var(--orange-dim)}
-.sub-name{font-size:11px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.sub-card.on{border:2px solid var(--accent);background:var(--accent-soft);padding:13px}
+.sub-name{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text-2)}
 .sub-card.on .sub-name{color:var(--orange2)}
-.sub-preview{background:#000;border-radius:4px;padding:8px;min-height:38px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+.sub-preview{background:transparent;border-radius:8px;padding:6px 0;align-self:center;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 /* Cartes STYLE des sous-titres — layout 2 colonnes, plus grandes (réf. maquette) */
 .style-card{padding:11px 16px 13px;border-radius:13px}
 .style-card .sub-name{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-3)}
@@ -1855,7 +1855,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <input class="aa-slider" type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%">
               <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
-                <button onclick="resetSubStyle()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,71,87,0.5)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↺ Défaut</button>
+                
                 <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
                 <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Sauvegarder preset</button>
               </div>
@@ -1880,7 +1880,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="animLabel">Aucune</div>
                   </div>
                 </div>
-                <div id="animSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0"><div class="toggle-thumb" id="animThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s"></div></div>
+                <svg id="animChevron" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:.2s"><path d="M9 6l6 6-6 6"/></svg>
               </div>
               <div id="animMenu" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -15934,18 +15934,13 @@ function pickAnim(el,anim,label){
   updateSubPreview();
 }
 function toggleAnimMenu(){
-  animEnabled=!animEnabled;
-  const sw=document.getElementById('animSwitch');
-  const th=document.getElementById('animThumb');
+  // Maquette : accordéon. On EXPAND/COLLAPSE seulement — l'activation des
+  // animations est portée par pickAnim (« Aucune » = off), plus par un toggle.
   const menu=document.getElementById('animMenu');
-  const row=document.getElementById('animToggleRow');
-  if(animEnabled){
-    sw.style.background='var(--orange)';th.style.left='21px';
-    menu.style.display='block';row.style.borderColor='rgba(255,107,53,.4)';
-  }else{
-    sw.style.background='var(--bg5)';th.style.left='3px';
-    menu.style.display='none';row.style.borderColor='var(--border)';
-  }
+  const chev=document.getElementById('animChevron');
+  const ouvert = menu.style.display==='block';
+  menu.style.display = ouvert ? 'none' : 'block';
+  if(chev) chev.style.transform = ouvert ? 'none' : 'rotate(90deg)';
 }
 function applyColorPreset(name){
   const presets={
