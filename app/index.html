@@ -15174,18 +15174,50 @@ function _setAvatarSource(src){
   // On délimite désormais par les deux séparateurs qui structurent déjà
   // l'étape — « ta photo avatar » et « ou réutilise une vidéo existante » —
   // ce qui suit la structure au lieu d'énumérer des identifiants qui bougent.
+  // ── LA MAQUETTE NE MONTRE QUE L'ESSENTIEL ──────────────────────────────
+  // Axel, capture à l'appui : « supprime tout ce qui n'est pas sur le 2ème
+  // screen ». Sa maquette n'affiche, pour chaque source, QUE la zone de dépôt
+  // et son bouton secondaire. Les curseurs de taille, « Voir les avatars IA »,
+  // « Sauvegarder avatar », l'intertitre « ou réutilise une vidéo existante »
+  // et l'interrupteur vidéo n'y sont pas : ils encombrent une étape qui pose
+  // une seule question. Le code reste, seul l'affichage est retiré — le
+  // repositionnement se fait déjà en glissant l'avatar dans le preview.
+  const RETIRES = [
+    /voir les avatars ia/i, /sauvegarder avatar/i,
+    /hauteur de l.avatar/i, /largeur de l.avatar/i,
+    /ou r\u00e9utilise une vid\u00e9o existante/i,
+    /utiliser ma vid\u00e9o avatar existante/i,
+    /ta photo avatar/i,
+    /glisse ensuite l.avatar/i,
+  ];
   const enfants = [...document.getElementById('fs-1').children];
-  const iPhoto = enfants.findIndex((e) => /ta photo avatar/i.test(e.textContent || ''));
-  const iVideo = enfants.findIndex((e) => /ou r\u00e9utilise une vid\u00e9o existante/i.test(e.textContent || ''));
-  if (iPhoto >= 0 && iVideo > iPhoto) {
-    enfants.forEach((e, i) => {
-      if (i < iPhoto || e.id === 'avSrcCards' || e.id === 'avLibInline' || e.id === 'f-avatarimg') return;
-      // le ratio du split a sa propre logique d'affichage : on n'y touche pas
-      if (e.id === 'avSplitRatioRow' || e.id === 'splitToggleStep2' || e.id === 'splitPanelStep2') return;
-      const groupe = i < iVideo ? 'photo' : 'video';
-      e.style.display = (groupe === src) ? '' : 'none';
+  enfants.forEach((e) => {
+    if (['avSrcCards','avLibInline','f-avatarimg','avSplitRatioRow',
+         'splitToggleStep2','splitPanelStep2'].includes(e.id)) return;
+    if (e.classList && e.classList.contains('flbl')) return;   // « QUI PARLE DANS TA VIDÉO ? »
+    const txt = (e.textContent || '').trim();
+    if (!txt) { e.style.display = 'none'; return; }
+    // Un bloc n'est retiré QUE si tout son contenu correspond. Sinon on ne
+    // masque que les commandes visées à l'intérieur : la zone de dépôt photo
+    // héberge « Sauvegarder avatar », et la masquer en entier faisait
+    // disparaître le dépôt lui-même.
+    // On juge sur la PREMIÈRE LIGNE : un bloc porte souvent une description en
+    // dessous, et mesurer le texte entier laissait passer l'interrupteur vidéo.
+    // Première ligne, sauf quand elle ne porte qu'un pictogramme : « Voir les
+    // avatars IA » commence par son étoile seule sur sa ligne.
+    const lignes = txt.split('\n').map((x) => x.trim()).filter(Boolean);
+    const tete = (lignes[0] && lignes[0].length > 2) ? lignes[0] : (lignes.slice(0, 2).join(' '));
+    if (RETIRES.some((r) => r.test(tete))) { e.style.display = 'none'; return; }
+    e.querySelectorAll('button, a, .fld > div').forEach((x) => {
+      if (x.children.length > 2) return;
+      const t = (x.textContent || '').trim();
+      if (t && t.length < 70 && RETIRES.some((r) => r.test(t))) x.style.display = 'none';
     });
-  }
+    // ce qui reste appartient à la photo (dépôt, avatars sauvegardés) ou à la
+    // vidéo (dépôt vidéo, bibliothèque, bandeau de quota)
+    const estVideo = /vid\u00e9o avatar|biblioth\u00e8que|re-compositions/i.test(txt);
+    e.style.display = ((estVideo ? 'video' : 'photo') === src) ? '' : 'none';
+  });
 
   document.getElementById('avLibInline').style.display = src === 'library' ? '' : 'none';
   if (src === 'library') _remplirGrilleAvatars();
