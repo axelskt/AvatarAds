@@ -1716,7 +1716,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </button>
                 </div>
 
-                <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), sliders cachés -->
+                <!-- ZOOM DU GAMEPLAY — visible directement (demande d'Axel : le réglage le plus utilisé reste hors de l'accordéon) -->
+                <div>
+                  <div class="row" style="justify-content:space-between;margin-bottom:8px">
+                    <span class="label" style="margin:0">Zoom du gameplay</span>
+                    <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
+                  </div>
+                  <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                </div>
+
+                <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), autres réglages -->
                 <button onclick="_toggleSplitAdv()" id="splitAdvBtn" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer">
                   <div class="col" style="line-height:1.35">
                     <span style="font-weight:600;font-size:14px">Réglages du split screen</span>
@@ -1731,13 +1740,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                       <span class="mono accent" style="font-size:13px" id="splitRatioVal">35 / 65</span>
                     </div>
                     <input class="aa-slider" type="range" id="splitRatio" min="20" max="70" value="35" step="5" oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()" style="width:100%">
-                  </div>
-                  <div>
-                    <div class="row" style="justify-content:space-between;margin-bottom:8px">
-                      <span class="label" style="margin:0">Zoom du gameplay</span>
-                      <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
-                    </div>
-                    <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                   <div>
                     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -5715,7 +5717,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-style-reglages-anim-tapsync'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-zoomgameplay-imgfallback-nano'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9572,13 +9574,32 @@ async function generateImage(){
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ' + (_imgMode==='correct'?'Correction':'Génération')+' en cours…';
-      const url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+      // OpenAI /edits refuse souvent du contenu pourtant non explicite (filtre très
+      // strict, même en modération 'low'). Repli automatique sur Nano Banana Pro
+      // (Gemini), dont le filtre laisse passer le contenu influenceur : même crédit,
+      // et le toast dit quel moteur a rendu (cf. philosophie « repli systématique »).
+      let url, _imgEngine = 'OpenAI';
+      try {
+        url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+      } catch(_edErr){
+        const _em = String((_edErr && _edErr.message) || _edErr);
+        if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em)){
+          _imgEngine = 'Nano Banana Pro';
+          _imgProgStart('OpenAI a refusé — nouvel essai via Nano Banana Pro…');
+          toast('⚠️ OpenAI a refusé — nouvel essai via Nano Banana Pro…');
+          const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+          const _asp = _NB_FMT_ASPECT[size] || '9:16';
+          url = await _nbEdit(token, _refUrl, editPrompt, _asp, '2K');
+        } else {
+          throw _edErr;
+        }
+      }
       _imgMonthIncrement();
       _imgShowSingle(url, size);
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('✅ Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('✅ Image générée' + (_imgEngine!=='OpenAI' ? ' via '+_imgEngine : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
@@ -9678,7 +9699,7 @@ function _imgFriendlyErr(m){
               : /violence|graphic/i.test(m) ? 'contenu jugé violent'
               : /child|minor|csam/i.test(m) ? 'contenu refusé'
               : 'image refusée par le filtre de contenu';
-    return '🚫 Génération refusée par le filtre de sécurité d\'OpenAI ('+kind+'). Essaie une autre photo, un cadrage plus serré (visage/épaules) ou une tenue moins suggestive — le filtre est appliqué par OpenAI, pas par AvatarAds.';
+    return '🚫 Génération refusée par le filtre des deux moteurs d\'images ('+kind+'). On a essayé OpenAI puis Nano Banana Pro, les deux ont refusé — c\'est leur filtre, pas AvatarAds. Essaie une autre photo, un cadrage plus serré (visage/épaules) ou une tenue moins suggestive.';
   }
   if(/billing|quota|insufficient/i.test(m)) return 'Quota du moteur d\'images atteint — réessaie dans quelques minutes.';
   if(/timeout|timed out/i.test(m)) return 'Délai dépassé — réessaie.';
