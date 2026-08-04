@@ -1444,7 +1444,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                                     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Nettoie l'audio · supprime les pauses</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Coupe les blancs, les hésitations et les bruits de fond · volume constant</div>
                   </div>
                 </div>
                 <span id="silenceToolArrow" style="font-size:12px;color:var(--text3);transition:transform .25s;transform:rotate(90deg)">›</span>
@@ -1458,9 +1458,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
 
                 <!-- Gameplay upload -->
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Synchronise le gameplay à la voix</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Le gameplay suit ton audio</div>
                 <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:12px">
-                  <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div></div>
+                  <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">Quand ta voix est coupée, le gameplay est coupé au même endroit</div></div>
                   <div id="silenceGpFileInfo" style="display:none"><div style="font-size:18px">✅</div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
                   <div id="silenceGpAutoInfo" style="display:none"><div style="font-size:18px;color:var(--green)">✓</div><div style="font-size:12px;font-weight:700;margin-top:2px;color:var(--green)">Gameplay déjà chargé</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Utilisé pour la synchro · glisse ici pour en changer</div></div>
                 </div>
@@ -10539,6 +10539,7 @@ function updateSteps(){
   // Voix : une seule source depuis l'abandon de la synthèse. Le mode « clone /
   // preset » était le défaut au chargement ; sans ce forçage l'étape s'ouvrirait
   // sur un sélecteur masqué et un panneau fichier inerte.
+  if(step===2 && typeof _epurerVoix==='function') _epurerVoix();
   if(step===2 && typeof selectVoiceMode==='function'){
     try{ selectVoiceMode('mp4'); }catch(e){ console.warn('mode voix :', e); }
   }
@@ -15144,6 +15145,58 @@ function _syncDecorCards(){
               const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
     const chk = b.querySelector('.decor-chk'); if (chk) chk.style.display = on ? '' : 'none';
   });
+}
+
+// ── ÉTAPE VOIX : CE QUE MONTRE LA MAQUETTE, ET RIEN D'AUTRE ────────────────
+// Axel : « faut que ça ressemble au screen 2 ». Sa maquette n'a que trois
+// blocs, chacun précédé de son intertitre numéroté : le fichier, le nettoyage,
+// la synchro gameplay. L'app affichait en plus l'interrupteur « Ajouter un
+// audio depuis un fichier MP4 » — devenu inutile puisque c'est la seule source —
+// et tout l'atelier d'analyse des silences : forme d'onde, seuils, statistiques,
+// boutons d'écoute et d'export. Ce sont des outils de mise au point, pas une
+// étape de création. Le code reste, l'affichage est retiré.
+const VOIX_MASQUES = [
+  'silenceSourceInfo', 'silenceWaveWrap', 'silenceZoomWrap', 'silenceTrimWrap',
+  'silenceAnalyzeBtn', 'silenceResultsRow', 'silenceStats', 'silenceExportStatus',
+  'silenceThresholdSlider', 'silenceMinDurSlider', 'silencePaddingSlider',
+  'silenceListenBtn', 'silenceExportAudioBtn', 'silenceGpAutoInfo',
+];
+function _epurerVoix(){
+  const fs = document.getElementById('fs-2');
+  if (!fs || fs.dataset.epure === '1') return;
+
+  // l'interrupteur de source : il ne reste qu'un mode, il n'a plus de rôle
+  const bloc = [...fs.children].find((e) => /Ajouter un audio depuis un fichier/i.test(e.textContent || ''));
+  if (bloc && bloc.children[0]) bloc.children[0].style.display = 'none';
+
+  VOIX_MASQUES.forEach((id) => {
+    const e = document.getElementById(id);
+    // on remonte au conteneur qui porte le libellé, sinon on laisse une étiquette orpheline
+    // On masque l'élément, et son parent SEULEMENT s'il n'enveloppe que lui —
+    // sinon on emporte tout le bloc « Supprimer les silences » avec.
+    if (!e) return;
+    const par = e.parentElement;
+    if (par && par.children.length <= 2 && par.id !== 'silenceToolPanel'
+        && !par.classList.contains('fld') && par.id !== 'fs-2') par.style.display = 'none';
+    else e.style.display = 'none';
+  });
+
+  // les trois intertitres de la maquette
+  const titres = [
+    [bloc, '① Ton fichier audio'],
+    [[...fs.children].find((e) => /Supprimer les silences/i.test((e.textContent || '').slice(0, 80))), '② Nettoyage · optionnel'],
+  ];
+  titres.forEach(([cible, texte]) => {
+    if (!cible || cible.previousElementSibling?.dataset?.voixTitre) return;
+    const h = document.createElement('div');
+    h.dataset.voixTitre = '1';
+    h.className = 'flbl';
+    h.style.cssText = 'font-size:11px;margin:0 0 11px';
+    h.textContent = texte;
+    cible.parentElement.insertBefore(h, cible);
+  });
+
+  fs.dataset.epure = '1';
 }
 
 // ── QUI PARLE : UNE SOURCE À LA FOIS ───────────────────────────────────────
