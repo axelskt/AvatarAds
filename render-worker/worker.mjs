@@ -1138,6 +1138,28 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   console.log(`▶ lipsync : ${segs.length} scène(s) lancée(s) en parallèle (${PARALLELE} à la fois)`)
   await Promise.all(equipes)
   console.log(`▶ lipsync : ${depense} crédit(s) Hedra dépensé(s)${economie ? `, ${economie} économisé(s) par le cache` : ''}`)
+
+  // ── LE CLIP DOIT COUVRIR SON PANNEAU (#149) ──────────────────────────────────
+  // dynamic-engine rend chaque clip avatar JUSQU'AU panneau suivant (contiguïté),
+  // pas jusqu'à w.end. Depuis #149 les fenêtres à clip survivent toutes ; si un
+  // petit trou non remplissable (< 1,25 s) suit une fenêtre, son panneau déborde
+  // la durée du clip et HyperFrames refuse (« captured X of expected Y frames »).
+  // On GÈLE donc la dernière image en fin de chaque clip : le panneau a toujours
+  // de la matière ; le gel n'apparaît que si le panneau dépasse vraiment le clip
+  // (bref en pratique, et infiniment mieux qu'un rendu qui plante). Au passage on
+  // passe ces clips (Hedra 25 fps bruts) en 50 fps comme l'autre chemin (#36 fps).
+  for (const k of Object.keys(avatarClips)) {
+    const f = join(proj, avatarClips[k])
+    if (!existsSync(f)) continue
+    const tmp = f.replace(/\.mp4$/i, '.pad.mp4')
+    try {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', f,
+        '-vf', `tpad=stop_mode=clone:stop_duration=6,scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
+        '-movflags', '+faststart', tmp])
+      copyFileSync(tmp, f); rmSync(tmp, { force: true })
+    } catch (e) { console.warn(`gel de fin de clip ${k} ignoré :`, e.message) }
+  }
   return faits
 }
 

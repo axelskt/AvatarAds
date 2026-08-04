@@ -2330,6 +2330,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // mes tables de mots-cles ecrites a la main, pas les choix du modele.
   // Il passe donc EN PREMIER. Mes tables ne servent plus qu'a boucher ce qu'il
   // n'a pas couvert. L'ordre de reservation decide de tout dans ce moteur.
+
+  // ── 2b · LES FENÊTRES QUI PARLENT SONT RÉSERVÉES AVANT LE CONTENU (#149) ──────
+  // hasClips → chaque fenêtre du plan (w.clip ≥ 0) porte un clip Hedra. §3b ne les
+  // réservait qu'APRÈS placeServerAnims : les slides qui chevauchent 32→50 s
+  // prenaient le créneau, §3b jetait la fenêtre (overlaps) et le clip av2/av3
+  // partait à la poubelle → des « blancs » à l'écran (Axel, 04/08 : « un clip
+  // d'avatar à CHAQUE fenêtre »). On la réserve donc ICI ; le contenu se rogne
+  // dans les TROUS entre ces fenêtres. Le hook (§0) garde son claim ; les fenêtres
+  // SANS clip (respiration) gardent le plafond 6,5 s / 40 % de §3b.
+  if (hasClips) {
+    for (const w of plan.avatarSegments || []) {
+      if (w.adresse || !Number.isInteger(w.clip) || w.clip < 0) continue
+      const a = r2(w.start || 0), b = r2(w.end ?? a)
+      if (b - a < 0.6 || b - a > 12) continue   // trop court = flash ; trop long = fenêtre géante héritée → §3b la borne
+      if (overlaps(a, b)) continue              // le hook ou un choix explicite tient déjà ce créneau
+      w.__clipLocked = true
+      claim(a, b)
+    }
+  }
+
   placeServerAnims()
 
   // On repasse donc sur les beats AVANT de poser les fenêtres avatar : chaque
@@ -2550,8 +2570,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // (héritage du mode classique où l'avatar EST la vidéo). En Dynamique le
   // visage est une RESPIRATION : 6,5 s max par fenêtre, 40 % du temps au total.
   const adresses2 = (plan.avatarSegments || []).filter((w) => w.adresse)
+  // #149 — fenêtres à clip verrouillées en §2b : intouchables, hors du plafond de
+  // respiration (sinon `overlaps` les jetterait sur leur PROPRE claim).
+  const lockedClips = (plan.avatarSegments || []).filter((w) => w.__clipLocked)
   if ((plan.avatarSegments || []).length) {
-    plan.avatarSegments = plan.avatarSegments.filter((w) => !w.adresse)
+    plan.avatarSegments = plan.avatarSegments.filter((w) => !w.adresse && !w.__clipLocked)
     const MAXW = 6.5
     let budget = D * 0.4
     // la fenêtre du hook a déjà été réservée en §0 : on garde ses BORNES, mais
@@ -2585,7 +2608,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // LES ADRESSES DIRECTES DE §0b SURVIVENT. Elles ont déjà réservé leur place
     // avant tout le monde ; les repasser dans le rognage ci-dessus les faisait
     // tomber sur leur propre réservation (`overlaps`) et disparaître.
-    plan.avatarSegments = [...clamped, ...adresses2].sort((x, y) => x.start - y.start)
+    plan.avatarSegments = [...clamped, ...lockedClips, ...adresses2].sort((x, y) => x.start - y.start)
   }
 
   // …et s'il n'en reste presque rien (l'orchestrateur n'en propose souvent QU'UNE,
