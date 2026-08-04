@@ -346,6 +346,13 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .sub-name{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text-2)}
 .sub-card.on .sub-name{color:var(--orange2)}
 .sub-preview{background:transparent;border-radius:8px;padding:6px 0;align-self:center;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+/* Cartes « Animation des sous-titres » — maquette : compactes, demo dans une puce --panel-1 */
+.anim-card{border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;background:var(--surface);display:flex;flex-direction:column;gap:9px;text-align:left}
+.anim-card:hover{border-color:var(--border-2)}
+.anim-card.on{border:2px solid var(--accent);background:var(--accent-soft);padding:11px}
+.anim-name{font-size:13px;font-weight:500;color:var(--text)}
+.anim-card.on .anim-name{font-weight:700}
+.anim-demo{font-family:var(--mono);font-size:12px;color:var(--text-3);background:var(--panel-1);border-radius:8px;padding:9px 0;text-align:center}
 /* Cartes STYLE des sous-titres — layout 2 colonnes, plus grandes (réf. maquette) */
 .style-card{padding:11px 16px 13px;border-radius:13px}
 .style-card .sub-name{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-3)}
@@ -1800,36 +1807,36 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- RÉGLAGES AVANCÉS (repliable, fermé par défaut) -->
             <details class="adv" style="margin-bottom:16px">
-              <summary style="cursor:pointer;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:10px;user-select:none"><span>Réglages avancés <span style="font-weight:400;color:var(--text3);font-family:var(--mono);font-size:10px">couleurs · taille · position · étirement</span></span><span class="adv-caret" style="font-size:11px;color:var(--text3);transition:transform .2s">▾</span></summary>
+              <summary style="cursor:pointer;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:14px;user-select:none;list-style:none"><span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg><span style="font-weight:600;font-size:14.5px">Réglages avancés</span><span class="mono faint" style="font-size:11.5px">couleurs · taille · position · étirement</span></span><span class="adv-caret" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span></summary>
             <div style="margin-top:12px">
-            <!-- COULEURS -->
-            <div class="fld" style="margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Couleurs</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 1 (accentué)</div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input type="color" id="color-c1" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
-                    <input type="text" id="color-c1-hex" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+            <!-- COULEURS — maquette ColorField : boîte bordée --panel-1 + pastille arrondie + hex -->
+            <div class="fld" style="margin-bottom:16px">
+              <div class="label">Couleurs</div>
+              <div class="row gap16" style="margin-bottom:14px">
+                <div class="col" style="flex:1;gap:8px">
+                  <span class="mono faint" style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">Couleur 1 (accentué)</span>
+                  <div class="row gap8" style="border:1px solid var(--border);border-radius:12px;padding:8px 10px;background:var(--panel-1)">
+                    <input type="color" id="color-c1" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1-hex').value=this.value;updateSubPreview()" style="width:26px;height:26px;border:1px solid var(--border-2);border-radius:7px;cursor:pointer;padding:0;flex:0 0 auto;background:none">
+                    <input class="mono" type="text" id="color-c1-hex" value="#FFE500" oninput="subColors.c1=this.value;document.getElementById('color-c1').value=this.value;updateSubPreview()" style="background:transparent;border:none;outline:none;font-size:13.5px;width:100%;color:var(--text)">
                   </div>
                 </div>
-                <div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Couleur 2 (autres)</div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input type="color" id="color-c2" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2-hex').value=this.value;updateSubPreview()" style="width:32px;height:26px;border:none;border-radius:5px;cursor:pointer;padding:1px">
-                    <input type="text" id="color-c2-hex" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2').value=this.value;updateSubPreview()" style="flex:1;font-size:11px;font-family:var(--mono);padding:5px 7px">
+                <div class="col" style="flex:1;gap:8px">
+                  <span class="mono faint" style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">Couleur 2 (autres)</span>
+                  <div class="row gap8" style="border:1px solid var(--border);border-radius:12px;padding:8px 10px;background:var(--panel-1)">
+                    <input type="color" id="color-c2" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2-hex').value=this.value;updateSubPreview()" style="width:26px;height:26px;border:1px solid var(--border-2);border-radius:7px;cursor:pointer;padding:0;flex:0 0 auto;background:none">
+                    <input class="mono" type="text" id="color-c2-hex" value="#ffffff" oninput="subColors.c2=this.value;document.getElementById('color-c2').value=this.value;updateSubPreview()" style="background:transparent;border:none;outline:none;font-size:13.5px;width:100%;color:var(--text)">
                   </div>
                 </div>
               </div>
-              <div style="display:flex;gap:5px;flex-wrap:wrap">
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);width:100%;margin-bottom:3px">Presets :</div>
-                <button onclick="applyColorPreset('hormozi')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Hormozi</button>
-                <button onclick="applyColorPreset('badis')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FFE500;display:inline-block"></span>Badis</button>
-                <button onclick="applyColorPreset('mrbeast')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D2D;display:inline-block"></span>MrBeast</button>
-                <button onclick="applyColorPreset('iman')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#fff;border:1px solid #444;display:inline-block"></span>Iman</button>
-                <button onclick="applyColorPreset('neon')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#00FF87;display:inline-block"></span>Neon</button>
-                <button onclick="applyColorPreset('fire')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#FF4500;display:inline-block"></span>Fire</button>
-                <button onclick="applyColorPreset('purple')" style="display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono)"><span style="width:8px;height:8px;border-radius:50%;background:#BF5FFF;display:inline-block"></span>Purple</button>
+              <div class="row" style="gap:8px;flex-wrap:wrap">
+                <span class="mono faint" style="font-size:11px;align-self:center">Presets :</span>
+                <button onclick="applyColorPreset('hormozi')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#FFE500;border:1px solid rgba(255,255,255,.2)"></span>Hormozi</button>
+                <button onclick="applyColorPreset('badis')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#FFE500;border:1px solid rgba(255,255,255,.2)"></span>Badis</button>
+                <button onclick="applyColorPreset('mrbeast')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#FF2D2D;border:1px solid rgba(255,255,255,.2)"></span>MrBeast</button>
+                <button onclick="applyColorPreset('iman')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#fff;border:1px solid rgba(255,255,255,.2)"></span>Iman</button>
+                <button onclick="applyColorPreset('neon')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#00FF87;border:1px solid rgba(255,255,255,.2)"></span>Neon</button>
+                <button onclick="applyColorPreset('fire')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#FF4500;border:1px solid rgba(255,255,255,.2)"></span>Fire</button>
+                <button onclick="applyColorPreset('purple')" class="row gap8" style="padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text);font-family:var(--font)"><span style="width:10px;height:10px;border-radius:50%;background:#BF5FFF;border:1px solid rgba(255,255,255,.2)"></span>Purple</button>
               </div>
             </div>
 
@@ -1875,10 +1882,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subWpgVal">2</span>
               </div>
               <input class="aa-slider" type="range" id="subWpg" min="1" max="5" value="2" oninput="cfg.subWpg=+this.value;document.getElementById('subWpgVal').textContent=this.value;updateSubPreview();updateLivePreview()" style="width:100%">
-              <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:7px">
-                
-                <button onclick="openSubPresetPicker()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↩ Appliquer preset</button>
-                <button onclick="openSubPresetSave()" style="padding:4px 12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Sauvegarder preset</button>
+              <div class="row gap8" style="margin-top:14px">
+                <button onclick="openSubPresetPicker()" class="btn btn-ghost btn-sm grow">Appliquer preset</button>
+                <button onclick="openSubPresetSave()" class="btn btn-ghost btn-sm grow">Sauvegarder preset</button>
               </div>
             </div>
             </div>
@@ -1893,24 +1899,24 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- ANIMATIONS -->
             <div class="fld" style="margin-bottom:16px">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;cursor:pointer" onclick="toggleAnimMenu()" id="animToggleRow">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:16px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-                  <div>
-                    <div style="font-size:12px;font-weight:700">Animation des sous-titres</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="animLabel">Aucune</div>
+              <div class="row card" style="justify-content:space-between;align-items:center;padding:13px 15px;cursor:pointer;text-align:left" onclick="toggleAnimMenu()" id="animToggleRow">
+                <div class="row gap12" style="align-items:center">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+                  <div class="col" style="line-height:1.35">
+                    <span style="font-weight:600;font-size:14.5px">Animation des sous-titres</span>
+                    <span class="faint" style="font-size:12px" id="animLabel">Aucune</span>
                   </div>
                 </div>
-                <svg id="animChevron" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:.2s"><path d="M9 6l6 6-6 6"/></svg>
+                <svg id="animChevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="faint" style="flex:0 0 auto;transition:.2s"><path d="M9 6l6 6-6 6"/></svg>
               </div>
               <div id="animMenu" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <div class="sub-card anim-card on" id="anim-none" onclick="pickAnim(this,'none','Aucune')"><div class="sub-name">Aucune</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">A B C</div></div>
-                  <div class="sub-card anim-card" id="anim-pop" onclick="pickAnim(this,'pop','Pop')"><div class="sub-name">Pop</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↗ A ↗ B</div></div>
-                  <div class="sub-card anim-card" id="anim-bounce" onclick="pickAnim(this,'bounce','Bounce')"><div class="sub-name">Bounce</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">↑ A ↑ B</div></div>
-                  <div class="sub-card anim-card" id="anim-slide" onclick="pickAnim(this,'slide','Slide')"><div class="sub-name">Slide</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">→ A → B</div></div>
-                  <div class="sub-card anim-card" id="anim-fade" onclick="pickAnim(this,'fade','Fade')"><div class="sub-name">Fade</div><div class="sub-preview" style="font-size:10px;color:var(--text3);font-family:var(--mono)">A · B</div></div>
-                  <div class="sub-card anim-card" id="anim-karaoke" onclick="pickAnim(this,'karaoke','Karaoké')"><div class="sub-name">Karaoké</div><div class="sub-preview" style="font-size:10px;font-family:var(--mono)"><span style="color:var(--orange2)">A</span><span style="color:var(--text3)"> B C</span></div></div>
+                  <div class="anim-card on" id="anim-none" onclick="pickAnim(this,'none','Aucune')"><div class="anim-name">Aucune</div><div class="anim-demo">A B C</div></div>
+                  <div class="anim-card" id="anim-pop" onclick="pickAnim(this,'pop','Pop')"><div class="anim-name">Pop</div><div class="anim-demo">↗ A ↗ B</div></div>
+                  <div class="anim-card" id="anim-bounce" onclick="pickAnim(this,'bounce','Bounce')"><div class="anim-name">Bounce</div><div class="anim-demo">↑ A ↑ B</div></div>
+                  <div class="anim-card" id="anim-slide" onclick="pickAnim(this,'slide','Slide')"><div class="anim-name">Slide</div><div class="anim-demo">→ A → B</div></div>
+                  <div class="anim-card" id="anim-fade" onclick="pickAnim(this,'fade','Fade')"><div class="anim-name">Fade</div><div class="anim-demo">A · B</div></div>
+                  <div class="anim-card" id="anim-karaoke" onclick="pickAnim(this,'karaoke','Karaoké')"><div class="anim-name">Karaoké</div><div class="anim-demo"><span style="color:var(--accent-2)">A</span> B C</div></div>
                 </div>
               </div>
             </div>
@@ -5709,7 +5715,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-style-splitscreen-1a1'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-style-reglages-anim-tapsync'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28365,7 +28371,20 @@ function startTapSync(){
   if(!allWords.length){
     const ta = document.getElementById('transcriptInput');
     const src = (ta && ta.value.trim()) || pendingTranscript || '';
-    if(!src){ toast('⚠️ Applique d\'abord ton transcript'); return; }
+    if(!src){
+      // Le Générateur n'a plus d'étape « transcript écrit » : le texte se détecte
+      // depuis l'audio. Si un audio existe, on lance la détection ; sinon on guide.
+      const hasAudio = (mp4AudioEnabled && mp4AudioFile) || mp4AudioFile
+        || (window._bypassHedraOn && (window._bypassHedraUrl || window._bypassHedraFile))
+        || (results && results.audioBlob);
+      if(hasAudio){
+        toast('🎙️ On détecte le texte depuis ton audio…');
+        if(typeof whisperTranscribe === 'function') whisperTranscribe();
+        return;
+      }
+      toast('⚠️ Ajoute d\'abord un audio (étape Voix) — on détectera le texte automatiquement');
+      return;
+    }
     allWords = src.trim().split(/[\s\n]+/).filter(w=>w).map(w=>w.toUpperCase().replace(/[.,!?;:"«»]/g,''));
   }
 
