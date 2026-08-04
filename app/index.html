@@ -1128,7 +1128,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button id="removeAvatarBtn" onclick="removeAvatar()" style="display:none;flex:1;padding:9px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:9px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer avatar</button>
               </div>
               <div style="display:flex;gap:6px;margin-top:6px">
-                <button onclick="openAvatarPresetPicker()" style="flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">↩ Avatars sauvegardés</button>
+                <button onclick="openAvatarPresetPicker()" style="flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">↩ Mes avatars sauvegardés</button>
                 <button id="saveAvatarPresetBtn" onclick="openAvatarPresetSave()" style="display:none;flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--surface-2)';this.style.borderColor='var(--border-2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Sauvegarder avatar</button>
               </div>
             </div>
@@ -1216,15 +1216,22 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- Bibliothèque picker -->
               <button onclick="openLibVideoPicker()" style="width:100%;padding:9px 12px;background:transparent;border:1.5px dashed var(--border2);border-radius:8px;color:var(--text);font-size:11.5px;font-family:var(--mono);font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text)'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> ou utilise une vidéo depuis la bibliothèque
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque
               </button>
 
               <div id="bypassQuotaInfo" style="padding:10px 12px;background:rgba(0,217,126,0.07);border:1px solid rgba(0,217,126,0.2);border-radius:8px;font-size:11px;font-family:var(--mono);color:var(--green);line-height:1.6">
-                ✅ Mode actif — Hedra ignoré · Génère un audio, choisis tes sous-titres &amp; ton gameplay, puis télécharge. Aucun crédit débité.
-              </div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M20 6L9 17l-5-5"/></svg>Aucun crédit avatar consommé · <span id="bypassQuotaNb">70</span> re-compositions restantes ce mois
+                </div>
             </div>
             <!-- /BYPASS HEDRA -->
 
+          
+            <!-- Présent sur la maquette, en bas de l'étape. Il vivait jusqu'ici
+                 dans l'ancienne étape Produit, donc masqué avec elle. -->
+            <button type="button" data-reset-total="1"
+              onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (avatar, voix, gameplay, style).')) location.reload()"
+              style="width:100%;margin-top:18px;padding:12px;background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:13.5px;cursor:pointer;transition:color .15s"
+              onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">Réinitialiser totalement</button>
           </div><!-- /fs-2 -->
 
           <!-- STEP 3 -->
@@ -15247,6 +15254,7 @@ function _setAvatarSource(src){
   enfants.forEach((e) => {
     if (['avSrcCards','avLibInline','f-avatarimg','avSplitRatioRow',
          'splitToggleStep2','splitPanelStep2'].includes(e.id)) return;
+    if (e.dataset && e.dataset.resetTotal) return;   // visible dans les trois sources
     if (e.classList && e.classList.contains('flbl')) return;   // « QUI PARLE DANS TA VIDÉO ? »
     const txt = (e.textContent || '').trim();
     if (!txt) { e.style.display = 'none'; return; }
