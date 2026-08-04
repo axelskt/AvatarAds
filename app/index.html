@@ -3086,6 +3086,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
         </div>
 
+        <!-- LES DEUX MOTEURS ONT REFUSÉ — change de photo de réf + prompt -->
+        <div id="imgBothRefused" class="rise" style="display:none;width:100%;max-width:520px;margin:0 auto">
+          <div style="background:var(--surface);border:1px solid rgba(255,71,87,0.28);border-radius:16px;padding:22px 20px;text-align:center">
+            <div style="width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);display:grid;place-items:center">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ff8a94" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h0"/></svg>
+            </div>
+            <div style="font-weight:700;font-size:16px;margin-bottom:6px">Refusée par les deux moteurs</div>
+            <div class="faint" style="font-size:13px;line-height:1.55;margin-bottom:18px">OpenAI <b style="color:var(--text-2)">et</b> Nano Banana Pro ont refusé cette image. Essaie une <b style="color:var(--text-2)">autre photo de référence</b> (cadrage plus serré, tenue moins suggestive) et/ou un <b style="color:var(--text-2)">autre prompt</b>. Tes crédits ont été remboursés.</div>
+            <button onclick="document.getElementById('imgBothRefused').style.display='none';_imgIdleShow(true)" style="width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border-3)'" onmouseout="this.style.borderColor='var(--border-2)'">Compris</button>
+          </div>
+        </div>
+
         <!-- RÉSULTAT MULTI (2-3 images) -->
         <div id="imgResultMulti" class="rise" style="display:none;width:100%;max-width:640px;margin:0 auto">
           <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px">
@@ -5730,7 +5742,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-img-nano-optin-5cr'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-04-img-presets-off-bothrefused'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9159,20 +9171,10 @@ const _IMG_SUGGEST_FIX = [
   'change la couleur du t-shirt en rouge',
 ];
 function _imgInitSuggestions(){
+  // Puces d'exemples de prompt retirées à la demande d'Axel (04/08).
   const c = document.getElementById('imgSuggestions'); if(!c) return;
-  const list = (_imgMode==='correct' ? _IMG_SUGGEST_FIX : _IMG_SUGGEST_GEN).slice(0,2);
   c.innerHTML = '';
-  list.forEach(s => {
-    const b = document.createElement('button');
-    b.className = 'pill';
-    b.textContent = s.length > 34 ? s.slice(0,32)+'…' : s;
-    b.title = s;
-    b.style.cssText += 'cursor:pointer;font-size:12.5px;padding:7px 13px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    b.onmouseover = () => { b.style.borderColor='var(--accent-line)'; b.style.color='var(--accent-2)'; };
-    b.onmouseout  = () => { b.style.borderColor='var(--border)'; b.style.color='var(--text-2)'; };
-    b.onclick = () => { const p=document.getElementById('imgPrompt'); p.value = s; _imgUpdateCharCount(p); p.focus(); };
-    c.appendChild(b);
-  });
+  c.style.display = 'none';
 }
 
 function initImageGen(){
@@ -9732,6 +9734,7 @@ function _imgShowNanoOffer(prompt, size){
   _imgIdleShow(false);
   const r=document.getElementById('imgResult'); if(r) r.style.display='none';
   const m=document.getElementById('imgResultMulti'); if(m) m.style.display='none';
+  const bad=document.getElementById('imgBothRefused'); if(bad) bad.style.display='none';
   const el=document.getElementById('imgNanoOffer'); if(!el) return;
   el.style.display='block';
   try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(_){}
@@ -9768,8 +9771,17 @@ async function _imgRetryViaNano(){
     toast('✅ Image générée via Nano Banana Pro · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
   }catch(e){
     await creditsFlowRefund('Nano Banana Pro a échoué');
-    toast('⚠️ '+_imgFriendlyErr((e&&e.message)||String(e)));
-    _imgIdleShow(true);
+    const _m = String((e&&e.message)||e);
+    const _isRefus = /safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m);
+    if(_isRefus){
+      // Les deux moteurs ont refusé → message clair : changer la photo de réf + le prompt.
+      const r=document.getElementById('imgResult'); if(r) r.style.display='none';
+      _imgIdleShow(false);
+      const bad=document.getElementById('imgBothRefused'); if(bad){ bad.style.display='block'; try{ bad.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
+    } else {
+      toast('⚠️ '+_imgFriendlyErr(_m));
+      _imgIdleShow(true);
+    }
   }finally{
     _imgProgStop();
     if(overlay) overlay.style.display='none';
