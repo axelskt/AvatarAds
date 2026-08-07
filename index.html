@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
 <title>AvatarAds — Tes vidéos virales générées par l'IA sans montrer ton visage</title>
@@ -17,7 +17,14 @@
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Fonts NON bloquantes (PageSpeed : « requêtes de blocage du rendu ») : preload + bascule
+     media=print→all à l'onload. display=swap déjà dans l'URL → texte visible immédiatement
+     en police système, puis swap. Rendu final strictement identique. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<!-- Image LCP du hero (téléphone central) : préchargée en priorité haute -->
+<link rel="preload" as="image" href="assets/lp/hero-homme.webp" fetchpriority="high">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -298,6 +305,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   </div>
 </div>
 
+<!-- <main> : repère principal (audit accessibilité « document sans landmark ») — aucun impact visuel -->
+<main>
+
 <!-- ══════════ 3 · HERO V2 ══════════ -->
 <section class="wrap hero-sec" style="padding-top:64px;padding-bottom:30px">
   <div class="hero2-grid">
@@ -361,14 +371,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds" loading="lazy"></div>
+        <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds" width="941" height="1672" loading="lazy" decoding="async"></div>
       </div>
 
       <!-- phone droite : portrait femme IA + badges -->
       <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille.webp" alt="Portrait femme généré par IA" loading="lazy"></div>
+        <div class="scr"><img src="assets/lp/hero-fille.webp" alt="Portrait femme généré par IA" width="900" height="1612" loading="lazy" decoding="async"></div>
         <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
           <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
             <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
@@ -386,7 +396,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr" style="inset:5px;border-radius:39px">
-          <img src="assets/lp/hero-homme.webp" alt="Portrait homme généré par IA" fetchpriority="high">
+          <img src="assets/lp/hero-homme.webp" alt="Portrait homme généré par IA" width="900" height="1342" fetchpriority="high" decoding="async">
           <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
           <div class="ph-rail" style="bottom:22px">
             <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
@@ -479,7 +489,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <img src="assets/lp/lipsync.jpg" alt="Lipsync IA — avatar parlant" loading="lazy">
+          <img src="assets/lp/lipsync.jpg" alt="Lipsync IA — avatar parlant" width="1100" height="733" loading="lazy" decoding="async">
           <div class="sc-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
       </div>
@@ -502,9 +512,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="reveal sc-mediawrap" style="position:relative">
         <!-- comparateur avant/après : les deux rendus superposés, poignée centrale draggable (souris + tactile) -->
         <div id="baSlider" style="position:relative;width:100%;border-radius:18px;overflow:hidden;cursor:ew-resize;border:1px solid rgba(255,255,255,.1);filter:drop-shadow(0 30px 60px rgba(0,0,0,.7));user-select:none;-webkit-user-select:none;touch-action:pan-y">
-          <img src="assets/lp/ia-after.jpg" alt="Résultat IA — après" loading="lazy" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%">
+          <img src="assets/lp/ia-after.jpg" alt="Résultat IA — après" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%">
           <div id="baBefore" style="position:absolute;inset:0;width:50%;overflow:hidden">
-            <img src="assets/lp/ia-before.jpg" alt="Résultat IA — avant" loading="lazy" draggable="false" style="position:absolute;top:0;left:0;height:100%;width:200%;max-width:none;object-fit:cover;object-position:50% 22%;filter:saturate(.7) blur(.4px)">
+            <img src="assets/lp/ia-before.jpg" alt="Résultat IA — avant" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;top:0;left:0;height:100%;width:200%;max-width:none;object-fit:cover;object-position:50% 22%;filter:saturate(.7) blur(.4px)">
           </div>
           <span class="ba-tag" style="left:12px">AVANT</span>
           <span class="ba-tag" style="right:12px">APRÈS</span>
@@ -523,7 +533,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo.jpg" playsinline preload="metadata" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
+          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo.jpg" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
           <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px;pointer-events:none">✦ Veo 3.1</span>
           <div class="sc-play" id="veoPlayWrap" onclick="veoToggle()" style="pointer-events:auto;cursor:pointer"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
@@ -551,7 +561,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="card feat-card-grid" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
     <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
       <!-- claude (image placeholder — à remplacer par la version sans logo) -->
-      <div class="feat-mock" data-feat="claude" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/feat-claude.jpg" alt="AvatarAds × Claude" loading="lazy"></div></div>
+      <div class="feat-mock" data-feat="claude" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/feat-claude.jpg" alt="AvatarAds × Claude" width="1200" height="800" loading="lazy" decoding="async"></div></div>
       <!-- split -->
       <div class="feat-mock" data-feat="split" style="padding:20px"><div class="feat-demo">
         <div class="col" style="align-items:center;gap:18px">
@@ -570,7 +580,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         </div>
       </div></div>
       <!-- soustitres -->
-      <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres.jpg" alt="Sous-titres animés" loading="lazy"></div></div>
+      <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres.jpg" alt="Sous-titres animés" width="1100" height="1100" loading="lazy" decoding="async"></div></div>
       <!-- voix -->
       <div class="feat-mock" data-feat="voix" style="padding:8px"><div class="feat-demo">
         <div class="col" style="align-items:center;gap:20px;width:80%;max-width:380px">
@@ -583,14 +593,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="feat-mock" data-feat="montage" style="padding:20px"><div class="feat-demo">
         <div class="row" id="mtDemoRow" style="gap:10px;position:relative;justify-content:center;width:100%;max-width:380px">
           <div style="flex:1;min-width:0;position:relative;aspect-ratio:9/16;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)">
-            <video src="assets/lp/montage-avant.mp4" poster="assets/lp/montage-avant.jpg" muted loop playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+            <video src="assets/lp/montage-avant.mp4" poster="assets/lp/montage-avant.jpg" muted loop playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
             <span style="position:absolute;top:9px;left:9px;z-index:2;font-size:clamp(8.5px,2.2vw,10px);font-weight:800;color:#fff;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:6px">AVANT</span>
           </div>
           <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:38px;height:38px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </div>
           <div style="flex:1;min-width:0;position:relative;aspect-ratio:9/16;border-radius:14px;overflow:hidden;border:1px solid var(--accent-line)">
-            <video src="assets/lp/montage-apres.mp4" poster="assets/lp/montage-apres.jpg" muted loop playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+            <video src="assets/lp/montage-apres.mp4" poster="assets/lp/montage-apres.jpg" muted loop playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
             <span style="position:absolute;top:9px;right:9px;z-index:2;font-size:clamp(8.5px,2.2vw,10px);font-weight:800;color:#1A0A02;background:var(--accent-2);padding:3px 8px;border-radius:6px;white-space:nowrap">APRÈS · IA</span>
           </div>
         </div>
@@ -611,7 +621,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div></div>
       <!-- editeur -->
       <!-- 🎬 À REMPLACER par la vidéo quand Axel l'envoie : <video src="assets/lp/lipsync-montage.mp4" poster="assets/lp/lipsync.jpg" muted loop playsinline …> -->
-      <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur.jpg" alt="Éditeur vidéo" loading="lazy"></div></div>
+      <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur.jpg" alt="Éditeur vidéo" width="1100" height="1100" loading="lazy" decoding="async"></div></div>
       <!-- library -->
       <div class="feat-mock" data-feat="library" style="padding:8px"><div class="feat-demo">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:80%;max-width:360px" id="libGrid"></div>
@@ -662,16 +672,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- desktop : arc + cartes chevauchantes -->
   <div class="reveal hide-mobile" style="position:relative;max-width:1080px;margin:0 auto">
     <div class="row" style="justify-content:center;align-items:flex-start;gap:0;padding-bottom:10px">
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
 
     <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
       <div style="width:300px;height:268px;flex:0 0 auto;border-radius:22px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.12);box-shadow:0 34px 70px -30px rgba(0,0,0,.85)">
-        <img src="assets/lp/gen-veo.jpg" alt="Veo 3" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+        <img src="assets/lp/gen-veo.jpg" alt="Veo 3" width="1100" height="1100" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.72));pointer-events:none"></div>
         <div style="position:absolute;left:18px;bottom:18px;right:18px;pointer-events:none">
           <div class="display" style="font-size:24px;font-weight:800;color:#fff">Veo 3</div>
@@ -702,9 +712,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- mobile -->
   <div class="reveal only-mobile" style="flex-direction:column;gap:16px;max-width:460px;margin:0 auto">
     <div class="row" style="gap:0;justify-content:center;align-items:center">
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
     <div class="card col" style="padding:16px;border-color:var(--accent-line)">
       <textarea id="genPromptM" placeholder="Décris la vidéo que tu veux créer…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
@@ -774,7 +784,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Fini les abonnements séparés.</p>
     </div>
     <div class="reveal" style="border-radius:22px;overflow:hidden;box-shadow:0 26px 90px -34px rgba(255,107,53,.4)">
-      <img src="assets/lp/tout-en-un.jpg" alt="Tous tes outils vidéo réunis dans AvatarAds" loading="lazy" onerror="this.style.display='none'" style="display:block;width:100%;height:auto">
+      <img src="assets/lp/tout-en-un.jpg" alt="Tous tes outils vidéo réunis dans AvatarAds" width="1536" height="1024" loading="lazy" decoding="async" onerror="this.style.display='none'" style="display:block;width:100%;height:auto">
     </div>
   </div>
 </section>
@@ -814,6 +824,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   </div>
 </section>
 
+</main>
+
 <!-- ══════════ 13 · FOOTER ══════════ -->
 <footer style="border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(124,92,255,.05),transparent 40%),var(--bg);overflow:hidden">
   <div class="wrap" style="padding-top:64px;padding-bottom:10px">
@@ -827,8 +839,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           Crée des vidéos faceless virales avec l'IA : avatar, voix clonée, sous-titres — sans caméra. Une question ? Notre équipe est disponible pour t'aider.
         </p>
         <div class="row gap12" style="margin-top:20px">
-          <a href="mailto:contact@avatarads.fr" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg></a>
-          <a href="https://whop.com/avatarads/" target="_blank" rel="noopener" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg></a>
+          <a href="mailto:contact@avatarads.fr" aria-label="Nous contacter par e-mail" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg></a>
+          <a href="https://whop.com/avatarads/" target="_blank" rel="noopener" aria-label="AvatarAds sur Whop" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg></a>
         </div>
       </div>
       <div>
@@ -1117,7 +1129,7 @@ var V='#7C5CFF';
     texts.appendChild(tx);
     var c=document.createElement('div');
     c.className='stack-card'; c.style.zIndex=i+1; c.style.opacity=i===0?1:0;
-    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" loading="lazy"><span class="step-badge">'+s.n+' / 05</span></div>';
+    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 05</span></div>';
     cards.appendChild(c);
   });
   // mobile
@@ -1129,7 +1141,7 @@ var V='#7C5CFF';
       +'<div><span class="mono" style="font-size:11px;color:'+V+';font-weight:600">'+s.n+'</span>'
       +'<h3 class="display" style="font-size:20px;font-weight:700">'+s.t+'</h3></div></div>'
       +'<p class="muted" style="font-size:14.5px;line-height:1.55;margin-bottom:14px">'+s.d+'</p>'
-      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" loading="lazy"><span class="step-badge">'+s.n+' / 05</span></div>';
+      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 05</span></div>';
     ml.appendChild(d);
   });
 })();
