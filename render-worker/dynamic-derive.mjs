@@ -2715,6 +2715,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // chose que la voix. `clipFrom` dit au worker où recouper le clip ; les
       // lèvres retombent sur leurs mots.
       const glisse = Number.isInteger(w.clip) && w.clip >= 0 && a > r2(w.start || 0) + 0.05
+      // ── UN COURT RELIQUAT QUI A GLISSÉ RESTE AU CONTENU (Axel, 08/08) ──────
+      // La fenêtre 32,08→38,06 (clip av2) poussée à 36,4→38,06 par le connect/
+      // chat n'est qu'un reliquat de 1,7 s : y coller l'avatar (a) contredit le
+      // « le reste c'est good » d'Axel sur la zone 32-46 en animations, et (b)
+      // ajoute un 6ᵉ clip vidéo qui fait exploser la RAM du rendu. En dessous de
+      // 2,5 s ET après avoir glissé, on rend la fenêtre aux animations validées.
+      if (glisse && b - a < 2.5) continue
       clamped.push({ ...w, start: a, end: b,
         ...(glisse ? { clipFrom: r2((Number(w.clipFrom) || 0) + a - (w.start || 0)) } : {}) })
       if (glisse) console.log(`▶ fenêtre avatar av${w.clip} décalée à ${a}s → le clip reprend à ${r2(a - (w.start || 0))}s dedans (lèvres synchrones)`)
