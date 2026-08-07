@@ -700,10 +700,15 @@ export function buildDynamicComposition(plan, opts = {}) {
         // largeur, posée haut. Le visage reste visible dessous dans les deux
         // cas — la règle « l'avatar ouvre toujours » n'est pas entamée.
         const large = rat > 1.15
-        const iw = Math.round(W * (large ? 0.92 : 0.42))
+        // MOYEN ET CENTRÉ quand le média est ce qu'il MONTRE (« regarde ça,
+        // c'est je pense la meilleure qualité ») : Axel 05/08 veut « l'image en
+        // moyen avec l'avatar qui parle derrière ». Le coin 42 % reste pour le
+        // média d'accompagnement de l'accroche (Léna, 31/07).
+        const prom = !large && ins.prominent
+        const iw = Math.round(W * (large ? 0.92 : prom ? 0.56 : 0.42))
         const ih = Math.round(iw / rat)
-        const ix = large ? Math.round((W - iw) / 2) : Math.round(W - iw - W * 0.06)
-        const iy = Math.round(H * (large ? 0.13 : 0.11))
+        const ix = large || prom ? Math.round((W - iw) / 2) : Math.round(W - iw - W * 0.06)
+        const iy = prom ? Math.round((H - ih) / 2) : Math.round(H * (large ? 0.13 : 0.11))
         const iid = id + 'in' + k
         const a = Math.max(liveT0, r2(ins.start)), b = Math.min(t1, r2(ins.end))
         if (b - a < 0.3) continue
