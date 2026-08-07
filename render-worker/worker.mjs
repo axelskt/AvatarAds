@@ -660,7 +660,9 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       // morceau serait plus court que la vidéo, et l'afade coupe à la fin.
       if (pick.start > 0) inputs.push('-ss', String(pick.start))
       inputs.push('-stream_loop', '-1', '-i', pick.file)
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2[mus]`)
+      // #68 (Axel, 07/08) : la musique ENTRE — montée de 1,2 s au lieu d'un
+      // fondu de 0,6 s, l'effet « la couche BGM arrive » de la réf @tians028.
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=1.2,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2[mus]`)
       mixIns.push('[mus]')
       idx++
       console.log(`▶ musique : ${pick.name || 'preset'} à partir de ${(pick.start || 0).toFixed(0)} s`)

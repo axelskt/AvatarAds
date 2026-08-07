@@ -367,6 +367,30 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // le worker sait s'il a des clips lipsync sous la main ; le moteur (appel de
   // repli depuis dynamic-engine) le déduit de ses propres options.
   const hasClips = opts.hasClips ?? Object.keys(opts.avatarClips || {}).length > 0
+  // ── LES BORNES D'ORIGINE, FIGÉES AVANT TOUTE RETOUCHE (retours d'Axel 07/08) ──
+  // La dérivation supprime, déplace et scinde les fenêtres du plan — mais les
+  // clips Hedra, eux, ont été générés sur les BORNES D'ORIGINE : c'est la seule
+  // vérité pour savoir quelles secondes de voix un clip sait prononcer. Deux
+  // usages plus bas : une fenêtre créée par la dérivation (adresse §0b, trou
+  // comblé §3b-bis) peut REPRENDRE le clip payé qu'elle recouvre au lieu de la
+  // photo figée (Axel : « à 13 s le lipsync manque » — le clip av1 existait,
+  // la fenêtre d'adresse l'avait jeté), et une fenêtre dont le début glisse
+  // doit savoir de COMBIEN pour que les lèvres restent vraies (clipFrom).
+  const fenetresSources = (plan.avatarSegments || [])
+    .filter((w) => Number.isInteger(w.clip) && w.clip >= 0 && !w.adresse && !w.comble)
+    .map((w) => ({ start: r2(w.start || 0), end: r2(w.end ?? w.start ?? 0), clip: w.clip }))
+  // La fenêtre créée [a,b] peut-elle porter un clip payé ? Oui si son début
+  // coïncide avec celui d'une fenêtre d'origine (±0,3 s : au-delà, le clip
+  // prononce d'autres mots et les lèvres mentiraient), et si elle ne déborde
+  // pas la matière du clip de plus de 2,5 s (marge du tpad/padding Hedra —
+  // au-delà on garde la photo : un visage gelé en plein mot est pire).
+  const clipPourFenetre = (a, b) => {
+    if (!hasClips) return null
+    const s = fenetresSources.find((w) => Math.abs((w.start || 0) - a) <= 0.3 && b > w.start + 0.4)
+    if (!s) return null
+    if (b > s.end + 2.5) return null
+    return s
+  }
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(c.end) }))
@@ -948,7 +972,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // clip: -1 — fenêtre née ici, aucun clip lipsync ne lui appartient (le
       // worker mappe les clips par indice : sans cette marque, elle volait
       // celui de la fenêtre suivante et les lèvres disaient d'autres mots)
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true, clip: -1 })
+      // …SAUF si elle recouvre une fenêtre du plan qui portait un clip et que
+      // les débuts coïncident : le clip payé dit exactement ces mots-là, on le
+      // REPREND au lieu de figer la photo (Axel 07/08, « à 13 s le lipsync
+      // manque » — même mécanique ici que pour les adresses de §0b).
+      const src = clipPourFenetre(a, b)
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true, clip: src ? src.clip : -1 })
       claim(a, b); nb++
     }
     if (nu || nb) console.log(`▶ choix utilisateur : ${nu} remplacement(s) posé(s) · ${nb} suppression(s) rendue(s) au visage`)
@@ -1280,8 +1309,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const [a, b] of adresses.sort((x, y) => x[0] - y[0])) {
       if (noFace) break                       // pas de visage à rendre l'écran à
       if (overlaps(a, b)) continue
-      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true, clip: -1 })
+      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle.
+      // ── …SAUF QUAND ELLE RECOUVRE UNE FENÊTRE À CLIP DU PLAN (Axel, 07/08) ──
+      // Mesuré sur le montage 3df63a0d : l'adresse « Pour maintenant faire… »
+      // (12,2→13,65 s) recouvrait la fenêtre 12,2→13,46 du plan, qui portait le
+      // clip av1 DÉJÀ PAYÉ chez Hedra. Cette fenêtre-là mourait plus bas sur le
+      // claim de l'adresse (§2b puis §3b), et l'écran montrait la photo figée
+      // pendant que la voix parle — « à 13 s le lipsync manque ». Quand les
+      // débuts coïncident (±0,3 s), le clip prononce exactement ces mots :
+      // l'adresse le REPREND. Si le début ne coïncide pas, on garde la photo —
+      // des lèvres qui disent d'autres mots seraient pires qu'une image fixe.
+      const src = clipPourFenetre(r2(a), r2(b))
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true, clip: src ? src.clip : -1 })
+      if (src) console.log(`▶ adresse directe ${r2(a)}→${r2(b)}s : elle reprend le clip lipsync av${src.clip} (même début, mêmes mots)`)
       claim(a, b); n2++
     }
     if (n2) console.log(`▶ ${n2} adresse(s) directe(s) : le visage reprend l'écran`)
@@ -1591,12 +1631,39 @@ export function deriveDynamicSlides(plan, opts = {}) {
       let cur = 0, dernierMot = -1
       {
         const preuve = (plan.sections || []).find((x) => String(x.role) === 'preuve')
-        const t0Tuto = preuve ? preuve.start : (plan.hook && plan.hook.end) || 0
+        let t0Tuto = preuve ? preuve.start : (plan.hook && plan.hook.end) || 0
+        // ── LA SECTION « PREUVE » N'EST PAS TOUJOURS LE TUTORIEL (Axel, 07/08) ──
+        // Sur le montage 3df63a0d, le chef a étiqueté « preuve » le RÉSULTAT
+        // (« et voilà, Claude est connecté », 32,08 s) — le mode d'emploi, lui,
+        // vit de 16 à 32 s dans une section « benefice ». Démarrer la recherche
+        // à 32,08 s cassait TOUT le curseur chronologique : chaque mot d'étape,
+        // introuvable après 32 s, retombait sur le repli global-depuis-zéro, et
+        // le dernier « Ajouter » (« valide en cliquant sur Ajouter », 31,5 s)
+        // se calait sur le premier (24,5 s) — d'où le cadre sur le bas de la
+        // modale (Annuler/Ajouter) pendant que la voix dit « Ajouter un
+        // connecteur personnalisé », et deux écrans du parcours écrasés à zéro
+        // seconde d'écran. On VÉRIFIE donc : si les premiers mots du parcours se
+        // trouvent APRÈS l'accroche mais AVANT la section preuve, le tutoriel
+        // commence là — et c'est de là qu'on part.
+        if (preuve && t0Tuto > 0.5) {
+          const finHook2 = (plan.hook && plan.hook.end) || 0
+          const jHook = Math.max(0, words.findIndex((w) => w.start >= finHook2))
+          let avant = 0
+          for (const t of tuto.slice(0, 3)) {
+            const w = String(t.word || '')
+            const h = findSeq(words, w, jHook) || findAny(words, [w], jHook) || like(w, jHook)
+            if (h && h.start < t0Tuto - 0.5) avant++
+          }
+          if (avant >= 2) {
+            console.log(`▶ visite guidée : le parcours commence AVANT la section preuve (${r2(t0Tuto)}s) → recherche depuis la fin de l'accroche`)
+            t0Tuto = finHook2
+          }
+        }
         if (t0Tuto > 0.5) {
           const j = words.findIndex((w) => w.start >= t0Tuto - 0.2)
           if (j > 0) {
             cur = j
-            console.log(`▶ visite guidée : recherche à partir de ${r2(t0Tuto)}s (${preuve ? 'section preuve' : 'après l\'accroche'}), pas depuis le début`)
+            console.log(`▶ visite guidée : recherche à partir de ${r2(t0Tuto)}s, pas depuis le début`)
           }
         }
       }
@@ -1736,9 +1803,18 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // …et elle S'ARRÊTE À LA FIN DE LA PHRASE. « le format neuf seize. Puis
         // décris… » : sans cette coupure, le cadre du format se faisait remplacer
         // par le champ de description, une phrase trop tôt.
+        // ── …ET ELLE NE REMONTE PAS SUR LA PHRASE D'AVANT (Axel, 07/08) ──────
+        // « Donne-lui le nom AvatarAds. COLLE la clé… » : le mot d'avant
+        // (« AvatarAds. ») clôt la phrase PRÉCÉDENTE — celle du champ du nom.
+        // Inclus dans la fenêtre, il gagnait le rapprochement (le libellé du
+        // champ est littéralement « AvatarAds ») et le cadre restait sur la
+        // première section pendant que la voix dit « colle la clé » — Axel
+        // voulait la DEUXIÈME section, le champ où se colle la clé. La coupure
+        // de phrase vaut donc aussi vers l'arrière.
         const proche = []
         for (let k = Math.max(0, hit.i - 1); k < Math.min(words.length, hit.i + 3); k++) {
           if (k > hit.i && /[.!?]$/.test(String(words[k - 1].text))) break
+          if (k < hit.i && /[.!?]$/.test(String(words[k].text))) continue
           proche.push(words[k].text)
         }
         const alt = spotForWords(t.screen, proche, { sansMenu: true, min: 0.55 })
@@ -2631,7 +2707,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (b - a < 1.5 || overlaps(a, b)) continue
       // …avec ses médaillons : sans `...w` la fenêtre était recréée à vide et le
       // média accroché en §0a disparaissait sans un mot.
-      clamped.push({ ...w, start: a, end: b })
+      // ── LE DÉBUT GLISSE ? LE CLIP GLISSE D'AUTANT (Axel, 07/08) ────────────
+      // Le rognage ci-dessus peut pousser le début à droite (la fenêtre
+      // 32,08→38,06 devenait 36,4→38,06 derrière le « connect » et la bulle
+      // chat). Sans décalage, le clip av2 rejouait depuis SON début : à 36,4 s
+      // les lèvres prononçaient les mots de 32,1 s — un visage qui dit autre
+      // chose que la voix. `clipFrom` dit au worker où recouper le clip ; les
+      // lèvres retombent sur leurs mots.
+      const glisse = Number.isInteger(w.clip) && w.clip >= 0 && a > r2(w.start || 0) + 0.05
+      clamped.push({ ...w, start: a, end: b,
+        ...(glisse ? { clipFrom: r2((Number(w.clipFrom) || 0) + a - (w.start || 0)) } : {}) })
+      if (glisse) console.log(`▶ fenêtre avatar av${w.clip} décalée à ${a}s → le clip reprend à ${r2(a - (w.start || 0))}s dedans (lèvres synchrones)`)
       budget += 0   // (les fenêtres d'adresse de §0b sont déjà réservées)
       claim(a, b)
       budget -= b - a
@@ -2787,8 +2873,39 @@ export function deriveDynamicSlides(plan, opts = {}) {
         else if (apres) { apres.start = r2(a); claim(a, fin); etires++ }
         continue
       }
-      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true, clip: -1 })
+      // clip: -1 : fenêtre créée par la dérivation, pas de clip lipsync à elle.
+      // ── LE TROU QUI RECOUVRE UN CLIP PAYÉ LE FAIT PARLER (Axel, 07/08) ─────
+      // Mesuré sur le montage 3df63a0d : le trou 38,06→39,76 s montrait la photo
+      // figée alors que le clip av3 (39,12→46,78, payé chez Hedra) commence en
+      // plein dedans — « à 39 s le lipsync n'est pas fait ». Les animations qui
+      // ont pris le reste de la fenêtre av3 (lineup, cards — validées) restent :
+      // ici on ne récupère QUE la part du trou où un clip sait parler. Le trou
+      // se scinde donc à la frontière du clip : photo avant (même visage, il
+      // attend), clip lipsync après (il parle). Jamais de clip décalé : la
+      // partie adoptée démarre PILE au début de la fenêtre d'origine, ou dedans
+      // avec `clipFrom` — les lèvres disent toujours leurs mots.
+      let adopte = null
+      if (hasClips) {
+        adopte = fenetresSources.find((s) =>
+          Math.max(a, s.start) < Math.min(d, s.end) - 0.5)
+      }
+      if (adopte && adopte.start <= a + 0.05 && a - adopte.start < (adopte.end - adopte.start) - 0.4) {
+        // le trou entier est DANS la fenêtre d'origine, et il reste de la voix
+        // à cet endroit du clip : une seule fenêtre, recoupée dedans
+        ;(plan.avatarSegments = plan.avatarSegments || []).push(
+          { start: r2(a), end: r2(d), comble: true, clip: adopte.clip, clipFrom: r2(Math.max(0, a - adopte.start)) })
+        console.log(`▶ trou ${r2(a)}→${r2(d)}s : le clip av${adopte.clip} reprend la parole (repris à ${r2(Math.max(0, a - adopte.start))}s dedans)`)
+      } else if (adopte && adopte.start > a + 0.05 && d - adopte.start >= 0.55 && adopte.start - a >= 0.3) {
+        // le clip commence AU MILIEU du trou : photo jusqu'à son début (même
+        // visage, continuité assurée), puis le clip parle — c'est le cas du
+        // trou de 38,06 s, où av3 démarre à 39,12 s
+        ;(plan.avatarSegments = plan.avatarSegments || []).push(
+          { start: r2(a), end: r2(adopte.start), comble: true, clip: -1 },
+          { start: r2(adopte.start), end: r2(d), comble: true, clip: adopte.clip, clipFrom: 0 })
+        console.log(`▶ trou ${r2(a)}→${r2(d)}s : photo jusqu'à ${r2(adopte.start)}s, puis le clip av${adopte.clip} parle`)
+      } else {
+        ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true, clip: -1 })
+      }
       claim(a, d); n++
     }
     if (n) {
@@ -2822,8 +2939,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // Axel : « les animations ne correspondent pas du tout ». Un panneau animé
       // ne s'étire donc que de 0,35 s ; au-delà, mieux vaut le trou — il sera
       // comblé par le visage, qui lui ne raconte rien de faux.
+      //
+      // ── …MAIS UN TROU TROP COURT POUR UN VISAGE NE DOIT PAS RESTER NU ──────
+      // (Axel, 07/08 : « petit trou à 46,5 s ».) Mesuré sur le montage 3df63a0d :
+      // la card `faceless` s'arrêtait à 46,37 s, le punch arrivait à 46,74 s —
+      // 0,37 s de dégradé nu, trop court pour §3b-bis (seuil visage 1,2 s), déjà
+      // passé de toute façon. Deux issues, dans l'ordre :
+      //   1. si la PHRASE continue sur le reliquat (aucune fin de phrase entre
+      //      les deux), l'animation ne ment pas en tenant jusqu'au suivant — le
+      //      plafond de 0,35 s ne protégeait rien ici, on va jusqu'au bout ;
+      //   2. sinon, la scène SUIVANTE avance son entrée sur le reliquat — sauf
+      //      une fenêtre à clip (les lèvres glisseraient) ou un média (sa
+      //      fenêtre est un point du script).
       const cible = r2((chain[i + 1].start || 0) - 0.02)
-      chain[i].end = isAnimPanel(chain[i]) ? r2(Math.min(cible, (chain[i].end || 0) + 0.35)) : cible
+      if (!isAnimPanel(chain[i])) { chain[i].end = cible; continue }
+      const fin0 = r2(chain[i].end || 0)
+      let fin1 = r2(Math.min(cible, fin0 + 0.35))
+      const reliquat = r2(cible - fin1)
+      if (reliquat > 0.05 && reliquat < 0.8) {
+        const phraseCoupe = words.some((w) => w.end > fin0 - 0.3 && w.end < cible - 0.12 && /[.!?]$/.test(String(w.text)))
+        if (!phraseCoupe) fin1 = cible
+        else {
+          const nxt = chain[i + 1]
+          const clipReel2 = Number.isInteger(nxt.clip) && nxt.clip >= 0
+          if (!clipReel2 && nxt.anim !== 'media') nxt.start = r2(fin1 + 0.02)
+        }
+      }
+      chain[i].end = fin1
     }
     const last = chain[chain.length - 1]
     if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2) last.end = r2(D)
