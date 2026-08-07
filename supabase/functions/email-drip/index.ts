@@ -214,9 +214,16 @@ serve(async (req) => {
     if (sent >= MAX_SENDS) break
     const from = new Date(now - st.maxH * 3600_000).toISOString()
     const to   = new Date(now - st.minH * 3600_000).toISOString()
+    // ── UN CLIENT QUI A PAYÉ NE REÇOIT PAS LA SÉRIE « NON-PAYEURS » (07/08) ──
+    // Les PACKS one-shot ne changent pas le plan (whop-webhook : « ne touche pas
+    // au plan ») : un acheteur de pack restait `free` et recevait les relances.
+    // On exclut donc toute trace d'achat : whop_member_id posé (paiement Whop
+    // rattaché au compte) ou bought_credits > 0.
     const { data: users } = await sb.from('profiles')
       .select('id, email, first_name')
       .eq('plan', 'free').eq('email_optout', false)
+      .is('whop_member_id', null)
+      .or('bought_credits.is.null,bought_credits.eq.0')
       .gte('created_at', from).lte('created_at', to)
       .limit(MAX_SENDS)
     for (const u of users ?? []) {
