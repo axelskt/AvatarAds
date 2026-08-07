@@ -3565,20 +3565,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- Résultat / preview -->
         <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
-          <!-- Écran d'accueil DYNAMIQUE (05/08) : l'ancien header « 3 cartes »
-               noyait l'utilisateur — « trop d'information, les gens ne
-               comprennent rien ». Comme sur Images IA : un aperçu simple qui
-               RÉSUME ce que l'utilisateur a sélectionné, mis à jour en direct. -->
-          <div id="expResultPlaceholder" style="width:100%;max-width:600px;align-self:center;max-height:100%;overflow-y:auto;padding:4px 2px;text-align:center">
-            <div id="expHeroFrame" style="width:158px;height:281px;margin:0 auto 20px;border-radius:22px;background:linear-gradient(160deg,var(--bg4),var(--bg3));border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 18px 50px -22px rgba(0,0,0,.7);transition:width .25s ease,height .25s ease">
-              <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,var(--accent-2),var(--accent));display:grid;place-items:center;box-shadow:0 10px 26px -10px var(--accent-glow)">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="#1A0A02" style="margin-left:3px"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-              <span id="expHeroFmtTag" class="mono" style="position:absolute;top:10px;right:10px;font-size:9px;font-weight:800;background:rgba(0,0,0,.45);color:#fff;border-radius:5px;padding:2px 6px">9:16</span>
+          <!-- Écran d'accueil (07/08) : EXACTEMENT le patron d'Images IA — Axel :
+               « comme Image IA en fait, mais pour les vidéos ». Icône, titre,
+               et une ligne mono qui résume les réglages, mise à jour en direct. -->
+          <div id="expResultPlaceholder" class="col" style="align-self:center;align-items:center;gap:16px;color:var(--text-3);text-align:center;padding:4px 2px">
+            <div style="width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="M16 10l5-3v10l-5-3"/></svg>
             </div>
-            <h2 style="font-size:29px;font-weight:800;line-height:1.06;margin:0 0 8px;color:var(--text);letter-spacing:-.5px">Décris ta vidéo, on la crée</h2>
-            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 auto 18px;max-width:420px">Écris ton idée ci-dessous — elle sera générée avec ces réglages :</p>
-            <div id="expHeroChips" class="row" style="gap:8px;flex-wrap:wrap;justify-content:center"></div>
+            <div class="display" style="font-size:21px;font-weight:600;color:var(--text-2)">Décris ta vidéo en bas, puis génère</div>
+            <span class="mono faint" id="expHeroLine" style="font-size:12px"></span>
           </div>
           <video id="expResultVid" controls playsinline style="display:none;max-height:100%;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
 
@@ -23673,20 +23668,17 @@ function _expUpdateGenCaption(){
   const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
 }
-// L'écran d'accueil RÉSUME les réglages en direct (05/08, style Images IA) :
-// cadre au format choisi + pilules Style/Format/Durée/Qualité/Voix/Images.
+// L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
+// une ligne mono « 9:16 · 4 s · 720p · Voix native (Veo) », comme imgIdleMeta.
 function _expHeroSync(){
-  const chips=document.getElementById('expHeroChips');
-  if(chips){
-    const st=(EXP_STYLES.find(s=>s.id===window._expStyle)||{}).label||'Réaliste';
-    const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native';
-    const n=(window._expImgs||[]).length;
-    const chip=(ic,txt,on)=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:${on?'var(--orange2)':'var(--text2)'};background:${on?'rgba(255,107,53,.09)':'var(--bg3)'};border:1px solid ${on?'rgba(255,107,53,.4)':'var(--border2)'};border-radius:20px;padding:7px 12px">${ic} ${txt}</span>`;
-    chips.innerHTML = chip('🎨',st,true)+chip('📐',window._expFormat||'9:16')+chip('⏱',(window._expDur||4)+' s')+chip('💎',window._expQuality||'720p')+chip('🎙',vx)+(n?chip('🖼',n>1?n+' images':'1 image',true):'');
-  }
-  const frame=document.getElementById('expHeroFrame');
-  if(frame){ const land=(window._expFormat==='16:9'); frame.style.width=land?'320px':'158px'; frame.style.height=land?'180px':'281px'; }
-  const tag=document.getElementById('expHeroFmtTag'); if(tag) tag.textContent=window._expFormat||'9:16';
+  const line=document.getElementById('expHeroLine');
+  if(!line) return;
+  const st=(EXP_STYLES.find(s=>s.id===window._expStyle)||{}).label||'Réaliste';
+  const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native (Veo)';
+  const n=(window._expImgs||[]).length;
+  line.textContent = [ (window._expFormat||'9:16'), (window._expDur||4)+' s',
+    (window._expQuality||'720p'), st, vx, n? (n>1? n+' images':'1 image') : null ]
+    .filter(Boolean).join(' · ');
 }
 // Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
 function _expDurAllowed(){
