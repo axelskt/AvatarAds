@@ -331,9 +331,14 @@ export function buildComposition(plan, opts = {}) {
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
 
+  // ── #68 « RAW vs EDITED » : LES SOUS-TITRES DU HOOK SONT PLUS GROS ─────────
+  // (Axel, 07/08, réf TikTok @tians028 : « ils jouent sur les sous-titres en
+  // gros ».) +28 % sur les mots prononcés pendant l'accroche, taille normale
+  // ensuite — c'est le CONTRASTE qui fait claquer l'ouverture.
+  const hookCapEnd = r2(plan.hook?.end ?? Math.min(4, D))
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
-      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${wordFontSize(c.text, W, H)}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}"${
     String(c.text || '').length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')

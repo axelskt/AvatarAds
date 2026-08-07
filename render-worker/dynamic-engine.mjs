@@ -678,6 +678,22 @@ export function buildDynamicComposition(plan, opts = {}) {
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
       }
 
+      // ── #68 « RAW vs EDITED » : LE HOOK BOUGE (Axel, 07/08) ────────────────
+      // Réf TikTok @tians028 : pendant l'accroche, la caméra respire — zoom-in
+      // et zoom-out alternés toutes les ~1,5 s sur le clip qui parle, un whoosh
+      // discret sur le premier. UNIQUEMENT le panneau qui ouvre la vidéo
+      // (t0 < 0,6 s) : le reste du montage garde son calme, c'est le contraste
+      // qui claque. Temps absolus sur la timeline → seek-safe, comme le reste.
+      if (p.t0 < 0.6 && src) {
+        let zt = r2(liveT0 + 0.85), zin = true
+        while (zt < t1 - 0.7) {
+          pjs += `\n  tl.to('#${id}av',{scale:${zin ? 1.075 : 1.0},duration:0.34,ease:'power3.out',transformOrigin:'50% 30%'},${zt});`
+          if (zin && zt < liveT0 + 1) sfxAdd.push({ kind: 'mo-whoosh-1', t: zt, vol: 0.4 })
+          zin = !zin
+          zt = r2(zt + 1.5)
+        }
+      }
+
       // ── LE MÉDAILLON : SON MÉDIA POSÉ SUR L'AVATAR QUI PARLE ────────────────
       // Axel, sur sa vidéo d'influenceuse : « tu vas garder l'avatar principal qui
       // parle et tu vas ajouter la vidéo que je t'envoie, tu la mets en plus
