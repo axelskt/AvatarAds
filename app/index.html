@@ -5673,7 +5673,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-05-express-simple'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-07-mode-capture'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -31230,5 +31230,52 @@ window.mPreviewClose=function(){
         </div>
       </div>
     </div>
+<script>
+/* ── MODE CAPTURE (outillage interne) : #capture=<vue>[/txt:<texte>][/scroll:<px>] ──
+   Sert à re-capturer les écrans de « Ma marque » en headless après une refonte
+   (Chrome --headless --screenshot). Profil LOCAL factice : enterApp ne donne
+   aucun droit serveur (toutes les actions passent par les RPC avec un vrai JWT,
+   absent ici) — l'app s'affiche, c'est tout.
+   · <vue>       : id de nav (express, imagegen, montage, studio, audioclean…)
+   · txt:<texte> : clique le premier bouton/summary VISIBLE contenant ce texte
+                   (ouvre une modale ou un panneau, ex. « paramètres avancés »)
+   · scroll:<px> : fait défiler le premier conteneur scrollable de modale ouverte */
+(function(){
+  if(location.hash.indexOf('#capture=')!==0) return;
+  setTimeout(function(){
+    try{
+      var spec=decodeURIComponent(location.hash.slice(9)).split('/');
+      enterApp({ id:'capture-locale', email:'axel@iamanager.fr', plan:'developer', credits_remaining:9999, credits_total:9999 });
+      nav(spec[0]||'studio');
+      var pas2=function(){
+        for(var s=1;s<spec.length;s++){
+          var p=spec[s]||'';
+          if(p.indexOf('txt:')===0){
+            var cible=p.slice(4).toLowerCase();
+            var els=[].slice.call(document.querySelectorAll('button,summary,[onclick]'));
+            for(var i=0;i<els.length;i++){
+              if(els[i].offsetParent && (els[i].textContent||'').toLowerCase().indexOf(cible)>=0){
+                /* un toggle re-cliqué se REFERME : chaque cible ne se clique qu'une fois */
+                if(!els[i].dataset._capDone){ els[i].dataset._capDone='1'; els[i].click(); }
+                break;
+              }
+            }
+          }
+          if(p.indexOf('scroll:')===0){
+            var px=parseInt(p.slice(7),10)||0;
+            var boxes=[].slice.call(document.querySelectorAll('div'));
+            for(var j=boxes.length-1;j>=0;j--){
+              var b=boxes[j];
+              if(b.offsetParent && b.scrollHeight>b.clientHeight+80 && b.clientHeight>200){ b.scrollTop=px; break; }
+            }
+          }
+        }
+      };
+      setTimeout(pas2, 800);
+      setTimeout(pas2, 1600);   /* les modales montées tard : on rejoue le clic/scroll */
+    }catch(_){}
+  }, 400);
+})();
+</script>
 </body>
 </html>
