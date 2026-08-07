@@ -902,7 +902,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .pw-label{font-size:14px;font-weight:500;color:var(--text-2);opacity:.6;letter-spacing:.02em;text-align:center}
 .pw-marquee{overflow:hidden;max-width:var(--maxw);margin:16px auto 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .pw-track{display:flex;width:max-content;animation:pwScroll 30s linear infinite}
-.pw-marquee:hover .pw-track{animation-play-state:paused}
+/* pause au survol : UNIQUEMENT sur les vrais pointeurs — sur iOS le tap rend le
+   :hover collant et FIGEAIT le bandeau au premier contact (Axel, 07/08) */
+@media (hover:hover) and (pointer:fine){ .pw-marquee:hover .pw-track{animation-play-state:paused} }
 @keyframes pwScroll{to{transform:translateX(-50%)}}
 .pw-seq{display:flex;align-items:center;flex:0 0 auto}
 .pw-item{display:flex;align-items:center;gap:9px;color:#9a9a9a;opacity:.55;margin-right:58px;flex:0 0 auto;transition:opacity .25s}
@@ -916,7 +918,10 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .pw-item svg{width:22px;height:22px}
   .pw-item span{font-size:14px}
 }
-@media (prefers-reduced-motion:reduce){ .pw-track{animation:none} }
+/* 07/08 (Axel) : le bandeau doit défiler PARTOUT — « Réduire les animations »
+   d'iOS (très répandu) coupait la marquee sur téléphone. Décision produit :
+   on garde le mouvement, lent, plutôt que rien. */
+@media (prefers-reduced-motion:reduce){ .pw-track{animation-duration:45s} }
 </style>
 
 <script>
