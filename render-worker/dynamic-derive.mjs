@@ -472,7 +472,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // deux ou trois sujets dessinés, dans l'ordre où il les dit. Si on ne sait
   // dessiner AUCUN de ses mots, on ne rend rien — un visuel faux serait pire.
   const sujetsPoses = []
+  // ── DANS UNE FENÊTRE À CLIP RÉEL, LE REPLI C'EST LE VISAGE, PAS LE MOT ─────
+  // Règle d'Axel : « si tu as un trou tu mets ton avatar principal, ça dynamise
+  // et c'est clean ». Une scène du mot posée DANS une fenêtre qui porte un clip
+  // lipsync recouvrait l'avatar d'un dégradé quasi nu — les « blancs » des 04 et
+  // 05/08. Ici on renonce : la fenêtre reste à l'avatar qui parle. Hors fenêtre
+  // à clip, la scène du mot garde toute sa valeur (domaines hors banque).
+  const dansClipReel = (a, b) => hasClips && (plan.avatarSegments || []).some((w) =>
+    Number.isInteger(w.clip) && w.clip >= 0 && !w.adresse &&
+    a < (w.end || 0) - 0.2 && b > (w.start || 0) + 0.2)
   const sceneDuMot = (a, b) => {
+    if (dansClipReel(a, b)) return null
     const ph = phraseDe(a, b)
     const su = sujetsDe(ph, 3)
     if (!su.length) return null
@@ -975,7 +985,18 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const s0 = segs[0]
     if (s0 && (s0.start || 0) < 0.6) {
       const a = r2(s0.start || 0)
-      const b = r2(Math.min(s0.end ?? a + 4, a + (hasClips ? 6.5 : HOOK_MAX), D))
+      // ── UN VRAI CLIP JOUE SA DURÉE, PAS SIX SECONDES ET DEMIE ──────────────
+      // Fenêtre à clip lipsync réel (w.clip ≥ 0, bornée à la durée du clip par
+      // le worker) : la rogner à 6,5 s fige l'avatar et laisse un dégradé nu
+      // derrière (Axel 05/08 : « le lipsync n'est pas fait dans toute la
+      // vidéo »). Le clip DIT ces secondes-là — on le laisse parler (plafond
+      // 12 s, même garde anti-fenêtre-géante qu'en §2b). Le contenu réel qui
+      // tombe dedans passe devant : médaillon §0a, ou réservation déjà posée
+      // (on s'arrête au premier bord pris). Sans clip, le plafond 4,2 s tient.
+      const clipReel = hasClips && Number.isInteger(s0.clip) && s0.clip >= 0
+      const plafond = clipReel ? 12 : (hasClips ? 6.5 : HOOK_MAX)
+      let b = r2(Math.min(s0.end ?? a + 4, a + plafond, D))
+      for (const t of taken) if (a < t[0] && b > t[0]) b = r2(t[0] - 0.05)
       // sans clip lipsync, on rogne AUSSI la fenêtre elle-même : sinon elle
       // continue de s'afficher jusqu'à 6,5 s et la place reste occupée.
       if (!hasClips && (s0.end ?? 0) > b) s0.end = b
@@ -1165,8 +1186,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const hote = (hookWin && a < hookWin.end - 0.3 && e > hookWin.start + 0.3) ? hookWin
         : (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
       if (hote) {
+        // `prominent` : passé l'accroche (5 s), le média qu'il MONTRE se rend
+        // en MOYEN centré, l'avatar qui parle derrière (Axel 05/08 : « l'image
+        // de la fille en moyen avec l'avatar qui parle derrière »). Dans
+        // l'accroche, il reste petit en coin (règle Léna du 31/07).
         ;(hote.insets = hote.insets || []).push({ src, assetId: b.assetId, ratio,
-          start: a, end: r2(Math.min(e, hote.end)) })
+          start: a, end: r2(Math.min(e, hote.end)), prominent: a >= 5 })
         // …et on note qu'il DÉPEND de cette fenêtre : plus bas, les fenêtres
         // avatar sont rebâties sous contrainte de budget et de collisions, et
         // celle-ci peut très bien ne pas survivre. Le repêchage de la §4 s'en
@@ -2592,10 +2617,16 @@ export function deriveDynamicSlides(plan, opts = {}) {
       let a = r2(w.start)
       let b = r2(Math.min(w.end ?? w.start + MAXW, w.start + MAXW, w.start + budget))
       // le visage ne passe JAMAIS par-dessus une scène déjà posée : il se
-      // décale ou se raccourcit (sinon l'avatar recouvrait le navigateur)
+      // décale ou se raccourcit (sinon l'avatar recouvrait le navigateur).
+      // #149b — en cas de chevauchement, garder le PLUS GRAND côté libre : la
+      // fenêtre 32,08→38,06 s chevauchait le « connect » (32,42→34,21) de 0,3 s
+      // à gauche ; l'ancien code coupait à droite du chevauchement (b=32,37,
+      // fenêtre morte) alors que 34,26→38,06 était libre — 3,8 s d'avatar
+      // jetées, remplacées par un dégradé nu.
       for (const t of taken) {
-        if (a < t[0] && b > t[0]) b = r2(t[0] - 0.05)
-        if (a >= t[0] && a < t[1]) a = r2(t[1] + 0.05)
+        if (b <= t[0] + 0.05 || a >= t[1] - 0.05) continue
+        if (t[0] - a >= b - t[1]) b = r2(t[0] - 0.05)
+        else a = r2(t[1] + 0.05)
       }
       if (b - a < 1.5 || overlaps(a, b)) continue
       // …avec ses médaillons : sans `...w` la fenêtre était recréée à vide et le
@@ -3303,7 +3334,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const seg = (plan.avatarSegments || []).find((w) => a < (w.end || 0) - 0.3 && e > (w.start || 0) + 0.3)
       if (seg) {
         ;(seg.insets = seg.insets || []).push({ src, assetId: b.assetId, ratio: ratioR,
-          start: r2(Math.max(a, seg.start)), end: r2(Math.min(e, seg.end)) })
+          start: r2(Math.max(a, seg.start)), end: r2(Math.min(e, seg.end)), prominent: a >= 5 })
         console.log(`▶ média « ${b.assetId} » repêché : médaillon sur l'avatar (${seg.start}→${seg.end}s)`)
         continue
       }
