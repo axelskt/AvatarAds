@@ -1604,7 +1604,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div style="display:flex;align-items:center;gap:9px">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                   <div>
-                    <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom gameplay</div>
+                    <div class="flbl" style="font-size:11px;margin:0">Taille &amp; zoom du clip</div>
                     <div id="gpStep3FileLabel" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px"></div>
                   </div>
                 </div>
@@ -1613,7 +1613,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom gameplay</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
                   <input class="aa-slider" type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
@@ -1622,7 +1622,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur gameplay</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
                   </div>
                   <input class="aa-slider" type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
@@ -1670,7 +1670,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </div>
                 <div style="display:flex;flex-direction:column;gap:3px">
                   <span style="font-weight:700;font-size:14.5px">Split screen</span>
-                  <span class="faint" style="font-size:12px;line-height:1.4">Avatar en haut · gameplay en bas</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Avatar en haut · ton clip en bas</span>
                 </div>
               </button>
             </div>
@@ -1693,11 +1693,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'"
                   ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';handleGameplayFile(event.dataTransfer.files[0])"
                   class="aaph" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;cursor:pointer;text-align:center;transition:.18s">
-                  <div id="gameplayDropContent" style="display:flex;flex-direction:column;align-items:center;gap:12px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text);font-family:var(--font);letter-spacing:0;text-transform:none">Glisse ton propre gameplay</div><div style="font-size:11.5px;color:var(--text-3);font-family:var(--mono)">MP4 · MOV</div><span class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</span></div>
+                  <div id="gameplayDropContent" style="display:flex;flex-direction:column;align-items:center;gap:12px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text);font-family:var(--font);letter-spacing:0;text-transform:none">Glisse ton clip</div><div style="font-size:11.5px;color:var(--text-3);font-family:var(--mono)">MP4 · MOV</div><span class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</span></div>
                   <div id="gameplayFileInfo" style="display:none"><div style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><div id="gameplayFileName" style="font-size:13px;font-weight:600"></div></div></div>
                 </div>
                 <input type="file" id="gameplayFileIn" accept="video/*" style="display:none" onchange="handleGameplayFile(this.files[0])">
-                <button id="removeGameplayBtn" onclick="removeGameplay()" style="display:none;width:100%;padding:8px;background:var(--surface);border:1px solid rgba(255,71,87,0.25);border-radius:10px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer gameplay</button>
+                <button id="removeGameplayBtn" onclick="removeGameplay()" style="display:none;width:100%;padding:8px;background:var(--surface);border:1px solid rgba(255,71,87,0.25);border-radius:10px;color:var(--red);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='rgba(255,71,87,0.25)'">✕ Supprimer le clip</button>
 
                 <!-- INVERSER clip ⇄ avatar — bouton fantôme pleine largeur -->
                 <button onclick="swapSplit()" class="btn btn-ghost" style="width:100%">Inverser clip ⇄ avatar</button>
@@ -1708,7 +1708,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto" id="avFrontIco"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                     <div class="col" style="line-height:1.3;min-width:0">
                       <span style="font-weight:600;font-size:14.5px">Avatar au premier plan</span>
-                      <span class="faint" style="font-size:12px">Quand l'avatar et le gameplay se superposent, l'avatar passe devant (sinon derrière)</span>
+                      <span class="faint" style="font-size:12px">Quand l'avatar et le clip se superposent, l'avatar passe devant (sinon derrière)</span>
                     </div>
                   </div>
                   <button onclick="_toggleAvatarFront()" id="avFrontSwitch" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer">
@@ -1716,10 +1716,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </button>
                 </div>
 
-                <!-- ZOOM DU GAMEPLAY — visible directement (demande d'Axel : le réglage le plus utilisé reste hors de l'accordéon) -->
+                <!-- ZOOM DU CLIP — visible directement (demande d'Axel : le réglage le plus utilisé reste hors de l'accordéon) -->
                 <div>
                   <div class="row" style="justify-content:space-between;margin-bottom:8px">
-                    <span class="label" style="margin:0">Zoom du gameplay</span>
+                    <span class="label" style="margin:0">Zoom du clip</span>
                     <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
                   </div>
                   <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
@@ -1945,9 +1945,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <span id="wordEditorChevron" style="font-size:10px;transition:transform .2s">▼</span>
                 </button>
                 <div id="wordEditorBody" style="display:none;margin-top:6px">
-                  <div id="wordEditorHint" style="margin-bottom:8px;font-size:10px;font-family:var(--mono);color:var(--text3);line-height:1.6">
-                    Glisse n'importe où · double-clic pour modifier ou supprimer · <strong style="color:var(--text2)">+</strong> pour ajouter · <strong style="color:var(--text2)">+ ligne</strong> pour insérer une ligne
-                  </div>
+                  <!-- 05/08 : la ligne d'aide « Glisse n'importe où · double-clic… »
+                       est retirée (Axel) — le geste doit se comprendre sans notice. -->
                   <div id="wordEditor"></div>
                 </div>
               </div>
@@ -1960,9 +1959,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Rognage (clic pour activer, puis glisse sur le preview)</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <button id="crop-btn-av" onclick="toggleCropMode('avatar')" class="btn btn-ghost btn-sm">Rogner avatar</button>
-                <button id="crop-btn-gp" onclick="toggleCropMode('gameplay')" class="btn btn-ghost btn-sm">Rogner gameplay</button>
+                <button id="crop-btn-gp" onclick="toggleCropMode('gameplay')" class="btn btn-ghost btn-sm">Rogner le clip</button>
                 <button onclick="resetCrop()" class="btn btn-quiet btn-sm" style="border:1px solid var(--border)">↺ Rognage</button>
-                <button onclick="resetGameplay()" class="btn btn-quiet btn-sm" style="border:1px solid var(--border)">↺ Gameplay</button>
+                <button onclick="resetGameplay()" class="btn btn-quiet btn-sm" style="border:1px solid var(--border)">↺ Le clip</button>
               </div>
               <div id="crop-hint" style="display:none;margin-top:8px;font-size:10px;font-family:var(--mono);color:var(--orange2);text-align:center;padding:6px;background:var(--orange-dim);border-radius:6px">✋ Mode rognage actif — glisse sur la zone dans le preview · Clic à nouveau pour désactiver</div>
             </div>
@@ -2005,29 +2004,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
-            <!-- CLIP GAMEPLAY — sélecteur compact étape 4 (en bas) — masqué si un gameplay est déjà uploadé -->
-            <div class="fld" id="clipSectionS4" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>Clip Gameplay</div>
-              <!-- Aucun clip -->
-              <div id="noClipRowS4" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;opacity:.55"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>
-                <div style="flex:1">
-                  <div style="font-size:12px;font-weight:600;color:var(--text3)">Aucun clip</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Optionnel — joue en fond</div>
-                </div>
-                <button onclick="openClipPickerModal()" style="padding:6px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.35);border-radius:7px;color:var(--orange2);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='rgba(255,107,53,0.2)'" onmouseout="this.style.background='var(--orange-dim)'">+ Choisir</button>
-              </div>
-              <!-- Clip actif -->
-              <div id="activeClipRowS4" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,107,53,0.07);border:1.5px solid rgba(255,107,53,0.35);border-radius:10px">
-                <span id="activeClipEmoS4" style="font-size:20px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
-                <div style="flex:1;min-width:0">
-                  <div id="activeClipNameS4" style="font-size:12px;font-weight:700;color:var(--orange2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Segment aléatoire · fond vidéo</div>
-                </div>
-                <button onclick="openClipPickerModal()" style="padding:5px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">Changer</button>
-                <button onclick="clearSelectedClip()" style="padding:5px 8px;background:var(--bg4);border:1px solid rgba(255,71,87,0.25);border-radius:7px;color:var(--red);font-family:var(--mono);font-size:10px;cursor:pointer">✕</button>
-              </div>
-            </div>
+            <!-- ── RETIRÉ LE 05/08 : le sélecteur « Clip Gameplay » (catalogue de
+                 clips fournis) ─────────────────────────────────────────────────
+                 Axel : « on oublie les gameplay, ça ne sert à rien, supprime-les
+                 complètement ». Le split screen vit avec le CLIP DE L'UTILISATEUR
+                 (dropzone de l'étape Style) ; le catalogue et son picker modal
+                 restent en code mort (openClipPickerModal) mais plus aucun accès. -->
 
             <!-- ── RETIRÉ LE 03/08 : « Générer la vidéo split screen » et « Clip
                  gameplay seul » ──────────────────────────────────────────────
@@ -3052,23 +3034,20 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- Actions -->
             <div style="padding:16px 18px">
-              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;box-shadow:0 4px 16px rgba(255,107,53,.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (4K)<span style="font-size:8px;background:rgba(0,0,0,.22);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE · 5 CR</span></button>
+              <!-- 05/08 : « Restaurer les détails » passe en CONTOURS orange (Axel) —
+                   le bouton plein orange, c'est « Télécharger » ci-dessous. -->
+              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (4K)<span style="font-size:8px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE · 5 CR</span></button>
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
-              <button onclick="_imgEditThis()" id="imgEditThisBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--border-3)'" onmouseout="this.style.borderColor='var(--border-2)'">🪄 Modifier cette image</button>
+              <!-- 05/08 : « Modifier cette image », « Utiliser en avatar » et le
+                   crayon « Nouveau prompt » sont RETIRÉS (Axel) — le mode
+                   Correction reste accessible par l'onglet Corriger. -->
               <button onclick="_imgSaveToLibrary(this)" id="imgSaveLibBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Enregistrer dans la bibliothèque</button>
-              <div style="display:flex;gap:8px">
-                <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--accent-line);border-radius:10px;color:#fff;font-family:var(--font);font-size:12px;font-weight:700;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent-2)'" onmouseout="this.style.borderColor='var(--accent-line)'">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
-                  Télécharger
-                </a>
-                <button onclick="useImageAsAvatar()" id="imgUseAsAvatarBtn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,1 5.5,6.5 2,6.5 8.5,13 8.5,7.5 12,7.5"/></svg>
-                  Utiliser en avatar
-                </button>
-                <button onclick="_imgNewPrompt()" style="padding:11px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'" title="Nouveau prompt">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9.5L8.5 3l1-.5a1 1 0 011 1L10 4.5 3.5 11H2V9.5z"/><path d="M7 4l1.5 1.5"/></svg>
-                </button>
-              </div>
+              <!-- 05/08 : « Télécharger » devient LE bouton principal — plein
+                   orange, pleine largeur (Axel). -->
+              <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="display:inline-flex;width:100%;box-sizing:border-box;align-items:center;justify-content:center;gap:7px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;text-decoration:none;transition:all .2s;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 10px 24px -12px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 1v7M3 5l3 3 3-3M1 9.5v.5a1 1 0 001 1h8a1 1 0 001-1v-.5"/></svg>
+                Télécharger
+              </a>
             </div>
           </div>
         </div>
@@ -3571,25 +3550,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- ③c VOIX -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title">🎙 Voix</div>
+          <!-- 05/08 : Gemini TTS, ElevenLabs et l'import de voix sont RETIRÉS
+               d'Express (trop d'options, personne ne comprenait). Deux choix :
+               voix native Veo, ou muet. Le TTS ne survit qu'en repli interne
+               quand Veo refuse l'audio natif (_expTtsFallback). -->
           <div id="expVoiceRows" style="display:grid;gap:5px"></div>
-          <!-- Sous-panneau selon le mode -->
-          <div id="expVoiceTtsPanel" style="display:none;margin-top:10px">
-            <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-bottom:7px;line-height:1.5">La voix lira ce que tu écris dans le prompt principal (ⓘ inclus la réplique dedans).</div>
-            <div id="expGeminiVoicePanel" style="margin-top:7px">
-              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX GEMINI</div>
-              <button onclick="openVoicePicker('gemini')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🎙 Voix : <b id="expGeminiVoiceLabel" style="color:var(--orange2)">Puck</b></span><span style="color:var(--text3);font-size:11px">écouter · parcourir ▾</span></button>
-            </div>
-            <div id="expElevenVoicePanel" style="display:none;margin-top:7px">
-              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-bottom:5px">VOIX ELEVENLABS</div>
-              <button onclick="openVoicePicker('eleven')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;cursor:pointer" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'"><span>🔊 Voix : <b id="expElevenVoiceLabel" style="color:var(--orange2)">Rachel</b></span><span style="color:var(--text3);font-size:11px">écouter · parcourir ▾</span></button>
-            </div>
-          </div>
-          <div id="expVoiceImportPanel" style="display:none;margin-top:10px">
-            <div onclick="document.getElementById('expVoiceFileIn').click()" style="border:1.5px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg3)" onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='var(--border2)'">
-              <div id="expVoiceFileLabel" style="font-size:11px;font-family:var(--mono);color:var(--text3)">📁 Importer un audio / mp4<br><span class="faint" style="font-size:9px">mp3 · wav · mp4 · m4a</span></div>
-            </div>
-            <input type="file" id="expVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_expLoadVoiceFile(this.files[0]);this.value=''">
-          </div>
         </div>
 
         <div style="flex:1"></div>
@@ -3600,57 +3565,20 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- Résultat / preview -->
         <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
-          <div id="expResultPlaceholder" style="width:100%;max-width:940px;align-self:center;max-height:100%;overflow-y:auto;padding:4px 2px">
-            <h2 style="font-size:33px;font-weight:800;line-height:1.04;margin:0 0 7px;color:var(--text);letter-spacing:-.6px">Crée des vidéos en un clic</h2>
-            <p class="muted" style="font-size:14.5px;line-height:1.45;margin:0 0 16px;max-width:600px">Importe une image, décris la scène — l'IA anime le reste.</p>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
-
-              <!-- ① Choisis un style -->
-              <div class="card" style="position:relative;padding:15px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">1</div>
-                <div style="height:186px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;gap:10px;overflow:hidden;position:relative;margin-bottom:16px">
-                  <div style="width:46px;height:104px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">TRACKING</span></div>
-                  <div style="width:76px;height:154px;border-radius:13px;background:linear-gradient(180deg,#16542b,#34995a);border:2px solid var(--orange);box-shadow:0 10px 26px -8px rgba(47,163,90,.55);position:relative;overflow:hidden">
-                    <img src="../assets/hero-banana.png" alt="Avatar banane AvatarAds" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
-                    <span style="position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:2px 5px;z-index:2">CC</span>
-                    <span style="position:absolute;bottom:9px;right:8px;z-index:2;display:flex;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="#1A0A02" stroke-width="1.1" stroke-linejoin="round"><path d="M6.5 3.5l13 7.2-5.5 1.4 3.2 5.6-2.6 1.5-3.2-5.6-3.9 4z"/><path d="M16.8 2.6l1.5-1.6M20.4 5.4l1.6-1M18.9 9.1l1.9.1" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></span>
-                  </div>
-                  <div style="width:46px;height:104px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px"><span class="mono faint" style="font-size:7px">CORPORATE</span></div>
-                </div>
-                <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Choisis tes réglages</div>
-                <div class="muted" style="font-size:12.5px;line-height:1.4">Sélectionne ton style, ta durée, ton format et ta voix…</div>
+          <!-- Écran d'accueil DYNAMIQUE (05/08) : l'ancien header « 3 cartes »
+               noyait l'utilisateur — « trop d'information, les gens ne
+               comprennent rien ». Comme sur Images IA : un aperçu simple qui
+               RÉSUME ce que l'utilisateur a sélectionné, mis à jour en direct. -->
+          <div id="expResultPlaceholder" style="width:100%;max-width:600px;align-self:center;max-height:100%;overflow-y:auto;padding:4px 2px;text-align:center">
+            <div id="expHeroFrame" style="width:158px;height:281px;margin:0 auto 20px;border-radius:22px;background:linear-gradient(160deg,var(--bg4),var(--bg3));border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 18px 50px -22px rgba(0,0,0,.7);transition:width .25s ease,height .25s ease">
+              <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,var(--accent-2),var(--accent));display:grid;place-items:center;box-shadow:0 10px 26px -10px var(--accent-glow)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#1A0A02" style="margin-left:3px"><path d="M8 5v14l11-7z"/></svg>
               </div>
-
-              <!-- ② Rédige ton script -->
-              <div class="card" style="position:relative;padding:15px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">2</div>
-                <div style="height:186px;border-radius:14px;background:var(--bg4);border:1px solid var(--border2);padding:18px 20px;margin-bottom:16px;display:flex;flex-direction:column;justify-content:center">
-                  <div class="row" style="gap:9px;margin-bottom:15px;padding-left:30px;color:var(--text2);align-items:center"><span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--orange2);font-size:18px;line-height:1">T</span><span class="mono" style="font-size:10px;letter-spacing:1.5px;font-weight:700">TON SCRIPT</span></div>
-                  <div style="height:9px;border-radius:5px;background:var(--border2);margin-bottom:9px"></div>
-                  <div style="height:9px;width:90%;border-radius:5px;background:var(--border2);margin-bottom:9px"></div>
-                  <div style="height:9px;border-radius:5px;background:var(--border2);margin-bottom:14px"></div>
-                  <div class="row" style="align-items:center;gap:5px;margin-bottom:15px"><div style="height:9px;width:44%;border-radius:5px;background:var(--accent)"></div><div style="width:2px;height:15px;background:var(--orange2)"></div></div>
-                  <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--orange2);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:22px;padding:6px 13px">✦ Améliorer avec l'IA</span>
-                </div>
-                <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Rédige ton script</div>
-                <div class="muted" style="font-size:12.5px;line-height:1.4">Décris ta vidéo et ce que le perso doit dire à voix haute.</div>
-              </div>
-
-              <!-- ③ Obtiens ta vidéo -->
-              <div class="card" style="position:relative;padding:15px;background:var(--bg3);border:1.5px solid rgba(255,107,53,.55);border-radius:18px;text-align:left">
-                <div style="position:absolute;top:28px;left:28px;width:30px;height:30px;border-radius:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;font-size:15px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 12px -4px var(--accent-glow)">3</div>
-                <div style="height:186px;border-radius:14px;background:linear-gradient(120deg,#c8902f,#2c8f57 52%,#1f6ec0);border:3px solid #fff;display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 10px 26px -12px rgba(0,0,0,.6)">
-                  <svg width="54" height="54" viewBox="0 0 24 24" fill="#fff" style="filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))"><path d="M8 5v14l11-7z"/></svg>
-                </div>
-                <div style="font-size:17.5px;font-weight:700;color:var(--text);margin-bottom:6px">Obtiens ta vidéo</div>
-                <div class="muted" style="font-size:12.5px;line-height:1.4">Clique sur Générer pour créer ta vidéo animée finale !</div>
-              </div>
-
+              <span id="expHeroFmtTag" class="mono" style="position:absolute;top:10px;right:10px;font-size:9px;font-weight:800;background:rgba(0,0,0,.45);color:#fff;border-radius:5px;padding:2px 6px">9:16</span>
             </div>
-            <div class="row gap6" style="margin-top:14px;color:var(--text3);align-items:center;justify-content:center">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
-              <span class="mono" style="font-size:11.5px">Décris ta vidéo ci-dessous, puis clique sur Générer · <span id="expHeroFmt">9:16</span> · <span id="expHeroQual">720p</span></span>
-            </div>
+            <h2 style="font-size:29px;font-weight:800;line-height:1.06;margin:0 0 8px;color:var(--text);letter-spacing:-.5px">Décris ta vidéo, on la crée</h2>
+            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 auto 18px;max-width:420px">Écris ton idée ci-dessous — elle sera générée avec ces réglages :</p>
+            <div id="expHeroChips" class="row" style="gap:8px;flex-wrap:wrap;justify-content:center"></div>
           </div>
           <video id="expResultVid" controls playsinline style="display:none;max-height:100%;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
 
@@ -3932,12 +3860,15 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <!-- 1 · SOURCE -->
               <div class="mt-eyebrow">1 · Ta source</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+                <!-- 05/08 (Axel) : les noms disent ce que l'outil FAIT. « Gameplay
+                     + voix » était un vestige — ce mode n'utilise aucun gameplay :
+                     un audio (+ photo d'avatar) → l'IA crée toute la vidéo. -->
                 <button id="mtSrcGame" onclick="mtSetSrc('gameplay')" class="mt-src on">
-                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></span><span style="font-weight:700;font-size:15px">Gameplay + voix</span></div>
-                  <span class="faint" style="font-size:12px;line-height:1.35">Ta voix sur un clip gameplay</span>
+                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><span style="font-weight:700;font-size:15px">Ma voix off</span></div>
+                  <span class="faint" style="font-size:12px;line-height:1.35">L'IA crée toute la vidéo : avatar qui parle + visuels</span>
                 </button>
                 <button id="mtSrcVideo" onclick="mtSetSrc('mavideo')" class="mt-src">
-                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span style="font-weight:700;font-size:15px">Ma vidéo</span></div>
+                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span style="font-weight:700;font-size:15px">Monter ma vidéo</span></div>
                   <span class="faint" style="font-size:12px;line-height:1.35">Importe ta vidéo, l'IA la monte façon créateur pro</span>
                 </button>
               </div>
@@ -3957,7 +3888,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
                     <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="mt-drop-lbl" id="mtAvatarName">Ajoute une photo d'avatar</span></div>
-                    <span class="mt-drop-sub" id="mtAvatarSub">Sinon 100% gameplay · 0 crédit lipsync</span>
+                    <span class="mt-drop-sub" id="mtAvatarSub">Sinon visuels seuls · 0 crédit lipsync</span>
                     <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;cursor:pointer;line-height:1;display:none;align-items:center;justify-content:center">✕</button>
                   </div>
                   <input type="file" id="mtAvatarIn" accept="image/*" style="display:none" onchange="mtSetAvatar(this.files[0]);this.value=''">
@@ -5742,7 +5673,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-04-poignees-avatar'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-05-express-simple'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -14766,6 +14697,17 @@ function _mdVidEl(){
   // Repli sur le montage rendu si la source n'est pas signable (vieux job).
   v.id='mdVid'; v.src=_md.job.source_url||_md.job.url||''; v.playsInline=true; v.setAttribute('playsinline',''); v.preload='auto';
   v.crossOrigin='anonymous';   // permet de capturer la frame courante (placement média)
+  // ── LA SOURCE PEUT ÊTRE UN AUDIO SEUL (montage « Ma voix off » / MCP) ─────
+  // Un .mp3 dans <video> : le son joue, l'image reste noire — Axel (05/08) :
+  // « la vidéo n'est pas intégrée, on ne la voit pas alors que l'audio marche
+  // correctement ». Sans piste vidéo (videoWidth=0 au chargement), on bascule
+  // sur le MONTAGE RENDU : on perd le « dessous » simulé (qui n'existe pas de
+  // toute façon sans vidéo source), mais l'aperçu montre enfin la vidéo.
+  v.addEventListener('loadedmetadata',()=>{
+    if(!v.videoWidth && _md && _md.job.url && v.src!==_md.job.url){
+      const t=v.currentTime||0; v.src=_md.job.url; try{ v.currentTime=t; }catch(_){}
+    }
+  });
   v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#08070a';
   v.addEventListener('play',()=>{ if(_md){ _md.playing=true; _mdPlayBtns(); _mdRaf(); } });
   v.addEventListener('pause',()=>{ if(_md){ _md.playing=false; _mdPlayBtns(); } });
@@ -19257,6 +19199,41 @@ function _renderGroupEditor(){
     row.dataset.gi = gi;
     row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:6px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;margin-bottom:5px;min-height:40px;transition:border-color .15s;position:relative';
 
+    // ── TOUTE LA LIGNE ACCEPTE LE DROP (05/08) ────────────────────────────────
+    // Les seules cibles étaient les slots de 6 px entre les chips : impossible à
+    // viser — Axel : « je n'arrive pas à mettre un mot en bas ni derrière ou
+    // devant le mot ». Désormais on lâche N'IMPORTE OÙ sur la ligne : l'index
+    // d'insertion se déduit de la position du curseur (avant/après le mot le
+    // plus proche, fin de ligne si on lâche après le dernier, et une autre
+    // ligne = déplacer le mot dedans). Les slots restent pour la visée fine.
+    const dropIndexAt = (x, y) => {
+      const chips = [...row.querySelectorAll('.word-chip')];
+      let idx = chips.length;                       // défaut : fin de ligne
+      for(let i=0;i<chips.length;i++){
+        const r = chips[i].getBoundingClientRect();
+        if(y < r.top - 4){ idx = i; break; }        // rangée du dessus (ligne wrappée)
+        if(y <= r.bottom + 4 && x < r.left + r.width/2){ idx = i; break; }
+      }
+      return idx;
+    };
+    row.ondragover  = e => { e.preventDefault(); row.style.borderColor = 'var(--orange)'; };
+    row.ondragleave = e => { if(!row.contains(e.relatedTarget)) row.style.borderColor = 'var(--border)'; };
+    row.ondrop = e => {
+      e.preventDefault();
+      row.style.borderColor = 'var(--border)';
+      const fromGi = +e.dataTransfer.getData('wg_gi');
+      const fromWi = +e.dataTransfer.getData('wg_wi');
+      if(Number.isNaN(fromGi) || Number.isNaN(fromWi)) return;
+      let idx = dropIndexAt(e.clientX, e.clientY);
+      const word = _wordGroups[fromGi]?.splice(fromWi, 1)[0];
+      if(!word){ _renderGroupEditor(); return; }
+      if(fromGi === gi && fromWi < idx) idx = Math.max(0, idx-1);
+      if(!_wordGroups[gi]) _wordGroups[gi]=[];
+      _wordGroups[gi].splice(idx, 0, word);
+      _wordGroups = _wordGroups.filter(g=>g.length>0);
+      _renderGroupEditor();
+    };
+
     // Numéro de ligne
     const label = document.createElement('span');
     label.textContent = gi+1;
@@ -23619,20 +23596,18 @@ window._expGeminiVoice = 'Puck';
 window._expVoiceBlob = null;          // voix générée/importée (à muxer dans l'Éditeur)
 
 const EXP_QUALITIES = [ {v:'720p',l:'720p',note:''}, {v:'1080p',l:'1080p',note:'✦'} ]; /* 4K réservé Élite plus tard */
+// 05/08 — Axel : « supprime Gemini TTS et ElevenLabs ainsi qu'importer une
+// voix… tu mets juste voix native ou pas d'audio ». Deux modes, point. Le TTS
+// Gemini ne subsiste qu'en repli INTERNE quand Veo refuse l'audio natif
+// (_expTtsFallback) — ce n'est plus un choix offert à l'utilisateur.
 const EXP_VOICES = [
   { id:'native', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
-  { id:'gemini', name:'Gemini TTS',         desc:'voix générée · 11 timbres' },
-  { id:'eleven', name:'ElevenLabs',         desc:'Voice Design + presets' },
-  { id:'import', name:'Importer une voix',  desc:'MP3 · WAV · M4A · MP4' },
-  { id:'none',   name:'Pas de voix',        desc:'vidéo muette · tu ajoutes le son après' },
+  { id:'none',   name:'Pas de voix',        desc:'vidéo muette' },
 ];
 // Icônes SVG par mode de voix
 const _EXP_VOICE_ICON = {
   none:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>',
   native:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
-  gemini:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>',
-  eleven:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7M19 5.5a8 8 0 0 1 0 13"/></svg>',
-  import:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>',
 };
 
 const EXP_STYLES = [
@@ -23691,13 +23666,27 @@ function initExpress(){
   _expRenderVoices();
   _expSyncSubToggle();
   _expUpdateGenCaption();
+  _expHeroSync();
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
   const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
-  const hf=document.getElementById('expHeroFmt'); if(hf) hf.textContent=window._expFormat||'9:16';
-  const hq=document.getElementById('expHeroQual'); if(hq) hq.textContent=q;
+}
+// L'écran d'accueil RÉSUME les réglages en direct (05/08, style Images IA) :
+// cadre au format choisi + pilules Style/Format/Durée/Qualité/Voix/Images.
+function _expHeroSync(){
+  const chips=document.getElementById('expHeroChips');
+  if(chips){
+    const st=(EXP_STYLES.find(s=>s.id===window._expStyle)||{}).label||'Réaliste';
+    const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native';
+    const n=(window._expImgs||[]).length;
+    const chip=(ic,txt,on)=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:${on?'var(--orange2)':'var(--text2)'};background:${on?'rgba(255,107,53,.09)':'var(--bg3)'};border:1px solid ${on?'rgba(255,107,53,.4)':'var(--border2)'};border-radius:20px;padding:7px 12px">${ic} ${txt}</span>`;
+    chips.innerHTML = chip('🎨',st,true)+chip('📐',window._expFormat||'9:16')+chip('⏱',(window._expDur||4)+' s')+chip('💎',window._expQuality||'720p')+chip('🎙',vx)+(n?chip('🖼',n>1?n+' images':'1 image',true):'');
+  }
+  const frame=document.getElementById('expHeroFrame');
+  if(frame){ const land=(window._expFormat==='16:9'); frame.style.width=land?'320px':'158px'; frame.style.height=land?'180px':'281px'; }
+  const tag=document.getElementById('expHeroFmtTag'); if(tag) tag.textContent=window._expFormat||'9:16';
 }
 // Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
 function _expDurAllowed(){
@@ -23727,13 +23716,9 @@ function _expRenderVoices(){
   if(wrap){
     wrap.innerHTML = EXP_VOICES.map(v=>{
       const on=v.id===window._expVoice;
-      const isImport=v.id==='import';
-      // Indicateur à droite : ✓ si sélectionné · ⌃ chevron pour gemini/eleven · rien pour import
-      let right='';
-      if(on){ right='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'; }
-      else if(v.id==='gemini'||v.id==='eleven'){ right='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'; }
+      const right = on ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '';
       const iconColor = on ? 'var(--orange2)' : 'var(--text2)';
-      const border = isImport ? `1.5px dashed ${on?'rgba(255,107,53,.85)':'var(--border2)'}` : `1.5px solid ${on?'rgba(255,107,53,.85)':'var(--border2)'}`;
+      const border = `1.5px solid ${on?'rgba(255,107,53,.85)':'var(--border2)'}`;
       const bg = on ? 'rgba(255,107,53,.08)' : 'var(--bg3)';
       const row = `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
         <span style="flex-shrink:0;color:${iconColor};display:flex">${_EXP_VOICE_ICON[v.id]||''}</span>
@@ -23747,65 +23732,12 @@ function _expRenderVoices(){
       return row;
     }).join('');
   }
-  // Panels (gemini/eleven → menu modal partagé)
-  const tts=document.getElementById('expVoiceTtsPanel'), imp=document.getElementById('expVoiceImportPanel'),
-        gp=document.getElementById('expGeminiVoicePanel'), ep=document.getElementById('expElevenVoicePanel');
-  if(tts) tts.style.display = (window._expVoice==='gemini'||window._expVoice==='eleven') ? 'block' : 'none';
-  if(gp)  gp.style.display  = (window._expVoice==='gemini') ? 'block' : 'none';
-  if(ep)  ep.style.display  = (window._expVoice==='eleven') ? 'block' : 'none';
-  if(imp) imp.style.display = (window._expVoice==='import') ? 'block' : 'none';
-  if(typeof _refreshVoiceLabels==='function') _refreshVoiceLabels();
+  if(typeof _expHeroSync==='function') _expHeroSync();
 }
-function _expPickVoice(id){
-  window._expVoice=id; _expRenderVoices();
-  // Clic = ouvre directement le menu correspondant
-  if(id==='gemini'){ if(typeof openVoicePicker==='function') openVoicePicker('gemini'); }
-  else if(id==='eleven'){ if(typeof openVoicePicker==='function') openVoicePicker('eleven'); }
-  else if(id==='import'){ const fi=document.getElementById('expVoiceFileIn'); if(fi) fi.click(); }
-}
-function _expLoadVoiceFile(file){
-  if(!file){ return; }
-  if(!(file.type.startsWith('audio/')||file.type.startsWith('video/'))){ toast('⚠️ Importe un audio ou mp4'); return; }
-  window._expVoiceBlob = file;
-  const lbl=document.getElementById('expVoiceFileLabel');
-  if(lbl) lbl.innerHTML = '✅ '+file.name;
-  toast('✅ Voix importée');
-}
-// Génère la voix selon le mode choisi → renvoie un Blob audio (ou null pour native)
-async function _expBuildVoice(){
-  // « Pas de voix » : Veo tourne sans audio, on ne génère RIEN — la vidéo sort muette
-  if(window._expVoice==='native' || window._expVoice==='none') return null;
-  if(window._expVoice==='import'){
-    if(!window._expVoiceBlob) throw new Error('Importe un fichier voix d\'abord');
-    return window._expVoiceBlob;
-  }
-  const text=(document.getElementById('expPrompt')?.value||'').trim();
-  if(!text) throw new Error('Écris ton texte dans le prompt');
-  if(window._expVoice==='gemini'){
-    const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
-      method:'POST',
-      body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:(window._selGeminiVoice||window._expGeminiVoice||'Puck') } } } } })
-    });
-    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||('Gemini TTS '+resp.status)); }
-    const data=await resp.json();
-    const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-    const b64=(part?.inlineData||part?.inline_data)?.data;
-    if(!b64) throw new Error('Pas d\'audio Gemini');
-    const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-    return new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
-  }
-  if(window._expVoice==='eleven'){
-    const authH=await getAuthHeader();
-    const vid=(typeof selVoiceId!=='undefined' && selVoiceId) ? selVoiceId : '21m00Tcm4TlvDq8ikWAM';
-    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${vid}`,{
-      method:'POST', headers:{...authH,'Content-Type':'application/json'},
-      body:JSON.stringify({ text, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} })
-    });
-    if(!resp.ok){ const e=await resp.text(); throw new Error('ElevenLabs '+resp.status+' '+e.slice(0,80)); }
-    return await resp.blob();
-  }
-  return null;
-}
+function _expPickVoice(id){ window._expVoice=id; _expRenderVoices(); }
+// Génère la voix selon le mode choisi — deux modes restants (native/muet), la
+// vidéo Veo porte son audio elle-même : plus rien à fabriquer côté client.
+async function _expBuildVoice(){ return null; }
 // Fallback voix (Gemini TTS) quand Veo natif refuse l'audio — la voix est ajoutée dans l'Éditeur
 async function _expTtsFallback(text){
   if(!text) return null;
@@ -23947,6 +23879,7 @@ function _expPickFromLib(i){
 }
 function _expRenderImgs(){
   const imgs=window._expImgs||[];
+  if(typeof _expHeroSync==='function') _expHeroSync();
   const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
   if(imgs.length){ if(p){ p.src=imgs[0].url; p.style.display='block'; } if(d) d.style.borderColor='var(--orange)'; if(cnt){ cnt.style.display=imgs.length>1?'block':'none'; cnt.textContent=imgs.length+'/'+EXP_MAX_IMGS; } }
   else { if(p){ p.style.display='none'; p.src=''; } if(d) d.style.borderColor='var(--border2)'; if(cnt) cnt.style.display='none'; }
@@ -30834,7 +30767,6 @@ function edBandDrag(ov,track,e,mode){
   #v-recorder div:has(>#recLibBtn){flex-wrap:wrap}
   #recLibBtn{flex:1 1 100% !important}
   /* Express : cartes explicatives 1-2-3 en colonne */
-  #expResultPlaceholder div[style*="repeat(3,1fr)"]{grid-template-columns:1fr !important}
   /* Grilles 3 colonnes génériques trop larges → 2 colonnes (sauf formats) */
   #v-imagegen div[style*="repeat(3,1fr)"]:not(#imgFormatGrid){grid-template-columns:1fr 1fr !important}
   /* Composer Images IA : la colonne prompt doit pouvoir rétrécir */
