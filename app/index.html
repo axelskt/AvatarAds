@@ -5668,7 +5668,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-07-mode-capture'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-08-07-md-fluide'; window.__AA_BUILD = AA_BUILD;
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -13218,21 +13218,29 @@ function _mdTick(){
   try{ _mdPeindreAnim(t); }catch(_){ /* l'aperçu ne casse jamais la lecture */ }
   // curseurs + temps
   for(const id of ['mdCur','mdCurH','mdCurHit']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
-  const tm=document.getElementById('mdTime'); if(tm) tm.innerHTML=_mdT(t)+'<span class="faint"> / '+_mdT(dur)+'</span>';
-  const tz=document.getElementById('mdZoomTime'); if(tz) tz.textContent=_mdT(t);
   // scène en cours pendant la lecture
   if(_md.playing){ const hit=_md.scenes.find(s=>t>=s.a&&t<s.b);
     if(hit && hit.id!==_md.sel){ _md.sel=hit.id; _mdPaintSel(); } }
-  // proximité des tiges (bande) + blocs playing
-  _mdPaintProximity();
   // auto-scroll du zoom bande
   const wrap=document.getElementById('mdBandWrap');
   if(wrap && _md.bandZoom>1 && _md.playing){ const target=(t/dur)*wrap.scrollWidth - wrap.clientWidth/2;
     wrap.scrollLeft=Math.max(0,Math.min(wrap.scrollWidth-wrap.clientWidth,target)); }
-  // vue rapprochée : re-render léger (fenêtre glissante)
-  if(_md.detail) _mdPaintCloseUp();
-  // pill info du clip
-  _mdPaintClipInfo();
+  // ── 60 fps POUR CE QUI GLISSE, ~15 fps POUR CE QUI SE REDESSINE (07/08) ──
+  // Axel : « ce n'est pas très fluide niveau fps ». La lecture repeignait À
+  // CHAQUE frame les tiges (querySelectorAll + JSON.parse par tige), le pill
+  // (innerHTML), la vue rapprochée et l'horloge. Le curseur et le zoom vidéo
+  // restent à 60 fps (transform/left, pas chers) ; le reste passe à ~15 fps —
+  // l'œil ne voit pas la différence, la lecture si.
+  const _now=performance.now();
+  const lourd=!_md.playing || !_md._lastHeavy || _now-_md._lastHeavy>66;
+  if(lourd){
+    _md._lastHeavy=_now;
+    const tm=document.getElementById('mdTime'); if(tm) tm.innerHTML=_mdT(t)+'<span class="faint"> / '+_mdT(dur)+'</span>';
+    const tz=document.getElementById('mdZoomTime'); if(tz) tz.textContent=_mdT(t);
+    _mdPaintProximity();
+    if(_md.detail) _mdPaintCloseUp();
+    _mdPaintClipInfo();
+  }
 }
 function _mdRaf(){ if(!_md || !_md.playing) return; _mdTick(); _mdSfxLive(); requestAnimationFrame(_mdRaf); }
 // pendant la lecture, les bruitages AJOUTÉS/CHANGÉS se jouent à leur instant —
@@ -13350,11 +13358,17 @@ function _mdPaintClipInfo(){
   }
   const s=_md.scenes.find(x=>x.id===_md.sel);
   const halo=document.getElementById('mdClipHalo'), pill=document.getElementById('mdClipPill');
-  if(halo) halo.style.background = s?'radial-gradient(160px 220px at 50% 45%, color-mix(in srgb, '+_MD_NATURE[s.n].color+' 55%, transparent), transparent 70%)':'none';
-  if(pill){ if(!s){ pill.style.display='none'; } else { pill.style.display='block';
-    pill.innerHTML='<div class="row" style="gap:6px;align-items:center">'+_mdIco(_MD_NATURE[s.n].ico,11,_MD_NATURE[s.n].color)
-      +'<span style="font-size:10.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mdEsc(s.repl||s.t)+'</span>'
-      +'<span class="mono" style="font-size:9.5px;color:rgba(255,255,255,.6);margin-left:auto">'+_mdT(s.a)+'</span></div>'; } }
+  // 07/08 (Axel) : « pourquoi y'a un effet un peu violet sur l'écran ? » — le
+  // halo teinté à la couleur de la scène VOILAIT la vidéo (violet plein écran
+  // sur les captures). On le coupe : la nature reste lisible par la pastille.
+  if(halo) halo.style.background='none';
+  if(pill){ if(!s){ pill.style.display='none'; _md._pillKey=''; } else {
+    // le pill ne se réécrit QUE quand la scène change — pas à chaque frame
+    const pk=s.id+'|'+String(s.repl||s.t);
+    if(_md._pillKey!==pk){ _md._pillKey=pk; pill.style.display='block';
+      pill.innerHTML='<div class="row" style="gap:6px;align-items:center">'+_mdIco(_MD_NATURE[s.n].ico,11,_MD_NATURE[s.n].color)
+        +'<span style="font-size:10.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mdEsc(s.repl||s.t)+'</span>'
+        +'<span class="mono" style="font-size:9.5px;color:rgba(255,255,255,.6);margin-left:auto">'+_mdT(s.a)+'</span></div>'; } } }
 }
 // tiges : taille/hauteur selon la proximité du curseur (NEAR 4 s) — imperatif
 function _mdPaintProximity(){
