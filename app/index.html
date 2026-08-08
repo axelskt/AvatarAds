@@ -4418,9 +4418,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </div>
                   <!-- CLIPS -->
                   <div class="row" style="height:46px;border-top:1px solid var(--border2)">
-                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:var(--accent);flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Clips</span></div>
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:var(--accent);flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Visuel</span></div>
                     <div style="position:relative;flex:1;height:100%;padding:5px 0;box-sizing:border-box">
                       <div id="edTl" style="position:absolute;left:0;right:0;top:5px;bottom:5px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;cursor:pointer;overflow:hidden;user-select:none">
+                        <!-- pellicule : vignettes du clip, sous les poignées/bandes -->
+                        <div id="edTlStrip" style="position:absolute;top:0;bottom:0;left:0;right:0;display:flex;pointer-events:none"></div>
                         <div id="edTlDeletes" style="position:absolute;top:0;bottom:0;left:0;right:0;pointer-events:none"></div>
                         <div id="edTlTrimL" style="position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
                         <div id="edTlTrimR" style="position:absolute;top:0;bottom:0;right:0;width:0;background:rgba(0,0,0,.6);pointer-events:none"></div>
@@ -4428,6 +4430,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                         <div id="edTlHandleR" style="position:absolute;top:3px;bottom:3px;right:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
                       </div>
                       <div id="edClipsTrack" style="display:none;position:absolute;left:0;right:0;top:5px;bottom:5px;gap:3px"></div>
+                      <!-- les ANIMATIONS vivent sur la piste Visuel (retour Axel 08/08) -->
+                      <div id="edZoomTrack" style="display:none;position:absolute;left:0;right:0;top:5px;bottom:5px;z-index:4"></div>
                     </div>
                   </div>
                   <!-- BANDE SON -->
@@ -4444,18 +4448,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
                       <div id="edSfxTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
                       <span id="edSfxHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Ajoute gloup · transition · ding au curseur</span>
-                      <div id="edZoomTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
                     </div>
                   </div>
-                  <!-- CALQUES -->
-                  <div class="row" style="border-top:1px solid var(--border2);min-height:46px">
-                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#9A7CFF;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Calques</span></div>
-                    <div style="position:relative;flex:1;min-height:46px;padding:6px 8px;box-sizing:border-box">
-                      <div id="edOvTrack" style="display:none;flex-direction:column;gap:5px"></div>
-                      <div id="edOvTrackHint" class="faint mono" style="display:none;font-size:9px;line-height:1.4;color:var(--text3);margin-top:3px">Bandes = durée d'apparition · glisse pour déplacer, bords pour ajuster, ✕ pour supprimer</div>
-                      <span id="edOvEmptyHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Ajoute du texte ou une image</span>
-                    </div>
-                  </div>
+                  <!-- (piste Calques retirée — les calques se gèrent dans le rail droit, retour Axel 08/08) -->
                   <!-- PLAYHEAD (traverse toutes les pistes) -->
                   <div id="edTlPlayhead" style="position:absolute;top:20px;bottom:0;left:100px;width:2px;background:var(--accent-2);box-shadow:0 0 8px var(--accent-glow);pointer-events:none;z-index:6"><div style="position:absolute;top:-3px;left:-5px;width:12px;height:12px;border-radius:50%;background:var(--accent-2)"></div></div>
                 </div>
@@ -4479,7 +4474,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- OUTILS -->
             <div id="edTools" class="card" style="padding:16px;margin-bottom:14px">
               <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Outils</div>
-              <button onclick="openEdAiModal()" id="edAiBtn" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;border:1px solid rgba(255,143,94,.6);box-shadow:0 4px 18px rgba(255,107,53,.25);display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>Montage IA</button>
               <button onclick="edAddText()" class="btn btn-primary" style="width:100%;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg> Ajouter un texte</button>
               <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Ajouter une image</button>
               <div onclick="document.getElementById('edImportIn').click()"
@@ -4492,7 +4486,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="faint mono" style="font-size:10.5px">vidéos · images · audio</div>
               </div>
               <button onclick="edPickFromLibrary()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque</button>
-              <button onclick="edReset()" class="btn-quiet btn-sm" style="width:100%;color:var(--accent-2);display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/></svg> Recommencer</button>
+              <button onclick="edReset()" class="btn-quiet btn-sm" style="width:100%;color:var(--accent-2);display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;background:none;box-shadow:none;outline:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/></svg> Recommencer</button>
               <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
               <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
             </div>
@@ -4515,11 +4509,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <input type="range" min="0" max="100" value="70" class="ed-range" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'">
               </div>
               <div class="row" style="justify-content:space-between;margin:0 0 6px"><span class="mono faint row gap6" style="font-size:11px;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Voix vidéo</span><span id="edVoiceVolLbl" class="mono accent" style="font-size:11px">100%</span></div>
-              <input type="range" min="0" max="100" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'">
+              <input type="range" min="0" max="100" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%';edRangeFill(this)">
               <div class="label" style="margin:14px 0 10px;font-size:10.5px">Effets sonores — ajoutés au curseur</div>
               <div style="display:grid;grid-template-columns:1fr;gap:8px">
                 <button onclick="edOpenBank('sfx')" class="ed-bankbtn" style="border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.09);color:#22D3EE"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Bruitages <span style="opacity:.7">(52)</span></button>
-                <button onclick="edOpenBank('anim')" class="ed-bankbtn" style="border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Animations <span style="opacity:.7">(169)</span></button>
+                <button onclick="edOpenBank('anim')" class="ed-bankbtn" style="border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Animations <span style="opacity:.7">(164)</span></button>
                 <button onclick="edOpenBank('trans')" class="ed-bankbtn" style="border:1px solid rgba(154,124,255,.35);background:rgba(154,124,255,.09);color:#9A7CFF"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg> Transitions <span style="opacity:.7">(5)</span></button>
               </div>
               <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
@@ -29280,25 +29274,50 @@ async function _edFillStrip(strip, clip){
   }catch(e){}
 }
 function _edExtractThumbs(clip, count){
-  if(clip._thumbs) return Promise.resolve(clip._thumbs);
+  // cache PAR NOMBRE demandé : la carte (1 vignette) et la pellicule (10) se
+  // partageaient la même entrée — le premier arrivé imposait son compte
+  clip._thumbs=clip._thumbs&&!Array.isArray(clip._thumbs)?clip._thumbs:{};
+  if(clip._thumbs[count]) return Promise.resolve(clip._thumbs[count]);
   return new Promise((resolve)=>{
     const tv=document.createElement('video'); tv.src=clip.url; tv.muted=true; tv.preload='auto'; tv.playsInline=true;
     const cv=document.createElement('canvas'); const cx=cv.getContext('2d'); const out=[];
-    let done=false; const finish=()=>{ if(done) return; done=true; clip._thumbs=out; try{tv.src='';}catch(e){} resolve(out); };
+    let done=false; const finish=()=>{ if(done) return; done=true; clip._thumbs[count]=out; try{tv.src='';}catch(e){} resolve(out); };
     tv.onloadedmetadata=async ()=>{
       const vw=clip.vw||tv.videoWidth||720, vh=clip.vh||tv.videoHeight||1280;
       cv.width=160; cv.height=Math.max(1,Math.round(160*(vh/vw)));
       const a=clip.trimA, b=clip.trimB;
       for(let i=0;i<count;i++){
-        const t=a+((b-a)*(i+0.5)/count);
+        // 1 seule vignette → à 25 % du clip (le milieu tombait parfois sur un
+        // écran noir de transition ; le début est souvent noir tout court)
+        const t=count===1 ? a+(b-a)*0.25 : a+((b-a)*(i+0.5)/count);
         await new Promise(res=>{ const on=()=>{ tv.removeEventListener('seeked',on); res(); }; tv.addEventListener('seeked',on); try{ tv.currentTime=t; }catch(e){ res(); } setTimeout(res,700); });
+        // Safari : `seeked` part AVANT que la frame soit peinte — un drawImage
+        // immédiat capture du NOIR (la vignette noire d'Axel). Deux rAF.
+        await new Promise(res=>requestAnimationFrame(()=>requestAnimationFrame(res)));
         try{ cx.imageSmoothingQuality='high'; cx.drawImage(tv,0,0,cv.width,cv.height); out.push(cv.toDataURL('image/jpeg',0.78)); }catch(e){ out.push(null); }
       }
       finish();
     };
     tv.onerror=()=>finish();
-    setTimeout(finish, 7000);
+    setTimeout(finish, 9000);
   });
+}
+// ── PELLICULE DE LA PISTE VISUEL (1 seul clip) ─────────────────────────────
+// « dans clips il faut afficher les images de la vidéo dans la timeline, là
+// c'est vide » — le clip unique n'avait que la bande orange ; on y pose ses
+// vignettes, sous les poignées de trim. (Le multi-clips a déjà les siennes.)
+async function _edRenderTlStrip(){
+  const st=document.getElementById('edTlStrip'); if(!st||!_ed||!_ed.clips||!_ed.clips.length) { if(st) st.innerHTML=''; return; }
+  const c=_ed.clips[_ed.activeIdx||0]||_ed.clips[0];
+  const sig=(c.url||'')+'|'+(+c.trimA).toFixed(2)+'|'+(+c.trimB).toFixed(2);
+  if(st.dataset.sig===sig) return;
+  st.dataset.sig=sig;
+  try{
+    const thumbs=await _edExtractThumbs(c, 10);
+    if(!st.isConnected||st.dataset.sig!==sig) return;
+    st.innerHTML='';
+    (thumbs||[]).forEach(src=>{ const im=document.createElement('div'); im.style.cssText='flex:1;min-width:0;background-size:cover;background-position:center;opacity:.8'+(src?(';background-image:url('+src+')'):''); st.appendChild(im); });
+  }catch(e){}
 }
 function _edDrawWave(canvasId, peaks, color){
   const c=document.getElementById(canvasId); if(!c) return;
@@ -29360,7 +29379,11 @@ async function _edSfxBuffer(ac, type){
   if(_sfxBufCache[type]) return _sfxBufCache[type];
   const f=_SFX_FILES[type]; if(!f) return null;
   try{
-    const ab=await (await fetch(/^https?:/.test(f) ? f : '../assets/sfx/'+f)).arrayBuffer();
+    // sfx/ (app) d'abord : les 52 bruitages réels + les lits y vivent tous ;
+    // ../assets/sfx/ reste en secours (anciens chemins)
+    const ab=await (async()=>{ if(/^https?:/.test(f)) return (await fetch(f)).arrayBuffer();
+      const r1=await fetch('sfx/'+f); if(r1.ok) return r1.arrayBuffer();
+      return (await fetch('../assets/sfx/'+f)).arrayBuffer(); })();
     _sfxBufCache[type]=await ac.decodeAudioData(ab);
     return _sfxBufCache[type];
   }catch(e){ return null; }
@@ -30495,10 +30518,16 @@ function edRenderClips(){
     const main=idx===0, active=idx===_ed.activeIdx;
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border2)')+';background:'+(active?'var(--accent-soft)':'var(--bg3)');
-    // vignette = première image du clip (pour se repérer)
+    // vignette = image du clip (pour se repérer) ; un fichier SANS image
+    // (audio importé) reçoit une icône de musique, pas un carré noir
     const thumb=document.createElement('div');
     thumb.style.cssText='width:36px;height:36px;border-radius:8px;flex:0 0 auto;border:1px solid var(--border2);background:repeating-linear-gradient(135deg,oklch(.4 .09 '+(c.hue||18)+') 0 7px,oklch(.28 .07 '+(c.hue||18)+') 7px 14px);background-size:cover;background-position:center';
-    try{ _edExtractThumbs(c,1).then(t=>{ if(t&&t[0]) thumb.style.background='#000 url('+t[0]+') center/cover'; }).catch(()=>{}); }catch(e){}
+    if(c.isAudio||c.vw===0){
+      thumb.style.background='var(--bg3)'; thumb.style.display='grid'; thumb.style.placeItems='center';
+      thumb.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28C795" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    } else {
+      try{ _edExtractThumbs(c,1).then(t=>{ if(t&&t[0]) thumb.style.background='#000 url('+t[0]+') center/cover'; }).catch(()=>{}); }catch(e){}
+    }
     const star=document.createElement('span'); star.style.cssText='flex:0 0 auto;display:grid;place-items:center'; star.innerHTML=main?'<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB020" stroke="none"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>';
     const name=document.createElement('span'); name.style.cssText='font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600'; name.textContent=(main?'Clip principal':'Clip '+(idx+1))+(active?' • édition':'');
     const dur=document.createElement('span'); dur.className='faint mono'; dur.style.cssText='font-size:10px;flex:0 0 auto'; dur.textContent=edFmt(Math.max(0,c.trimB-c.trimA));
@@ -30512,6 +30541,7 @@ function edRenderClips(){
     }
     wrap.appendChild(row);
   });
+  _edRenderTlStrip();
 }
 
 /* ---------- overlay time-range track ---------- */
@@ -30581,19 +30611,15 @@ function edBandDrag(ov,track,e,mode){
     ["Overlay",["light leak","poussière","rayures film","pluie écran","flare","grain 16mm","vignettage","brume","reflet verre","scanline douce","halo néon","texture papier","fuite lumière","vieux film","bruit TV","projecteur","cendres","étincelles"]],
   ];
   const ED_ANIMS=ED_ANIM_FAMILIES.reduce((a,x)=>a.concat(x[1].map(v=>x[0]+" "+v)),[]);      // 169
-  const ED_SFX_FAMILIES=[
-    ["Whoosh",["rapide","grave","double","aérien","métal","inversé"]],
-    ["Impact",["grave","sec","béton","sub","tambour","cinéma"]],
-    ["Clic",["sec","souris","interface","clavier","déclic"]],
-    ["Riser",["tension","aigu","sirène","cordes","synthé"]],
-    ["Pop",["bulle","bouchon","doux","aigu","cartoon"]],
-    ["Cash",["register","pièces","billets","ka-ching"]],
-    ["Notification",["ding","cloche","message","alerte","succès"]],
-    ["Boom",["sub","explosion","tonnerre","canon"]],
-    ["Ambiance",["foule","ville","vent","pluie","studio","café"]],
-    ["Voix",["applaudissements","rire","wow","yes","huh","oh non"]],
-  ];
-  const ED_SFX=ED_SFX_FAMILIES.reduce((a,x)=>a.concat(x[1].map(v=>x[0]+" "+v)),[]);          // 52
+  // LES VRAIS BRUITAGES (app/sfx/*.mp3, ceux du worker) — retour Axel 08/08 :
+  // « il faut connecter les vrais bruitages à notre banque, pas ceux du design »
+  const ED_SFX=["whoosh","woosh","mo-whoosh-1","mo-swipe-1","mo-swipe-2","ed-swish-1","knife-draw","reverse-crash",
+    "hit","ed-hit-1","cinematic-impact","mo-impact-1","mo-impact-2","mo-impact-3","punch-stop-riser","ed-thud-1","ed-thud-2","ed-boom-1","mo-sub-1","ed-sub-1",
+    "click","ed-click-1","mouse-click","mo-tap-1","mo-tick-1","bip","snap","camera-click","camera-shutter","flash","gear",
+    "riser","metallic-riser","mo-riser-1","ed-riser-1",
+    "pop","ed-pop-1","mo-pop-1","mo-pop-2","mo-pop-3",
+    "ding","message-tone","success","iphone-charging","magic","timer","heartbeat","mac-typing","robot","hu","fahh","mo-outro-1"]; // 52 fichiers réels
+  const sfxLabel=function(s){ return String(s).replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}); };
   const ED_TRANS=["Cut net","Fondu enchaîné","Whip pan","Zoom transition","Glitch"];         // 5
   const ED_MUSIC=[
     {id:"lofi",name:"Aesthetic Lo-fi",mood:"doux · fond de voix",dur:"2:14",url:"../assets/music/music-1.mp3"},
@@ -30616,18 +30642,65 @@ function edBandDrag(ov,track,e,mode){
     play:'<path d="M7 4l13 8-13 8z"/>',
     music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   };
-  function metaFor(kind){ return {anim:{t:"Animations",items:ED_ANIMS,c:"var(--accent)",ico:IC.sparkle},
+  // LES VRAIES ANIMATIONS : la même banque que le Montage IA — les previews
+  // MP4 rendus par le moteur lui-même (anim-previews/<nom>.mp4 + manifeste).
+  function ensureAnimBank(){
+    if(window._edAnimsReal) return Promise.resolve(window._edAnimsReal);
+    return fetch('anim-previews/index.json').then(function(r){return r.json();}).then(function(names){
+      window._edAnimsReal=names;
+      window._mdPrevSet=window._mdPrevSet||new Set(names);
+      return names;
+    }).catch(function(){ window._edAnimsReal=[]; return []; });
+  }
+  function metaFor(kind){ return {anim:{t:"Animations",items:(window._edAnimsReal&&window._edAnimsReal.length?window._edAnimsReal:ED_ANIMS),c:"var(--accent)",ico:IC.sparkle},
                                   sfx:{t:"Bruitages",items:ED_SFX,c:"#22D3EE",ico:IC.volume},
                                   trans:{t:"Transitions",items:ED_TRANS,c:"#9A7CFF",ico:IC.film}}[kind]; }
+  // aperçu d'une carte/cellule : vidéo réelle (anim), écoute réelle (sfx), démo (transition)
+  function previewCell(kind, item, big){
+    if(kind==='anim'){
+      const nm=String(item).replace(/[^a-z0-9_-]/gi,'');
+      if(window._mdPrevSet&&window._mdPrevSet.has(nm)){
+        const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+        return '<video src="'+src+'" muted '+(big?'autoplay':'preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause()"')+' loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
+      }
+      return '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent)">'+S(IC.sparkle,big?44:26)+'</div>';
+    }
+    if(kind==='sfx'){
+      return '<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,rgba(34,211,238,.10),rgba(0,0,0,.5))">'
+        +'<button onclick="event.stopPropagation();(function(b){var a=new Audio(\'sfx/'+String(item).replace(/[^a-z0-9-]/gi,'')+'.mp3\');a.volume=.9;a.play().catch(function(){});b.style.background=\'#22D3EE33\';setTimeout(function(){b.style.background=\'transparent\'},350)})(this)" title="Écouter" style="width:'+(big?62:30)+'px;height:'+(big?62:30)+'px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #22D3EE;background:transparent;color:#22D3EE;cursor:pointer">'
+        +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></button></div>';
+    }
+    // transitions : mini-démo animée (deux panneaux)
+    const demo={'Cut net':'edtCut','Fondu enchaîné':'edtFade','Whip pan':'edtWhip','Zoom transition':'edtZoom','Glitch':'edtGlitch'}[item]||'edtFade';
+    return '<div style="position:absolute;inset:0;overflow:hidden;background:#17171C">'
+      +'<div style="position:absolute;inset:0;background:linear-gradient(150deg,#2b2530,#17131c)"></div>'
+      +'<div class="'+demo+'" style="position:absolute;inset:0;background:linear-gradient(150deg,var(--accent),#8a3a12)"></div>'
+      +'<span class="mono" style="position:absolute;left:0;right:0;top:46%;text-align:center;color:#fff;font-size:'+(big?13:10)+'px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8)">A → B</span></div>';
+  }
+  (function(){ const st=document.createElement('style'); st.textContent=
+    '@keyframes edtCutK{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}.edtCut{animation:edtCutK 1.6s steps(1) infinite}'
+    +'@keyframes edtFadeK{0%,35%{opacity:1}60%,85%{opacity:0}100%{opacity:1}}.edtFade{animation:edtFadeK 2s ease infinite}'
+    +'@keyframes edtWhipK{0%,38%{transform:translateX(0);filter:blur(0)}55%{transform:translateX(-108%);filter:blur(6px)}56%,92%{transform:translateX(-108%);filter:blur(0)}100%{transform:translateX(0)}}.edtWhip{animation:edtWhipK 2s cubic-bezier(.7,0,.2,1) infinite}'
+    +'@keyframes edtZoomK{0%,38%{transform:scale(1);opacity:1}60%{transform:scale(1.7);opacity:0}61%,92%{opacity:0}100%{transform:scale(1);opacity:1}}.edtZoom{animation:edtZoomK 2s ease infinite}'
+    +'@keyframes edtGlitchK{0%,40%{clip-path:inset(0);transform:none;opacity:1}45%{clip-path:inset(12% 0 34% 0);transform:translateX(-7px)}50%{clip-path:inset(48% 0 8% 0);transform:translateX(6px)}55%{clip-path:inset(0);opacity:0}56%,92%{opacity:0}100%{opacity:1}}.edtGlitch{animation:edtGlitchK 1.8s steps(2) infinite}';
+    document.head.appendChild(st); })();
   function cursorT(){ return (typeof edGlobalNow==='function' && _ed)?edGlobalNow():0; }
   function fmtT(s){ return (typeof edFmt==='function')?edFmt(s):'0:00'; }
 
-  const SFX_MAP={Whoosh:'whoosh',Impact:'hit',Clic:'click',Riser:'riser',Pop:'pop',Cash:'coin',Notification:'ding',Boom:'boom',Ambiance:'bedgrave',Voix:'success'};
-  function sfxTypeFor(label){ return SFX_MAP[String(label).split(' ')[0]]||'pop'; }
+  // chaque slug réel devient un type jouable par le graphe audio (aperçu + export)
+  try{ ED_SFX.forEach(function(s){ if(!_SFX_FILES[s]) _SFX_FILES[s]=s+'.mp3'; }); }catch(_){}
   function relabelLastSfx(label){ if(_ed&&_ed.sfx&&_ed.sfx.length){ _ed.sfx[_ed.sfx.length-1].label=label; if(typeof edRenderSfxTrack==='function') edRenderSfxTrack(); } }
 
   // ═══════════ helpers exposés pour les fonctions éditeur d'origine (édition sur place) ═══════════
   window.edToolsToggle=function(show){ const t=document.getElementById('edTools'); if(t) t.style.display=show?'':'none'; };
+  // « le slider ne se remplit pas » : la piste se colore jusqu'au curseur
+  window.edRangeFill=function(el){ if(!el) return; const min=+el.min||0, max=+el.max||100, v=+el.value;
+    const p=max>min?((v-min)/(max-min))*100:0;
+    el.style.background='linear-gradient(90deg,var(--accent) 0%,var(--accent-2) '+p+'%,var(--surface-3) '+p+'%)'; };
+  document.addEventListener('input',function(e){ if(e.target&&e.target.classList&&e.target.classList.contains('ed-range')) edRangeFill(e.target); },true);
+  document.querySelectorAll('.ed-range').forEach(edRangeFill);
+  const _obsRange=new MutationObserver(function(){ document.querySelectorAll('.ed-range:not([data-fill])').forEach(function(r){ r.dataset.fill='1'; edRangeFill(r); }); });
+  _obsRange.observe(document.body,{childList:true,subtree:true});
   const FONTS_ED=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
   const STYLES_ED=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
   const SUBS_ED=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
@@ -30673,14 +30746,14 @@ function edBandDrag(ov,track,e,mode){
 
   // ═══════════ BANQUE (modale swipe / liste / créer / remplacer) ═══════════
   let bank=null;
-  window.edOpenBank=function(kind){ if(!_ed){ toast('⚠ Charge d\'abord une vidéo'); return; } bank={kind:kind,i:0,mode:'swipe',q:'',dx:0,drag:null,menu:false}; const ov=document.createElement('div'); ov.id='edBankModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto'; ov.onclick=function(e){ if(e.target===ov) closeBank(); }; document.body.appendChild(ov); renderBank(); };
+  window.edOpenBank=function(kind){ if(!_ed){ toast('⚠ Charge d\'abord une vidéo'); return; } bank={kind:kind,i:0,mode:'swipe',q:'',dx:0,drag:null,menu:false}; const ov=document.createElement('div'); ov.id='edBankModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(8,8,11,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto'; ov.onclick=function(e){ if(e.target===ov) closeBank(); }; document.body.appendChild(ov); renderBank(); ensureAnimBank().then(function(){ if(bank) renderBank(); }); };
   function closeBank(){ const el=document.getElementById('edBankModal'); if(el) el.remove(); bank=null; }
   window.edCloseBank=closeBank;
   function bankInsert(label){
     const k=bank.kind;
-    if(k==='sfx'){ edAddSfxAtPlayhead(sfxTypeFor(label)); relabelLastSfx(label); }
+    if(k==='sfx'){ edAddSfxAtPlayhead(label); relabelLastSfx(sfxLabel(label)); }
     else if(k==='anim'){ if(typeof edAddZoomAtPlayhead==='function') edAddZoomAtPlayhead(); toast('Animation « '+label+' » ajoutée'); }
-    else { edAddSfxAtPlayhead('whoosh'); relabelLastSfx(label); toast('Transition « '+label+' » ajoutée'); }
+    else { edAddSfxAtPlayhead('mo-whoosh-1'); relabelLastSfx(label); toast('Transition « '+label+' » ajoutée'); }
     closeBank();
   }
   function renderBank(){
@@ -30700,7 +30773,7 @@ function edBandDrag(ov,track,e,mode){
         +'<div style="padding:10px 12px"><button data-act="swipe" class="row gap6" style="width:100%;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'+S(IC.sparkle,13)+' Revenir au mode swipe</button>'
         +'<input id="edBankSearch" placeholder="Rechercher parmi '+meta.items.length+'…" value="'+(bank.q||'').replace(/"/g,'&quot;')+'" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px"></div>'
         +'<div style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-        + items.map(function(it){return '<button data-pick="'+it.replace(/"/g,'&quot;')+'" class="col" style="gap:9px;align-items:stretch;padding:9px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid '+meta.c+'44;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(0,0,0,.4));color:'+meta.c+'">'+S(meta.ico,26)+'</span><span class="row gap6" style="align-items:center;font-size:12px;font-weight:600;color:var(--text)"><span style="color:'+meta.c+'">'+S(meta.ico,11)+'</span>'+it+'</span></button>';}).join('')
+        + items.map(function(it){ const lbl=bank.kind==='sfx'?sfxLabel(it):it; return '<button data-pick="'+it.replace(/"/g,'&quot;')+'" class="col" style="gap:9px;align-items:stretch;padding:9px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid '+meta.c+'44;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(0,0,0,.4));color:'+meta.c+'">'+previewCell(bank.kind,it,false)+'</span><span class="row gap6" style="align-items:center;font-size:12px;font-weight:600;color:var(--text)"><span style="color:'+meta.c+';flex:0 0 auto">'+S(meta.ico,11)+'</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</span></span></button>';}).join('')
         +'</div></div>';
       bindBank(ov); const se=ov.querySelector('#edBankSearch'); if(se){ se.oninput=function(){ bank.q=se.value; const pos=se.selectionStart; renderBank(); const s2=document.getElementById('edBankSearch'); if(s2){ s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(_){}}}; } return;
     }
@@ -30716,14 +30789,19 @@ function edBandDrag(ov,track,e,mode){
           +'<button data-kind="sfx" class="row gap10" style="width:100%;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;background:transparent;color:var(--text);border:none;cursor:pointer"><span style="color:#22D3EE">'+S(IC.volume,13)+'</span> Bruitage</button>'
           +'<button data-kind="trans" class="row gap10" style="width:100%;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;background:transparent;color:var(--text);border:none;cursor:pointer"><span style="color:#9A7CFF">'+S(IC.film,13)+'</span> Transition</button></div>'):'')
       +'</div></div>'
-      +'<div id="edBankCard" style="position:relative;height:min(52vh,430px);aspect-ratio:9 / 16;width:auto;max-width:100%;user-select:none;touch-action:pan-y;border-radius:18px;overflow:hidden;border:1px solid '+meta.c+'55;background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(0,0,0,.35));transform:translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg);transition:'+(bank.drag?'none':'transform .28s cubic-bezier(.2,.8,.2,1)')+'">'
-        +'<div style="position:absolute;inset:0;display:grid;place-items:center;color:'+meta.c+'">'+S(meta.ico,44)+'</div>'
-        +'<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 14px 14px;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.85))"><div class="mono" style="font-weight:700;font-size:15px">'+cur+'</div></div></div>'
+      +'<div id="edBankCard" style="position:relative;height:min(52vh,430px);aspect-ratio:9 / 16;width:auto;max-width:100%;user-select:none;touch-action:pan-y;border-radius:18px;overflow:hidden;border:1px solid '+meta.c+'55;background:#101014;transform:translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg);transition:'+(bank.drag?'none':'transform .28s cubic-bezier(.2,.8,.2,1)')+'">'
+        +previewCell(bank.kind,cur,true)
+        +'<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 14px 14px;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.85));pointer-events:none"><div class="mono" style="font-weight:700;font-size:15px">'+(bank.kind==='sfx'?sfxLabel(cur):cur)+'</div></div></div>'
       +'<span class="mono" style="font-size:11px;color:var(--text-3)">'+((bank.i%meta.items.length)+1)+' / '+meta.items.length+' · glisse ou choisis</span>'
       +'<div class="row" style="gap:16px;align-items:center"><button data-act="next" title="Passer au suivant" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);border:1px solid rgba(255,71,87,.45);color:#ff6b7a;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
       +'<button data-act="pick" title="Choisir celui-ci" style="width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;box-shadow:0 12px 30px -10px var(--accent-glow);border:none;cursor:pointer"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button></div>'
       +'</div>';
     bindBank(ov);
+    // un bruitage S'ÉCOUTE : le son joue à l'arrivée de chaque carte
+    if(bank.kind==='sfx'&&bank._played!==bank.i){ bank._played=bank.i;
+      try{ const a=new Audio('sfx/'+String(cur).replace(/[^a-z0-9-]/gi,'')+'.mp3'); a.volume=.9; const p=a.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){}
+    }
+    const pv=ov.querySelector('#edBankCard video'); if(pv){ const p=pv.play(); if(p&&p.catch) p.catch(function(){}); }
     const card=ov.querySelector('#edBankCard');
     if(card){ card.addEventListener('pointerdown',function(e){ bank.drag={x:e.clientX}; }); card.addEventListener('pointermove',function(e){ if(bank.drag){ bank.dx=e.clientX-bank.drag.x; card.style.transform='translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg)'; card.style.transition='none'; } }); const end=function(){ if(!bank||!bank.drag)return; const d=bank.dx; bank.drag=null; bank.dx=0; if(Math.abs(d)>70){ bank.i=(bank.i+1)%meta.items.length; } renderBank(); }; card.addEventListener('pointerup',end); card.addEventListener('pointerleave',function(){ if(bank&&bank.drag){ bank.drag=null; bank.dx=0; renderBank(); } }); }
   }
