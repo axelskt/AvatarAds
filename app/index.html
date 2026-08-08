@@ -82,6 +82,17 @@ button{color:var(--text)}
 @keyframes whopspin{to{transform:rotate(360deg)}}
 .ed-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft),0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .ed-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent-2);border:2px solid var(--bg);box-shadow:0 0 0 3px var(--accent-soft);cursor:pointer}
+/* Éditeur vidéo — refonte (classes scoping l'éditeur, style maquette) */
+.ed-mini{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:transparent;transition:.12s;color:var(--text);border:none;cursor:pointer}
+.ed-mini:hover{background:var(--surface-3)}
+.ed-drop{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 10px,rgba(255,255,255,0) 10px 20px),var(--panel-1);border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--text-3)}
+.ed-seg{display:inline-flex;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px}
+.ed-seg button{padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-3);transition:.18s;white-space:nowrap;background:transparent;border:none;cursor:pointer;flex:1}
+.ed-seg button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.ed-tbtn{display:inline-flex;align-items:center;gap:8px;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;transition:.15s;white-space:nowrap;cursor:pointer}
+.ed-tbtn:hover{background:var(--surface-2)}
+.ed-tbtn.danger{color:#FF6B6B}
+.ed-bankbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
 /* Images IA — scrollbars fines rail/canvas */
 #v-imagegen .scroll-y::-webkit-scrollbar{width:5px}
 #v-imagegen .scroll-y::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:4px}
@@ -4328,21 +4339,20 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
     <div class="view" id="v-studio">
       <!-- IMPORT (état vide, centré) -->
-      <div id="edEmpty" class="scroll-y" style="flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;padding:56px 24px 24px">
-        <div style="max-width:1120px;width:100%">
-          <div style="margin-bottom:18px">
-            <h2 class="display row gap12" style="font-size:30px;font-weight:800;align-items:center;line-height:1.1"><span style="font-size:26px">✂️</span>Éditeur vidéo <span class="tag-beta" style="font-size:9px;margin-left:2px">BETA</span></h2>
-            <p class="muted" style="margin-top:8px;font-size:14.5px">Coupe, réorganise, ajoute texte, images, sons et musique — puis exporte ta vidéo verticale.</p>
+      <div id="edEmpty" class="scroll-y" style="flex:1;min-height:0;padding:32px 40px 90px">
+        <div style="max-width:900px;margin:0 auto">
+          <div class="row gap10" style="align-items:center;margin-bottom:6px">
+            <h2 class="display row gap10" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Éditeur vidéo</h2>
+            <span class="tag-beta" style="align-self:center">BETA</span>
           </div>
-          <div onclick="document.getElementById('edFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';edLoadFile(event.dataTransfer.files[0])" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:440px;padding:48px 20px;border:1.5px dashed var(--border-2);border-radius:20px;cursor:pointer;background:rgba(255,255,255,.012);transition:border-color .15s">
-            <div style="width:88px;height:88px;border-radius:24px;background:radial-gradient(circle at 50% 38%, rgba(255,90,31,.16), rgba(255,90,31,.04));border:1px solid rgba(255,90,31,.28);display:flex;align-items:center;justify-content:center;box-shadow:0 0 50px -10px rgba(255,90,31,.35)">
-              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
-            </div>
-            <div style="font-weight:800;font-size:22px;color:var(--text);margin-top:4px">Glisse ta vidéo ici</div>
-            <div class="faint" style="font-size:12px;font-family:var(--mono)">MP4 · MOV · WEBM · 9:16 recommandé</div>
-            <div class="row gap10" style="margin-top:10px">
-              <button onclick="event.stopPropagation();document.getElementById('edFileIn').click()" style="padding:15px 40px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 10px 26px -10px var(--accent-glow)">＋ Parcourir</button>
-              <button onclick="event.stopPropagation();edPickFromLibrary()" class="btn btn-ghost" style="padding:15px 26px">📁 Bibliothèque</button>
+          <p class="muted" style="margin-bottom:28px;font-size:14.5px">Coupe, réorganise, ajoute texte, images, sons et musique — puis exporte ta vidéo verticale.</p>
+          <div onclick="document.getElementById('edFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';edLoadFile(event.dataTransfer.files[0])" class="ed-drop" style="flex-direction:column;gap:18px;padding:90px 20px;border-radius:22px;cursor:pointer;transition:.18s">
+            <div style="width:74px;height:74px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></div>
+            <div class="display" style="font-size:24px;font-weight:700;color:var(--text)">Glisse ta vidéo ici</div>
+            <div class="mono faint" style="font-size:12px;letter-spacing:.08em">MP4 · MOV · WEBM · 9:16 recommandé</div>
+            <div class="row gap12" style="margin-top:6px;flex-wrap:wrap;justify-content:center">
+              <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('edFileIn').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Parcourir</button>
+              <button class="btn btn-ghost" onclick="event.stopPropagation();edPickFromLibrary()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>
             </div>
           </div>
           <input type="file" id="edFileIn" accept="video/*" style="display:none" onchange="edLoadFile(this.files[0]);this.value=''">
@@ -4355,29 +4365,38 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <!-- CENTRE : aperçu (flexible) + transport + timeline (poussés en bas) -->
           <div class="col" style="flex:1;min-width:0;display:flex;flex-direction:column">
             <!-- zone aperçu flexible -->
-            <div id="edPreviewZone" style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:18px 16px;overflow:auto;background:radial-gradient(600px 300px at 50% 0%, rgba(255,90,31,.05), transparent)">
+            <div id="edPreviewZone" style="flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:10px 16px 4px;overflow:auto;background:radial-gradient(600px 300px at 50% 0%, rgba(255,90,31,.05), transparent), var(--bg)">
+              <div id="edZoomWrap" style="display:grid;place-items:center;transition:transform .15s">
               <div id="edStage" style="position:relative;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border2);touch-action:none;box-shadow:0 30px 70px -30px rgba(0,0,0,.9)">
                 <canvas id="edCanvas" style="display:block" onclick="if(typeof edZoomStageClick==='function')edZoomStageClick(event)"></canvas>
               </div>
+              </div>
               <div id="edTextMenu" class="card" style="display:none;padding:13px;position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:20;max-width:94%;box-shadow:0 18px 40px -12px rgba(0,0,0,.7)"></div>
             </div>
-            <!-- transport + outils d'édition (fixes, en bas de l'aperçu) -->
-            <div style="flex:0 0 auto;padding:10px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:9px">
-              <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap;justify-content:center">
-                <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost btn-sm" style="min-width:92px">▶ Lire</button>
-                <span id="edTime" class="mono faint" style="font-size:12.5px">0:00 / 0:00</span>
+            <!-- transport + barre d'outils (style maquette) -->
+            <div class="col" style="flex:0 0 auto;align-items:center;gap:11px;padding:4px 16px 12px;background:var(--bg)">
+              <div class="row gap12" style="align-items:center">
+                <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost" style="padding:9px 20px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4l13 8-13 8z"/></svg><span id="edPlayLbl">Lire</span></button>
+                <span id="edTime" class="mono faint" style="font-size:13px">0:00 / 0:00</span>
+                <span style="width:1px;height:22px;background:var(--border)"></span>
+                <div class="row gap6" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;padding:4px">
+                  <button class="ed-mini" onclick="edPreviewZoom(-1)" title="Zoom arrière"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg></button>
+                  <button class="ed-mini" onclick="edPreviewZoom(1)" title="Zoom avant"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg></button>
+                  <span style="width:1px;background:var(--border);margin:4px 2px"></span>
+                  <button class="ed-mini" onclick="edToggleFullscreen()" title="Plein écran (F)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M21 8V3h-5M16 21h5v-5M3 16v5h5"/></svg></button>
+                </div>
               </div>
-              <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:center">
-                <!-- 🎼 Montage IA : accès rapide mobile (le panneau Outils est sous le fold) -->
+              <div class="row gap8" style="flex-wrap:wrap;justify-content:center;max-width:100%">
+                <!-- Montage IA : accès rapide mobile (le panneau Outils est sous le fold) -->
                 <style>#edAiFab{display:none} @media(max-width:820px){ #edAiFab{display:flex} }</style>
                 <button id="edAiFab" onclick="openEdAiModal()" title="Montage IA"
                         style="position:fixed;right:14px;bottom:86px;z-index:1200;width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;border:1px solid rgba(255,143,94,.6);background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;box-shadow:0 6px 22px rgba(255,107,53,.45);cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg></button>
-                <button onclick="edUndo()" id="edUndoBtn" title="Annuler" class="btn btn-ghost btn-sm" style="padding:6px 11px">↶ Annuler</button>
-                <button onclick="edRedo()" id="edRedoBtn" title="Refaire" class="btn btn-ghost btn-sm" style="padding:6px 11px">↷ Refaire</button>
-                <button onclick="edSplitClip()" title="Séparer le clip au curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">✂️ Séparer</button>
-                <button onclick="edDeleteLeft()" title="Supprimer avant le curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">⏴ Suppr. avant</button>
-                <button onclick="edDeleteRight()" title="Supprimer après le curseur" class="btn btn-ghost btn-sm" style="padding:6px 11px">Suppr. après ⏵</button>
-                <button onclick="edDeleteContext()" title="Supprimer l'élément sélectionné" class="btn btn-ghost btn-sm" style="padding:6px 11px;color:#ff6b6b">🗑 Supprimer</button>
+                <button onclick="edUndo()" id="edUndoBtn" title="Annuler (⌘Z)" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg><span>Annuler</span></button>
+                <button onclick="edRedo()" id="edRedoBtn" title="Refaire (⌘⇧Z)" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 00-5 5v0"/></svg><span>Refaire</span></button>
+                <button onclick="edSplitClip()" title="Séparer au curseur (S)" class="ed-tbtn" style="padding:9px 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg><span>Séparer</span></button>
+                <button onclick="edDeleteLeft()" title="Supprimer avant le curseur" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg><span>Suppr. avant</span></button>
+                <button onclick="edDeleteRight()" title="Supprimer après le curseur" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 00-5 5v0"/></svg><span>Suppr. après</span></button>
+                <button onclick="edDeleteContext()" title="Supprimer la sélection (⌫)" class="ed-tbtn danger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg><span>Supprimer</span></button>
               </div>
             </div>
             <!-- TIMELINE multi-piste étiquetée (design Claude — CapCut style) -->
@@ -4445,152 +4464,103 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- PANNEAU OUTILS (droite, pleine hauteur) -->
+          <!-- PANNEAU CONTEXTUEL + OUTILS (droite, pleine hauteur) -->
           <div class="scroll-y" style="width:360px;flex:0 0 auto;border-left:1px solid var(--border);padding:18px 16px;background:var(--bg-grad)">
 
-            <!-- TOOLS -->
-              <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:10px">🧰 Outils</div>
-                <button onclick="openEdAiModal()" id="edAiBtn" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;border:1px solid rgba(255,143,94,.6);box-shadow:0 4px 18px rgba(255,107,53,.25);display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>Montage IA</button>
-                <button onclick="edAddText()" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:var(--bg3);color:var(--text);font-weight:700;border:1px solid var(--border2)" onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-2px;margin-right:5px"><path d="M5 5h14M12 5v14"/></svg>Ajouter un texte</button>
-                <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;padding:13px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Ajouter une image</button>
-                <div onclick="document.getElementById('edImportIn').click()"
-                     ondragover="event.preventDefault();this.style.borderColor='#3dd6c4';this.style.background='rgba(61,214,196,.07)'"
-                     ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg3)'"
-                     ondrop="event.preventDefault();this.style.borderColor='var(--border2)';this.style.background='var(--bg3)';[...event.dataTransfer.files].forEach(f=>edRouteFile(f))"
-                     style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px 14px;border:1.5px dashed var(--border2);border-radius:14px;cursor:pointer;background:var(--bg3);transition:all .15s">
-                  <div style="width:46px;height:46px;border-radius:13px;background:rgba(61,214,196,.12);border:1px solid rgba(61,214,196,.45);display:flex;align-items:center;justify-content:center;color:#3dd6c4;font-size:26px;font-weight:500;line-height:1">+</div>
-                  <div style="font-weight:700;font-size:13px;color:var(--text)">Importer</div>
-                  <div class="faint" style="font-size:10.5px;font-family:var(--mono);text-align:center;line-height:1.5">vidéos · images · audio</div>
-                </div>
-                <button onclick="edPickFromLibrary()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px">📁 Choisir dans la bibliothèque</button>
-                <div style="text-align:center;margin-top:8px"><span onclick="edReset()" style="cursor:pointer;color:var(--orange2);font-size:11px;font-family:var(--mono)">↺ Recommencer</span></div>
-                <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
-                <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
+            <!-- CONTEXTUEL : Texte / Image (rempli par edShowProps) -->
+            <div id="edProps" class="card" style="padding:16px;margin-bottom:14px;display:none;border-color:var(--accent-line)">
+              <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+                <div class="label" id="edPropsTitle" style="margin:0">Texte</div>
+                <button onclick="edDeleteSelected()" class="btn btn-sm" style="padding:6px 10px;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg>Supprimer</button>
               </div>
+              <div id="edPropsBody"></div>
+            </div>
 
-              <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin:0 0 10px">🎞 Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
-                <div id="edClips" class="col" style="gap:6px"></div>
-                <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. <b style="color:var(--text-2)">Glisse une vidéo sur l'aperçu</b> pour la coller à la suite — vidéo &gt; 10s à l'export.</div>
-                <input type="file" id="edClipIn" accept="video/*" multiple style="display:none" onchange="edAddClips(this.files);this.value=''">
+            <!-- OUTILS -->
+            <div id="edTools" class="card" style="padding:16px;margin-bottom:14px">
+              <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Outils</div>
+              <button onclick="openEdAiModal()" id="edAiBtn" class="btn" style="width:100%;margin-bottom:10px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;border:1px solid rgba(255,143,94,.6);box-shadow:0 4px 18px rgba(255,107,53,.25);display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>Montage IA</button>
+              <button onclick="edAddText()" class="btn btn-primary" style="width:100%;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg> Ajouter un texte</button>
+              <button onclick="document.getElementById('edImgIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Ajouter une image</button>
+              <div onclick="document.getElementById('edImportIn').click()"
+                   ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'"
+                   ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'"
+                   ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';[...event.dataTransfer.files].forEach(f=>edRouteFile(f))"
+                   class="ed-drop" style="flex-direction:column;gap:8px;padding:22px 14px;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:.15s">
+                <div style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:rgba(40,199,149,.14);border:1px solid rgba(40,199,149,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+                <div style="font-weight:700;font-size:14px;color:var(--text);font-family:'Hanken Grotesk'">Importer</div>
+                <div class="faint mono" style="font-size:10.5px">vidéos · images · audio</div>
               </div>
+              <button onclick="edPickFromLibrary()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque</button>
+              <button onclick="edReset()" class="btn-quiet btn-sm" style="width:100%;color:var(--accent-2);display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/></svg> Recommencer</button>
+              <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
+              <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
+            </div>
 
-              <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:12px">🎵 Bande son</div>
-                <button id="edMusicEmpty" onclick="document.getElementById('edMusicIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;padding:13px;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Importer une musique</button>
-                <div class="faint mono" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin:2px 0 7px">Musiques tendance</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
-                  <button onclick="edAddMusicPreset('../assets/music/music-1.mp3','Tendance 1')" class="btn btn-sm" style="padding:8px 4px;font-size:11.5px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🎵 Tendance 1</button>
-                  <button onclick="edAddMusicPreset('../assets/music/music-2.mp3','Tendance 2')" class="btn btn-sm" style="padding:8px 4px;font-size:11.5px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🎵 Tendance 2</button>
-                  <button onclick="edAddMusicPreset('../assets/music/music-3.mp3','Tendance 3')" class="btn btn-sm" style="padding:8px 4px;font-size:11.5px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🎵 Tendance 3</button>
-                </div>
-                <div id="edMusicLoaded" style="display:none">
-                  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--orange2)"></span><button onclick="edRemoveMusic()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
-                  <div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="faint mono" style="font-size:10px">🎵 Musique</span><span id="edMusicVolLbl" class="mono" style="font-size:10px;color:var(--accent-2)">70%</span></div>
-                  <input type="range" min="0" max="100" value="70" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'" style="width:100%;margin-bottom:12px;accent-color:var(--accent)">
-                </div>
-                <div class="row" style="justify-content:space-between;margin:0 0 5px"><span class="faint mono" style="font-size:10.5px">🎙 Voix vidéo</span><span id="edVoiceVolLbl" class="mono" style="font-size:10.5px;color:var(--accent-2)">100%</span></div>
-                <input type="range" min="0" max="100" value="100" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'" style="width:100%;accent-color:var(--accent)">
-                <div class="label" onclick="const b=document.getElementById('edSfxBank'),c=document.getElementById('edSfxChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edSfxChev">▸</span> Bruitages — ajoutés au curseur</div>
-                <div id="edSfxBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px">
-                  <button onclick="edAddSfxAtPlayhead('pop')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(20,184,166,.5);background:rgba(20,184,166,.12);color:#2dd4bf">🫧 Gloup</button>
-                  <button onclick="edAddSfxAtPlayhead('whoosh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">🌀 Transition</button>
-                  <button onclick="edAddSfxAtPlayhead('ding')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🔔 Ding</button>
-                  <button onclick="edAddSfxAtPlayhead('boom')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:#f87171">💥 Boom</button>
-                  <button onclick="edAddSfxAtPlayhead('riser')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">📈 Riser</button>
-                  <button onclick="edAddSfxAtPlayhead('hit')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(244,114,182,.5);background:rgba(244,114,182,.12);color:#f472b6">👊 Impact</button>
-                  <button onclick="edAddSfxAtPlayhead('coin')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#eab308">🪙 Coin</button>
-                  <button onclick="edAddSfxAtPlayhead('success')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12);color:#22c55e">✅ Succès</button>
-                  <button onclick="edAddSfxAtPlayhead('magic')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(154,124,255,.5);background:rgba(154,124,255,.12);color:#a78bfa">✨ Magie</button>
-                  <button onclick="edAddSfxAtPlayhead('click')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg4);color:var(--text2)">🖱 Click</button>
-                  <button onclick="edAddSfxAtPlayhead('buzz')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#f87171">🚫 Erreur</button>
-                  <button onclick="edAddSfxAtPlayhead('flash')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(226,232,240,.5);background:rgba(226,232,240,.12);color:#e2e8f0">📸 Flash</button>
-                  <button onclick="edAddSfxAtPlayhead('snap')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fbbf24">🫰 Clac</button>
-                </div>
-                <!-- #125b · sons FUN : jamais placés par l'IA, uniquement à la main ici, en regardant la vidéo -->
-                <div class="label" onclick="const b=document.getElementById('edFunBank'),c=document.getElementById('edFunChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edFunChev">▸</span> Sons fun — à caler à l'oreille</div>
-                <div id="edFunBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px">
-                  <button onclick="edAddSfxAtPlayhead('hu')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">😳 Hu</button>
-                  <button onclick="edAddSfxAtPlayhead('bip')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🔇 Bip</button>
-                  <button onclick="edAddSfxAtPlayhead('fahh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🤯 Fahh</button>
-                  <button onclick="edAddSfxAtPlayhead('robot')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,.5);background:rgba(255,107,53,.12);color:var(--orange2)">🤖 Robot</button>
-                  <button onclick="edAddSfxAtPlayhead('bedgrave')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit grave</button>
-                  <button onclick="edAddSfxAtPlayhead('bedtension')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit tension</button>
-                  <button onclick="edAddSfxAtPlayhead('bedmontee')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.5);background:rgba(77,171,247,.12);color:#4dabf7">🎬 Lit montée</button>
-                  <p class="faint" style="grid-column:1/-1;font-size:10.5px;line-height:1.45;margin:2px 0 0">Place-les en regardant la vidéo : un son mal calé se remarque plus qu'il n'apporte. Le lit « montée » culmine à 9 s — pose-le 9 s avant ta punchline.</p>
-                </div>
-                </div>
-                <!-- 🎧 pack pro : découpe et noms lus sur la timeline de la vidéo source -->
-                <div class="label" onclick="const b=document.getElementById('edProBank'),c=document.getElementById('edProChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edProChev">▸</span> Pack pro</div>
-                <div id="edProBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px">
-                  <button onclick="edAddSfxAtPlayhead('metallic-riser')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Riser métal</button>
-                  <button onclick="edAddSfxAtPlayhead('camera-click')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Clic photo</button>
-                  <button onclick="edAddSfxAtPlayhead('ding')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Ding pro</button>
-                  <button onclick="edAddSfxAtPlayhead('mouse-click')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Clic souris</button>
-                  <button onclick="edAddSfxAtPlayhead('iphone-charging')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Charge iPhone</button>
-                  <button onclick="edAddSfxAtPlayhead('mac-typing')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Frappe Mac</button>
-                  <button onclick="edAddSfxAtPlayhead('gear')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Rouage</button>
-                  <button onclick="edAddSfxAtPlayhead('camera-shutter')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Obturateur</button>
-                  <button onclick="edAddSfxAtPlayhead('punch-stop-riser')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Riser stop</button>
-                  <button onclick="edAddSfxAtPlayhead('cinematic-impact')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Impact ciné</button>
-                  <button onclick="edAddSfxAtPlayhead('impact')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Impact</button>
-                  <button onclick="edAddSfxAtPlayhead('woosh')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Woosh</button>
-                  <button onclick="edAddSfxAtPlayhead('reverse-crash')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Crash inversé</button>
-                  <button onclick="edAddSfxAtPlayhead('timer')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Minuteur</button>
-                  <button onclick="edAddSfxAtPlayhead('heartbeat')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Battement</button>
-                  <button onclick="edAddSfxAtPlayhead('message-tone')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Notification</button>
-                  <button onclick="edAddSfxAtPlayhead('knife-draw')" style="padding:8px 3px;border-radius:10px;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid rgba(77,171,247,.45);background:rgba(77,171,247,.10);color:#6cb6ff">Lame</button>
-                <!-- #126 · les bruitages que l'utilisateur a déposés dans « Ma marque » -->
-                <div class="label" onclick="const b=document.getElementById('edLibBank'),c=document.getElementById('edLibChev');const o=b.style.display!=='none';b.style.display=o?'none':'grid';c.textContent=o?'▸':'▾'" style="margin:14px 0 9px;font-size:10px;cursor:pointer;user-select:none"><span id="edLibChev">▸</span> Mes sons</div>
-                <div id="edLibBank" style="display:none;grid-template-columns:repeat(3,1fr);gap:6px"></div>
-                </div>
-                <div class="label" style="margin:14px 0 8px;font-size:10px">Zoom punch-in — au curseur</div>
-                <button onclick="edAddZoomAtPlayhead()" style="width:100%;padding:9px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(154,124,255,.55);background:rgba(154,124,255,.14);color:#c9b8ff">🔎 Ajouter un zoom au curseur</button>
-                <div class="faint mono" style="font-size:9px;margin-top:7px;line-height:1.5">Tout se règle sur le bloc dans la timeline : tire les bords = durée · − / + = intensité · clique l'aperçu = point de zoom.</div>
-                <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
-              </div>
+            <!-- CLIPS -->
+            <div class="card" style="padding:16px;margin-bottom:14px">
+              <div class="label" style="margin:0 0 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
+              <div id="edClips" class="col" style="gap:8px"></div>
+              <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. <b style="color:var(--text-2)">Glisse une vidéo sur l'aperçu</b> pour la coller à la suite — vidéo &gt; 10s à l'export.</div>
+              <input type="file" id="edClipIn" accept="video/*" multiple style="display:none" onchange="edAddClips(this.files);this.value=''">
+            </div>
 
-              <div id="edProps" class="card" style="padding:16px;margin-bottom:14px;display:none">
-                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
-                  <div class="label" id="edPropsTitle" style="margin:0">Élément</div>
-                  <button onclick="edDeleteSelected()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px">🗑 Supprimer</button>
-                </div>
-                <div id="edPropsBody"></div>
+            <!-- BANDE SON -->
+            <div class="card" style="padding:16px;margin-bottom:14px">
+              <div class="label" style="margin-bottom:12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Bande son</div>
+              <button id="edMusicEmpty" onclick="edOpenMusicModal()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:14px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Ajouter une musique</button>
+              <div id="edMusicLoaded" style="display:none;margin-bottom:14px">
+                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--accent-2)"></span><button onclick="edRemoveMusic()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px">✕</button></div>
+                <div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="mono faint" style="font-size:11px">Musique</span><span id="edMusicVolLbl" class="mono accent" style="font-size:11px">70%</span></div>
+                <input type="range" min="0" max="100" value="70" class="ed-range" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'">
               </div>
+              <div class="row" style="justify-content:space-between;margin:0 0 6px"><span class="mono faint row gap6" style="font-size:11px;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Voix vidéo</span><span id="edVoiceVolLbl" class="mono accent" style="font-size:11px">100%</span></div>
+              <input type="range" min="0" max="100" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%'">
+              <div class="label" style="margin:14px 0 10px;font-size:10.5px">Effets sonores — ajoutés au curseur</div>
+              <div style="display:grid;grid-template-columns:1fr;gap:8px">
+                <button onclick="edOpenBank('sfx')" class="ed-bankbtn" style="border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.09);color:#22D3EE"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Bruitages <span style="opacity:.7">(52)</span></button>
+                <button onclick="edOpenBank('anim')" class="ed-bankbtn" style="border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Animations <span style="opacity:.7">(169)</span></button>
+                <button onclick="edOpenBank('trans')" class="ed-bankbtn" style="border:1px solid rgba(154,124,255,.35);background:rgba(154,124,255,.09);color:#9A7CFF"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg> Transitions <span style="opacity:.7">(5)</span></button>
+              </div>
+              <input type="file" id="edMusicIn" accept="audio/*" style="display:none" onchange="edAddMusic(this.files[0]);this.value=''">
+            </div>
 
-              <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:10px">Calques</div>
-                <div id="edLayers" class="col" style="gap:6px"></div>
-                <div id="edLayersEmpty" class="faint" style="font-size:12px">Aucun calque — ajoute du texte ou une image.</div>
-              </div>
+            <!-- CALQUES -->
+            <div class="card" style="padding:16px;margin-bottom:14px">
+              <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>Calques <span id="edLayersCount" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
+              <div id="edLayers" class="col" style="gap:8px"></div>
+              <div id="edLayersEmpty" class="faint" style="font-size:12.5px">Aucun calque — ajoute du texte ou une image.</div>
+            </div>
 
-              <div class="card" style="padding:16px;margin-bottom:14px">
-                <div class="label" style="margin-bottom:10px">📐 Format &amp; qualité</div>
-                <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Format (ratio)</div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
-                  <button id="edFmt916" onclick="edSetFormat('9:16',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column"><span style="width:14px;height:22px;border-radius:3px;border:2px solid var(--accent-2)"></span><span style="font-size:12px;font-weight:700">9:16</span><span class="faint" style="font-size:9.5px">TikTok</span></button>
-                  <button id="edFmt45" onclick="edSetFormat('4:5',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:15px;height:19px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">4:5</span><span class="faint" style="font-size:9.5px">Feed</span></button>
-                  <button id="edFmt11" onclick="edSetFormat('1:1',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:17px;height:17px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">1:1</span><span class="faint" style="font-size:9.5px">Post</span></button>
-                  <button id="edFmt169" onclick="edSetFormat('16:9',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:22px;height:13px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">16:9</span><span class="faint" style="font-size:9.5px">YouTube</span></button>
-                </div>
-                <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Qualité d'export</div>
-                <div class="row gap8" style="margin-bottom:12px">
-                  <button id="edQ720" onclick="edSetQ(720,this)" class="btn btn-ghost btn-sm grow">720p</button>
-                  <button id="edQ1080" onclick="edSetQ(1080,this)" class="btn btn-sm grow" style="border:1px solid var(--accent);background:var(--accent-soft);color:var(--text);font-weight:700">1080p ✓</button>
-                  <button id="edQ1440" onclick="edSetQ(1440,this)" class="btn btn-ghost btn-sm grow">2K</button>
-                </div>
-                <div class="row gap8 faint" style="font-size:11.5px;align-items:center">🎞 <span id="edOutputLabel">Sortie : 9:16 · 1080p · H.264</span></div>
+            <!-- FORMAT & QUALITÉ -->
+            <div class="card" style="padding:16px;margin-bottom:14px">
+              <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>Format &amp; qualité</div>
+              <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Format (ratio)</div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+                <button id="edFmt916" onclick="edSetFormat('9:16',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column"><span style="width:14px;height:22px;border-radius:3px;border:2px solid var(--accent-2)"></span><span style="font-size:12px;font-weight:700">9:16</span><span class="faint" style="font-size:9.5px">TikTok</span></button>
+                <button id="edFmt45" onclick="edSetFormat('4:5',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:15px;height:19px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">4:5</span><span class="faint" style="font-size:9.5px">Feed</span></button>
+                <button id="edFmt11" onclick="edSetFormat('1:1',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:17px;height:17px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">1:1</span><span class="faint" style="font-size:9.5px">Post</span></button>
+                <button id="edFmt169" onclick="edSetFormat('16:9',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:22px;height:13px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">16:9</span><span class="faint" style="font-size:9.5px">YouTube</span></button>
               </div>
+              <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Qualité d'export</div>
+              <div class="ed-seg" style="width:100%;margin-bottom:12px">
+                <button id="edQ720" onclick="edSetQ(720,this)">720p</button>
+                <button id="edQ1080" onclick="edSetQ(1080,this)" class="on">1080p ✓</button>
+                <button id="edQ1440" onclick="edSetQ(1440,this)">2K</button>
+              </div>
+              <div class="row gap8 faint" style="font-size:11.5px;align-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><span id="edOutputLabel">Sortie : 9:16 · 1080p · H.264</span></div>
+            </div>
 
-              <div class="card" style="padding:16px">
-                <div class="label" style="margin-bottom:10px">🎞 Export</div>
-                <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>Exporter MP4</button>
-                <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px">🎬 Rendu final serveur (split + slides) — 4 crédits</button>
-                <div id="edSrvExportStatus" style="display:none;margin-top:7px;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5"></div>
-                <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
-                <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
-                <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
-              </div>
+            <!-- EXPORT -->
+            <div class="card" style="padding:16px">
+              <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Export</div>
+              <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exporter MP4</button>
+              <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="M10 9l5 2-5 2z"/></svg>Rendu final serveur (split + slides) — 4 crédits</button>
+              <div id="edSrvExportStatus" style="display:none;margin-top:7px;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5"></div>
+              <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
+              <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
+              <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -28980,9 +28950,9 @@ function edPlay(){
   _ed.video.currentTime=t;
   if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{_ed.audio.ac.resume();}catch(e){} }
   if(_ed.music){ try{ _ed.music.currentTime=edOutTime(t); _ed.music.play(); }catch(e){} }
-  _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='⏸ Pause'; }).catch(()=>{});
+  _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Pause'; }).catch(()=>{});
 }
-function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayBtn'); if(b) b.textContent='▶ Lire'; }
+function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Lire'; }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmtMs(Math.min(edGlobalNow(),tot))+' / '+edFmtMs(tot); } }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
@@ -29166,10 +29136,10 @@ function edBuildOverlayEl(ov){
   // barre d'action flottante (éditer / rogner / supprimer depuis l'aperçu)
   const bar=document.createElement('div'); bar.className='ed-ov-bar';
   bar.style.cssText='position:absolute;top:-30px;right:-2px;display:none;gap:4px;z-index:9';
-  const _mkBar=(txt,title,fn)=>{ const b=document.createElement('button'); b.textContent=txt; b.title=title; b.style.cssText='width:28px;height:25px;border-radius:7px;background:rgba(10,10,12,.92);border:1px solid var(--border2);color:#fff;font-size:13px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center'; b.addEventListener('pointerdown',e=>e.stopPropagation()); b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
-  if(ov.type==='text') bar.appendChild(_mkBar('✏️','Éditer le texte',()=>edEditText(ov)));
-  else bar.appendChild(_mkBar('✂️','Rogner',()=>{ ov._cropMode=!ov._cropMode; edSelect(ov.id); }));
-  bar.appendChild(_mkBar('🗑','Supprimer',()=>{ edSnap(); edDeleteSelected(); }));
+  const _mkBar=(txt,title,fn)=>{ const b=document.createElement('button'); b.innerHTML=txt; b.title=title; b.style.cssText='width:28px;height:25px;border-radius:7px;background:rgba(10,10,12,.92);border:1px solid var(--border2);color:#fff;font-size:13px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center'; b.addEventListener('pointerdown',e=>e.stopPropagation()); b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
+  if(ov.type==='text') bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>','Éditer le texte',()=>edEditText(ov)));
+  else bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>','Rogner',()=>{ ov._cropMode=!ov._cropMode; edSelect(ov.id); }));
+  bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg>','Supprimer',()=>{ edSnap(); edDeleteSelected(); }));
   el.appendChild(bar);
   edStyleOverlay(ov);
 
@@ -29231,7 +29201,7 @@ function edStyleOverlay(ov){
 }
 
 function edSelect(id){ _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
-function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; edRenderTextMenu(null); _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
+function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); edRenderTextMenu(null); _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
 function edRenderTextMenu(ov){
   const m=document.getElementById('edTextMenu'); if(!m) return;
   if(!ov||ov.type!=='text'){ m.style.display='none'; m.innerHTML=''; return; }
@@ -29253,41 +29223,13 @@ function edRenderTextMenu(ov){
     '<div class="row gap8" style="align-items:center"><span class="faint mono" style="font-size:10px;min-width:34px">Taille</span><input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="flex:1"></div>';
 }
 function edShowProps(){
-  const ov=_ed.overlays.find(o=>o.id===_ed.sel); const p=document.getElementById('edProps'); const body=document.getElementById('edPropsBody');
-  if(!ov){ p.style.display='none'; edRenderTextMenu(null); return; }
-  if(ov.type==='text'){ p.style.display='none'; edRenderTextMenu(ov); return; }  // texte → menu flottant près de l'aperçu
-  edRenderTextMenu(null);
-  p.style.display='block';
-  document.getElementById('edPropsTitle').textContent=ov.type==='text'?'Texte':'Image';
-  if(ov.type==='text'){
-    const fonts=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
-    const styles=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
-    body.innerHTML=
-      '<div class="faint mono" style="font-size:10px;margin-bottom:6px">💡 Double-clique le texte dans l\'aperçu pour l\'éditer</div>'+
-      '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:10px">'+
-      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Styles sous-titres</div>'+
-      '<div class="row gap6" style="margin-bottom:10px;flex-wrap:wrap">'+
-        [['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']]
-          .map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid var(--border2);background:#0d0d0f;color:'+s[2]+';font-size:11px;font-weight:800;padding:5px 9px;-webkit-text-stroke:.6px #000">'+s[1]+'</button>').join('')+
-      '</div>'+
-      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Police</div>'+
-      '<select class="field" onchange="edSetFont(this.value)" style="margin-bottom:10px">'+fonts.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'+
-      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Style</div>'+
-      '<div class="row gap6" style="margin-bottom:10px;flex-wrap:wrap">'+styles.map(s=>{const on=(ov.style||'box')===s[0];return '<button onclick="edSetStyle(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid '+(on?'var(--accent)':'var(--border2)')+';background:'+(on?'var(--accent-soft)':'transparent')+';color:var(--text);font-size:11px;padding:5px 9px">'+s[1]+'</button>';}).join('')+'</div>'+
-      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
-      '<input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="width:100%;margin-bottom:12px">'+
-      '<div class="row" style="gap:14px;align-items:center;flex-wrap:wrap">'+
-        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Couleur</label>'+
-        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="color" value="'+(ov.bgColor||'#000000')+'" oninput="edSetProp(\'bgColor\',this.value);edSetProp(\'style\',\'box\')" style="width:26px;height:22px;border:none;background:none;cursor:pointer"> Fond</label>'+
-        '<label class="row gap6" style="font-size:12px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bold?'checked':'')+' onchange="edSetProp(\'bold\',this.checked)"> Gras</label>'+
-      '</div>';
-  } else {
-    body.innerHTML=
-      '<div class="faint mono" style="font-size:11px;line-height:1.6;margin-bottom:10px">✂️ <b style="color:var(--text-2)">Double-clique l\'image</b> dans l\'aperçu pour la rogner (poignées cyan) · les coins servent à la redimensionner.</div>'+
-      '<button onclick="edToggleCrop()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:10px">✂️ Activer / désactiver le rognage</button>'+
-      '<div class="faint mono" style="font-size:10px;margin-bottom:4px">Taille</div>'+
-      '<input type="range" min="40" max="'+Math.round(_ed.dispW*1.3)+'" value="'+Math.round(ov.w)+'" oninput="edSetImgW(+this.value)" style="width:100%">';
-  }
+  if(!_ed) return;
+  const ov=_ed.overlays.find(o=>o.id===_ed.sel); const p=document.getElementById('edProps'); if(!p) return;
+  if(typeof edRenderTextMenu==='function') edRenderTextMenu(null);
+  if(!ov){ p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); return; }
+  p.style.display='block'; if(window.edToolsToggle) edToolsToggle(false);
+  const t=document.getElementById('edPropsTitle'); if(t) t.textContent=ov.type==='text'?'Texte':'Image';
+  if(window.edFillProps) edFillProps(ov);
 }
 function edSetProp(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov[k]=v; edStyleOverlay(ov); edRenderLayers(); }
 function edSetCrop(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov.crop) return; ov.crop[k]=v; edStyleOverlay(ov); }
@@ -29322,9 +29264,9 @@ function edRenderClipsTrack(){
     const seg=document.createElement('div');
     seg.style.cssText='flex:'+len.toFixed(3)+' 1 0;min-width:0;height:100%;border-radius:6px;cursor:pointer;position:relative;overflow:hidden;background:'+(active?'var(--accent-soft)':'var(--bg4)')+';border:1px solid '+(active?'var(--accent)':'var(--border2)')+'';
     const strip=document.createElement('div'); strip.style.cssText='position:absolute;inset:0;display:flex'; seg.appendChild(strip);
-    const lab=document.createElement('div'); lab.style.cssText='position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;font-family:var(--mono);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.95);pointer-events:none;z-index:2'; lab.textContent=(idx===0?'⭐':'🎞')+' '+(idx+1); seg.appendChild(lab);
+    const lab=document.createElement('div'); lab.style.cssText='position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;font-family:var(--mono);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.95);pointer-events:none;z-index:2'; lab.textContent='Clip '+(idx+1); seg.appendChild(lab);
     seg.title='Clip '+(idx+1)+' ('+edFmt(len)+') — clique pour le sélectionner, Suppr pour le retirer';
-    seg.onclick=(e)=>{ e.stopPropagation(); edSelectClip(idx); };
+    seg.onclick=(e)=>{ e.stopPropagation(); edSelectClip(idx); }; seg.dataset.clipidx=idx;
     tr.appendChild(seg);
     _edFillStrip(strip, c);
   });
@@ -29528,7 +29470,7 @@ function edRenderSfxTrack(){
     const chip=document.createElement('div');
     chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:48px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba(255,170,40,.22);border:1px solid rgba(255,170,40,.6);color:#ffcb6b;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:1;cursor:grab;touch-action:none';
     chip.title='Glisse pour déplacer · tire les bords pour ajuster la durée';
-    chip.innerHTML='<span style="pointer-events:none;flex-shrink:0">🔊</span><span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">'+s.label+'</span>';
+    chip.innerHTML='<span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">'+s.label+'</span>';
     const hL=document.createElement('span'); hL.dataset.h='l'; hL.title='Ajuster le début'; hL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,200,90,.55);border-radius:5px 0 0 5px;z-index:2';
     const hR=document.createElement('span'); hR.dataset.h='r'; hR.title='Ajuster la fin'; hR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,200,90,.55);border-radius:0 5px 5px 0;z-index:2';
     const x=document.createElement('span'); x.textContent='✕'; x.title='Retirer ce son'; x.dataset.x='1'; x.style.cssText='cursor:pointer;color:#ff8a8a;margin-left:auto;padding:0 3px;z-index:3'; x.onclick=(e)=>{e.stopPropagation();edRemoveSfx(s.id);};
@@ -29592,7 +29534,7 @@ function edRenderZoomTrack(){
     const chip=document.createElement('div');
     chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:44px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba(154,124,255,'+(sel?'.34':'.2')+');border:1px solid rgba(154,124,255,'+(sel?'.95':'.6')+');color:#c9b8ff;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(sel?2:1)+';cursor:grab;touch-action:none';
     chip.title='Glisse = déplacer · tire les bords = durée · clique = sélectionner (puis clique l\'aperçu pour le point)';
-    chip.innerHTML='<span style="pointer-events:none;flex-shrink:0">🔎</span><span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">×'+(z.scale||1.4).toFixed(1)+'</span>';
+    chip.innerHTML='<span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">×'+(z.scale||1.4).toFixed(1)+'</span>';
     const hL=document.createElement('span'); hL.dataset.h='l'; hL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(180,160,255,.55);border-radius:5px 0 0 5px;z-index:2';
     const hR=document.createElement('span'); hR.dataset.h='r'; hR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(180,160,255,.55);border-radius:0 5px 5px 0;z-index:2';
     const x=document.createElement('span'); x.textContent='✕'; x.dataset.x='1'; x.style.cssText='cursor:pointer;color:#ff8a8a;margin-left:auto;padding:0 3px;z-index:3'; x.onclick=(e)=>{e.stopPropagation();edRemoveZoom(z.id);};
@@ -30252,19 +30194,7 @@ function _edDrawSubsAI(ctx, gt, W, H){
   ctx.restore();
 }
 
-function edRenderLayers(){
-  const wrap=document.getElementById('edLayers'); const empty=document.getElementById('edLayersEmpty'); if(!wrap||!_ed) return;
-  wrap.innerHTML='';
-  if(!_ed.overlays.length){ empty.style.display='block'; return; }
-  empty.style.display='none';
-  _ed.overlays.forEach(ov=>{
-    const on=_ed.sel===ov.id; const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(on?'var(--accent)':'var(--border2)')+';background:'+(on?'var(--accent-soft)':'var(--bg3)');
-    row.innerHTML='<span style="font-size:13px">'+(ov.type==='text'?'🅣':'🖼')+'</span><span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(ov.type==='text'?(ov.text||'Texte'):'Image')+'</span>';
-    row.onclick=()=>edSelect(ov.id);
-    wrap.appendChild(row);
-  });
-}
+function edRenderLayers(){ if(window.edLayersRows) edLayersRows(); }
 function edDeleteSelected(){ if(!_ed) return; const i=_ed.overlays.findIndex(o=>o.id===_ed.sel); if(i<0) return; const ov=_ed.overlays[i]; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); edHideProps(); edRenderLayers(); }
 
 let _edFormat='9:16';
@@ -30293,8 +30223,8 @@ function edSetFormat(fmt){
 function edSetQ(q,btn){
   _edQuality=q;
   const labels={720:'720p',1080:'1080p',1440:'2K'};
-  ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.border='1px solid var(--border)'; b.style.background='transparent'; b.style.color='var(--text-2)'; b.style.fontWeight='500'; const k=({edQ720:720,edQ1080:1080,edQ1440:1440})[id]; b.textContent=labels[k]; } });
-  btn.style.border='1px solid var(--accent)'; btn.style.background='var(--accent-soft)'; btn.style.color='var(--text)'; btn.style.fontWeight='700'; btn.textContent=labels[q]+' ✓';
+  ['edQ720','edQ1080','edQ1440'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.classList.remove('on'); b.style.cssText=''; const k=({edQ720:720,edQ1080:1080,edQ1440:1440})[id]; b.textContent=labels[k]; } });
+  btn.classList.add('on'); btn.textContent=labels[q]+' ✓';
   edUpdateOutputLabel();
 }
 function edReset(){
@@ -30569,7 +30499,7 @@ function edRenderClips(){
     const thumb=document.createElement('div');
     thumb.style.cssText='width:36px;height:36px;border-radius:8px;flex:0 0 auto;border:1px solid var(--border2);background:repeating-linear-gradient(135deg,oklch(.4 .09 '+(c.hue||18)+') 0 7px,oklch(.28 .07 '+(c.hue||18)+') 7px 14px);background-size:cover;background-position:center';
     try{ _edExtractThumbs(c,1).then(t=>{ if(t&&t[0]) thumb.style.background='#000 url('+t[0]+') center/cover'; }).catch(()=>{}); }catch(e){}
-    const star=document.createElement('span'); star.style.cssText='font-size:13px;flex:0 0 auto'; star.textContent=main?'⭐':'🎞';
+    const star=document.createElement('span'); star.style.cssText='flex:0 0 auto;display:grid;place-items:center'; star.innerHTML=main?'<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB020" stroke="none"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>';
     const name=document.createElement('span'); name.style.cssText='font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600'; name.textContent=(main?'Clip principal':'Clip '+(idx+1))+(active?' • édition':'');
     const dur=document.createElement('span'); dur.className='faint mono'; dur.style.cssText='font-size:10px;flex:0 0 auto'; dur.textContent=edFmt(Math.max(0,c.trimB-c.trimA));
     row.appendChild(thumb); row.appendChild(star); row.appendChild(name); row.appendChild(dur);
@@ -30599,7 +30529,7 @@ function edRenderOvTrack(){
     const L=Math.max(0,(ov.start/_td)*100), W=Math.max(3,((ov.end-ov.start)/_td)*100);
     const band=document.createElement('div');
     band.style.cssText='position:absolute;top:0;bottom:0;left:'+L+'%;width:'+W+'%;background:'+(ov.type==='text'?'rgba(255,90,31,.9)':'rgba(168,85,247,.9)')+';border-radius:6px;display:flex;align-items:center;gap:4px;padding:0 9px;color:#fff;font-size:10px;font-weight:700;cursor:grab;box-sizing:border-box;'+(on?'box-shadow:0 0 0 2px #fff inset':'');
-    band.innerHTML='<span style="font-size:11px">'+(ov.type==='text'?'🅣':'🖼')+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((ov.type==='text'?(ov.text||'Texte'):'Image'))+'</span>';
+    band.innerHTML='<span class="mono" style="font-size:9px;font-weight:800;opacity:.9;flex-shrink:0">'+(ov.type==='text'?'T':'IMG')+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+((ov.type==='text'?(ov.text||'Texte'):'Image'))+'</span>';
     const eL=document.createElement('div'); eL.dataset.e='l'; eL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:6px 0 0 6px';
     const eR=document.createElement('div'); eR.dataset.e='r'; eR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:0 6px 6px 0';
     band.appendChild(eL); band.appendChild(eR);
@@ -30626,6 +30556,272 @@ function edBandDrag(ov,track,e,mode){
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
 
+</script>
+
+<script>
+/* ═══════════ ÉDITEUR — refonte 1:1 : banques (swipe), musique, plein écran, contextuel, raccourcis ═══════════ */
+/* NB : _ed / _edFormat sont des globals lexicaux (let) du script éditeur ci-dessus — accessibles en identifiant nu, PAS via window. */
+(function(){
+  const ED_ANIM_FAMILIES=[
+    ["Zoom",["punch-in","punch-out","slow push","snap 200%","ken burns","dolly avant","dolly arrière","pulse rythmé","zoom + shake","zoom flou","crash zoom","zoom lent"]],
+    ["Shake",["rythmé","léger","impact","handheld","séisme","nervous cam","kick basse","double frappe","micro-tremble","chute"]],
+    ["Slide",["latéral","vertical","diagonal","push gauche","push droite","whip pan","parallax","glisse lente","rebond","dérapage"]],
+    ["Flash",["blanc","noir","couleur","strobe","double flash","flash + zoom","flash sub","fade éclair","impact lumineux","néon"]],
+    ["Glitch",["coupé","RGB split","datamosh","scan lines","VHS","pixel drop","tear vertical","static","signal perdu","corruption"]],
+    ["Pop",["élastique","rebond","scale in","scale out","spring","overshoot","bounce texte","punch pop","éclatement","apparition"]],
+    ["Blur",["cinétique","directionnel","radial","focus pull","motion trail","depth blur","reveal net","blur pulse","tilt-shift","flou vitesse"]],
+    ["Rotation",["douce","tilt","roll 3D","spin rapide","balancier","pivot ancre","rotation + zoom","twist","vortex","culbute"]],
+    ["Reveal",["masque haut","masque bas","wipe gauche","wipe droite","cercle","volets","rideau","split écran","diagonale","iris"]],
+    ["Effet",["vignette pulse","light leak","grain animé","chromatique","néon glow","ombre portée","halo","fumée","particules","reflets"]],
+    ["Texte",["typewriter","mot par mot","karaoké","pop lettre","slide up","tremblé","surligné","compteur","machine à écrire","fondu lettre"]],
+    ["Caméra",["orbit","crash zoom","suivi sujet","tremblement main","dutch angle","recadrage auto","travelling","stabilisé","grue","steadicam"]],
+    ["Rythme",["cut sur beat","freeze frame","slow motion","speed ramp","boucle","stutter","reverse","time remap","accéléré","ralenti"]],
+    ["Fond",["dégradé animé","particules","bokeh","vagues","grille néon","nuages","étoiles","aurore","pluie","confettis"]],
+    ["Transition",["morph","fluide","liquide","zoom blur","spin cut","cube 3D","page turn","warp","dissolution"]],
+    ["Overlay",["light leak","poussière","rayures film","pluie écran","flare","grain 16mm","vignettage","brume","reflet verre","scanline douce","halo néon","texture papier","fuite lumière","vieux film","bruit TV","projecteur","cendres","étincelles"]],
+  ];
+  const ED_ANIMS=ED_ANIM_FAMILIES.reduce((a,x)=>a.concat(x[1].map(v=>x[0]+" "+v)),[]);      // 169
+  const ED_SFX_FAMILIES=[
+    ["Whoosh",["rapide","grave","double","aérien","métal","inversé"]],
+    ["Impact",["grave","sec","béton","sub","tambour","cinéma"]],
+    ["Clic",["sec","souris","interface","clavier","déclic"]],
+    ["Riser",["tension","aigu","sirène","cordes","synthé"]],
+    ["Pop",["bulle","bouchon","doux","aigu","cartoon"]],
+    ["Cash",["register","pièces","billets","ka-ching"]],
+    ["Notification",["ding","cloche","message","alerte","succès"]],
+    ["Boom",["sub","explosion","tonnerre","canon"]],
+    ["Ambiance",["foule","ville","vent","pluie","studio","café"]],
+    ["Voix",["applaudissements","rire","wow","yes","huh","oh non"]],
+  ];
+  const ED_SFX=ED_SFX_FAMILIES.reduce((a,x)=>a.concat(x[1].map(v=>x[0]+" "+v)),[]);          // 52
+  const ED_TRANS=["Cut net","Fondu enchaîné","Whip pan","Zoom transition","Glitch"];         // 5
+  const ED_MUSIC=[
+    {id:"lofi",name:"Aesthetic Lo-fi",mood:"doux · fond de voix",dur:"2:14",url:"../assets/music/music-1.mp3"},
+    {id:"phonk",name:"Phonk Drift",mood:"énergique · punchy",dur:"1:58",url:"../assets/music/music-2.mp3"},
+    {id:"cine",name:"Cinematic Build",mood:"dramatique · montée",dur:"2:40",url:"../assets/music/music-3.mp3"},
+    {id:"pop",name:"Upbeat Pop",mood:"feel-good · rythmé",dur:"2:05",url:"../assets/music/music-1.mp3"},
+    {id:"trap",name:"Trap Minimal",mood:"sombre · basse",dur:"2:22",url:"../assets/music/music-2.mp3"},
+    {id:"corpo",name:"Corporate Clean",mood:"neutre · pro",dur:"1:47",url:"../assets/music/music-3.mp3"},
+  ];
+  window.ED_ANIMS=ED_ANIMS; window.ED_SFX=ED_SFX; window.ED_TRANS=ED_TRANS;
+  const MUSIC_GREEN="#28C795";
+
+  function S(inner,sz,sw){ return '<svg width="'+(sz||16)+'" height="'+(sz||16)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(sw==null?1.8:sw)+'" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>'; }
+  const IC={
+    sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/>',
+    grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    volume:'<path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/>',
+    film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/>',
+    play:'<path d="M7 4l13 8-13 8z"/>',
+    music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  };
+  function metaFor(kind){ return {anim:{t:"Animations",items:ED_ANIMS,c:"var(--accent)",ico:IC.sparkle},
+                                  sfx:{t:"Bruitages",items:ED_SFX,c:"#22D3EE",ico:IC.volume},
+                                  trans:{t:"Transitions",items:ED_TRANS,c:"#9A7CFF",ico:IC.film}}[kind]; }
+  function cursorT(){ return (typeof edGlobalNow==='function' && _ed)?edGlobalNow():0; }
+  function fmtT(s){ return (typeof edFmt==='function')?edFmt(s):'0:00'; }
+
+  const SFX_MAP={Whoosh:'whoosh',Impact:'hit',Clic:'click',Riser:'riser',Pop:'pop',Cash:'coin',Notification:'ding',Boom:'boom',Ambiance:'bedgrave',Voix:'success'};
+  function sfxTypeFor(label){ return SFX_MAP[String(label).split(' ')[0]]||'pop'; }
+  function relabelLastSfx(label){ if(_ed&&_ed.sfx&&_ed.sfx.length){ _ed.sfx[_ed.sfx.length-1].label=label; if(typeof edRenderSfxTrack==='function') edRenderSfxTrack(); } }
+
+  // ═══════════ helpers exposés pour les fonctions éditeur d'origine (édition sur place) ═══════════
+  window.edToolsToggle=function(show){ const t=document.getElementById('edTools'); if(t) t.style.display=show?'':'none'; };
+  const FONTS_ED=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
+  const STYLES_ED=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
+  const SUBS_ED=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
+  window.edFillProps=function(ov){
+    const body=document.getElementById('edPropsBody'); if(!body||!ov) return;
+    if(ov.type==='text'){
+      body.innerHTML=
+        '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" placeholder="Ton texte…" style="margin-bottom:14px">'
+        +'<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:16px">'+SUBS_ED.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" style="padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:'+s[2]+';-webkit-text-stroke:.5px rgba(0,0,0,.5);cursor:pointer">'+s[1]+'</button>').join('')+'</div>'
+        +'<div class="row gap10" style="margin-bottom:14px;flex-wrap:wrap">'
+          +'<select class="field" onchange="edSetFont(this.value)" style="flex:1 1 130px;padding:10px 12px">'+FONTS_ED.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'
+          +'<label class="row gap8" style="padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:20px;height:20px;border:none;background:none;padding:0"> Couleur</label>'
+          +'<label class="row gap8" style="padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;align-items:center"><input type="color" value="'+(ov.bgColor||'#000000')+'" oninput="edSetProp(\'bgColor\',this.value);edSetProp(\'style\',\'box\')" style="width:20px;height:20px;border:none;background:none;padding:0"> Fond</label>'
+          +'<button onclick="edSetProp(\'bold\','+(ov.bold?'false':'true')+');edShowProps()" style="padding:9px 13px;border-radius:10px;font-weight:800;border:1px solid '+(ov.bold?'var(--accent-line)':'var(--border)')+';background:'+(ov.bold?'var(--accent-soft)':'var(--surface)')+';color:'+(ov.bold?'var(--accent-2)':'var(--text)')+';cursor:pointer">B</button>'
+        +'</div>'
+        +'<div class="ed-seg" style="width:100%;margin-bottom:16px">'+STYLES_ED.map(s=>'<button class="'+(((ov.style||'box')===s[0])?'on':'')+'" onclick="edSetStyle(\''+s[0]+'\')">'+s[1]+'</button>').join('')+'</div>'
+        +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
+    } else {
+      const maxw=Math.round(((_ed&&_ed.dispW)||400)*1.3);
+      body.innerHTML=
+        '<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="40" max="'+maxw+'" value="'+Math.round(ov.w)+'" oninput="edSetImgW(+this.value)"></div>'
+        +'<p class="faint" style="font-size:12px;margin-top:12px">Glisse l\'image sur l\'aperçu pour la repositionner · double-clic pour la rogner.</p>';
+    }
+  };
+  window.edLayersRows=function(){
+    const wrap=document.getElementById('edLayers'); const empty=document.getElementById('edLayersEmpty'); const cnt=document.getElementById('edLayersCount'); if(!wrap||!_ed) return;
+    if(cnt) cnt.textContent=_ed.overlays.length?('· '+_ed.overlays.length):'';
+    wrap.innerHTML='';
+    if(!_ed.overlays.length){ if(empty) empty.style.display='block'; return; }
+    if(empty) empty.style.display='none';
+    _ed.overlays.forEach(ov=>{ const on=_ed.sel===ov.id; const isTxt=ov.type==='text';
+      const row=document.createElement('div'); row.className='row gap10';
+      row.style.cssText='padding:9px 11px;border-radius:10px;cursor:pointer;border:1px solid '+(on?(isTxt?'var(--accent)':'var(--violet)'):'var(--border)')+';background:'+(on?(isTxt?'var(--accent-soft)':'rgba(154,124,255,.1)'):'var(--surface)');
+      row.innerHTML='<span class="mono" style="font-size:10px;font-weight:700;color:'+(isTxt?'var(--accent-2)':'var(--violet)')+'">'+(isTxt?'T':'IMG')+'</span>'
+        +'<span style="font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(isTxt?(ov.text||'texte'):'Image')+'</span>'
+        +'<span class="mono faint" style="font-size:10px">'+fmtT(ov.start||0)+'–'+fmtT(ov.end||0)+'</span>'
+        +'<button class="ed-mini" data-del="1" style="width:24px;height:24px;color:#FF6B6B"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+      row.onclick=()=>{ if(typeof edSelect==='function') edSelect(ov.id); };
+      const db=row.querySelector('[data-del]'); if(db) db.onclick=(e)=>{ e.stopPropagation(); const i=_ed.overlays.findIndex(o=>o.id===ov.id); if(i<0) return; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); if(_ed.sel===ov.id){ if(typeof edHideProps==='function') edHideProps(); } if(typeof edRenderLayers==='function') edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); };
+      wrap.appendChild(row);
+    });
+  };
+
+  // ═══════════ BANQUE (modale swipe / liste / créer / remplacer) ═══════════
+  let bank=null;
+  window.edOpenBank=function(kind){ if(!_ed){ toast('⚠ Charge d\'abord une vidéo'); return; } bank={kind:kind,i:0,mode:'swipe',q:'',dx:0,drag:null,menu:false}; const ov=document.createElement('div'); ov.id='edBankModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto'; ov.onclick=function(e){ if(e.target===ov) closeBank(); }; document.body.appendChild(ov); renderBank(); };
+  function closeBank(){ const el=document.getElementById('edBankModal'); if(el) el.remove(); bank=null; }
+  window.edCloseBank=closeBank;
+  function bankInsert(label){
+    const k=bank.kind;
+    if(k==='sfx'){ edAddSfxAtPlayhead(sfxTypeFor(label)); relabelLastSfx(label); }
+    else if(k==='anim'){ if(typeof edAddZoomAtPlayhead==='function') edAddZoomAtPlayhead(); toast('Animation « '+label+' » ajoutée'); }
+    else { edAddSfxAtPlayhead('whoosh'); relabelLastSfx(label); toast('Transition « '+label+' » ajoutée'); }
+    closeBank();
+  }
+  function renderBank(){
+    const ov=document.getElementById('edBankModal'); if(!ov||!bank) return;
+    const meta=metaFor(bank.kind); const items=meta.items.filter(function(x){return x.toLowerCase().includes((bank.q||'').toLowerCase());});
+    const at='à '+fmtT(cursorT());
+    if(bank.mode==='create'){
+      ov.innerHTML='<div style="width:min(420px,94vw);background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:18px" onclick="event.stopPropagation()">'
+        +'<div class="row" style="align-items:flex-start;margin-bottom:14px"><div class="col grow" style="gap:3px"><span class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--text-3)">CRÉER UNE ANIMATION</span><span style="font-weight:700;font-size:16px">Décris ce que tu veux voir</span></div><button data-act="close" style="color:var(--text-3);font-size:18px;line-height:1;background:none;border:none;cursor:pointer">✕</button></div>'
+        +'<textarea id="edBankPrompt" rows="4" placeholder="Décris l\'animation que tu veux." style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--accent-line);background:var(--panel-1);color:var(--text);font-size:14px;resize:vertical;font-family:inherit"></textarea>'
+        +'<button data-act="createGo" class="btn btn-primary" style="width:100%;margin-top:14px;font-weight:800">'+S(IC.sparkle,15)+' Créer l\'animation</button></div>';
+      bindBank(ov); const ta=ov.querySelector('#edBankPrompt'); if(ta) ta.focus(); return;
+    }
+    if(bank.mode==='list'){
+      ov.innerHTML='<div style="width:min(460px,94vw);max-height:80vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)" onclick="event.stopPropagation()">'
+        +'<div class="row" style="gap:9px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)"><span style="color:'+meta.c+'">'+S(meta.ico,15)+'</span><span style="font-weight:700;font-size:14.5px">'+meta.t+'</span><span class="mono faint" style="font-size:10px;margin-left:auto">'+at+'</span><button data-act="close" style="margin-left:6px;color:var(--text-3);font-size:16px;line-height:1;background:none;border:none;cursor:pointer">✕</button></div>'
+        +'<div style="padding:10px 12px"><button data-act="swipe" class="row gap6" style="width:100%;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'+S(IC.sparkle,13)+' Revenir au mode swipe</button>'
+        +'<input id="edBankSearch" placeholder="Rechercher parmi '+meta.items.length+'…" value="'+(bank.q||'').replace(/"/g,'&quot;')+'" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px"></div>'
+        +'<div style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        + items.map(function(it){return '<button data-pick="'+it.replace(/"/g,'&quot;')+'" class="col" style="gap:9px;align-items:stretch;padding:9px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid '+meta.c+'44;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(0,0,0,.4));color:'+meta.c+'">'+S(meta.ico,26)+'</span><span class="row gap6" style="align-items:center;font-size:12px;font-weight:600;color:var(--text)"><span style="color:'+meta.c+'">'+S(meta.ico,11)+'</span>'+it+'</span></button>';}).join('')
+        +'</div></div>';
+      bindBank(ov); const se=ov.querySelector('#edBankSearch'); if(se){ se.oninput=function(){ bank.q=se.value; const pos=se.selectionStart; renderBank(); const s2=document.getElementById('edBankSearch'); if(s2){ s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(_){}}}; } return;
+    }
+    const cur=meta.items[bank.i%meta.items.length];
+    const createBtn = bank.kind==='anim' ? '<button data-act="create" class="row gap6" style="padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);cursor:pointer">'+S(IC.sparkle,13)+' Créer</button>' : '';
+    ov.innerHTML='<div style="margin:auto;display:flex;flex-direction:column;gap:12px;align-items:center;flex:0 0 auto" onclick="event.stopPropagation()">'
+      +'<div class="col" style="gap:12px;width:min(340px,92vw)"><div class="row" style="gap:10px;align-items:flex-start"><div class="col grow" style="gap:3px"><span class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--text-3)">'+meta.t.toUpperCase()+'</span><span style="font-weight:700;font-size:15px">'+at+'</span></div><button data-act="close" style="color:var(--text-3);font-size:20px;line-height:1;background:none;border:none;cursor:pointer">✕</button></div>'
+      +'<div class="row gap8" style="position:relative">'+createBtn
+      +'<button data-act="list" class="row gap6 grow" style="justify-content:center;padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;border:1px solid var(--border-2);background:var(--surface-2);color:var(--text);cursor:pointer">'+S(IC.grid,13)+' Voir la liste</button>'
+      +'<button data-act="menu" class="row gap6" style="padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);cursor:pointer">'+S(IC.plus,13)+' Remplacer</button>'
+      + (bank.menu?('<div style="position:absolute;top:calc(100% + 6px);right:0;z-index:5;width:170px;padding:6px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border-2);box-shadow:0 18px 44px -14px rgba(0,0,0,.9)">'
+          +'<button data-kind="anim" class="row gap10" style="width:100%;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;background:transparent;color:var(--text);border:none;cursor:pointer"><span style="color:var(--accent)">'+S(IC.sparkle,13)+'</span> Animation</button>'
+          +'<button data-kind="sfx" class="row gap10" style="width:100%;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;background:transparent;color:var(--text);border:none;cursor:pointer"><span style="color:#22D3EE">'+S(IC.volume,13)+'</span> Bruitage</button>'
+          +'<button data-kind="trans" class="row gap10" style="width:100%;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;background:transparent;color:var(--text);border:none;cursor:pointer"><span style="color:#9A7CFF">'+S(IC.film,13)+'</span> Transition</button></div>'):'')
+      +'</div></div>'
+      +'<div id="edBankCard" style="position:relative;height:min(52vh,430px);aspect-ratio:9 / 16;width:auto;max-width:100%;user-select:none;touch-action:pan-y;border-radius:18px;overflow:hidden;border:1px solid '+meta.c+'55;background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(0,0,0,.35));transform:translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg);transition:'+(bank.drag?'none':'transform .28s cubic-bezier(.2,.8,.2,1)')+'">'
+        +'<div style="position:absolute;inset:0;display:grid;place-items:center;color:'+meta.c+'">'+S(meta.ico,44)+'</div>'
+        +'<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 14px 14px;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.85))"><div class="mono" style="font-weight:700;font-size:15px">'+cur+'</div></div></div>'
+      +'<span class="mono" style="font-size:11px;color:var(--text-3)">'+((bank.i%meta.items.length)+1)+' / '+meta.items.length+' · glisse ou choisis</span>'
+      +'<div class="row" style="gap:16px;align-items:center"><button data-act="next" title="Passer au suivant" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);border:1px solid rgba(255,71,87,.45);color:#ff6b7a;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
+      +'<button data-act="pick" title="Choisir celui-ci" style="width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;box-shadow:0 12px 30px -10px var(--accent-glow);border:none;cursor:pointer"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button></div>'
+      +'</div>';
+    bindBank(ov);
+    const card=ov.querySelector('#edBankCard');
+    if(card){ card.addEventListener('pointerdown',function(e){ bank.drag={x:e.clientX}; }); card.addEventListener('pointermove',function(e){ if(bank.drag){ bank.dx=e.clientX-bank.drag.x; card.style.transform='translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg)'; card.style.transition='none'; } }); const end=function(){ if(!bank||!bank.drag)return; const d=bank.dx; bank.drag=null; bank.dx=0; if(Math.abs(d)>70){ bank.i=(bank.i+1)%meta.items.length; } renderBank(); }; card.addEventListener('pointerup',end); card.addEventListener('pointerleave',function(){ if(bank&&bank.drag){ bank.drag=null; bank.dx=0; renderBank(); } }); }
+  }
+  function bindBank(ov){
+    ov.querySelectorAll('[data-act]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); const a=b.dataset.act; const meta=metaFor(bank.kind);
+      if(a==='close') closeBank();
+      else if(a==='next'){ bank.i=(bank.i+1)%meta.items.length; renderBank(); }
+      else if(a==='pick') bankInsert(meta.items[bank.i%meta.items.length]);
+      else if(a==='list'){ bank.mode='list'; renderBank(); }
+      else if(a==='swipe'){ bank.mode='swipe'; renderBank(); }
+      else if(a==='create'){ bank.mode='create'; renderBank(); }
+      else if(a==='menu'){ bank.menu=!bank.menu; renderBank(); }
+      else if(a==='createGo'){ const ta=document.getElementById('edBankPrompt'); bankInsert((ta&&ta.value.trim())||'Animation sur mesure'); }
+    }; });
+    ov.querySelectorAll('[data-pick]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); bankInsert(b.dataset.pick); }; b.onmouseenter=function(){ const m=metaFor(bank.kind); b.style.borderColor=m.c; b.style.background='var(--surface-2)'; }; b.onmouseleave=function(){ b.style.borderColor='var(--border)'; b.style.background='var(--panel-1)'; }; });
+    ov.querySelectorAll('[data-kind]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); bank.kind=b.dataset.kind; bank.i=0; bank.menu=false; bank.q=''; bank.mode='swipe'; renderBank(); }; b.onmouseenter=function(){b.style.background='var(--surface-3)';}; b.onmouseleave=function(){b.style.background='transparent';}; });
+  }
+
+  // ═══════════ MUSIQUE (modale) ═══════════
+  window.edOpenMusicModal=function(){ if(!_ed){ toast('⚠ Charge d\'abord une vidéo'); return; }
+    const ov=document.createElement('div'); ov.id='edMusicModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.78);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px'; ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML='<div style="width:min(430px,94vw);max-height:82vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)" onclick="event.stopPropagation()">'
+      +'<div class="row gap10" style="align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)"><span style="color:'+MUSIC_GREEN+'">'+S(IC.music,15)+'</span><span style="font-weight:700;font-size:14.5px">Musique de fond</span><button data-close="1" style="margin-left:auto;color:var(--text-3);font-size:16px;line-height:1;background:none;border:none;cursor:pointer">✕</button></div>'
+      +'<div class="col" style="overflow-y:auto;padding:12px;gap:8px">'
+      + ED_MUSIC.map(function(m){return '<button data-url="'+m.url+'" data-name="'+m.name.replace(/"/g,'&quot;')+'" class="row gap12" style="align-items:center;padding:11px 12px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:'+MUSIC_GREEN+'22;border:1px solid '+MUSIC_GREEN+'55;color:'+MUSIC_GREEN+'">'+S(IC.play,13)+'</span><span class="col grow" style="gap:2px;min-width:0"><span style="font-size:13.5px;font-weight:600">'+m.name+'</span><span class="faint" style="font-size:11.5px">'+m.mood+'</span></span><span class="mono faint" style="font-size:11px;flex:0 0 auto">'+m.dur+'</span></button>';}).join('')
+      +'<button data-import="1" class="row gap10" style="align-items:center;justify-content:center;padding:13px 12px;border-radius:12px;margin-top:2px;border:1px dashed var(--border-2);background:transparent;color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer">'+S(IC.plus,14)+' Importer ma musique <span class="faint mono" style="font-size:11px">MP3 · WAV</span></button>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('[data-close]').onclick=function(){ov.remove();};
+    ov.querySelectorAll('[data-url]').forEach(function(b){ b.onclick=function(){ if(typeof edAddMusicPreset==='function') edAddMusicPreset(b.dataset.url,b.dataset.name); ov.remove(); }; b.onmouseenter=function(){ b.style.borderColor=MUSIC_GREEN; b.style.background='var(--surface-2)'; }; b.onmouseleave=function(){ b.style.borderColor='var(--border)'; b.style.background='var(--panel-1)'; }; });
+    ov.querySelector('[data-import]').onclick=function(){ ov.remove(); const inp=document.getElementById('edMusicIn'); if(inp) inp.click(); };
+  };
+
+  // ═══════════ AIDE (raccourcis) ═══════════
+  window.edOpenHelp=function(){ if(document.getElementById('edHelpModal')) return;
+    const rows=[["Espace","Lire / Pause"],["S · ⌘S","Séparer au curseur"],["⌘C / ⌘V","Copier / Coller"],["⌘D","Dupliquer"],["Suppr","Supprimer la sélection"],["⌘Z / ⌘⇧Z","Annuler / Rétablir"],["← →","Reculer / Avancer de 0,1 s"],["⇧ ← →","… de 1 s"],["Début / Fin","Aller au début / à la fin"],["T","Ajouter un texte"],["I","Ajouter une image"],["F","Plein écran"],["+ / −","Zoom timeline"],["?","Afficher cette aide"],["Échap","Fermer"]];
+    const ov=document.createElement('div'); ov.id='edHelpModal'; ov.style.cssText='position:fixed;inset:0;z-index:6800;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px'; ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML='<div style="width:min(460px,94vw);max-height:82vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:18px" onclick="event.stopPropagation()"><div class="row" style="align-items:center;margin-bottom:16px"><span style="font-weight:700;font-size:15px">Raccourcis clavier</span><button data-close="1" style="margin-left:auto;color:var(--text-3);font-size:18px;line-height:1;background:none;border:none;cursor:pointer">✕</button></div><div class="col" style="gap:7px">'
+      + rows.map(function(r){return '<div class="row" style="align-items:center;gap:12px;padding:7px 10px;border-radius:9px;background:var(--panel-1)"><span class="mono" style="font-size:11.5px;font-weight:700;color:var(--accent-2);min-width:88px">'+r[0]+'</span><span style="font-size:13px">'+r[1]+'</span></div>';}).join('')
+      +'</div></div>';
+    document.body.appendChild(ov); ov.querySelector('[data-close]').onclick=function(){ov.remove();};
+  };
+
+  // ═══════════ ZOOM APERÇU + PLEIN ÉCRAN ═══════════
+  let _edPZoom=1, _edFsOn=false, _edFsHome=null;
+  window.edPreviewZoom=function(d){ _edPZoom=Math.max(0.5,Math.min(3,+(_edPZoom+(d>0?0.1:-0.1)).toFixed(2))); const w=document.getElementById('edZoomWrap'); if(w) w.style.transform='scale('+_edPZoom+')'; };
+  window.edToggleFullscreen=function(){ const wrap=document.getElementById('edZoomWrap'); if(!wrap) return;
+    if(_edFsOn){ const ov=document.getElementById('edFsOverlay'); if(_edFsHome) _edFsHome.insertBefore(wrap,_edFsHome.firstChild); if(ov) ov.remove(); _edFsOn=false; wrap.style.transform='scale('+_edPZoom+')'; return; }
+    _edFsHome=wrap.parentElement;
+    const ov=document.createElement('div'); ov.id='edFsOverlay'; ov.style.cssText='position:fixed;inset:0;z-index:7000;background:rgba(6,6,8,.97);backdrop-filter:blur(8px);display:flex;flex-direction:column;animation:aaRise .25s ease both';
+    ov.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;padding:16px 22px"><span class="mono faint" style="font-size:12px">Aperçu plein écran</span><button data-exit="1" class="btn btn-ghost btn-sm">✕ Quitter (Échap)</button></div><div id="edFsStage" style="flex:1;min-height:0;display:grid;place-items:center;padding:0 24px"></div><div class="row gap16" style="justify-content:center;align-items:center;padding:16px 22px 26px"><button data-play="1" class="btn btn-ghost" style="padding:9px 20px">'+S(IC.play,15,0)+' Lire</button></div>';
+    document.body.appendChild(ov); ov.querySelector('#edFsStage').appendChild(wrap); wrap.style.transform='scale(1)'; _edFsOn=true;
+    ov.querySelector('[data-exit]').onclick=function(){edToggleFullscreen();};
+    ov.querySelector('[data-play]').onclick=function(){ if(typeof edTogglePlay==='function') edTogglePlay(); };
+  };
+
+  // ═══════════ MENU CONTEXTUEL CLIP (clic droit sur la timeline Clips) ═══════════
+  function closeClipMenu(){ const m=document.getElementById('edClipMenu'); if(m) m.remove(); }
+  function openClipMenu(x,y,idx){
+    closeClipMenu(); if(!_ed||!_ed.clips) return;
+    const m=document.createElement('div'); m.id='edClipMenu'; m.style.cssText='position:fixed;left:'+Math.min(x,window.innerWidth-210)+'px;top:'+y+'px;z-index:7000;width:200px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:12px;padding:6px;box-shadow:0 18px 50px -12px rgba(0,0,0,.8)';
+    const item=function(inner,danger){ const b=document.createElement('button'); b.className='row gap10'; b.style.cssText='width:100%;padding:9px 10px;border-radius:8px;font-size:13px;text-align:left;background:transparent;border:none;cursor:pointer;color:'+(danger?'#FF6B6B':'var(--text)'); b.innerHTML=inner; b.onmouseenter=function(){b.style.background=danger?'rgba(255,70,70,.12)':'var(--surface-3)';}; b.onmouseleave=function(){b.style.background='transparent';}; return b; };
+    const head=document.createElement('div'); head.className='mono faint'; head.style.cssText='font-size:9.5px;letter-spacing:.08em;padding:6px 10px 8px'; head.textContent='CLIP · ACTIONS'; m.appendChild(head);
+    const ext=item(S(IC.music,14)+' Extraire le son'); ext.onclick=function(){ closeClipMenu(); if(typeof edExportAudio==='function') edExportAudio(); }; m.appendChild(ext);
+    const go=item(S('<path d="M5 12h14M13 6l6 6-6 6"/>',14)+' Aller au début du clip'); go.onclick=function(){ closeClipMenu(); let acc=0; for(let i=0;i<idx&&_ed.clips[i];i++){ acc+=Math.max(0,_ed.clips[i].trimB-_ed.clips[i].trimA); } if(typeof edScrubTo==='function') edScrubTo(acc); if(typeof edSelectClip==='function') edSelectClip(idx); }; m.appendChild(go);
+    if(_ed.clips.length>1){ const del=item(S('<path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/>',14)+' Supprimer le clip',true); del.onclick=function(){ closeClipMenu(); if(typeof edRemoveClip==='function') edRemoveClip(idx); }; m.appendChild(del); }
+    document.body.appendChild(m);
+  }
+  document.addEventListener('pointerdown',function(e){ const m=document.getElementById('edClipMenu'); if(m && (!e.target.closest||!e.target.closest('#edClipMenu'))) closeClipMenu(); },true);
+  document.addEventListener('contextmenu',function(e){ if(!_ed) return; const tl=e.target.closest&&e.target.closest('#edTl'); const seg=e.target.closest&&e.target.closest('[data-clipidx]'); if(seg){ e.preventDefault(); openClipMenu(e.clientX,e.clientY,+seg.dataset.clipidx); } else if(tl){ e.preventDefault(); openClipMenu(e.clientX,e.clientY,(_ed.activeIdx||0)); } });
+
+  // ═══════════ RACCOURCIS CLAVIER SUPPLÉMENTAIRES ═══════════
+  let _edClip=null;
+  function edClipboard(k){ if(!_ed) return;
+    if(k==='c'){ const o=_ed.overlays.find(function(x){return x.id===_ed.sel;}); if(o){ _edClip=Object.assign({},o); delete _edClip._el; toast('Calque copié'); } return; }
+    if((k==='v'&&_edClip)||k==='d'){ const src=k==='d'?_ed.overlays.find(function(x){return x.id===_ed.sel;}):_edClip; if(!src) return; if(typeof edSnap==='function') edSnap();
+      const id='ov'+Date.now(); const len=(src.end-src.start)||1; const now=cursorT(); const tot=(typeof edTotalDur==='function'?edTotalDur():len)||len;
+      const nov=Object.assign({},src,{id:id,_el:undefined,start:Math.min(now,Math.max(0,tot-0.3)),end:Math.min(tot,now+len)});
+      _ed.overlays.push(nov); if(typeof edBuildOverlayEl==='function') edBuildOverlayEl(nov); if(typeof edSelect==='function') edSelect(id); if(typeof edRenderLayers==='function') edRenderLayers();
+    }
+  }
+  document.addEventListener('keydown',function(e){
+    const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
+    const tg=(e.target.tagName||'').toLowerCase(); if(tg==='input'||tg==='textarea'||e.target.isContentEditable) return;
+    const meta=e.metaKey||e.ctrlKey, k=e.key;
+    if(k==='Escape'){ if(document.getElementById('edBankModal')){ closeBank(); return; } const ids=['edMusicModal','edHelpModal','edFsOverlay','edClipMenu']; for(let i=0;i<ids.length;i++){ const el=document.getElementById(ids[i]); if(el){ if(ids[i]==='edFsOverlay') edToggleFullscreen(); else el.remove(); return; } } return; }
+    if(meta && k.toLowerCase()==='s'){ e.preventDefault(); if(typeof edSplitClip==='function') edSplitClip(); return; }
+    if(meta && (k==='c'||k==='v'||k==='d')){ e.preventDefault(); edClipboard(k); return; }
+    if(meta) return;
+    if(k==='s'||k==='S'){ e.preventDefault(); if(typeof edSplitClip==='function') edSplitClip(); }
+    else if(k==='t'||k==='T'){ e.preventDefault(); if(typeof edAddText==='function') edAddText(); }
+    else if(k==='i'||k==='I'){ e.preventDefault(); const inp=document.getElementById('edImgIn'); if(inp) inp.click(); }
+    else if(k==='f'||k==='F'){ e.preventDefault(); edToggleFullscreen(); }
+    else if(k==='?'){ e.preventDefault(); edOpenHelp(); }
+    else if(k==='Home'){ e.preventDefault(); if(typeof edScrubTo==='function') edScrubTo(0); }
+    else if(k==='End'){ e.preventDefault(); if(typeof edScrubTo==='function') edScrubTo(typeof edTotalDur==='function'?edTotalDur():0); }
+  });
+})();
 </script>
 
 <!-- ══════════ SHELL MOBILE : topbar compacte + bottom-nav + page « Plus » ══════════ -->
