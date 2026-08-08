@@ -24,7 +24,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <!-- Image LCP du hero (téléphone central) : préchargée en priorité haute -->
-<link rel="preload" as="image" href="assets/lp/hero-homme.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/lp/hero-homme-640.webp" fetchpriority="high" media="(min-width:761px)">
+<link rel="preload" as="image" href="assets/hero-bacteria-720.webp" fetchpriority="high" media="(max-width:760px)">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -161,7 +162,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 /* features tabs */
 .feat-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .feat-tabs::-webkit-scrollbar{display:none}
-.feat-tabs button{padding:11px 20px;border-radius:10px;font-size:14.5px;font-weight:600;white-space:nowrap;transition:.18s;color:var(--text-3)}
+.feat-tabs button{padding:11px 20px;border-radius:10px;font-size:14.5px;font-weight:600;white-space:nowrap;transition:.18s;color:var(--text-2)}
 .feat-tabs button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
 .feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
 .feat-mock.on{display:grid}
@@ -276,7 +277,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="glass" style="border-bottom:1px solid var(--border);background:rgba(14,13,16,.9)">
     <div class="wrap row" style="height:60px;justify-content:space-between;gap:12px">
       <div class="row gap10" style="min-width:0">
-        <img src="assets/avatarads-logo.png" alt="" width="19" height="19" style="border-radius:5px;display:block">
+        <img src="assets/avatarads-logo-96.png" alt="" width="19" height="19" style="border-radius:5px;display:block">
         <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
       </div>
       <a href="/app/" class="btn btn-primary btn-sm" style="white-space:nowrap">Commencer <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -289,7 +290,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="glass" style="border-bottom:1px solid var(--border)">
     <div class="wrap row" style="height:72px;justify-content:space-between">
       <div class="row gap12">
-        <div class="brandmark"><img src="assets/avatarads-logo.png" alt="AvatarAds" width="22" height="22" style="border-radius:6px;display:block"></div>
+        <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="AvatarAds" width="22" height="22" style="border-radius:6px;display:block"></div>
         <div class="col" style="line-height:1">
           <span class="logo-wordmark">AvatarAds</span>
           <span class="mono faint" style="font-size:9.5px;letter-spacing:.1em;margin-top:3px">BY IA MANAGER</span>
@@ -375,14 +376,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria-820.webp" alt="Cartoon bactérie virale AvatarAds" width="820" height="1457" loading="lazy" decoding="async"></div>
+        <div class="scr"><img src="assets/hero-bacteria-720.webp" alt="Cartoon bactérie virale AvatarAds" width="720" height="1279" fetchpriority="high" decoding="async"></div>
       </div>
 
       <!-- phone droite : portrait femme IA + badges -->
       <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille.webp" alt="Portrait femme généré par IA" width="900" height="1612" loading="lazy" decoding="async"></div>
+        <div class="scr"><img src="assets/lp/hero-fille-776.webp" alt="Portrait femme généré par IA" width="776" height="1390" loading="lazy" decoding="async"></div>
         <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
           <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
             <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
@@ -400,7 +401,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr" style="inset:5px;border-radius:39px">
-          <img src="assets/lp/hero-homme.webp" alt="Portrait homme généré par IA" width="900" height="1342" fetchpriority="high" decoding="async">
+          <img src="assets/lp/hero-homme-640.webp" alt="Portrait homme généré par IA" width="640" height="954" fetchpriority="high" decoding="async">
           <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
           <div class="ph-rail" style="bottom:22px">
             <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
@@ -516,9 +517,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="reveal sc-mediawrap" style="position:relative">
         <!-- comparateur avant/après : les deux rendus superposés, poignée centrale draggable (souris + tactile) -->
         <div id="baSlider" style="position:relative;width:100%;border-radius:18px;overflow:hidden;cursor:ew-resize;border:1px solid rgba(255,255,255,.1);filter:drop-shadow(0 30px 60px rgba(0,0,0,.7));user-select:none;-webkit-user-select:none;touch-action:pan-y">
-          <img src="assets/lp/ia-after.jpg" alt="Résultat IA — après" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%">
+          <img src="assets/lp/ia-after.webp" alt="Résultat IA — après" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%">
           <div id="baBefore" style="position:absolute;inset:0;width:50%;overflow:hidden">
-            <img src="assets/lp/ia-before.jpg" alt="Résultat IA — avant" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;top:0;left:0;height:100%;width:200%;max-width:none;object-fit:cover;object-position:50% 22%;filter:saturate(.7) blur(.4px)">
+            <img src="assets/lp/ia-before.webp" alt="Résultat IA — avant" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;top:0;left:0;height:100%;width:200%;max-width:none;object-fit:cover;object-position:50% 22%;filter:saturate(.7) blur(.4px)">
           </div>
           <span class="ba-tag" style="left:12px">AVANT</span>
           <span class="ba-tag" style="right:12px">APRÈS</span>
@@ -537,7 +538,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo-720.webp" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
+          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo-720b.webp" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
           <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px;pointer-events:none">✦ Veo 3.1</span>
           <div class="sc-play" id="veoPlayWrap" onclick="veoToggle()" style="pointer-events:auto;cursor:pointer"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
@@ -836,7 +837,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px">
       <div>
         <div class="row gap10" style="align-items:center">
-          <div class="brandmark"><img src="assets/avatarads-logo.png" alt="" width="26" height="26" style="border-radius:7px;display:block"></div>
+          <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="" width="26" height="26" style="border-radius:7px;display:block"></div>
           <span class="logo-wordmark" style="font-size:20px">AvatarAds</span>
         </div>
         <p class="muted" style="margin-top:16px;font-size:14px;line-height:1.6;max-width:320px">
@@ -991,7 +992,9 @@ function lpGenerate(e){
 /* ══════════ Sticky CTA ══════════ */
 (function(){
   var bar=document.getElementById('stickyCta');
-  function on(){ var s=window.scrollY>620; bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
+  var dernier=null;
+  function on(){ var s=window.scrollY>620; if(s===dernier) return; dernier=s;
+    bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
   window.addEventListener('scroll',on,{passive:true}); on();
 })();
 
