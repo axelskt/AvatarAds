@@ -491,12 +491,27 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         if (!src) return
         if (from < 0.05) { next['av' + i] = src; return }
         const out = 'media/av' + i + '-cut.mp4'
+        // ── UN RECOUPAGE NE DOIT JAMAIS SORTIR 0 FRAME (Axel, 08/08) ──────────
+        // Le point de reprise `clipFrom` est calculé sur les bornes d'ORIGINE de
+        // la fenêtre ; si le clip Hedra sous-jacent est plus court (tranché, pad
+        // court…), `-ss from` seek au-delà de la fin → fichier VIDE, et
+        // HyperFrames refuse alors TOUT le rendu (« captured 0 of expected N
+        // frames » — 4 rendus perdus sur ce piège le 08/08). On borne donc le
+        // point de reprise à la durée réelle (en gardant ≥0,3 s de matière), et
+        // on GÈLE la dernière image (+6 s) : le clip couvre toujours son panneau.
+        let srcDur = 0
+        try { srcDur = parseFloat(ffprobe(join(proj, src), 'format=duration')) || 0 } catch (_) {}
+        const fromSafe = srcDur > 0.4 ? Math.min(from, srcDur - 0.3) : from
         try {
-          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(from), '-i', join(proj, src),
-            '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', join(proj, out)])
-          next['av' + i] = out
-          console.log(`▶ fenêtre avatar ${i} : même clip, repris à ${from.toFixed(2)}s`)
-        } catch (e) { console.warn('découpe clip avatar :', e.message) }
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(fromSafe), '-i', join(proj, src),
+            '-an', '-vf', `tpad=stop_mode=clone:stop_duration=6,fps=${FPS}`,
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-g', String(FPS), join(proj, out)])
+          // garde-fou : si malgré tout le fichier n'a pas de frame, on repli sur
+          // le clip source entier (jamais 0 frame qui casse le rendu complet)
+          const okDur = (() => { try { return parseFloat(ffprobe(join(proj, out), 'format=duration')) || 0 } catch (_) { return 0 } })()
+          next['av' + i] = okDur > 0.1 ? out : src
+          console.log(`▶ fenêtre avatar ${i} : même clip, repris à ${fromSafe.toFixed(2)}s${okDur > 0.1 ? '' : ' (recoupage vide → clip entier en repli)'}`)
+        } catch (e) { console.warn('découpe clip avatar :', e.message); next['av' + i] = src }
       })
       for (const k of Object.keys(avatarClips)) delete avatarClips[k]
       Object.assign(avatarClips, next)
