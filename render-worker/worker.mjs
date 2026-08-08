@@ -449,6 +449,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       try { deriveDynamicSlides(plan, { assetFiles, assetDims, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
       // #24 · et maintenant il RELIT sa copie, sur le montage réel
       try { await passeDeFinition(plan) } catch (e) { console.warn('finitions:', e.message) }
+      // fenêtres 'G*' : un clip que la dérivation VEUT mais qu'aucun existant ne
+      // couvre (« la photo figée lit comme un bug ») — généré ici, cache compris
+      if (avatarPhoto) {
+        try { const g = await genererFenetresG(plan, proj, jobDir, avatarClips); if (g) console.log(`▶ ${g} fenêtre(s) générée(s) après dérivation`) }
+        catch (e) { console.warn('fenêtres G :', e.message) }
+      }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
@@ -1084,6 +1090,85 @@ function trancherFenetres(plan) {
   }
   if (coupes) plan.avatarSegments = out
   return coupes
+}
+
+// ── LES FENÊTRES 'G*' : UN CLIP GÉNÉRÉ APRÈS LA DÉRIVATION ──────────────────
+// La dérivation peut créer une fenêtre qu'AUCUN clip existant ne couvre (le
+// trou de 38 s : la photo figée « lisait comme un bug » — Axel). Elle la marque
+// clip:'G0' ; on la génère ici, APRÈS dérivation, même quand les clips du job
+// sont fournis — même cache par contenu que le reste : payé UNE fois.
+async function genererFenetresG(plan, proj, jobDir, avatarClips) {
+  const fen = (plan.avatarSegments || []).filter((w) => /^G\d+$/.test(String(w.clip)))
+  if (!fen.length) return 0
+  if (!existsSync(join(proj, 'media', 'avatar.png'))) { console.warn('fenêtres G : pas de photo avatar'); return 0 }
+  const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
+  if (!existsSync(voix)) return 0
+  const photo = readFileSync(join(proj, 'media', 'avatar.png'))
+  let imageId = null, faits = 0
+  for (const w of fen) {
+    // Hedra refuse sous 3,24 s : on étire l'audio vers la droite, le clip sera
+    // recoupé à la fenêtre de toute façon (freeze-pad au recoupage)
+    const dur = Math.max(3.3, w.end - w.start)
+    const mp3 = join(proj, `ls-${w.clip}.mp3`)
+    try {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
+        '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
+    } catch (e) { console.warn(`fenêtre ${w.clip} : découpe impossible`); continue }
+    const audioBuf = readFileSync(mp3)
+    const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_MODEL_ID)
+    const out = join(proj, 'media', 'av' + w.clip + '.mp4')
+    let clip = await cacheLire(cle)
+    if (clip) console.log(`♻︎ fenêtre ${w.clip} : ${r2(w.start)}→${r2(w.end)}s reprise du cache — ${Math.round(dur * HEDRA_CR_SEC)} crédits économisés`)
+    else {
+      if (!imageId) imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
+      if (!imageId) { console.warn('fenêtres G : upload de la photo refusé'); break }
+      const audioId = await hedraAsset('audio', `voice-${w.clip}.mp3`, audioBuf, 'audio/mpeg')
+      if (!audioId) { console.warn(`fenêtre ${w.clip} : upload audio refusé`); continue }
+      const gen = await hedraProxy('/generations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'video', ai_model_id: HEDRA_MODEL_ID, audio_id: audioId, start_keyframe_id: imageId,
+          generated_video_inputs: {
+            text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
+            aspect_ratio: '9:16', character_orientation: 'video', resolution: '1080p',
+          },
+        }),
+      })
+      if (!gen.ok) { console.warn(`fenêtre ${w.clip} : Hedra ${gen.status}`); continue }
+      const g = await gen.json().catch(() => ({}))
+      if (!g.id) { console.warn(`fenêtre ${w.clip} : pas d'identifiant`); continue }
+      let url = ''
+      for (let k = 0; k < 90; k++) {
+        await new Promise((r) => setTimeout(r, 4000))
+        const st = await hedraProxy(`/generations/${g.id}/status`, { method: 'GET' })
+        if (!st.ok) continue
+        const d2 = await st.json().catch(() => ({}))
+        const s = String(d2.status || '').toLowerCase()
+        if (s === 'complete' || s === 'completed' || s === 'succeeded') { url = d2.url || d2.video_url || d2.output_url || ''; break }
+        if (s === 'error' || s === 'failed') { console.warn(`fenêtre ${w.clip} : ${d2.error || 'échec Hedra'}`); break }
+      }
+      if (!url) { console.warn(`fenêtre ${w.clip} : pas de vidéo`); continue }
+      const res = await fetch(url)
+      if (!res.ok) { console.warn(`fenêtre ${w.clip} : téléchargement ${res.status}`); continue }
+      clip = Buffer.from(await res.arrayBuffer())
+      await cacheEcrire(cle, clip, dur)
+      console.log(`▶ fenêtre ${w.clip} : ${r2(w.start)}→${r2(w.end)}s générée — ${Math.round(dur * HEDRA_CR_SEC)} crédits`)
+    }
+    writeFileSync(out, clip)
+    // même moulinette 50 i/s que partout : les octets bruts ne vont jamais au rendu
+    const brut = out.replace(/\.mp4$/, '-brut.mp4')
+    try {
+      renameSync(out, brut)
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', brut,
+        '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
+        '-movflags', '+faststart', out])
+      rmSync(brut)
+    } catch (e) { console.warn(`normalisation ${w.clip} :`, e.message); try { if (!existsSync(out) && existsSync(brut)) renameSync(brut, out) } catch (_) {} }
+    avatarClips['av' + w.clip] = 'media/av' + w.clip + '.mp4'
+    faits++
+  }
+  return faits
 }
 
 async function genererLipsync(plan, proj, jobDir, avatarClips) {
