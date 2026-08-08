@@ -1115,11 +1115,18 @@ export function buildDynamicComposition(plan, opts = {}) {
       const a = g.a
       const enc = g.sombre ? encre : '#17171C'
       const accW = g.hook ? '#FFD400' : (g.sombre ? '#FF8A5B' : '#E8500A')
+      // sur le hook, le mot prononcé prend une LUEUR rouge-orangée (néon réf)
+      const lueur = g.hook ? `, textShadow: '0 0 ${Math.round(H * 0.024)}px rgba(255,90,0,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.014)}px rgba(0,0,0,.8)'` : ''
+      const lueurOff = g.hook ? `, textShadow: '0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.8), 0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.3)'` : ''
       g.mots.forEach((w, k) => {
-        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}' }, ${r2(w.start)});`
-        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
+        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}'${lueur} }, ${r2(w.start)});`
+        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}'${lueurOff} }, ${r2(w.start)});`
       })
-      js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
+      // le hook POP plus fort : le groupe claque à l'arrivée (réf : chaque
+      // phrase tombe avec un punch, pas un fondu discret)
+      js += g.hook
+        ? `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, scale: 1.35 }, { autoAlpha: 1, scale: 1, duration: 0.22, ease: 'power3.out', transformOrigin: '50% 50%' }, ${a});`
+        : `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
     }
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
   }
@@ -1208,12 +1215,14 @@ export function buildDynamicComposition(plan, opts = {}) {
   .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
     box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
   /* HOOK (réf @tians028) : plus de pastille — texte nu, énorme, en capitales,
-     halo blanc + assise sombre pour rester lisible sur le visage */
+     halo blanc + assise sombre pour rester lisible sur le visage. Le mot
+     prononcé s'allume en jaune NÉON avec une lueur rouge-orangée (le
+     « NEVER POST » rouge-jaune de la réf), posé par GSAP dans la boucle. */
   .dc-hook { background:transparent; box-shadow:none;
-    font-size:${Math.round(H * 0.052)}px; font-weight:900; text-transform:uppercase;
-    letter-spacing:-.012em; line-height:1.12; max-width:${Math.round(W * 0.9)}px;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.75),
-      0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.28); }
+    font-size:${Math.round(H * 0.056)}px; font-weight:900; text-transform:uppercase;
+    letter-spacing:-.012em; line-height:1.08; max-width:${Math.round(W * 0.88)}px;
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.8),
+      0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.3); }
   .dc-w { display:inline-block; }
 </style>
 </head>
