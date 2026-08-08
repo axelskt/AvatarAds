@@ -24,6 +24,15 @@ import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
+// ── DURÉE D'UN CLIP VIDÉO : SUR LA GRILLE 0,1 s, ARRONDIE VERS LE BAS ──────
+// Le garde de couverture d'HyperFrames compte `ceil(durée × fps)` images
+// attendues, mais l'extracteur ffmpeg en émet `floor` : sur une fenêtre de
+// 0,54 s à 30 i/s ça fait 16 capturées pour 17 attendues → 94,1 % < 95 % et
+// TOUT le rendu est refusé (vécu le 08/08, quatre rendus perdus). 0,1 s est
+// un multiple exact de 1/30 ET de 1/50 : calée dessus, la durée donne le même
+// compte des deux côtés. On perd au plus 0,09 s de clip — la dernière image
+// tient l'écran, invisible à l'œil.
+const dvid = (s) => Math.max(0.1, Math.floor((s + 1e-6) * 10) / 10)
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const DARK  = { bg: '#0E0E13', ink: '#F5F5F6', mute: '#8B8B94', dark: true }
@@ -562,7 +571,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         const cx = x0 + k * (cw + gap)
         const vid = /\.(mp4|mov|webm|m4v)$/i.test(String(it.src || ''))
         const corps = vid
-          ? `<video class="clip" src="${esc(it.src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="${8 + k}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          ? `<video class="clip" src="${esc(it.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="${8 + k}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
           : `<img src="${esc(it.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
         inner += `<div class="an-p" id="${cid}" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.12)}px;overflow:hidden;box-shadow:0 26px 60px -18px rgba(0,0,0,.5)">${corps}</div>`
         // arrivée en cascade à l'ouverture du panneau…
@@ -611,7 +620,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       const rad = Math.round(cw * 0.075)
       const card = (body) => `<div class="an-p" id="${id}md" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rad}px;overflow:hidden;box-shadow:0 40px 90px -20px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.06)">${body}</div>`
       if (vid) {
-        inner += card(`<video id="${id}mv" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`)
+        inner += card(`<video id="${id}mv" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`)
       } else {
         inner += card(`<img src="${esc(src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`)
       }
@@ -645,7 +654,7 @@ export function buildDynamicComposition(plan, opts = {}) {
           pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out',transformOrigin:'50% 30%'},${liveT0});`
         } else if (duo.src) {
           inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
-            <video id="${id}bt" class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
+            <video id="${id}bt" class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
           pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out'},${liveT0});`
         } else {
           const tw = Math.round(W * 0.46), tr = Math.round(tw * 0.24)
@@ -657,7 +666,7 @@ export function buildDynamicComposition(plan, opts = {}) {
           pjs += `\n  tl.to('#${id}bt',{scale:1.05,duration:${r2(Math.max(0.6, t1 - liveT0 - 0.7))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(liveT0 + 0.62)});`
         }
         const bot = src
-          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
           : `<div style="width:100%;height:100%;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
         inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
@@ -667,7 +676,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // et Axel les veut (« ça animé c'était bien, ça rajoute un truc de parler
         // avec les mains »). Le défaut se corrige à la source, dans le prompt
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
-        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${r2(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
         // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
         // principaux différents ». Le hook et le CTA sont deux moments distincts ;
@@ -730,7 +739,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         if (b - a < 0.3) continue
         const isVid = /\.(mp4|mov|webm|m4v)$/i.test(String(ins.src || ''))
         const corps = isVid
-          ? `<video id="${iid}v" class="clip" src="${esc(ins.src)}" data-start="${a}" data-duration="${r2(b - a)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          ? `<video id="${iid}v" class="clip" src="${esc(ins.src)}" data-start="${a}" data-duration="${dvid(b - a)}" data-track-index="8" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
           : `<img src="${esc(ins.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
         inner += `<div class="an-p" id="${iid}" style="left:${ix}px;top:${iy}px;width:${iw}px;height:${ih}px;border-radius:${Math.round(iw * 0.1)}px;overflow:hidden;box-shadow:0 30px 70px -14px rgba(0,0,0,.55),0 0 0 3px rgba(255,255,255,.85)">${corps}</div>`
         pjs += `\n  tl.fromTo('#${iid}',{scale:0.6,rotation:-6,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.7)',transformOrigin:'50% 50%'},${a});`
@@ -895,7 +904,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       const t0m = r2(Math.max(liveT0, om.start != null ? om.start : liveT0))
       const t1m = r2(Math.min(t1, om.end != null ? om.end : t1))
       const corps2 = vid2
-        ? `<video class="clip" src="${esc(om.src)}" data-start="${t0m}" data-duration="${r2(Math.max(0.4, t1m - t0m))}" data-track-index="11" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+        ? `<video class="clip" src="${esc(om.src)}" data-start="${t0m}" data-duration="${dvid(Math.max(0.4, t1m - t0m))}" data-track-index="11" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
         : `<img src="${esc(om.src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
       inner += `<div class="an-p" id="${id}om" style="left:${cx2}px;top:${cy2}px;width:${cw2}px;height:${ch2}px;border-radius:${Math.round(cw2 * 0.08)}px;overflow:hidden;box-shadow:0 34px 80px -22px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.08);z-index:9">${corps2}</div>`
       pjs += `\n  tl.fromTo('#${id}om',{yPercent:8,scale:0.92,autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:0.42,ease:'back.out(1.5)',transformOrigin:'50% 50%'},${t0m});`

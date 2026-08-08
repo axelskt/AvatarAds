@@ -14,7 +14,7 @@
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
@@ -1046,6 +1046,30 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
   if (!imageId) { console.warn('lipsync : upload de la photo refusé'); return 0 }
 
+  // ── LES OCTETS BRUTS D'HEDRA NE VONT JAMAIS DIRECTEMENT AU RENDU ──────────
+  // Les clips fournis par l'app (jobDir/avatar) passent tous par un ré-encodage
+  // 50 i/s avant compositing — depuis des mois, sans un raté. Ce chemin-ci
+  // (génération + cache) écrivait les octets Hedra TELS QUELS (25 i/s), et
+  // c'est sur EUX, et eux seuls, que l'extracteur d'HyperFrames plantait sur
+  // Railway (« captured 0 of expected N frames », l'entrée du clip disparaît
+  // de l'extraction — 4 rendus perdus le 08/08 avant de trouver ça). Même
+  // moulinette pour tout le monde : mêmes réglages que le chargeur jobDir.
+  function normaliserClipAvatar(nom) {
+    const fini = join(proj, 'media', nom)
+    const brut = join(proj, 'media', nom.replace(/\.mp4$/, '-brut.mp4'))
+    try {
+      renameSync(fini, brut)
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', brut,
+        '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
+        '-movflags', '+faststart', fini])
+      rmSync(brut)
+    } catch (e) {
+      console.warn(`normalisation clip avatar ${nom} :`, e.message)
+      try { if (!existsSync(fini) && existsSync(brut)) renameSync(brut, fini) } catch (_) {}
+    }
+  }
+
   // ── TOUTES LES SCÈNES EN MÊME TEMPS ──────────────────────────────────────
   // Axel : « on peut pas faire tourner plusieurs clips d'un coup pour aller plus
   // vite avec Hedra ? ça nous ferait gagner beaucoup de temps ». Oui — et c'est
@@ -1100,6 +1124,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     const dejaPaye = await cacheLire(cle)
     if (dejaPaye) {
       writeFileSync(join(proj, 'media', `av${i}.mp4`), dejaPaye)
+      normaliserClipAvatar(`av${i}.mp4`)
       avatarClips['av' + i] = 'media/av' + i + '.mp4'
       economie += cout
       console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
@@ -1143,10 +1168,11 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     const out = join(proj, 'media', `av${i}.mp4`)
     const clip = Buffer.from(await res.arrayBuffer())
     writeFileSync(out, clip)
-    avatarClips['av' + i] = 'media/av' + i + '.mp4'
-    // Payé une fois : on le range AVANT de rendre la main, pour que le prochain
-    // passage — relance, régénération, autre réplica — le trouve.
+    // Payé une fois : on range les octets BRUTS au cache AVANT de normaliser —
+    // la normalisation dépend du fps de rendu, le cache doit rester neutre.
     await cacheEcrire(cle, clip, dur)
+    normaliserClipAvatar(`av${i}.mp4`)
+    avatarClips['av' + i] = 'media/av' + i + '.mp4'
     depense += cout
     console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}) — ${cout} crédits`)
     return true
