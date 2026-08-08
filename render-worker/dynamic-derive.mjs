@@ -2908,10 +2908,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // le clip commence AU MILIEU du trou : photo jusqu'à son début (même
         // visage, continuité assurée), puis le clip parle — c'est le cas du
         // trou de 38,06 s, où av3 démarre à 39,12 s
+        // La v4 mettait la PHOTO en attendant le clip — et Axel a lu la photo
+        // figée comme un bug : « à 38 s le lipsync n'est pas fait sur
+        // l'avatar ». Un visage à l'écran DOIT parler : la fenêtre devient UNE
+        // SEULE scène à générer (clip 'G*') ; le worker paie une fois chez
+        // Hedra, le cache par contenu garde pour toutes les relances.
+        const gid = 'G' + (plan._prochainG = (plan._prochainG || 0) + 1, plan._prochainG - 1)
         ;(plan.avatarSegments = plan.avatarSegments || []).push(
-          { start: r2(a), end: r2(adopte.start), comble: true, clip: -1 },
-          { start: r2(adopte.start), end: r2(d), comble: true, clip: adopte.clip, clipFrom: 0 })
-        console.log(`▶ trou ${r2(a)}→${r2(d)}s : photo jusqu'à ${r2(adopte.start)}s, puis le clip av${adopte.clip} parle`)
+          { start: r2(a), end: r2(d), comble: true, clip: gid })
+        console.log(`▶ trou ${r2(a)}→${r2(d)}s : clip lipsync À GÉNÉRER (${gid}) — un visage à l'écran doit parler`)
       } else {
         ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true, clip: -1 })
       }
@@ -3357,9 +3362,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
       ...(plan.slides || []).map((s) => [s.start, s.end, s]),
       ...(plan.avatarSegments || []).map((w) => [w.start, w.end, w]),
     ].filter((x) => typeof x[0] === 'number' && typeof x[1] === 'number').sort((a, b) => a[0] - b[0])
+    // 0,35 s et pas 1,0 s : le blanc que l'œil accroche commence bien avant la
+    // seconde pleine. Vu sur la v4 : 0,87 s de fond nu entre la capture (31,91)
+    // et « connect » (32,78) — Axel : « y'a toujours le blanc à 32 secondes ».
+    // Sous 0,35 s, c'est la respiration d'une transition ; au-delà, un trou.
+    const CREUX = 0.35
     let cur = 0, bouches = 0
     for (const [a, , ] of bornes) {
-      if (a - cur >= 1.0) {
+      if (a - cur >= CREUX) {
         const avant = bornes.filter((x) => x[1] <= cur + 0.06).sort((x, y) => y[1] - x[1])[0]
         const apres = bornes.find((x) => x[0] >= a - 0.06)
         if (avant) { avant[2].end = r2(a); bouches++ }
@@ -3368,8 +3378,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
       cur = Math.max(cur, bornes.filter((x) => x[0] <= a).reduce((m, x) => Math.max(m, x[1]), cur))
     }
     const dernier = bornes[bornes.length - 1]
-    if (dernier && D - dernier[1] >= 1.0) { dernier[2].end = r2(D); bouches++ }
-    if (bouches) console.log(`▶ ${bouches} creux de plus d'une seconde bouché(s) par la scène voisine`)
+    if (dernier && D - dernier[1] >= CREUX) { dernier[2].end = r2(D); bouches++ }
+    if (bouches) console.log(`▶ ${bouches} creux bouché(s) par la scène voisine (seuil ${CREUX}s)`)
   }
 
   // ── AUCUN MÉDIA DE L'UTILISATEUR NE DISPARAÎT EN SILENCE ────────────────────
