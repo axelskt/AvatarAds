@@ -32,5 +32,27 @@ COPY package.json ./
 RUN npm install --omit=dev
 COPY . .
 
+# ⚠️ HYPERFRAMES EST INSTALLÉ DANS L'IMAGE ET PATCHÉ ICI — PLUS NPX AU RENDU.
+# Découvert sur les montages à 6 vidéos du 08/08 (3 rendus perdus, zéro ligne
+# de diagnostic) :
+#   ① la CLI 0.7.60 AVALE les erreurs d'extraction vidéo : quand un des ffmpeg
+#      d'extraction meurt, l'erreur va dans un tableau que personne ne lit et
+#      le rendu échoue plus loin sur « captured 0 of expected N frames » — un
+#      message qui accuse la capture alors que la stderr du ffmpeg perdu vient
+#      d'être jetée. patch-hyperframes.mjs ajoute LE log manquant ; le build
+#      ÉCHOUE si l'ancre a bougé (version épinglée dans package.json).
+#   ② la CLI lance ses N ffmpeg d'extraction d'un coup (Promise.all sans
+#      borne), chacun en threads=auto — une explosion de threads qu'un Mac
+#      encaisse et qu'un conteneur ne pardonne pas. hf-ffmpeg plafonne les
+#      threads du DÉCODEUR (-threads en option d'ENTRÉE : l'encodeur x264 du
+#      MP4 final garde tous ses cœurs). Branché par worker.mjs via
+#      HYPERFRAMES_FFMPEG_PATH — les ffmpeg du worker (mix audio) ne passent
+#      pas par là.
+# Bonus : plus de téléchargement npx (~380 Mo) au premier rendu — même
+# philosophie que Chromium ci-dessus.
+RUN printf '#!/bin/sh\nexec /usr/bin/ffmpeg -threads "${HF_FFMPEG_THREADS:-2}" "$@"\n' > /usr/local/bin/hf-ffmpeg \
+  && chmod +x /usr/local/bin/hf-ffmpeg \
+  && node patch-hyperframes.mjs node_modules/hyperframes/dist/cli.js
+
 ENV NODE_ENV=production
 CMD ["node", "worker.mjs"]

@@ -30,6 +30,14 @@ import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cach
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
+// Sur Railway, la CLI vit DANS l'image (node_modules du worker) et y est
+// PATCHÉE au build : la 0.7.60 avale les erreurs d'extraction vidéo, le patch
+// (patch-hyperframes.mjs) les loggue enfin. npx n'est que le repli local — si
+// on le laissait tourner sur Railway, il téléchargerait une copie NON patchée
+// et on perdrait le diagnostic. Guillemets sur le chemin : celui d'Axel
+// contient une espace (« Autre SaaS »).
+const HF_BIN = join(HERE, 'node_modules', '.bin', 'hyperframes')
+const HF_CMD = existsSync(HF_BIN) ? JSON.stringify(HF_BIN) : `npx -y ${HYPERFRAMES}`
 
 // ── LA CADENCE DE TOUTE LA CHAÎNE ───────────────────────────────────────────
 // 50, et pas 30 ni 60. Deux raisons, toutes les deux mesurées le 02/08 :
@@ -120,25 +128,27 @@ const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args[i +
 // envoie directement dans Railway — donc hors de la trace, donc perdue.
 // On garde la sortie standard en direct (la progression du rendu reste
 // lisible) et on CAPTE la sortie d'erreur, pour la recracher dans la trace au
-// moment où ça casse. Douze dernières lignes : c'est là que se trouve la cause.
-function sh(cmd, cwd) {
+// moment où ça casse. Quarante dernières lignes : une erreur Node arrive avec
+// sa pile (~10 lignes) SOUS le message — à douze lignes, la pile poussait
+// parfois la cause hors du cadre.
+function sh(cmd, cwd, extraEnv = {}) {
   try {
-    // ── LE CACHE D'EXTRACTION D'HYPERFRAMES EST COUPÉ, ET C'EST VOULU ───────
-    // Son budget (2 Go dans /tmp) est PLUS PETIT qu'un seul rendu 1080×1920 à
-    // 50 i/s (~900 frames) : le ramasse-miettes évince alors une entrée EN
-    // PLEIN rendu, le clip victime « disparaît » de l'extraction et le garde
-    // de couverture refuse tout le MP4 — « captured 0 of expected N frames »
-    // sur un clip à chaque fois DIFFÉRENT (av3, av1, av4 selon le run — c'est
-    // cette rotation qui l'a trahi, 7 rendus perdus le 08/08). Et ce cache ne
-    // rapporte RIEN ici : le dossier de job change à chaque rendu, donc jamais
-    // un hit (« cacheMisses: 6 » à chaque run). Extraction directe, point.
+    // ── LE CACHE D'EXTRACTION D'HYPERFRAMES RESTE COUPÉ ─────────────────────
+    // Il ne rapporte rien ici (le dossier de job change à chaque rendu, donc
+    // jamais un hit — « cacheMisses: 6 » à chaque run) et son ramasse-miettes
+    // (budget 2 Go dans /tmp) sait évincer une entrée EN PLEIN rendu. Mais le
+    // couper n'a PAS éteint les « captured 0 of expected N frames » du 08/08 :
+    // la vraie mécanique est au rendu visuel (voir renderJob) — une extraction
+    // qui échoue est AVALÉE en silence par la CLI, et le garde de couverture
+    // la déguise en clip fantôme. Sans cache on a une cause de moins, c'est
+    // tout ; le patch de l'image et la relance font le reste.
     execSync(cmd, {
       cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024,
-      env: { ...process.env, HYPERFRAMES_EXTRACT_CACHE_DIR: 'off' },
+      env: { ...process.env, HYPERFRAMES_EXTRACT_CACHE_DIR: 'off', ...extraEnv },
     })
   } catch (e) {
     const err = String((e && e.stderr) || '').trim()
-    if (err) console.error('✗ ' + cmd.slice(0, 90) + ' →\n' + err.split('\n').slice(-12).join('\n').slice(0, 1600))
+    if (err) console.error('✗ ' + cmd.slice(0, 90) + ' →\n' + err.split('\n').slice(-40).join('\n').slice(0, 4000))
     throw e
   }
 }
@@ -640,7 +650,37 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // Railway garde le défaut auto.
     const wk = process.env.RENDER_WORKERS ? ` --workers ${parseInt(process.env.RENDER_WORKERS, 10) || 2}` : ''
     const fps = draft ? FPS_DRAFT : FPS
-    sh(`npx -y ${HYPERFRAMES} render --quality ${draft ? 'draft' : 'high'} --fps ${fps}${wk} --output visual.mp4`, proj)
+    // ── « captured 0 of expected N frames » : LE VRAI FILM (08/08) ──────────
+    // Sur Railway, un montage à 6 vidéos perdait TOUJOURS exactement 1 clip à
+    // l'extraction — jamais le même (av4, av1, av0…). Pas la mémoire (2 Go
+    // utilisés sur 8), pas le cache d'extraction (coupé — échec identique).
+    // La CLI extrait toutes les vidéos EN MÊME TEMPS (Promise.all sans borne) :
+    // 6 ffmpeg en threads=auto d'un coup, le perdant de la course meurt,
+    // hyperframes range son erreur dans un tableau que personne ne lit, et le
+    // garde de couverture maquille ça en clip fantôme. Le Mac, lui, encaisse.
+    // Trois réponses, toutes inertes en local :
+    //   ① hf-ffmpeg (image Railway, branché par HYPERFRAMES_FFMPEG_PATH)
+    //      plafonne les threads du DÉCODEUR — l'encodeur x264 garde ses cœurs ;
+    //   ② le patch de l'image loggue les erreurs d'extraction avalées
+    //      ([hyperframes:extract-errors] sur la sortie standard) — c'est LUI
+    //      qui dira la cause exacte si ça retombe ;
+    //   ③ le garde tombe AVANT la capture : relancer ne coûte que la
+    //      compilation + l'extraction — 3 essais avant de rendre le job.
+    const FFMPEG_PLAFONNE = '/usr/local/bin/hf-ffmpeg'
+    const envRendu = existsSync(FFMPEG_PLAFONNE) ? { HYPERFRAMES_FFMPEG_PATH: FFMPEG_PLAFONNE } : {}
+    const RENDUS_MAX = 3
+    for (let essai = 1; ; essai++) {
+      try {
+        sh(`${HF_CMD} render --quality ${draft ? 'draft' : 'high'} --fps ${fps}${wk} --output visual.mp4`, proj, envRendu)
+        break
+      } catch (e) {
+        const stderr = String((e && e.stderr) || '')
+        const couverture = /VideoFrameCoverageError|captured \d+ of expected \d+ frames/.test(stderr)
+        if (!couverture || essai >= RENDUS_MAX) throw e
+        console.warn(`⟲ extraction incomplète (essai ${essai}/${RENDUS_MAX}) — on relance le rendu visuel`)
+        await new Promise((r) => setTimeout(r, 4000))
+      }
+    }
     if (!existsSync(visual)) throw new Error('rendu visuel échoué (visual.mp4 absent)')
 
     // ── 3. mix audio ffmpeg : voix + SFX (adelay) + musique duckée en boucle ──
