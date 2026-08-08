@@ -8,7 +8,8 @@
     "test:local": "node worker.mjs --local test/job --output test/final.mp4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.7"
+    "@supabase/supabase-js": "^2.110.7",
+    "hyperframes": "0.7.60"
   },
   "engines": {
     "node": ">=20"
