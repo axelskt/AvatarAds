@@ -123,7 +123,19 @@ const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args[i +
 // moment où ça casse. Douze dernières lignes : c'est là que se trouve la cause.
 function sh(cmd, cwd) {
   try {
-    execSync(cmd, { cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024 })
+    // ── LE CACHE D'EXTRACTION D'HYPERFRAMES EST COUPÉ, ET C'EST VOULU ───────
+    // Son budget (2 Go dans /tmp) est PLUS PETIT qu'un seul rendu 1080×1920 à
+    // 50 i/s (~900 frames) : le ramasse-miettes évince alors une entrée EN
+    // PLEIN rendu, le clip victime « disparaît » de l'extraction et le garde
+    // de couverture refuse tout le MP4 — « captured 0 of expected N frames »
+    // sur un clip à chaque fois DIFFÉRENT (av3, av1, av4 selon le run — c'est
+    // cette rotation qui l'a trahi, 7 rendus perdus le 08/08). Et ce cache ne
+    // rapporte RIEN ici : le dossier de job change à chaque rendu, donc jamais
+    // un hit (« cacheMisses: 6 » à chaque run). Extraction directe, point.
+    execSync(cmd, {
+      cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024,
+      env: { ...process.env, HYPERFRAMES_EXTRACT_CACHE_DIR: 'off' },
+    })
   } catch (e) {
     const err = String((e && e.stderr) || '').trim()
     if (err) console.error('✗ ' + cmd.slice(0, 90) + ' →\n' + err.split('\n').slice(-12).join('\n').slice(0, 1600))
