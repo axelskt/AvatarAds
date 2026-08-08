@@ -36,7 +36,7 @@
   --bg:#0B0B0D;--bg-grad:#0E0D10;
   --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
   --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
-  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#6B6862;
+  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#807C76; /* 4,7:1 sur le fond — l'ancien #6B6862 ratait le seuil de contraste (3,6:1) */
   --accent:#FF5A1F;--accent-2:#FF8042;
   --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
   --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
@@ -104,8 +104,12 @@ a{color:inherit;text-decoration:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}
 @keyframes lipTalk{0%,100%{height:6px}50%{height:14px}}
-@keyframes ctaPulse{0%,100%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 14px 36px -10px var(--accent-glow),0 0 0 0 var(--accent-glow)}50%{box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 44px -8px var(--accent-glow),0 0 0 10px rgba(255,90,31,0)}}
-.cta-hero{font-size:18px;font-weight:800;padding:18px 32px;border-radius:16px;letter-spacing:.005em;animation:ctaPulse 2.6s ease-in-out infinite}
+/* le pulse animait box-shadow (recalcul de peinture à chaque frame — « animation
+   non composée » chez PageSpeed) : le halo vit sur un ::after et n'anime plus
+   qu'opacity + transform, composés par le GPU — même rendu, zéro paint */
+@keyframes ctaHalo{0%,100%{opacity:0;transform:scale(.94)}50%{opacity:.6;transform:scale(1.04)}}
+.cta-hero{font-size:18px;font-weight:800;padding:18px 32px;border-radius:16px;letter-spacing:.005em;position:relative;box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 14px 36px -10px var(--accent-glow)}
+.cta-hero::after{content:'';position:absolute;inset:-3px;border-radius:19px;box-shadow:0 0 0 8px var(--accent-glow),0 16px 44px -8px var(--accent-glow);opacity:0;animation:ctaHalo 2.6s ease-in-out infinite;pointer-events:none;will-change:opacity,transform}
 .cta-hero:hover{transform:translateY(-2px) scale(1.015)}
 .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
 /* scroll reveal */
@@ -371,7 +375,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria.png" alt="Cartoon bactérie virale AvatarAds" width="941" height="1672" loading="lazy" decoding="async"></div>
+        <div class="scr"><img src="assets/hero-bacteria-820.webp" alt="Cartoon bactérie virale AvatarAds" width="820" height="1457" loading="lazy" decoding="async"></div>
       </div>
 
       <!-- phone droite : portrait femme IA + badges -->
@@ -422,7 +426,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="row rise trust-row" style="gap:24px;margin-top:8px;flex-wrap:wrap">
         <div class="pill" style="padding:8px 14px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
-          <span class="faint">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span class="faint">utilisateurs<span class="hide-mobile"> satisfaits</span></span>
+          <span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">utilisateurs<span class="hide-mobile"> satisfaits</span></span>
         </div>
         <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues<span class="hide-mobile"> générées</span></div>
       </div>
@@ -489,7 +493,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <img src="assets/lp/lipsync.jpg" alt="Lipsync IA — avatar parlant" width="1100" height="733" loading="lazy" decoding="async">
+          <img src="assets/lp/lipsync-720.webp" alt="Lipsync IA — avatar parlant" width="720" height="480" loading="lazy" decoding="async">
           <div class="sc-play"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
       </div>
@@ -533,7 +537,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
-          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo.jpg" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
+          <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo-720.webp" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
           <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px;pointer-events:none">✦ Veo 3.1</span>
           <div class="sc-play" id="veoPlayWrap" onclick="veoToggle()" style="pointer-events:auto;cursor:pointer"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
@@ -561,7 +565,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="card feat-card-grid" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
     <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
       <!-- claude (image placeholder — à remplacer par la version sans logo) -->
-      <div class="feat-mock" data-feat="claude" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/feat-claude.jpg" alt="AvatarAds × Claude" width="1200" height="800" loading="lazy" decoding="async"></div></div>
+      <div class="feat-mock" data-feat="claude" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/feat-claude-720.webp" alt="AvatarAds × Claude" width="720" height="480" loading="lazy" decoding="async"></div></div>
       <!-- split -->
       <div class="feat-mock" data-feat="split" style="padding:20px"><div class="feat-demo">
         <div class="col" style="align-items:center;gap:18px">
@@ -580,7 +584,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         </div>
       </div></div>
       <!-- soustitres -->
-      <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres.jpg" alt="Sous-titres animés" width="1100" height="1100" loading="lazy" decoding="async"></div></div>
+      <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres-720.webp" alt="Sous-titres animés" width="720" height="720" loading="lazy" decoding="async"></div></div>
       <!-- voix -->
       <div class="feat-mock" data-feat="voix" style="padding:8px"><div class="feat-demo">
         <div class="col" style="align-items:center;gap:20px;width:80%;max-width:380px">
@@ -621,7 +625,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div></div>
       <!-- editeur -->
       <!-- 🎬 À REMPLACER par la vidéo quand Axel l'envoie : <video src="assets/lp/lipsync-montage.mp4" poster="assets/lp/lipsync.jpg" muted loop playsinline …> -->
-      <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur.jpg" alt="Éditeur vidéo" width="1100" height="1100" loading="lazy" decoding="async"></div></div>
+      <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur-720.webp" alt="Éditeur vidéo" width="720" height="720" loading="lazy" decoding="async"></div></div>
       <!-- library -->
       <div class="feat-mock" data-feat="library" style="padding:8px"><div class="feat-demo">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:80%;max-width:360px" id="libGrid"></div>
@@ -681,7 +685,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
     <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
       <div style="width:300px;height:268px;flex:0 0 auto;border-radius:22px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.12);box-shadow:0 34px 70px -30px rgba(0,0,0,.85)">
-        <img src="assets/lp/gen-veo.jpg" alt="Veo 3" width="1100" height="1100" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+        <img src="assets/lp/gen-veo-720.webp" alt="Veo 3" width="720" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.72));pointer-events:none"></div>
         <div style="position:absolute;left:18px;bottom:18px;right:18px;pointer-events:none">
           <div class="display" style="font-size:24px;font-weight:800;color:#fff">Veo 3</div>
@@ -1151,10 +1155,15 @@ var V='#7C5CFF';
   if(!sec) return;
   var N=STEPS.length, target=0, cur=0, raf=0, lastAct=-1;
   var mq=window.matchMedia('(min-width:761px)');
+  // `offsetHeight` lu à CHAQUE scroll forçait un recalcul de mise en page
+  // (l'« ajustement forcé » pointé par PageSpeed) : la hauteur ne change
+  // qu'au resize — on la met en cache et le scroll ne lit plus qu'un rect.
+  var secTotal=0;
+  function mesure(){ secTotal=sec.offsetHeight-window.innerHeight; }
   function readTarget(){
+    if(!secTotal) mesure();
     var r=sec.getBoundingClientRect();
-    var total=sec.offsetHeight-window.innerHeight;
-    target=Math.min(1,Math.max(0,-r.top/total))*N;
+    target=Math.min(1,Math.max(0,-r.top/secTotal))*N;
   }
   function apply(p){
     var act=Math.min(N-1,Math.floor(p+0.5));
@@ -1194,7 +1203,7 @@ var V='#7C5CFF';
     if(!mq.matches) return;
     readTarget(); cur=target; apply(cur);
     window.addEventListener('scroll',readTarget,{passive:true});
-    window.addEventListener('resize',readTarget);
+    window.addEventListener('resize',function(){ mesure(); readTarget(); });
     raf=requestAnimationFrame(loop);
   }
   start();
