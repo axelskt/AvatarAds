@@ -635,41 +635,34 @@ export function buildDynamicComposition(plan, opts = {}) {
       const src = (opts.avatarClips || {})['av' + p.slide.i]
       const duo = p.slide.duo
       if (duo) {
-        // HOOK EN SPLIT (Axel : « le hook je le vois plutôt en split screen avec
-        // Alex en bas et le logo Claude qui pop »). L'outil dont il parle occupe
-        // la moitié haute, son visage la moitié basse — on comprend le sujet ET
-        // qui parle en une seconde, sans une ligne de texte.
-        const half = Math.round(H / 2)
-        // LA MOITIÉ HAUTE : la vidéo de marque quand il y en a une. Axel avait
-        // fabriqué une animation Veo (les deux logos qui s'affrontent) et je
-        // l'avais laissée de côté : « je t'ai envoyé la vidéo à mettre en split
-        // screen en haut, tu ne l'as pas mise ». Une pastille dessinée ne fait
-        // pas le poids contre son animation.
-        if (duo.src && /\.(png|jpe?g|webp)(\?|$)/i.test(duo.src)) {
-          // le média de hook peut être une PHOTO (Léna piscine) : un <video> sur
-          // un PNG ne décode rien — moitié haute noire. Même cadrage, même zoom
-          // lent, mais en fond d'image.
-          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
-            <div id="${id}bt" style="width:100%;height:100%;background:url('${esc(duo.src)}') center 30%/cover"></div></div>`
-          pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out',transformOrigin:'50% 30%'},${liveT0});`
-        } else if (duo.src) {
-          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;overflow:hidden;background:#000">
-            <video id="${id}bt" class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
-          pjs += `\n  tl.fromTo('#${id}bt',{scale:1.12},{scale:1,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'power2.out'},${liveT0});`
-        } else {
-          const tw = Math.round(W * 0.46), tr = Math.round(tw * 0.24)
-          const tx = Math.round((W - tw) / 2), ty = Math.round((half - tw) / 2)
-          inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${half}px;background:${tone.dark ? '#17171C' : '#F0EEE6'}"></div>
-          <div class="an-p" id="${id}bt" style="left:${tx}px;top:${ty}px;width:${tw}px;height:${tw}px;border-radius:${tr}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 70px rgba(0,0,0,.4)">
-            <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(tw * 0.24)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
-          pjs += `\n  tl.fromTo('#${id}bt',{scale:0.2,rotation:-12,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.5,ease:'back.out(2.2)',transformOrigin:'50% 50%'},${r2(liveT0 + 0.12)});`
-          pjs += `\n  tl.to('#${id}bt',{scale:1.05,duration:${r2(Math.max(0.6, t1 - liveT0 - 0.7))},ease:'sine.inOut',transformOrigin:'50% 50%'},${r2(liveT0 + 0.62)});`
-        }
+        // HOOK v3 (Axel, 09/08, réf @tians028) : « la vidéo AvatarAds×Claude
+        // cache le visage — réduis-la et mets-la en haut, au niveau des
+        // cheveux ». L'avatar prend donc TOUT le cadre (c'est lui qui porte le
+        // hook), et la vidéo de marque devient une carte réduite posée en haut :
+        // on voit le sujet ET celui qui parle, sans sacrifier le visage.
         const bot = src
-          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
-          : `<div style="width:100%;height:100%;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
-        inner += `<div style="position:absolute;left:0;top:${half}px;width:${W}px;height:${half}px;overflow:hidden">${bot}</div>`
+          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+          : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
+        inner += bot
+        const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
+        const cx2 = Math.round((W - cw) / 2), cy = Math.round(H * 0.05)
+        const rd = Math.round(cw * 0.055)
+        if (duo.src && /\.(png|jpe?g|webp)(\?|$)/i.test(duo.src)) {
+          inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000 url('${esc(duo.src)}') center/cover;box-shadow:0 26px 60px rgba(0,0,0,.55)"></div>`
+        } else if (duo.src) {
+          inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000;box-shadow:0 26px 60px rgba(0,0,0,.55)">
+            <video class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
+        } else {
+          inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 26px 60px rgba(0,0,0,.55)">
+            <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(cw * 0.13)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
+        }
+        // la carte TOMBE du haut (elle arrive, elle n'est pas déjà là), puis
+        // respire doucement pendant que l'avatar parle dessous
+        pjs += `\n  tl.fromTo('#${id}bt',{y:-${Math.round(ch * 1.3)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.5,ease:'back.out(1.6)'},${r2(liveT0 + 0.1)});`
+        pjs += `\n  tl.to('#${id}bt',{scale:1.04,duration:${r2(Math.max(0.8, t1 - liveT0 - 0.8))},ease:'sine.inOut',transformOrigin:'50% 0%'},${r2(liveT0 + 0.7)});`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
+        // la montée qui déboule sur le premier punch de zoom (réf : BGM & SFX)
+        sfxAdd.push({ kind: 'mo-riser-1', t: r2(liveT0 + 2.3), vol: 0.3 })
       } else if (src) {
         // CADRAGE DE LA PHOTO, INTACT. J'avais recadré serré pour cacher une main
         // ratée par le lipsync — mauvaise réponse : ça masquait aussi les gestes,
@@ -693,13 +686,30 @@ export function buildDynamicComposition(plan, opts = {}) {
       // discret sur le premier. UNIQUEMENT le panneau qui ouvre la vidéo
       // (t0 < 0,6 s) : le reste du montage garde son calme, c'est le contraste
       // qui claque. Temps absolus sur la timeline → seek-safe, comme le reste.
+      // v2 (retour d'Axel, 08/08 soir, réf QuickTime) : « je veux l'effet de
+      // zoom la première seconde, la 2e seconde il revient normal avec les
+      // sous-titres voyants, avec toujours une dynamique de zoom sur l'avatar
+      // toutes les 3 secondes ». Donc : on OUVRE déjà zoomé (1.14), retour au
+      // calme à ~1,2 s, puis un punch de respiration toutes les 3 s.
       if (p.t0 < 0.6 && src) {
-        let zt = r2(liveT0 + 0.85), zin = true
-        while (zt < t1 - 0.7) {
-          pjs += `\n  tl.to('#${id}av',{scale:${zin ? 1.075 : 1.0},duration:0.34,ease:'power3.out',transformOrigin:'50% 30%'},${zt});`
-          if (zin && zt < liveT0 + 1) sfxAdd.push({ kind: 'mo-whoosh-1', t: zt, vol: 0.4 })
-          zin = !zin
-          zt = r2(zt + 1.5)
+        pjs += `\n  tl.fromTo('#${id}av',{scale:1.14},{scale:1.14,duration:0.9,ease:'none',transformOrigin:'50% 30%'},${liveT0});`
+        pjs += `\n  tl.to('#${id}av',{scale:1.0,duration:0.55,ease:'power2.inOut',transformOrigin:'50% 30%'},${r2(liveT0 + 0.9)});`
+        sfxAdd.push({ kind: 'mo-whoosh-1', t: r2(liveT0 + 0.92), vol: 0.4 })
+        let zt = r2(liveT0 + 3.4)
+        while (zt < t1 - 0.9) {
+          pjs += `\n  tl.to('#${id}av',{scale:1.09,duration:0.3,ease:'power3.out',transformOrigin:'50% 30%'},${zt});`
+          pjs += `\n  tl.to('#${id}av',{scale:1.0,duration:0.5,ease:'power2.inOut',transformOrigin:'50% 30%'},${r2(zt + 0.55)});`
+          sfxAdd.push({ kind: 'mo-whoosh-1', t: zt, vol: 0.3 })
+          zt = r2(zt + 3.0)
+        }
+      } else if (p.t0 < 12 && src) {
+        // la suite du hook (le plein cadre après le split) garde la même
+        // respiration : un punch toutes les 3 s, jamais d'écran statique
+        let zt = r2(liveT0 + 1.6)
+        while (zt < t1 - 0.9) {
+          pjs += `\n  tl.to('#${id}av',{scale:1.08,duration:0.3,ease:'power3.out',transformOrigin:'50% 30%'},${zt});`
+          pjs += `\n  tl.to('#${id}av',{scale:1.0,duration:0.5,ease:'power2.inOut',transformOrigin:'50% 30%'},${r2(zt + 0.55)});`
+          zt = r2(zt + 3.0)
         }
       }
 
@@ -1078,9 +1088,16 @@ export function buildDynamicComposition(plan, opts = {}) {
       }
       console.log(`▶ sous-titres déjà incrustés dans la source : ${grp.length}/${avant} groupes gardés (uniquement sous les panneaux)`)
     }
+    // LE HOOK A SES SOUS-TITRES À LUI (réf @tians028, Axel 09/08) : « un
+    // montage de sous-titres qui attire vraiment l'œil dès le début ». Sur
+    // l'accroche, la pastille disparaît : texte NU, énorme, en capitales, avec
+    // un halo — posé au tiers bas, sur le visage plein cadre.
+    const hookFin = r2(plan.hook?.end ?? Math.min(4, D))
+    const hautHook = Math.round(H * 0.60)
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
+      g.hook = a < hookFin
       // « c'est tout le temps les mêmes sous-titres » (Axel, 31/07) : en apple,
       // la pastille S'ADAPTE au panneau qu'elle survole — claire sur les
       // panneaux clairs (animations, cartes, captures), sombre sur le visage
@@ -1091,13 +1108,13 @@ export function buildDynamicComposition(plan, opts = {}) {
       const dedans = g.mots.map((w, k) =>
         `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
-        style="top:${bas}px"><span class="dc-p${g.sombre ? '' : ' dc-clair'}" id="dp${i}">${dedans}</span></div>`
+        style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ' dc-hook' : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
       const enc = g.sombre ? encre : '#17171C'
-      const accW = g.sombre ? '#FF8A5B' : '#E8500A'
+      const accW = g.hook ? '#FFD400' : (g.sombre ? '#FF8A5B' : '#E8500A')
       g.mots.forEach((w, k) => {
         js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}' }, ${r2(w.start)});`
         if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
@@ -1190,6 +1207,13 @@ export function buildDynamicComposition(plan, opts = {}) {
      comme une bulle iOS. La sombre reste pour le visage et les médias. */
   .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
     box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
+  /* HOOK (réf @tians028) : plus de pastille — texte nu, énorme, en capitales,
+     halo blanc + assise sombre pour rester lisible sur le visage */
+  .dc-hook { background:transparent; box-shadow:none;
+    font-size:${Math.round(H * 0.052)}px; font-weight:900; text-transform:uppercase;
+    letter-spacing:-.012em; line-height:1.12; max-width:${Math.round(W * 0.9)}px;
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.75),
+      0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.28); }
   .dc-w { display:inline-block; }
 </style>
 </head>
