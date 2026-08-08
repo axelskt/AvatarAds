@@ -20,7 +20,6 @@
 <!-- Fonts NON bloquantes (PageSpeed : « requêtes de blocage du rendu ») : preload + bascule
      media=print→all à l'onload. display=swap déjà dans l'URL → texte visible immédiatement
      en police système, puis swap. Rendu final strictement identique. -->
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <!-- Image LCP du hero (téléphone central) : préchargée en priorité haute -->
@@ -374,14 +373,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria-621.webp" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" fetchpriority="high" decoding="async"></div>
+        <div class="scr"><img src="assets/hero-bacteria-621.webp" srcset="assets/hero-bacteria-536.webp 536w, assets/hero-bacteria-621.webp 621w" sizes="(max-width: 767px) 231px, 300px" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" fetchpriority="high" decoding="async"></div>
       </div>
 
       <!-- phone droite : portrait femme IA + badges -->
       <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille-669.webp" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
+        <div class="scr"><img src="assets/lp/hero-fille-669.webp" srcset="assets/lp/hero-fille-531.webp 531w, assets/lp/hero-fille-669.webp 669w" sizes="(max-width: 767px) 229px, 300px" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
         <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
           <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
             <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
@@ -990,10 +989,10 @@ function lpGenerate(e){
 /* ══════════ Sticky CTA ══════════ */
 (function(){
   var bar=document.getElementById('stickyCta');
-  var dernier=null;
-  function on(){ var s=window.scrollY>620; if(s===dernier) return; dernier=s;
+  var dernier=null, tick=false;
+  function on(){ tick=false; var s=window.scrollY>620; if(s===dernier) return; dernier=s;
     bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
-  window.addEventListener('scroll',on,{passive:true}); on();
+  window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); on();
 })();
 
 /* ══════════ Scroll-reveal (IntersectionObserver) ══════════ */
