@@ -28,6 +28,7 @@ export function fontFaceCss() {
   return [
     ff('Inter', 'Inter-var', '100 900'),
     ff('Archivo Black', 'ArchivoBlack-400', 400),
+    ff('Anton', 'Anton-400', 400),
     ff('Instrument Serif', 'InstrumentSerif-400', 400),
     ff('Instrument Serif', 'InstrumentSerif-400i', 400, 'italic'),
     ff('JetBrains Mono', 'JetBrainsMono-400', 400),

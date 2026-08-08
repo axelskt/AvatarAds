@@ -19,7 +19,7 @@
 
 import { uiScene } from './ui-scenes.mjs'
 import { screenSize } from './screen-spots.mjs'
-import { SAFE } from './visual-styles.mjs'
+import { SAFE, fontFaceCss } from './visual-styles.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
@@ -647,20 +647,32 @@ export function buildDynamicComposition(plan, opts = {}) {
         const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
         const cx2 = Math.round((W - cw) / 2), cy = Math.round(H * 0.05)
         const rd = Math.round(cw * 0.055)
+        // Axel 09/08 : « mets-la que 2 secondes ». btOut est calculé AVANT le
+        // markup : la fenêtre du clip vidéo doit s'arrêter à la sortie de la
+        // carte — hyperframes composite les .clip par leur data-duration, en
+        // couche indépendante : un autoAlpha GSAP sur le div parent ne cache
+        // PAS la vidéo (c'est pour ça que la carte v6/v7 restait collée à
+        // l'écran jusqu'à la fin du hook malgré le tween de sortie).
+        const btOut = r2(Math.min(liveT0 + 2.35, t1 - 0.4))
         if (duo.src && /\.(png|jpe?g|webp)(\?|$)/i.test(duo.src)) {
           inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000 url('${esc(duo.src)}') center/cover;box-shadow:0 26px 60px rgba(0,0,0,.55)"></div>`
         } else if (duo.src) {
           inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000;box-shadow:0 26px 60px rgba(0,0,0,.55)">
-            <video class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
+            <video class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(btOut - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
         } else {
           inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;background:#F0EEE6;display:flex;align-items:center;justify-content:center;box-shadow:0 26px 60px rgba(0,0,0,.55)">
             <span style="font-family:'Archivo Black',sans-serif;font-size:${Math.round(cw * 0.13)}px;color:#D97757;letter-spacing:-.02em">${esc(duo.brand)}</span></div>`
         }
-        // la carte TOMBE du haut (elle arrive, elle n'est pas déjà là), puis
-        // respire doucement pendant que l'avatar parle dessous
+        // la carte TOMBE du haut, respire un instant… et COUPE SEC à la fin de
+        // la fenêtre de sa vidéo (cut assumé, comme la réf) : le cadre fond en
+        // 0,14 s pour finir à alpha 0 PILE à l'instant où la couche vidéo se
+        // coupe — jamais de cadre noir orphelin, jamais de vidéo qui flotte.
+        const tCut = r2(liveT0 + dvid(btOut - liveT0))
         pjs += `\n  tl.fromTo('#${id}bt',{y:-${Math.round(ch * 1.3)},autoAlpha:0},{y:0,autoAlpha:1,duration:0.5,ease:'back.out(1.6)'},${r2(liveT0 + 0.1)});`
-        pjs += `\n  tl.to('#${id}bt',{scale:1.04,duration:${r2(Math.max(0.8, t1 - liveT0 - 0.8))},ease:'sine.inOut',transformOrigin:'50% 0%'},${r2(liveT0 + 0.7)});`
+        pjs += `\n  tl.to('#${id}bt',{scale:1.04,duration:${r2(Math.max(0.5, tCut - liveT0 - 0.85))},ease:'sine.inOut',transformOrigin:'50% 0%'},${r2(liveT0 + 0.7)});`
+        pjs += `\n  tl.to('#${id}bt',{autoAlpha:0,scale:1.07,duration:0.14,ease:'power1.in',transformOrigin:'50% 0%'},${r2(tCut - 0.14)});`
         sfxAdd.push({ kind: 'mo-impact-1', t: r2(liveT0 + 0.14), vol: 0.7 })
+        sfxAdd.push({ kind: 'mo-swipe-1', t: r2(tCut - 0.1), vol: 0.35 })
         // la montée qui déboule sur le premier punch de zoom (réf : BGM & SFX)
         sfxAdd.push({ kind: 'mo-riser-1', t: r2(liveT0 + 2.3), vol: 0.3 })
       } else if (src) {
@@ -785,7 +797,14 @@ export function buildDynamicComposition(plan, opts = {}) {
         const ix = large || prom ? Math.round((W - iw) / 2) : Math.round(W - iw - W * 0.06)
         const iy = prom ? Math.round((H - ih) / 2) : Math.round(H * (large ? 0.13 : 0.11))
         const iid = id + 'in' + k
-        const a = Math.max(liveT0, r2(ins.start)), b = Math.min(t1, r2(ins.end))
+        const a = Math.max(liveT0, r2(ins.start))
+        let b = Math.min(t1, r2(ins.end))
+        // LE MÉDAILLON DE L'ACCROCHE NE S'INCRUSTE PAS (Axel 09/08 : « mets-la
+        // que 2 secondes ») : sur le hook, la carte entre, se lit, et rend le
+        // visage avant la 3e seconde. C'était ELLE qui restait collée en haut
+        // tout le hook — pas le duo, que ce plan n'a même pas. Les médaillons
+        // des autres fenêtres gardent leur durée.
+        if (p.t0 < 0.6) b = Math.min(b, r2(a + 2.1))
         if (b - a < 0.3) continue
         const isVid = /\.(mp4|mov|webm|m4v)$/i.test(String(ins.src || ''))
         const corps = isVid
@@ -795,6 +814,8 @@ export function buildDynamicComposition(plan, opts = {}) {
         pjs += `\n  tl.fromTo('#${iid}',{scale:0.6,rotation:-6,autoAlpha:0},{scale:1,rotation:0,autoAlpha:1,duration:0.42,ease:'back.out(1.7)',transformOrigin:'50% 50%'},${a});`
         pjs += `\n  tl.to('#${iid}',{scale:0.7,autoAlpha:0,duration:0.26,ease:'power2.in',transformOrigin:'50% 50%'},${r2(b - 0.26)});`
         sfxAdd.push({ kind: 'mo-pop-2', t: r2(a + 0.05), vol: 0.5 })
+        // sa sortie en cours de fenêtre s'entend aussi (départ visible = son)
+        if (b < t1 - 0.35) sfxAdd.push({ kind: 'mo-swipe-1', t: r2(b - 0.24), vol: 0.35 })
       }
 
     } else if (p.kind !== 'punch' && ANIMS.includes(p.kind)) {
@@ -959,7 +980,9 @@ export function buildDynamicComposition(plan, opts = {}) {
       inner += `<div class="an-p" id="${id}om" style="left:${cx2}px;top:${cy2}px;width:${cw2}px;height:${ch2}px;border-radius:${Math.round(cw2 * 0.08)}px;overflow:hidden;box-shadow:0 34px 80px -22px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.08);z-index:9">${corps2}</div>`
       pjs += `\n  tl.fromTo('#${id}om',{yPercent:8,scale:0.92,autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:0.42,ease:'back.out(1.5)',transformOrigin:'50% 50%'},${t0m});`
       if (t1m < t1 - 0.35) pjs += `\n  tl.to('#${id}om',{scale:0.94,autoAlpha:0,duration:0.3,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t1m - 0.3)});`
-      sfxAdd.push({ kind: 'mo-pop-2', t: r2(t0m + 0.05), vol: 0.55 })
+      // une PHOTO qui se pose fait clic d'obturateur, une vidéo fait pop —
+      // le son raconte ce qui vient d'apparaître (Axel 09/08)
+      sfxAdd.push({ kind: vid2 ? 'mo-pop-2' : 'camera-shutter', t: r2(t0m + 0.05), vol: 0.5 })
     }
     // ── UNE CAPTURE SOMBRE A BESOIN D'UN FOND CLAIR ────────────────────────
     // Axel, 03/08, trois fois : « y'a des écrans blancs, des écrans noirs, faut
@@ -992,7 +1015,13 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.fromTo('#${id}in',{filter:'blur(7px)'},{filter:'blur(0px)',duration:${r2(PUSH + 0.1)},ease:'power2.out'},${t0});
   tl.to('#pn${i - 1}',{${Object.entries(to).map(([k, v]) => `${k}:${v}`).join(',')},duration:${PUSH},ease:'power2.inOut'},${t0});
   tl.set('#pn${i - 1}',{autoAlpha:0},${r2(t0 + PUSH + 0.04)});`
-      if (p.kind !== 'typo' && t0 - lastWhoosh > 2.5) {
+      // Axel 09/08 : « toujours un bruitage quand on met une photo/une vidéo ou
+      // qu'on passe à une autre frame dans la visite guidée » — pour les MÉDIAS
+      // et les ÉCRANS du tuto le son est SYSTÉMATIQUE (le TWIN varie
+      // l'échantillon si deux poussées se suivent) ; les autres panneaux
+      // gardent la retenue des 2,5 s.
+      const pousseForte = p.kind === 'media' || p.kind === 'screen'
+      if (p.kind !== 'typo' && (pousseForte || t0 - lastWhoosh > 2.5)) {
         sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.55 })
         lastWhoosh = t0; whooshFlip = !whooshFlip
       }
@@ -1007,7 +1036,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   const sfxOut = []
   // un CLIC peut légitimement se répéter vite (deux choix à 1s d'écart) ; c'est
   // le whoosh répété qui lasse — fenêtres anti-répétition par famille
-  const minGap = (k) => (k === 'mo-tap-1' ? 0.6 : k === 'mo-whoosh-1' || k === 'mo-swipe-2' ? 2.2 : 2)
+  const minGap = (k) => (k === 'mo-tap-1' ? 0.6 : k === 'mo-swipe-1' ? 0.9 : k === 'mo-whoosh-1' || k === 'mo-swipe-2' ? 2.2 : 2)
   // LE BON SON POUR LA SCÈNE (chaque scène déclare le sien : clic pour un bouton,
   // ding pour un envoi, obturateur pour une photo, tic-tac pour le chrono…) — et
   // si le même son devait rejouer trop vite, on le remplace par son jumeau au
@@ -1015,7 +1044,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   // fenêtre d'ÉCHANGE (2.4s) : le même son qui reviendrait vite devient son jumeau,
   // puis le jumeau du jumeau — quatre clics de suite deviennent clic/click/obturateur.
   // fenêtre de COUPE (minGap) : en dessous, on saute carrément.
-  const TWIN = { 'mo-tap-1':'mo-pop-3', 'mo-pop-3':'mo-tick-1', 'mo-tick-1':'mo-tap-1', 'mo-pop-1':'mo-pop-2', 'mo-pop-2':'mo-pop-1', 'mo-impact-1':'mo-impact-2', 'mo-impact-2':'mo-impact-3' }
+  const TWIN = { 'mo-tap-1':'mo-pop-3', 'mo-pop-3':'mo-tick-1', 'mo-tick-1':'mo-tap-1', 'mo-pop-1':'mo-pop-2', 'mo-pop-2':'mo-pop-1', 'mo-impact-1':'mo-impact-2', 'mo-impact-2':'mo-impact-3', 'mo-whoosh-1':'mo-swipe-2', 'mo-swipe-2':'mo-swipe-1', 'mo-swipe-1':'mo-whoosh-1', 'camera-shutter':'camera-click', 'camera-click':'mo-pop-2' }
   for (const s of sfxAdd.sort((a, b) => a.t - b.t)) {
     for (let k = 0; k < 2 && lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < 2.4 && TWIN[s.kind]; k++) s.kind = TWIN[s.kind]
     if (lastByKind[s.kind] != null && s.t - lastByKind[s.kind] < minGap(s.kind)) continue
@@ -1113,20 +1142,30 @@ export function buildDynamicComposition(plan, opts = {}) {
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
+      if (g.hook) {
+        // RÉF @tians028, palette du crop d'Axel (09/08) : chaque mot CLAQUE à
+        // l'instant où il est prononcé et s'empile (accumulation). Le mot en
+        // cours brûle en ROUGE cerné de jaune avec une lueur chaude — comme le
+        // « NEVER POST » de la réf — puis se range en jaune doré quand le
+        // suivant tombe. L'œil suit la voix mot par mot.
+        const strokeW = Math.max(2, Math.round(H * 0.0016))
+        const rougeOn = `{color:'#FF2E1F',webkitTextStroke:'${strokeW}px rgba(247,201,72,.95)',textShadow:'0 0 ${Math.round(H * 0.017)}px rgba(255,110,20,.85), 0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65)'}`
+        const jauneOff = `{color:'#F7C948',webkitTextStroke:'${strokeW}px rgba(55,25,0,.9)',textShadow:'0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65)'}`
+        g.mots.forEach((w, k) => {
+          const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
+          js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:1.4},{autoAlpha:1,scale:1,duration:0.14,ease:'back.out(2.4)',transformOrigin:'50% 80%'},${r2(w.start)});`
+          js += `\n  tl.set(${sel},${rougeOn},${r2(w.start)});`
+          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',${jauneOff},${r2(w.start)});`
+        })
+        continue
+      }
       const enc = g.sombre ? encre : '#17171C'
-      const accW = g.hook ? '#FFD400' : (g.sombre ? '#FF8A5B' : '#E8500A')
-      // sur le hook, le mot prononcé prend une LUEUR rouge-orangée (néon réf)
-      const lueur = g.hook ? `, textShadow: '0 0 ${Math.round(H * 0.024)}px rgba(255,90,0,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.014)}px rgba(0,0,0,.8)'` : ''
-      const lueurOff = g.hook ? `, textShadow: '0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.8), 0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.3)'` : ''
+      const accW = g.sombre ? '#FF8A5B' : '#E8500A'
       g.mots.forEach((w, k) => {
-        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}'${lueur} }, ${r2(w.start)});`
-        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}'${lueurOff} }, ${r2(w.start)});`
+        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}' }, ${r2(w.start)});`
+        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
       })
-      // le hook POP plus fort : le groupe claque à l'arrivée (réf : chaque
-      // phrase tombe avec un punch, pas un fondu discret)
-      js += g.hook
-        ? `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, scale: 1.35 }, { autoAlpha: 1, scale: 1, duration: 0.22, ease: 'power3.out', transformOrigin: '50% 50%' }, ${a});`
-        : `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
+      js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
     }
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
   }
@@ -1187,6 +1226,11 @@ export function buildDynamicComposition(plan, opts = {}) {
 <meta charset="UTF-8" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <style>
+  /* Sans ces @font-face, 'Inter' et 'Archivo Black' retombaient sur Liberation
+     Sans (conteneur) / Helvetica (Mac) : le moteur dynamique n'injectait pas les
+     polices embarquées que les autres styles chargent déjà. Les sous-titres du
+     hook n'avaient jamais leur vraie graisse. */
+  ${fontFaceCss()}
   body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${ap ? AP_A.bg : DARK.bg}; font-family:'Inter',sans-serif; }
   .pnl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; overflow:hidden; }
   ${animCss(W, H)}
@@ -1214,15 +1258,22 @@ export function buildDynamicComposition(plan, opts = {}) {
      comme une bulle iOS. La sombre reste pour le visage et les médias. */
   .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
     box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
-  /* HOOK (réf @tians028) : plus de pastille — texte nu, énorme, en capitales,
-     halo blanc + assise sombre pour rester lisible sur le visage. Le mot
-     prononcé s'allume en jaune NÉON avec une lueur rouge-orangée (le
-     « NEVER POST » rouge-jaune de la réf), posé par GSAP dans la boucle. */
+  /* HOOK — copié sur le crop exact envoyé par Axel (09/08, « NEVER POST /
+     CONTENT AGAIN ») : police ANTON (embarquée), capitales condensées, lignes
+     SERRÉES. Palette réf : le mot prononcé en ROUGE cerné d'un liseré jaune +
+     lueur chaude, les mots déjà dits en JAUNE doré cerné d'un liseré brun
+     sombre. Pas de gros contour noir (« nan c'est pas beau ça »), pas de
+     rotation : le bloc est droit et compact comme dans la réf. */
   .dc-hook { background:transparent; box-shadow:none;
-    font-size:${Math.round(H * 0.056)}px; font-weight:900; text-transform:uppercase;
-    letter-spacing:-.012em; line-height:1.08; max-width:${Math.round(W * 0.88)}px;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(0,0,0,.8),
-      0 0 ${Math.round(H * 0.03)}px rgba(255,255,255,.3); }
+    font-family:'Anton','Archivo Black',sans-serif; font-weight:400;
+    font-size:${Math.round(H * 0.055)}px; text-transform:uppercase;
+    letter-spacing:.014em; line-height:0.99; max-width:${Math.round(W * 0.82)}px;
+    color:#F7C948;
+    -webkit-text-stroke:${Math.max(2, Math.round(H * 0.0016))}px rgba(55, 25, 0, .9);
+    paint-order:stroke fill;
+    text-shadow:0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65); }
+  /* chaque mot du hook naît invisible : GSAP le fait claquer à SON instant */
+  .dc-hook .dc-w { opacity:0; padding:0 ${Math.round(W * 0.003)}px; }
   .dc-w { display:inline-block; }
 </style>
 </head>
