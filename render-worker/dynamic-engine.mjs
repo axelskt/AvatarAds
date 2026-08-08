@@ -436,6 +436,21 @@ export function buildDynamicComposition(plan, opts = {}) {
   const kbAdd = []
   let lastWhoosh = 0, whooshFlip = false
 
+  // LE RISER, UNE SEULE FOIS PAR VIDÉO (Axel 09/08 : « le metallic riser est
+  // pas mal, faudrait le mettre plus souvent — mais max 1 fois ») : la poussée
+  // de panneau illustré la plus proche des 55 % de la vidéo devient LA
+  // transition forte — le riser monte ~1,4 s avant et culmine sur l'impact.
+  const iRiser = (() => {
+    if (D < 18) return -1
+    let best = -1, dBest = 1e9
+    panels.forEach((p, i) => {
+      if (!i || p.kind === 'typo' || p.kind === 'avclip') return
+      const d = Math.abs(p.t0 - D * 0.55)
+      if (d < dBest) { dBest = d; best = i }
+    })
+    return best
+  })()
+
   const ap = isApple(plan)
   panels.forEach((p, i) => {
     // apple garde l'alternance (c'est elle qui donne le rythme d'un panneau à
@@ -1025,6 +1040,9 @@ export function buildDynamicComposition(plan, opts = {}) {
         sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.55 })
         lastWhoosh = t0; whooshFlip = !whooshFlip
       }
+      if (i === iRiser && p.t0 > 4) {
+        sfxAdd.push({ kind: 'metallic-riser', t: r2(Math.max(0, p.t0 - 1.45)), vol: 0.5 })
+      }
     }
     js += pjs
   })
@@ -1123,6 +1141,9 @@ export function buildDynamicComposition(plan, opts = {}) {
     // un halo — posé au tiers bas, sur le visage plein cadre.
     const hookFin = r2(plan.hook?.end ?? Math.min(4, D))
     const hautHook = Math.round(H * 0.60)
+    // 5 styles de sous-titres hook (Axel 09/08 : « fais 5 hooks avec différents
+    // styles et je te dis lequel on garde ») — `plan.hookStyle` 1..5, défaut 1.
+    const hs = Math.min(5, Math.max(1, Number(plan.hookStyle) || 1))
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
@@ -1137,25 +1158,21 @@ export function buildDynamicComposition(plan, opts = {}) {
       const dedans = g.mots.map((w, k) =>
         `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
-        style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ' dc-hook' : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
+        style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
       if (g.hook) {
-        // RÉF @tians028, palette du crop d'Axel (09/08) : chaque mot CLAQUE à
-        // l'instant où il est prononcé et s'empile (accumulation). Le mot en
-        // cours brûle en ROUGE cerné de jaune avec une lueur chaude — comme le
-        // « NEVER POST » de la réf — puis se range en jaune doré quand le
-        // suivant tombe. L'œil suit la voix mot par mot.
-        const strokeW = Math.max(2, Math.round(H * 0.0016))
-        const rougeOn = `{color:'#FF2E1F',webkitTextStroke:'${strokeW}px rgba(247,201,72,.95)',textShadow:'0 0 ${Math.round(H * 0.017)}px rgba(255,110,20,.85), 0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65)'}`
-        const jauneOff = `{color:'#F7C948',webkitTextStroke:'${strokeW}px rgba(55,25,0,.9)',textShadow:'0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65)'}`
+        // RÉF @tians028 : chaque mot CLAQUE à l'instant où il est prononcé et
+        // s'empile (accumulation). Le mot en cours porte la classe `on`, les
+        // mots passés la perdent — les couleurs/dégradés vivent dans le CSS des
+        // styles hk1..hk5 (un dégradé ne se tweene pas, une classe se pose).
         g.mots.forEach((w, k) => {
           const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
           js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:1.4},{autoAlpha:1,scale:1,duration:0.14,ease:'back.out(2.4)',transformOrigin:'50% 80%'},${r2(w.start)});`
-          js += `\n  tl.set(${sel},${rougeOn},${r2(w.start)});`
-          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',${jauneOff},${r2(w.start)});`
+          js += `\n  tl.set(${sel},{attr:{class:'dc-w on'}},${r2(w.start)});`
+          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',{attr:{class:'dc-w'}},${r2(w.start)});`
         })
         continue
       }
@@ -1258,22 +1275,47 @@ export function buildDynamicComposition(plan, opts = {}) {
      comme une bulle iOS. La sombre reste pour le visage et les médias. */
   .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
     box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
-  /* HOOK — copié sur le crop exact envoyé par Axel (09/08, « NEVER POST /
-     CONTENT AGAIN ») : police ANTON (embarquée), capitales condensées, lignes
-     SERRÉES. Palette réf : le mot prononcé en ROUGE cerné d'un liseré jaune +
-     lueur chaude, les mots déjà dits en JAUNE doré cerné d'un liseré brun
-     sombre. Pas de gros contour noir (« nan c'est pas beau ça »), pas de
-     rotation : le bloc est droit et compact comme dans la réf. */
+  /* HOOK (réf @tians028, crop d'Axel : « NEVER POST / CONTENT AGAIN ») : Anton
+     embarquée, capitales condensées, lignes SERRÉES, PAS de contour — la réf
+     n'en a pas : des DÉGRADÉS verticaux et une ombre douce. Le mot en cours
+     porte la classe « on » (posée par GSAP mot à mot), le style hk1..hk5
+     décide des couleurs. */
   .dc-hook { background:transparent; box-shadow:none;
     font-family:'Anton','Archivo Black',sans-serif; font-weight:400;
-    font-size:${Math.round(H * 0.055)}px; text-transform:uppercase;
-    letter-spacing:.014em; line-height:0.99; max-width:${Math.round(W * 0.82)}px;
-    color:#F7C948;
-    -webkit-text-stroke:${Math.max(2, Math.round(H * 0.0016))}px rgba(55, 25, 0, .9);
-    paint-order:stroke fill;
-    text-shadow:0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.65); }
+    font-size:${Math.round(H * 0.058)}px; text-transform:uppercase;
+    letter-spacing:.012em; line-height:0.97; max-width:${Math.round(W * 0.84)}px; }
   /* chaque mot du hook naît invisible : GSAP le fait claquer à SON instant */
   .dc-hook .dc-w { opacity:0; padding:0 ${Math.round(W * 0.003)}px; }
+  /* hk1 — LA RÉF : mots passés en or dégradé, mot prononcé en rouge dégradé */
+  .hk1 .dc-w { background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
+  .hk1 .dc-w.on { background:linear-gradient(180deg,#FF6A57 6%,#EF2A1D 48%,#9E120B 94%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,90,25,.5)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.55)); }
+  /* hk2 — blanc massif, le mot prononcé prend FEU (jaune→orange→rouge) */
+  .hk2 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.75); }
+  .hk2 .dc-w.on { background:linear-gradient(180deg,#FFD34D 8%,#FF7A1A 55%,#E8281B 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.009)}px rgba(255,140,30,.65)) drop-shadow(0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.6)); }
+  /* hk3 — surligneur : blanc, le mot prononcé sur pilule jaune, texte noir */
+  .hk3 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.8);
+    padding:0 ${Math.round(W * 0.007)}px; border-radius:${Math.round(H * 0.008)}px; }
+  .hk3 .dc-w.on { background:#FFD400; color:#151515; text-shadow:none;
+    box-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.45); }
+  /* hk4 — rouge intégral, le mot prononcé s'embrase d'un halo clair */
+  .hk4 .dc-w { background:linear-gradient(180deg,#FF7563 5%,#E4241A 50%,#8E0F08 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)); }
+  .hk4 .dc-w.on { background:linear-gradient(180deg,#FFB199 4%,#F5372A 46%,#A31209 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,200,120,.9)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)); }
+  /* hk5 — or intégral, le mot prononcé FLASHE en blanc */
+  .hk5 .dc-w { background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
+  .hk5 .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(255,220,140,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.7); filter:none; }
   .dc-w { display:inline-block; }
 </style>
 </head>
