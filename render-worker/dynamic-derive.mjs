@@ -2715,14 +2715,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // chose que la voix. `clipFrom` dit au worker où recouper le clip ; les
       // lèvres retombent sur leurs mots.
       const glisse = Number.isInteger(w.clip) && w.clip >= 0 && a > r2(w.start || 0) + 0.05
-      // ── UN TROU SE REMPLIT PAR LE VISAGE (Axel, 08/08) ────────────────────
-      // Retour d'Axel sur la v3 : « à 32 et 37 s y'a un blanc, surtout celui de
-      // 37 s qui dure très longtemps ». Ce long blanc = la « scène du mot »
-      // 36,35→39,51 (3,16 s) qui remplaçait l'avatar quand je l'avais retiré
-      // pour la RAM. Sa règle prime : un trou se remplit par le visage. On
-      // GARDE donc la fenêtre à clip même courte/glissée — l'avatar parle dans
-      // les creux entre les animations. Le surcoût mémoire (un clip de plus) est
-      // absorbé en rendant à 1 worker (RENDER_WORKERS=1 côté Railway).
+      // ── STABILITÉ DU RENDU AVANT TOUT (Axel, 08/08) ───────────────────────
+      // Tentative de remplir le blanc de 37 s par l'avatar : dès qu'on garde une
+      // 6ᵉ fenêtre à clip, HyperFrames rejette le rendu (« captured 0 of expected
+      // N frames ») — un clip re-découpé sort vide, cause encore à tracer avec
+      // les fichiers réels du job (6 rendus perdus). En attendant CE fix, un
+      // court reliquat glissé retourne au contenu : le montage RE-REND de façon
+      // fiable (4 clips). Le blanc de 37 s reste à traiter proprement — voir la
+      // tâche « 37 s : remplir sans clip fragile » (extension d'anim voisine).
+      if (glisse && b - a < 2.5) continue
       clamped.push({ ...w, start: a, end: b,
         ...(glisse ? { clipFrom: r2((Number(w.clipFrom) || 0) + a - (w.start || 0)) } : {}) })
       if (glisse) console.log(`▶ fenêtre avatar av${w.clip} décalée à ${a}s → le clip reprend à ${r2(a - (w.start || 0))}s dedans (lèvres synchrones)`)
