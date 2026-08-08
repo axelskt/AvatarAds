@@ -703,6 +703,46 @@ export function buildDynamicComposition(plan, opts = {}) {
         }
       }
 
+      // ── #68 (suite) : LA NOTIFICATION QUAND LE SCRIPT LA NOMME ─────────────
+      // Réf @tians028 : la bannière iOS tombe pile quand la voix dit « tu reçois
+      // une notification / un message / une vente ». Axel : « mais qui
+      // corresponde à son script… je ne dis pas que l'effet notifications faut
+      // le mettre à chaque fois ». Donc : DÉTECTION stricte dans les mots du
+      // hook (les 12 premières secondes), une seule bannière, jamais de chiffre
+      // inventé (le libellé reste générique — la règle « le chiffre vient de ce
+      // qui est DIT » s'applique aussi ici).
+      if (p.t0 < 12) {
+        const NOTIF = [
+          [/notification|notif\b/i, 'Nouvelle notification'],
+          [/message/i, 'Nouveau message'],
+          [/abonn[ée]/i, 'Nouvel abonné'],
+          [/\bvente/i, 'Nouvelle vente'],
+          [/commande/i, 'Nouvelle commande'],
+          [/\blikes?\b/i, 'Nouveau like'],
+        ]
+        let hit = null
+        for (const c of plan.captions || []) {
+          const cs = Number(c.start) || 0
+          if (cs < liveT0 - 0.05 || cs > t1 - 0.9 || cs > 12) continue
+          for (const [re, lib] of NOTIF) { if (re.test(String(c.text || ''))) { hit = { t: cs, lib }; break } }
+          if (hit) break
+        }
+        if (hit) {
+          const nid = id + 'ntf'
+          const nw = Math.round(W * 0.86), nx = Math.round((W - nw) / 2)
+          const tN = r2(Math.max(liveT0 + 0.25, hit.t - 0.1))
+          inner += `<div id="${nid}" style="position:absolute;left:${nx}px;top:${Math.round(H * 0.045)}px;width:${nw}px;display:flex;align-items:center;gap:${Math.round(nw * 0.032)}px;padding:${Math.round(nw * 0.036)}px ${Math.round(nw * 0.042)}px;border-radius:${Math.round(nw * 0.062)}px;background:rgba(22,22,26,.92);backdrop-filter:blur(14px);box-shadow:0 24px 60px rgba(0,0,0,.5);opacity:0;z-index:9">
+            <span style="width:${Math.round(nw * 0.115)}px;height:${Math.round(nw * 0.115)}px;border-radius:${Math.round(nw * 0.028)}px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#FF5A1F,#FF8A50)">
+              <svg viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font-family:'Inter',sans-serif;font-weight:700;font-size:${Math.round(nw * 0.048)}px;color:#fff;line-height:1.15">${esc(hit.lib)}</span>
+              <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:${Math.round(nw * 0.038)}px;color:rgba(255,255,255,.55)">AvatarAds · à l'instant</span></span></div>`
+          pjs += `\n  tl.fromTo('#${nid}',{y:-140,autoAlpha:0},{y:0,autoAlpha:1,duration:0.5,ease:'back.out(1.7)'},${tN});`
+          pjs += `\n  tl.to('#${nid}',{y:-140,autoAlpha:0,duration:0.4,ease:'power2.in'},${r2(Math.min(t1 - 0.35, tN + 2.4))});`
+          sfxAdd.push({ kind: 'message-tone', t: r2(tN + 0.08), vol: 0.85 })
+        }
+      }
+
       // ── LE MÉDAILLON : SON MÉDIA POSÉ SUR L'AVATAR QUI PARLE ────────────────
       // Axel, sur sa vidéo d'influenceuse : « tu vas garder l'avatar principal qui
       // parle et tu vas ajouter la vidéo que je t'envoie, tu la mets en plus
