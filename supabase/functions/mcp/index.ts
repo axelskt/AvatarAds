@@ -144,31 +144,45 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
 // résultat d'outil. On fabrique donc une vignette ~640 px à la génération, une
 // seule fois, et c'est elle qu'on renvoie. Si la vignette échoue, on retombe
 // simplement sur le lien : jamais de génération perdue pour une miniature.
-const APERCU_LARGEUR = 640
+const APERCU_LARGEUR = 768
 async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
   try {
-    const { Image } = await import('https://deno.land/x/imagescript@1.2.17/mod.ts')
+    // 1.3.0 : la 1.2.17 plantait une fois sur deux sur les PNG gpt-image
+    // (profils couleur) — c'est pour ça qu'Axel ne voyait « que des liens »
+    const { Image } = await import('https://deno.land/x/imagescript@1.3.0/mod.ts')
     const img = await Image.decode(bytes)
     if (img.width > APERCU_LARGEUR) img.resize(APERCU_LARGEUR, Image.RESIZE_AUTO)
-    return await img.encodeJPEG(72)
+    return await img.encodeJPEG(78)
   } catch (e) {
     console.error('apercu:', (e as Error)?.message || e)
     return null
   }
 }
-// Un résultat d'outil ne doit pas dépasser quelques centaines de Ko : au-delà,
-// on préfère le lien seul à une réponse que le client tronque ou refuse.
-const APERCU_MAX_OCTETS = 700_000
+// Un résultat d'outil ne doit pas dépasser ~1,5 Mo : au-delà, les clients
+// tronquent ou refusent. Mais « trop gros » ne doit plus JAMAIS vouloir dire
+// « pas d'image » : on REDIMENSIONNE à la volée (768 px JPEG ≈ 100-250 Ko).
+const APERCU_MAX_OCTETS = 1_500_000
+const b64DepuisOctets = (buf: Uint8Array): string => {
+  let bin = ''
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
 async function blocImage(url: string): Promise<Record<string, unknown> | null> {
   try {
     const r = await fetch(url)
     if (!r.ok) return null
     const buf = new Uint8Array(await r.arrayBuffer())
-    if (!buf.length || buf.length > APERCU_MAX_OCTETS) return null
-    let bin = ''
-    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
+    if (!buf.length) return null
+    // au-delà de 400 Ko on tente la réduction (l'image s'affiche pareil dans la
+    // carte, et la conversation reste légère) ; en dessous, le fichier tel quel
+    if (buf.length > 400_000) {
+      const petit = await fabriquerApercu(buf)
+      if (petit && petit.length <= APERCU_MAX_OCTETS)
+        return { type: 'image', data: b64DepuisOctets(petit), mimeType: 'image/jpeg' }
+    }
+    if (buf.length > APERCU_MAX_OCTETS) return null   // réduction impossible ET trop gros
     const mime = /\.png($|\?)/i.test(url) ? 'image/png' : 'image/jpeg'
-    return { type: 'image', data: btoa(bin), mimeType: mime }
+    return { type: 'image', data: b64DepuisOctets(buf), mimeType: mime }
   } catch { return null }
 }
 
@@ -658,15 +672,13 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
   if (!job) return toolErr('Job introuvable sur ce compte.')
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (job.status === 'done' && job.result_url) {
+    // blocImage réduit désormais À LA VOLÉE (768 px JPEG) : l'image s'affiche
+    // TOUJOURS dans la carte de l'outil, comme chez les intégrations concurrentes.
+    // (Le markdown ![image](url externe) ne rend PAS dans claude.ai — on a
+    // arrêté de le demander : c'était lu comme « l'image arrive en lien ».)
     const vignette = await blocImage(String(job.preview_url || job.result_url))
-    // L'image s'affiche bien, mais DANS la carte de l'outil — pas dans le fil de
-    // la conversation (bug claude.ai connu, cf. anthropics/claude-ai-mcp#238).
-    // Le seul chemin pour qu'elle descende dans la réponse : que le modèle
-    // l'écrive lui-même en markdown. On le lui demande explicitement ici.
-    const texte = { type: 'text', text: `✅ Image prête !
-URL (pleine résolution) : ${job.result_url}
-
-Affiche-la dans ta réponse en écrivant exactement : ![image](${job.result_url})` }
+    const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
+URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}` }
     return vignette ? { content: [vignette, texte] } : { content: [texte] }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
@@ -1700,12 +1712,36 @@ Appelle check_montage avec ce job_id dans 1 à 2 minutes.`)
 async function runListMedia(profile: Record<string, unknown>): Promise<ToolContent> {
   const userId = String(profile.id)
   const { data, error } = await svc.storage.from('mcp-media')
-    .list(userId, { limit: 20, sortBy: { column: 'created_at', order: 'desc' } })
+    .list(userId, { limit: 24, sortBy: { column: 'created_at', order: 'desc' } })
   if (error) return toolErr('Erreur lecture médias : ' + error.message)
   if (!data || !data.length) return toolText('Aucun média généré via Claude pour le moment.')
+  const urlDe = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${userId}/${n}`
   const lines = data.map((f) =>
-    `- ${f.name} (${f.created_at ? new Date(f.created_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : '—'}) : ${SUPABASE_URL}/storage/v1/object/public/mcp-media/${userId}/${f.name}`)
-  return toolText(`Derniers médias générés :\n${lines.join('\n')}`)
+    `- ${f.name} (${f.created_at ? new Date(f.created_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : '—'}) : ${urlDe(f.name)}`)
+  // GALERIE (réf. intégrations concurrentes) : les dernières images s'affichent
+  // directement dans la carte, pas seulement en liste de liens. On préfère les
+  // aperçus .jpg (déjà réduits) et on plafonne à 5 pour rester léger.
+  const contenu: Array<Record<string, unknown>> = []
+  const images = data.filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name))
+  // un PNG et son aperçu JPG naissent à ~1 s d'écart avec deux timestamps :
+  // on groupe par tranche de 5 s et on garde UN visuel par génération (le JPG
+  // — déjà réduit — de préférence)
+  const parGen = new Map<number, { name: string; jpg: boolean }>()
+  for (const f of images) {
+    const ts = Number((f.name.match(/^(\d{10,})/) || [])[1] || 0)
+    const cle = ts ? Math.round(ts / 5000) : Math.random()
+    const jpg = /\.jpe?g$/i.test(f.name)
+    const ex = parGen.get(cle)
+    if (!ex || (jpg && !ex.jpg)) parGen.set(cle, { name: f.name, jpg })
+  }
+  let n = 0
+  for (const { name } of parGen.values()) {
+    if (n >= 5) break
+    const bloc = await blocImage(urlDe(name))
+    if (bloc) { contenu.push(bloc); n++ }
+  }
+  contenu.push({ type: 'text', text: `Derniers médias générés (les ${n} images les plus récentes sont affichées ci-dessus) :\n${lines.join('\n')}` })
+  return { content: contenu }
 }
 
 // ── #37 · LE BACKLOG DE LA BANQUE D'ANIMATIONS ────────────────────────────
