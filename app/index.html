@@ -3521,7 +3521,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="view" id="v-express" style="overflow:hidden">
 
       <!-- ══ LEFT — Config rail (style Higgsfield) ══ -->
-      <div style="flex:0 0 340px;overflow-y:auto;padding:18px 18px 30px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+      <div id="expLeftRail" style="flex:0 0 340px;overflow-y:auto;padding:18px 18px 30px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
 
         <!-- Header -->
         <div>
@@ -3573,6 +3573,23 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
       <!-- ══ CENTER — Stage ══ -->
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+        <!-- ══ MOTEUR — sélecteur Veo 3.1 / Motion Control (maquette motion-handoff, 1:1) ══ -->
+        <div id="expMoteurBar" style="padding:18px 28px 0;flex:0 0 auto">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:920px;margin:0 auto">
+            <button id="expEngVeo" onclick="_expSetEngine('veo')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:2px solid var(--accent);background:var(--accent-soft)">
+              <span style="font-weight:700;font-size:14px">Veo 3.1</span>
+              <span class="faint" style="font-size:11.5px">génère depuis un prompt</span>
+            </button>
+            <button id="expEngMotion" onclick="_expSetEngine('motion')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:1px solid var(--border);background:var(--surface)">
+              <span style="font-weight:700;font-size:14px">Motion Control</span>
+              <span class="faint" style="font-size:11.5px">transfère un mouvement</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- corps VEO (le flux Express existant) -->
+        <div id="expVeoBody" style="flex:1;display:flex;flex-direction:column;min-height:0">
 
         <!-- Résultat / preview -->
         <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
@@ -3638,6 +3655,53 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
           </div>
+        </div>
+        </div><!-- /expVeoBody -->
+
+        <!-- ══ MOTION CONTROL (maquette motion-handoff · gen-motion.jsx, 1:1) ══ -->
+        <div id="expMotionWrap" class="scroll-y" style="display:none;flex:1;min-height:0;max-width:920px;margin:0 auto;width:100%;padding:24px 28px 40px;box-sizing:border-box">
+          <div class="center" style="margin-bottom:26px">
+            <h2 class="display" style="font-size:26px;font-weight:800;letter-spacing:-.01em">Motion Control</h2>
+            <p class="muted" style="margin-top:6px;font-size:14.5px">Ton personnage reproduit le mouvement de la vidéo — même durée que l'original.</p>
+          </div>
+          <div class="row" style="gap:16px;align-items:center">
+            <div class="col grow" style="gap:8px;min-width:0">
+              <span class="label" style="margin:0">Vidéo de référence</span>
+              <div id="mcRefDrop" onclick="document.getElementById('mcRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'ref')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
+                <input type="file" id="mcRefInput" accept="video/*" style="display:none" onchange="_mcPick(this,'ref')">
+                <video id="mcRefPrev" muted playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+                <svg id="mcRefIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+                <span style="font-weight:700;color:var(--text);font-size:14px">Insère ta vidéo</span>
+                <span class="faint" id="mcRefSub" style="font-size:11.5px">le mouvement à reproduire</span>
+              </div>
+            </div>
+            <div style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);margin-top:24px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+            <div class="col grow" style="gap:8px;min-width:0">
+              <span class="label" style="margin:0">Ton personnage</span>
+              <div id="mcCharDrop" onclick="document.getElementById('mcCharInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'char')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
+                <input type="file" id="mcCharInput" accept="image/*" style="display:none" onchange="_mcPick(this,'char')">
+                <img id="mcCharPrev" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                <svg id="mcCharIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span style="font-weight:700;color:var(--text);font-size:14px">Glisse ton image</span>
+                <span class="faint" id="mcCharSub" style="font-size:11.5px">le perso qui bouge</span>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px;gap:12px">
+            <button onclick="_mcOpenAdv()" class="row gap8" style="flex:0 0 auto;padding:15px 22px;border-radius:14px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Paramètres avancés
+            </button>
+            <button onclick="_mcGenerate()" class="btn btn-primary grow" style="font-weight:800;font-size:16.5px;padding:16px">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer le mouvement
+            </button>
+          </div>
+        </div>
+
+        <!-- Modale Paramètres avancés Motion Control (contenu généré par _mcRenderAdv) -->
+        <div id="mcAdvModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(6,6,9,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px" onclick="if(event.target===this)_mcCloseAdv()">
+          <div id="mcAdvCard" onclick="event.stopPropagation()" class="col scroll-y" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:min(560px,100%);max-height:88%;padding:26px"></div>
         </div>
       </div>
 
@@ -23688,6 +23752,129 @@ function _expPickQual(v){
   window._expQuality=v; initExpress();
 }
 
+/* ══════════ MOTEUR — Veo 3.1 ⇄ Motion Control (maquette motion-handoff) ══════════ */
+window._expEngine = window._expEngine || 'veo';
+function _expSetEngine(e){
+  window._expEngine = e;
+  const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp');
+  const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion');
+  const on=(b)=>{ if(b){ b.style.border='2px solid var(--accent)'; b.style.background='var(--accent-soft)'; } };
+  const off=(b)=>{ if(b){ b.style.border='1px solid var(--border)'; b.style.background='var(--surface)'; } };
+  if(e==='motion'){
+    if(rail) rail.style.display='none';
+    if(veo)  veo.style.display='none';
+    if(mot)  mot.style.display='block';
+    if(mexp) mexp.style.display='none';   // masque le composer mobile Veo (#mExp)
+    on(bMot); off(bVeo);
+  } else {
+    if(rail) rail.style.display='flex';
+    if(veo)  veo.style.display='flex';
+    if(mot)  mot.style.display='none';
+    if(mexp) mexp.style.display='';        // desktop : CSS masque · mobile : réaffiché
+    on(bVeo); off(bMot);
+  }
+}
+
+/* ── Motion Control — état + uploads ── */
+window._MC_BACKEND_READY = false;   // passe à true quand l'edge function Hedra Kling 2.6 est branchée
+window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
+window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
+function _mcPick(input, which){ const f=input.files&&input.files[0]; if(f) _mcLoad(f,which); }
+function _mcDrop(e, which){ e.preventDefault(); if(e.currentTarget) e.currentTarget.style.borderColor='var(--border-2)'; const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) _mcLoad(f,which); }
+function _mcLoad(f, which){
+  const r=new FileReader();
+  r.onload=()=>{
+    const b64=r.result;
+    if(which==='ref'){
+      window._mcRefB64=b64;
+      const v=document.getElementById('mcRefPrev'), dz=document.getElementById('mcRefDrop');
+      if(v){ v.src=b64; v.style.display='block';
+        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'; };
+      }
+      if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
+    } else if(which==='char'){
+      window._mcCharB64=b64;
+      const im=document.getElementById('mcCharPrev'), dz=document.getElementById('mcCharDrop');
+      if(im){ im.src=b64; im.style.display='block'; }
+      if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
+    } else if(which==='bg'){ window._mcBgB64=b64; _mcRenderAdv(); }
+  };
+  r.readAsDataURL(f);
+}
+
+/* ── Motion Control — modale Paramètres avancés (1:1 gen-motion.jsx) ── */
+function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) return; m.style.display='flex'; _mcRenderAdv(); }
+function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
+function _mcSetTier(t){ window._mcTier=t; window._mcQuality = (t==='pro'?'1080':'720'); _mcRenderAdv(); }
+function _mcSetQual(v){ if(v==='1080' && window._mcTier==='pro') return; window._mcQuality=v; _mcRenderAdv(); }
+function _mcSetRender(r){ window._mcRender=r; _mcRenderAdv(); }
+function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='1080' ? 3 : 2); }
+function _mcRenderAdv(){
+  const card=document.getElementById('mcAdvCard'); if(!card) return;
+  const tier=window._mcTier, q=window._mcQuality, rnd=window._mcRender, rate=_mcRate();
+  const dur=Math.round(window._mcRefDur||0);
+  const totalTxt = dur>0 ? `${rate} cr/s × ${dur}s = ${rate*dur} crédits` : `${rate} crédits / seconde`;
+  const modes=[['full','Plein écran','Motion seul'],['split-bottom','Original en haut','original ↑ · motion ↓'],['split-top','Original en bas','motion ↑ · original ↓']];
+  const diag=(id)=> id==='full' ? '<div style="flex:1;background:var(--accent);opacity:.5"></div>'
+    : id==='split-bottom' ? '<div style="flex:1;background:var(--surface-3)"></div><div style="flex:1;background:var(--accent);opacity:.55"></div>'
+    : '<div style="flex:1;background:var(--accent);opacity:.55"></div><div style="flex:1;background:var(--surface-3)"></div>';
+  const tierCard=(id,title,sub)=>`<button onclick="_mcSetTier('${id}')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:${tier===id?'2px solid var(--accent)':'1px solid var(--border)'};background:${tier===id?'var(--accent-soft)':'var(--surface)'}"><span style="font-weight:700;font-size:14px">${title}</span><span class="faint" style="font-size:11.5px">${sub}</span></button>`;
+  card.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:18px">
+      <span style="font-weight:800;font-size:18px">Paramètres avancés</span>
+      <button onclick="_mcCloseAdv()" class="row" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;background:none;color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <span class="label" style="display:block;margin-bottom:8px">Arrière-plan · optionnel</span>
+    <div onclick="document.getElementById('mcBgInput').click()" class="ph" style="display:flex;flex-direction:row;align-items:center;gap:10px;padding:16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;justify-content:center;margin-bottom:18px;position:relative;overflow:hidden">
+      <input type="file" id="mcBgInput" accept="image/*" style="display:none" onchange="_mcPick(this,'bg')">
+      ${window._mcBgB64?`<img src="${window._mcBgB64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span style="font-weight:600;color:var(--text);font-size:13.5px;position:relative">${window._mcBgB64?'Fond ajouté':'Glisse un fond'}</span><span class="faint" style="font-size:11.5px;position:relative">remplace le décor</span>
+    </div>
+    <span class="label" style="display:block;margin-bottom:8px">Instructions · optionnel</span>
+    <textarea id="mcPromptTa" oninput="window._mcPrompt=this.value" class="field" style="min-height:96px;resize:vertical;margin-bottom:18px" placeholder="Ex : garde le regard caméra, ambiance studio, démarche assurée…"></textarea>
+    <span class="label" style="display:block;margin-bottom:8px">Forfait de rendu</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      ${tierCard('standard','Standard','720p natif · rapide')}
+      ${tierCard('pro','Pro','1080p natif inclus')}
+    </div>
+    <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
+    <div class="seg" style="width:100%;margin-bottom:6px">
+      <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
+      <button class="${q==='1080'?'on':''}" style="flex:1;opacity:${tier==='pro'?'.55':'1'};cursor:${tier==='pro'?'default':'pointer'}" onclick="_mcSetQual('1080')">1080p ${tier==='pro'?'<span class="mono" style="font-size:10px;color:var(--green)">natif</span>':'<span class="mono" style="font-size:10px;color:var(--accent-2)">+1 cr/s</span>'}</button>
+    </div>
+    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${tier==='pro'?"Le 1080p est inclus nativement avec le forfait Pro.":q==='1080'?"Upgrade 1080p depuis le rendu standard : +1 crédit / seconde.":"Passe en 1080p pour +1 cr/s, ou choisis le forfait Pro pour l'avoir en natif."}</p>
+    <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
+    </div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--panel-1);border:1px solid var(--border)">
+      <span class="faint" style="font-size:12px">Coût estimé</span>
+      <span class="mono" style="font-size:13px;color:var(--accent-2);font-weight:700">${totalTxt}</span>
+    </div>
+    <button onclick="_mcCloseAdv()" class="btn btn-ghost" style="width:100%;margin-top:14px">Terminé</button>`;
+  const ta=document.getElementById('mcPromptTa'); if(ta) ta.value=window._mcPrompt||'';
+}
+
+/* ── Motion Control — génération ── */
+async function _mcGenerate(){
+  if(!window._mcRefB64){ toast('Insère une vidéo de référence'); return; }
+  if(!window._mcCharB64){ toast("Glisse l'image de ton personnage"); return; }
+  if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  const tier=window._mcTier, q=window._mcQuality;
+  if((tier==='pro'||q==='1080') && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+    toast('Le 1080p / forfait Pro est réservé au plan Pro et +'); if(typeof showPaywall==='function') showPaywall(); return;
+  }
+  const rate=_mcRate(), dur=Math.ceil(window._mcRefDur||0);
+  if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
+  const cost=rate*dur;
+  if(!window._MC_BACKEND_READY){
+    toast(`Prêt : ${cost} crédits (${rate} cr/s × ${dur}s). Le moteur Motion Control se branche bientôt (Hedra Kling 2.6).`);
+    return;
+  }
+  if(!(await spendCreditsFor(cost,'motion'))) return;
+  // TODO backend : POST /functions/v1/motion-control { ref, character, bg, prompt, tier, quality, render } → Hedra Kling 2.6
+}
+
 // ── Voix ──
 function _expRenderVoices(){
   const wrap=document.getElementById('expVoiceRows');
@@ -31310,8 +31497,15 @@ function edBandDrag(ov,track,e,mode){
   #v-express>div:nth-child(1){display:none !important}
   #v-express>div:nth-child(2){order:1;min-height:200px;flex:1 0 auto !important;width:100% !important;border-bottom:1px solid var(--border)}
   #mExp{display:block;order:2;padding:14px 16px 0}
-  /* composer du bas (desktop) masqué — remplacé par #mExp */
-  #v-express>div:nth-child(2)>div[style*="border-top"]{display:none !important}
+  /* composer du bas (desktop) masqué — remplacé par #mExp (le composer est
+     désormais imbriqué dans #expVeoBody depuis l'ajout du sélecteur MOTEUR) */
+  #expVeoBody>div[style*="border-top"]{display:none !important}
+  /* MOTEUR : le sélecteur reste, mais discret ; en Motion Control les 2 zones
+     s'empilent (le design côte-à-côte est desktop) */
+  #expMoteurBar{padding:12px 16px 0 !important}
+  #expMotionWrap{padding:14px 16px 30px !important}
+  #expMotionWrap>div.row{flex-direction:column !important;align-items:stretch !important}
+  #expMotionWrap>div.row>div[style*="width:40px"]{transform:rotate(90deg);margin:2px auto !important}
   /* état vide compact (design proto) à la place du grand explicatif */
   #expResultPlaceholder>*{display:none !important}
   #expResultPlaceholder::before{content:'✦';display:block;text-align:center;font-size:28px;color:var(--accent-2);padding-top:34px;text-shadow:0 0 18px var(--accent-glow)}
