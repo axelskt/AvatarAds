@@ -23825,8 +23825,10 @@ function _mcLoad(f, which){
 function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) return; m.style.display='flex'; _mcRenderAdv(); }
 function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
 function _mcSetTier(t){ window._mcTier=t; window._mcQuality = (t==='pro'?'1080':'720'); _mcRenderAdv(); }
-function _mcSetQual(v){ if(v==='1080' && window._mcTier==='pro') return; window._mcQuality=v; _mcRenderAdv(); }
+function _mcSetQual(v){ window._mcQuality=v; _mcRenderAdv(); }
 function _mcSetRender(r){ window._mcRender=r; _mcRenderAdv(); }
+// Standard 720p = 2 cr/s ; Standard 1080p = 3 cr/s (Kling 720p + upscale Topaz) ;
+// Pro 1080p natif = 4 cr/s.
 function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='1080' ? 3 : 2); }
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
@@ -23861,9 +23863,9 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
-      <button class="${q==='1080'?'on':''}" style="flex:1;opacity:${tier==='pro'?'.55':'1'};cursor:${tier==='pro'?'default':'pointer'}" onclick="_mcSetQual('1080')">1080p ${tier==='pro'?'<span class="mono" style="font-size:10px;color:var(--green)">natif</span>':'<span class="mono" style="font-size:10px;color:var(--accent-2)">+1 cr/s</span>'}</button>
+      <button class="${q==='1080'?'on':''}" style="flex:1;opacity:${tier==='pro'?'.55':'1'};cursor:${tier==='pro'?'default':'pointer'}" onclick="_mcSetQual('1080')">1080p ${tier==='pro'?'<span class="mono" style="font-size:10px;color:var(--green)">natif</span>':'<span class="mono" style="font-size:10px;color:var(--accent-2)">Topaz +1 cr/s</span>'}</button>
     </div>
-    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${tier==='pro'?"Le 1080p est inclus nativement avec le forfait Pro.":q==='1080'?"Upgrade 1080p depuis le rendu standard : +1 crédit / seconde.":"Passe en 1080p pour +1 cr/s, ou choisis le forfait Pro pour l'avoir en natif."}</p>
+    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${tier==='pro'?"Le 1080p est inclus nativement avec le forfait Pro.":q==='1080'?"1080p via upscale Topaz après le rendu 720p : +1 crédit / seconde.":"Passe en 1080p (upscale Topaz) pour +1 cr/s, ou choisis le forfait Pro pour l'avoir en natif."}</p>
     <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
