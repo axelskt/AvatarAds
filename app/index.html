@@ -4393,7 +4393,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                         style="position:fixed;right:14px;bottom:86px;z-index:1200;width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;border:1px solid rgba(255,143,94,.6);background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;box-shadow:0 6px 22px rgba(255,107,53,.45);cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg></button>
                 <button onclick="edUndo()" id="edUndoBtn" title="Annuler (⌘Z)" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg><span>Annuler</span></button>
                 <button onclick="edRedo()" id="edRedoBtn" title="Refaire (⌘⇧Z)" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 00-5 5v0"/></svg><span>Refaire</span></button>
-                <button onclick="edSplitClip()" title="Séparer au curseur (S)" class="ed-tbtn" style="padding:9px 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg><span>Séparer</span></button>
+                <button onclick="edSplitContext()" title="Séparer au curseur (S) — coupe l'élément sélectionné" class="ed-tbtn" style="padding:9px 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg><span>Séparer</span></button>
                 <button onclick="edDeleteLeft()" title="Supprimer avant le curseur" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg><span>Suppr. avant</span></button>
                 <button onclick="edDeleteRight()" title="Supprimer après le curseur" class="ed-tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 00-5 5v0"/></svg><span>Suppr. après</span></button>
                 <button onclick="edDeleteContext()" title="Supprimer la sélection (⌫)" class="ed-tbtn danger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg><span>Supprimer</span></button>
@@ -4436,7 +4436,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   </div>
                   <!-- AUDIO DU CLIP (la voix de la vidéo, extraite d'office) -->
                   <div class="row" style="height:46px;border-top:1px solid var(--border2)">
-                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#3B82F6;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Audio du clip</span></div>
+                    <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#3B82F6;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Audio</span></div>
                     <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
                       <div id="edClipAudioTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
                       <span id="edClipAudioHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">L'audio de ta vidéo apparaît ici</span>
@@ -28808,8 +28808,8 @@ function edLoadFile(file){
     const _dur=video.duration||0, _vw=video.videoWidth||720, _vh=video.videoHeight||1280;
     const clip0={ file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[] };
     _ed={ clips:[clip0], activeIdx:0,
-          file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[], overlays:[], sfx:[], zooms:[], selZoom:null, _zoomDefDur:1.2, _zoomDefScale:1.4, sel:null,
-          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, audio:null };
+          file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[], overlays:[], sfx:[], zooms:[], selZoom:null, _zoomDefDur:1.2, _zoomDefScale:1.4, sel:null, selTrack:null,
+          playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, musicDur:0, musicSegs:null, musicAuto:true, audio:null };
     edSetup();
   };
   video.onerror=()=>toast('Impossible de lire cette vidéo');
@@ -28876,6 +28876,7 @@ function edGlobalNow(){ if(!_ed) return 0; edSyncToClip(); return edClipGlobalSt
 function edSelectClip(idx){
   if(!_ed||!_ed.clips||idx<0||idx>=_ed.clips.length||idx===_ed.activeIdx) return;
   edSyncToClip(); edPause();
+  _ed.selTrack=null; // #5 · sélection clip et sélection piste exclusives
   _ed.activeIdx=idx;
   const c=_ed.clips[idx];
   _ed.video=c.video; _ed.url=c.url; _ed.file=c.file; _ed.dur=c.dur; _ed.vw=c.vw; _ed.vh=c.vh;
@@ -28931,6 +28932,8 @@ function edDrawLoop(){
   }
   if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
   _ed._gtPrev=_gt;
+  // #4 · la musique suit ses segments et S'ARRÊTE à la fin des clips (pas au-delà)
+  if(_ed.playing && !_ed.exporting && _ed.music) _edMusicSync(_gt, true);
   if(_ed.playing){
     let t=v.currentTime;
     for(const d of _ed.deletes){ if(t>=d.a-0.02 && t<d.b){ v.currentTime=d.b; t=d.b; break; } }
@@ -28951,7 +28954,7 @@ function edPlay(){
   for(const d of _ed.deletes){ if(t>=d.a && t<d.b) t=d.b; }
   _ed.video.currentTime=t;
   if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{_ed.audio.ac.resume();}catch(e){} }
-  if(_ed.music){ try{ _ed.music.currentTime=edOutTime(t); _ed.music.play(); }catch(e){} }
+  _edMusicSync(edGlobalNow(), true); // musique calée sur le temps GLOBAL, segments compris
   _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Pause'; }).catch(()=>{});
 }
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Lire'; }
@@ -28967,7 +28970,7 @@ function edScrubTo(gt){
   if(target!==_ed.activeIdx) edAdvanceClip(target);
   const c=_ed.clips[target];
   try{ _ed.video.currentTime=c.trimA+Math.max(0,Math.min(c.trimB-c.trimA,local)); }catch(e){}
-  if(_ed.music){ try{ _ed.music.currentTime=edOutTime(_ed.video.currentTime); }catch(e){} }
+  _edMusicSync(gt, _ed.playing);
   edUpdatePlayhead(); edUpdateTime();
 }
 
@@ -29037,6 +29040,7 @@ function edBindTimeline(){
       // ignore les éléments interactifs (poignées trim, chips SFX, bandes calque, vignettes clip, boutons)
       if(e.target.closest('#edTlHandleL,#edTlHandleR,[data-h],[data-x],[data-e],.ed-ov,#edClipsTrack,button')) return;
       if(e.clientX < inner.getBoundingClientRect().left+100) return; // colonne des labels
+      if(_ed.selTrack) edSelectTrack(null); // clic dans le vide = désélection piste
       scrub=true; edPause(); edScrubTo(gtFromX(e.clientX));
       try{ inner.setPointerCapture(e.pointerId); }catch(_){}
     });
@@ -29067,7 +29071,7 @@ function edBindTimeline(){
 function edKeyHandler(e){
   const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
   const t=(e.target.tagName||'').toLowerCase(); if(t==='input'||t==='textarea'||e.target.isContentEditable) return;
-  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.sel || _ed.selZoom || (_ed.clips&&_ed.clips.length>1)){ e.preventDefault(); edDeleteContext(); } }
+  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.selTrack || _ed.sel || _ed.selZoom || (_ed.clips&&_ed.clips.length>1)){ e.preventDefault(); edDeleteContext(); } }
   else if(e.key===' '||e.code==='Space'){ e.preventDefault(); edTogglePlay(); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
     const dir=e.key==='ArrowRight'?1:-1; const step=e.shiftKey?1:0.2; const tot=edTotalDur()||1;
@@ -29208,7 +29212,7 @@ function edStyleOverlay(ov){
   const _bar=el.querySelector('.ed-ov-bar'); if(_bar) _bar.style.display=(onSel&&!ov._editing)?'flex':'none';
 }
 
-function edSelect(id){ _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
+function edSelect(id){ if(_ed.selTrack) edSelectTrack(null); _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
 function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); edRenderTextMenu(null); _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
 function edRenderTextMenu(ov){
   const m=document.getElementById('edTextMenu'); if(!m) return;
@@ -29333,8 +29337,9 @@ async function _edRenderTlStrip(){
     (thumbs||[]).forEach(src=>{ const im=document.createElement('div'); im.style.cssText='flex:1;min-width:0;background-size:cover;background-position:center;opacity:.8'+(src?(';background-image:url('+src+')'):''); st.appendChild(im); });
   }catch(e){}
 }
-function _edDrawWave(canvasId, peaks, color){
-  const c=document.getElementById(canvasId); if(!c) return;
+function _edDrawWave(canvasId, peaks, color){ _edDrawWaveEl(document.getElementById(canvasId), peaks, color); }
+function _edDrawWaveEl(c, peaks, color){
+  if(!c) return;
   const dpr=Math.min(2,window.devicePixelRatio||1); const W=c.clientWidth||300, H=c.clientHeight||34;
   c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
   if(!peaks||!peaks.length) return;
@@ -29345,18 +29350,79 @@ async function _edComputePeaks(blob, buckets){
   buckets=buckets||260;
   try{ if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)(); const ab=await blob.arrayBuffer(); const dec=await recCtx.decodeAudioData(ab.slice(0)); const ch=dec.getChannelData(0); const block=Math.max(1,Math.floor(ch.length/buckets)); const peaks=[]; for(let b=0;b<buckets;b++){ let mx=0; const st=b*block; for(let i=0;i<block;i+=2){ const v=Math.abs(ch[st+i]||0); if(v>mx)mx=v; } peaks.push(mx); } return peaks; }catch(e){ return null; }
 }
+/* #4/#7 · SEGMENTS DE MUSIQUE — la musique vit en segments [{start,end,off}] sur le temps
+   GLOBAL de la timeline. Par défaut (musicAuto) : UN segment qui colle à la durée totale
+   des clips — jamais plus long que la vidéo, ni que le fichier. « Séparer » fige les
+   segments (musicAuto=false), chacun sélectionnable / supprimable indépendamment. */
+function _edMusicSegs(){
+  if(!_ed||!_ed.music) return [];
+  if(_ed.musicAuto!==false || !_ed.musicSegs || !_ed.musicSegs.length){
+    const tot=edTotalDur()||0;
+    const md=_ed.musicDur||(_ed.music&&_ed.music.duration)||0;
+    const end=Math.max(0.1, Math.min(tot||md||0.1, md||tot||0.1));
+    _ed.musicSegs=[{ id:'ms0', start:0, end:end, off:0 }];
+  }
+  return _ed.musicSegs;
+}
+// temps FICHIER de la musique au temps global gt (null = pas de musique à cet instant)
+function _edMusicTimeAt(gt){
+  const tot=edTotalDur()||0;
+  for(const s of _edMusicSegs()){
+    const end=Math.min(s.end, tot);
+    if(gt>=s.start && gt<end) return s.off+(gt-s.start);
+  }
+  return null;
+}
+// synchronise l'élément <audio> musique sur le temps global (preview ET export)
+function _edMusicSync(gt, playing){
+  if(!_ed||!_ed.music) return;
+  const m=_ed.music;
+  let mt=_edMusicTimeAt(gt);
+  if(mt!=null && _ed.musicDur && mt>=_ed.musicDur) mt=null; // au-delà du fichier
+  if(mt==null){ if(!m.paused){ try{ m.pause(); }catch(e){} } return; }
+  if(playing){
+    if(m.paused){ try{ m.currentTime=mt; const p=m.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+    else if(Math.abs(m.currentTime-mt)>0.35){ try{ m.currentTime=mt; }catch(e){} }
+  } else { try{ m.currentTime=mt; }catch(e){} }
+}
 function edRenderMusicTrack(){
   const mt=document.getElementById('edMusicTrack'); if(!mt||!_ed) return;
   const hint=document.getElementById('edMusicHint');
   if(!_ed.music){ mt.style.display='none'; mt.innerHTML=''; if(hint) hint.style.display='block'; return; }
   if(hint) hint.style.display='none';
   mt.style.display='block';
-  mt.innerHTML='<div style="position:relative;height:34px;border-radius:6px;overflow:hidden;background:rgba(77,171,247,.14);border:1px solid rgba(77,171,247,.5)">'
-    +'<canvas id="edMusicWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
-    +'<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;font-family:var(--mono);color:#cfe9ff;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;max-width:68%;text-overflow:ellipsis;pointer-events:none;display:inline-flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'+((_ed.musicName||'Musique'))+'</div>'
-    +'<button onclick="edRemoveMusic()" title="Retirer la musique" style="position:absolute;right:4px;top:5px;width:22px;height:22px;background:rgba(10,10,12,.7);border:1px solid var(--border2);border-radius:6px;color:#ff8a8a;cursor:pointer;line-height:1;z-index:2;display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
-    +'</div>';
-  _edDrawWave('edMusicWave', _ed.musicPeaks, 'rgba(130,195,255,.85)');
+  const total=edTotalDur()||1;
+  const md=_ed.musicDur||(_ed.music&&_ed.music.duration)||total;
+  const segs=_edMusicSegs();
+  let html='';
+  segs.forEach((s,i)=>{
+    const end=Math.min(s.end,total); if(end-s.start<=0.02) return; // segment hors timeline → rien à dessiner
+    const L=Math.max(0,(s.start/total)*100), W=Math.max(0.6,((end-s.start)/total)*100);
+    const on=_ed.selTrack&&_ed.selTrack.type==='music'&&_ed.selTrack.idx===i;
+    html+='<div data-mseg="'+i+'" title="Clique pour sélectionner · Suppr pour supprimer · Séparer pour couper au curseur" style="position:absolute;top:0;bottom:0;left:'+L+'%;width:'+W+'%;border-radius:6px;overflow:hidden;background:rgba(77,171,247,.14);border:1.5px solid '+(on?'var(--accent)':'rgba(77,171,247,.5)')+';cursor:pointer'+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 14px var(--accent-glow)':'')+'">'
+      +'<canvas data-mwave="'+i+'" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
+      +(i===0?'<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;font-family:var(--mono);color:#cfe9ff;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;max-width:68%;text-overflow:ellipsis;pointer-events:none;display:inline-flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'+((_ed.musicName||'Musique'))+'</div>':'')
+      +'<button data-mx="'+i+'" title="'+(segs.length>1?'Retirer ce segment':'Retirer la musique')+'" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:22px;height:22px;background:rgba(10,10,12,.7);border:1px solid var(--border2);border-radius:6px;color:#ff8a8a;cursor:pointer;line-height:1;z-index:2;display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
+      +'</div>';
+  });
+  mt.innerHTML=html;
+  // forme d'onde PAR SEGMENT : tranche des pics correspondant à [off, off+durée]
+  segs.forEach((s,i)=>{
+    const cv=mt.querySelector('canvas[data-mwave="'+i+'"]'); const pk=_ed.musicPeaks;
+    if(!cv||!pk||!pk.length||!(md>0)) return;
+    const end=Math.min(s.end,total);
+    const a=Math.max(0,Math.floor(pk.length*(s.off/md)));
+    const b=Math.min(pk.length,Math.max(a+1,Math.ceil(pk.length*((s.off+(end-s.start))/md))));
+    _edDrawWaveEl(cv, pk.slice(a,b), 'rgba(130,195,255,.85)');
+  });
+  // clic sur un segment = SÉLECTION (pas un déplacement de tête de lecture)
+  mt.querySelectorAll('[data-mseg]').forEach(el=>{
+    el.addEventListener('pointerdown',e=>{ if(e.target.closest('[data-mx]')) return; e.stopPropagation(); edSelectTrack({type:'music', idx:+el.dataset.mseg}); });
+  });
+  mt.querySelectorAll('[data-mx]').forEach(b=>{
+    b.onclick=e=>{ e.stopPropagation(); edRemoveMusicSeg(+b.dataset.mx); };
+    b.onpointerdown=e=>e.stopPropagation();
+  });
 }
 /* ---------- SFX (sons synthétisés Web Audio: gloup / transition / ding) ---------- */
 function _edNoise(ac,dur){ const len=Math.floor(ac.sampleRate*dur); const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len); const s=ac.createBufferSource(); s.buffer=buf; return s; }
@@ -29504,9 +29570,10 @@ function edRenderSfxTrack(){
     if(s.len==null) s.len=0.6;
     const leftPct=Math.min(99,Math.max(0,(s.t/total)*100));
     const wPct=Math.max(0,Math.min(100-leftPct,(s.len/total)*100));
+    const on=_ed.selTrack&&_ed.selTrack.type==='sfx'&&_ed.selTrack.id===s.id; // #5 · sélection
     const chip=document.createElement('div');
-    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:48px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba(255,170,40,.22);border:1px solid rgba(255,170,40,.6);color:#ffcb6b;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:1;cursor:grab;touch-action:none';
-    chip.title='Glisse pour déplacer · tire les bords pour ajuster la durée';
+    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:48px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba(255,170,40,'+(on?'.34':'.22')+');border:1.5px solid '+(on?'var(--accent)':'rgba(255,170,40,.6)')+';color:#ffcb6b;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 12px var(--accent-glow)':'');
+    chip.title='Clique pour sélectionner (Suppr pour retirer) · glisse pour déplacer · tire les bords pour ajuster';
     chip.innerHTML='<span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">'+s.label+'</span>';
     const hL=document.createElement('span'); hL.dataset.h='l'; hL.title='Ajuster le début'; hL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,200,90,.55);border-radius:5px 0 0 5px;z-index:2';
     const hR=document.createElement('span'); hR.dataset.h='r'; hR.title='Ajuster la fin'; hR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,200,90,.55);border-radius:0 5px 5px 0;z-index:2';
@@ -29515,6 +29582,8 @@ function edRenderSfxTrack(){
     chip.addEventListener('pointerdown',e=>{
       if(e.target&&e.target.dataset&&e.target.dataset.x) return;
       e.preventDefault(); e.stopPropagation(); edSnap(); chip.style.cursor='grabbing';
+      // #5 · le clic SÉLECTIONNE l'effet (contour orange) — le drag reste possible
+      if(!(_ed.selTrack&&_ed.selTrack.type==='sfx'&&_ed.selTrack.id===s.id)) edSelectTrack({type:'sfx', id:s.id});
       const r=tr.getBoundingClientRect();
       const mode=(e.target&&e.target.dataset&&e.target.dataset.h)||'move';
       const startX=e.clientX, t0=s.t, len0=(s.len||0.6);
@@ -29626,12 +29695,16 @@ function edRenderClipAudioTrack(){
       for(let k=0;k<n;k++) buckets.push(p[i0+Math.floor(((i1-i0)*k)/n)]||0);
     } else for(let k=0;k<n;k++) buckets.push(0.08+0.04*Math.sin(k*0.7)); // squelette en attendant
   }
-  if(tr.dataset.sig!==buckets.length+':'+total.toFixed(2)+':'+(manque?'p':'ok')||!tr.firstChild){
-    tr.innerHTML='<div style="position:relative;height:100%;border-radius:6px;overflow:hidden;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.45)">'
-      +'<canvas id="edClipAudioWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
-      +'<span class="mono" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:9.5px;font-weight:700;color:#bcd7ff;text-shadow:0 1px 3px rgba(0,0,0,.8);pointer-events:none;display:inline-flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Voix vidéo</span></div>';
-    tr.dataset.sig=buckets.length+':'+total.toFixed(2)+':'+(manque?'p':'ok');
+  // #8 · plus de pill « Voix vidéo » incrustée — la bande reste nue, le label de piste suffit
+  const on=_ed.selTrack&&_ed.selTrack.type==='audio';
+  const sig=buckets.length+':'+total.toFixed(2)+':'+(manque?'p':'ok')+':'+(on?'sel':'');
+  if(tr.dataset.sig!==sig||!tr.firstChild){
+    tr.innerHTML='<div style="position:relative;height:100%;border-radius:6px;overflow:hidden;background:rgba(59,130,246,.12);border:1.5px solid '+(on?'var(--accent)':'rgba(59,130,246,.45)')+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 14px var(--accent-glow)':'')+'">'
+      +'<canvas id="edClipAudioWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas></div>';
+    tr.dataset.sig=sig;
   }
+  // #5 · clic sur la bande Audio = SÉLECTION (pas un déplacement de tête de lecture)
+  tr.onpointerdown=e=>{ e.stopPropagation(); edSelectTrack({type:'audio'}); };
   _edDrawWave('edClipAudioWave', buckets, 'rgba(130,180,255,.8)');
 }
 let _edZoom=1;
@@ -29662,11 +29735,61 @@ function edSplitClip(){
 }
 function edDeleteContext(){
   if(!_ed) return;
+  // #5 · un élément de PISTE sélectionné (musique / effet / bande audio) se supprime en priorité
+  if(_ed.selTrack){
+    const st=_ed.selTrack;
+    if(st.type==='music'){ edRemoveMusicSeg(st.idx||0); return; }
+    if(st.type==='sfx'){ edSelectTrack(null); edRemoveSfx(st.id); return; }
+    if(st.type==='audio'){ toast('La bande Audio est liée au clip — coupe ou supprime le clip pour la modifier'); return; }
+    edSelectTrack(null); return;
+  }
   if(_ed.sel){ edSnap(); edDeleteSelected(); return; }
   if(_ed.selZoom){ edRemoveZoom(_ed.selZoom); return; }
   if(_ed.activeIdx>0){ edRemoveClip(_ed.activeIdx); return; }
   if(_ed.clips && _ed.clips.length>1){ toast('Le clip principal ne peut pas être supprimé — clique un autre clip (🎞) puis Suppr'); return; }
   toast('Sélectionne un texte/image, un zoom ou un clip ajouté à supprimer');
+}
+/* ---------- #5/#7 · sélection d'éléments de piste (musique / audio / effet) ---------- */
+// _ed.selTrack = {type:'music', idx} | {type:'audio'} | {type:'sfx', id} — exclusif de la
+// sélection calque (_ed.sel) et de la sélection zoom (_ed.selZoom). Échap désélectionne.
+function edSelectTrack(sel){
+  if(!_ed) return;
+  _ed.selTrack=sel||null;
+  if(sel){
+    if(_ed.sel) edHideProps();
+    if(_ed.selZoom){ _ed.selZoom=null; edRenderZoomTrack(); }
+  }
+  edRenderClipAudioTrack(); edRenderMusicTrack(); edRenderSfxTrack();
+}
+// « Séparer » agit sur la sélection : musique sélectionnée → coupe la musique ;
+// bande Audio (liée au clip) ou rien → comportement d'origine, coupe le clip visuel.
+function edSplitContext(){
+  if(!_ed) return;
+  if(_ed.selTrack && _ed.selTrack.type==='music'){ edSplitMusic(); return; }
+  edSplitClip();
+}
+function edSplitMusic(){
+  if(!_ed||!_ed.music){ toast('Aucune musique à couper'); return; }
+  const gt=edGlobalNow(); const segs=_edMusicSegs();
+  const i=segs.findIndex(s=>gt>s.start+0.15 && gt<Math.min(s.end,edTotalDur())-0.15);
+  if(i<0){ toast('Place le curseur au milieu de la musique pour la couper'); return; }
+  edSnap();
+  const s=segs[i];
+  // le segment droit repart PILE au bon endroit du fichier (offset de départ)
+  const right={ id:'ms'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), start:gt, end:s.end, off:s.off+(gt-s.start) };
+  s.end=gt; segs.splice(i+1,0,right); _ed.musicAuto=false;
+  edSelectTrack({type:'music', idx:i+1});
+  toast('Musique coupée en deux');
+}
+function edRemoveMusicSeg(idx){
+  if(!_ed||!_ed.music) return;
+  const segs=_edMusicSegs();
+  if(segs.length<=1){ edSelectTrack(null); edRemoveMusic(); toast('Musique retirée'); return; }
+  edSnap();
+  segs.splice(idx,1); _ed.musicAuto=false;
+  if(_ed.selTrack&&_ed.selTrack.type==='music') _ed.selTrack=null;
+  try{ _ed.music.pause(); }catch(e){}
+  edRenderMusicTrack(); toast('Segment de musique supprimé');
 }
 
 /* ---------- undo / redo (snapshots, refs préservées) ---------- */
@@ -29675,6 +29798,7 @@ function edStateCopy(){
     clips:_ed.clips.map(c=>({...c})),
     overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }),
     sfx:(_ed.sfx||[]).map(s=>({...s})),
+    musicSegs:_ed.musicSegs?_ed.musicSegs.map(s=>({...s})):null, musicAuto:_ed.musicAuto!==false,
     zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom,
     subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, softCase:!!_ed.subsAI.softCase, words:_ed.subsAI.words.map(w=>({...w})) } : null };
 }
@@ -29688,6 +29812,7 @@ function edRestoreState(st){
   _ed.video=ac.video;_ed.url=ac.url;_ed.file=ac.file;_ed.dur=ac.dur;_ed.vw=ac.vw;_ed.vh=ac.vh;_ed.trimA=ac.trimA;_ed.trimB=ac.trimB;_ed.deletes=ac.deletes;
   _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; n._editing=false; n._cropMode=false; return n; });
   _ed.sfx=(st.sfx||[]).map(s=>({...s}));
+  _ed.musicSegs=st.musicSegs?st.musicSegs.map(s=>({...s})):null; _ed.musicAuto=st.musicAuto!==false; _ed.selTrack=null;
   _ed.zooms=(st.zooms||[]).map(z=>({...z})); _ed.selZoom=st.selZoom||null;
   _ed.subsAI=st.subsAI ? { enabled:st.subsAI.enabled, style:st.subsAI.style, softCase:!!st.subsAI.softCase, words:(st.subsAI.words||[]).map(w=>({...w})) } : null;
   _ed.sel=null;
@@ -30448,7 +30573,8 @@ async function edExport(){
     await new Promise(r=>{ first.vid.onseeked=()=>{ first.vid.onseeked=null; r(); }; setTimeout(r,800); });
     rec.start();
     edProgStep(1);
-    if(_ed.music){ try{ _ed.music.currentTime=0; await _ed.music.play(); }catch(e){} }
+    // #4 · la musique suit ses segments pendant l'export (démarre/coupe pile aux bons temps)
+    if(_ed.music){ _edMusicSync(0, true); }
 
     const _sfxFired=new Set();
     let doneSpan=0;
@@ -30464,6 +30590,7 @@ async function edExport(){
           for(const d of (seg.deletes||[])){ if(t>=d.a-0.02 && t<d.b){ cur.currentTime=d.b; t=d.b; break; } }
           const gTime=doneSpan+Math.max(0,t-seg.a);
           for(const s of (_ed.sfx||[])){ if(!_sfxFired.has(s.id) && gTime>=s.t){ _sfxFired.add(s.id); if(_ed.audio){ try{ _edBlip(_ed.audio.ac,[_ed.audio.ac.destination,_ed.audio.dest],s.type); }catch(e){} } } }
+          if(_ed.music) _edMusicSync(gTime, true); // #4 · export : musique bornée aux segments/à la durée totale
           renderFrame(cur, gTime);
           edProgSet(Math.min(99,Math.max(0,(gTime/totalSpan)*100)));
           if(t>=seg.b || cur.ended){ resolve(); return; }
@@ -30524,6 +30651,9 @@ function edAddMusic(file){
   edRemoveMusic(true);
   const url=URL.createObjectURL(file); const a=new Audio(); a.src=url; a.preload='auto';
   _ed.music=a; _ed.musicUrl=url; _ed.musicName=file.name; _ed.musicPeaks=null;
+  // #4 · durée du fichier connue → le segment auto se cale sur min(durée clips, durée musique)
+  _ed.musicDur=0; _ed.musicSegs=null; _ed.musicAuto=true;
+  a.onloadedmetadata=()=>{ if(_ed&&_ed.music===a){ _ed.musicDur=a.duration||0; edRenderMusicTrack(); } };
   _edComputePeaks(file).then(p=>{ if(_ed&&_ed.music){ _ed.musicPeaks=p; edRenderMusicTrack(); } });
   edEnsureAudioGraph();
   if(_ed.audio){ try{ const mSrc=_ed.audio.ac.createMediaElementSource(a); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=_ed.musicVol; mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){ a.volume=_ed.musicVol; } }
@@ -30540,6 +30670,8 @@ function edRemoveMusic(silent){
   if(_ed.audio&&_ed.audio.mGain){ try{_ed.audio.mGain.disconnect();}catch(e){} try{_ed.audio.mSrc.disconnect();}catch(e){} _ed.audio.mSrc=null; _ed.audio.mGain=null; }
   if(_ed.musicUrl){ try{URL.revokeObjectURL(_ed.musicUrl);}catch(e){} }
   _ed.music=null; _ed.musicUrl=null; _ed.musicName=null;
+  _ed.musicDur=0; _ed.musicSegs=null; _ed.musicAuto=true;
+  if(_ed.selTrack&&_ed.selTrack.type==='music') _ed.selTrack=null;
   if(!silent){ const e1=document.getElementById('edMusicEmpty'),e2=document.getElementById('edMusicLoaded'); if(e1)e1.style.display='block'; if(e2)e2.style.display='none'; }
   edRenderMusicTrack();
 }
@@ -30754,14 +30886,18 @@ function edBandDrag(ov,track,e,mode){
       const nm=String(item).replace(/[^a-z0-9_-]/gi,'');
       if(window._mdPrevSet&&window._mdPrevSet.has(nm)){
         const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
-        return '<video src="'+src+'" muted '+(big?'autoplay':'preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause()"')+' loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
+        // poster JPG = image visible tout de suite ; la lecture réelle est (re)lancée en JS
+        // après rendu (muted/playsinline posés par innerHTML pas toujours appliqués — WebKit)
+        return '<video data-edprev src="'+src+'" poster="anim-previews/'+nm+'.jpg" muted loop playsinline '+(big?'autoplay preload="auto"':'preload="none"')+' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
       }
       return '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent)">'+S(IC.sparkle,big?44:26)+'</div>';
     }
     if(kind==='sfx'){
+      // ⚠ pas de <button> ici : la cellule de liste est déjà un <button data-pick> et un
+      // <button> imbriqué FERME le bouton parent au parsing (HTML) → clics perdus. Un <span> joue le rôle.
       return '<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,rgba(34,211,238,.10),rgba(0,0,0,.5))">'
-        +'<button onclick="event.stopPropagation();(function(b){var a=new Audio(\'sfx/'+String(item).replace(/[^a-z0-9-]/gi,'')+'.mp3\');a.volume=.9;a.play().catch(function(){});b.style.background=\'#22D3EE33\';setTimeout(function(){b.style.background=\'transparent\'},350)})(this)" title="Écouter" style="width:'+(big?62:30)+'px;height:'+(big?62:30)+'px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #22D3EE;background:transparent;color:#22D3EE;cursor:pointer">'
-        +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></button></div>';
+        +'<span role="button" tabindex="0" data-sfxplay onclick="event.stopPropagation();(function(b){var a=new Audio(\'sfx/'+String(item).replace(/[^a-z0-9-]/gi,'')+'.mp3\');a.volume=.9;var p=a.play();if(p&&p.catch)p.catch(function(){});b.style.background=\'#22D3EE33\';setTimeout(function(){b.style.background=\'transparent\'},350)})(this)" title="Écouter" style="width:'+(big?62:30)+'px;height:'+(big?62:30)+'px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #22D3EE;background:transparent;color:#22D3EE;cursor:pointer">'
+        +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 4l13 8-13 8z"/></svg></span></div>';
     }
     // transitions : mini-démo animée (deux panneaux)
     const demo={'Cut net':'edtCut','Fondu enchaîné':'edtFade','Whip pan':'edtWhip','Zoom transition':'edtZoom','Glitch':'edtGlitch'}[item]||'edtFade';
@@ -30839,7 +30975,11 @@ function edBandDrag(ov,track,e,mode){
 
   // ═══════════ BANQUE (modale swipe / liste / créer / remplacer) ═══════════
   let bank=null;
-  window.edOpenBank=function(kind){ if(!_ed){ toast('Charge d\'abord une vidéo'); return; } bank={kind:kind,i:0,mode:'swipe',q:'',dx:0,drag:null,menu:false}; const ov=document.createElement('div'); ov.id='edBankModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(8,8,11,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto'; ov.onclick=function(e){ if(e.target===ov) closeBank(); }; document.body.appendChild(ov); renderBank(); ensureAnimBank().then(function(){ if(bank) renderBank(); }); };
+  window.edOpenBank=function(kind){ if(!_ed){ toast('Charge d\'abord une vidéo'); return; } bank={kind:kind,i:0,mode:'swipe',q:'',dx:0,drag:null,menu:false,shown:0}; const ov=document.createElement('div'); ov.id='edBankModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(8,8,11,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto'; ov.onclick=function(e){ if(e.target===ov) closeBank(); }; document.body.appendChild(ov);
+    // le re-rendu post-fetch ne sert QUE si la banque réelle n'était pas encore là :
+    // re-rendre pour rien détruisait la <video> de la carte en plein play() (AbortError → carte figée)
+    const hadReal=!!(window._edAnimsReal&&window._edAnimsReal.length);
+    renderBank(); ensureAnimBank().then(function(){ if(bank&&!hadReal) renderBank(); }); };
   function closeBank(){ const el=document.getElementById('edBankModal'); if(el) el.remove(); bank=null; }
   window.edCloseBank=closeBank;
   function bankInsert(label){
@@ -30861,14 +31001,21 @@ function edBandDrag(ov,track,e,mode){
       bindBank(ov); const ta=ov.querySelector('#edBankPrompt'); if(ta) ta.focus(); return;
     }
     if(bank.mode==='list'){
+      // #2 · LISTE PAGINÉE : 30 cellules par lot (164 vidéos rendues d'un coup = crash),
+      // lot suivant chargé quand la sentinelle « Voir plus » entre dans la vue (ou au clic)
+      const PAGE=30; if(!bank.shown) bank.shown=PAGE; bank.shown=Math.min(bank.shown,Math.max(PAGE,items.length));
+      const cellHtml=function(it){ const lbl=bank.kind==='sfx'?sfxLabel(it):it; return '<button data-pick="'+it.replace(/"/g,'&quot;')+'" class="col" style="gap:9px;align-items:stretch;padding:9px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid '+meta.c+'44;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(0,0,0,.4));color:'+meta.c+'">'+previewCell(bank.kind,it,false)+'</span><span class="row gap6" style="align-items:center;font-size:12px;font-weight:600;color:var(--text)"><span style="color:'+meta.c+';flex:0 0 auto">'+S(meta.ico,11)+'</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</span></span></button>';};
       ov.innerHTML='<div style="width:min(460px,94vw);max-height:80vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)" onclick="event.stopPropagation()">'
         +'<div class="row" style="gap:9px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)"><span style="color:'+meta.c+'">'+S(meta.ico,15)+'</span><span style="font-weight:700;font-size:14.5px">'+meta.t+'</span><span class="mono faint" style="font-size:10px;margin-left:auto">'+at+'</span><button data-act="close" style="margin-left:6px;color:var(--text-3);font-size:16px;line-height:1;background:none;border:none;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
         +'<div style="padding:10px 12px"><button data-act="swipe" class="row gap6" style="width:100%;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'+S(IC.sparkle,13)+' Revenir au mode swipe</button>'
         +'<input id="edBankSearch" placeholder="Rechercher parmi '+meta.items.length+'…" value="'+(bank.q||'').replace(/"/g,'&quot;')+'" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px"></div>'
-        +'<div style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-        + items.map(function(it){ const lbl=bank.kind==='sfx'?sfxLabel(it):it; return '<button data-pick="'+it.replace(/"/g,'&quot;')+'" class="col" style="gap:9px;align-items:stretch;padding:9px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid '+meta.c+'44;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(0,0,0,.4));color:'+meta.c+'">'+previewCell(bank.kind,it,false)+'</span><span class="row gap6" style="align-items:center;font-size:12px;font-weight:600;color:var(--text)"><span style="color:'+meta.c+';flex:0 0 auto">'+S(meta.ico,11)+'</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</span></span></button>';}).join('')
+        +'<div id="edBankGrid" style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start">'
+        + items.slice(0,bank.shown).map(cellHtml).join('')
+        + (items.length>bank.shown?('<button id="edBankMore" class="mono" style="grid-column:1 / -1;padding:11px 12px;border-radius:10px;border:1px dashed var(--border-2);background:transparent;color:var(--text-2);font-size:11.5px;cursor:pointer">Voir plus · '+(items.length-bank.shown)+' restants</button>'):'')
         +'</div></div>';
-      bindBank(ov); const se=ov.querySelector('#edBankSearch'); if(se){ se.oninput=function(){ bank.q=se.value; const pos=se.selectionStart; renderBank(); const s2=document.getElementById('edBankSearch'); if(s2){ s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(_){}}}; } return;
+      bindBank(ov);
+      bankListWire(ov, items, cellHtml);
+      const se=ov.querySelector('#edBankSearch'); if(se){ se.oninput=function(){ bank.q=se.value; bank.shown=PAGE; const pos=se.selectionStart; renderBank(); const s2=document.getElementById('edBankSearch'); if(s2){ s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(_){}}}; } return;
     }
     const cur=meta.items[bank.i%meta.items.length];
     const createBtn = bank.kind==='anim' ? '<button data-act="create" class="row gap6" style="padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);cursor:pointer">'+S(IC.sparkle,13)+' Créer</button>' : '';
@@ -30894,9 +31041,69 @@ function edBandDrag(ov,track,e,mode){
     if(bank.kind==='sfx'&&bank._played!==bank.i){ bank._played=bank.i;
       try{ const a=new Audio('sfx/'+String(cur).replace(/[^a-z0-9-]/gi,'')+'.mp3'); a.volume=.9; const p=a.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){}
     }
-    const pv=ov.querySelector('#edBankCard video'); if(pv){ const p=pv.play(); if(p&&p.catch) p.catch(function(){}); }
+    // #1 · la préview VIDÉO de la carte doit JOUER : muted/playsinline reposés en JS
+    // (l'attribut via innerHTML n'est pas toujours appliqué — WebKit) + play() relancé
+    // sur canplay, et re-tenté si le navigateur coupe la lecture (économie d'énergie)
+    const pv=ov.querySelector('#edBankCard video');
+    if(pv){
+      pv.muted=true; pv.playsInline=true; pv.loop=true; pv.autoplay=true;
+      let kick=0;
+      const go=function(){ if(!pv.isConnected||!bank) return; const p=pv.play(); if(p&&p.catch) p.catch(function(){}); };
+      pv.addEventListener('canplay', go);
+      pv.addEventListener('pause', function(){ if(pv.isConnected&&bank&&!pv.ended&&kick++<10) setTimeout(go,150); });
+      go();
+    }
     const card=ov.querySelector('#edBankCard');
-    if(card){ card.addEventListener('pointerdown',function(e){ bank.drag={x:e.clientX}; }); card.addEventListener('pointermove',function(e){ if(bank.drag){ bank.dx=e.clientX-bank.drag.x; card.style.transform='translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg)'; card.style.transition='none'; } }); const end=function(){ if(!bank||!bank.drag)return; const d=bank.dx; bank.drag=null; bank.dx=0; if(Math.abs(d)>70){ bank.i=(bank.i+1)%meta.items.length; } renderBank(); }; card.addEventListener('pointerup',end); card.addEventListener('pointerleave',function(){ if(bank&&bank.drag){ bank.drag=null; bank.dx=0; renderBank(); } }); }
+    if(card){
+      // le bouton play (bruitages) ne doit PAS armer le drag — sinon le pointerup re-rendait
+      // la carte AVANT le click : bouton détruit, clic jamais délivré → play muet (#3)
+      card.addEventListener('pointerdown',function(e){ if(e.target.closest&&e.target.closest('button,[data-sfxplay]')) return; bank.drag={x:e.clientX}; });
+      card.addEventListener('pointermove',function(e){ if(bank.drag){ bank.dx=e.clientX-bank.drag.x; card.style.transform='translateX('+bank.dx+'px) rotate('+(bank.dx*0.03)+'deg)'; card.style.transition='none'; } });
+      const end=function(){ if(!bank||!bank.drag)return; const d=bank.dx; bank.drag=null; bank.dx=0;
+        if(Math.abs(d)>70){ bank.i=(bank.i+1)%meta.items.length; renderBank(); }
+        else if(Math.abs(d)>4){ renderBank(); } // drag avorté → la carte se remet en place
+        else { card.style.transform='translateX(0px) rotate(0deg)'; } // simple CLIC → pas de re-rendu (la vidéo continue, les clics passent)
+      };
+      card.addEventListener('pointerup',end); card.addEventListener('pointercancel',end);
+      card.addEventListener('pointerleave',function(){ if(bank&&bank.drag){ const d=bank.dx; bank.drag=null; bank.dx=0; if(Math.abs(d)>4) renderBank(); else card.style.transform='translateX(0px) rotate(0deg)'; } });
+    }
+  }
+  // #2 · liste : lot suivant chargé quand la sentinelle « Voir plus » approche du bas (scroll)
+  // ou au clic, et vidéos qui ne JOUENT que visibles — hors écran = pause() (« 164 vidéos
+  // décodées mettraient Safari à genoux »). Test géométrique direct sur scroll : plus fiable
+  // qu'IntersectionObserver (callbacks non garantis selon l'état de l'onglet WebKit).
+  function bankListWire(ov, items, cellHtml){
+    const grid=ov.querySelector('#edBankGrid'); if(!grid) return;
+    const PAGE=30;
+    const loadMore=function(){
+      if(!bank) return;
+      const from=bank.shown; if(from>=items.length) return;
+      bank.shown=Math.min(items.length, from+PAGE);
+      const btn=grid.querySelector('#edBankMore'); if(!btn) return;
+      btn.insertAdjacentHTML('beforebegin', items.slice(from,bank.shown).map(cellHtml).join(''));
+      if(bank.shown>=items.length) btn.remove();
+      else btn.textContent='Voir plus · '+(items.length-bank.shown)+' restants';
+      bindBank(ov);
+      setTimeout(applyVis,0); // jouer/pauser ce qui vient d'apparaître (après layout)
+    };
+    const applyVis=function(){
+      if(!bank||!grid.isConnected) return;
+      const gr=grid.getBoundingClientRect();
+      grid.querySelectorAll('video[data-edprev]').forEach(function(v){
+        const r=v.getBoundingClientRect();
+        const vis=r.bottom>gr.top-80 && r.top<gr.bottom+80;
+        if(vis){ if(v.paused){ v.muted=true; v.playsInline=true; const p=v.play(); if(p&&p.catch)p.catch(function(){}); } }
+        else if(!v.paused) v.pause();
+      });
+      const btn=grid.querySelector('#edBankMore');
+      if(btn && btn.getBoundingClientRect().top < gr.bottom+140) loadMore();
+    };
+    const more=grid.querySelector('#edBankMore');
+    if(more) more.onclick=function(e){ e.stopPropagation(); loadMore(); };
+    // appel DIRECT sur scroll (léger : ≤ quelques dizaines de rects) — pas de rAF :
+    // il gèle en onglet masqué et les événements scroll sont déjà coalescés par frame
+    grid.addEventListener('scroll',applyVis,{passive:true});
+    applyVis();
   }
   function bindBank(ov){
     ov.querySelectorAll('[data-act]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); const a=b.dataset.act; const meta=metaFor(bank.kind);
@@ -30914,18 +31121,34 @@ function edBandDrag(ov,track,e,mode){
   }
 
   // ═══════════ MUSIQUE (modale) ═══════════
+  // #6 · préview d'un extrait : UNE seule écoute à la fois, stop du précédent, icône stop pendant la lecture
+  let musPrev=null;
+  function musicPrevStop(){ if(musPrev){ try{ musPrev.a.pause(); }catch(_){ } if(musPrev.btn&&musPrev.btn.isConnected) musPrev.btn.innerHTML=S(IC.play,13); musPrev=null; } }
   window.edOpenMusicModal=function(){ if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
-    const ov=document.createElement('div'); ov.id='edMusicModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.78);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px'; ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+    const ov=document.createElement('div'); ov.id='edMusicModal'; ov.style.cssText='position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.78);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px'; ov.onclick=function(e){ if(e.target===ov){ musicPrevStop(); ov.remove(); } };
     ov.innerHTML='<div style="width:min(430px,94vw);max-height:82vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)" onclick="event.stopPropagation()">'
       +'<div class="row gap10" style="align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)"><span style="color:'+MUSIC_GREEN+'">'+S(IC.music,15)+'</span><span style="font-weight:700;font-size:14.5px">Musique de fond</span><button data-close="1" style="margin-left:auto;color:var(--text-3);font-size:16px;line-height:1;background:none;border:none;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
       +'<div class="col" style="overflow-y:auto;padding:12px;gap:8px">'
-      + ED_MUSIC.map(function(m){return '<button data-url="'+m.url+'" data-name="'+m.name.replace(/"/g,'&quot;')+'" class="row gap12" style="align-items:center;padding:11px 12px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:'+MUSIC_GREEN+'22;border:1px solid '+MUSIC_GREEN+'55;color:'+MUSIC_GREEN+'">'+S(IC.play,13)+'</span><span class="col grow" style="gap:2px;min-width:0"><span style="font-size:13.5px;font-weight:600">'+m.name+'</span><span class="faint" style="font-size:11.5px">'+m.mood+'</span></span><span class="mono faint" style="font-size:11px;flex:0 0 auto">'+m.dur+'</span></button>';}).join('')
+      + ED_MUSIC.map(function(m){return '<button data-url="'+m.url+'" data-name="'+m.name.replace(/"/g,'&quot;')+'" class="row gap12" style="align-items:center;padding:11px 12px;border-radius:12px;text-align:left;border:1px solid var(--border);background:var(--panel-1);cursor:pointer"><span role="button" tabindex="0" data-prev="'+m.url+'" title="Écouter un extrait" style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:'+MUSIC_GREEN+'22;border:1px solid '+MUSIC_GREEN+'55;color:'+MUSIC_GREEN+';cursor:pointer">'+S(IC.play,13)+'</span><span class="col grow" style="gap:2px;min-width:0"><span style="font-size:13.5px;font-weight:600">'+m.name+'</span><span class="faint" style="font-size:11.5px">'+m.mood+'</span></span><span class="mono faint" style="font-size:11px;flex:0 0 auto">'+m.dur+'</span></button>';}).join('')
       +'<button data-import="1" class="row gap10" style="align-items:center;justify-content:center;padding:13px 12px;border-radius:12px;margin-top:2px;border:1px dashed var(--border-2);background:transparent;color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer">'+S(IC.plus,14)+' Importer ma musique <span class="faint mono" style="font-size:11px">MP3 · WAV</span></button>'
       +'</div></div>';
     document.body.appendChild(ov);
-    ov.querySelector('[data-close]').onclick=function(){ov.remove();};
-    ov.querySelectorAll('[data-url]').forEach(function(b){ b.onclick=function(){ if(typeof edAddMusicPreset==='function') edAddMusicPreset(b.dataset.url,b.dataset.name); ov.remove(); }; b.onmouseenter=function(){ b.style.borderColor=MUSIC_GREEN; b.style.background='var(--surface-2)'; }; b.onmouseleave=function(){ b.style.borderColor='var(--border)'; b.style.background='var(--panel-1)'; }; });
-    ov.querySelector('[data-import]').onclick=function(){ ov.remove(); const inp=document.getElementById('edMusicIn'); if(inp) inp.click(); };
+    ov.querySelector('[data-close]').onclick=function(){ musicPrevStop(); ov.remove(); };
+    ov.querySelectorAll('[data-prev]').forEach(function(b){
+      b.onclick=function(e){ e.stopPropagation();
+        if(musPrev&&musPrev.url===b.dataset.prev){ musicPrevStop(); return; }
+        musicPrevStop();
+        const a=new Audio(b.dataset.prev); a.volume=.9;
+        musPrev={a:a, btn:b, url:b.dataset.prev};
+        a.onended=musicPrevStop;
+        const p=a.play();
+        if(p&&p.catch) p.catch(function(){ musicPrevStop(); toast('Extrait indisponible'); });
+        b.innerHTML=S('<rect x="7" y="7" width="10" height="10" rx="1.5"/>',13);
+      };
+      b.onpointerdown=function(e){ e.stopPropagation(); };
+    });
+    ov.querySelectorAll('[data-url]').forEach(function(b){ b.onclick=function(){ musicPrevStop(); if(typeof edAddMusicPreset==='function') edAddMusicPreset(b.dataset.url,b.dataset.name); ov.remove(); }; b.onmouseenter=function(){ b.style.borderColor=MUSIC_GREEN; b.style.background='var(--surface-2)'; }; b.onmouseleave=function(){ b.style.borderColor='var(--border)'; b.style.background='var(--panel-1)'; }; });
+    ov.querySelector('[data-import]').onclick=function(){ musicPrevStop(); ov.remove(); const inp=document.getElementById('edMusicIn'); if(inp) inp.click(); };
   };
 
   // ═══════════ AIDE (raccourcis) ═══════════
@@ -30980,11 +31203,16 @@ function edBandDrag(ov,track,e,mode){
     const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
     const tg=(e.target.tagName||'').toLowerCase(); if(tg==='input'||tg==='textarea'||e.target.isContentEditable) return;
     const meta=e.metaKey||e.ctrlKey, k=e.key;
-    if(k==='Escape'){ if(document.getElementById('edBankModal')){ closeBank(); return; } const ids=['edMusicModal','edHelpModal','edFsOverlay','edClipMenu']; for(let i=0;i<ids.length;i++){ const el=document.getElementById(ids[i]); if(el){ if(ids[i]==='edFsOverlay') edToggleFullscreen(); else el.remove(); return; } } return; }
-    if(meta && k.toLowerCase()==='s'){ e.preventDefault(); if(typeof edSplitClip==='function') edSplitClip(); return; }
+    if(k==='Escape'){ if(document.getElementById('edBankModal')){ closeBank(); return; } const ids=['edMusicModal','edHelpModal','edFsOverlay','edClipMenu']; for(let i=0;i<ids.length;i++){ const el=document.getElementById(ids[i]); if(el){ if(ids[i]==='edFsOverlay') edToggleFullscreen(); else { if(ids[i]==='edMusicModal') musicPrevStop(); el.remove(); } return; } }
+      // #5 · aucun modal ouvert → Échap DÉSÉLECTIONNE (piste, calque ou zoom)
+      if(_ed&&_ed.selTrack&&typeof edSelectTrack==='function'){ edSelectTrack(null); return; }
+      if(_ed&&_ed.sel&&typeof edHideProps==='function'){ edHideProps(); return; }
+      if(_ed&&_ed.selZoom){ _ed.selZoom=null; if(typeof edRenderZoomTrack==='function') edRenderZoomTrack(); return; }
+      return; }
+    if(meta && k.toLowerCase()==='s'){ e.preventDefault(); if(typeof edSplitContext==='function') edSplitContext(); return; }
     if(meta && (k==='c'||k==='v'||k==='d')){ e.preventDefault(); edClipboard(k); return; }
     if(meta) return;
-    if(k==='s'||k==='S'){ e.preventDefault(); if(typeof edSplitClip==='function') edSplitClip(); }
+    if(k==='s'||k==='S'){ e.preventDefault(); if(typeof edSplitContext==='function') edSplitContext(); }
     else if(k==='t'||k==='T'){ e.preventDefault(); if(typeof edAddText==='function') edAddText(); }
     else if(k==='i'||k==='I'){ e.preventDefault(); const inp=document.getElementById('edImgIn'); if(inp) inp.click(); }
     else if(k==='f'||k==='F'){ e.preventDefault(); edToggleFullscreen(); }
