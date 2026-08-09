@@ -1185,10 +1185,10 @@ export function buildDynamicComposition(plan, opts = {}) {
           const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
           js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:1.4},{autoAlpha:1,scale:1,duration:0.14,ease:'back.out(2.4)',transformOrigin:'50% 80%'},${r2(w.start)});`
           js += `\n  tl.set(${sel},{attr:{class:'${base(k)} on'}},${r2(w.start)});`
-          // DÈS que le mot est dit (sa propre fin), il retombe sur sa couleur — les
-          // mots FORTS (.acc) s'allument alors en rouge flou, SANS attendre le mot
-          // suivant (Axel : « le flou dès que le mot est passé, pas de délai »).
-          const finMot = r2(Math.max(w.start + 0.1, w.end != null ? w.end : (g.mots[k + 1] ? g.mots[k + 1].start : g.b)))
+          // Le mot fort s'allume en rouge flou 0,16 s après son apparition (à peine
+          // un flash blanc, PAS de délai qui attend la fin du mot / le mot suivant —
+          // Axel : « pas le petit temps avant que la bordure rouge apparaisse »).
+          const finMot = r2(w.start + 0.16)
           js += `\n  tl.set(${sel},{attr:{class:'${base(k)}'}},${finMot});`
         })
         continue
@@ -1420,7 +1420,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .hk15 .dc-w.acc { color:#FFF2F4;
-    text-shadow:0 0 ${Math.round(H * 0.009)}px rgba(255,95,120,1), 0 0 ${Math.round(H * 0.022)}px rgba(255,28,64,.92), 0 0 ${Math.round(H * 0.042)}px rgba(225,0,46,.72), 0 0 ${Math.round(H * 0.066)}px rgba(205,0,42,.48); }
+    text-shadow:0 0 ${Math.round(H * 0.008)}px rgba(255,115,140,1), 0 0 ${Math.round(H * 0.02)}px rgba(255,35,74,1), 0 0 ${Math.round(H * 0.04)}px rgba(240,0,52,.88), 0 0 ${Math.round(H * 0.072)}px rgba(210,0,46,.62); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
