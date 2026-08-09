@@ -1188,7 +1188,7 @@ export function buildDynamicComposition(plan, opts = {}) {
           // Le mot fort s'allume en rouge flou 0,16 s après son apparition (à peine
           // un flash blanc, PAS de délai qui attend la fin du mot / le mot suivant —
           // Axel : « pas le petit temps avant que la bordure rouge apparaisse »).
-          const finMot = r2(w.start + 0.16)
+          const finMot = r2(w.start + 0.06)
           js += `\n  tl.set(${sel},{attr:{class:'${base(k)}'}},${finMot});`
         })
         continue
@@ -1420,7 +1420,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .hk15 .dc-w.acc { color:#FFF2F4;
-    text-shadow:0 0 ${Math.round(H * 0.008)}px rgba(255,115,140,1), 0 0 ${Math.round(H * 0.02)}px rgba(255,35,74,1), 0 0 ${Math.round(H * 0.04)}px rgba(240,0,52,.88), 0 0 ${Math.round(H * 0.072)}px rgba(210,0,46,.62); }
+    text-shadow:0 0 ${Math.round(H * 0.01)}px rgba(255,120,145,1), 0 0 ${Math.round(H * 0.026)}px rgba(255,38,78,1), 0 0 ${Math.round(H * 0.052)}px rgba(240,0,54,.86), 0 0 ${Math.round(H * 0.09)}px rgba(210,0,48,.6), 0 0 ${Math.round(H * 0.13)}px rgba(190,0,44,.4); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
