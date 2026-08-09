@@ -1416,18 +1416,18 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — BLANC + NÉON ROUGE (Axel : « reproduis le dégradé de couleur de ma réf »
-     = tube néon : cœur clair rose-blanc en haut → rouge vif en bas, gros halo
-     rouge). Anton (zéro contour), base blanche, dégradé dans les lettres via
-     background-clip + lueur en drop-shadow (le text-shadow ne marche pas sur du
-     texte transparent), mot prononcé flash blanc. */
+  /* hk15 — BLANC + NÉON ROSE-ROUGE (réf « COMMENT TE LANCER », sur fond sombre).
+     Sur un t-shirt BLANC un néon clair se lave → on pose un léger SPOT sombre
+     DERRIÈRE la zone du texte (pas de contour, pas de noir sur les lettres) pour
+     que le néon ressorte comme sur la réf. Base blanche, accent rose-clair néon. */
+  .dc-hook.hk15 { background:radial-gradient(ellipse 84% 132% at 50% 47%, rgba(6,2,4,.62) 0%, rgba(6,2,4,.34) 44%, transparent 74%); }
   .hk15 .dc-w { color:#FFFFFF;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFFFFF 6%,#FFDCE0 52%,#FFB6BE 100%);
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.6); }
+  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFF0F2 8%,#FFB6C0 92%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.0022)}px rgba(30,0,6,.98)) drop-shadow(0 0 ${Math.round(H * 0.005)}px rgba(255,72,94,1)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,24,58,1)) drop-shadow(0 0 ${Math.round(H * 0.024)}px rgba(240,0,46,.92)) drop-shadow(0 0 ${Math.round(H * 0.044)}px rgba(210,0,40,.64)); }
+    filter:drop-shadow(0 0 ${Math.round(H * 0.005)}px rgba(255,150,168,.98)) drop-shadow(0 0 ${Math.round(H * 0.013)}px rgba(255,54,84,.95)) drop-shadow(0 0 ${Math.round(H * 0.028)}px rgba(235,10,52,.72)) drop-shadow(0 0 ${Math.round(H * 0.05)}px rgba(210,0,44,.5)); }
   .hk15 .dc-w.on { color:#FFFFFF;
-    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.55); }
   .dc-w { display:inline-block; }
 </style>
 </head>
