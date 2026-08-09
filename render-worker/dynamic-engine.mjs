@@ -1088,12 +1088,20 @@ export function buildDynamicComposition(plan, opts = {}) {
     const mots = plan.captions.filter((c) => String(c.text || '').trim())
       .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(Math.max(c.start + 0.12, c.end)) }))
       .sort((a, b) => a.start - b.start)
-    // groupes de 3 mots, coupés sur la ponctuation : on lit une respiration
+    // groupes de 3 mots, coupés sur la ponctuation : on lit une respiration.
+    // SUR LE HOOK (Axel 09/08, choix du style 5) : des PHRASES — « c'est
+    // littéralement une dinguerie » affichée en entier, puis « avatarads
+    // connecté à claude » sur sa propre frame. Jusqu'à 4 mots, et seule une
+    // vraie fin de phrase (.!? ou une pause) coupe — pas la virgule.
+    const hookPre = r2(plan.hook?.end ?? Math.min(4, D))
     const grp = []
     for (const w of mots) {
       const g = grp[grp.length - 1]
-      const coupe = !g || g.mots.length >= 3 || /[.!?,]$/.test(g.mots[g.mots.length - 1].text)
-        || w.start - g.mots[g.mots.length - 1].end > 0.45
+      const dansHook = w.start < hookPre
+      const dernier = g && g.mots[g.mots.length - 1]
+      const coupe = !g || g.mots.length >= (dansHook ? 4 : 3)
+        || (dernier && (dansHook ? /[.!?]$/ : /[.!?,]$/).test(dernier.text))
+        || (dernier && w.start - dernier.end > 0.45)
       if (coupe) grp.push({ mots: [w] })
       else g.mots.push(w)
     }
@@ -1141,9 +1149,13 @@ export function buildDynamicComposition(plan, opts = {}) {
     // un halo — posé au tiers bas, sur le visage plein cadre.
     const hookFin = r2(plan.hook?.end ?? Math.min(4, D))
     const hautHook = Math.round(H * 0.60)
-    // 5 styles de sous-titres hook (Axel 09/08 : « fais 5 hooks avec différents
-    // styles et je te dis lequel on garde ») — `plan.hookStyle` 1..5, défaut 1.
-    const hs = Math.min(5, Math.max(1, Number(plan.hookStyle) || 1))
+    // 5 styles de sous-titres hook — `plan.hookStyle` 1..5. Axel a choisi le 5
+    // (or intégral, mot prononcé qui flashe en blanc) : c'est le défaut.
+    const hs = Math.min(5, Math.max(1, Number(plan.hookStyle) || 5))
+    // les mots que l'orchestrateur a marqués comme FORTS prennent la couleur
+    // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
+    const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
+    const ACCFORTS = new Set((plan.accents || []).map(normAcc))
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
@@ -1156,7 +1168,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
       g.sombre = !ap || !pan || pan.kind === 'avclip'
       const dedans = g.mots.map((w, k) =>
-        `<span class="dc-w" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
+        `<span class="dc-w${g.hook && ACCFORTS.has(normAcc(w.text)) ? ' acc' : ''}" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
         style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
@@ -1168,11 +1180,19 @@ export function buildDynamicComposition(plan, opts = {}) {
         // s'empile (accumulation). Le mot en cours porte la classe `on`, les
         // mots passés la perdent — les couleurs/dégradés vivent dans le CSS des
         // styles hk1..hk5 (un dégradé ne se tweene pas, une classe se pose).
+        const base = (k) => `dc-w${ACCFORTS.has(normAcc(g.mots[k].text)) ? ' acc' : ''}`
         g.mots.forEach((w, k) => {
           const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
           js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:1.4},{autoAlpha:1,scale:1,duration:0.14,ease:'back.out(2.4)',transformOrigin:'50% 80%'},${r2(w.start)});`
-          js += `\n  tl.set(${sel},{attr:{class:'dc-w on'}},${r2(w.start)});`
-          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',{attr:{class:'dc-w'}},${r2(w.start)});`
+          js += `\n  tl.set(${sel},{attr:{class:'${base(k)} on'}},${r2(w.start)});`
+          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',{attr:{class:'${base(k - 1)}'}},${r2(w.start)});`
+          // le DERNIER mot ne reste pas bloqué en flash : il retombe sur sa
+          // couleur (or, ou ROUGE s'il est un mot fort — dinguerie, Claude…
+          // sont presque toujours en fin de phrase, sans ça le rouge
+          // n'apparaissait jamais)
+          if (k === g.mots.length - 1 && g.b - w.start > 0.7) {
+            js += `\n  tl.set(${sel},{attr:{class:'${base(k)}'}},${r2(Math.min(g.b - 0.05, w.start + 0.5))});`
+          }
         })
         continue
       }
@@ -1310,12 +1330,20 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk4 .dc-w.on { background:linear-gradient(180deg,#FFB199 4%,#F5372A 46%,#A31209 95%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,200,120,.9)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)); }
-  /* hk5 — or intégral, le mot prononcé FLASHE en blanc */
+  /* hk5 — LE CHOISI (Axel 09/08) : or intégral par phrases entières, les mots
+     FORTS du plan (accents) en rouge dégradé — « la police j'aime beaucoup,
+     essaye de mettre de la couleur » — et le mot prononcé FLASHE en blanc. */
   .hk5 .dc-w { background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
   .hk5 .dc-w.on { background:none; color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(255,220,140,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.7); filter:none; }
+  /* .acc défini APRÈS .on : un mot FORT est rouge DÈS son apparition, comme le
+     « NEVER POST » de la réf — pas de flash blanc qui le retarde (les phrases
+     vivent trop peu pour qu'une retombée se voie). */
+  .hk5 .dc-w.acc { background:linear-gradient(180deg,#FF6A57 6%,#EF2A1D 48%,#9E120B 94%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,90,25,.45)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.55)); }
   .dc-w { display:inline-block; }
 </style>
 </head>
