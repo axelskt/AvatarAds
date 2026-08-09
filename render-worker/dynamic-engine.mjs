@@ -1424,8 +1424,8 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.42); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { background:linear-gradient(180deg,#FFF0F3 12%,#FFCDD6 95%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
+  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { background:linear-gradient(180deg,#FFFFFF 10%,#FFDDE3 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
     filter:drop-shadow(0 0 ${Math.round(H * 0.006)}px rgba(255,90,115,1)) drop-shadow(0 0 ${Math.round(H * 0.016)}px rgba(255,26,60,.95)) drop-shadow(0 0 ${Math.round(H * 0.032)}px rgba(225,0,44,.72)); }
   .dc-w { display:inline-block; }
 </style>
