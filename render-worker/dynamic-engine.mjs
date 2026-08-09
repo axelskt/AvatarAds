@@ -1416,17 +1416,16 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — lettres CLAIRES + halo rouge DOUX (flou), SANS fond (Axel : « le flou
-     c'est stylé, mais pas la zone grise »). Halo en drop-shadow large (flou) = néon
-     ; ombre portée sur la base blanche pour tenir sur le t-shirt blanc.
-     .acc/.acc.on identiques → constant. */
+  /* hk15 — le mot fort passe en NÉON ROUGE FLOU UNE FOIS DIT (Axel : « le flou une
+     fois que le mot est dit et qu'il passe au suivant »). Ordre base→acc→on : le mot
+     EN COURS porte .on (dernier) → BLANC ; une fois dit il retombe sur .acc → clair
+     + halo rouge flou. Pas de fond, pas de noir. */
   .hk15 .dc-w { color:#FFFFFF;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.42); }
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
+  .hk15 .dc-w.acc { color:#FFF2F4;
+    text-shadow:0 0 ${Math.round(H * 0.009)}px rgba(255,95,120,1), 0 0 ${Math.round(H * 0.022)}px rgba(255,28,64,.92), 0 0 ${Math.round(H * 0.042)}px rgba(225,0,46,.72), 0 0 ${Math.round(H * 0.066)}px rgba(205,0,42,.48); }
   .hk15 .dc-w.on { color:#FFFFFF;
-    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { background:linear-gradient(180deg,#FFFFFF 10%,#FFDDE3 96%);
-    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.006)}px rgba(255,90,115,1)) drop-shadow(0 0 ${Math.round(H * 0.016)}px rgba(255,26,60,.95)) drop-shadow(0 0 ${Math.round(H * 0.032)}px rgba(225,0,44,.72)); }
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
 </style>
 </head>
