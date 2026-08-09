@@ -3532,6 +3532,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.45">Décris ta vidéo, on la crée.</p>
         </div>
 
+        <!-- ⓪ MOTEUR — Veo 3.1 / Motion Control (dans le rail, au-dessus de Style) -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:13px 14px">
+              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt</div></div>
+            <div id="expEngMotionRail" onclick="_expSetEngine('motion')" class="exp-card" style="padding:13px 14px">
+              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Motion Control</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">transfère un mouvement</div></div>
+          </div>
+        </div>
+
         <!-- ① STYLE -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Style</div>
@@ -23712,6 +23725,7 @@ function initExpress(){
   _expSyncSubToggle();
   _expUpdateGenCaption();
   _expHeroSync();
+  if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine||'veo');
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
@@ -23756,8 +23770,9 @@ function _expPickQual(v){
 window._expEngine = window._expEngine || 'veo';
 function _expSetEngine(e){
   window._expEngine = e;
-  const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp');
+  const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp'), bar=document.getElementById('expMoteurBar');
   const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion');
+  const rVeo=document.getElementById('expEngVeoRail'), rMot=document.getElementById('expEngMotionRail');
   const on=(b)=>{ if(b){ b.style.border='2px solid var(--accent)'; b.style.background='var(--accent-soft)'; } };
   const off=(b)=>{ if(b){ b.style.border='1px solid var(--border)'; b.style.background='var(--surface)'; } };
   if(e==='motion'){
@@ -23765,13 +23780,17 @@ function _expSetEngine(e){
     if(veo)  veo.style.display='none';
     if(mot)  mot.style.display='block';
     if(mexp) mexp.style.display='none';   // masque le composer mobile Veo (#mExp)
+    if(bar)  bar.style.display='';         // barre moteur centrée visible en Motion (rail masqué)
     on(bMot); off(bVeo);
+    if(rMot) rMot.classList.add('on'); if(rVeo) rVeo.classList.remove('on');
   } else {
     if(rail) rail.style.display='flex';
     if(veo)  veo.style.display='flex';
     if(mot)  mot.style.display='none';
     if(mexp) mexp.style.display='';        // desktop : CSS masque · mobile : réaffiché
+    if(bar)  bar.style.display='none';     // en Veo, le sélecteur MOTEUR est dans le rail
     on(bVeo); off(bMot);
+    if(rVeo) rVeo.classList.add('on'); if(rMot) rMot.classList.remove('on');
   }
 }
 
@@ -23825,10 +23844,12 @@ function _mcRenderAdv(){
       <button onclick="_mcCloseAdv()" class="row" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;background:none;color:var(--text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Arrière-plan · optionnel</span>
-    <div onclick="document.getElementById('mcBgInput').click()" class="ph" style="display:flex;flex-direction:row;align-items:center;gap:10px;padding:16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;justify-content:center;margin-bottom:18px;position:relative;overflow:hidden">
+    <div onclick="document.getElementById('mcBgInput').click()" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;margin-bottom:18px;position:relative;overflow:hidden;min-height:100px">
       <input type="file" id="mcBgInput" accept="image/*" style="display:none" onchange="_mcPick(this,'bg')">
       ${window._mcBgB64?`<img src="${window._mcBgB64}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:''}
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span style="font-weight:600;color:var(--text);font-size:13.5px;position:relative">${window._mcBgB64?'Fond ajouté':'Glisse un fond'}</span><span class="faint" style="font-size:11.5px;position:relative">remplace le décor</span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span style="font-weight:700;color:var(--text);font-size:13.5px;position:relative">${window._mcBgB64?'Fond ajouté':'Glisse un fond'}</span>
+      <span class="faint" style="font-size:11.5px;position:relative">remplace le décor</span>
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Instructions · optionnel</span>
     <textarea id="mcPromptTa" oninput="window._mcPrompt=this.value" class="field" style="min-height:96px;resize:vertical;margin-bottom:18px" placeholder="Ex : garde le regard caméra, ambiance studio, démarche assurée…"></textarea>
@@ -31502,7 +31523,9 @@ function edBandDrag(ov,track,e,mode){
   #expVeoBody>div[style*="border-top"]{display:none !important}
   /* MOTEUR : le sélecteur reste, mais discret ; en Motion Control les 2 zones
      s'empilent (le design côte-à-côte est desktop) */
-  #expMoteurBar{padding:12px 16px 0 !important}
+  /* mobile : le rail (donc le MOTEUR du rail) est masqué → la barre centrée
+     reste le sélecteur, visible dans les deux moteurs */
+  #expMoteurBar{padding:12px 16px 0 !important;display:block !important}
   #expMotionWrap{padding:14px 16px 30px !important}
   #expMotionWrap>div.row{flex-direction:column !important;align-items:stretch !important}
   #expMotionWrap>div.row>div[style*="width:40px"]{transform:rotate(90deg);margin:2px auto !important}
