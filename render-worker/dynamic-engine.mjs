@@ -1423,9 +1423,9 @@ export function buildDynamicComposition(plan, opts = {}) {
      texte transparent), mot prononcé flash blanc. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFDDE1 6%,#FF6274 44%,#EA1330 100%);
+  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFFFFF 6%,#FFDCE0 52%,#FFB6BE 100%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.0025)}px rgba(45,0,10,.98)) drop-shadow(0 0 ${Math.round(H * 0.006)}px rgba(120,0,20,.9)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,55,85,1)) drop-shadow(0 0 ${Math.round(H * 0.022)}px rgba(255,18,52,.92)) drop-shadow(0 0 ${Math.round(H * 0.04)}px rgba(210,0,40,.6)); }
+    filter:drop-shadow(0 0 ${Math.round(H * 0.0022)}px rgba(30,0,6,.98)) drop-shadow(0 0 ${Math.round(H * 0.005)}px rgba(255,72,94,1)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,24,58,1)) drop-shadow(0 0 ${Math.round(H * 0.024)}px rgba(240,0,46,.92)) drop-shadow(0 0 ${Math.round(H * 0.044)}px rgba(210,0,40,.64)); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
   .dc-w { display:inline-block; }
