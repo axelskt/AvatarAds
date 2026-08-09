@@ -23932,9 +23932,22 @@ async function _mcGenerate(){
     const sv=await sb.storage.from('render-media').createSignedUrl(vPath, 3600);
     const si=await sb.storage.from('render-media').createSignedUrl(iPath, 3600);
     if(sv.error||si.error||!sv.data?.signedUrl||!si.data?.signedUrl) throw new Error('lien signé indisponible');
+    // Fond optionnel : on détoure le perso (fal birefnet) et on l'incruste sur le
+    // fond AVANT Kling. Repli sur le décor d'origine si le détourage échoue.
+    let charUrl = si.data.signedUrl;
+    if(window._mcBgB64){
+      try{
+        _mcProg('Détourage + fond…', 12);
+        const comp = await _mcApplyBg(si.data.signedUrl, window._mcBgB64, H);
+        const cPath = base+'-comp.jpg';
+        const uc = await sb.storage.from('render-media').upload(cPath, comp, { contentType:'image/jpeg', upsert:true });
+        const sc = uc.error ? null : await sb.storage.from('render-media').createSignedUrl(cPath, 3600);
+        if(sc?.data?.signedUrl) charUrl = sc.data.signedUrl; else throw new Error(uc.error?.message||'lien signé');
+      }catch(e){ console.error('fond:',e); toast("Fond non appliqué — perso sur son décor d'origine"); }
+    }
     _mcProg('Transfert du mouvement (Kling 2.6)…', 18);
     const model='/fal-ai/kling-video/v2.6/'+(tier==='pro'?'pro':'standard')+'/motion-control';
-    const sub=await fPost(model, { image_url:si.data.signedUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(window._mcPrompt||'The character reproduces the exact motion and gestures of the reference video, natural, same framing') });
+    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(window._mcPrompt||'The character reproduces the exact motion and gestures of the reference video, natural, same framing') });
     if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
     const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
     const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
@@ -23972,6 +23985,36 @@ async function _mcGenerate(){
     _mcProg('Terminé', 100);
     _mcShowResult(finalUrl, finalMode);
   }catch(e){ _mcProgHide(); toast('Motion Control : '+(e && e.message ? e.message : e)); }
+}
+/* ── Fond : détoure le perso (fal birefnet Portrait) + l'incruste sur le fond ── */
+async function _mcApplyBg(charUrl, bgB64, H){
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const post=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const get =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const sub=await post('/fal-ai/birefnet/v2',{ image_url:charUrl, model:'Portrait', refine_foreground:true });
+  if(!sub.ok) throw new Error('birefnet '+sub.status);
+  const sd=await sub.json().catch(()=>({}));
+  let cut = sd?.image?.url || sd?.images?.[0]?.url || '';
+  if(!cut){
+    const stP=(sd.status_url||'').replace('https://queue.fal.run',''), reP=(sd.response_url||'').replace('https://queue.fal.run','');
+    for(let i=0;i<30 && !cut;i++){
+      await new Promise(r=>setTimeout(r,2000));
+      const pr=await get(stP); const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+      if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({})); cut=rd?.image?.url||rd?.images?.[0]?.url||''; }
+      else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS') throw new Error('birefnet '+s);
+    }
+  }
+  if(!cut) throw new Error('détourage indisponible');
+  const loadImg=(src)=>new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('image')); im.src=src; });
+  const [cutImg,bgImg]=await Promise.all([loadImg(cut), loadImg(bgB64)]);
+  const W=cutImg.naturalWidth||1024, Hh=cutImg.naturalHeight||1536;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=Hh; const ctx=cv.getContext('2d');
+  // fond en COVER (remplit le cadre du perso), puis le perso détouré par-dessus, à sa place
+  const ir=bgImg.naturalWidth/bgImg.naturalHeight, cr=W/Hh; let dw,dh,dx,dy;
+  if(ir>cr){ dh=Hh; dw=Hh*ir; dx=(W-dw)/2; dy=0; } else { dw=W; dh=W/ir; dx=0; dy=(Hh-dh)/2; }
+  ctx.drawImage(bgImg,dx,dy,dw,dh);
+  ctx.drawImage(cutImg,0,0,W,Hh);
+  return await new Promise(r=>cv.toBlob(r,'image/jpeg',0.92));
 }
 /* ── Upscale 1080p via Topaz (fal) — pour le 1080p depuis le forfait Standard ── */
 async function _mcUpscaleTopaz(videoUrl, H){
