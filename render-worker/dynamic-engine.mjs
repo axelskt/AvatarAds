@@ -1149,9 +1149,9 @@ export function buildDynamicComposition(plan, opts = {}) {
     // un halo — posé au tiers bas, sur le visage plein cadre.
     const hookFin = r2(plan.hook?.end ?? Math.min(4, D))
     const hautHook = Math.round(H * 0.60)
-    // 5 styles de sous-titres hook — `plan.hookStyle` 1..5. Axel a choisi le 5
-    // (or intégral, mot prononcé qui flashe en blanc) : c'est le défaut.
-    const hs = Math.min(5, Math.max(1, Number(plan.hookStyle) || 5))
+    // 5 palettes de sous-titres hook — `plan.hookStyle` 1..5. hk1 (or + rouge,
+    // la réf validée) est le défaut ; hk2..hk5 sont les variantes couleur.
+    const hs = Math.min(13, Math.max(1, Number(plan.hookStyle) || 1))
     // les mots que l'orchestrateur a marqués comme FORTS prennent la couleur
     // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
     const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
@@ -1306,44 +1306,107 @@ export function buildDynamicComposition(plan, opts = {}) {
     letter-spacing:.012em; line-height:0.97; max-width:${Math.round(W * 0.84)}px; }
   /* chaque mot du hook naît invisible : GSAP le fait claquer à SON instant */
   .dc-hook .dc-w { opacity:0; padding:0 ${Math.round(W * 0.003)}px; }
-  /* hk1 — LA RÉF : mots passés en or dégradé, mot prononcé en rouge dégradé */
-  .hk1 .dc-w { background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
-  .hk1 .dc-w.on { background:linear-gradient(180deg,#FF6A57 6%,#EF2A1D 48%,#9E120B 94%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,90,25,.5)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.55)); }
-  /* hk2 — blanc massif, le mot prononcé prend FEU (jaune→orange→rouge) */
-  .hk2 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.75); }
-  .hk2 .dc-w.on { background:linear-gradient(180deg,#FFD34D 8%,#FF7A1A 55%,#E8281B 96%);
+  /* 5 PALETTES (Axel 09/08 : « fais 5 hooks avec différentes couleurs, je te dis
+     lequel je préfère »). MÊME mise en page validée — phrases entières, mot
+     prononcé qui FLASHE en blanc, mots FORTS (.acc, placés APRÈS .on pour qu'ils
+     restent colorés dès l'apparition). Seule la couleur change d'un style à
+     l'autre. Une ombre portée garde le texte lisible sur fond clair. */
+  ${(() => {
+    const s = Math.round(H * 0.0035), m = Math.round(H * 0.007), g = Math.round(H * 0.009)
+    const ombre = `drop-shadow(0 ${s}px ${m}px rgba(0,0,0,.6))`
+    const clip = '-webkit-background-clip:text; background-clip:text; color:transparent;'
+    // {n, base, acc, glow} — base = dégradé des mots posés, acc = mot fort, glow = teinte du flash blanc
+    // Axel a gardé la couleur OR + ROUGE (hk1) mais veut voir 5 TRAITEMENTS de
+    // dégradé différents dessus. Même identité colorée partout, seule la façon
+    // dont le dégradé se pose change (classique, métal brossé, bi-ton franc,
+    // glossy à reflet blanc, profond premium). glow chaud commun.
+    const P = [
+      { n: 1, nom: 'CLASSIQUE', base: '#FFEFAE 6%,#F6CE67 46%,#E5A233 94%', acc: '#FF6A57 6%,#EF2A1D 48%,#9E120B 94%', glow: '255,220,140' },
+      { n: 2, nom: 'MÉTAL',     base: '#FFF6D8 0%,#F3CE73 34%,#FFFFFF 50%,#E7AC3B 64%,#B2720F 100%', acc: '#FF9A7A 0%,#F0463A 40%,#FFE0D6 51%,#C6180F 64%,#750B05 100%', glow: '255,220,140' },
+      { n: 3, nom: 'BI-TON',    base: '#FFDC6E 0%,#FFDC6E 49%,#E4881C 51%,#E4881C 100%', acc: '#FF5A45 0%,#FF5A45 49%,#AE1008 51%,#AE1008 100%', glow: '255,220,140' },
+      { n: 4, nom: 'GLOSSY',    base: '#FFFFFF 0%,#FFE79A 28%,#F1BF49 60%,#CE8A20 100%', acc: '#FFE7E0 0%,#FF6A54 30%,#E42417 62%,#8A0B06 100%', glow: '255,225,150' },
+      { n: 5, nom: 'PROFOND',   base: '#F7DA86 0%,#E4A93A 46%,#A96E17 100%', acc: '#F1503C 0%,#BE160E 50%,#640904 100%', glow: '255,215,130' },
+    ]
+    return P.map((p) => `/* hk${p.n} — ${p.nom} */
+  .hk${p.n} .dc-w { background:linear-gradient(180deg,${p.base}); ${clip} filter:${ombre}; }
+  .hk${p.n} .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(${p.glow},.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.7); filter:none; }
+  .hk${p.n} .dc-w.acc { background:linear-gradient(180deg,${p.acc}); ${clip} text-shadow:none;
+    filter:drop-shadow(0 0 ${g}px rgba(${p.glow},.55)) drop-shadow(0 ${s}px ${m}px rgba(0,0,0,.55)); }`).join('\n  ')
+  })()}
+  /* hk6 — NÉON ARRONDI (réf Axel : « COMMENT TE LANCER AUJOURD'HUI ») : police
+     bulle Baloo 2, remplissage rose clair, halo NÉON rouge, trait rouge dessous.
+     Pas de dégradé — un vrai panneau lumineux. Monochrome comme la réf : le mot
+     prononcé passe en blanc pur (le néon s'intensifie), sans accent séparé. */
+  .dc-hook.hk6 { font-family:'Baloo 2','Anton',sans-serif; letter-spacing:.004em;
+    border-bottom:${Math.max(2, Math.round(H * 0.0045))}px solid rgba(255,60,60,.9);
+    padding-bottom:${Math.round(H * 0.008)}px; }
+  .hk6 .dc-w, .hk6 .dc-w.acc { color:#FFCED2;
+    -webkit-text-stroke:${Math.max(1, Math.round(H * 0.0012))}px rgba(150,12,12,.6);
+    text-shadow:0 0 ${Math.round(H * 0.004)}px #FF5555, 0 0 ${Math.round(H * 0.012)}px #FF2323,
+      0 0 ${Math.round(H * 0.023)}px #E31616, 0 0 ${Math.round(H * 0.04)}px #B00000; }
+  .hk6 .dc-w.on { color:#FFFFFF; -webkit-text-stroke:0;
+    text-shadow:0 0 ${Math.round(H * 0.005)}px #FFFFFF, 0 0 ${Math.round(H * 0.014)}px #FF6A6A,
+      0 0 ${Math.round(H * 0.027)}px #FF2323, 0 0 ${Math.round(H * 0.046)}px #C40000; }
+  /* hk7 — MONTSERRAT noir, blanc à gros contour noir, mot fort + prononcé JAUNE
+     (le classique viral CapCut : lisible sur n'importe quel fond) */
+  .dc-hook.hk7 { font-family:'Montserrat','Anton',sans-serif; font-weight:900; letter-spacing:-.012em; }
+  .hk7 .dc-w { color:#FFFFFF; -webkit-text-stroke:${Math.max(4, Math.round(H * 0.0058))}px #0E0E0E;
+    paint-order:stroke fill; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.01)}px rgba(0,0,0,.55); }
+  .hk7 .dc-w.acc { color:#FFD400; }
+  .hk7 .dc-w.on { color:#FFD400; text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,205,0,.7); }
+  /* hk8 — BEBAS NEUE grand condensé, blanc, mot fort en CYAN→bleu */
+  .dc-hook.hk8 { font-family:'Bebas Neue',sans-serif; font-weight:400; letter-spacing:.03em;
+    font-size:${Math.round(H * 0.07)}px; }
+  .hk8 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.75); }
+  .hk8 .dc-w.acc { background:linear-gradient(180deg,#8FF0FF 6%,#39B7FF 50%,#1470E6 96%);
     -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.009)}px rgba(255,140,30,.65)) drop-shadow(0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.6)); }
-  /* hk3 — surligneur : blanc, le mot prononcé sur pilule jaune, texte noir */
-  .hk3 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.8);
-    padding:0 ${Math.round(W * 0.007)}px; border-radius:${Math.round(H * 0.008)}px; }
-  .hk3 .dc-w.on { background:#FFD400; color:#151515; text-shadow:none;
-    box-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.45); }
-  /* hk4 — rouge intégral, le mot prononcé s'embrase d'un halo clair */
-  .hk4 .dc-w { background:linear-gradient(180deg,#FF7563 5%,#E4241A 50%,#8E0F08 95%);
+    filter:drop-shadow(0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.5)); }
+  .hk8 .dc-w.on { color:#FFFFFF; text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(120,220,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); }
+  /* hk9 — POPPINS gras, blanc, mot fort en MAGENTA→violet */
+  .dc-hook.hk9 { font-family:'Poppins','Anton',sans-serif; font-weight:800; letter-spacing:-.015em; }
+  .hk9 .dc-w { color:#FFFFFF; text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
+  .hk9 .dc-w.acc { background:linear-gradient(180deg,#FFA8F0 6%,#E84DD6 48%,#8A2BE2 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
+    filter:drop-shadow(0 ${Math.round(H * 0.003)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.5)); }
+  .hk9 .dc-w.on { color:#FFFFFF; text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(240,150,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); }
+  /* hk10 — MONTSERRAT noir, dégradé VERT→teal, mot fort en BLANC */
+  .dc-hook.hk10 { font-family:'Montserrat','Anton',sans-serif; font-weight:900; letter-spacing:-.012em; }
+  .hk10 .dc-w { background:linear-gradient(180deg,#B9FFD9 6%,#37E39B 50%,#0DA271 96%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)); }
-  .hk4 .dc-w.on { background:linear-gradient(180deg,#FFB199 4%,#F5372A 46%,#A31209 95%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,200,120,.9)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)); }
-  /* hk5 — LE CHOISI (Axel 09/08) : or intégral par phrases entières, les mots
-     FORTS du plan (accents) en rouge dégradé — « la police j'aime beaucoup,
-     essaye de mettre de la couleur » — et le mot prononcé FLASHE en blanc. */
-  .hk5 .dc-w { background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);
+  .hk10 .dc-w.acc, .hk10 .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(180,255,220,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.7); filter:none; }
+  /* hk11-13 — POPPINS EN COULEUR (Axel aime la police Poppins mais la veut
+     colorée). Dégradé de base coloré + mot fort contrasté + flash blanc. */
+  .dc-hook.hk11, .dc-hook.hk12, .dc-hook.hk13 { font-family:'Poppins','Anton',sans-serif; font-weight:800; letter-spacing:-.015em; }
+  /* hk11 — violet→rose, accent JAUNE */
+  .hk11 .dc-w { background:linear-gradient(180deg,#DBAcFF 6%,#B15CFF 48%,#E13CC0 96%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
-  .hk5 .dc-w.on { background:none; color:#FFFFFF;
-    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(255,220,140,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.7); filter:none; }
-  /* .acc défini APRÈS .on : un mot FORT est rouge DÈS son apparition, comme le
-     « NEVER POST » de la réf — pas de flash blanc qui le retarde (les phrases
-     vivent trop peu pour qu'une retombée se voie). */
-  .hk5 .dc-w.acc { background:linear-gradient(180deg,#FF6A57 6%,#EF2A1D 48%,#9E120B 94%);
-    -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,90,25,.45)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.55)); }
+  .hk11 .dc-w.acc { background:linear-gradient(180deg,#FFF0A8 6%,#FFD23A 50%,#F5A800 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,210,60,.55)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.5)); }
+  .hk11 .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(235,185,255,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); filter:none; }
+  /* hk12 — bleu→cyan, accent ORANGE */
+  .hk12 .dc-w { background:linear-gradient(180deg,#A8E9FF 6%,#3FA9FF 48%,#2C63F0 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
+  .hk12 .dc-w.acc { background:linear-gradient(180deg,#FFD8A8 6%,#FF9A3A 50%,#F5600F 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(255,150,60,.55)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.5)); }
+  .hk12 .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(150,220,255,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); filter:none; }
+  /* hk13 — rose→orange (sunset), accent CYAN */
+  .hk13 .dc-w { background:linear-gradient(180deg,#FFC4E0 6%,#FF6EA8 46%,#FF7A3C 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.6)); }
+  .hk13 .dc-w.acc { background:linear-gradient(180deg,#C8FBFF 6%,#4EE0F0 50%,#12A6C8 96%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(90,225,240,.55)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.5)); }
+  .hk13 .dc-w.on { background:none; color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(255,190,220,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); filter:none; }
   .dc-w { display:inline-block; }
 </style>
 </head>
