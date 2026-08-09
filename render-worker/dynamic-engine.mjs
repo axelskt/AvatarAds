@@ -1151,7 +1151,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     const hautHook = Math.round(H * 0.60)
     // 5 palettes de sous-titres hook — `plan.hookStyle` 1..5. hk1 (or + rouge,
     // la réf validée) est le défaut ; hk2..hk5 sont les variantes couleur.
-    const hs = Math.min(15, Math.max(1, Number(plan.hookStyle) || 1))
+    const hs = Math.min(15, Math.max(1, Number(plan.hookStyle) || 15))
     // les mots que l'orchestrateur a marqués comme FORTS prennent la couleur
     // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
     const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
@@ -1419,8 +1419,8 @@ export function buildDynamicComposition(plan, opts = {}) {
      flou (immédiat, pas au mot suivant). Pas de fond, pas de noir. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc { color:#FFF2F4;
-    text-shadow:0 0 ${Math.round(H * 0.01)}px rgba(255,120,145,1), 0 0 ${Math.round(H * 0.026)}px rgba(255,38,78,1), 0 0 ${Math.round(H * 0.052)}px rgba(240,0,54,.86), 0 0 ${Math.round(H * 0.09)}px rgba(210,0,48,.6), 0 0 ${Math.round(H * 0.13)}px rgba(190,0,44,.4); }
+  .hk15 .dc-w.acc { color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.009)}px rgba(255,40,60,1), 0 0 ${Math.round(H * 0.024)}px rgba(255,16,44,1), 0 0 ${Math.round(H * 0.05)}px rgba(235,0,40,.9), 0 0 ${Math.round(H * 0.09)}px rgba(210,0,38,.62), 0 0 ${Math.round(H * 0.13)}px rgba(185,0,34,.4); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
