@@ -1151,7 +1151,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     const hautHook = Math.round(H * 0.60)
     // 5 palettes de sous-titres hook — `plan.hookStyle` 1..5. hk1 (or + rouge,
     // la réf validée) est le défaut ; hk2..hk5 sont les variantes couleur.
-    const hs = Math.min(13, Math.max(1, Number(plan.hookStyle) || 1))
+    const hs = Math.min(14, Math.max(1, Number(plan.hookStyle) || 1))
     // les mots que l'orchestrateur a marqués comme FORTS prennent la couleur
     // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
     const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
@@ -1407,6 +1407,15 @@ export function buildDynamicComposition(plan, opts = {}) {
     filter:drop-shadow(0 0 ${Math.round(H * 0.008)}px rgba(90,225,240,.55)) drop-shadow(0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.007)}px rgba(0,0,0,.5)); }
   .hk13 .dc-w.on { background:none; color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.011)}px rgba(255,190,220,.9), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); filter:none; }
+  /* hk14 — BLANC + ROUGE (Axel : « 2 couleurs max, pro, blanc par défaut, rouge
+     différenciant »). Anton, base blanche à ombre nette, mots FORTS (.acc) en
+     rouge plein, mot prononcé qui garde le blanc mais s'épaissit d'une lueur. */
+  .hk14 .dc-w { color:#FFFFFF;
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
+  .hk14 .dc-w.acc { color:#FF2E36;
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
+  .hk14 .dc-w.on { color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
   .dc-w { display:inline-block; }
 </style>
 </head>

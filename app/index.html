@@ -23876,7 +23876,32 @@ function _mcRenderAdv(){
   const ta=document.getElementById('mcPromptTa'); if(ta) ta.value=window._mcPrompt||'';
 }
 
-/* ── Motion Control — génération ── */
+/* ── Motion Control — overlay progression + résultat ── */
+function _mcProg(msg, pct){
+  let o=document.getElementById('mcProg');
+  if(!o){ o=document.createElement('div'); o.id='mcProg';
+    o.style.cssText='position:fixed;inset:0;z-index:220;background:rgba(8,8,11,.88);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px';
+    o.innerHTML='<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div><div id="mcProgTxt" class="mono" style="font-size:13px;color:var(--text2)"></div><div style="width:280px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="mcProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .4s"></div></div>';
+    document.body.appendChild(o); }
+  o.style.display='flex';
+  const t=document.getElementById('mcProgTxt'); if(t) t.textContent=msg||'';
+  const b=document.getElementById('mcProgBar'); if(b) b.style.width=(pct||0)+'%';
+}
+function _mcProgHide(){ const o=document.getElementById('mcProg'); if(o) o.style.display='none'; }
+function _mcShowResult(url, render){
+  _mcProgHide();
+  let m=document.getElementById('mcResModal');
+  if(!m){ m=document.createElement('div'); m.id='mcResModal';
+    m.style.cssText='position:fixed;inset:0;z-index:230;background:rgba(6,6,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px';
+    m.onclick=(e)=>{ if(e.target===m) m.style.display='none'; };
+    document.body.appendChild(m); }
+  const split = render && render!=='full';
+  m.innerHTML='<div class="col" style="gap:14px;align-items:center;max-width:420px;width:100%"><video src="'+url+'" controls autoplay playsinline style="max-height:70vh;width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
+    +(split?'<div class="faint mono" style="font-size:11px">Rendu plein écran — la composition split (original + motion) arrive bientôt</div>':'')
+    +'<div class="row" style="gap:10px"><a href="'+url+'" download="motion-control.mp4" class="btn btn-primary" style="text-decoration:none">Télécharger</a><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
+  m.style.display='flex';
+}
+/* ── Motion Control — génération réelle (Kling 2.6 via fal-proxy) ── */
 async function _mcGenerate(){
   if(!window._mcRefB64){ toast('Insère une vidéo de référence'); return; }
   if(!window._mcCharB64){ toast("Glisse l'image de ton personnage"); return; }
@@ -23888,12 +23913,46 @@ async function _mcGenerate(){
   const rate=_mcRate(), dur=Math.ceil(window._mcRefDur||0);
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
   const cost=rate*dur;
-  if(!window._MC_BACKEND_READY){
-    toast(`Prêt : ${cost} crédits (${rate} cr/s × ${dur}s). Le moteur Motion Control se branche bientôt (Hedra Kling 2.6).`);
-    return;
-  }
-  if(!(await spendCreditsFor(cost,'motion'))) return;
-  // TODO backend : POST /functions/v1/motion-control { ref, character, bg, prompt, tier, quality, render } → Hedra Kling 2.6
+  const b64ToBlob=(b64)=>{ const [meta,data]=String(b64).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
+  try{
+    _mcProg('Envoi des fichiers…', 6);
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) throw new Error('Session expirée — reconnecte-toi');
+    const H=await getAuthHeader();
+    const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+    const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+    const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+    const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+    const vPath=base+'.mp4', iPath=base+'.jpg';
+    const uv=await sb.storage.from('render-media').upload(vPath, b64ToBlob(window._mcRefB64), { contentType:'video/mp4', upsert:true });
+    const ui=await sb.storage.from('render-media').upload(iPath, b64ToBlob(window._mcCharB64), { contentType:'image/jpeg', upsert:true });
+    if(uv.error||ui.error) throw new Error('upload : '+((uv.error||ui.error).message));
+    const sv=await sb.storage.from('render-media').createSignedUrl(vPath, 3600);
+    const si=await sb.storage.from('render-media').createSignedUrl(iPath, 3600);
+    if(sv.error||si.error||!sv.data?.signedUrl||!si.data?.signedUrl) throw new Error('lien signé indisponible');
+    _mcProg('Transfert du mouvement (Kling 2.6)…', 18);
+    const model='/fal-ai/kling-video/v2.6/'+(tier==='pro'?'pro':'standard')+'/motion-control';
+    const sub=await fPost(model, { image_url:si.data.signedUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(window._mcPrompt||'The character reproduces the exact motion and gestures of the reference video, natural, same framing') });
+    if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
+    const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
+    const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
+    const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
+    let out='';
+    for(let i=0;i<90;i++){
+      await new Promise(r=>setTimeout(r,4000));
+      const pr=await fGet(stP); if(!pr.ok) continue;
+      const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+      _mcProg('Génération en cours…', Math.min(88, 22+i*2));
+      if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+      if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); out=rd?.video?.url||rd?.video_url||''; break; }
+      throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
+    }
+    if(!out) throw new Error('Délai dépassé (>6 min)');
+    // succès → on débite les crédits (jamais avant, pour ne pas facturer un échec)
+    if(typeof spendCreditsFor==='function'){ await spendCreditsFor(cost,'motion'); }
+    _mcProg('Terminé', 100);
+    _mcShowResult(out, window._mcRender||'full');
+  }catch(e){ _mcProgHide(); toast('Motion Control : '+(e && e.message ? e.message : e)); }
 }
 
 // ── Voix ──
