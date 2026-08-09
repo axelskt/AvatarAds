@@ -1413,10 +1413,10 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — le mot fort passe en NÉON ROUGE FLOU UNE FOIS DIT (Axel : « le flou une
-     fois que le mot est dit et qu'il passe au suivant »). Ordre base→acc→on : le mot
-     EN COURS porte .on (dernier) → BLANC ; une fois dit il retombe sur .acc → clair
-     + halo rouge flou. Pas de fond, pas de noir. */
+  /* hk15 — le mot fort s'allume en NÉON ROUGE FLOU DÈS QU'IL EST DIT (Axel : « le
+     flou après, pas de délai »). Ordre base→acc→on : pendant qu'il est dit le mot
+     porte .on (dernier) → BLANC ; à sa fin il retombe sur .acc → clair + halo rouge
+     flou (immédiat, pas au mot suivant). Pas de fond, pas de noir. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .hk15 .dc-w.acc { color:#FFF2F4;
