@@ -1416,16 +1416,17 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — BLANC + ROUGE NÉON (2 couleurs : blanc principal, rouge accent). PAS de
-     fond derrière le texte. Le rouge lit sur le blanc (contraste) + halo rouge =
-     néon. L'accent utilise text-shadow (pas filter) → il OVERRIDE le flash blanc
-     de .on, donc le mot fort reste rouge néon constant, dit ou pas. */
+  /* hk15 — réf néon : lettres CLAIRES + halo/bordure ROUGE (pas rose), sur un léger
+     SPOT sombre pour ressortir sur le t-shirt blanc. .acc et .acc.on identiques →
+     l'accent reste constant (dit ou pas), plus de flash blanc ni de foncé. */
+  .dc-hook.hk15 { background:radial-gradient(ellipse 92% 150% at 50% 50%, rgba(6,2,4,.58) 0%, rgba(6,2,4,.52) 52%, rgba(6,2,4,.22) 72%, transparent 86%); }
   .hk15 .dc-w { color:#FFFFFF;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.4); }
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .hk15 .dc-w.on { color:#FFFFFF;
-    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.55); }
-  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { color:#FF2636;
-    text-shadow:0 0 ${Math.round(H * 0.006)}px rgba(255,120,140,.95), 0 0 ${Math.round(H * 0.014)}px rgba(255,40,72,.9), 0 0 ${Math.round(H * 0.028)}px rgba(225,0,44,.62), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.01)}px rgba(0,0,0,.4); }
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
+  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { background:linear-gradient(180deg,#FFF0F3 12%,#FFCDD6 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.0045)}px rgba(255,90,115,1)) drop-shadow(0 0 ${Math.round(H * 0.012)}px rgba(255,26,60,.95)) drop-shadow(0 0 ${Math.round(H * 0.026)}px rgba(225,0,44,.7)); }
   .dc-w { display:inline-block; }
 </style>
 </head>
