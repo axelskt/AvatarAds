@@ -876,6 +876,26 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       ], { stdio: 'inherit' })
     }
 
+    // ── PREMIÈRE FRAME (Axel, 09/08 : « la 1re frame c'est un écran coloré ») ──
+    // HyperFrames capture parfois les overlays lourds (blobs radial-gradient,
+    // sous-couche) au tout premier frame, AVANT que la vidéo avatar ne peigne →
+    // frame 0 = fond coloré au lieu du visage (c'est aussi la miniature du MP4).
+    // Le mux fait `-c:v copy`, donc on corrige ici : on jette le frame 0 et on le
+    // remplace par un clone du frame 1 (visage). Best-effort, ~1 frame de gel
+    // imperceptible, audio inchangé.
+    // Mesuré (09/08) : le bug salit les ~3 premiers frames — on en jette 5 (marge)
+    // et on gèle le 1er frame propre à la place. 0,1 s de gel = invisible.
+    try {
+      const SKIP = 5
+      const gel = (SKIP / fps).toFixed(3)
+      const ff = outPath.replace(/\.mp4$/i, '') + '-ff.mp4'
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', outPath,
+        '-vf', `trim=start_frame=${SKIP},setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=${gel}`,
+        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
+        '-c:a', 'copy', '-movflags', '+faststart', ff], { stdio: 'inherit' })
+      renameSync(ff, outPath)
+    } catch (e) { console.warn('fix 1re frame:', e.message) }
+
     // ── LE PLAN DÉRIVÉ, PUBLIÉ À CÔTÉ DU MP4 ────────────────────────────────
     // Le plan du chef est une PROPOSITION, la dérivation tranche : c'est donc le
     // plan APRÈS dérivation qui dit ce que la vidéo montre vraiment. L'écran
