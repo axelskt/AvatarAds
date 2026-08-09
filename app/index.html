@@ -3589,16 +3589,32 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- ══ MOTEUR — sélecteur Veo 3.1 / Motion Control (maquette motion-handoff, 1:1) ══ -->
         <div id="expMoteurBar" style="padding:18px 28px 0;flex:0 0 auto">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:920px;margin:0 auto">
+          <div id="expMoteurGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:920px;margin:0 auto">
             <button id="expEngVeo" onclick="_expSetEngine('veo')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:2px solid var(--accent);background:var(--accent-soft)">
               <span style="font-weight:700;font-size:14px">Veo 3.1</span>
               <span class="faint" style="font-size:11.5px">génère depuis un prompt</span>
+            </button>
+            <!-- Seedance — dev-only (affiché par _expInitSeedanceDev si compte dev) -->
+            <button id="expEngSeedance" onclick="_expSetEngine('seedance')" class="col" style="display:none;gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:1px solid var(--border);background:var(--surface)">
+              <span style="font-weight:700;font-size:14px">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></span>
+              <span class="faint" style="font-size:11.5px">génère depuis un prompt (Hedra)</span>
             </button>
             <button id="expEngMotion" onclick="_expSetEngine('motion')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:1px solid var(--border);background:var(--surface)">
               <span style="font-weight:700;font-size:14px">Motion Control</span>
               <span class="faint" style="font-size:11.5px">transfère un mouvement</span>
             </button>
           </div>
+        </div>
+
+        <!-- Durée Seedance (dev) — visible seulement en mode Seedance -->
+        <div id="expSeedanceDurRow" style="display:none;align-items:center;gap:8px;padding:12px 28px 0;max-width:920px;margin:0 auto;flex-wrap:wrap">
+          <span class="faint" style="font-size:12px;font-weight:600">Durée</span>
+          <button class="exp-sd-dur" onclick="_expSetSeedanceDur(2,this)" style="padding:6px 13px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">2 s</button>
+          <button class="exp-sd-dur" onclick="_expSetSeedanceDur(4,this)" style="padding:6px 13px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">4 s</button>
+          <button class="exp-sd-dur" onclick="_expSetSeedanceDur(6,this)" style="padding:6px 13px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">6 s</button>
+          <button class="exp-sd-dur" onclick="_expSetSeedanceDur(8,this)" style="padding:6px 13px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">8 s</button>
+          <button class="exp-sd-dur" onclick="_expSetSeedanceDur(10,this)" style="padding:6px 13px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">10 s</button>
+          <span class="faint mono" style="font-size:10px">Seedance : 4–10 s natif · 2-3 s recoupé · 1080p · audio natif</span>
         </div>
 
         <!-- corps VEO (le flux Express existant) -->
@@ -23725,6 +23741,7 @@ function initExpress(){
   _expSyncSubToggle();
   _expUpdateGenCaption();
   _expHeroSync();
+  if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
   if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine||'veo');
 }
 function _expUpdateGenCaption(){
@@ -23768,30 +23785,38 @@ function _expPickQual(v){
 
 /* ══════════ MOTEUR — Veo 3.1 ⇄ Motion Control (maquette motion-handoff) ══════════ */
 window._expEngine = window._expEngine || 'veo';
+// dev = compte développeur ou owner (Seedance est dev-only)
+function _expIsDev(){ try{ return ['developer'].includes((currentMember?.plan||'').toLowerCase()) || !!currentMember?.is_owner; }catch(_){ return false; } }
+// affiche la carte Seedance + passe le sélecteur en 3 colonnes (appelé à l'init si dev)
+function _expInitSeedanceDev(){
+  if(!_expIsDev()) return;
+  const bSd=document.getElementById('expEngSeedance'), grid=document.getElementById('expMoteurGrid');
+  if(bSd) bSd.style.display='';
+  if(grid) grid.style.gridTemplateColumns='1fr 1fr 1fr';
+}
 function _expSetEngine(e){
+  // Seedance = même flux que Veo (corps Veo), seul le moteur de génération change.
+  if(e==='seedance' && !_expIsDev()) e='veo';
   window._expEngine = e;
+  const isVeoLike = (e!=='motion');
   const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp'), bar=document.getElementById('expMoteurBar');
-  const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion');
+  const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion'), bSd=document.getElementById('expEngSeedance');
   const rVeo=document.getElementById('expEngVeoRail'), rMot=document.getElementById('expEngMotionRail');
+  const dev=_expIsDev();
   const on=(b)=>{ if(b){ b.style.border='2px solid var(--accent)'; b.style.background='var(--accent-soft)'; } };
   const off=(b)=>{ if(b){ b.style.border='1px solid var(--border)'; b.style.background='var(--surface)'; } };
-  if(e==='motion'){
-    if(rail) rail.style.display='none';
-    if(veo)  veo.style.display='none';
-    if(mot)  mot.style.display='block';
-    if(mexp) mexp.style.display='none';   // masque le composer mobile Veo (#mExp)
-    if(bar)  bar.style.display='';         // barre moteur centrée visible en Motion (rail masqué)
-    on(bMot); off(bVeo);
-    if(rMot) rMot.classList.add('on'); if(rVeo) rVeo.classList.remove('on');
-  } else {
-    if(rail) rail.style.display='flex';
-    if(veo)  veo.style.display='flex';
-    if(mot)  mot.style.display='none';
-    if(mexp) mexp.style.display='';        // desktop : CSS masque · mobile : réaffiché
-    if(bar)  bar.style.display='none';     // en Veo, le sélecteur MOTEUR est dans le rail
-    on(bVeo); off(bMot);
-    if(rVeo) rVeo.classList.add('on'); if(rMot) rMot.classList.remove('on');
-  }
+  if(veo)  veo.style.display = isVeoLike ? 'flex' : 'none';
+  if(mot)  mot.style.display = isVeoLike ? 'none' : 'block';
+  if(mexp) mexp.style.display = isVeoLike ? '' : 'none';
+  // Sélecteur : le dev voit toujours la barre 3-way (Veo/Seedance/Motion) ; sinon rail en Veo, barre en Motion.
+  if(rail) rail.style.display = (isVeoLike && !dev) ? 'flex' : 'none';
+  if(bar)  bar.style.display  = (!isVeoLike || dev) ? '' : 'none';
+  // états des 3 cartes de la barre
+  [ [bVeo,'veo'],[bSd,'seedance'],[bMot,'motion'] ].forEach(([b,id])=>{ if(!b) return; (id===e?on:off)(b); });
+  // rail (2 cartes) pour le non-dev
+  if(rVeo) rVeo.classList.toggle('on', e!=='motion'); if(rMot) rMot.classList.toggle('on', e==='motion');
+  // durée Seedance visible uniquement en mode seedance
+  const sdDur=document.getElementById('expSeedanceDurRow'); if(sdDur) sdDur.style.display = (e==='seedance') ? 'flex' : 'none';
 }
 
 /* ── Motion Control — état + uploads ── */
@@ -24240,9 +24265,90 @@ function _expRenderImgs(){
 }
 
 // ── Génération principale ──
+/* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
+window._expSeedanceDur = window._expSeedanceDur || 5;   // durée voulue en s (2→10)
+function _expSetSeedanceDur(sec, el){
+  window._expSeedanceDur = sec;
+  document.querySelectorAll('.exp-sd-dur').forEach(b=>{ b.style.border='1px solid var(--border2)'; b.style.background='var(--bg3)'; b.style.color='var(--text3)'; });
+  if(el){ el.style.border='1px solid var(--accent)'; el.style.background='var(--accent-soft)'; el.style.color='var(--text)'; }
+}
+// coupe une vidéo à `sec` secondes (Seedance ne descend pas sous 4 s) via ffmpeg.wasm
+async function _expTrimVideo(blob, sec){
+  await _loadFFmpeg(); const ff=_ffmpegInst;
+  ff.FS('writeFile','sd-in.mp4', new Uint8Array(await blob.arrayBuffer()));
+  await ff.run('-i','sd-in.mp4','-t',String(sec),'-c','copy','-movflags','+faststart','sd-out.mp4');
+  const data=ff.FS('readFile','sd-out.mp4');
+  try{ ff.FS('unlink','sd-in.mp4'); ff.FS('unlink','sd-out.mp4'); }catch(_){}
+  return new Blob([data.buffer], { type:'video/mp4' });
+}
+async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, onStep){
+  const modelId = await _cartoonResolveSeedanceModel();
+  const bin = Uint8Array.from(atob(imgB64), c=>c.charCodeAt(0));
+  const blob = new Blob([bin], { type: imgMime||'image/png' });
+  const createImg = await _hedraFetch('/assets','POST',{ type:'image', name:'express.png' });
+  if(!createImg.ok) throw new Error('Hedra asset '+createImg.status+' — '+(await createImg.text()).slice(0,100));
+  const imgAsset = await createImg.json(); if(!imgAsset.id) throw new Error('Hedra : pas d\'ID asset');
+  const fd = new FormData(); fd.append('file', blob, 'express.png');
+  const up = await _hedraFetch('/assets/'+imgAsset.id+'/upload','POST',fd,true);
+  if(!up.ok) throw new Error('Hedra upload image '+up.status);
+  if(onStep) onStep('Seedance génère…');
+  const genRes = await _hedraFetch('/generations','POST',{ type:'video', ai_model_id:modelId, start_keyframe_id:imgAsset.id, generated_video_inputs:{ text_prompt:animPrompt, aspect_ratio:aspect, resolution:'1080p', duration_ms:durMs } });
+  if(!genRes.ok) throw new Error('Seedance '+genRes.status+' — '+(await genRes.text()).slice(0,140));
+  const gen = await genRes.json(); const genId = gen.id||gen.generation_id; if(!genId) throw new Error('Seedance : pas d\'ID de génération');
+  for(let i=0;i<72;i++){
+    await new Promise(r=>setTimeout(r,5000));
+    const pr = await _hedraFetch('/generations/'+genId+'/status','GET'); if(!pr.ok) continue;
+    const pd = await pr.json(); const st=(pd.status||pd.state||'').toLowerCase();
+    if(st==='error'||st==='failed') throw new Error('Seedance a échoué — '+(pd.error||pd.error_message||'?'));
+    if(st==='complete'||st==='completed'||st==='succeeded'){
+      const url = pd.url||pd.download_url||pd.video_url||pd.streaming_url||''; if(!url) throw new Error('Seedance : pas d\'URL vidéo');
+      const vr = await fetch(url); if(!vr.ok) throw new Error('Téléchargement Seedance '+vr.status);
+      return new Blob([await vr.blob()], { type:'video/mp4' });
+    }
+  }
+  throw new Error('Seedance : délai dépassé (~6 min)');
+}
+async function _expCreateSeedance(prompt){
+  const btn=document.getElementById('expGenBtn');
+  const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
+  const ph=document.getElementById('expResultPlaceholder'), vid=document.getElementById('expResultVid'), acts=document.getElementById('expResultActions');
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
+  if(ph) ph.style.display='none'; if(vid) vid.style.display='none'; if(acts) acts.style.display='none';
+  if(prog) prog.style.display='flex';
+  let p=0; const setP=(v,t)=>{ p=Math.max(p,v); if(progBar)progBar.style.width=p+'%'; if(progTxt&&t)progTxt.innerHTML=t; };
+  const tick=setInterval(()=>{ if(p<90) setP(p+0.5); },900);
+  try{
+    if(_gateFreeGenerate()) throw new Error('__abort');
+    const session=(await sb.auth.getSession()).data.session; const token=session?.access_token||SUPABASE_KEY;
+    const styleMeta=EXP_STYLES.find(s=>s.id===window._expStyle)||EXP_STYLES[0];
+    let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
+    if(!imgB64){
+      setP(8,'Création de l\'image…');
+      const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
+      const url = await _imgGenerateOne(token, prompt+', '+styleMeta.prompt+', no text, no watermark, high quality', size, null);
+      if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
+      else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:[^,]+,/,''));fr.readAsDataURL(b);}); }
+    }
+    const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
+    const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
+    const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
+    const animPrompt = prompt+', '+styleMeta.prompt+', smooth fluid motion, cinematic';
+    setP(25,'Seedance 2.0 génère… (1 à 3 min)');
+    let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
+    if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
+    if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
+    window._expVidBlob=blob; window._expVidUrl=URL.createObjectURL(blob);
+    if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
+    if(acts) acts.style.display='flex';
+    setP(100,'✓ Vidéo Seedance prête'); toast('Vidéo Seedance générée');
+  }catch(e){ if(String(e&&e.message)!=='__abort'){ console.error('Seedance:',e); toast('Seedance : '+(e.message||e)); } if(ph) ph.style.display='block'; }
+  finally{ clearInterval(tick); setTimeout(()=>{ if(prog)prog.style.display='none'; },700); if(btn){ btn.disabled=false; btn.style.opacity=''; } }
+}
 async function expressCreate(){
   const prompt = (document.getElementById('expPrompt')?.value || '').trim();
   if(!prompt && !window._expImgB64){ toast('Décris ta vidéo (ou ajoute une image)'); return; }
+  // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
+  if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
   if(_gateFreeGenerate()) return;
   // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit
   if((parseInt(window._expDur)||4)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
@@ -26204,7 +26310,8 @@ async function _cartoonResolveSeedanceModel(){
   if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
   const data = await r.json().catch(()=>null);
   const all = Array.isArray(data) ? data : (data?.models || data?.data || []);
-  const m = all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
+  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
+         || all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
          || all.find(x=>/seedance/i.test(x.name||''));
   if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
   window._seedanceModelId = m.id;
