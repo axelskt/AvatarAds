@@ -23950,18 +23950,50 @@ async function _mcGenerate(){
       throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
     }
     if(!out) throw new Error('Délai dépassé (>6 min)');
-    // succès → on débite les crédits (jamais avant, pour ne pas facturer un échec)
-    if(typeof spendCreditsFor==='function'){ await spendCreditsFor(cost,'motion'); }
+    // Débit au succès (jamais avant). Standard=2 cr/s (720p), Pro=4 cr/s (1080p natif).
+    // Le +1 cr/s du 1080p Standard n'est facturé QUE si l'upscale Topaz réussit.
+    const baseRate = tier==='pro' ? 4 : 2;
+    if(typeof spendCreditsFor==='function'){ await spendCreditsFor(baseRate*dur,'motion'); }
+    // 1080p depuis Standard : Kling sort en 720p → upscale Topaz vers 1080p.
+    if(tier!=='pro' && q==='1080'){
+      try{
+        _mcProg('Upscale 1080p (Topaz)…', 90);
+        out = await _mcUpscaleTopaz(out, H);
+        if(typeof spendCreditsFor==='function'){ await spendCreditsFor(dur,'motion-topaz'); }
+      }catch(e){ console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré'); }
+    }
     // split (original + motion en 9:16) → composé par le render-worker natif.
     // Repli plein écran si la compo échoue : le livrable payé est toujours rendu.
     let finalUrl=out, finalMode=window._mcRender||'full';
     if(finalMode!=='full'){
-      try{ _mcProg('Composition split…', 92); finalUrl=await _mcComposeSplit({ origPath:vPath, motionUrl:out, dur, mode:finalMode }); }
+      try{ _mcProg('Composition split…', 94); finalUrl=await _mcComposeSplit({ origPath:vPath, motionUrl:out, dur, mode:finalMode }); }
       catch(e){ console.error('split:',e); toast('Composition split indispo — plein écran fourni'); finalMode='full'; }
     }
     _mcProg('Terminé', 100);
     _mcShowResult(finalUrl, finalMode);
   }catch(e){ _mcProgHide(); toast('Motion Control : '+(e && e.message ? e.message : e)); }
+}
+/* ── Upscale 1080p via Topaz (fal) — pour le 1080p depuis le forfait Standard ── */
+async function _mcUpscaleTopaz(videoUrl, H){
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const post=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const get =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const sub=await post('/fal-ai/topaz/upscale/video',{ video_url:videoUrl, upscale_factor:1.5, H264_output:true });
+  if(!sub.ok) throw new Error('Topaz '+sub.status+' '+(await sub.text()).slice(0,120));
+  const sd=await sub.json().catch(()=>({}));
+  const stP=sd.status_url?sd.status_url.replace('https://queue.fal.run',''):'';
+  const reP=sd.response_url?sd.response_url.replace('https://queue.fal.run',''):'';
+  if(!stP||!reP) throw new Error('Topaz : pas de status_url');
+  for(let i=0;i<90;i++){
+    await new Promise(r=>setTimeout(r,4000));
+    const pr=await get(stP); if(!pr.ok) continue;
+    const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+    _mcProg('Upscale 1080p (Topaz)…', Math.min(93, 90+Math.floor(i/6)));
+    if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+    if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({})); const u=rd?.video?.url||rd?.video_url; if(!u) throw new Error('Topaz : pas d\'URL'); return u; }
+    throw new Error('Topaz : '+(pd.error?String(pd.error).slice(0,80):s));
+  }
+  throw new Error('Topaz : délai dépassé');
 }
 /* ── Split original + motion → render-worker (vstack 9:16, safe zone) ── */
 async function _mcComposeSplit({ origPath, motionUrl, dur, mode }){
