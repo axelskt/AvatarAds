@@ -1416,19 +1416,16 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — BLANC + NÉON ROSE-ROUGE (réf « COMMENT TE LANCER », sur fond sombre).
-     Sur un t-shirt BLANC un néon clair se lave → on pose un léger SPOT sombre
-     DERRIÈRE la zone du texte (pas de contour, pas de noir sur les lettres) pour
-     que le néon ressorte comme sur la réf. Base blanche, accent rose-clair néon. */
-  .dc-hook.hk15 { background:radial-gradient(ellipse 92% 150% at 50% 50%, rgba(6,2,4,.58) 0%, rgba(6,2,4,.52) 52%, rgba(6,2,4,.22) 72%, transparent 86%); }
+  /* hk15 — BLANC + ROUGE NÉON (2 couleurs : blanc principal, rouge accent). PAS de
+     fond derrière le texte. Le rouge lit sur le blanc (contraste) + halo rouge =
+     néon. L'accent utilise text-shadow (pas filter) → il OVERRIDE le flash blanc
+     de .on, donc le mot fort reste rouge néon constant, dit ou pas. */
   .hk15 .dc-w { color:#FFFFFF;
-    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.6); }
-  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFE6EA 12%,#FFC2CC 96%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,236,240,.9);
-    filter:drop-shadow(0 0 ${Math.round(H * 0.0035)}px rgba(255,190,205,1)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,82,112,.92)) drop-shadow(0 0 ${Math.round(H * 0.02)}px rgba(235,20,64,.55)); }
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.4); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.55); }
+  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { color:#FF2636;
+    text-shadow:0 0 ${Math.round(H * 0.006)}px rgba(255,120,140,.95), 0 0 ${Math.round(H * 0.014)}px rgba(255,40,72,.9), 0 0 ${Math.round(H * 0.028)}px rgba(225,0,44,.62), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.01)}px rgba(0,0,0,.4); }
   .dc-w { display:inline-block; }
 </style>
 </head>
