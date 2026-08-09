@@ -883,18 +883,20 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // Le mux fait `-c:v copy`, donc on corrige ici : on jette le frame 0 et on le
     // remplace par un clone du frame 1 (visage). Best-effort, ~1 frame de gel
     // imperceptible, audio inchangé.
-    // Mesuré (09/08) : le bug salit les ~3 premiers frames — on en jette 5 (marge)
-    // et on gèle le 1er frame propre à la place. 0,1 s de gel = invisible.
+    // Mesuré (09/08) : le bug salit les ~3 premiers ET derniers frames (fond
+    // coloré au lieu du visage). On en jette 5 de chaque bout et on gèle le 1er/
+    // dernier frame PROPRE à la place — 0,1 s de gel de chaque côté, invisible.
     try {
       const SKIP = 5
       const gel = (SKIP / fps).toFixed(3)
+      const nbF = Math.round((parseFloat(ffprobe(outPath, 'format=duration')) || plan.duration) * fps)
       const ff = outPath.replace(/\.mp4$/i, '') + '-ff.mp4'
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', outPath,
-        '-vf', `trim=start_frame=${SKIP},setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=${gel}`,
+        '-vf', `trim=start_frame=${SKIP}:end_frame=${nbF - SKIP},setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=${gel}:stop_mode=clone:stop_duration=${gel}`,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
         '-c:a', 'copy', '-movflags', '+faststart', ff], { stdio: 'inherit' })
       renameSync(ff, outPath)
-    } catch (e) { console.warn('fix 1re frame:', e.message) }
+    } catch (e) { console.warn('fix 1re/derniere frame:', e.message) }
 
     // ── LE PLAN DÉRIVÉ, PUBLIÉ À CÔTÉ DU MP4 ────────────────────────────────
     // Le plan du chef est une PROPOSITION, la dérivation tranche : c'est donc le
