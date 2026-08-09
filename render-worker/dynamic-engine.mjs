@@ -1416,15 +1416,16 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — BLANC + ROUGE NÉON, SANS fond (Axel : « enlève la zone grise »). Rouge
-     plein qui lit sur le blanc + halo rouge = néon. .acc et .acc.on identiques →
-     l'accent reste rouge constant, plus de flash blanc ni de foncé. */
+  /* hk15 — SANS fond (Axel : « enlève la zone grise »). Lettres CLAIRES, seules les
+     BORDURES/halo sont ROUGES (pas de rempli rouge) : un liseré rouge serré cerne
+     les lettres (= ce qui les détache du t-shirt blanc) + un halo rouge = néon.
+     .acc/.acc.on identiques → constant. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.42); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.55); }
-  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { color:#FF2636;
-    text-shadow:0 0 ${Math.round(H * 0.006)}px rgba(255,120,140,.95), 0 0 ${Math.round(H * 0.014)}px rgba(255,40,72,.9), 0 0 ${Math.round(H * 0.028)}px rgba(225,0,44,.62), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.01)}px rgba(0,0,0,.42); }
+  .hk15 .dc-w.acc, .hk15 .dc-w.acc.on { color:#FFE7EC;
+    text-shadow:0 0 ${Math.round(H * 0.0022)}px rgba(255,10,44,1), 0 0 ${Math.round(H * 0.0045)}px rgba(255,18,50,1), 0 0 ${Math.round(H * 0.01)}px rgba(255,22,56,.92), 0 0 ${Math.round(H * 0.02)}px rgba(225,0,46,.6), 0 0 ${Math.round(H * 0.034)}px rgba(200,0,40,.38); }
   .dc-w { display:inline-block; }
 </style>
 </head>
