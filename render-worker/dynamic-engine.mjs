@@ -1421,8 +1421,8 @@ export function buildDynamicComposition(plan, opts = {}) {
      mot FORT en rouge NÉON (halo, sans stroke), mot prononcé flash blanc. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc { color:#FF3B42;
-    text-shadow:0 0 ${Math.round(H * 0.006)}px rgba(255,80,90,.95), 0 0 ${Math.round(H * 0.016)}px rgba(255,40,50,.9), 0 0 ${Math.round(H * 0.03)}px rgba(230,20,30,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); }
+  .hk15 .dc-w.acc { color:#FF1E3C;
+    text-shadow:0 0 ${Math.round(H * 0.005)}px rgba(255,192,206,.98), 0 0 ${Math.round(H * 0.011)}px rgba(255,45,75,1), 0 0 ${Math.round(H * 0.022)}px rgba(255,12,48,.98), 0 0 ${Math.round(H * 0.037)}px rgba(235,0,38,.9), 0 0 ${Math.round(H * 0.058)}px rgba(205,0,32,.66); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
   .dc-w { display:inline-block; }
