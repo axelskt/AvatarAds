@@ -46,17 +46,30 @@ serve(async (req: Request) => {
 
   if (!falKey) return json({ error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' }, 500)
 
-  // ── session utilisateur obligatoire (comme hedra-proxy) ──
+  // ── session utilisateur obligatoire (comme hedra-proxy) — SAUF le moteur de
+  //    rendu / le backend Motion Control, qui présente un jeton service_role
+  //    (jamais exposé au client). Le gateway Supabase a DÉJÀ vérifié la
+  //    signature du jeton (verify_jwt actif) : si role==='service_role', il est
+  //    authentique et personne ne peut le forger sans le secret du projet. ──
   const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
   if (!token) return json({ error: 'Unauthorized — token manquant' }, 401)
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: `Bearer ${token}` } } },
-  )
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
+  const roleDuJeton = (() => {
+    try {
+      const p = token.split('.')[1]; if (!p) return ''
+      const b = p.replace(/-/g, '+').replace(/_/g, '/')
+      return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
+    } catch { return '' }
+  })()
+  if (roleDuJeton !== 'service_role') {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: `Bearer ${token}` } } },
+    )
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
+  }
 
   // ── relais vers fal ──
   try {
