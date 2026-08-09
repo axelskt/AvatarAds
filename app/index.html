@@ -23895,9 +23895,9 @@ function _mcShowResult(url, render){
     m.style.cssText='position:fixed;inset:0;z-index:230;background:rgba(6,6,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px';
     m.onclick=(e)=>{ if(e.target===m) m.style.display='none'; };
     document.body.appendChild(m); }
-  const split = render && render!=='full';
+  const lbl = render==='split-bottom' ? 'Split · original ↑ · motion ↓' : render==='split-top' ? 'Split · motion ↑ · original ↓' : '';
   m.innerHTML='<div class="col" style="gap:14px;align-items:center;max-width:420px;width:100%"><video src="'+url+'" controls autoplay playsinline style="max-height:70vh;width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
-    +(split?'<div class="faint mono" style="font-size:11px">Rendu plein écran — la composition split (original + motion) arrive bientôt</div>':'')
+    +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
     +'<div class="row" style="gap:10px"><a href="'+url+'" download="motion-control.mp4" class="btn btn-primary" style="text-decoration:none">Télécharger</a><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
   m.style.display='flex';
 }
@@ -23950,9 +23950,37 @@ async function _mcGenerate(){
     if(!out) throw new Error('Délai dépassé (>6 min)');
     // succès → on débite les crédits (jamais avant, pour ne pas facturer un échec)
     if(typeof spendCreditsFor==='function'){ await spendCreditsFor(cost,'motion'); }
+    // split (original + motion en 9:16) → composé par le render-worker natif.
+    // Repli plein écran si la compo échoue : le livrable payé est toujours rendu.
+    let finalUrl=out, finalMode=window._mcRender||'full';
+    if(finalMode!=='full'){
+      try{ _mcProg('Composition split…', 92); finalUrl=await _mcComposeSplit({ origPath:vPath, motionUrl:out, dur, mode:finalMode }); }
+      catch(e){ console.error('split:',e); toast('Composition split indispo — plein écran fourni'); finalMode='full'; }
+    }
     _mcProg('Terminé', 100);
-    _mcShowResult(out, window._mcRender||'full');
+    _mcShowResult(finalUrl, finalMode);
   }catch(e){ _mcProgHide(); toast('Motion Control : '+(e && e.message ? e.message : e)); }
+}
+/* ── Split original + motion → render-worker (vstack 9:16, safe zone) ── */
+async function _mcComposeSplit({ origPath, motionUrl, dur, mode }){
+  const H=await getAuthHeader();
+  const mPath = origPath.replace(/\.mp4$/,'') + '-motion.mp4';
+  const mb = await (await fetch(motionUrl)).blob();
+  const um = await sb.storage.from('render-media').upload(mPath, mb, { contentType:'video/mp4', upsert:true });
+  if(um.error) throw new Error('upload motion : '+um.error.message);
+  const post=(b)=>fetch(RENDERJOB_FN,{ method:'POST', headers:{...H,'Content-Type':'application/json'}, body:JSON.stringify(b) });
+  const rj = await post({ action:'create', plan:{ duration: Math.max(1,dur), __compose:'motion-split', mode }, input_video: origPath, assets:[{ id:'motion', path:mPath, kind:'video' }] });
+  const rd = await rj.json().catch(()=>({}));
+  if(!rj.ok || !rd.ok || !rd.job_id) throw new Error(rd.error||('render-job '+rj.status));
+  for(let i=0;i<90;i++){
+    await new Promise(r=>setTimeout(r,4000));
+    const pr=await post({ action:'status', job_id: rd.job_id });
+    const pd=await pr.json().catch(()=>({}));
+    _mcProg('Composition split…', Math.min(98, 92+Math.floor(i/2)));
+    if(pd.status==='done' && pd.url) return pd.url;
+    if(pd.status==='failed') throw new Error(pd.error||'composition échouée');
+  }
+  throw new Error('composition trop longue');
 }
 
 // ── Voix ──

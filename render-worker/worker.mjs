@@ -176,9 +176,36 @@ function loudnessOf(file) {
 }
 
 // ── cœur : job (dossier local) → MP4 final ──
+// ── Motion Control · composition split (#34) ────────────────────────────────
+// Empile l'original et le clip motion en 1080×1920 SANS passer par le montage.
+// Chaque panneau : cover-crop 1080×960 biaisé vers le haut (0.3) pour garder les
+// visages hauts, hors de la zone de légende/boutons TikTok. L'audio vient de
+// l'original (la voix qui a piloté le mouvement). input 0 = base.mp4 (original),
+// input 1 = assets/motion.mp4. mode 'split-top' = motion en haut, sinon original.
+function composeMotionSplit(jobDir, outPath, plan) {
+  const orig = join(jobDir, 'base.mp4')
+  const motion = join(jobDir, 'assets', 'motion.mp4')
+  if (!existsSync(motion)) throw new Error('clip motion manquant (assets/motion.mp4)')
+  const mode = plan.mode === 'split-top' ? 'split-top' : 'split-bottom'
+  const pan = 'scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960:(iw-1080)/2:(ih-960)*0.3,setsar=1'
+  const top = mode === 'split-top' ? 1 : 0   // split-top → motion (input 1) en haut
+  const bot = mode === 'split-top' ? 0 : 1
+  const fc = `[${top}:v]${pan}[t];[${bot}:v]${pan}[b];[t][b]vstack=inputs=2[v]`
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig, '-i', motion,
+    '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
+    '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
+    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
+    '-movflags', '+faststart', outPath], { stdio: 'inherit' })
+  console.log(`✅ motion-split (${mode}) → ${outPath}`)
+}
+
 export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   const t0 = Date.now()
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
+
+  // Motion Control (#34) : composition légère original + motion, pas de montage.
+  if (plan.__compose === 'motion-split') { composeMotionSplit(jobDir, outPath, plan); return }
+
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
 
