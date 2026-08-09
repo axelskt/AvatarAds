@@ -1416,13 +1416,16 @@ export function buildDynamicComposition(plan, opts = {}) {
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
-  /* hk15 — BLANC + NÉON ROUGE (Axel : « le mot important en néon, le reste
-     blanc, pas de trait dans les lettres »). Anton (zéro contour), base blanche,
-     mot FORT en rouge NÉON (halo, sans stroke), mot prononcé flash blanc. */
+  /* hk15 — BLANC + NÉON ROUGE (Axel : « reproduis le dégradé de couleur de ma réf »
+     = tube néon : cœur clair rose-blanc en haut → rouge vif en bas, gros halo
+     rouge). Anton (zéro contour), base blanche, dégradé dans les lettres via
+     background-clip + lueur en drop-shadow (le text-shadow ne marche pas sur du
+     texte transparent), mot prononcé flash blanc. */
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
-  .hk15 .dc-w.acc { color:#FF1E3C;
-    text-shadow:0 0 ${Math.round(H * 0.005)}px rgba(255,192,206,.98), 0 0 ${Math.round(H * 0.011)}px rgba(255,45,75,1), 0 0 ${Math.round(H * 0.022)}px rgba(255,12,48,.98), 0 0 ${Math.round(H * 0.037)}px rgba(235,0,38,.9), 0 0 ${Math.round(H * 0.058)}px rgba(205,0,32,.66); }
+  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFDDE1 6%,#FF6274 44%,#EA1330 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 ${Math.round(H * 0.0025)}px rgba(45,0,10,.98)) drop-shadow(0 0 ${Math.round(H * 0.006)}px rgba(120,0,20,.9)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,55,85,1)) drop-shadow(0 0 ${Math.round(H * 0.022)}px rgba(255,18,52,.92)) drop-shadow(0 0 ${Math.round(H * 0.04)}px rgba(210,0,40,.6)); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
   .dc-w { display:inline-block; }
