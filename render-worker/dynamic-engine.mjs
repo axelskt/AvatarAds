@@ -1151,7 +1151,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     const hautHook = Math.round(H * 0.60)
     // 5 palettes de sous-titres hook — `plan.hookStyle` 1..5. hk1 (or + rouge,
     // la réf validée) est le défaut ; hk2..hk5 sont les variantes couleur.
-    const hs = Math.min(14, Math.max(1, Number(plan.hookStyle) || 1))
+    const hs = Math.min(15, Math.max(1, Number(plan.hookStyle) || 1))
     // les mots que l'orchestrateur a marqués comme FORTS prennent la couleur
     // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
     const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
@@ -1415,6 +1415,15 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk14 .dc-w.acc { color:#FF2E36;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.6), 0 0 ${Math.round(H * 0.012)}px rgba(255,46,54,.5); }
   .hk14 .dc-w.on { color:#FFFFFF;
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
+  /* hk15 — BLANC + NÉON ROUGE (Axel : « le mot important en néon, le reste
+     blanc, pas de trait dans les lettres »). Anton (zéro contour), base blanche,
+     mot FORT en rouge NÉON (halo, sans stroke), mot prononcé flash blanc. */
+  .hk15 .dc-w { color:#FFFFFF;
+    text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.72), 0 0 ${Math.round(H * 0.004)}px rgba(0,0,0,.5); }
+  .hk15 .dc-w.acc { color:#FF3B42;
+    text-shadow:0 0 ${Math.round(H * 0.006)}px rgba(255,80,90,.95), 0 0 ${Math.round(H * 0.016)}px rgba(255,40,50,.9), 0 0 ${Math.round(H * 0.03)}px rgba(230,20,30,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.011)}px rgba(0,0,0,.6); }
+  .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.75), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.013)}px rgba(0,0,0,.7); }
   .dc-w { display:inline-block; }
 </style>
