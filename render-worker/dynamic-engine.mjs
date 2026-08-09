@@ -1185,14 +1185,11 @@ export function buildDynamicComposition(plan, opts = {}) {
           const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
           js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:1.4},{autoAlpha:1,scale:1,duration:0.14,ease:'back.out(2.4)',transformOrigin:'50% 80%'},${r2(w.start)});`
           js += `\n  tl.set(${sel},{attr:{class:'${base(k)} on'}},${r2(w.start)});`
-          if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})',{attr:{class:'${base(k - 1)}'}},${r2(w.start)});`
-          // le DERNIER mot ne reste pas bloqué en flash : il retombe sur sa
-          // couleur (or, ou ROUGE s'il est un mot fort — dinguerie, Claude…
-          // sont presque toujours en fin de phrase, sans ça le rouge
-          // n'apparaissait jamais)
-          if (k === g.mots.length - 1 && g.b - w.start > 0.7) {
-            js += `\n  tl.set(${sel},{attr:{class:'${base(k)}'}},${r2(Math.min(g.b - 0.05, w.start + 0.5))});`
-          }
+          // DÈS que le mot est dit (sa propre fin), il retombe sur sa couleur — les
+          // mots FORTS (.acc) s'allument alors en rouge flou, SANS attendre le mot
+          // suivant (Axel : « le flou dès que le mot est passé, pas de délai »).
+          const finMot = r2(Math.max(w.start + 0.1, w.end != null ? w.end : (g.mots[k + 1] ? g.mots[k + 1].start : g.b)))
+          js += `\n  tl.set(${sel},{attr:{class:'${base(k)}'}},${finMot});`
         })
         continue
       }
