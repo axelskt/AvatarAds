@@ -1420,12 +1420,13 @@ export function buildDynamicComposition(plan, opts = {}) {
      Sur un t-shirt BLANC un néon clair se lave → on pose un léger SPOT sombre
      DERRIÈRE la zone du texte (pas de contour, pas de noir sur les lettres) pour
      que le néon ressorte comme sur la réf. Base blanche, accent rose-clair néon. */
-  .dc-hook.hk15 { background:radial-gradient(ellipse 84% 132% at 50% 47%, rgba(6,2,4,.62) 0%, rgba(6,2,4,.34) 44%, transparent 74%); }
+  .dc-hook.hk15 { background:radial-gradient(ellipse 92% 150% at 50% 50%, rgba(6,2,4,.58) 0%, rgba(6,2,4,.52) 52%, rgba(6,2,4,.22) 72%, transparent 86%); }
   .hk15 .dc-w { color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.6); }
-  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFF0F2 8%,#FFB6C0 92%);
+  .hk15 .dc-w.acc { background:linear-gradient(180deg,#FFE6EA 12%,#FFC2CC 96%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 0 ${Math.round(H * 0.005)}px rgba(255,150,168,.98)) drop-shadow(0 0 ${Math.round(H * 0.013)}px rgba(255,54,84,.95)) drop-shadow(0 0 ${Math.round(H * 0.028)}px rgba(235,10,52,.72)) drop-shadow(0 0 ${Math.round(H * 0.05)}px rgba(210,0,44,.5)); }
+    text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,236,240,.9);
+    filter:drop-shadow(0 0 ${Math.round(H * 0.0035)}px rgba(255,190,205,1)) drop-shadow(0 0 ${Math.round(H * 0.011)}px rgba(255,82,112,.92)) drop-shadow(0 0 ${Math.round(H * 0.02)}px rgba(235,20,64,.55)); }
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.8), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.55); }
   .dc-w { display:inline-block; }
