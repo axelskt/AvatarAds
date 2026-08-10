@@ -3535,10 +3535,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- ⓪ MOTEUR — Veo 3.1 / Motion Control (dans le rail, au-dessus de Style) -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div id="expMoteurRailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:13px 14px">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div>
               <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt</div></div>
+            <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="display:none;padding:13px 14px">
+              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt (Hedra)</div></div>
             <div id="expEngMotionRail" onclick="_expSetEngine('motion')" class="exp-card" style="padding:13px 14px">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Motion Control</div>
               <div style="font-size:11px;color:var(--text3);margin-top:3px">transfère un mouvement</div></div>
@@ -23790,6 +23793,12 @@ function _expIsDev(){ try{ return ['developer'].includes((currentMember?.plan||'
 // affiche la carte Seedance + passe le sélecteur en 3 colonnes (appelé à l'init si dev)
 function _expInitSeedanceDev(){
   if(!_expIsDev()) return;
+  // ① carte Seedance DANS le rail Moteur (la « case » avec Veo/Motion) — desktop.
+  //    3 cartes empilées en colonne pour rester lisibles dans le rail étroit.
+  const rSd=document.getElementById('expEngSeedanceRail'), railGrid=document.getElementById('expMoteurRailGrid');
+  if(rSd) rSd.style.display='';
+  if(railGrid) railGrid.style.gridTemplateColumns='1fr';
+  // ② carte Seedance aussi dans la barre (le rail est masqué sur mobile → la barre sert de sélecteur).
   const bSd=document.getElementById('expEngSeedance'), grid=document.getElementById('expMoteurGrid');
   if(bSd) bSd.style.display='';
   if(grid) grid.style.gridTemplateColumns='1fr 1fr 1fr';
@@ -23801,20 +23810,22 @@ function _expSetEngine(e){
   const isVeoLike = (e!=='motion');
   const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp'), bar=document.getElementById('expMoteurBar');
   const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion'), bSd=document.getElementById('expEngSeedance');
-  const rVeo=document.getElementById('expEngVeoRail'), rMot=document.getElementById('expEngMotionRail');
-  const dev=_expIsDev();
+  const rVeo=document.getElementById('expEngVeoRail'), rMot=document.getElementById('expEngMotionRail'), rSd=document.getElementById('expEngSeedanceRail');
   const on=(b)=>{ if(b){ b.style.border='2px solid var(--accent)'; b.style.background='var(--accent-soft)'; } };
   const off=(b)=>{ if(b){ b.style.border='1px solid var(--border)'; b.style.background='var(--surface)'; } };
   if(veo)  veo.style.display = isVeoLike ? 'flex' : 'none';
   if(mot)  mot.style.display = isVeoLike ? 'none' : 'block';
   if(mexp) mexp.style.display = isVeoLike ? '' : 'none';
-  // Sélecteur : le dev voit toujours la barre 3-way (Veo/Seedance/Motion) ; sinon rail en Veo, barre en Motion.
-  if(rail) rail.style.display = (isVeoLike && !dev) ? 'flex' : 'none';
-  if(bar)  bar.style.display  = (!isVeoLike || dev) ? '' : 'none';
-  // états des 3 cartes de la barre
+  // Sélecteur : rail (Moteur) en Veo/Seedance, barre en Motion — pour TOUT LE MONDE.
+  // (Seedance vit dans le rail comme 3ᵉ carte, cf _expInitSeedanceDev ; sur mobile le rail est masqué et la barre reprend la main via CSS.)
+  if(rail) rail.style.display = isVeoLike ? 'flex' : 'none';
+  if(bar)  bar.style.display  = isVeoLike ? 'none' : '';
+  // états des cartes de la barre (utilisée en Motion + sur mobile)
   [ [bVeo,'veo'],[bSd,'seedance'],[bMot,'motion'] ].forEach(([b,id])=>{ if(!b) return; (id===e?on:off)(b); });
-  // rail (2 cartes) pour le non-dev
-  if(rVeo) rVeo.classList.toggle('on', e!=='motion'); if(rMot) rMot.classList.toggle('on', e==='motion');
+  // états des cartes du rail (2 ou 3 selon dev) — classe .on
+  if(rVeo) rVeo.classList.toggle('on', e==='veo');
+  if(rSd)  rSd.classList.toggle('on', e==='seedance');
+  if(rMot) rMot.classList.toggle('on', e==='motion');
   // durée Seedance visible uniquement en mode seedance
   const sdDur=document.getElementById('expSeedanceDurRow'); if(sdDur) sdDur.style.display = (e==='seedance') ? 'flex' : 'none';
 }
