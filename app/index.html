@@ -23930,7 +23930,7 @@ function _expSetEngine(e){
 }
 
 /* ── Motion Control — état + uploads ── */
-window._MC_BACKEND_READY = false;   // passe à true quand l'edge function Hedra Kling 2.6 est branchée
+window._MC_BACKEND_READY = true;   // Motion Control LIVE pour tous (Kling 2.6 via fal-proxy dans _mcGenerate) — flag informatif, non testé ailleurs
 window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
 function _mcPick(input, which){ const f=input.files&&input.files[0]; if(f) _mcLoad(f,which); }
