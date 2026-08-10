@@ -64,7 +64,7 @@ const MUSIC_VOL_EXTRA = 0.06 // repli si la sonie d'un titre est illisible
 // niveau CIBLE de la musique de fond, en LUFS. La voix est calée à -14 : à -30
 // le lit se sent sans jamais disputer la parole. Chaque titre de la
 // bibliothèque est mesuré et ramené ici, sinon les plus forts écrasent tout.
-const MUSIC_TARGET_LUFS = -30
+const MUSIC_TARGET_LUFS = -20
 
 // banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
 // entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
@@ -451,12 +451,13 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // On ne génère QUE sur les fenêtres `avatarSegments` — c'est ce qui rend le
     // coût tenable (1,5 cr/s sur 12 s de visage, pas sur 50 s de vidéo).
     if (plan.__lipsync) console.log(`▶ lipsync demandé — photo ${avatarPhoto ? 'oui' : 'NON'}, clips existants ${Object.keys(avatarClips).length}, fenêtres ${(plan.avatarSegments || []).length}`)
-    if (plan.__lipsync && avatarPhoto && !Object.keys(avatarClips).length) {
-      try {
-        const n = await genererLipsync(plan, proj, jobDir, avatarClips)
-        if (n) console.log(`▶ lipsync : ${n} scène(s) générée(s) chez Hedra`)
-      } catch (e) { console.warn('lipsync :', e.message) }
-    }
+    // #84 · LE LIPSYNC SE GÉNÈRE APRÈS LA DÉRIVATION (voir plus bas). Avant, on
+    // le générait ICI sur les 7 fenêtres du chef d'orchestre — puis la dérivation
+    // n'en gardait que 2 (hook + CTA) : 5 clips payés jamais montrés, et les
+    // fenêtres créées par la dérivation (trou, adresse) sans clip à elles (photo
+    // figée, ou clip d'une AUTRE tranche réutilisé = lèvres décalées à 40 s).
+    // Axel : « il faut générer que pour les fenêtres gardées ». On attend donc que
+    // la dérivation ait tranché QUELLES fenêtres montrent le visage.
 
     // `noFace` : vider `avatarSegments` ne suffisait pas — la dérivation en
     // recréait juste après (adresse directe, respiration, trou comblé) et chacune
@@ -515,6 +516,15 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
           .sort((a, b) => (a.start || 0) - (b.start || 0))
         wins.forEach((w, k) => { w.photo = avatarPool[k % avatarPool.length] })
         if (wins.length) console.log(`▶ rotation avatar : ${wins.length} fenêtre(s)-photo sur ${avatarPool.length} visage(s)`)
+      }
+      // #84 · LIPSYNC ICI, APRÈS QUE LA DÉRIVATION A TRANCHÉ. Chaque fenêtre
+      // gardée (hook, respiration, trou comblé, adresse, CTA) est lipsyncée sur
+      // SA tranche exacte et SON image (rotation) — zéro clip gaspillé, aucune
+      // scène oubliée, plus de clip décalé réutilisé. La visite guidée n'a pas de
+      // fenêtre avatar : le visage ne parle donc QUE hors tutoriel.
+      if (plan.__lipsync && avatarPhoto && !Object.keys(avatarClips).length) {
+        try { const n = await genererLipsync(plan, proj, jobDir, avatarClips); if (n) console.log(`▶ lipsync : ${n} scène(s) générée(s) chez Hedra (fenêtres gardées)`) }
+        catch (e) { console.warn('lipsync :', e.message) }
       }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
@@ -1264,12 +1274,38 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   trancherFenetres(plan)
   const segs = (plan.avatarSegments || []).filter((w) => (w.end - w.start) >= 1)
   if (!segs.length) return 0
+  // #84 · répartir les visages du pool sur les scènes (rotation) : chaque fenêtre
+  // parle sur une image TOM différente. On lit le pool sur le disque (media/
+  // avatar.png + avatar-1.png…) pour ne pas dépendre de l'ordre d'appel.
+  {
+    const pool = ['media/avatar.png']
+    for (let n = 1; n <= 8; n++) if (existsSync(join(proj, 'media', 'avatar-' + n + '.png'))) pool.push('media/avatar-' + n + '.png')
+    if (pool.length > 1) {
+      segs.slice().sort((a, b) => (a.start || 0) - (b.start || 0)).forEach((w, k) => { if (!w.photo) w.photo = pool[k % pool.length] })
+      console.log(`▶ lipsync : ${segs.length} scène(s) réparties sur ${pool.length} visage(s) (rotation)`)
+    }
+  }
   const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
   if (!existsSync(voix)) return 0
 
-  const photo = readFileSync(join(proj, 'media', 'avatar.png'))
-  const imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
-  if (!imageId) { console.warn('lipsync : upload de la photo refusé'); return 0 }
+  const photoDefaut = readFileSync(join(proj, 'media', 'avatar.png'))
+  const imageIdDefaut = await hedraAsset('image', 'avatar.png', photoDefaut, 'image/png')
+  if (!imageIdDefaut) { console.warn('lipsync : upload de la photo refusé'); return 0 }
+  // #84 · ROTATION DANS LE LIPSYNC : chaque fenêtre parle sur SON image (w.photo,
+  // posée avant l'appel). Upload-cachée par chemin → 3 visages = 3 uploads, pas
+  // un par scène. Sans w.photo (ou fichier absent) : la photo par défaut.
+  const idParPhoto = new Map()
+  const photoDe = async (w) => {
+    const rel = String(w.photo || '')
+    const abs = rel ? join(proj, rel) : ''
+    if (!abs || !existsSync(abs)) return { buf: photoDefaut, id: imageIdDefaut }
+    if (!idParPhoto.has(rel)) {
+      const buf = readFileSync(abs)
+      const id = await hedraAsset('image', rel.split('/').pop(), buf, 'image/png')
+      idParPhoto.set(rel, id ? { buf, id } : { buf: photoDefaut, id: imageIdDefaut })
+    }
+    return idParPhoto.get(rel)
+  }
 
   // ── LES OCTETS BRUTS D'HEDRA NE VONT JAMAIS DIRECTEMENT AU RENDU ──────────
   // Les clips fournis par l'app (jobDir/avatar) passent tous par un ré-encodage
@@ -1305,7 +1341,10 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const PARALLELE = 4
   let faits = 0
   let depense = 0, economie = 0   // crédits Hedra, pour que la facture soit lisible dans la trace
-  const file = segs.map((w, i) => ({ w, i }))
+  // ⚠ l'indice DOIT être celui du tableau plan.avatarSegments : le moteur mappe
+  // les clips par `av${indexDuTableau}` (dynamic-engine). Nommer par l'indice
+  // FILTRÉ décalait les clips d'une fenêtre dès qu'une était écartée.
+  const file = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1)
   const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
     for (;;) {
       const t = file.shift()
@@ -1322,12 +1361,20 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
         try { ok = await uneScene(t.w, t.i) } catch (e) { pourquoi = e.message }
         if (!ok && essai === 1) console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : 1er essai manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
       }
-      if (ok) { faits++; console.log(`✓ lipsync scène ${t.i} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
+      // #84 · le clip est nommé par l'INDICE DE TABLEAU (t.i) ; on aligne
+      // `w.clip` dessus pour que le remap post-découpe (`'av'+(w.clip ?? i)`) le
+      // retrouve. Sans ça, une fenêtre créée par la dérivation (clip:-1 : trou,
+      // adresse) cherchait `av-1` → visage FIGÉ (Axel : « pas de lipsync à 4-6 s
+      // ni à 40 s »).
+      if (ok) { t.w.clip = t.i; faits++; console.log(`✓ lipsync scène ${t.i} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
       else console.warn(`✗ lipsync scène ${t.i} ABANDONNÉE : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})${pourquoi ? ' — ' + pourquoi : ''} → la photo restera figée sur cette fenêtre`)
     }
   })
 
   async function uneScene(w, i) {
+    // #84 · l'image de CETTE fenêtre (rotation) — la clé de cache et le keyframe
+    // Hedra en découlent : chaque visage parle sur la bonne photo.
+    const { buf: photo, id: imageId } = await photoDe(w)
     // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
     // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
     // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
