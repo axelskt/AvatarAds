@@ -3043,8 +3043,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </button>
               </div>
             </div>
-            <!-- Actions -->
-            <div style="padding:16px 18px">
+            <!-- Actions (Axel 10/08 : cachées pendant le chargement, réaffichées quand l'image est prête — cf _imgProgStart / _imgShowSingle) -->
+            <div id="imgActions" style="padding:16px 18px">
               <!-- 05/08 : « Restaurer les détails » passe en CONTOURS orange (Axel) —
                    le bouton plein orange, c'est « Télécharger » ci-dessous. -->
               <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (4K)<span style="font-size:8px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE · 5 CR</span></button>
@@ -9125,6 +9125,7 @@ function _imgRenderHistory(){
         document.getElementById('imgDownloadBtn').href = item.url;
         document.getElementById('imgResult').style.display = 'block';
         document.getElementById('imgLoadingOverlay').style.display = 'none';
+        { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }  // image d'historique prête → boutons visibles
       };
       const img = document.createElement('img');
       img.src = item.url; img.alt = '';
@@ -9317,6 +9318,7 @@ function _imgSetProg(p){
   if(pct) pct.textContent = Math.round(Math.min(100,p))+'%';
 }
 function _imgProgStart(label){
+  { const a=document.getElementById('imgActions'); if(a) a.style.display='none'; }  // boutons cachés pendant le chargement
   const l=document.getElementById('imgProgLabel'); if(l&&label) l.textContent=label;
   if(typeof _imgIdleShow==='function') _imgIdleShow(false);
   _imgSetProg(1);
@@ -9451,16 +9453,22 @@ window._FACE_UPSCALE_DEV = true;
 function _loadImgEl(src){ return new Promise((res,rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
 async function _detectFaceBox(dataUrl){
   try{
+    // Downscale à 768px pour la détection (le 4K entier = data-URL trop lourd pour
+    // la vision). La box est normalisée 0..1 → remappe telle quelle sur le 4K.
+    let small=dataUrl;
+    try{ const im0=await _loadImgEl(dataUrl); const mx=768; const rr=Math.min(1,mx/Math.max(im0.naturalWidth,im0.naturalHeight)); const c0=document.createElement('canvas'); c0.width=Math.max(1,Math.round(im0.naturalWidth*rr)); c0.height=Math.max(1,Math.round(im0.naturalHeight*rr)); c0.getContext('2d').drawImage(im0,0,0,c0.width,c0.height); small=c0.toDataURL('image/jpeg',0.85); }catch(_){}
     const Hh=await getAuthHeader();
     const body={ model:'gpt-4o', max_tokens:80, temperature:0, messages:[{ role:'user', content:[
       { type:'text', text:'Give ONLY a compact JSON object with keys x, y, w, h = the bounding box of the MAIN person face and head as fractions from 0 to 1 (x,y = top-left corner, w,h = width and height). Example: {"x":0.42,"y":0.30,"w":0.16,"h":0.20}. If there is no clear human face, output {"none":true}. Output JSON only, no other text.' },
-      { type:'image_url', image_url:{ url:dataUrl } } ] }] };
+      { type:'image_url', image_url:{ url:small } } ] }] };
     const r=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path='+encodeURIComponent('/v1/chat/completions'),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(body) });
-    if(!r.ok) return null;
-    const d=await r.json(); const t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; const m=t.match(/\{[\s\S]*\}/); if(!m) return null;
-    const j=JSON.parse(m[0]); if(j.none||typeof j.x!=='number'||typeof j.h!=='number') return null;
+    if(!r.ok){ console.warn('[face-upscale] détection HTTP', r.status); return null; }
+    const d=await r.json(); const t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; const m=t.match(/\{[\s\S]*\}/);
+    if(!m){ console.warn('[face-upscale] détection: pas de JSON', t.slice(0,80)); return null; }
+    const j=JSON.parse(m[0]); if(j.none){ console.log('[face-upscale] aucun visage détecté'); return null; }
+    if(typeof j.x!=='number'||typeof j.h!=='number'||j.h>1||j.w>1){ console.warn('[face-upscale] box invalide', j); return null; }
     return { x:Math.max(0,j.x), y:Math.max(0,j.y), w:Math.min(1,j.w||0.15), h:Math.min(1,j.h) };
-  }catch(e){ return null; }
+  }catch(e){ console.warn('[face-upscale] détection err', e); return null; }
 }
 async function _falClarityUpscale(imageDataUrl){
   const Hh=await getAuthHeader();
@@ -9481,9 +9489,10 @@ async function _falClarityUpscale(imageDataUrl){
 async function _faceUpscalePass(dataUrl){
   try{
     if(!window._FACE_UPSCALE_DEV || typeof _expIsDev!=='function' || !_expIsDev()) return dataUrl;
-    if(!/^data:/.test(dataUrl)) return dataUrl; // besoin d'un data-URL canvas-safe
+    if(!/^data:/.test(dataUrl)){ console.warn('[face-upscale] pas un data-URL, skip'); return dataUrl; }
     const box=await _detectFaceBox(dataUrl); if(!box) return dataUrl;
-    if(box.h>0.32) return dataUrl; // visage déjà grand/proche → inutile
+    console.log('[face-upscale] visage détecté', box);
+    if(box.h>0.42){ console.log('[face-upscale] visage déjà grand (h='+(box.h).toFixed(2)+'), skip'); return dataUrl; }
     const im=await _loadImgEl(dataUrl); const W=im.naturalWidth, H2=im.naturalHeight;
     const padX=box.w*0.6, padT=box.h*0.55, padB=box.h*1.1;
     const x0=Math.max(0,box.x-padX), y0=Math.max(0,box.y-padT), x1=Math.min(1,box.x+box.w+padX), y1=Math.min(1,box.y+box.h+padB);
@@ -9491,7 +9500,7 @@ async function _faceUpscalePass(dataUrl){
     if(cw<48||ch<48) return dataUrl;
     const cc=document.createElement('canvas'); cc.width=cw; cc.height=ch; const cctx=cc.getContext('2d'); cctx.drawImage(im,px0,py0,cw,ch,0,0,cw,ch);
     const cropDataUrl=cc.toDataURL('image/png');
-    const upUrl=await _falClarityUpscale(cropDataUrl); if(!upUrl) return dataUrl;
+    const upUrl=await _falClarityUpscale(cropDataUrl); if(!upUrl){ console.warn('[face-upscale] Clarity a échoué, skip'); return dataUrl; }
     const upResp=await fetch(upUrl); const upObj=URL.createObjectURL(await upResp.blob());
     let upImg; try{ upImg=await _loadImgEl(upObj); } finally { /* obj révoqué plus bas */ }
     const out=document.createElement('canvas'); out.width=W; out.height=H2; const ctx=out.getContext('2d'); ctx.drawImage(im,0,0);
@@ -9585,6 +9594,7 @@ async function _imgUpscaleHD(btn){
 }
 function _imgShowSingle(url, size){
   _imgProgStop();
+  { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }  // boutons réaffichés quand l'image est prête
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
