@@ -6147,6 +6147,20 @@ async function creditsFlowRefund(why){
   return total;
 }
 
+// Filet global (audit Générateur 10/08) : une erreur async imprévue PENDANT une
+// génération ne doit ni bloquer l'app (onbeforeunload « quitter la page ? » figé)
+// ni faire perdre les crédits déjà débités. Sans try/finally dans la grosse fonction
+// startGeneration, ce filet attrape toute promesse rejetée non gérée.
+window.addEventListener('unhandledrejection', (ev)=>{
+  if(window._generationInProgress){
+    window._generationInProgress = false; window.onbeforeunload = null;
+    try{ if(typeof _creditOps!=='undefined' && _creditOps.length) creditsFlowRefund('erreur inattendue pendant la génération'); }catch(_){}
+    try{ toast('Erreur pendant la génération — crédits rendus, réessaie'); }catch(_){}
+    try{ document.getElementById('v-generator')?.classList.remove('gen-generating'); }catch(_){}
+    console.warn('[gen] unhandledrejection pendant la génération :', ev && ev.reason);
+  }
+});
+
 // Solde insuffisant : free → paywall plans ; abonné → upsell contextuel (upgrade + packs)
 function _insufficientCredits(missing){
   const plan = (typeof currentMember !== 'undefined' && currentMember && (currentMember.plan || '').toLowerCase()) || 'free';
@@ -19759,7 +19773,8 @@ async function startGeneration(){
     // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
     if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
       const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
-      if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))) return;
+      // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
+      if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
     }
   }
 
@@ -19941,6 +19956,9 @@ async function startGeneration(){
   setStep('gp5','done');
 
   // Show results
+  // Filet crédits : si aucune vidéo n'a été produite (compose raté, aucun clip, etc.)
+  // et qu'il reste des crédits débités non soldés → on rembourse. #122
+  if(!hedraUrl && typeof _creditOps!=='undefined' && _creditOps.length){ try{ await creditsFlowRefund('aucune vidéo produite'); }catch(_){} }
   results={script:finalScript, audioBlob, hedraUrl};
   showResults();
 
