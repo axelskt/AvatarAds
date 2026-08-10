@@ -86,7 +86,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
