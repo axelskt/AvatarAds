@@ -1084,7 +1084,12 @@ async function passeDeFinition(plan) {
 // Une scène qui échoue ne fait PAS échouer le montage : on garde la photo fixe
 // pour cette fenêtre-là et on continue. Un visage figé vaut mieux qu'aucune
 // vidéo livrée.
-const HEDRA_MODEL_ID = process.env.HEDRA_MODEL_ID || 'd1dd37a3-e39a-4854-a298-6510289f9cf2'
+// Modèle lipsync par défaut = Hedra AVATAR (26f0fc66…), swap validé par Axel le
+// 10/08 (« hedra avatar tient + la route que character 3 ») — même prix 7 cr/s,
+// modèle « longform » plus récent. Character-3 = 'd1dd37a3-e39a-4854-a298-6510289f9cf2'
+// (repli via env HEDRA_MODEL_ID). ⚠ la clé de cache lipsync inclut le modèle : le
+// swap repart donc d'un cache vierge (normal, sortie différente).
+const HEDRA_MODEL_ID = process.env.HEDRA_MODEL_ID || '26f0fc66-152b-40ab-abed-76c43df99bc8'
 
 async function hedraProxy(chemin, init = {}) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
