@@ -44,7 +44,7 @@ const IMG_COST        = { standard: 3, high: 5 }
 const VIDEO_COST_SEC  = 1 // Veo 3.1 Lite = tarif Express Lite
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
 const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
-const HEDRA_MODEL_ID  = 'd1dd37a3-e39a-4854-a298-6510289f9cf2' // Hedra Character 3 (même modèle que l'app)
+const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (swap 10/08, même modèle que l'app). Character-3 = d1dd37a3-e39a-4854-a298-6510289f9cf2
 const AVATAR_COST_SEC = 1.5 // 1 cr/s lipsync + 0,5 cr/s voix ElevenLabs (barème app)
 const AVATAR_MAX_SEC  = 60
 const CHARS_PER_SEC   = 14  // débit de parole FR moyen pour estimer la durée depuis le script
