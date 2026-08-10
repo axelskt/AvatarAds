@@ -1507,6 +1507,9 @@ async function pollLoop() {
           // racine du job (avatar.png), pas dans assets/ — sans elle un montage
           // lancé hors app (MCP) était toujours sans visage
           if (a.id === 'avatar') { await dl(a.path, join(jobDir, 'avatar.png')); continue }
+          // #84 · les visages du POOL (avatar-1, avatar-2…) : eux aussi à la
+          // racine, en avatar-1.png… — le worker les répartit sur les fenêtres.
+          if (/^avatar-\d+$/.test(String(a.id))) { await dl(a.path, join(jobDir, a.id + '.' + ext)); continue }
           await dl(a.path, join(jobDir, 'assets', a.id + '.' + ext))
         }
         // #119 · scènes avatar : téléchargées comme av0.mp4, av1.mp4… (ordre = plan.avatarSegments)
