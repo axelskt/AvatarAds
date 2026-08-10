@@ -354,6 +354,28 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ici, il recevait le plan BRUT — 19 panneaux au lieu de 14, captures non
   // pilotées, animations non ancrées. La peau était claire, la matière non.
   if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple') return
+  // ── UN BÉGAIEMENT NE S'ÉCRIT PAS DEUX FOIS ──────────────────────────────────
+  // La transcription garde les répétitions de la voix : « il te reste plus qu'à,
+  // qu'à demander » sort DEUX légendes « qu'à » collées (Axel, Cartoon 20, 27 s :
+  // « je dis 2 fois qu'à, supprime-en 1 »). On fusionne deux légendes IDENTIQUES
+  // qui se suivent de près QUAND le mot est une élision (qu', d', l', j'…) ou
+  // très court : un vrai « très très » (mot plein, sans apostrophe, ≥3 lettres)
+  // n'est jamais touché. La seconde disparaît, la première tient jusqu'au bout.
+  if (Array.isArray(plan.captions) && plan.captions.length > 1) {
+    const norm2 = (t) => String(t || '').toLowerCase().replace(/[.,!?…«»"]/g, '').trim()
+    const nettoye = [plan.captions[0]]
+    let retires = 0
+    for (let i = 1; i < plan.captions.length; i++) {
+      const cur = plan.captions[i], prev = nettoye[nettoye.length - 1]
+      const nm = norm2(cur.text)
+      const meme = nm && nm === norm2(prev.text)
+      const colle = (cur.start - (prev.end ?? cur.start)) < 0.5
+      const faible = /['']/.test(nm) || nm.length <= 2
+      if (meme && colle && faible) { prev.end = cur.end ?? prev.end; retires++; continue }
+      nettoye.push(cur)
+    }
+    if (retires) { plan.captions = nettoye; console.log(`▶ ${retires} bégaiement(s) de sous-titre fusionné(s)`) }
+  }
   // ── CHAQUE FENÊTRE D'ORIGINE GARDE SON CLIP ────────────────────────────────
   // L'app génère les clips lipsync av0, av1… AVANT cette dérivation, un par
   // fenêtre du plan d'orchestrate, et le worker les remappe ensuite PAR INDICE
@@ -1253,7 +1275,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // ces tournures ferment une énumération ou ouvrent un chapitre
     const FERME = [['cest', 'toi', 'qui', 'vois'], ['cest', 'comme', 'tu', 'veux'],
       ['a', 'toi', 'de', 'voir'], ['peu', 'importe'], ['cest', 'toi', 'qui', 'decides']]
-    const OUVRE = [['maintenant'], ['desormais'], ['place', 'a'], ['on', 'passe', 'a']]
+    // « si tu veux … » en TÊTE de phrase = une adresse directe au spectateur
+    // (le CTA de sortie : « si tu veux la méthode complète, écris Avatar »).
+    // Axel (Cartoon 20) : « y'aurait pu avoir mon avatar quand je dis "si tu
+    // veux la méthode complète" ». Le garde `tete` la limite aux débuts de
+    // proposition — jamais un « si tu veux » au milieu d'une instruction.
+    const OUVRE = [['maintenant'], ['desormais'], ['place', 'a'], ['on', 'passe', 'a'], ['si', 'tu', 'veux']]
     const n = (w) => norm(String(w && w.text || ''))
     const suite = (i, seq) => seq.every((tk, k) => words[i + k] && n(words[i + k]) === tk)
     for (let i = 0; i < words.length; i++) {
@@ -2010,14 +2037,27 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // le zoom se cale sur « clique sur commencer » — mais SEULEMENT si ce mot
       // tombe dans la scène. Ici « pour commencer » est dit AVANT l'adresse : le
       // zoom partait alors à 16,5 s, hors du panneau, et ne jouait jamais.
-      // PAS DE ZOOM SUR LE BOUTON DE LA PAGE D'ACCUEIL. Il zoomait sur
-      // « Commencer » : un troisième plan serré dans une scène qui en a déjà
-      // deux (l'adresse qui se tape, la page qui arrive), et qui vole la place
-      // du vrai geste suivant — le clic sur Images IA dans l'app. Axel :
-      // « annule ce zoom ». La page s'affiche en entier, et la visite guidée
-      // prend le relais sur l'écran d'après.
+      // ── LE NAVIGATEUR OWN « CRÉER TON COMPTE SUR AVATARADS.FR » ────────────
+      // Axel (Cartoon 20, 10/08) REVIENT sur sa demande d'avant (« annule ce
+      // zoom ») : « à 8 s il aurait dû ZOOMER sur la LP sur Commencer / Se
+      // connecter ». Le zoom existe dans la scène (cible re-calée sur la
+      // nouvelle capture 2880×1800), mais un écran de la visite guidée se posait
+      // DANS la fenêtre du navigateur (« Mon compte » dès 7,8 s) et le coupait
+      // avant le zoom — d'où « il n'a pas zoomé » ET « Mon compte trop tôt ». On
+      // rend donc au navigateur TOUTE sa fenêtre : tout écran/scène déjà posé
+      // dedans est repoussé APRÈS elle (« ouvre Mon compte » vient ensuite), ou
+      // retiré s'il y tenait entier.
+      for (let k = out.length - 1; k >= 0; k--) {
+        const s2 = out[k]
+        if (!(s2.screen || s2.ui)) continue
+        if ((s2.start || 0) >= b - 0.1 || (s2.end || 0) <= a + 0.1) continue
+        const ki = taken.findIndex((w) => Math.abs(w[0] - (s2.start || 0)) < 0.06 && Math.abs(w[1] - (s2.end || 0)) < 0.06)
+        if (ki >= 0) taken.splice(ki, 1)
+        if ((s2.end || 0) > b + 0.3) { s2.start = r2(b); claim(s2.start, s2.end); console.log(`▶ navigateur : « ${s2.screen || s2.ui} » repoussé à ${r2(b)}s (il volait la fenêtre du site)`) }
+        else { out.splice(k, 1); console.log(`▶ navigateur : « ${s2.screen || s2.ui} » retiré (dans la fenêtre du site)`) }
+      }
       if (add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home' }, a, b)) {
-        console.log(`▶ navigateur : l'adresse se tape puis la page s'affiche (${r2(a)}→${r2(b)}s)`)
+        console.log(`▶ navigateur : l'adresse se tape, la LP arrive, puis zoom sur « Commencer » (${r2(a)}→${r2(b)}s)`)
       }
       break
     }
@@ -2820,6 +2860,31 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // l'animation hors sujet qui l'est. On passe donc une dernière fois sur ce qui
   // reste et on y met la personne qui parle, sans plafond.
   {
+    // ── UNE COQUILLE VIDE CÈDE AU VISAGE (Cartoon 20, 10/08) ────────────────
+    // Le chef pose parfois une carte `money`/`blankfill`/sans-type qui n'a NI
+    // valeur, NI items, NI capture, NI média, NI sujets dessinés : elle ne
+    // montre rien. Sur Cartoon 20 une carte `money` nue tenait 4,25→6,16 s
+    // juste après le hook — le « blanc » qu'Axel a filmé. Un panneau qui
+    // encadre du vide est pire que pas de panneau : on la retire ICI, AVANT le
+    // calcul des creux, et on libère son créneau (`taken`) pour que le trou
+    // retombe sur le visage (règle 2). Les cartes à matière ne sont jamais
+    // touchées : c'est le VIDE qu'on refuse, pas le contenu.
+    if (!noFace) {
+      const coquilleVide = (s) => {
+        const nm = String(s.anim || '')
+        if (s.screen || s.assetId || s.src || s.user || (s.items || []).length ||
+            s.value || s.title || (s.sujets || []).length) return false
+        return nm === 'money' || nm === 'blankfill' || nm === ''
+      }
+      for (let i = out.length - 1; i >= 0; i--) {
+        const s = out[i]
+        if (!coquilleVide(s)) continue
+        const k = taken.findIndex((w) => Math.abs(w[0] - s.start) < 0.06 && Math.abs(w[1] - s.end) < 0.06)
+        if (k >= 0) taken.splice(k, 1)
+        console.log(`▶ carte vide « ${s.anim || '—'} » ${r2(s.start)}→${r2(s.end)}s retirée → le trou revient au visage`)
+        out.splice(i, 1)
+      }
+    }
     const bornes = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
       .sort((a, b) => a[0] - b[0])
     // 1,2 s est le seuil du VISAGE : en dessous, le montrer puis le retirer fait

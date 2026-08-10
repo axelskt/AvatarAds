@@ -412,14 +412,36 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // sur audio seul), on supprime les fenêtres avatar : la dérivation remplit
     // alors ces secondes avec des animations, ce qui vaut mieux qu'un écran noir.
     let avatarPhoto = ''
+    // ── LE POOL D'AVATARS : UNE IMAGE ≠ À CHAQUE FENÊTRE (#84) ─────────────────
+    // Axel (Cartoon 20) : « à 40 s l'avatar n'a pas changé, il faut qu'il
+    // change ». Le job peut fournir plusieurs visages du MÊME perso :
+    // `avatar.png` (le principal, celui du hook) et `avatar-1.png`,
+    // `avatar-2.png`… La dérivation posée, on répartit ces images sur les
+    // fenêtres qui montrent la PHOTO (pas un clip lipsync) — une différente à
+    // chaque fois, jamais deux fois de suite. Une seule image = comme avant.
+    const avatarPool = []
+    const chargePhoto = (src, dest) => {
+      try {
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src,
+          '-vf', "scale='min(1080,iw)':-2", join(proj, 'media', dest)])
+        return 'media/' + dest
+      } catch (e) { console.warn('photo avatar illisible :', e.message); return '' }
+    }
     for (const n of ['avatar.png', 'avatar.jpg', 'avatar.jpeg', 'avatar.webp']) {
       if (!existsSync(join(jobDir, n))) continue
-      try {
-        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(jobDir, n),
-          '-vf', "scale='min(1080,iw)':-2", join(proj, 'media', 'avatar.png')])
-        avatarPhoto = 'media/avatar.png'
-      } catch (e) { console.warn('photo avatar illisible :', e.message) }
+      avatarPhoto = chargePhoto(join(jobDir, n), 'avatar.png')
+      if (avatarPhoto) avatarPool.push(avatarPhoto)
       break
+    }
+    // images supplémentaires : avatar-1.png, avatar-2.png… à la racine du job
+    // (l'app les enverra depuis « Ma marque » ; en local on les dépose à la main)
+    if (avatarPhoto) {
+      const extra = readdirSync(jobDir).filter((f) => /^avatar-\d+\.(png|jpe?g|webp)$/i.test(f)).sort()
+      for (const f of extra) {
+        const rel = chargePhoto(join(jobDir, f), f.replace(/\.(jpe?g|webp)$/i, '.png'))
+        if (rel) avatarPool.push(rel)
+      }
+      if (avatarPool.length > 1) console.log(`▶ pool avatar : ${avatarPool.length} visages (rotation par fenêtre)`)
     }
     // ── #42 · LE LIPSYNC, SCÈNE PAR SCÈNE ────────────────────────────────────
     // Axel : « il faut qu'il appelle l'API Hedra pour le faire, et faut qu'il
@@ -481,6 +503,18 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       if (avatarPhoto) {
         try { const g = await genererFenetresG(plan, proj, jobDir, avatarClips); if (g) console.log(`▶ ${g} fenêtre(s) générée(s) après dérivation`) }
         catch (e) { console.warn('fenêtres G :', e.message) }
+      }
+      // ── ROTATION DES VISAGES SUR LES FENÊTRES-PHOTO (#84) ────────────────────
+      // Chaque fenêtre qui montrera la PHOTO (pas un clip lipsync généré) pioche
+      // l'image suivante du pool — le hook prend la 1re, la fenêtre d'après la
+      // 2e, etc. Déterministe (ordre chronologique) : un re-rendu retombe sur les
+      // mêmes visages. Le moteur lit `w.photo` (dynamic-engine : « photo prime »).
+      if (avatarPool.length > 1) {
+        const montrePhoto = (w) => !existsSync(join(proj, 'media', 'av' + w.clip + '.mp4'))
+        const wins = (plan.avatarSegments || []).filter(montrePhoto)
+          .sort((a, b) => (a.start || 0) - (b.start || 0))
+        wins.forEach((w, k) => { w.photo = avatarPool[k % avatarPool.length] })
+        if (wins.length) console.log(`▶ rotation avatar : ${wins.length} fenêtre(s)-photo sur ${avatarPool.length} visage(s)`)
       }
     }
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes

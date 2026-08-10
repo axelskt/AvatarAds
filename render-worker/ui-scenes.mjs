@@ -244,7 +244,10 @@ export const UI_SCENES = {
     const W = 1000, H = 690, X = (1080 - W) / 2, Y = 560
     const tType = t0 + 0.35, tGo = r2(tType + 0.09 * url.length + 0.2)
     // cible du zoom final : le bouton « Commencer » en haut à droite du site
-    const zx = s.zoomX ?? 0.885, zy = s.zoomY ?? 0.146, zf = s.zoomTo || 2.8
+    // cible calée sur la NOUVELLE LP (capture 2880×1800) : « Se connecter » +
+    // « Commencer » sont sur la rangée du haut, à y≈0,04. L'ancien 0,146 zoomait
+    // sous la barre, dans le vide — Axel : « il aurait dû zoomer sur Commencer ».
+    const zx = s.zoomX ?? 0.86, zy = s.zoomY ?? 0.052, zf = s.zoomTo || 2.6
     const tZoom = r2(s.zoomAt ? Math.max(tGo + 0.5, s.zoomAt) : Math.max(tGo + 0.6, t1 - 1.2))
     const html = `
       <div id="${id}win" style="position:absolute;left:${X}px;top:${Y}px;width:${W}px;height:${H}px;background:${tone.dark ? '#17171E' : '#FFFFFF'};border-radius:28px;overflow:hidden;box-shadow:0 60px 150px rgba(13,13,18,.45);opacity:0">
