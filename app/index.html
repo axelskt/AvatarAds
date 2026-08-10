@@ -9441,6 +9441,83 @@ async function _nbRefine4K(token, dataUrl, aspect){
 // Correspondance format app → aspect ratio Nano Banana.
 const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
 
+/* ── #81 · PASSE VISAGE CIBLÉE (dev-only) ─────────────────────────────────────
+   Sur un plan large, le petit visage manque de détail (budget pixels). On le
+   détecte (GPT-4o vision), on l'upscale SEUL via fal Clarity (pas cher, PAS Nano
+   Banana), et on le recolle avec un bord adouci. 100% additif : gated par
+   _FACE_UPSCALE_DEV + compte dev, skip si pas de visage / visage déjà grand,
+   fallback total (toute erreur → image inchangée). Ne touche RIEN si désactivé. */
+window._FACE_UPSCALE_DEV = true;
+function _loadImgEl(src){ return new Promise((res,rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+async function _detectFaceBox(dataUrl){
+  try{
+    const Hh=await getAuthHeader();
+    const body={ model:'gpt-4o', max_tokens:80, temperature:0, messages:[{ role:'user', content:[
+      { type:'text', text:'Give ONLY a compact JSON object with keys x, y, w, h = the bounding box of the MAIN person face and head as fractions from 0 to 1 (x,y = top-left corner, w,h = width and height). Example: {"x":0.42,"y":0.30,"w":0.16,"h":0.20}. If there is no clear human face, output {"none":true}. Output JSON only, no other text.' },
+      { type:'image_url', image_url:{ url:dataUrl } } ] }] };
+    const r=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path='+encodeURIComponent('/v1/chat/completions'),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(body) });
+    if(!r.ok) return null;
+    const d=await r.json(); const t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; const m=t.match(/\{[\s\S]*\}/); if(!m) return null;
+    const j=JSON.parse(m[0]); if(j.none||typeof j.x!=='number'||typeof j.h!=='number') return null;
+    return { x:Math.max(0,j.x), y:Math.max(0,j.y), w:Math.min(1,j.w||0.15), h:Math.min(1,j.h) };
+  }catch(e){ return null; }
+}
+async function _falClarityUpscale(imageDataUrl){
+  const Hh=await getAuthHeader();
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
+  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
+  const model='/fal-ai/clarity-upscaler';
+  const sub=await fPost(model,{ image_url:imageDataUrl, prompt:'ultra realistic close-up real photo of a face, natural skin with visible pores and fine peach fuzz, detailed eyes with sharp iris, individual hair strands, sharp, photorealistic, no plastic, no smoothing, no airbrush', upscale_factor:4, creativity:0.35, resemblance:0.8, num_inference_steps:20 });
+  if(!sub.ok) return null;
+  const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
+  if(!url && (sd.status_url||sd.request_id)){
+    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+    for(let i=0;i<50 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
+  }
+  return url||null;
+}
+async function _faceUpscalePass(dataUrl){
+  try{
+    if(!window._FACE_UPSCALE_DEV || typeof _expIsDev!=='function' || !_expIsDev()) return dataUrl;
+    if(!/^data:/.test(dataUrl)) return dataUrl; // besoin d'un data-URL canvas-safe
+    const box=await _detectFaceBox(dataUrl); if(!box) return dataUrl;
+    if(box.h>0.32) return dataUrl; // visage déjà grand/proche → inutile
+    const im=await _loadImgEl(dataUrl); const W=im.naturalWidth, H2=im.naturalHeight;
+    const padX=box.w*0.6, padT=box.h*0.55, padB=box.h*1.1;
+    const x0=Math.max(0,box.x-padX), y0=Math.max(0,box.y-padT), x1=Math.min(1,box.x+box.w+padX), y1=Math.min(1,box.y+box.h+padB);
+    const px0=Math.round(x0*W), py0=Math.round(y0*H2), cw=Math.round((x1-x0)*W), ch=Math.round((y1-y0)*H2);
+    if(cw<48||ch<48) return dataUrl;
+    const cc=document.createElement('canvas'); cc.width=cw; cc.height=ch; const cctx=cc.getContext('2d'); cctx.drawImage(im,px0,py0,cw,ch,0,0,cw,ch);
+    const cropDataUrl=cc.toDataURL('image/png');
+    const upUrl=await _falClarityUpscale(cropDataUrl); if(!upUrl) return dataUrl;
+    const upResp=await fetch(upUrl); const upObj=URL.createObjectURL(await upResp.blob());
+    let upImg; try{ upImg=await _loadImgEl(upObj); } finally { /* obj révoqué plus bas */ }
+    const out=document.createElement('canvas'); out.width=W; out.height=H2; const ctx=out.getContext('2d'); ctx.drawImage(im,0,0);
+    const tmp=document.createElement('canvas'); tmp.width=cw; tmp.height=ch; const tctx=tmp.getContext('2d');
+    tctx.drawImage(upImg,0,0,upImg.naturalWidth,upImg.naturalHeight,0,0,cw,ch);
+    URL.revokeObjectURL(upObj);
+    // calage couleur léger (mean par canal) : le visage upscalé doit matcher le crop d'origine
+    try{
+      const oc=cctx.getImageData(0,0,cw,ch).data; const ui=tctx.getImageData(0,0,cw,ch); const ud=ui.data;
+      let so0=0,so1=0,so2=0,su0=0,su1=0,su2=0; for(let i=0;i<oc.length;i+=4){ so0+=oc[i];so1+=oc[i+1];so2+=oc[i+2]; su0+=ud[i];su1+=ud[i+1];su2+=ud[i+2]; }
+      const g0=su0?so0/su0:1, g1=su1?so1/su1:1, g2=su2?so2/su2:1;
+      for(let i=0;i<ud.length;i+=4){ ud[i]=Math.min(255,ud[i]*g0); ud[i+1]=Math.min(255,ud[i+1]*g1); ud[i+2]=Math.min(255,ud[i+2]*g2); }
+      tctx.putImageData(ui,0,0);
+    }catch(_){}
+    // masque radial (feather) → recollage invisible
+    const mk=document.createElement('canvas'); mk.width=cw; mk.height=ch; const mc=mk.getContext('2d');
+    const rg=mc.createRadialGradient(cw/2,ch/2,Math.min(cw,ch)*0.18, cw/2,ch/2,Math.min(cw,ch)*0.52);
+    rg.addColorStop(0,'rgba(0,0,0,1)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+    mc.fillStyle=rg; mc.fillRect(0,0,cw,ch);
+    tctx.globalCompositeOperation='destination-in'; tctx.drawImage(mk,0,0);
+    ctx.drawImage(tmp,px0,py0);
+    console.log('[face-upscale] passe visage appliquée ('+cw+'x'+ch+')');
+    return out.toDataURL('image/png');
+  }catch(e){ console.warn('[face-upscale] sautée:', e); return dataUrl; }
+}
+
 async function _imgUpscaleHD(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
@@ -9487,6 +9564,13 @@ async function _imgUpscaleHD(btn){
       // Les URLs Replicate expirent ~1h → data URL pour la persistance bibliothèque
       try{ const r2=await fetch(d.url); const b2=await r2.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(b2);}); }catch(e2){}
     }
+    // #81 (dev-only) : passe VISAGE ciblée sur les plans larges (petit visage).
+    // Additive, best-effort — toute erreur renvoie le 4K normal (aucun surcoût
+    // Nano Banana : la passe visage tourne sur fal Clarity, ~0,03 $).
+    try{
+      const withFace=await _faceUpscalePass(finalUrl);
+      if(withFace && withFace!==finalUrl){ finalUrl=withFace; engine+=' + visage'; }
+    }catch(_){}
     img.src=finalUrl; _imgIsHD=true;
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
