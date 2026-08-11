@@ -1244,7 +1244,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
         })
         if (cue) {
           const a = r2(Math.max(0, cue.start - 0.5)), e = r2(Math.min(D, cue.start + 2.6))
-          const items = dispo.map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
+          // le média du SUJET (nom « influenceuse »/« brune »/« hero ») devient le
+          // HÉRO du mur (en grand en haut) ; les autres remplissent la grille.
+          const estHero = (b) => /influenceus|brune|hero/i.test(String(b.assetId || ''))
+          const ordered = dispo.slice().sort((x, y) =>
+            (estHero(x) ? 0 : 1) - (estHero(y) ? 0 : 1) || (x.start || 0) - (y.start || 0))
+          const items = ordered.map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
           if (add({ anim: 'photowall', items, count: items.length }, a, e)) {
             for (const b of dispo) b.__pose = true
             med += items.length
