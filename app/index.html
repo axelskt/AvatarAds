@@ -3993,7 +3993,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <span class="mt-drop-sub" id="mtAvatarSub">Sinon visuels seuls · 0 crédit lipsync</span>
                     <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;cursor:pointer;line-height:1;display:none;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
                   </div>
-                  <input type="file" id="mtAvatarIn" accept="image/*" style="display:none" onchange="mtSetAvatar(this.files[0]);this.value=''">
+                  <input type="file" id="mtAvatarIn" accept="image/*" multiple style="display:none" onchange="mtSetAvatar(this.files);this.value=''">
                 </div>
 
                 <!-- #119 · modèle lipsync (visible quand un avatar est choisi) -->
@@ -11662,23 +11662,52 @@ async function mtSetMp3(f){
   }
 }
 // 🧑 avatar optionnel : il parle le MP3 en lipsync (pipeline Hedra du Générateur, 1 cr/s)
-function mtSetAvatar(f){
-  if(!f || !f.type.startsWith('image/')){ if(f) toast('Choisis une image (photo de ton avatar)'); return; }
-  _mt.avatar = f;
+// #84 · PLUSIEURS visages = ROTATION : à chaque fois que l'avatar réapparaît
+// (hook, respiration, CTA…), le montage prend l'image SUIVANTE du pool, jamais
+// deux fois la même d'affilée. Une seule photo = comportement d'avant.
+function mtSetAvatar(files){
+  const list = !files ? [] : (typeof files!=='string' && files.length!==undefined ? Array.from(files) : [files]);
+  const imgs = list.filter(f=>f && f.type && f.type.startsWith('image/'));
+  if(!imgs.length){ if(list.length) toast('Choisis une image (photo de ton avatar)'); return; }
+  _mt.avatars = (_mt.avatars||[]).concat(imgs).slice(0,6);   // plafond 6 visages
+  mtRefreshAvatarUI();
+  const n=_mt.avatars.length;
+  toast(n>1 ? n+' visages chargés — ils tournent à chaque apparition' : 'Avatar chargé — lipsync sur ton audio');
+}
+function mtRefreshAvatarUI(){
+  const avs=_mt.avatars||[];
+  _mt.avatar = avs[0] || null;                 // compat : le reste du code lit _mt.avatar
+  _mt._avF_portrait=null; _mt._avF_paysage=null;  // le reformatage se refait (cache par-image dans _mtAvatarInFormat)
+  if(_mt._avFmt) _mt._avFmt.clear();
+  if(!avs.length){ mtClearAvatar(); return; }
   if(_mt._avUrl){ try{ URL.revokeObjectURL(_mt._avUrl); }catch(_){} }
-  _mt._avUrl = URL.createObjectURL(f);
+  _mt._avUrl = URL.createObjectURL(avs[0]);
+  const n=avs.length;
   const drop=document.getElementById('mtAvatarDrop'); if(drop) drop.classList.add('filled');
   const ico=document.querySelector('#mtAvatarDrop .mt-drop-ico');
   if(ico) ico.innerHTML='<img src="'+_mt._avUrl+'" style="width:22px;height:22px;border-radius:6px;object-fit:cover;display:block">';
-  const nm=document.getElementById('mtAvatarName'); if(nm) nm.textContent = f.name;
+  const nm=document.getElementById('mtAvatarName'); if(nm) nm.textContent = n>1 ? n+' photos · ton avatar change à chaque plan' : avs[0].name;
   const sub=document.getElementById('mtAvatarSub'); if(sub) sub.style.display='none';
   const cl=document.getElementById('mtAvatarClear'); if(cl) cl.style.display='flex';
   const mw=document.getElementById('mtModelWrap'); if(mw) mw.style.display='block';
+  // bande de vignettes (le pool visible) + un « + » pour en ajouter
+  let row=document.getElementById('mtAvatarThumbs');
+  if(!row && drop){ row=document.createElement('div'); row.id='mtAvatarThumbs';
+    row.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center'; drop.appendChild(row); }
+  if(row) row.innerHTML = avs.map((f,i)=>{ const u=URL.createObjectURL(f);
+    return '<span style="position:relative;display:inline-flex"><img src="'+u+'" style="width:34px;height:34px;border-radius:8px;object-fit:cover;display:block;border:1.5px solid var(--border-2)">'
+      +'<button onclick="event.stopPropagation();mtRemoveAvatar('+i+')" title="Retirer" style="position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>';
+  }).join('') + (n<6 ? '<button onclick="event.stopPropagation();document.getElementById(\'mtAvatarIn\').click()" title="Ajouter un visage" style="width:34px;height:34px;border-radius:8px;border:1.5px dashed var(--border-2);background:transparent;color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>' : '');
   mtSetLipModel(_mt.lipModel);
-  toast('Avatar chargé — lipsync sur ton audio');
+}
+function mtRemoveAvatar(i){
+  _mt.avatars = (_mt.avatars||[]).filter((_,k)=>k!==i);
+  mtRefreshAvatarUI();
 }
 function mtClearAvatar(){
-  _mt.avatar = null;
+  _mt.avatar = null; _mt.avatars = [];
+  _mt._avF_portrait=null; _mt._avF_paysage=null; if(_mt._avFmt) _mt._avFmt.clear();
+  const th=document.getElementById('mtAvatarThumbs'); if(th) th.remove();
   const drop=document.getElementById('mtAvatarDrop'); if(drop) drop.classList.remove('filled');
   const ico=document.querySelector('#mtAvatarDrop .mt-drop-ico');
   if(ico) ico.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>';
@@ -12151,14 +12180,22 @@ function _mtImgOrient(file){
 // #119 · la photo de l'avatar dans le format voulu. Si l'original ne convient pas,
 // on RÉGÉNÈRE la MÊME personne dans l'autre cadrage via gpt-image /edits (img2img,
 // PAS d'outpainting — qualité > économie). L'original reste intact. Résultat mis en cache.
-async function _mtAvatarInFormat(target){
+async function _mtAvatarInFormat(idx, target){
+  // #84 · ROTATION : la scène `idx` parle sur l'image (idx % N) du pool de visages.
+  // Cache de reformatage PAR IMAGE (Map) — sinon toutes les scènes héritaient du
+  // format de la 1re photo. Une seule photo = comme avant (idx ignoré).
+  const pool = (_mt.avatars && _mt.avatars.length) ? _mt.avatars : (_mt.avatar ? [_mt.avatar] : []);
+  if(!pool.length) return _mt.avatar;
+  const base = pool[(((idx||0)%pool.length)+pool.length)%pool.length];
   const want = target==='paysage' ? 'paysage' : 'portrait';
-  if(want==='portrait' && _mt._avF_portrait) return _mt._avF_portrait;
-  if(want==='paysage'  && _mt._avF_paysage)  return _mt._avF_paysage;
-  const orient = await _mtImgOrient(_mt.avatar);
-  // l'original convient déjà (portrait/carré pour 9:16 ; paysage pour 16:9) → on le garde tel quel
+  _mt._avFmt = _mt._avFmt || new Map();
+  const cached = _mt._avFmt.get(base);
+  if(cached && cached[want]) return cached[want];
+  const remember = (f)=>{ const c=_mt._avFmt.get(base)||{}; c[want]=f; _mt._avFmt.set(base,c); return f; };
+  const orient = await _mtImgOrient(base);
+  // l'original convient déjà (portrait/carré pour 9:16 ; paysage pour 16:9) → tel quel
   const okAsIs = (want==='portrait') ? (orient!=='paysage') : (orient==='paysage');
-  if(okAsIs){ if(want==='portrait') _mt._avF_portrait=_mt.avatar; else _mt._avF_paysage=_mt.avatar; return _mt.avatar; }
+  if(okAsIs) return remember(base);
   // sinon régénération img2img dans le nouveau format
   let token=''; try{ token=(await sb.auth.getSession()).data.session?.access_token || ''; }catch(_){}
   const size   = want==='paysage' ? '1536x1024' : '1024x1536';
@@ -12168,7 +12205,7 @@ async function _mtAvatarInFormat(target){
     try{
       const fd=new FormData();
       fd.append('model', model);
-      fd.append('image', _mt.avatar, _mt.avatar.name||'avatar.png');
+      fd.append('image', base, base.name||'avatar.png');
       fd.append('prompt', prompt);
       fd.append('n','1'); fd.append('size', size);
       fd.append('quality','high'); fd.append('moderation','low');
@@ -12179,13 +12216,11 @@ async function _mtAvatarInFormat(target){
       let blob=null;
       if(it?.b64_json) blob=await (await fetch('data:image/png;base64,'+it.b64_json)).blob();
       else if(it?.url)  blob=await (await fetch(it.url)).blob();
-      if(blob){ const f=new File([blob], 'avatar-'+want+'.png', {type:'image/png'});
-        if(want==='portrait') _mt._avF_portrait=f; else _mt._avF_paysage=f;
-        return f; }
+      if(blob) return remember(new File([blob], 'avatar-'+want+'.png', {type:'image/png'}));
     }catch(e){ console.warn('régénération format '+want+':', e); }
   }
   // échec de régénération → on renvoie l'original (le renderer cover-crop centre le visage)
-  return _mt.avatar;
+  return base;
 }
 
 // génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
@@ -12541,7 +12576,7 @@ async function _mtSegmentedGenerate(){
     for(let i=0;i<segs.length;i++){
       const s=segs[i]; const fmt = s.format==='paysage' ? 'paysage' : 'portrait';
       _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
-      const img=await _mtAvatarInFormat(fmt);
+      const img=await _mtAvatarInFormat(i, fmt);   // #84 · rotation : image ≠ par scène
       await _mtDetectHands(img);   // mains dans le cadre ? une seule fois par photo
       const segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end);
       // le rôle borne la « scène vivante » : seulement aux extrémités, jamais au milieu
@@ -12823,10 +12858,13 @@ async function _mtVideoGenerate(){
 // 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
 // montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
 function _mtBonusImages(){
+  // #84 · le cache de reformatage est désormais une Map PAR IMAGE (rotation) :
+  // on offre chaque variante 9:16/16:9 RÉELLEMENT régénérée (≠ de l'originale).
   const out=[];
-  const o=_mt.avatar||null;
-  if(_mt._avF_portrait && _mt._avF_portrait!==o) out.push({ blob:_mt._avF_portrait, fmt:'9:16' });
-  if(_mt._avF_paysage  && _mt._avF_paysage !==o) out.push({ blob:_mt._avF_paysage,  fmt:'16:9' });
+  if(_mt._avFmt){ for(const [base, c] of _mt._avFmt){
+    if(c && c.portrait && c.portrait!==base) out.push({ blob:c.portrait, fmt:'9:16' });
+    if(c && c.paysage  && c.paysage !==base) out.push({ blob:c.paysage,  fmt:'16:9' });
+  }}
   return out;
 }
 function _mtBonusHtml(){
