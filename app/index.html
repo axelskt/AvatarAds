@@ -24070,17 +24070,32 @@ function _mcRenderAdv(){
 }
 
 /* ── Motion Control — overlay progression + résultat ── */
+let _mcT0=0, _mcTimerIv=null;
+function _mcTimerTick(){
+  const el=document.getElementById('mcProgTimer'); if(!el||!_mcT0) return;
+  const s=Math.max(0,Math.floor((Date.now()-_mcT0)/1000));
+  el.textContent='⏱ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
 function _mcProg(msg, pct){
   let o=document.getElementById('mcProg');
   if(!o){ o=document.createElement('div'); o.id='mcProg';
-    o.style.cssText='position:fixed;inset:0;z-index:220;background:rgba(8,8,11,.88);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px';
-    o.innerHTML='<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div><div id="mcProgTxt" class="mono" style="font-size:13px;color:var(--text2)"></div><div style="width:280px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="mcProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .4s"></div></div>';
+    o.style.cssText='position:fixed;inset:0;z-index:220;background:rgba(8,8,11,.88);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px';
+    o.innerHTML='<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>'
+      +'<div id="mcProgPct" style="font-family:var(--mono);font-size:30px;font-weight:800;color:var(--text);line-height:1">0%</div>'
+      +'<div id="mcProgTxt" class="mono" style="font-size:13px;color:var(--text2)"></div>'
+      +'<div style="width:280px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="mcProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .4s"></div></div>'
+      +'<div id="mcProgTimer" class="mono" style="font-size:12px;color:var(--text2);opacity:.7">⏱ 0:00</div>';
     document.body.appendChild(o); }
   o.style.display='flex';
+  // le chrono démarre au 1er appel (début de génération) et tourne chaque seconde
+  if(!_mcT0) _mcT0=Date.now();
+  if(!_mcTimerIv){ _mcTimerIv=setInterval(_mcTimerTick,1000); }
+  _mcTimerTick();
   const t=document.getElementById('mcProgTxt'); if(t) t.textContent=msg||'';
+  const p=document.getElementById('mcProgPct'); if(p) p.textContent=Math.round(pct||0)+'%';
   const b=document.getElementById('mcProgBar'); if(b) b.style.width=(pct||0)+'%';
 }
-function _mcProgHide(){ const o=document.getElementById('mcProg'); if(o) o.style.display='none'; }
+function _mcProgHide(){ const o=document.getElementById('mcProg'); if(o) o.style.display='none'; if(_mcTimerIv){ clearInterval(_mcTimerIv); _mcTimerIv=null; } _mcT0=0; }
 function _mcShowResult(url, render){
   _mcProgHide();
   let m=document.getElementById('mcResModal');
@@ -24089,10 +24104,27 @@ function _mcShowResult(url, render){
     m.onclick=(e)=>{ if(e.target===m) m.style.display='none'; };
     document.body.appendChild(m); }
   const lbl = render==='split-bottom' ? 'Split · original ↑ · motion ↓' : render==='split-top' ? 'Split · motion ↑ · original ↓' : '';
+  window._mcLastUrl = url;
   m.innerHTML='<div class="col" style="gap:14px;align-items:center;max-width:420px;width:100%"><video src="'+url+'" controls autoplay playsinline style="max-height:70vh;width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
-    +'<div class="row" style="gap:10px"><a href="'+url+'" download="motion-control.mp4" class="btn btn-primary" style="text-decoration:none">Télécharger</a><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
+    +'<div class="row" style="gap:10px"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
   m.style.display='flex';
+}
+// #34 · le « télécharger » DOIT enregistrer le fichier. Un <a download> sur une
+// URL fal cross-origin (v3b.fal.media) est IGNORÉ par Safari → il OUVRE la vidéo
+// et l'user la perd. On récupère donc le blob et on force l'enregistrement ;
+// repli sur l'ouverture (clic droit → Enregistrer) si le CORS bloque le fetch.
+async function _mcDownload(){
+  const url=window._mcLastUrl; if(!url){ return; }
+  try{
+    toast('Téléchargement…');
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    const b=await r.blob();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download='motion-control-'+Date.now()+'.mp4'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(_){} }, 1500);
+    toast('Vidéo enregistrée ✓');
+  }catch(e){ console.warn('mc download:', e); toast('Téléchargement direct bloqué — j\'ouvre la vidéo, fais « Enregistrer sous »'); try{ window.open(url,'_blank'); }catch(_){} }
 }
 /* ── Motion Control — génération réelle (Kling 2.6 via fal-proxy) ── */
 async function _mcGenerate(){
@@ -24138,7 +24170,11 @@ async function _mcGenerate(){
     }
     _mcProg('Transfert du mouvement (Kling 2.6)…', 18);
     const model='/fal-ai/kling-video/v2.6/'+(tier==='pro'?'pro':'standard')+'/motion-control';
-    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(window._mcPrompt||'The character reproduces the exact motion and gestures of the reference video, natural, same framing') });
+    // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
+    // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
+    const _mcMotion = window._mcPrompt || 'The character reproduces the exact motion and gestures of the reference video, natural, same framing';
+    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.';
+    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId) });
     if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
     const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
     const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
