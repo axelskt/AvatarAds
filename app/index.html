@@ -30039,7 +30039,7 @@ function edBindTimeline(){
 function edKeyHandler(e){
   const main=document.getElementById('edMain'); if(!_ed||!main||main.offsetParent===null) return;
   const t=(e.target.tagName||'').toLowerCase(); if(t==='input'||t==='textarea'||e.target.isContentEditable) return;
-  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.selTrack || _ed.sel || _ed.selZoom || (_ed.clips&&_ed.clips.length>1)){ e.preventDefault(); edDeleteContext(); } }
+  if(e.key==='Delete'||e.key==='Backspace'){ if(_ed.selTrack || _ed.sel || _ed.selZoom || _ed.selVisual || (_ed.clips&&_ed.clips.length>1)){ e.preventDefault(); edDeleteContext(); } }
   else if(e.key===' '||e.code==='Space'){ e.preventDefault(); edTogglePlay(); }
   else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
     const dir=e.key==='ArrowRight'?1:-1; const step=e.shiftKey?1:0.2; const tot=edTotalDur()||1;
@@ -30708,8 +30708,29 @@ function edDeleteContext(){
     const st=_ed.selTrack;
     if(st.type==='music'){ edRemoveMusicSeg(st.idx||0); return; }
     if(st.type==='sfx'){ edSelectTrack(null); edRemoveSfx(st.id); return; }
-    if(st.type==='audio'){ toast('La bande Audio est liée au clip — coupe ou supprime le clip pour la modifier'); return; }
+    if(st.type==='audio'){
+      // #1 (11/08) · la bande Audio EST la voix du clip → « Supprimer » la coupe
+      // (voix vidéo à 0). On peut la rétablir via le curseur « Voix vidéo ».
+      edSnap();
+      if(typeof edSetVideoVol==='function') edSetVideoVol(0);
+      const sl=document.querySelector('input[oninput*="edSetVideoVol"]'); if(sl){ sl.value=0; if(typeof edRangeFill==='function') edRangeFill(sl); }
+      const lbl=document.getElementById('edVoiceVolLbl'); if(lbl) lbl.textContent='0%';
+      edSelectTrack(null);
+      toast('Audio du clip coupé — remonte « Voix vidéo » pour le rétablir');
+      return;
+    }
     edSelectTrack(null); return;
+  }
+  // #1 (11/08) · le CLIP VISUEL sélectionné se supprime (clip unique → on vide l'éditeur)
+  if(_ed.selVisual){
+    if(_ed.activeIdx>0){ edRemoveClip(_ed.activeIdx); return; }
+    if(_ed.clips && _ed.clips.length>1){ toast('Le clip principal ne peut pas être supprimé — clique un autre clip puis Suppr'); return; }
+    try{ if(typeof edPause==='function') edPause(); }catch(_){}
+    _ed=null;
+    const m=document.getElementById('edMain'); if(m) m.style.display='none';
+    const e=document.getElementById('edEmpty'); if(e) e.style.display='flex';
+    toast('Clip supprimé — glisse une nouvelle vidéo');
+    return;
   }
   if(_ed.sel){ edSnap(); edDeleteSelected(); return; }
   if(_ed.selZoom){ edRemoveZoom(_ed.selZoom); return; }
