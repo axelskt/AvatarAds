@@ -2561,15 +2561,25 @@ serve(async (req: Request) => {
     assetsMeta = (Array.isArray(assetsMeta) ? assetsMeta : []).slice(0, MAX_ASSETS)
       .map((a) => ({ id: String(a.id || '').slice(0, 40), name: String(a.name || 'image').slice(0, 80), kind: a.kind === 'video' ? 'video' : 'image', auto: a.auto === true }))
       .filter((a) => a.id)
+    // ⚠ PLAFOND DE VISION (Axel, 11/08) : envoyer une miniature base64 de CHAQUE
+    // média à Claude faisait durer l'appel ~139 s à 6 médias → près du timeout
+    // edge (150 s), le plan n'était pas persité et le rendu ne partait jamais.
+    // On ne base64-encode donc QUE les 4 premiers (les plus utiles : héros +
+    // médias à placer précisément). Les suivants restent connus côté rendu (ils
+    // sont dans assetFiles) et sont replacés par la dérivation — le mur de photos
+    // (`photowall`) les récupère tous de toute façon.
+    const MAX_VISION = 4
     const assets = []
+    let vis = 0
     for (const meta of assetsMeta) {
       const f = form.get('asset_' + meta.id)
       let thumb
-      if (f instanceof File && f.size > 0 && f.size <= MAX_THUMB_BYTES) {
+      if (vis < MAX_VISION && f instanceof File && f.size > 0 && f.size <= MAX_THUMB_BYTES) {
         const buf = new Uint8Array(await f.arrayBuffer())
         let bin = ''
         for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
         thumb = { media: f.type || 'image/jpeg', b64: btoa(bin) }
+        vis++
       }
       assets.push({ ...meta, thumb })
     }
