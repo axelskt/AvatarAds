@@ -10941,45 +10941,71 @@ function _genRefreshMusicLabel(){
   const m=window._genMusic;
   l.textContent = (m && m.url) ? (m.name + ' · ' + Math.round((m.volume!=null?m.volume:0.35)*100) + '%') : 'Aucune — mixée sous ta voix';
 }
-function _genSetMusicVol(v){ window._genMusic.volume = Math.max(0, Math.min(1, (+v)/100)); const el=document.getElementById('genMusicVolVal'); if(el) el.textContent=Math.round(window._genMusic.volume*100)+'%'; _genRefreshMusicLabel(); }
-function _genStopPrev(){ if(window._genPrevAudio){ try{ window._genPrevAudio.pause(); }catch(_){} } }
-function _genClearMusic(){ window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
+function _genSetMusicVol(v){ window._genMusic.volume = Math.max(0, Math.min(1, (+v)/100)); const el=document.getElementById('genMusicVolVal'); if(el) el.textContent=Math.round(window._genMusic.volume*100)+'%'; const s=document.getElementById('genMusicVolSlider'); if(s) s.style.setProperty('--aa-fill', Math.round(window._genMusic.volume*100)+'%'); _genRefreshMusicLabel(); }
+// icône play↔pause d'une ligne du picker
+function _genPrevIcon(id, playing){
+  const b=document.querySelector('#_genMusModal [data-play="'+id+'"]'); if(!b) return;
+  b.innerHTML = playing
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>'
+    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>';
+}
+function _genStopPrev(){ if(window._genPrevAudio){ try{ window._genPrevAudio.pause(); }catch(_){} } if(window._genPrevId){ _genPrevIcon(window._genPrevId,false); window._genPrevId=null; } }
+function _genClearMusic(){ try{ if(window._genMusic && window._genMusic.url && window._genMusic.url.startsWith('blob:')) URL.revokeObjectURL(window._genMusic.url); }catch(_){} window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
 function _genPickMusic(id){
   const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
   window._genMusic.url=m.url; window._genMusic.dyn=m.dyn||''; window._genMusic.name=m.name;
-  document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ r.style.borderColor=(r.getAttribute('data-mid')===id)?'var(--accent)':'var(--border)'; });
+  document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ const on=r.getAttribute('data-mid')===id; r.style.borderColor=on?'var(--accent)':'var(--border)'; r.style.background=on?'var(--accent-soft)':'var(--panel-1)'; });
   _genRefreshMusicLabel();
 }
+// play↔pause : reclic sur la même = pause ; clic sur une autre = stoppe la précédente
 function _genPrevMusic(id){
   const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
-  _genStopPrev(); const a=new Audio(_genMusicSrc(m)); a.volume=0.9; window._genPrevAudio=a; a.play().catch(()=>{});
+  if(window._genPrevId===id && window._genPrevAudio && !window._genPrevAudio.paused){ window._genPrevAudio.pause(); _genPrevIcon(id,false); window._genPrevId=null; return; }
+  _genStopPrev();
+  const a=new Audio(_genMusicSrc(m)); a.volume=0.9; window._genPrevAudio=a; window._genPrevId=id;
+  a.onended=()=>{ _genPrevIcon(id,false); if(window._genPrevId===id) window._genPrevId=null; };
+  a.play().then(()=>_genPrevIcon(id,true)).catch(()=>{});
+}
+// l'user importe SA musique directement
+function _genImportMusic(file){
+  if(!file) return;
+  try{ if(window._genMusic && window._genMusic.url && window._genMusic.url.startsWith('blob:')) URL.revokeObjectURL(window._genMusic.url); }catch(_){}
+  const url=URL.createObjectURL(file);
+  window._genMusic.url=url; window._genMusic.dyn=''; window._genMusic.name=(file.name||'Ma musique').replace(/\.[^.]+$/,'').slice(0,40);
+  _genStopPrev(); _genRefreshMusicLabel();
+  const md=document.getElementById('_genMusModal'); if(md) md.remove();
+  toast('« '+window._genMusic.name+' » — ta musique');
 }
 function _genOpenMusicPicker(){
   document.getElementById('_genMusModal')?.remove();
   const bank=window.AA_MUSIC||[]; const cur=window._genMusic||{};
   const vol=Math.round((cur.volume!=null?cur.volume:0.35)*100);
-  const rows=bank.map(m=>`<div data-mid="${m.id}" onclick="_genPickMusic('${m.id}')" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;border:1px solid ${cur.url===m.url?'var(--accent)':'var(--border)'};background:var(--panel-1);cursor:pointer;margin-bottom:8px">
-      <span role="button" onclick="event.stopPropagation();_genPrevMusic('${m.id}')" title="Écouter" style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,107,53,.14);border:1px solid rgba(255,107,53,.4);color:var(--orange2);cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
+  const importRow=`<label style="display:flex;align-items:center;gap:11px;padding:12px;border-radius:12px;border:1px dashed var(--accent-line);background:var(--accent-soft);cursor:pointer;margin-bottom:10px">
+      <input type="file" accept="audio/*" style="display:none" onchange="_genImportMusic(this.files[0])">
+      <span style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,107,53,.16);border:1px solid rgba(255,107,53,.4);color:var(--orange2)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10M8 9l4-4 4 4M5 19h14"/></svg></span>
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:700">Importer ma musique</span><span style="display:block;font-size:11px;color:var(--text3)">MP3 · WAV · M4A — la tienne</span></span>
+    </label>`;
+  const rows=bank.map(m=>`<div data-mid="${m.id}" onclick="_genPickMusic('${m.id}')" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;border:1px solid ${cur.url===m.url?'var(--accent)':'var(--border)'};background:${cur.url===m.url?'var(--accent-soft)':'var(--panel-1)'};cursor:pointer;margin-bottom:8px">
+      <span role="button" data-play="${m.id}" onclick="event.stopPropagation();_genPrevMusic('${m.id}')" title="Écouter" style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,107,53,.14);border:1px solid rgba(255,107,53,.4);color:var(--orange2);cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span><span style="display:block;font-size:11px;color:var(--text3)">${m.mood||''}</span></span>
       <span style="font-size:11px;font-family:var(--mono);color:var(--text3);flex:0 0 auto">${m.dur||''}</span>
     </div>`).join('');
   const modal=document.createElement('div'); modal.id='_genMusModal';
-  modal.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
   modal.addEventListener('click',e=>{ if(e.target===modal){ _genStopPrev(); modal.remove(); } });
-  modal.innerHTML=`<div style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 26px;max-height:78vh;display:flex;flex-direction:column">
+  modal.innerHTML=`<div style="width:100%;max-width:440px;background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:20px 16px 20px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0">
       <div style="font-size:14px;font-weight:800">Musique de fond</div>
       <button onclick="_genStopPrev();document.getElementById('_genMusModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div style="overflow-y:auto;flex:1;margin:0 -4px;padding:2px 4px">${rows}</div>
+    <div style="overflow-y:auto;flex:1;margin:0 -4px;padding:2px 4px">${importRow}${rows}</div>
     <div style="flex-shrink:0;border-top:1px solid var(--border);margin-top:12px;padding-top:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:7px"><span>Volume de la musique</span><span id="genMusicVolVal">${vol}%</span></div>
-      <input type="range" min="0" max="100" value="${vol}" oninput="_genSetMusicVol(this.value)" style="width:100%;accent-color:var(--accent)">
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button onclick="_genClearMusic()" style="flex:0 0 auto;padding:10px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Aucune</button>
-        <button onclick="_genStopPrev();document.getElementById('_genMusModal').remove()" style="flex:1;padding:10px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">OK</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px"><span>Volume de la musique</span><span id="genMusicVolVal">${vol}%</span></div>
+      <input type="range" min="0" max="100" value="${vol}" id="genMusicVolSlider" class="aa-slider" oninput="_genSetMusicVol(this.value)" style="width:100%;--aa-fill:${vol}%">
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="_genClearMusic()" style="flex:0 0 auto;padding:11px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Aucune</button>
+        <button onclick="_genStopPrev();document.getElementById('_genMusModal').remove()" style="flex:1;padding:11px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">Sélectionner cette musique</button>
       </div>
-      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:9px;text-align:center">Mixée sous ta voix · démarre sur la partie dynamique</div>
     </div>
   </div>`;
   document.body.appendChild(modal);
