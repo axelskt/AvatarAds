@@ -179,19 +179,38 @@ function loudnessOf(file) {
 // l'original (la voix qui a piloté le mouvement). input 0 = base.mp4 (original),
 // input 1 = assets/motion.mp4. mode 'split-top' = motion en haut, sinon original.
 function composeMotionSplit(jobDir, outPath, plan) {
-  const orig = join(jobDir, 'base.mp4')
+  const orig0 = join(jobDir, 'base.mp4')
   const motion = join(jobDir, 'assets', 'motion.mp4')
   if (!existsSync(motion)) throw new Error('clip motion manquant (assets/motion.mp4)')
+  // ⚠ VIDÉO TÉLÉPHONE : une vidéo filmée à l'iPhone embarque souvent un 3e flux
+  // DATA (métadonnées « mebx », codec « none ») que ffmpeg REFUSE de décoder
+  // (« Decoder (codec none) not found for input stream #0:2 ») → le split
+  // échouait TOUJOURS sur ces sources, d'où le repli plein écran systématique.
+  // On remuxe la source en VIDÉO+AUDIO seulement (le flux data est écarté) avant
+  // la composition. Copie d'abord (rapide) ; ré-encodage léger en repli.
+  const orig = join(jobDir, 'base-av.mp4')
+  try {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a?',
+      '-c', 'copy', '-movflags', '+faststart', orig], { stdio: 'pipe' })
+  } catch (_) {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a?',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
+  }
   const mode = plan.mode === 'split-top' ? 'split-top' : 'split-bottom'
   const pan = 'scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960:(iw-1080)/2:(ih-960)*0.3,setsar=1'
   const top = mode === 'split-top' ? 1 : 0   // split-top → motion (input 1) en haut
   const bot = mode === 'split-top' ? 0 : 1
   const fc = `[${top}:v]${pan}[t];[${bot}:v]${pan}[b];[t][b]vstack=inputs=2[v]`
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig, '-i', motion,
-    '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
-    '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
-    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
-    '-movflags', '+faststart', outPath], { stdio: 'inherit' })
+  try {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-ignore_unknown', '-i', orig, '-i', motion,
+      '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
+      '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
+      '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
+      '-movflags', '+faststart', outPath], { stdio: 'pipe' })
+  } catch (e) {
+    const err = (e.stderr ? e.stderr.toString() : '') || String(e.message || e)
+    throw new Error('motion-split ffmpeg : ' + err.trim().slice(-300))
+  }
   console.log(`✅ motion-split (${mode}) → ${outPath}`)
 }
 

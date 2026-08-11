@@ -24435,7 +24435,7 @@ async function _mcGenerate(){
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     const _mcMotion = window._mcPrompt || 'The character reproduces the exact motion and gestures of the reference video, natural, same framing';
-    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.';
+    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit. Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
     const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId) });
     if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
     const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
