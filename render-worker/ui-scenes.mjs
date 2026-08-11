@@ -320,9 +320,14 @@ export const UI_SCENES = {
   // ── hook « 30 secondes » : un CHRONOMÈTRE animé — anneau qui se trace,
   //    aiguille qui balaie, chiffre qui compte. Du motion design, pas du texte. ──
   timer(id, t0, t1, tone, s) {
+    // Refonte (Axel, 11/08) : « ça met tout en ORANGE depuis le CENTRE et ça
+    // SUIT L'AIGUILLE ; le 30 au-dessus avec "sec" à sa droite ; il passe de 0
+    // à 30 ». Le remplissage est une part de camembert qui grandit depuis le
+    // centre en suivant l'aiguille (astuce : anneau de rayon R/2, épaisseur R,
+    // dévoilé par stroke-dashoffset → un disque plein qui se remplit en rotation).
     const val = parseInt(String(s.value || '30').replace(/\D/g, ''), 10) || 30
-    const cx = 540, cy = 900, R = 300
-    const circ = Math.round(2 * Math.PI * R)
+    const cx = 540, cy = 1010, R = 300
+    const pieR = R / 2, pieC = Math.round(2 * Math.PI * pieR)   // circonférence du rayon R/2
     const countDur = r2(Math.min(1.3, t1 - t0 - 0.5))
     const ticks = Array.from({ length: 12 }, (_, k) => {
       const a = (k / 12) * 2 * Math.PI - Math.PI / 2
@@ -331,27 +336,29 @@ export const UI_SCENES = {
       return `<line class="${id}tk" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${tone.mute}" stroke-width="7" stroke-linecap="round" opacity="0"/>`
     }).join('')
     const html = `
+      <div id="${id}h" style="position:absolute;left:0;right:0;top:${cy - R - 220}px;display:flex;align-items:baseline;justify-content:center;gap:20px;opacity:0">
+        <span class="disp" id="${id}n" style="font-size:200px;line-height:1;color:${tone.ink}">0</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:70px;font-weight:700;letter-spacing:.04em;color:${ACC}">sec</span>
+      </div>
       <svg style="position:absolute;left:0;top:0;width:1080px;height:1920px" viewBox="0 0 1080 1920">
-        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${tone.dark ? '#26262E' : '#EDE4DC'}" stroke-width="16"/>
-        <circle id="${id}ring" cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${ACC}" stroke-width="16"
-          stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${tone.dark ? '#26262E' : '#EDE4DC'}" stroke-width="14"/>
+        <circle id="${id}pie" cx="${cx}" cy="${cy}" r="${pieR}" fill="none" stroke="${ACC}" stroke-opacity="0.92" stroke-width="${R}"
+          stroke-dasharray="${pieC}" stroke-dashoffset="${pieC}" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${ACC}" stroke-width="8"/>
         ${ticks}
-        <g id="${id}nd"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R + 46}" stroke="${tone.ink}" stroke-width="10" stroke-linecap="round"/>
-        <circle cx="${cx}" cy="${cy}" r="20" fill="${ACC}"/></g>
-      </svg>
-      <div class="disp" id="${id}n" style="position:absolute;left:0;right:0;top:${cy - 105}px;text-align:center;font-size:170px;color:${tone.ink};opacity:0">0</div>
-      <div id="${id}u" style="position:absolute;left:0;right:0;top:${cy + R + 96}px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:42px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || 'SECONDES')}</div>`
+        <g id="${id}nd"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R + 40}" stroke="${tone.ink}" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="22" fill="${tone.ink}"/></g>
+      </svg>`
     const js = `
-  var ${id}v = { n: 0, off: ${circ}, a: 0 };
-  tl.fromTo('.${id}tk',{opacity:0},{opacity:0.6,duration:0.2,stagger:0.03,ease:'power1.out'},${r2(t0)});
+  var ${id}v = { n: 0, off: ${pieC}, a: 0 };
+  tl.fromTo('.${id}tk',{opacity:0},{opacity:0.55,duration:0.2,stagger:0.03,ease:'power1.out'},${r2(t0)});
+  tl.fromTo('#${id}h',{y:-24,opacity:0},{y:0,opacity:1,duration:0.34,ease:'power3.out'},${r2(t0 + 0.05)});
   tl.to(${id}v,{off:0,n:${val},a:360,duration:${countDur},ease:'power2.inOut',onUpdate:function(){
-    var rg=document.getElementById('${id}ring'); if(rg) rg.setAttribute('stroke-dashoffset', String(${id}v.off));
+    var pi=document.getElementById('${id}pie'); if(pi) pi.setAttribute('stroke-dashoffset', String(${id}v.off));
     var el=document.getElementById('${id}n'); if(el) el.textContent=String(Math.round(${id}v.n));
     var nd=document.getElementById('${id}nd'); if(nd) nd.setAttribute('transform','rotate('+${id}v.a+' ${cx} ${cy})');
   }},${r2(t0 + 0.15)});
-  tl.fromTo('#${id}n',{scale:0.82,opacity:0},{scale:1,opacity:1,duration:0.4,ease:'power2.out'},${r2(t0 + 0.12)});
-  tl.fromTo('#${id}u',{y:40,opacity:0},{y:0,opacity:1,duration:0.32,ease:'circ.out'},${r2(t0 + 0.5)});
-  tl.to('#${id}n',{scale:1.1,duration:${r2(Math.max(0.3, t1 - t0 - countDur - 0.3))},ease:'none'},${r2(t0 + 0.15 + countDur)});`
+  tl.to('#${id}n',{scale:1.08,duration:${r2(Math.max(0.3, t1 - t0 - countDur - 0.3))},ease:'none',transformOrigin:'50% 100%'},${r2(t0 + 0.15 + countDur)});`
     return { html, js, sfx: [{ kind: 'mo-tick-1', t: r2(t0 + 0.1), vol: 0.3 }, { kind: 'mo-pop-1', t: r2(t0 + 0.15 + countDur), vol: 0.5 }] }
   },
 

@@ -1233,7 +1233,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // `photowall`). Le visuel EST le mot « dizaines ». Déclenché seulement s'il a
     // fourni assez de photos (≥3) et sur la phrase qui parle de plusieurs photos.
     {
-      const dispo = brut.filter((b) => !b.__pose)
+      // le mur ne prend que des IMAGES : une vidéo (ex. l'influenceuse qui danse)
+      // se place à part, sur son propre mot (« danser ton influenceuse »).
+      const estImg = (b) => !/\.(mp4|mov|webm|m4v)$/i.test(String(files[b.assetId] || ''))
+      const dispo = brut.filter((b) => !b.__pose && estImg(b))
       if (dispo.length >= 3) {
         const caps = plan.captions || []
         const cue = caps.find((w, i) => {
