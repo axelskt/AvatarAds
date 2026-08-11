@@ -1592,10 +1592,14 @@ async function pollLoop() {
         // ré-encode à un débit qui RENTRE (la vidéo reste en 1080×1920 ; les
         // réseaux ré-encodent de toute façon derrière). Perdre 20 % de débit
         // vaut mieux que perdre le montage.
-        const MAX_UP = 44 * 1024 * 1024
+        // #2 (Axel 11/08) : jusqu'à 40 s = PLEINE qualité (crf 18, AUCUN ré-encodage),
+        // plafond relevé à 48 Mo (2 Mo de marge sous la limite Supabase Free de 50 Mo).
+        // Au-delà de 40 s → 44 Mo comme avant, ré-encodage au débit qui rentre.
+        const durF = (() => { try { return parseFloat(ffprobe(out, 'format=duration')) || 60 } catch (_) { return 60 } })()
+        const MAX_UP = (durF <= 40 ? 48 : 44) * 1024 * 1024
         let outFinal = out
         if (statSync(out).size > MAX_UP) {
-          const dur = parseFloat(ffprobe(out, 'format=duration')) || 60
+          const dur = durF
           const kbps = Math.max(1500, Math.floor((MAX_UP * 8) / dur / 1000) - 160)
           const petit = out.replace(/\.mp4$/i, '') + '-web.mp4'
           console.log(`▶ ${(statSync(out).size / 1048576).toFixed(1)} Mo > limite : ré-encodage à ${kbps} kbit/s`)
