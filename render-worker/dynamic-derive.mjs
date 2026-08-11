@@ -1163,6 +1163,34 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
     }
 
+    // ── UN MÉDIA NOMMÉ NE RESTE PAS PETIT DANS LE HOOK S'IL EST DÉCRIT PLUS TARD ──
+    // Axel : « je veux VOIR l'image de la fille » (11/08), « l'image de la fille
+    // en MOYEN avec l'avatar qui parle derrière » (05/08). Le chef pose souvent
+    // la photo sur la PREMIÈRE mention de son sujet — qui tombe dans le hook
+    // (« faire des influenceuses IA », 1,3 s), où elle se rend en tout petit
+    // médaillon de coin (règle Léna du 31/07 : dans l'accroche elle reste petite).
+    // Or ce même sujet est re-nommé plus loin, là où il le DÉCRIT (« génère une
+    // photo de ton influenceuse… des photos d'elle », 14 s), et là elle mérite
+    // le MOYEN centré. On la déplace donc du hook vers sa première mention
+    // ≥ 5 s : le hook garde son avatar plein cadre, la photo arrive quand on la
+    // décrit. Jamais pour un média marqué hook (l'user l'a voulu dans l'accroche).
+    {
+      const caps = plan.captions || []
+      for (const b of plan.broll || []) {
+        if (!files[b.assetId] || b.hook || b.__force) continue
+        if ((b.start || 0) >= 5) continue                 // déjà hors accroche → il se rendra en moyen tel quel
+        const mots = norm(b.assetId).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        if (!mots.length) continue
+        const tard = caps.find((w) => (w.start || 0) >= 5 && matchNom(mots, norm(String(w.text || ''))))
+        if (!tard) continue
+        const duree = Math.max(1.6, (b.end || 0) - (b.start || 0))
+        const a2 = r2(Math.max(5, (tard.start || 0) - LEAD))
+        console.log(`▶ média « ${b.assetId} » sorti du hook (${r2(b.start)}s, petit) → sa mention décrite « ${tard.text} » à ${a2}s (moyen, avatar derrière)`)
+        b.start = a2
+        b.end = r2(Math.min(D, a2 + duree))
+      }
+    }
+
     // ── UNE ÉNUMÉRATION = UN PANNEAU, PAS TROIS ────────────────────────────────
     // « Homme, femme, coach sportif » : trois mots en 1,3 s. Une photo par mot
     // donnerait des panneaux de 0,3 s — plus courts que la transition elle-même
