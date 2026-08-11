@@ -1242,7 +1242,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
         body: JSON.stringify({
           type: 'video', ai_model_id: HEDRA_MODEL_ID, audio_id: audioId, start_keyframe_id: imageId,
           generated_video_inputs: {
-            text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
+            text_prompt: 'A person talking to camera in an expressive, animated UGC style — lively facial expressions, natural eyebrow and head movements, genuine emotion, natural hand gestures while speaking, energetic and engaged delivery, authentic and confident, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
             aspect_ratio: '9:16', character_orientation: 'video', resolution: '1080p',
           },
         }),

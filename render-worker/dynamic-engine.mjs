@@ -311,9 +311,13 @@ function screenContent(id, s, tone, liveT0, t1, W) {
       const tall = bh > fs * 3.4                          // vraie zone de texte → on écrit en HAUT
       const maxW = Math.max(20, bw - padX * 2 - bd * 2)
       const tw = Math.min(maxW, Math.round(String(st.type || '').length * fs * 0.52))
-      boxes += `<div id="${id}b${k}" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;` +
-        `border:${bd}px solid ${ACC};border-radius:${Math.max(6, Math.round(16 / Math.max(0.2, sh.s)))}px;` +
-        `box-shadow:0 0 0 ${Math.round(600 / Math.max(0.2, sh.s))}px rgba(10,10,14,.42);opacity:0">` +
+      // #91 (Axel, 11/08) : PLUS D'ENCADRÉ ORANGE — « les encadrements orange
+      // faudrait éviter, juste mettre un zoom avec l'icône de la souris ». Le
+      // cadre accent ET le voile sombre autour disparaissent : le zoom isole
+      // déjà l'élément (il occupe les 2/3 du cadre), le curseur et l'onde de clic
+      // le désignent. Le conteneur ne survit (transparent) QUE pour héberger la
+      // frappe clavier (masque + texte + caret) quand l'étape écrit dans un champ.
+      boxes += `<div id="${id}b${k}" style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;opacity:0">` +
         (st.type
           ? `<div id="${id}m${k}" style="position:absolute;inset:0;border-radius:${Math.max(4, Math.round(12 / Math.max(0.2, sh.s)))}px;background:#0F0F16;opacity:0"></div>` +
             `<div id="${id}t${k}" style="position:absolute;left:${padX}px;${tall ? `top:${Math.round(fs * 1.1)}px` : 'top:50%;transform:translateY(-50%)'};` +
@@ -437,18 +441,21 @@ export function buildDynamicComposition(plan, opts = {}) {
   let lastWhoosh = 0, whooshFlip = false
 
   // LE RISER, UNE SEULE FOIS PAR VIDÉO (Axel 09/08 : « le metallic riser est
-  // pas mal, faudrait le mettre plus souvent — mais max 1 fois ») : la poussée
-  // de panneau illustré la plus proche des 55 % de la vidéo devient LA
-  // transition forte — le riser monte ~1,4 s avant et culmine sur l'impact.
+  // pas mal, faudrait le mettre plus souvent — mais max 1 fois »).
+  // #90 (Axel, 11/08) : « les bruitages reverse-crash / cinematic-impact /
+  // metallic-riser, y'en a un qui doit être joué APRÈS le hook, pas au milieu ».
+  // Le hook, c'est l'avatar qui ouvre (§0) ; la PREMIÈRE poussée de panneau
+  // illustré qui le suit est LA transition forte de la vidéo — le riser monte
+  // ~1,4 s avant (pendant la fin du hook) et culmine sur la coupe vers le
+  // contenu. Avant, il tombait aux 55 % de la vidéo, en plein milieu.
   const iRiser = (() => {
     if (D < 18) return -1
-    let best = -1, dBest = 1e9
-    panels.forEach((p, i) => {
-      if (!i || p.kind === 'typo' || p.kind === 'avclip') return
-      const d = Math.abs(p.t0 - D * 0.55)
-      if (d < dBest) { dBest = d; best = i }
-    })
-    return best
+    for (let i = 1; i < panels.length; i++) {
+      const p = panels[i]
+      if (p.kind === 'typo' || p.kind === 'avclip') continue
+      return i
+    }
+    return -1
   })()
 
   const ap = isApple(plan)
@@ -1040,7 +1047,8 @@ export function buildDynamicComposition(plan, opts = {}) {
         sfxAdd.push({ kind: whooshFlip ? 'mo-swipe-2' : 'mo-whoosh-1', t: r2(Math.max(0, t0 - 0.05)), vol: 0.55 })
         lastWhoosh = t0; whooshFlip = !whooshFlip
       }
-      if (i === iRiser && p.t0 > 4) {
+      if (i === iRiser && p.t0 > 2.5) {
+        // culmine sur la coupe hook → contenu (#90) ; la montée occupe la fin du hook
         sfxAdd.push({ kind: 'metallic-riser', t: r2(Math.max(0, p.t0 - 1.45)), vol: 0.5 })
       }
     }
