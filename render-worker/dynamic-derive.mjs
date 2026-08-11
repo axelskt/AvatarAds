@@ -1254,9 +1254,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
             (estHero(x) ? 0 : 1) - (estHero(y) ? 0 : 1) || (x.start || 0) - (y.start || 0))
           const items = ordered.map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
           if (add({ anim: 'photowall', items, count: items.length }, a, e)) {
-            for (const b of dispo) b.__pose = true
-            med += items.length
-            console.log(`▶ mur de photos : ${items.length} clichés sur « ${cue.text} » (${a}→${e}s) — « des dizaines de photos »`)
+            // Le HÉRO garde sa place EN SOLO ailleurs (Axel, 11/08 : « d'abord la
+            // fille en grand quand je dis "danses TikTok d'influenceuses IA", PUIS
+            // toutes ses photos au mur ») : seule la grille est consommée par le
+            // mur. Le héro apparaît donc 2 fois — en solo sur son mot, puis en
+            // grand dans le mur.
+            for (const b of dispo) { if (!estHero(b)) b.__pose = true }
+            med += Math.max(1, items.length - 1)
+            console.log(`▶ mur de photos : ${items.length} clichés sur « ${cue.text} » (${a}→${e}s) — le héro garde sa place solo`)
           }
         }
       }
