@@ -1297,6 +1297,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
               <div style="margin-bottom:0"><div class="row" id="voxGpRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxGpIco" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Le gameplay suit ton audio</span><span class="faint" style="font-size:12px">Quand ta voix est coupée, le gameplay est coupé au même endroit</span></div></div><button type="button" id="voxGpSw" onclick="_voxToggleGp()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
               <div id="voxGpZoneWrap" class="rise" style="display:none;margin-top:12px"><div id="voxGpZone" onclick="document.getElementById('voxGpIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleSilenceGameplayFile(f);_voxGpReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton gameplay ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxGpIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin:14px 0 11px">④ Musique de fond <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
+              <div style="margin-bottom:0"><div class="row" id="genMusicRow" onclick="_genOpenMusicPicker()" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--accent-line)'" onmouseout="this.style.borderColor='var(--border)'"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Ajouter une musique de fond</span><span class="faint" style="font-size:12px" id="genMusicLabel">Aucune — mixée sous ta voix, démarre sur le drop</span></div></div><span style="font-size:16px;color:var(--text-3);flex:0 0 auto">›</span></div></div>
             </div>
 
             <div id="fs2Legacy" style="display:none">
@@ -1393,22 +1395,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="cloneStatus" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px;display:none"></div>
             </div>
 
-            <!-- MUSIQUE DE FOND (#86) -->
-            <div id="genMusicCard" class="fld" style="margin-top:16px">
-              <div class="flbl" style="font-size:11px;margin-bottom:10px">Musique de fond <span style="color:var(--text3);font-weight:400">— optionnel, mixée sous ta voix</span></div>
-              <div id="genMusicRow" onclick="_genOpenMusicPicker()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="display:flex;align-items:center;gap:9px;min-width:0">
-                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                  <div style="min-width:0">
-                    <div style="font-size:12px;font-weight:700">Ajouter une musique de fond</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="genMusicLabel">Aucune — mixée sous ta voix</div>
-                  </div>
-                </div>
-                <span style="font-size:12px;color:var(--text3);flex-shrink:0">›</span>
-              </div>
-            </div>
-
-            <div class="divider" style="margin:16px 0"></div>
+            <div class="divider" style="margin:4px 0 16px"></div>
 
             <!-- VOIX PRESET -->
             <div id="voice-preset-section" class="fld">
@@ -29846,6 +29833,25 @@ function edSelectClip(idx){
   edRefreshTimeline(); edRenderClips(); edRenderClipsTrack(); edRenderOvTrack(); edUpdateTime();
   toast(idx===0?'⭐ Clip principal sélectionné':'🎞 Clip '+(idx+1)+' sélectionné — Suppr pour le retirer');
 }
+// #b (11/08) · SÉLECTION DU CLIP VISUEL : cliquer la piste Visuel (#edTl, visible
+// à 1 clip) sélectionne le clip — encadré + « • édition » dans le rail — SANS
+// empêcher la tige de bouger (le scrub a déjà eu lieu). Exclusif des autres pistes.
+function _edStyleVisualSel(){
+  const tl=document.getElementById('edTl'); if(!tl) return;
+  const on=!!(_ed && _ed.selVisual);
+  tl.style.borderColor = on ? 'var(--accent)' : 'var(--border2)';
+  tl.style.boxShadow   = on ? '0 0 0 1px var(--accent),0 0 16px -5px var(--accent-glow)' : 'none';
+}
+function _edSelectVisualClip(){
+  if(!_ed) return;
+  if(_ed.selTrack) edSelectTrack(null);        // exclusif des pistes audio/musique/sfx
+  if(_ed.sel) edHideProps();                   // exclusif des calques
+  if(_ed.selZoom){ _ed.selZoom=null; if(window.edRenderZoomTrack) edRenderZoomTrack(); }
+  _ed.selVisual=true;
+  _edStyleVisualSel();
+  if(window.edRenderClips) edRenderClips();     // rail droit → « Clip principal • édition »
+}
+function _edClearVisualSel(){ if(_ed && _ed.selVisual){ _ed.selVisual=false; _edStyleVisualSel(); } }
 // avance au clip suivant pendant la lecture (sans pause/toast, garde la musique)
 function edAdvanceClip(idx){
   if(!_ed||!_ed.clips||idx<0||idx>=_ed.clips.length) return;
@@ -30002,6 +30008,8 @@ function edBindTimeline(){
       if(e.clientX < inner.getBoundingClientRect().left+100) return; // colonne des labels
       if(_ed.selTrack) edSelectTrack(null); // clic dans le vide = désélection piste
       scrub=true; edPause(); edScrubTo(gtFromX(e.clientX));
+      // #b · clic sur la piste Visuel = sélectionne AUSSI le clip (la tige a déjà bougé)
+      if(e.target.closest('#edTl')) _edSelectVisualClip(); else _edClearVisualSel();
       try{ inner.setPointerCapture(e.pointerId); }catch(_){}
     });
     inner.addEventListener('pointermove',e=>{ if(scrub&&_ed) edScrubTo(gtFromX(e.clientX)); });
@@ -30172,7 +30180,7 @@ function edStyleOverlay(ov){
   const _bar=el.querySelector('.ed-ov-bar'); if(_bar) _bar.style.display=(onSel&&!ov._editing)?'flex':'none';
 }
 
-function edSelect(id){ if(_ed.selTrack) edSelectTrack(null); _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
+function edSelect(id){ if(_ed.selTrack) edSelectTrack(null); if(typeof _edClearVisualSel==='function') _edClearVisualSel(); _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
 function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); edRenderTextMenu(null); _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
 function edRenderTextMenu(ov){
   const m=document.getElementById('edTextMenu'); if(!m) return;
@@ -30716,6 +30724,7 @@ function edSelectTrack(sel){
   if(!_ed) return;
   _ed.selTrack=sel||null;
   if(sel){
+    if(typeof _edClearVisualSel==='function') _edClearVisualSel();  // #b · exclusif du clip visuel
     if(_ed.sel) edHideProps();
     if(_ed.selZoom){ _ed.selZoom=null; edRenderZoomTrack(); }
   }
