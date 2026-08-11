@@ -1094,6 +1094,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
   {
     const files = opts.assetFiles || {}
     let n = 0, med = 0
+    // ── LE NOM DU MÉDIA MATCHE MÊME AU PLURIEL / FLÉCHI (Axel, 11/08) ──────────
+    // « influenceuse IA » nommait la photo, mais la voix dit « influenceuseS » :
+    // l'égalité stricte échouait et un graphe gagnait le créneau à la place de
+    // l'image de la fille. On aligne donc le matching du nom sur celui des anims
+    // (§2b) : égalité, OU le mot dit commence par le mot du nom (≥5 lettres), OU
+    // l'inverse — jamais une sous-chaîne libre (le piège « IA » dans « SasIA »).
+    const matchNom = (mots, nw) => mots.some((m) =>
+      nw === m || (m.length >= 5 && nw.startsWith(m)) || (nw.length >= 5 && m.startsWith(nw)))
     // ── UN MÉDIA FOURNI EST TOUJOURS PLACÉ. LE CHEF CHOISIT L'INSTANT ─────────
     // Règle d'Axel (02/08) : « les médias que l'user envoie doivent être placés
     // à 100 %, le chef d'orchestre choisit juste le moment le plus propice ».
@@ -1113,7 +1121,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
           quand = [0.4, Math.min(4.2, D)]                 // le hook : dès l'ouverture
         } else {
           // le premier moment où la voix prononce un des mots de son nom
-          const w = words.find((x) => mots.includes(norm(x.text)))
+          const w = words.find((x) => matchNom(mots, norm(x.text)))
           if (w) quand = [r2(Math.max(0, w.start - LEAD)), r2(Math.min(D, w.start + 2.8))]
         }
         if (!quand || quand[1] - quand[0] < 1.2) continue
@@ -1143,7 +1151,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (!files2[b.assetId] || b.hook || b.__force) continue
         const mots = norm(b.assetId).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
         if (!mots.length) continue
-        const prem = (plan.captions || []).find((w) => mots.includes(norm(String(w.text || ''))))
+        const prem = (plan.captions || []).find((w) => matchNom(mots, norm(String(w.text || ''))))
         if (!prem) continue
         const cible = r2(Math.max(0, prem.start - LEAD))
         const ecart = (b.start || 0) - cible
@@ -2876,13 +2884,64 @@ export function deriveDynamicSlides(plan, opts = {}) {
             s.value || s.title || (s.sujets || []).length) return false
         return nm === 'money' || nm === 'blankfill' || nm === ''
       }
+      // ── LES CARTES 100 % TEXTE CÈDENT AUSSI AU VISAGE (Axel, 11/08) ─────────
+      // « les animations où y'a du texte comme ça à bannir » — les cartes
+      // eyebrow + GROS TITRE + pastille (« PEU / BEAUCOUP », « LE SECRET:
+      // EXPRESS ») ne montrent AUCUNE action : ce sont les mots redits en géant,
+      // exactement ce que la règle #6 refuse (« si ça tient sur une image fixe,
+      // ça n'entre pas »). Elles passent par le rendu `content` de l'engine
+      // (slide sans `anim`, avec titre/items). On les retire comme les coquilles
+      // vides — le visage reprend (règle #2). On ÉPARGNE la vraie matière : un
+      // KPI chiffré réellement dit (règle #3/#44), une énumération de ≥2 lignes
+      // datées qui claquent chacune sur leur mot, une capture, un média, ou une
+      // vraie animation de la banque.
+      const coquilleTexte = (s) => {
+        if (s.anim || s.type === 'punch' || s.cta) return false
+        if (s.screen || s.assetId || s.src || s.user || s.overlayMedia || s.ui) return false
+        const its = (s.items || []).filter((it) => it && String(it.text || '').trim())
+        const num = String(s.value ?? s.center ?? (its[0] && its[0].text) ?? '')
+        if (s.type === 'kpi' && /\d/.test(num)) return false
+        const dates = its.filter((it) => Number(it.t) > 0)
+        if (its.length >= 2 && dates.length >= 2) return false
+        return !!(s.title || its.length)
+      }
       for (let i = out.length - 1; i >= 0; i--) {
         const s = out[i]
-        if (!coquilleVide(s)) continue
+        if (!coquilleVide(s) && !coquilleTexte(s)) continue
         const k = taken.findIndex((w) => Math.abs(w[0] - s.start) < 0.06 && Math.abs(w[1] - s.end) < 0.06)
         if (k >= 0) taken.splice(k, 1)
-        console.log(`▶ carte vide « ${s.anim || '—'} » ${r2(s.start)}→${r2(s.end)}s retirée → le trou revient au visage`)
+        console.log(`▶ carte texte « ${(s.title || s.anim || '—')} » ${r2(s.start)}→${r2(s.end)}s retirée → le visage reprend`)
         out.splice(i, 1)
+      }
+      // ── #88 · JAMAIS PLUS DE 3 ANIMATIONS D'AFFILÉE SANS LE VISAGE ──────────
+      // Axel : « des fois y'a beaucoup trop d'animations à la chaîne… après la
+      // 3ème animation il y a OBLIGATOIREMENT l'avatar ». Sur le montage de test
+      // du 11/08, le milieu (5→23 s) enchaînait 5-6 anims sans un seul visage.
+      // On casse donc toute série de 4 anims ABSTRAITES consécutives en libérant
+      // la 4ᵉ : son créneau redevient un trou que la passe ci-dessous (§3b-bis)
+      // comble par le visage — avec toute sa logique de reprise de clip payé.
+      // Les captures, médias et le CTA NE COMPTENT PAS dans la série (ce sont de
+      // vrais plans qu'Axel veut voir) et remettent le compteur à zéro. On
+      // n'évince que si le créneau libéré peut porter un visage (≥ 1,2 s).
+      {
+        const abstraite = (s) => !s.screen && !s.assetId && !s.src && !s.user &&
+          !s.overlayMedia && !s.ui && String(s.anim) !== 'media' && s.type !== 'punch' && !s.cta
+        let serie = 0
+        for (const s of out.slice().sort((a, b) => (a.start || 0) - (b.start || 0))) {
+          if (!abstraite(s)) { serie = 0; continue }
+          serie++
+          // ≥ 1,4 s : le remplissage §3b-bis borne le trou à (fin − 0,05) et exige
+          // ≥ SEUIL (1,2 s) de visage — en deçà, on laisserait un fond nu.
+          if (serie >= 4 && (s.end - s.start) >= 1.4) {
+            const j = out.indexOf(s)
+            if (j < 0) continue
+            const k = taken.findIndex((w) => Math.abs(w[0] - s.start) < 0.06 && Math.abs(w[1] - s.end) < 0.06)
+            if (k >= 0) taken.splice(k, 1)
+            out.splice(j, 1)
+            console.log(`▶ #88 : 4ᵉ animation d'affilée « ${s.anim || s.title || '—'} » ${r2(s.start)}→${r2(s.end)}s → rendue au visage`)
+            serie = 0
+          }
+        }
       }
     }
     const bornes = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
