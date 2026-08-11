@@ -162,7 +162,12 @@ const LIAISONS = new Set([
   'toute', 'tous', 'toutes', 'chaque', 'autre', 'autres',
 ])
 
-const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps'])
+// + 11/08 : Axel, sur le rendu Cartoon 21 — les barres/pilules de la section
+// revenus (« pour faire quelques » / « pendant que d'autres ») : « supprime ces
+// 2 animations, elles sont nulles et montrent rien ». twopaths (2 pilules),
+// bars2 et grow (histogrammes abstraits) → refusées. Leur créneau revient au
+// visage ou à un vrai visuel. (Une vraie viz d'argent = #44, chiffre + courbe.)
+const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps', 'twopaths', 'bars2', 'grow'])
 export const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
