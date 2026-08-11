@@ -618,6 +618,35 @@ export function buildDynamicComposition(plan, opts = {}) {
         }
       })
 
+    } else if (p.kind === 'photowall') {
+      // « CRÉE DES DIZAINES DE PHOTOS D'ELLE » (Axel, 11/08) : un MUR de photos —
+      // l'image en grand en haut, puis une grille de clichés en dessous, chacun
+      // qui se pose en cascade avec un déclic d'obturateur. On MONTRE l'abondance :
+      // « des dizaines de photos » ne se dit pas en texte, ça se voit.
+      const its = (p.slide.items || []).filter((it) => it && it.src)
+      const mk = (src, x, y, w, h, rad) => {
+        const vid = /\.(mp4|mov|webm|m4v)$/i.test(String(src || ''))
+        const body = vid
+          ? `<video class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="12" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          : `<img src="${esc(src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+        return { x, y, w, h, rad, body }
+      }
+      const cells = []
+      const hero = its[0]
+      if (hero) cells.push({ ...mk(hero.src, Math.round((W - 540) / 2), 92, 540, 675, 30), hero: true })
+      const gw = 319, gh = 319, gap = 18, x0 = Math.round((W - (gw * 3 + gap * 2)) / 2), gy0 = 796
+      its.slice(1, 7).forEach((it, k) => {
+        const col = k % 3, row = Math.floor(k / 3)
+        cells.push(mk(it.src, x0 + col * (gw + gap), gy0 + row * (gh + gap), gw, gh, 20))
+      })
+      cells.forEach((c, k) => {
+        const cid = id + 'pw' + k
+        inner += `<div class="an-p" id="${cid}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;border-radius:${c.rad}px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.06)">${c.body}</div>`
+        const t = c.hero ? liveT0 : r2(liveT0 + 0.34 + (k - 1) * 0.09)
+        pjs += `\n  tl.fromTo('#${cid}',{yPercent:12,scale:${c.hero ? 0.92 : 0.8},autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:${c.hero ? 0.42 : 0.3},ease:'back.out(1.6)',transformOrigin:'50% 50%'},${t});`
+        sfxAdd.push({ kind: 'camera-shutter', t: r2(t + 0.02), vol: c.hero ? 0.6 : 0.4 })
+      })
+
     } else if (p.kind === 'media') {
       // LE MÉDIA DE L'UTILISATEUR, POSÉ SUR LA PAGE. Ce style n'en affichait
       // aucun : `plan.broll` n'était lu que par le chemin classique. Je l'avais

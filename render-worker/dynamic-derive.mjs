@@ -1226,8 +1226,36 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     const brut = (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))
       .filter((b) => files[b.assetId])
+    // ── « DES DIZAINES DE PHOTOS D'ELLE » = UN MUR DE PHOTOS (Axel, 11/08) ──────
+    // Quand il annonce l'ABONDANCE (« crée des dizaines de photos d'elle »), une
+    // seule image ne la dit pas. On rassemble TOUS les médias fournis en un mur :
+    // l'image en grand en haut, la grille de clichés en dessous (moteur
+    // `photowall`). Le visuel EST le mot « dizaines ». Déclenché seulement s'il a
+    // fourni assez de photos (≥3) et sur la phrase qui parle de plusieurs photos.
+    {
+      const dispo = brut.filter((b) => !b.__pose)
+      if (dispo.length >= 3) {
+        const caps = plan.captions || []
+        const cue = caps.find((w, i) => {
+          const t = norm(String(w.text || ''))
+          if (!(t === 'photos' || t === 'photo' || t.startsWith('dizaine'))) return false
+          const autour = caps.slice(Math.max(0, i - 2), i + 3).map((x) => norm(x.text))
+          return autour.some((x) => x.startsWith('dizaine')) && autour.some((x) => x === 'photos' || x === 'photo')
+        })
+        if (cue) {
+          const a = r2(Math.max(0, cue.start - 0.5)), e = r2(Math.min(D, cue.start + 2.6))
+          const items = dispo.map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
+          if (add({ anim: 'photowall', items, count: items.length }, a, e)) {
+            for (const b of dispo) b.__pose = true
+            med += items.length
+            console.log(`▶ mur de photos : ${items.length} clichés sur « ${cue.text} » (${a}→${e}s) — « des dizaines de photos »`)
+          }
+        }
+      }
+    }
     const paquets = []
     for (const b of brut) {
+      if (b.__pose) continue
       const p = paquets[paquets.length - 1]
       if (p && b.start - p[0].start < 2.5 && b.start - p[p.length - 1].start < 1.2) p.push(b)
       else paquets.push([b])
