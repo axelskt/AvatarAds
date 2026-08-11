@@ -12891,6 +12891,13 @@ function _mtBonusSave(i){
 let _mtFinalUrl=null;
 function _mtVideoDone(finalUrl){
   _mtFinalUrl=finalUrl||null;
+  // #65 · SAUVEGARDE AUTO en bibliothèque — une seule fois par vidéo (_mtVideoDone
+  // est rappelé au retour de review). Le finalUrl est une URL render-media publique
+  // (CORS ok) → on récupère le blob et on le range comme Express le fait déjà.
+  if(finalUrl && window._mtSavedUrl!==finalUrl && typeof _libAutoSaveVideo==='function'){
+    window._mtSavedUrl=finalUrl;
+    (async()=>{ try{ const r=await fetch(finalUrl); if(r.ok){ await _libAutoSaveVideo(await r.blob(), 'Montage IA', ['Montage IA','9:16'], '🎬', 'MONTAGE'); } }catch(e){ console.warn('montage autosave:', e); } })();
+  }
   _mtProg(100, 'Terminé !');
   const o=document.getElementById('mtProgOv'); if(!o) return;
   // ── UN ÉCRAN QUI REVIENT DOIT REVENIR ENTIER ─────────────────────────────
@@ -24105,6 +24112,13 @@ function _mcShowResult(url, render){
     document.body.appendChild(m); }
   const lbl = render==='split-bottom' ? 'Split · original ↑ · motion ↓' : render==='split-top' ? 'Split · motion ↑ · original ↓' : '';
   window._mcLastUrl = url;
+  // #65 · SAUVEGARDE AUTO en bibliothèque — une fois. Le résultat « full » est une
+  // URL fal temporaire : on la range MAINTENANT (blob → IndexedDB) pour que la
+  // vidéo ne se perde pas. Repli silencieux si le CORS bloque le fetch.
+  if(url && window._mcSavedUrl!==url && typeof _libAutoSaveVideo==='function'){
+    window._mcSavedUrl=url;
+    (async()=>{ try{ const r=await fetch(url); if(r.ok){ await _libAutoSaveVideo(await r.blob(), 'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); } }catch(e){ console.warn('mc autosave:', e); } })();
+  }
   m.innerHTML='<div class="col" style="gap:14px;align-items:center;max-width:420px;width:100%"><video src="'+url+'" controls autoplay playsinline style="max-height:70vh;width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
     +'<div class="row" style="gap:10px"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
