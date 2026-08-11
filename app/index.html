@@ -3890,6 +3890,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <!-- ============ MONTAGE IA — refonte design 1:1 (maquette Claude Design) ============ -->
       <style>
         #v-montage .mt-eyebrow, #accountOverlay .mt-eyebrow, #brandModal .mt-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px}
+        /* fin trait entre les sections du Montage IA (Axel 11/08 : « les traits… petits détails clean ») — hairline dégradée, aérée */
+        #v-montage .mt-sep{height:1px;border:0;margin:2px 0 18px;background:linear-gradient(90deg,transparent,var(--border) 12%,var(--border) 88%,transparent);opacity:.85}
         #v-montage .mt-src{padding:14px 16px;border-radius:14px;display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:.15s;width:100%;font-family:var(--font);color:var(--text)}
         #v-montage .mt-src.on{border:2px solid var(--accent);background:var(--accent-soft)}
         #v-montage .mt-src .mt-src-i{color:var(--text-2);display:flex}
@@ -3978,6 +3980,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 </button>
               </div>
 
+              <div class="mt-sep"></div>
+
               <!-- gameplay -->
               <div id="mtGameplayBlock">
                 <div class="mt-eyebrow">2 · Ton audio</div>
@@ -3989,6 +3993,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
                 </div>
 
+                <div class="mt-sep"></div>
                 <div class="mt-eyebrow">3 · Ton avatar</div>
                 <div style="margin-bottom:18px">
                   <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
@@ -4001,6 +4006,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
                 <!-- #119 · modèle lipsync (visible quand un avatar est choisi) -->
                 <div id="mtModelWrap" style="display:none;margin-bottom:18px">
+                  <div class="mt-sep"></div>
                   <div class="mt-eyebrow">4 · Qualité du lipsync</div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                     <div id="mtModelC3" onclick="mtSetLipModel('character3')" class="mt-qual on">
@@ -4030,6 +4036,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <input type="file" id="mtVideoIn" accept="video/*" style="display:none" onchange="mtSetVideo(this.files[0]);this.value=''">
                 </div>
               </div>
+
+              <div class="mt-sep"></div>
 
               <!-- TES VISUELS & TON SCRIPT — visuels + brief ensemble, textarea visible (maquette) -->
               <div style="margin-top:2px">
