@@ -5992,18 +5992,20 @@ async function _libAutoSaveAudio(file, name, durLabel, emo){
   try{
     const idbKey = 'lib_audio_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     await _idbSave(idbKey, file);
-    library.unshift({
+    const entry = {
       type:'audio', emo: emo||'🎧', name: name||'Audio',
       tags: ['audio'].concat(durLabel ? [durLabel] : []),
       status:'done', style:'AUDIO',
       bg:'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))',
-      script:'', hedraUrl:'', idbKey,
+      script:'', hedraUrl:'', idbKey, ts: Date.now(),
       date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-    });
+    };
+    library.unshift(entry);
     _saveLibrary();
     const lv = document.getElementById('v-library');
     if(lv && lv.classList.contains('on') && typeof renderLibrary==='function') renderLibrary();
     toast('« ' + (name||'Audio') + ' » ajouté à la Bibliothèque');
+    _libPersistServer(entry, file, {kind:'audio'});   // #65 · + côté compte
   }catch(e){ console.warn('libAutoSaveAudio:', e); }
 }
 async function _libAutoSaveVideo(blob, name, tags, emo, style){
@@ -6032,17 +6034,27 @@ async function _libAutoSaveVideo(blob, name, tags, emo, style){
 // user_id=auth.uid()). Au chargement, on FUSIONNE les lignes serveur absentes du
 // local → les vidéos suivent le compte, tous appareils. Best-effort : si le
 // réseau/serveur échoue, la biblio locale fonctionne comme avant.
-async function _libPersistServer(entry, blob){
+async function _libPersistServer(entry, blob, opts){
   try{
     if(!blob || typeof sb==='undefined') return;
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) return;
-    const path = user.id + '/lib/' + (entry.hedraIdbKey || ('v-'+Date.now())) + '.mp4';
-    const up = await sb.storage.from('render-media').upload(path, new File([blob],'v.mp4',{type:'video/mp4'}), { contentType:'video/mp4', upsert:true });
+    opts = opts || {};
+    const kind = opts.kind || entry.type || 'video-simple';
+    const ext  = kind==='audio' ? 'wav' : (kind==='image' ? 'png' : 'mp4');
+    const mime = kind==='audio' ? 'audio/wav' : (kind==='image' ? 'image/png' : 'video/mp4');
+    const key  = entry.hedraIdbKey || entry.idbKey || entry.id || ('v-'+Date.now());
+    const path = user.id + '/lib/' + key + '.' + ext;
+    const up = await sb.storage.from('render-media').upload(path, new File([blob],'f.'+ext,{type:mime}), { contentType:mime, upsert:true });
     if(up.error){ console.warn('lib storage:', up.error.message); return; }
-    const ins = await sb.from('library_items').insert({ kind:entry.type||'video-simple', name:entry.name||'Vidéo', tags:entry.tags||[], style:entry.style||'', emo:entry.emo||'', storage_path:path }).select('id').single();
+    const row = { kind, name:entry.name||'', tags:Array.isArray(entry.tags)?entry.tags:[], style:entry.style||entry.styleLabel||'', emo:entry.emo||'', storage_path:path };
+    if(opts.thumb) row.thumb = opts.thumb;
+    const ins = await sb.from('library_items').insert(row).select('id').single();
     if(ins.error){ console.warn('lib row:', ins.error.message); return; }
-    entry.srvId = ins.data.id; entry.srvPath = path; _saveLibrary();
+    entry.srvId = ins.data.id; entry.srvPath = path;
+    if(typeof opts.onSaved === 'function') opts.onSaved(ins.data.id, path);
+    else if(typeof _saveLibrary==='function') _saveLibrary();
+    return ins.data.id;
   }catch(e){ console.warn('lib persist server:', e); }
 }
 async function _libLoadServer(){
@@ -6050,21 +6062,32 @@ async function _libLoadServer(){
     if(typeof sb==='undefined') return;
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) return;
-    const { data, error } = await sb.from('library_items').select('*').order('created_at',{ascending:false}).limit(200);
+    const { data, error } = await sb.from('library_items').select('*').order('created_at',{ascending:false}).limit(300);
     if(error || !data) return;
-    const haveSrv = new Set(library.map(e=>e.srvId).filter(Boolean));
+    const haveSrv = new Set(library.map(e=>e.srvId).filter(Boolean));   // vidéos + audios (library[])
     let added=0;
+    let imgHist=[]; try{ imgHist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(_){}
+    const haveImgSrv = new Set(imgHist.map(e=>e.srvId).filter(Boolean));
+    let imgAdded=0;
     for(const row of data){
+      if(row.kind==='image'){
+        if(haveImgSrv.has(row.id)) continue;   // déjà en local (imgHistory)
+        imgHist.push({ id:row.id, idbKey:null, url:row.thumb||'', srvId:row.id, srvPath:row.storage_path,
+          styleLabel:row.style||'Image', size:'', ts:new Date(row.created_at).getTime(), fav:false });
+        imgAdded++; continue;
+      }
       if(haveSrv.has(row.id)) continue;   // déjà en local (créé sur cet appareil)
-      library.push({ type:row.kind||'video-simple', emo:row.emo||'⚡', name:row.name||'Vidéo',
-        tags:Array.isArray(row.tags)?row.tags:['vidéo'], status:'done', style:row.style||'',
+      const isAudio = row.kind==='audio';
+      library.push({ type:row.kind||'video-simple', emo:row.emo||(isAudio?'🎧':'⚡'), name:row.name||(isAudio?'Audio':'Vidéo'),
+        tags:Array.isArray(row.tags)?row.tags:(isAudio?['audio']:['vidéo']), status:'done', style:row.style||'',
         bg:(typeof randBg==='function'?randBg():'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))'),
         script:'', hedraUrl:'', srvId:row.id, srvPath:row.storage_path, ts:new Date(row.created_at).getTime(),
         date:new Date(row.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) });
       added++;
     }
-    if(added){ library.sort((a,b)=>(b.ts||0)-(a.ts||0)); _saveLibrary();
-      const lv=document.getElementById('v-library'); if(lv&&lv.classList.contains('on')&&typeof renderLibrary==='function') renderLibrary(); }
+    if(imgAdded){ imgHist.sort((a,b)=>(b.ts||0)-(a.ts||0)); try{ localStorage.setItem('imgHistory', JSON.stringify(imgHist.slice(0,120))); }catch(_){} }
+    if(added){ library.sort((a,b)=>(b.ts||0)-(a.ts||0)); _saveLibrary(); }
+    if(added||imgAdded){ const lv=document.getElementById('v-library'); if(lv&&lv.classList.contains('on')&&typeof renderLibrary==='function') renderLibrary(); }
   }catch(e){ console.warn('lib load server:', e); }
 }
 // résout l'URL jouable d'une entrée : signée (serveur) OU blob (IndexedDB local)
@@ -9161,14 +9184,22 @@ async function _imgSaveToLibrary(btn){
     });
     localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
     toast('Enregistré dans la bibliothèque');
+    if(fullBlob && typeof _libPersistServer==='function'){   // #65 · image côté compte (Storage + row + thumb)
+      _libPersistServer(hist[0], fullBlob, { kind:'image', thumb, onSaved:(sid,spath)=>{
+        try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){}
+      }});
+    }
   } catch(e){ toast('Enregistrement impossible'); }
   finally { if(btn){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = orig; } }
 }
 
-// Résout l'URL pleine résolution d'une entrée image (IndexedDB si dispo, sinon miniature).
-async function _libGetFullImg(idbKey, fallback){
+// Résout l'URL pleine résolution d'une entrée image (IndexedDB si dispo, sinon serveur signé, sinon miniature).
+async function _libGetFullImg(idbKey, fallback, srvPath){
   if(idbKey){
     try { const e = await _idbLoad(idbKey); if(e && e.blob) return URL.createObjectURL(e.blob); } catch(_){}
+  }
+  if(srvPath && typeof sb!=='undefined'){   // #65 · image sur le compte (render-media)
+    try{ const s=await sb.storage.from('render-media').createSignedUrl(srvPath,3600); if(s.data && s.data.signedUrl) return s.data.signedUrl; }catch(_){}
   }
   return fallback;
 }
@@ -9176,7 +9207,7 @@ async function _libGetFullImg(idbKey, fallback){
 async function _libImgAction(action, idx){
   let e; try { e = JSON.parse(localStorage.getItem('imgHistory')||'[]')[idx]; } catch(_){}
   if(!e) return;
-  const u = await _libGetFullImg(e.idbKey, e.url);
+  const u = await _libGetFullImg(e.idbKey, e.url, e.srvPath);
   if(action === 'open'){ window.open(u, '_blank'); }
   else if(action === 'download'){
     const a = document.createElement('a'); a.href = u; a.download = 'avatarads-image.png';
@@ -13228,6 +13259,20 @@ const _MD_SFX_BANK = ['whoosh','woosh','mo-whoosh-1','pop','mo-pop-1','mo-pop-2'
   'heartbeat','iphone-charging','timer','robot','mo-outro-1',
   // les découpés de la vidéo d'Axel (01/08), après son tri du 01/08 soir
   'ed-swish-1','ed-thud-1','ed-boom-1','ed-click-1','ed-riser-1','ed-hit-1','ed-pop-1','ed-thud-2','ed-sub-1'];
+// ── BANQUE MUSIQUE PARTAGÉE (Éditeur + Générateur) ──────────────────────────
+// Fichiers réels dans assets/music/. Les 4 « viral » (courtes, tendance TikTok,
+// libres de droits — ajoutées le 11/08) sont surtout pensées pour Motion Control
+// mais dispo partout. `dur` = affichage mm:ss ; `viral:true` = mise en avant.
+const AA_MUSIC = [
+  {id:'lofi',   name:'Aesthetic Lo-fi',  mood:'doux · fond de voix',        dur:'2:14', url:'../assets/music/music-1.mp3'},
+  {id:'phonk',  name:'Phonk Drift',      mood:'énergique · punchy',         dur:'1:58', url:'../assets/music/music-2.mp3'},
+  {id:'cine',   name:'Cinematic Build',  mood:'dramatique · montée',        dur:'2:40', url:'../assets/music/music-3.mp3'},
+  {id:'viral1', name:'Viral Hit',        mood:'tendance · punchy',          dur:'0:15', url:'../assets/music/viral-1.mp3', viral:true},
+  {id:'viral2', name:'Trend Wave',       mood:'tendance · montée',          dur:'0:26', url:'../assets/music/viral-2.mp3', viral:true},
+  {id:'viral3', name:'Drift Motion',     mood:'tendance · motion control',  dur:'0:18', url:'../assets/music/viral-3.mp3', viral:true},
+  {id:'viral4', name:'Hype Loop',        mood:'tendance · énergique',       dur:'0:22', url:'../assets/music/viral-4.mp3', viral:true},
+];
+try{ window.AA_MUSIC = AA_MUSIC; }catch(_){}
 // famille sonore (enveloppe de la forme d'onde + synthèse d'aperçu)
 function _mdSfxFam(n){
   n = String(n);
@@ -22718,10 +22763,12 @@ async function _libSendVideoToExpress(idx){
 
 async function _libSendAudioToExpress(libIdx){
   const entry = library[libIdx];
-  if(!entry || !entry.idbKey){ toast('Audio introuvable'); return; }
-  const idbEntry = await _idbLoad(entry.idbKey);
-  if(!idbEntry){ toast('Audio introuvable en base'); return; }
-  const file = new File([idbEntry.blob], idbEntry.name || 'audio.wav', { type: idbEntry.type || 'audio/wav' });
+  if(!entry || (!entry.idbKey && !entry.srvPath)){ toast('Audio introuvable'); return; }
+  let blob = null, nm = entry.name || 'audio';
+  if(entry.idbKey){ const idbEntry = await _idbLoad(entry.idbKey); if(idbEntry){ blob = idbEntry.blob; nm = idbEntry.name || nm; } }
+  if(!blob) blob = await _libServerBlob(entry);   // #65 · serveur
+  if(!blob){ toast('Audio introuvable en base'); return; }
+  const file = new File([blob], (String(nm).endsWith('.wav')?nm:nm+'.wav'), { type: 'audio/wav' });
   // Injecter comme audio MP4 dans le générateur
   handleMp4AudioFile(file);
   toggleMp4AudioOption(true);
@@ -23052,7 +23099,7 @@ let _libAudioPlayingIdx = -1;
 
 async function _libPlayAudio(libIdx, btn){
   const entry = library[libIdx];
-  if(!entry || !entry.idbKey){ toast('Audio introuvable'); return; }
+  if(!entry || (!entry.idbKey && !entry.srvPath)){ toast('Audio introuvable'); return; }
 
   // Même audio en lecture → pause
   if(_libAudioPlayingIdx === libIdx && _libAudioEl && !_libAudioEl.paused){
@@ -23070,11 +23117,15 @@ async function _libPlayAudio(libIdx, btn){
   }
 
   btn.innerHTML = '';
-  const rec = await _idbLoad(entry.idbKey);
-  if(!rec){ toast('Fichier audio non trouvé'); btn.innerHTML = '▶ Écouter'; return; }
-
-  const blob = rec.blob || rec;
-  const url  = URL.createObjectURL(new Blob([blob], { type:'audio/wav' }));
+  let url = '';
+  if(entry.idbKey){
+    const rec = await _idbLoad(entry.idbKey);
+    if(rec){ const blob = rec.blob || rec; url = URL.createObjectURL(new Blob([blob], { type:'audio/wav' })); }
+  }
+  if(!url && entry.srvPath && typeof sb!=='undefined'){   // #65 · audio sur le compte (render-media)
+    try{ const s = await sb.storage.from('render-media').createSignedUrl(entry.srvPath, 3600); if(s.data && s.data.signedUrl) url = s.data.signedUrl; }catch(_){}
+  }
+  if(!url){ toast('Fichier audio non trouvé'); btn.innerHTML = '▶ Écouter'; return; }
   _libAudioEl = new Audio(url);
   _libAudioPlayingIdx = libIdx;
 
@@ -23094,10 +23145,12 @@ async function _libPlayAudio(libIdx, btn){
 
 async function recPlayLibraryAudio(libIdx){
   const entry = library[libIdx];
-  if(!entry||!entry.idbKey){ toast('Audio introuvable'); return; }
-  const rec = await _idbLoad(entry.idbKey);
-  if(!rec){ toast('Fichier audio non trouvé en mémoire'); return; }
-  const file = new File([rec.blob||rec], entry.name||'audio.wav', { type:'audio/wav' });
+  if(!entry || (!entry.idbKey && !entry.srvPath)){ toast('Audio introuvable'); return; }
+  let blob = null;
+  if(entry.idbKey){ const rec = await _idbLoad(entry.idbKey); if(rec) blob = rec.blob || rec; }
+  if(!blob) blob = await _libServerBlob(entry);   // #65 · serveur
+  if(!blob){ toast('Fichier audio non trouvé en mémoire'); return; }
+  const file = new File([blob], entry.name||'audio.wav', { type:'audio/wav' });
   // Inject into generator as voice
   window.mp4AudioFile = file;
   window.mp4AudioEnabled = true;
@@ -31638,14 +31691,8 @@ function edBandDrag(ov,track,e,mode){
     "ding","message-tone","success","iphone-charging","magic","timer","heartbeat","mac-typing","robot","hu","fahh","mo-outro-1"]; // 52 fichiers réels
   const sfxLabel=function(s){ return String(s).replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}); };
   const ED_TRANS=["Cut net","Fondu enchaîné","Whip pan","Zoom transition","Glitch"];         // 5
-  const ED_MUSIC=[
-    {id:"lofi",name:"Aesthetic Lo-fi",mood:"doux · fond de voix",dur:"2:14",url:"../assets/music/music-1.mp3"},
-    {id:"phonk",name:"Phonk Drift",mood:"énergique · punchy",dur:"1:58",url:"../assets/music/music-2.mp3"},
-    {id:"cine",name:"Cinematic Build",mood:"dramatique · montée",dur:"2:40",url:"../assets/music/music-3.mp3"},
-    {id:"pop",name:"Upbeat Pop",mood:"feel-good · rythmé",dur:"2:05",url:"../assets/music/music-1.mp3"},
-    {id:"trap",name:"Trap Minimal",mood:"sombre · basse",dur:"2:22",url:"../assets/music/music-2.mp3"},
-    {id:"corpo",name:"Corporate Clean",mood:"neutre · pro",dur:"1:47",url:"../assets/music/music-3.mp3"},
-  ];
+  // Banque partagée (3 originales + 4 virales) — voir AA_MUSIC près de _MD_SFX_BANK
+  const ED_MUSIC = (typeof AA_MUSIC !== 'undefined' ? AA_MUSIC : (window.AA_MUSIC || []));
   window.ED_ANIMS=ED_ANIMS; window.ED_SFX=ED_SFX; window.ED_TRANS=ED_TRANS;
   const MUSIC_GREEN="#28C795";
 
