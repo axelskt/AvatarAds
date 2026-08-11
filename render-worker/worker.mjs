@@ -70,10 +70,10 @@ const MUSIC_TARGET_LUFS = -20
 // entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
 function pickMusic(mood, seed) {
   const dir = join(HERE, 'assets', 'music')
-  // BIBLIOTHÈQUE (assets/music/lib) : les instrumentaux sans parole d'Axel. Ce
-  // sont des morceaux ENTIERS de 2 à 5 min — on ne veut donc pas toujours leur
-  // intro. On tire un morceau ET un point de départ quelconque dans le morceau,
-  // et le mix coupe à la fin de la vidéo (afade en sortie, déjà en place).
+  // BIBLIOTHÈQUE (assets/music/lib) : les instrumentaux « viraux » d'Axel, déjà
+  // ROGNÉS sur leur partie dynamique (départ sur le drop, ≤90 s — cf app/index.html
+  // AA_MUSIC `dyn`). On démarre donc à 0 (« commence par la partie dynamique »,
+  // demande d'Axel du 11/08) ; le mix coupe à la fin de la vidéo (afade en sortie).
   // Le tirage est pseudo-aléatoire mais DÉTERMINISTE (graine = durée de la
   // vidéo) : deux rendus du même montage donnent la même musique, sinon un
   // re-rendu changerait la bande-son sans prévenir.
@@ -83,12 +83,8 @@ function pickMusic(mood, seed) {
       const s = Math.abs(Math.round(seed * 1000))
       const f = lib.sort()[s % lib.length]
       const file = join(dir, 'lib', f)
-      let dur = 0
-      try { dur = parseFloat(ffprobe(file, 'format=duration')) || 0 } catch (_) { /* durée inconnue */ }
-      // on démarre n'importe où, mais en gardant de quoi couvrir la vidéo sans
-      // reboucler : au pire on repart du début
-      const room = Math.max(0, dur - (seed + 2))
-      const start = room > 1 ? Math.round((((s * 7919) % 9973) / 9973) * room * 100) / 100 : 0
+      // clips déjà coupés au drop → on part du début, pas d'offset aléatoire
+      const start = 0
       // NIVEAU MESURÉ, pas un volume au jugé. Les 8 titres vont de -8,3 à
       // -14,3 LUFS : à volume fixe, l'un passerait 6 dB au-dessus de l'autre.
       // On mesure et on ramène chacun à MUSIC_TARGET_LUFS — un lit constant,
