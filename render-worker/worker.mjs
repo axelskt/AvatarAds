@@ -1372,9 +1372,17 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // on retente une fois : la plupart des refus d'Hedra sont transitoires
       // (file d'attente, expiration de l'upload), pas structurels.
       let ok = false, pourquoi = ''
-      for (let essai = 1; essai <= 2 && !ok; essai++) {
+      // #92b (Axel, 11/08 : « le hook n'est pas lipsync alors que le CTA si ») —
+      // Hedra rate parfois une scène en transitoire (« pas de vidéo » : file
+      // d'attente, upload expiré). On retente jusqu'à 3 fois avec une courte
+      // pause : un visage FIGÉ pendant que les autres parlent se voit tout de
+      // suite, surtout sur le HOOK qui ouvre la vidéo.
+      for (let essai = 1; essai <= 3 && !ok; essai++) {
         try { ok = await uneScene(t.w, t.i) } catch (e) { pourquoi = e.message }
-        if (!ok && essai === 1) console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : 1er essai manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
+        if (!ok && essai < 3) {
+          console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : essai ${essai}/3 manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
+          await new Promise((r) => setTimeout(r, 4000))
+        }
       }
       // #84 · le clip est nommé par l'INDICE DE TABLEAU (t.i) ; on aligne
       // `w.clip` dessus pour que le remap post-découpe (`'av'+(w.clip ?? i)`) le
