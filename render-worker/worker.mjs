@@ -1095,7 +1095,15 @@ async function passeDeFinition(plan) {
       continue
     }
     const s = (plan.slides || []).find((x) => Math.abs((x.start || 0) - c.t) < 0.05)
-    if (!s || s.screen || s.assetId || s.overlayMedia) continue
+    // ── LES SCÈNES DE MÉDIAS DE L'USER SONT INTOUCHABLES (Axel, 11/08) ──────────
+    // La passe finitions voyait « des dizaines de photos » et remplaçait le
+    // `photowall` (le mur de SES photos) par un `carousel` générique → carte
+    // orange + images 404. Un `photowall`/`media`/`medias`, ou toute scène dont
+    // les items portent une source, montre du RÉEL (ses fichiers) : on n'y touche
+    // jamais. (Le `s.assetId` ne couvrait pas le mur, dont les ids sont dans items.)
+    if (!s || s.screen || s.assetId || s.overlayMedia
+      || ['photowall', 'media', 'medias'].includes(String(s.anim))
+      || (s.items || []).some((it) => it && it.src)) continue
     if (c.action === 'supprime') {
       // …sauf si le trou retomberait sur RIEN. Un plan retiré doit laisser la
       // place au visage ou à un voisin, jamais un vide.
