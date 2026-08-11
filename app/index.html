@@ -1393,7 +1393,22 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="cloneStatus" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:6px;display:none"></div>
             </div>
 
-            <div class="divider" style="margin:4px 0 16px"></div>
+            <!-- MUSIQUE DE FOND (#86) -->
+            <div id="genMusicCard" class="fld" style="margin-top:16px">
+              <div class="flbl" style="font-size:11px;margin-bottom:10px">Musique de fond <span style="color:var(--text3);font-weight:400">— optionnel, mixée sous ta voix</span></div>
+              <div id="genMusicRow" onclick="_genOpenMusicPicker()" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg4);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex;align-items:center;gap:9px;min-width:0">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  <div style="min-width:0">
+                    <div style="font-size:12px;font-weight:700">Ajouter une musique de fond</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="genMusicLabel">Aucune — mixée sous ta voix</div>
+                  </div>
+                </div>
+                <span style="font-size:12px;color:var(--text3);flex-shrink:0">›</span>
+              </div>
+            </div>
+
+            <div class="divider" style="margin:16px 0"></div>
 
             <!-- VOIX PRESET -->
             <div id="voice-preset-section" class="fld">
@@ -10877,6 +10892,12 @@ async function reuseLastVideo(){
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
 function _showResultArea(){
   _stopGenTimer();
+  // #86 · musique de fond choisie → la mixer sous la voix AVANT d'afficher (une seule fois)
+  if(window._genMusic && window._genMusic.url && results.hedraUrl && !(window._genMixedUrls && window._genMixedUrls.has(results.hedraUrl))){
+    toast('Ajout de la musique de fond…');
+    _genMixInto(results.hedraUrl).finally(()=>_showResultArea());
+    return;
+  }
   document.getElementById('v-generator').classList.add('gen-generating'); // résultat plein écran centré, sans colonne de gauche
   document.getElementById('previewArea').style.display = 'none';
   document.getElementById('genProgArea').style.display = 'none';
@@ -10922,6 +10943,90 @@ function _showResultArea(){
     st.classList.remove('on','done');
     if(i<5) st.classList.add('done'); else st.classList.add('on');
   }
+}
+
+// ── #86 · MUSIQUE DE FOND (Générateur) — menu + écoute + volume, mixée au rendu ──
+window._genMusic = window._genMusic || { url:'', dyn:'', name:'', volume:0.35 };
+window._genMixedUrls = window._genMixedUrls || new Set();
+function _genMusicSrc(m){ return (m && (m.dyn || m.url)) || ''; }   // dyn = démarre sur le drop (≤90s)
+function _genRefreshMusicLabel(){
+  const l=document.getElementById('genMusicLabel'); if(!l) return;
+  const m=window._genMusic;
+  l.textContent = (m && m.url) ? (m.name + ' · ' + Math.round((m.volume!=null?m.volume:0.35)*100) + '%') : 'Aucune — mixée sous ta voix';
+}
+function _genSetMusicVol(v){ window._genMusic.volume = Math.max(0, Math.min(1, (+v)/100)); const el=document.getElementById('genMusicVolVal'); if(el) el.textContent=Math.round(window._genMusic.volume*100)+'%'; _genRefreshMusicLabel(); }
+function _genStopPrev(){ if(window._genPrevAudio){ try{ window._genPrevAudio.pause(); }catch(_){} } }
+function _genClearMusic(){ window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
+function _genPickMusic(id){
+  const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
+  window._genMusic.url=m.url; window._genMusic.dyn=m.dyn||''; window._genMusic.name=m.name;
+  document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ r.style.borderColor=(r.getAttribute('data-mid')===id)?'var(--accent)':'var(--border)'; });
+  _genRefreshMusicLabel();
+}
+function _genPrevMusic(id){
+  const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
+  _genStopPrev(); const a=new Audio(_genMusicSrc(m)); a.volume=0.9; window._genPrevAudio=a; a.play().catch(()=>{});
+}
+function _genOpenMusicPicker(){
+  document.getElementById('_genMusModal')?.remove();
+  const bank=window.AA_MUSIC||[]; const cur=window._genMusic||{};
+  const vol=Math.round((cur.volume!=null?cur.volume:0.35)*100);
+  const rows=bank.map(m=>`<div data-mid="${m.id}" onclick="_genPickMusic('${m.id}')" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;border:1px solid ${cur.url===m.url?'var(--accent)':'var(--border)'};background:var(--panel-1);cursor:pointer;margin-bottom:8px">
+      <span role="button" onclick="event.stopPropagation();_genPrevMusic('${m.id}')" title="Écouter" style="width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,107,53,.14);border:1px solid rgba(255,107,53,.4);color:var(--orange2);cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</span><span style="display:block;font-size:11px;color:var(--text3)">${m.mood||''}</span></span>
+      <span style="font-size:11px;font-family:var(--mono);color:var(--text3);flex:0 0 auto">${m.dur||''}</span>
+    </div>`).join('');
+  const modal=document.createElement('div'); modal.id='_genMusModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px)';
+  modal.addEventListener('click',e=>{ if(e.target===modal){ _genStopPrev(); modal.remove(); } });
+  modal.innerHTML=`<div style="width:100%;max-width:460px;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 26px;max-height:78vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0">
+      <div style="font-size:14px;font-weight:800">Musique de fond</div>
+      <button onclick="_genStopPrev();document.getElementById('_genMusModal').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div style="overflow-y:auto;flex:1;margin:0 -4px;padding:2px 4px">${rows}</div>
+    <div style="flex-shrink:0;border-top:1px solid var(--border);margin-top:12px;padding-top:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:7px"><span>Volume de la musique</span><span id="genMusicVolVal">${vol}%</span></div>
+      <input type="range" min="0" max="100" value="${vol}" oninput="_genSetMusicVol(this.value)" style="width:100%;accent-color:var(--accent)">
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="_genClearMusic()" style="flex:0 0 auto;padding:10px 14px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Aucune</button>
+        <button onclick="_genStopPrev();document.getElementById('_genMusModal').remove()" style="flex:1;padding:10px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer">OK</button>
+      </div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:9px;text-align:center">Mixée sous ta voix · démarre sur la partie dynamique</div>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+// mix ffmpeg.wasm : musique (bouclée + duckée) sous la voix ; durée = la vidéo
+async function _genMixMusic(videoBlob){
+  const m=window._genMusic; if(!m||!m.url) return videoBlob;
+  const src=_genMusicSrc(m); if(!src) return videoBlob;
+  try{
+    await _loadFFmpeg(); const ff=_ffmpegInst;
+    await ff.FS('writeFile','gvin.mp4', await window._ffFetchFile(videoBlob));
+    await ff.FS('writeFile','gmus.mp3', await window._ffFetchFile(src));
+    const vol=(m.volume!=null?m.volume:0.35);
+    // voix pleine + musique à `vol` : amix normalise (÷2) → on ré-amplifie ×2 pour garder la voix intacte
+    await ff.run('-i','gvin.mp4','-stream_loop','-1','-i','gmus.mp3',
+      '-filter_complex','[1:a]volume='+vol.toFixed(2)+'[bg];[0:a][bg]amix=inputs=2:duration=first:dropout_transition=2[mx];[mx]volume=2.0[a]',
+      '-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-b:a','192k','-shortest','gvout.mp4');
+    const data=await ff.FS('readFile','gvout.mp4');
+    try{ await ff.FS('unlink','gvin.mp4'); await ff.FS('unlink','gmus.mp3'); await ff.FS('unlink','gvout.mp4'); }catch(_){}
+    return new Blob([data.buffer],{type:'video/mp4'});
+  }catch(e){ console.warn('genMixMusic:',e); return videoBlob; }   // repli : vidéo sans musique
+}
+async function _genMixInto(srcUrl){
+  try{
+    window._genMixedUrls = window._genMixedUrls || new Set();
+    window._genMixedUrls.add(srcUrl);
+    const r=await fetch(srcUrl); if(!r.ok) return;
+    const mixed=await _genMixMusic(await r.blob());
+    if(mixed){
+      const u=URL.createObjectURL(mixed); window._genMixedUrls.add(u); results.hedraUrl=u;
+      const hv=document.getElementById('hedraVideo'); if(hv){ hv.src=u; if(hv.load) hv.load(); }
+      const bpv=document.getElementById('bypassPreviewVid'); if(bpv){ bpv.src=u; bpv.load(); }
+    }
+  }catch(e){ console.warn('genMixInto:',e); }
 }
 
 function updateSteps(){
@@ -13271,6 +13376,16 @@ const AA_MUSIC = [
   {id:'viral2', name:'Trend Wave',       mood:'tendance · montée',          dur:'0:26', url:'../assets/music/viral-2.mp3', viral:true},
   {id:'viral3', name:'Drift Motion',     mood:'tendance · motion control',  dur:'0:18', url:'../assets/music/viral-3.mp3', viral:true},
   {id:'viral4', name:'Hype Loop',        mood:'tendance · énergique',       dur:'0:22', url:'../assets/music/viral-4.mp3', viral:true},
+  // « Musique 2 » (11/08) — url = INTÉGRALE (Éditeur) ; dyn = départ sur le drop,
+  // ≤90 s (Montage IA + Générateur : « commence par la partie dynamique »)
+  {id:'m2_1',   name:'Falling Forwards', mood:'planant · montée',           dur:'3:16', url:'../assets/music/m2-1.mp3', dyn:'../assets/music/m2-1-dyn.mp3'},
+  {id:'m2_2',   name:'Fatigue',          mood:'sombre · lourd',             dur:'3:06', url:'../assets/music/m2-2.mp3', dyn:'../assets/music/m2-2-dyn.mp3'},
+  {id:'m2_3',   name:'Monuments',        mood:'épique · montée',            dur:'4:53', url:'../assets/music/m2-3.mp3', dyn:'../assets/music/m2-3-dyn.mp3'},
+  {id:'m2_4',   name:'Let It Burn',      mood:'intense · drop',             dur:'2:09', url:'../assets/music/m2-4.mp3', dyn:'../assets/music/m2-4-dyn.mp3'},
+  {id:'m2_5',   name:'Convergence',      mood:'énergique · punchy',         dur:'2:44', url:'../assets/music/m2-5.mp3', dyn:'../assets/music/m2-5-dyn.mp3'},
+  {id:'m2_6',   name:'Me & The Devil',   mood:'sombre · groove',            dur:'3:02', url:'../assets/music/m2-6.mp3', dyn:'../assets/music/m2-6-dyn.mp3'},
+  {id:'m2_7',   name:'She Will (Slowed)',mood:'slowed · lourd',             dur:'2:00', url:'../assets/music/m2-7.mp3', dyn:'../assets/music/m2-7-dyn.mp3'},
+  {id:'m2_8',   name:'Clench My Fists',  mood:'punchy · hype',              dur:'2:33', url:'../assets/music/m2-8.mp3', dyn:'../assets/music/m2-8-dyn.mp3'},
 ];
 try{ window.AA_MUSIC = AA_MUSIC; }catch(_){}
 // famille sonore (enveloppe de la forme d'onde + synthèse d'aperçu)
