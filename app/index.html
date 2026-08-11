@@ -6010,19 +6010,83 @@ async function _libAutoSaveVideo(blob, name, tags, emo, style){
   try{
     const hedraIdbKey = 'lib_video_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
     await _idbSave(hedraIdbKey, new File([blob], (name||'video') + '.mp4', { type:'video/mp4' }));
-    library.unshift({
+    const entry = {
       type:'video-simple', emo: emo||'⚡', name: name||'Vidéo',
       tags: (tags && tags.length) ? tags : ['vidéo','9:16'],
       status:'done', style: style||'EXPRESS',
       bg: (typeof randBg==='function' ? randBg() : 'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))'),
-      script:'', hedraUrl:'', hedraIdbKey,
+      script:'', hedraUrl:'', hedraIdbKey, ts: Date.now(),
       date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-    });
+    };
+    library.unshift(entry);
     _saveLibrary();
     const lv = document.getElementById('v-library');
     if(lv && lv.classList.contains('on') && typeof renderLibrary==='function') renderLibrary();
     toast('« ' + (name||'Vidéo') + ' » ajoutée à la Bibliothèque');
+    _libPersistServer(entry, blob);   // #65 · + côté compte (Storage + row), async
   }catch(e){ console.warn('libAutoSaveVideo:', e); }
+}
+// ── #65 · BIBLIOTHÈQUE CÔTÉ COMPTE ──────────────────────────────────────────
+// Le local (IndexedDB + localStorage) reste la source rapide ; en plus, chaque
+// vidéo est rangée dans render-media/<uid>/lib/ + une ligne `library_items` (RLS
+// user_id=auth.uid()). Au chargement, on FUSIONNE les lignes serveur absentes du
+// local → les vidéos suivent le compte, tous appareils. Best-effort : si le
+// réseau/serveur échoue, la biblio locale fonctionne comme avant.
+async function _libPersistServer(entry, blob){
+  try{
+    if(!blob || typeof sb==='undefined') return;
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) return;
+    const path = user.id + '/lib/' + (entry.hedraIdbKey || ('v-'+Date.now())) + '.mp4';
+    const up = await sb.storage.from('render-media').upload(path, new File([blob],'v.mp4',{type:'video/mp4'}), { contentType:'video/mp4', upsert:true });
+    if(up.error){ console.warn('lib storage:', up.error.message); return; }
+    const ins = await sb.from('library_items').insert({ kind:entry.type||'video-simple', name:entry.name||'Vidéo', tags:entry.tags||[], style:entry.style||'', emo:entry.emo||'', storage_path:path }).select('id').single();
+    if(ins.error){ console.warn('lib row:', ins.error.message); return; }
+    entry.srvId = ins.data.id; entry.srvPath = path; _saveLibrary();
+  }catch(e){ console.warn('lib persist server:', e); }
+}
+async function _libLoadServer(){
+  try{
+    if(typeof sb==='undefined') return;
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) return;
+    const { data, error } = await sb.from('library_items').select('*').order('created_at',{ascending:false}).limit(200);
+    if(error || !data) return;
+    const haveSrv = new Set(library.map(e=>e.srvId).filter(Boolean));
+    let added=0;
+    for(const row of data){
+      if(haveSrv.has(row.id)) continue;   // déjà en local (créé sur cet appareil)
+      library.push({ type:row.kind||'video-simple', emo:row.emo||'⚡', name:row.name||'Vidéo',
+        tags:Array.isArray(row.tags)?row.tags:['vidéo'], status:'done', style:row.style||'',
+        bg:(typeof randBg==='function'?randBg():'linear-gradient(135deg,rgba(255,107,53,0.18),rgba(255,107,53,0.04))'),
+        script:'', hedraUrl:'', srvId:row.id, srvPath:row.storage_path, ts:new Date(row.created_at).getTime(),
+        date:new Date(row.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) });
+      added++;
+    }
+    if(added){ library.sort((a,b)=>(b.ts||0)-(a.ts||0)); _saveLibrary();
+      const lv=document.getElementById('v-library'); if(lv&&lv.classList.contains('on')&&typeof renderLibrary==='function') renderLibrary(); }
+  }catch(e){ console.warn('lib load server:', e); }
+}
+// résout l'URL jouable d'une entrée : signée (serveur) OU blob (IndexedDB local)
+async function _libVideoUrl(entry){
+  if(!entry) return '';
+  if(entry._srvUrl) return entry._srvUrl;
+  if(entry.srvPath && typeof sb!=='undefined'){ try{ const s=await sb.storage.from('render-media').createSignedUrl(entry.srvPath, 3600); if(s.data && s.data.signedUrl){ entry._srvUrl=s.data.signedUrl; return s.data.signedUrl; } }catch(_){} }
+  if(entry.hedraIdbKey){ try{ const e=await _idbLoad(entry.hedraIdbKey); if(e && e.blob) return URL.createObjectURL(e.blob); }catch(_){} }
+  return entry.hedraUrl||'';
+}
+// télécharge le blob d'une entrée SERVEUR (URL signée) — pour injection Express/Éditeur/pickers
+async function _libServerBlob(entry){
+  try{ if(!entry || !entry.srvPath) return null; const url = await _libVideoUrl(entry); if(!url) return null; const r = await fetch(url); if(r.ok) return await r.blob(); }catch(_){}
+  return null;
+}
+// supprime une entrée côté serveur (row + fichier Storage) — best-effort
+async function _libDeleteServer(entry){
+  try{
+    if(!entry || typeof sb==='undefined') return;
+    if(entry.srvPath){ try{ await sb.storage.from('render-media').remove([entry.srvPath]); }catch(_){} }
+    if(entry.srvId){ try{ await sb.from('library_items').delete().eq('id', entry.srvId); }catch(_){} }
+  }catch(e){ console.warn('lib delete server:', e); }
 }
 
 // Member session
@@ -6726,6 +6790,7 @@ async function loadProfile(user){
 // ── ENTER APP ──
 function enterApp(profile){
   currentMember = profile;
+  try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){}   // #65 · fusionne la biblio du compte (tous appareils)
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier)
@@ -22627,10 +22692,15 @@ function libSetTab(tab){
 }
 
 // ── Envoyer depuis bibliothèque vers Express / Cartoon ──────────────────
-async function _libSendVideoToExpress(idbKey){
-  const entry = await _idbLoad(idbKey);
-  if(!entry){ toast('Vidéo introuvable'); return; }
-  const file = new File([entry.blob], entry.name || 'video.mp4', { type: entry.type || 'video/mp4' });
+async function _libSendVideoToExpress(idx){
+  // idx = indice library (#65) ; rétro-compat clé IDB string
+  const it = (typeof idx==='number') ? library[idx] : library.find(e=>e && e.hedraIdbKey===idx);
+  if(!it){ toast('Vidéo introuvable'); return; }
+  let blob = null, nm = it.name || 'video';
+  if(it.hedraIdbKey){ try{ const e = await _idbLoad(it.hedraIdbKey); if(e && e.blob){ blob = e.blob; nm = e.name || nm; } }catch(_){} }
+  if(!blob) blob = await _libServerBlob(it);
+  if(!blob){ toast('Vidéo introuvable — cache vidé'); return; }
+  const file = new File([blob], (String(nm).endsWith('.mp4') ? nm : nm + '.mp4'), { type: 'video/mp4' });
   // Injecter dans l'input Express
   const expInput = document.getElementById('expMainFileIn');
   if(expInput){
@@ -22682,19 +22752,21 @@ function _libSendImageToCartoon(imgUrl){
 
 // ── Chargement des thumbnails vidéo + waveforms audio en arrière-plan ──
 async function _loadLibThumbnails(){
-  // 1. Thumbnails vidéo — premier frame via canvas
-  const thumbEls = document.querySelectorAll('[data-lib-idb]');
+  // 1. Thumbnails vidéo — premier frame via canvas (local IDB OU serveur signé)
+  const thumbEls = document.querySelectorAll('[data-lib-vid]');
   for(const img of thumbEls){
-    const key = img.dataset.libIdb;
-    if(!key) continue;
+    const ri = +img.dataset.libVid;
+    const entry = library[ri];
+    if(!entry) continue;
     try {
-      const entry = await _idbLoad(key);
-      if(!entry) continue;
-      const file = new File([entry.blob], entry.name||'video.mp4', { type: entry.type||'video/mp4' });
-      const url  = URL.createObjectURL(file);
+      const url = await _libVideoUrl(entry);
+      if(!url) continue;
+      const isBlob = url.startsWith('blob:');
       await new Promise(resolve => {
         const vid = document.createElement('video');
+        if(!isBlob) vid.crossOrigin = 'anonymous';   // canvas propre pour l'URL signée Supabase
         vid.src = url; vid.muted = true; vid.preload = 'metadata'; vid.playsInline = true;
+        const _cleanup = () => { if(isBlob){ try{ URL.revokeObjectURL(url); }catch(_){} } };
         vid.onloadeddata = () => {
           vid.currentTime = 0.5;
           vid.onseeked = () => {
@@ -22716,14 +22788,13 @@ async function _loadLibThumbnails(){
               const emoEl = img.parentElement?.querySelector('.lib-emoji');
               if(emoEl) emoEl.style.display = 'none';
             } catch(e){}
-            URL.revokeObjectURL(url);
-            resolve();
+            _cleanup(); resolve();
           };
-          vid.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          vid.onerror = () => { _cleanup(); resolve(); };
           setTimeout(resolve, 2000);
         };
-        vid.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-        setTimeout(() => { URL.revokeObjectURL(url); resolve(); }, 5000);
+        vid.onerror = () => { _cleanup(); resolve(); };
+        setTimeout(() => { _cleanup(); resolve(); }, 5000);
         vid.load();
       });
     } catch(e){ /* silencieux */ }
@@ -22765,11 +22836,12 @@ async function _loadLibThumbnails(){
   }
 }
 
-async function _libPreviewVideo(idbKey){
-  const entry = await _idbLoad(idbKey);
+async function _libPreviewVideo(idx){
+  // idx = indice library (#65) ; rétro-compat : une clé IDB en string est encore acceptée
+  const entry = (typeof idx==='number') ? library[idx] : library.find(e=>e && e.hedraIdbKey===idx);
   if(!entry){ toast('Vidéo introuvable'); return; }
-  const file = new File([entry.blob], entry.name || 'video.mp4', { type: entry.type || 'video/mp4' });
-  const url  = URL.createObjectURL(file);
+  const url = await _libVideoUrl(entry);
+  if(!url){ toast('Vidéo introuvable — cache vidé, régénère'); return; }
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;cursor:pointer';
   overlay.onclick = () => { vid.pause(); document.body.removeChild(overlay); URL.revokeObjectURL(url); };
@@ -22891,11 +22963,12 @@ function renderLibrary(){
     }
     // Video/Avatar card
     const ri = v._realIdx;
+    const _hasVid = v.hedraIdbKey || v.srvPath;   // #65 · local (IDB) OU serveur (Storage)
     return `<div class="vid-card">
-      <div class="vid-thumb" style="background:${v.bg};cursor:${v.hedraIdbKey?'pointer':'default'};position:relative;overflow:hidden" onclick="${v.hedraIdbKey?`event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})`:''}">
-        ${v.hedraIdbKey ? `<img id="lib-thumb-${ri}" data-lib-idb="${v.hedraIdbKey}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
+      <div class="vid-thumb" style="background:${v.bg};cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
+        ${_hasVid ? `<img id="lib-thumb-${ri}" data-lib-vid="${ri}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
         <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${v.emo}</div>
-        ${v.hedraIdbKey ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
+        ${_hasVid ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
         <div class="vid-overlay" style="z-index:4"></div>
         <div class="vid-badge" style="z-index:5">${v.style}</div>
         <div style="z-index:6">${_delBtn('lib', ri)}</div>
@@ -22905,11 +22978,11 @@ function renderLibrary(){
         <div class="vid-title">${v.name || 'Sans titre'}</div>
         <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
         <div class="vid-status"><div class="sdot ok"></div><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span></div>
-        ${v.hedraIdbKey ? `
+        ${_hasVid ? `
         <div style="display:flex;gap:5px;margin-top:7px">
-          <button onclick="event.stopPropagation();_libPreviewVideo('${v.hedraIdbKey}',${ri})" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
+          <button onclick="event.stopPropagation();_libPreviewVideo(${ri})" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
           <button onclick="recomposeFromLibrary(${ri})" style="flex:1;padding:7px 4px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Utiliser</button>
-          <button onclick="event.stopPropagation();_libSendVideoToExpress('${v.hedraIdbKey}')" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
+          <button onclick="event.stopPropagation();_libSendVideoToExpress(${ri})" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
         </div>` : ''}
       </div>
     </div>`;
@@ -22966,6 +23039,7 @@ async function deleteLibItem(src, idx){
     for(const k of keysToDelete){
       try { await _idbDelete(k); } catch(e){}
     }
+    if(entry.srvId || entry.srvPath) _libDeleteServer(entry);   // #65 · retire aussi la copie compte
     library.splice(idx, 1);
     _saveLibrary();
   }
@@ -23103,6 +23177,9 @@ async function recomposeFromLibrary(idx){
     } catch(e){}
   }
 
+  // 2b. #65 · Fallback SERVEUR (render-media, URL signée)
+  if(!hedraBlob) hedraBlob = await _libServerBlob(entry);
+
   if(!hedraBlob){
     toast('Vidéo introuvable — le cache a peut-être été vidé. Régénère la vidéo.');
     return;
@@ -23167,7 +23244,7 @@ async function recomposeFromLibrary(idx){
 // ── LIB VIDEO PICKER ──
 function openLibVideoPicker(){
   // Collect all library entries that have a video blob in IDB
-  const videos = library.filter(v => v.hedraIdbKey);
+  const videos = library.filter(v => v.hedraIdbKey || v.srvPath);   // #65 · local ou serveur
   if(!videos.length){
     toast('Aucune vidéo en bibliothèque — génère ou importe une vidéo d\'abord');
     return;
@@ -23216,6 +23293,7 @@ async function _lvpLoadThumbs(modal){
       let blob = null;
       if(entry.hedraIdbKey){ const s = await _idbLoad(entry.hedraIdbKey); blob = (s instanceof Blob) ? s : (s?.blob||null); }
       if(!blob && entry.hedraUrl?.startsWith('blob:')){ const r = await fetch(entry.hedraUrl); if(r.ok) blob = await r.blob(); }
+      if(!blob && entry.srvPath){ blob = await _libServerBlob(entry); }   // #65 · serveur
       if(!blob && entry.posterUrl){ cell.innerHTML = `<img src="${entry.posterUrl}" style="width:100%;height:100%;object-fit:cover">`; continue; }
       if(!blob) continue;
       const url = URL.createObjectURL(blob);
@@ -23252,6 +23330,7 @@ async function pickLibVideo(idx){
   if(!hedraBlob && entry.hedraUrl?.startsWith('blob:')){
     try { const r = await fetch(entry.hedraUrl); if(r.ok) hedraBlob = await r.blob(); } catch(e){}
   }
+  if(!hedraBlob) hedraBlob = await _libServerBlob(entry);   // #65 · serveur
   if(!hedraBlob){
     toast('Vidéo introuvable — le cache a peut-être été vidé. Régénère ou ré-importe la vidéo.');
     return;
@@ -25245,7 +25324,7 @@ function _expLoadVideo(file){
 
 // ── BIBLIOTHÈQUE → EXPRESS ────────────────────────────────────
 function openExpLibPicker(){
-  const videos = library.filter(v => v.hedraIdbKey);
+  const videos = library.filter(v => v.hedraIdbKey || v.srvPath);   // #65 · local ou serveur
   if(!videos.length){ toast('Aucune vidéo en bibliothèque'); return; }
   document.getElementById('_expLibModal')?.remove();
   const modal = document.createElement('div');
@@ -25287,6 +25366,7 @@ async function _expPickLibVid(idx){
   if(!blob && entry.hedraUrl?.startsWith('blob:')){
     try { const r=await fetch(entry.hedraUrl); if(r.ok) blob=await r.blob(); } catch(e){}
   }
+  if(!blob) blob = await _libServerBlob(entry);   // #65 · serveur
   if(!blob){ toast('Vidéo introuvable — cache vidé'); return; }
   const file = new File([blob], (entry.name||'video')+'.mp4', {type:'video/mp4'});
   _expLoadVideo(file);
@@ -29458,7 +29538,7 @@ function edFmtMs(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(
 function edPickFromLibrary(){
   // toutes les vidéos récupérables : sauvegarde locale (IndexedDB) OU URL distante
   const vids=((typeof library!=='undefined'&&library)||window.library||[])
-    .filter(v=>v && v.type!=='audio' && (v.hedraIdbKey || v.hedraUrl));
+    .filter(v=>v && v.type!=='audio' && (v.hedraIdbKey || v.hedraUrl || v.srvPath));
   if(!vids.length){ toast('Aucune vidéo dans ta bibliothèque'); return; }
   let modal=document.getElementById('edLibModal');
   if(modal) modal.remove();
@@ -29490,6 +29570,7 @@ function edPickFromLibrary(){
           if(!r.ok) throw new Error('lien expiré (HTTP '+r.status+') — regénère depuis la Bibliothèque');
           blob=await r.blob();
         }
+        if(!blob && v.srvPath){ blob = await _libServerBlob(v); }   // #65 · serveur
         if(!blob) throw new Error('vidéo introuvable sur cet appareil');
         edLoadFile(new File([blob], name, {type:blob.type||'video/mp4'}));
         toast('Vidéo chargée dans l\'éditeur');
@@ -29497,14 +29578,16 @@ function edPickFromLibrary(){
     };
     grid.appendChild(card);
   });
-  // miniatures (best-effort, uniquement depuis la sauvegarde locale — pas de téléchargement réseau)
-  vids.forEach(async v=>{ if(!v.hedraIdbKey) return; try{
-    const entry=await _idbLoad(v.hedraIdbKey); if(!entry||!entry.blob) return;
-    const url=URL.createObjectURL(entry.blob); const tv=document.createElement('video'); tv.src=url; tv.muted=true; tv.preload='auto';
+  // miniatures (best-effort) — local (IDB) ou serveur (#65, URL signée)
+  vids.forEach(async (v,i)=>{ try{
+    const key=v.hedraIdbKey||('url'+i);
+    const src=await _libVideoUrl(v); if(!src) return;
+    const isBlob=src.startsWith('blob:');
+    const tv=document.createElement('video'); if(!isBlob) tv.crossOrigin='anonymous'; tv.src=src; tv.muted=true; tv.preload='auto';
     await new Promise(r=>{ tv.onloadedmetadata=r; setTimeout(r,2000); });
     await new Promise(r=>{ tv.onseeked=r; try{ tv.currentTime=Math.min(0.6,(tv.duration||1)/3); }catch(e){ r(); } setTimeout(r,2000); });
-    const cv=modal.querySelector('canvas[data-libpick="'+v.hedraIdbKey+'"]'); if(cv&&tv.videoWidth){ cv.width=160; cv.height=Math.round(160*(tv.videoHeight/tv.videoWidth)||284); const cx=cv.getContext('2d'); try{ cx.drawImage(tv,0,0,cv.width,cv.height); }catch(e){} }
-    URL.revokeObjectURL(url);
+    const cv=modal.querySelector('canvas[data-libpick="'+key+'"]'); if(cv&&tv.videoWidth){ cv.width=160; cv.height=Math.round(160*(tv.videoHeight/tv.videoWidth)||284); const cx=cv.getContext('2d'); try{ cx.drawImage(tv,0,0,cv.width,cv.height); }catch(e){} }
+    if(isBlob) URL.revokeObjectURL(src);
   }catch(e){} });
 }
 
