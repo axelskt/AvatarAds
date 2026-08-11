@@ -2926,12 +2926,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const coquilleTexte = (s) => {
         if (s.anim || s.type === 'punch' || s.cta) return false
         if (s.screen || s.assetId || s.src || s.user || s.overlayMedia || s.ui) return false
+        if ((s.start || 0) > D - 4) return false            // le CTA de fin garde son texte (le mot à commenter)
         const its = (s.items || []).filter((it) => it && String(it.text || '').trim())
         const num = String(s.value ?? s.center ?? (its[0] && its[0].text) ?? '')
-        if (s.type === 'kpi' && /\d/.test(num)) return false
-        const dates = its.filter((it) => Number(it.t) > 0)
-        if (its.length >= 2 && dates.length >= 2) return false
-        return !!(s.title || its.length)
+        if (s.type === 'kpi' && /\d/.test(num)) return false // SEUL un chiffre réellement dit se garde (règle #3/#44)
+        // Tout le reste est du texte design qui ne montre AUCUNE action : l'eyebrow
+        // (« COMPARAISON », « SECRET »), le gros titre, les pastilles « QUELQUES
+        // EUROS »/« MILLIERS D'EUROS ». Axel l'a pointé DEUX fois sur la même carte
+        // comparaison (11/08). L'ancienne exemption « ≥2 lignes datées » la laissait
+        // passer — supprimée : une énumération de texte tient sur une image fixe,
+        // donc règle #6, elle cède au visage (ou à une vraie anim comme bars2).
+        return !!(s.title || its.length || s.eyebrow)
       }
       for (let i = out.length - 1; i >= 0; i--) {
         const s = out[i]
