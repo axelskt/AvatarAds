@@ -139,7 +139,20 @@ function buildPanels(plan, D) {
   }
   if (!out.length) return out
   out[0].t0 = 0
-  for (let i = 0; i < out.length; i++) out[i].t1 = r2(i < out.length - 1 ? out[i + 1].t0 : D)
+  // ── L'ÉTIREMENT A UNE LIMITE (Axel, 15/08 : le « screen 8 », un dégradé nu
+  // avec juste le sous-titre). Beaucoup d'animations SORTENT leur contenu à la
+  // fin de leur scène (la carte d'upload s'envole, le post part…) : un panneau
+  // étiré loin au-delà de sa fin naturelle n'est plus qu'un fond à halos. On
+  // borne l'étirement à +1,6 s ; le temps mort revient au panneau SUIVANT, qui
+  // entre plus tôt — son contenu arrive dès l'ouverture, l'écran vit toujours.
+  for (let i = 0; i < out.length - 1; i++) {
+    const finNat = r2(out[i].t1 ?? out[i + 1].t0)
+    const t0Suiv = r2(Math.min(out[i + 1].t0, Math.max(finNat + 1.6, out[i].t0 + 1.2)))
+    if (t0Suiv < out[i + 1].t0 - 0.05) console.log(`▶ temps mort ${t0Suiv}→${r2(out[i + 1].t0)}s : le panneau suivant entre plus tôt (fini les dégradés nus)`)
+    out[i + 1].t0 = t0Suiv
+    out[i].t1 = t0Suiv
+  }
+  out[out.length - 1].t1 = D
 
   // FUSION des scènes courtes voisines : deux panneaux de <1.35 s qui se poussent
   // à la chaîne, « on n'a même pas le temps de voir que ça change déjà » (Axel).
@@ -1236,10 +1249,31 @@ export function buildDynamicComposition(plan, opts = {}) {
       const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
       g.sombre = !ap || !pan || pan.kind === 'avclip'
       const dedans = g.mots.map((w, k) =>
-        `<span class="dc-w${g.hook && ACCFORTS.has(normAcc(w.text)) ? ' acc' : ''}" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
+        `<span class="dc-w${ACCFORTS.has(normAcc(w.text)) ? ' acc' : ''}" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
         style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
+    // ── COLLECTE DES MOTS GÉANTS (avant la boucle JS : un mot promu géant ne
+    // reçoit NI pop NI couleur dans son groupe — le géant le REMPLACE) ────────
+    const geantsPre = []
+    const supprimes = new Set()
+    {
+      let dernierG = -9
+      grp.forEach((g, gi) => {
+        if (g.hook) return
+        g.mots.forEach((w, k) => {
+          if (geantsPre.length >= 8) return
+          const t = r2(w.start)
+          const txt = normAcc(w.text)
+          if (!ACCFORTS.has(txt) || txt.length < 5 || t - dernierG < 2.5) return
+          const pan = panels.find((p) => t >= p.t0 && t < p.t1)
+          if (pan && pan.kind === 'typo') return
+          geantsPre.push({ t, mot: String(w.text).replace(/[.,!?;:«»()"']/g, ''), i: geantsPre.length })
+          supprimes.add(gi + ':' + k)
+          dernierG = t
+        })
+      })
+    }
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
@@ -1269,11 +1303,12 @@ export function buildDynamicComposition(plan, opts = {}) {
       // (hiérarchie visible), un mot courant pope sec. L'entrée du groupe
       // change une fois sur trois pour que deux pastilles ne se ressemblent pas.
       g.mots.forEach((w, k) => {
+        if (supprimes.has(i + ':' + k)) return   // promu en mot géant : il vit là-bas
         const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
         const fort = ACCFORTS.has(normAcc(w.text))
         js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:${fort ? 1.6 : 1.24},yPercent:${fort ? 12 : 6}},{autoAlpha:1,scale:${fort ? 1.14 : 1},yPercent:0,duration:${fort ? 0.16 : 0.11},ease:'back.out(2.2)',transformOrigin:'50% 85%'},${r2(w.start)});`
         js += `\n  tl.set(${sel}, { color: '${accW}' }, ${r2(w.start)});`
-        if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
+        if (k && !supprimes.has(i + ':' + (k - 1))) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
       })
       const entree = i % 3 === 0
         ? `{ autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }`
@@ -1289,21 +1324,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     // Les panneaux typo gardent l'exclusivité de leurs mots (jamais deux fois
     // le même mot à l'écran au même instant).
     {
-      const geants = []
-      let dernier = -9
-      for (const g of grp) {
-        if (g.hook) continue
-        for (const w of g.mots) {
-          if (geants.length >= 8) break
-          const t = r2(w.start)
-          const txt = normAcc(w.text)
-          if (!ACCFORTS.has(txt) || txt.length < 5 || t - dernier < 2.5) continue
-          const pan = panels.find((p) => t >= p.t0 && t < p.t1)
-          if (pan && pan.kind === 'typo') continue
-          geants.push({ t, mot: String(w.text).replace(/[.,!?;:«»()"']/g, ''), i: geants.length })
-          dernier = t
-        }
-      }
+      const geants = geantsPre
       capHtml += geants.map((gw) => `\n      <div class="clip gwcap" id="gw${gw.i}" data-start="${r2(Math.max(0, gw.t - 0.05))}" data-duration="0.95" data-track-index="16"><span class="gw-in" id="gwi${gw.i}">${esc(gw.mot.toUpperCase())}</span></div>`).join('')
       for (const gw of geants) {
         const e = gw.i % 3
@@ -1424,17 +1445,23 @@ export function buildDynamicComposition(plan, opts = {}) {
     letter-spacing:.02em; text-transform:uppercase;
     text-shadow:0 5px 28px rgba(0,0,0,.55), 0 2px 7px rgba(0,0,0,.5);
     will-change:transform,opacity,filter; }
-  .dc-p { display:inline-block; max-width:${Math.round(W * 0.84)}px;
-    padding:${Math.round(H * 0.014)}px ${Math.round(H * 0.024)}px ${Math.round(H * 0.017)}px;
-    border-radius:${Math.round(H * 0.019)}px;
-    background:rgba(16,16,20,.9); box-shadow:0 ${Math.round(H * 0.008)}px ${Math.round(H * 0.026)}px rgba(0,0,0,.3);
+  /* 15/08 (Axel, réfs ssstik ×2 : « oublie tes sous-titres avec fond noir,
+     prends la vidéo comme modèle ») : PLUS DE PILULE. Le modèle docu — texte
+     blanc très gras posé À MÊME l'image, ombre portée douce, casse naturelle,
+     l'accent en couleur et plus gros. */
+  .dc-p { display:inline-block; max-width:${Math.round(W * 0.86)}px;
+    background:transparent; box-shadow:none; padding:0;
     font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.022em;
-    font-size:${Math.round(H * 0.036)}px; line-height:1.24; color:#FFFFFF;
+    font-size:${Math.round(H * 0.038)}px; line-height:1.22; color:#FFFFFF;
+    text-shadow:0 ${Math.round(H * 0.0016)}px ${Math.round(H * 0.004)}px rgba(0,0,0,.55),
+      0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.02)}px rgba(0,0,0,.45);
     text-wrap:balance; }
-  /* apple : sur un panneau CLAIR, la pastille s'inverse — blanche, texte encre,
-     comme une bulle iOS. La sombre reste pour le visage et les médias. */
-  .dc-clair { background:rgba(255,255,255,.94); color:#17171C;
-    box-shadow:0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.022)}px rgba(20,20,28,.16); }
+  /* l'ACCENT du corps : plus gros, il reste — la hiérarchie se voit (réf) */
+  .dc-p:not(.dc-hook) .dc-w.acc { font-size:1.32em; font-weight:900; }
+  /* sur un panneau CLAIR : encre sombre, ombre claire discrète */
+  .dc-clair { background:transparent; color:#17171C;
+    text-shadow:0 ${Math.round(H * 0.0014)}px ${Math.round(H * 0.005)}px rgba(255,255,255,.6),
+      0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.016)}px rgba(20,20,28,.18); }
   /* HOOK (réf @tians028, crop d'Axel : « NEVER POST / CONTENT AGAIN ») : Anton
      embarquée, capitales condensées, lignes SERRÉES, PAS de contour — la réf
      n'en a pas : des DÉGRADÉS verticaux et une ombre douce. Le mot en cours
@@ -1567,6 +1594,9 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
+  /* corps : chaque mot n'existe qu'à partir de SON instant (accumulation, comme
+     le hook) — sans ça les pops par mot faisaient un clignotement visible→0→1 */
+  .dc-p:not(.dc-hook) .dc-w { opacity:0; }
   /* titre du hook — blanc massif au-dessus de la tête, ombre franche (réf
      makeugc_ai). Pas de transform en CSS : GSAP anime scale/y et l'écraserait. */
   /* z-index 70 OBLIGATOIRE : les panneaux portent z-index:i+1 et les sous-titres
