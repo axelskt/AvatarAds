@@ -1247,7 +1247,13 @@ export function buildDynamicComposition(plan, opts = {}) {
       // et les médias plein cadre. Le style respire au rythme des plans.
       const mid = (a + b) / 2
       const pan = panels.find((p) => mid >= p.t0 && mid < p.t1)
-      g.sombre = !ap || !pan || pan.kind === 'avclip'
+      // 15/08 : la bascule encre sombre vaut AUSSI en dynamic — sur un panneau
+      // clair (médias, alternance impaire), le blanc se lavait (vu à 23 s de la
+      // v14). Même règle de tone que le compositeur de panneaux ; en apple tous
+      // les panneaux sont clairs, la règle d'origine reste.
+      const panClair = pan && pan.kind !== 'avclip'
+        && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
+      g.sombre = ap ? (!pan || pan.kind === 'avclip') : !panClair
       const dedans = g.mots.map((w, k) =>
         `<span class="dc-w${ACCFORTS.has(normAcc(w.text)) ? ' acc' : ''}" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
       return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
