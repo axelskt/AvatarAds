@@ -181,24 +181,26 @@ const MOODS = ['intense', 'dynamique', 'chill']
 // coordonnees ne sortent jamais du serveur, un cadrage invente est impossible.
 // <<< SCREEN-ZONES — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>
 const TUTO: Record<string, Record<string, number[]>> = {
-  '01-imagesia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'generation': [0.214, 0.184, 0.091, 0.037], 'correction': [0.305, 0.184, 0.091, 0.037], 'photo-reel-realiste': [0.216, 0.312, 0.08, 0.087], 'pixar-3d-toy-story': [0.302, 0.312, 0.08, 0.087], 'fruit-perso-fruit': [0.216, 0.41, 0.08, 0.087], 'ugc-reel-authentique': [0.302, 0.41, 0.08, 0.087], 'mascotte-de-marque': [0.216, 0.509, 0.08, 0.087], 'autre-style-libre': [0.302, 0.509, 0.08, 0.087], '1-1': [0.201, 0.668, 0.052, 0.077], '9-16': [0.259, 0.668, 0.052, 0.077], '16-9': [0.317, 0.668, 0.052, 0.077], 'standard': [0.203, 0.826, 0.056, 0.017], 'premium': [0.259, 0.826, 0.056, 0.017], '4k': [0.315, 0.826, 0.056, 0.017], '1': [0.206, 0.941, 0.054, 0.037], '2': [0.259, 0.941, 0.054, 0.037], '3': [0.313, 0.941, 0.054, 0.037], 'image-de-reference': [0.415, 0.867, 0.075, 0.23], 'decris-l-image-que-tu-veux-generer': [0.724, 0.813, 0.525, 0.121], 'ameliorer': [0.947, 0.783, 0.066, 0.039], 'entrepreneur-en-studio-moderne': [0.532, 0.921, 0.142, 0.033], 'face-cam-ugc-outdoor-micro-crav': [0.683, 0.921, 0.148, 0.033], 'generer-l-image-3-cr': [0.909, 0.921, 0.154, 0.068], '2200-9999-credits-images-ce-mois': [0.724, 0.975, 0.525, 0.014] },
-  '02-express': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'realiste-avatar-reel': [0.218, 0.25, 0.082, 0.069], 'cartoon-3d-style-pixar': [0.304, 0.25, 0.082, 0.069], 'ugc-reel-selfie-authentique': [0.218, 0.329, 0.082, 0.069], 'studio-produit-pub': [0.304, 0.329, 0.082, 0.069], 'portrait-9-16': [0.218, 0.477, 0.082, 0.064], 'paysage-16-9': [0.304, 0.477, 0.082, 0.064], '720p': [0.218, 0.735, 0.082, 0.051], '1080pdes-8-s': [0.304, 0.735, 0.082, 0.051], 'voix-native-veo-audio-genere-avec-la-vid': [0.261, 0.895, 0.168, 0.066], 'gemini-tts-voix-generee-11-timbres': [0.261, 0.967, 0.168, 0.066], 'ajoute-tes-images-avatar-produit-perso': [0.451, 0.783, 0.131, 0.222], 'importer-depuis-la-bibliotheque': [0.451, 0.939, 0.131, 0.069], 'decris-ta-video-et-ce-que-le-perso-dit-a': [0.754, 0.756, 0.456, 0.167], 'ameliorer': [0.555, 0.869, 0.058, 0.033], 'face-camera': [0.625, 0.869, 0.071, 0.038], 'cartoon': [0.693, 0.869, 0.056, 0.038], 'fitness': [0.752, 0.869, 0.052, 0.038], 'produit': [0.808, 0.869, 0.052, 0.038], 'generer-la-video': [0.898, 0.935, 0.17, 0.077] },
-  '03-generateur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], '1-produit': [0.21, 0.194, 0.046, 0.029], '2-avatar': [0.32, 0.194, 0.044, 0.029], '3-voix': [0.426, 0.194, 0.036, 0.029], '4-style': [0.528, 0.194, 0.038, 0.029], '5-generer': [0.637, 0.194, 0.049, 0.029], 'ex-dropacademy-funnelpro-monbusiness-ia': [0.424, 0.29, 0.475, 0.051], 'selectionner-un-hook-personne-ne-t-en-pa': [0.424, 0.479, 0.475, 0.051], 'le-hook-apparaitra-ici-ou-ecris-le-tien-': [0.424, 0.548, 0.475, 0.051], 'ecris-le-corps-de-ton-script-ici-le-hook': [0.424, 0.711, 0.475, 0.167], 'selectionner-un-cta-commente-plan-et-je-': [0.424, 0.874, 0.475, 0.051], 'continuer': [0.456, 0.958, 0.451, 0.049], 'tiktok': [0.76, 0.118, 0.038, 0.026], 'reels': [0.798, 0.118, 0.034, 0.026], 'facebook': [0.84, 0.118, 0.045, 0.026], 'youtube': [0.885, 0.118, 0.041, 0.026], 'linkedin': [0.931, 0.118, 0.045, 0.026], 'apercu-anime': [0.847, 0.166, 0.082, 0.036] },
-  '04-montageia': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'gameplay-voix-ta-voix-ou-elevenlabs-sur-': [0.465, 0.276, 0.218, 0.081], 'ma-video-importe-ta-video-l-ia-la-monte-': [0.69, 0.276, 0.218, 0.081], 'importe-ta-voix-off-mp3-wav-m4a-l-ia-en-': [0.578, 0.412, 0.444, 0.093], 'ajoute-une-photo-d-avatar-sinon-100-game': [0.578, 0.552, 0.444, 0.093], 'https-ton-site-com': [0.464, 0.673, 0.216, 0.056], '0-8': [0.601, 0.678, 0.036, 0.064], 'parametres-avances-sous-titres-mot-par-m': [0.578, 0.773, 0.444, 0.076], 'ajouter-un-script-brief-dis-a-l-ia-ce-qu': [0.578, 0.894, 0.444, 0.076], 'creer-ma-video-8-credits': [0.578, 0.952, 0.475, 0.064] },
-  '05-bibliotheque': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'importer': [0.856, 0.118, 0.068, 0.041], 'nouvelle-video': [0.94, 0.118, 0.09, 0.039], 'toutes': [0.193, 0.212, 0.041, 0.037], 'videos': [0.234, 0.212, 0.041, 0.037], 'audio': [0.274, 0.212, 0.038, 0.037], 'images': [0.313, 0.212, 0.042, 0.037], 'importer-une-video-avatar-mp4-hedra-ou-v': [0.268, 0.591, 0.196, 0.675] },
-  '06-nettoyage-audio': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'nettoyer-mon-audio': [0.578, 0.82, 0.364, 0.064] },
-  '07-enregistreur': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'recmainbtn': [0.578, 0.41, 0.046, 0.082], 'importer-un-fichier-audio-video-mp4': [0.578, 0.519, 0.195, 0.051], 'ecouter': [0.398, 0.595, 0.088, 0.049], 'couper-ici': [0.491, 0.595, 0.088, 0.049], 'supprimer': [0.584, 0.595, 0.088, 0.049], 'remplacer': [0.677, 0.595, 0.088, 0.049], 'silences-on': [0.763, 0.595, 0.075, 0.049], 'wav': [0.365, 0.694, 0.058, 0.053], 'envoyer-vers-bibliotheque': [0.475, 0.694, 0.152, 0.053], 'utiliser-dans-le-generateur': [0.705, 0.694, 0.227, 0.053] },
-  '08-parrainage': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'https-avatarads-iamanager-fr-ref-f0cae49': [0.539, 0.589, 0.29, 0.053], 'copier': [0.726, 0.589, 0.069, 0.053], 'twitter': [0.453, 0.659, 0.117, 0.052], 'facebook': [0.578, 0.659, 0.117, 0.056], 'tiktok': [0.702, 0.659, 0.117, 0.056] },
-  '09-cartoon': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046] },
-  '11-connecter-claude': { 'generer-ma-cle': [0.284, 0.442, 0.172, 0.053], 'ouvrir-claude-connecteurs': [0.5, 0.442, 0.172, 0.053], 'commencer': [0.716, 0.442, 0.172, 0.053] },
+  '01-imagesia': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'generation': [0.214, 0.184, 0.091, 0.037], 'correction': [0.305, 0.184, 0.091, 0.037], 'photo-reel-realiste': [0.216, 0.312, 0.08, 0.087], 'pixar-3d-toy-story': [0.302, 0.312, 0.08, 0.087], 'fruit-perso-fruit': [0.216, 0.41, 0.08, 0.087], 'ugc-reel-authentique': [0.302, 0.41, 0.08, 0.087], 'mascotte-de-marque': [0.216, 0.509, 0.08, 0.087], 'autre-style-libre': [0.302, 0.509, 0.08, 0.087], '1-1': [0.201, 0.668, 0.052, 0.077], '9-16': [0.259, 0.668, 0.052, 0.077], '16-9': [0.317, 0.668, 0.052, 0.077], 'standard': [0.203, 0.826, 0.056, 0.017], 'premium': [0.259, 0.826, 0.056, 0.017], '4k': [0.315, 0.826, 0.056, 0.017], '1': [0.206, 0.941, 0.054, 0.037], '2': [0.259, 0.941, 0.054, 0.037], '3': [0.313, 0.941, 0.054, 0.037], 'image-de-reference': [0.415, 0.867, 0.075, 0.23], 'decris-l-image-que-tu-veux-generer': [0.724, 0.813, 0.525, 0.121], 'ameliorer': [0.947, 0.783, 0.066, 0.039], 'generer-l-image-3-cr': [0.909, 0.921, 0.154, 0.068], '2200-9999-credits-images-ce-mois': [0.724, 0.975, 0.525, 0.014] },
+  '02-express': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'veo-3-1-genere-depuis-un-prompt': [0.261, 0.248, 0.168, 0.069], 'seedance-2-0-dev-genere-depuis-un-prompt': [0.261, 0.325, 0.168, 0.069], 'motion-control-transfere-un-mouvement': [0.261, 0.403, 0.168, 0.069], 'realiste-avatar-reel': [0.218, 0.552, 0.082, 0.069], 'cartoon-3d-style-pixar': [0.304, 0.552, 0.082, 0.069], 'ugc-reel-selfie-authentique': [0.218, 0.63, 0.082, 0.069], 'studio-produit-pub': [0.304, 0.63, 0.082, 0.069], 'portrait-9-16': [0.218, 0.777, 0.082, 0.064], 'paysage-16-9': [0.304, 0.777, 0.082, 0.064], 'ajoute-tes-images-avatar-produit-perso': [0.451, 0.786, 0.131, 0.218], 'importer-depuis-la-bibliotheque': [0.451, 0.939, 0.131, 0.069], 'decris-ta-video-et-ce-que-le-perso-dit-a': [0.754, 0.76, 0.456, 0.167], 'ameliorer': [0.555, 0.871, 0.058, 0.033], 'face-camera': [0.625, 0.871, 0.071, 0.033], 'cartoon': [0.693, 0.871, 0.056, 0.033], 'fitness': [0.751, 0.871, 0.052, 0.033], 'produit': [0.808, 0.871, 0.052, 0.033], 'generer-la-video': [0.898, 0.935, 0.17, 0.077] },
+  '03-generateur': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], '1-avatar': [0.209, 0.194, 0.044, 0.029], '2-voix': [0.351, 0.194, 0.036, 0.029], '3-style': [0.491, 0.194, 0.038, 0.029], '4-generer': [0.637, 0.194, 0.049, 0.029], 'ma-photo-ton-portrait-devient-un-avatar-': [0.264, 0.335, 0.153, 0.15], 'ma-video-existante-reutilise-une-video-d': [0.424, 0.335, 0.153, 0.15], 'un-avatar-ia-49-visages-prets-a-l-emploi': [0.585, 0.335, 0.153, 0.15], 'glisse-ta-photo-ici-png-jpg-webp-portrai': [0.424, 0.567, 0.475, 0.269], 'parcourir': [0.424, 0.626, 0.054, 0.042], 'mes-avatars-sauvegardes': [0.424, 0.741, 0.475, 0.053], 'reinitialiser-totalement': [0.424, 0.813, 0.475, 0.042], 'continuer': [0.456, 0.958, 0.451, 0.049], 'tiktok': [0.76, 0.118, 0.038, 0.026], 'reels': [0.798, 0.118, 0.034, 0.026], 'facebook': [0.84, 0.118, 0.045, 0.026], 'youtube': [0.885, 0.118, 0.041, 0.026], 'linkedin': [0.931, 0.118, 0.045, 0.026], 'apercu-anime': [0.847, 0.166, 0.082, 0.036] },
+  '04-montageia': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'ma-voix-off-l-ia-cree-toute-la-video-ava': [0.465, 0.276, 0.218, 0.081], 'monter-ma-video-importe-ta-video-l-ia-la': [0.69, 0.276, 0.218, 0.081], 'importe-ta-voix-off-mp3-wav-m4a-l-ia-en-': [0.578, 0.433, 0.444, 0.093], 'ajoute-une-photo-d-avatar-sinon-visuels-': [0.578, 0.594, 0.444, 0.093], '0-8': [0.374, 0.741, 0.036, 0.064], 'decris-ce-que-la-video-doit-dire-ou-mont': [0.578, 0.849, 0.444, 0.124], 'creer-ma-video-8-credits': [0.578, 0.952, 0.475, 0.064] },
+  '05-bibliotheque': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'importer': [0.856, 0.118, 0.068, 0.041], 'nouvelle-video': [0.94, 0.118, 0.09, 0.039], 'toutes': [0.193, 0.212, 0.041, 0.037], 'videos': [0.234, 0.212, 0.041, 0.037], 'audio': [0.274, 0.212, 0.038, 0.037], 'images': [0.313, 0.212, 0.042, 0.037], 'importer-une-video-avatar-mp4-hedra-ou-v': [0.268, 0.591, 0.196, 0.675] },
+  '06-nettoyage-audio': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'nettoyer-mon-audio': [0.578, 0.82, 0.364, 0.064] },
+  '07-enregistreur': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'recmainbtn': [0.578, 0.41, 0.046, 0.082], 'importer-un-fichier-audio-video-mp4': [0.578, 0.519, 0.195, 0.051], 'ecouter': [0.399, 0.593, 0.088, 0.044], 'couper-ici': [0.492, 0.593, 0.088, 0.044], 'supprimer': [0.585, 0.593, 0.088, 0.044], 'remplacer': [0.678, 0.593, 0.088, 0.044], 'silences-on': [0.764, 0.593, 0.073, 0.044], 'telecharger': [0.456, 0.69, 0.239, 0.053], 'envoyer-vers-bibliotheque': [0.699, 0.69, 0.239, 0.053] },
+  '08-parrainage': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'https-avatarads-iamanager-fr-ref-f0cae49': [0.539, 0.567, 0.29, 0.053], 'copier': [0.726, 0.567, 0.069, 0.053], 'twitter': [0.453, 0.636, 0.117, 0.052], 'facebook': [0.578, 0.636, 0.117, 0.051], 'tiktok': [0.702, 0.636, 0.117, 0.051] },
+  '09-cartoon': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046] },
+  '11-connecter-claude': { 'btn': [0.971, 0.047, 0.025, 0.044], 'generer-ma-cle': [0.284, 0.442, 0.172, 0.053], 'ouvrir-claude-connecteurs': [0.5, 0.442, 0.172, 0.053], 'commencer': [0.716, 0.442, 0.172, 0.053] },
   '12-connecter-claude-entree': { 'connecter-claude': [0.498, 0.655, 0.236, 0.077] },
-  '13-montage-avance': { 'mot-par-mot': [0.386, 0.452, 0.113, 0.041], 'karaoke': [0.495, 0.452, 0.098, 0.041], 'ligne-complete': [0.609, 0.452, 0.122, 0.041], 'punch': [0.372, 0.544, 0.084, 0.041], 'neon': [0.458, 0.544, 0.081, 0.041], 'auto': [0.542, 0.544, 0.079, 0.041], 'aucun': [0.628, 0.544, 0.085, 0.041], 'haut': [0.355, 0.636, 0.051, 0.041], 'centre': [0.414, 0.636, 0.058, 0.041], 'bas': [0.47, 0.636, 0.047, 0.041], 's': [0.533, 0.636, 0.051, 0.041], 'm': [0.589, 0.636, 0.054, 0.041], 'l': [0.645, 0.636, 0.051, 0.041], 'emoji-auto-sur-les-mots-cles-ajoutes-sur': [0.5, 0.711, 0.346, 0.068], 'auto-ia-choisit': [0.383, 0.881, 0.111, 0.117], 'apple-fond-clair-minimal': [0.5, 0.881, 0.111, 0.117], 'liquid-glass-verre-depoli-reflets': [0.618, 0.881, 0.111, 0.117] },
-  '14-audio-avance': { 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'aucun-original': [0.439, 0.846, 0.087, 0.072], 'naturel-equilibre': [0.531, 0.846, 0.087, 0.072], 'podcast-chaleureux': [0.624, 0.846, 0.087, 0.072], 'punchy-nerveux': [0.716, 0.846, 0.087, 0.072], 'supprimer-les-silences-coupe-les-blancs-': [0.578, 0.966, 0.364, 0.069] },
+  '13-montage-avance': { 'btn': [0.664, 0.124, 0.019, 0.024], 'https-ton-site-com': [0.5, 0.219, 0.346, 0.056], 'mot-par-mot': [0.386, 0.564, 0.113, 0.041], 'karaoke': [0.495, 0.564, 0.098, 0.041], 'ligne-complete': [0.609, 0.564, 0.122, 0.041], 'punch': [0.372, 0.656, 0.084, 0.041], 'neon': [0.458, 0.656, 0.081, 0.041], 'auto': [0.542, 0.656, 0.079, 0.041], 'aucun': [0.628, 0.656, 0.085, 0.041], 'haut': [0.355, 0.748, 0.051, 0.041], 'centre': [0.414, 0.748, 0.058, 0.041], 'bas': [0.47, 0.748, 0.047, 0.041], 's': [0.533, 0.748, 0.051, 0.041], 'm': [0.589, 0.748, 0.054, 0.041], 'l': [0.645, 0.748, 0.051, 0.041], 'emoji-auto-sur-les-mots-cles-ajoutes-sur': [0.5, 0.823, 0.346, 0.068], 'auto-ia-choisit': [0.383, 0.993, 0.111, 0.117], 'anim-fond-clair-minimal': [0.5, 0.993, 0.111, 0.117], 'bientot-disponible-liquid-glass-bientot-': [0.618, 0.993, 0.111, 0.117] },
+  '14-audio-avance': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m': [0.578, 0.381, 0.364, 0.278], 'parcourir': [0.578, 0.438, 0.07, 0.044], 'standard-nettoyage-automatique': [0.485, 0.608, 0.178, 0.137], 'avance-traitement-renforce': [0.67, 0.608, 0.178, 0.137], 'parametres-avances-traitement-voix-silen': [0.578, 0.731, 0.364, 0.069], 'aucun-original': [0.439, 0.846, 0.087, 0.072], 'naturel-equilibre': [0.531, 0.846, 0.087, 0.072], 'podcast-chaleureux': [0.624, 0.846, 0.087, 0.072], 'punchy-nerveux': [0.716, 0.846, 0.087, 0.072], 'supprimer-les-silences-coupe-les-blancs-': [0.578, 0.966, 0.364, 0.069] },
+  '15-motion-control': { 'btn': [0.976, 0.035, 0.02, 0.033], 'generateur': [0.077, 0.127, 0.142, 0.046], 'bibliotheque': [0.077, 0.175, 0.142, 0.046], 'images-ia': [0.077, 0.223, 0.142, 0.046], 'enregistreur': [0.077, 0.271, 0.142, 0.046], 'nettoyage-audio': [0.077, 0.318, 0.142, 0.046], 'express': [0.077, 0.422, 0.142, 0.046], 'montage-ia-beta': [0.077, 0.469, 0.142, 0.046], 'editeur-beta': [0.077, 0.517, 0.142, 0.046], 'parrainage': [0.077, 0.565, 0.142, 0.046], 'publier-dev': [0.077, 0.613, 0.142, 0.046], 'details-montage-dev': [0.077, 0.661, 0.142, 0.046], 'mon-compte': [0.077, 0.921, 0.142, 0.046], 'veo-3-1-genere-depuis-un-prompt': [0.384, 0.128, 0.188, 0.073], 'seedance-2-0-dev-genere-depuis-un-prompt': [0.578, 0.128, 0.188, 0.073], 'motion-control-transfere-un-mouvement': [0.771, 0.128, 0.188, 0.073], 'insere-ta-video-le-mouvement-a-reproduir': [0.431, 0.521, 0.248, 0.44], 'glisse-ton-image-le-perso-qui-bouge': [0.724, 0.521, 0.248, 0.44], 'parametres-avances': [0.371, 0.809, 0.127, 0.057], 'generer-le-mouvement': [0.645, 0.809, 0.406, 0.062] },
   '20-claude-menu': { 'menu-parametres': [0.085, 0.632, 0.151, 0.028] },
   '21-claude-parametres': { 'onglet-connecteurs': [0.28, 0.713, 0.103, 0.031] },
   '22-claude-connecteurs': { 'bouton-ajouter': [0.72, 0.115, 0.055, 0.034] },
   '23-claude-ajouter': { 'bouton-ajouter': [0.72, 0.114, 0.05, 0.032], 'menu-ajouter-personnalise': [0.666, 0.199, 0.167, 0.03] },
   '24-claude-personnalise': { 'champ-nom': [0.499, 0.322, 0.283, 0.036], 'champ-url': [0.499, 0.374, 0.283, 0.034], 'bouton-ajouter': [0.621, 0.748, 0.043, 0.032] },
+  'site-home': { 'commencer': [0.892, 0.04, 0.089, 0.042], 'se-connecter': [0.801, 0.04, 0.075, 0.042] },
 }
 const TUTO_FILE: Record<string, string> = new Proxy(
   { 'images-ia': '01-imagesia', 'express': '02-express' },
@@ -787,7 +789,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
   LE 4e CHAMP EST CE QU'ON TAPE DANS LE CHAMP CADRE. Il n'apparait que sur une zone de SAISIE, et c'est un VRAI contenu, celui qu'un utilisateur ecrirait : pour un champ de description d'image, decris une image ("une fille qui prend un selfie", "un chat en costume dans un bureau") — jamais une etiquette ni un resume de la fonctionnalite.
 // <<< SCREEN-CATALOG — genere par render-worker/sync-screen-catalog.mjs, ne pas editer >>>
     NAVIGATION (la meme barre laterale sur TOUS les ecrans de l'app) :
-      generateur | bibliotheque | images-ia | enregistreur | nettoyage-audio | express | montage-ia-beta | editeur-beta | parrainage | publier-dev | mon-compte
+      btn | generateur | bibliotheque | images-ia | enregistreur | nettoyage-audio | express | montage-ia-beta | editeur-beta | parrainage | publier-dev | details-montage-dev | mon-compte
     01-imagesia
       generation                     « Génération »
       correction                     « Correction »
@@ -809,41 +811,39 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       image-de-reference             « Image de référence »
       decris-l-image-que-tu-veux-generer « Décris l'image que tu veux générer… »
       ameliorer                      « Améliorer »
-      entrepreneur-en-studio-moderne « Entrepreneur en studio moderne, … »
-      face-cam-ugc-outdoor-micro-crav « Face cam UGC outdoor, micro-crav… »
       generer-l-image-3-cr           « Générer l'image · 3 cr »
       2200-9999-credits-images-ce-mois « 2200 / 9999 crédits images ce mois · + »
     02-express
+      veo-3-1-genere-depuis-un-prompt « Veo 3.1 · génère depuis un prompt »
+      seedance-2-0-dev-genere-depuis-un-prompt « Seedance 2.0 DEV · génère depuis un prompt (Hedra) »
+      motion-control-transfere-un-mouvement « Motion Control · transfère un mouvement »
       realiste-avatar-reel           « Réaliste · avatar réel »
       cartoon-3d-style-pixar         « Cartoon 3D · style Pixar »
       ugc-reel-selfie-authentique    « UGC réel · selfie authentique »
       studio-produit-pub             « Studio · produit/pub »
-      portrait-9-16                  « 📱 · Portrait · 9:16 »
-      paysage-16-9                   « 🖥 · Paysage · 16:9 »
-      720p                           « 720p »
-      1080pdes-8-s                   « 1080pdès 8 s »
-      voix-native-veo-audio-genere-avec-la-vid « Voix native (Veo) · audio généré avec la vidéo »
-      gemini-tts-voix-generee-11-timbres « Gemini TTS · voix générée · 11 timbres »
+      portrait-9-16                  « Portrait · 9:16 »
+      paysage-16-9                   « Paysage · 16:9 »
       ajoute-tes-images-avatar-produit-perso « Ajoute tes images · avatar · produit · perso »
       importer-depuis-la-bibliotheque « Importer depuis · la bibliothèque »
       decris-ta-video-et-ce-que-le-perso-dit-a « Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn »
       ameliorer                      « ✦ Améliorer »
-      face-camera                    « 💬 Face caméra »
-      cartoon                        « 🧸 Cartoon »
-      fitness                        « 💪 Fitness »
-      produit                        « 🛍 Produit »
+      face-camera                    « Face caméra »
+      cartoon                        « Cartoon »
+      fitness                        « Fitness »
+      produit                        « Produit »
       generer-la-video               « Générer la vidéo »
     03-generateur
-      1-produit                      « 1 · Produit »
-      2-avatar                       « 2 · Avatar »
-      3-voix                         « 3 · Voix »
-      4-style                        « 4 · Style »
-      5-generer                      « 5 · Générer »
-      ex-dropacademy-funnelpro-monbusiness-ia « Ex : DropAcademy, FunnelPro, MonBusiness IA… »
-      selectionner-un-hook-personne-ne-t-en-pa « Sélectionner un hook... · Personne ne t'en parle mais actuel »
-      le-hook-apparaitra-ici-ou-ecris-le-tien- « Le hook apparaîtra ici, ou écris le tien directement »
-      ecris-le-corps-de-ton-script-ici-le-hook « Écris le corps de ton script ici… · Le hook et le CTA seront »
-      selectionner-un-cta-commente-plan-et-je- « Sélectionner un CTA... · Commente "PLAN" et je t'explique to »
+      1-avatar                       « 1 · Avatar »
+      2-voix                         « 2 · Voix »
+      3-style                        « 3 · Style »
+      4-generer                      « 4 · Générer »
+      ma-photo-ton-portrait-devient-un-avatar- « Ma photo · Ton portrait devient un avatar animé »
+      ma-video-existante-reutilise-une-video-d « Ma vidéo existante · Réutilise une vidéo déjà générée · 0 cr »
+      un-avatar-ia-49-visages-prets-a-l-emploi « Un avatar IA · 49 visages prêts à l'emploi »
+      glisse-ta-photo-ici-png-jpg-webp-portrai « Glisse ta photo ici · PNG · JPG · WEBP — portrait recommandé »
+      parcourir                      « Parcourir »
+      mes-avatars-sauvegardes        « Mes avatars sauvegardés »
+      reinitialiser-totalement       « Réinitialiser totalement »
       continuer                      « Continuer → »
       tiktok                         « TikTok »
       reels                          « Reels »
@@ -852,14 +852,12 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       linkedin                       « LinkedIn »
       apercu-anime                   « ▶ Aperçu animé »
     04-montageia
-      gameplay-voix-ta-voix-ou-elevenlabs-sur- « Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl »
-      ma-video-importe-ta-video-l-ia-la-monte- « Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr »
+      ma-voix-off-l-ia-cree-toute-la-video-ava « Ma voix off · L'IA crée toute la vidéo : avatar qui parle +  »
+      monter-ma-video-importe-ta-video-l-ia-la « Monter ma vidéo · Importe ta vidéo, l'IA la monte façon créa »
       importe-ta-voix-off-mp3-wav-m4a-l-ia-en- « Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les  »
-      ajoute-une-photo-d-avatar-sinon-100-game « Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l »
-      https-ton-site-com             « https://ton-site.com »
+      ajoute-une-photo-d-avatar-sinon-visuels- « Ajoute une photo d'avatar · Sinon visuels seuls · 0 crédit l »
       0-8                            « 0/8 »
-      parametres-avances-sous-titres-mot-par-m « Paramètres avancés · sous-titres mot-par-mot · musique auto »
-      ajouter-un-script-brief-dis-a-l-ia-ce-qu « Ajouter un script / brief · Dis à l'IA ce que la vidéo doit  »
+      decris-ce-que-la-video-doit-dire-ou-mont « Décris ce que la vidéo doit dire ou montrer. Ex : présentati »
       creer-ma-video-8-credits       « Créer ma vidéo — 8 crédits »
     05-bibliotheque
       importer                       « Importer »
@@ -882,17 +880,16 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       ecouter                        « ▶ Écouter »
       couper-ici                     « Couper ici »
       supprimer                      « Supprimer »
-      remplacer                      « ✂️ Remplacer »
-      silences-on                    « 🔇 Silences ON »
-      wav                            « WAV »
+      remplacer                      « Remplacer »
+      silences-on                    « Silences ON »
+      telecharger                    « Télécharger »
       envoyer-vers-bibliotheque      « Envoyer vers bibliothèque »
-      utiliser-dans-le-generateur    « Utiliser dans le générateur »
     08-parrainage
       https-avatarads-iamanager-fr-ref-f0cae49 « https://avatarads.iamanager.fr/?ref=F0CAE49AE6 »
       copier                         « Copier »
       twitter                        « 𝕏 Twitter »
-      facebook                       « 📘 Facebook »
-      tiktok                         « 🎵 TikTok »
+      facebook                       « Facebook »
+      tiktok                         « TikTok »
     11-connecter-claude
       generer-ma-cle                 « Générer ma clé »
       ouvrir-claude-connecteurs      « Ouvrir Claude → Connecteurs »
@@ -900,6 +897,7 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
     12-connecter-claude-entree
       connecter-claude               « Connecter Claude »
     13-montage-avance
+      https-ton-site-com             « https://ton-site.com »
       mot-par-mot                    « Mot par mot »
       karaoke                        « Karaoké »
       ligne-complete                 « Ligne complète »
@@ -915,8 +913,8 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       l                              « L »
       emoji-auto-sur-les-mots-cles-ajoutes-sur « Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps »
       auto-ia-choisit                « Auto · IA choisit »
-      apple-fond-clair-minimal       « Apple · fond clair, minimal »
-      liquid-glass-verre-depoli-reflets « Liquid glass · verre dépoli, reflets »
+      anim-fond-clair-minimal        « Anim · fond clair, minimal »
+      bientot-disponible-liquid-glass-bientot- « BIENTÔT DISPONIBLE · Liquid glass · bientôt disponible »
     14-audio-avance
       glisse-ton-fichier-ici-mp3-wav-m4a-mp4-m « Glisse ton fichier ici · MP3 · WAV · M4A · MP4 · MOV · Parco »
       parcourir                      « Parcourir »
@@ -928,6 +926,14 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       podcast-chaleureux             « Podcast · chaleureux »
       punchy-nerveux                 « Punchy · nerveux »
       supprimer-les-silences-coupe-les-blancs- « Supprimer les silences · Coupe les blancs entre les phrases »
+    15-motion-control
+      veo-3-1-genere-depuis-un-prompt « Veo 3.1 · génère depuis un prompt »
+      seedance-2-0-dev-genere-depuis-un-prompt « Seedance 2.0 DEV · génère depuis un prompt (Hedra) »
+      motion-control-transfere-un-mouvement « Motion Control · transfère un mouvement »
+      insere-ta-video-le-mouvement-a-reproduir « Insère ta vidéo · le mouvement à reproduire »
+      glisse-ton-image-le-perso-qui-bouge « Glisse ton image · le perso qui bouge »
+      parametres-avances             « Paramètres avancés »
+      generer-le-mouvement           « Générer le mouvement »
     20-claude-menu
       menu-parametres                « Paramètres »
     21-claude-parametres
@@ -941,6 +947,9 @@ LES 4 RYTHMES (le coeur du format) : une bonne video n'est JAMAIS un seul cadre 
       champ-nom                      « AvatarAds »
       champ-url                      « URL du serveur MCP distant »
       bouton-ajouter                 « Ajouter »
+    site-home
+      commencer                      « undefined »
+      se-connecter                   « undefined »
 // <<< /SCREEN-CATALOG >>>
   ON CLIQUE D'ABORD, ON ARRIVE ENSUITE. Quand il dit « tu vas dans X », la
   premiere ligne vise l'ENTREE DE NAVIGATION sur l'ecran ou il se trouve — pas
