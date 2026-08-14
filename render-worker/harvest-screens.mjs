@@ -56,6 +56,9 @@ const SCREENS = [
   // ouverts, avec leurs zones mesurées comme les autres.
   { slug: '13-montage-avance',   open: `nav('montage'); mzAdvOpen()` },
   { slug: '14-audio-avance',     open: `nav('audioclean'); _acToggleAdv()` },
+  // Motion Control (14/08) : le rail vit DANS Express — on récolte l'écran
+  // avec le moteur Motion sélectionné (réf vidéo + personnage + bouton Générer).
+  { slug: '15-motion-control',   open: `nav('express'); if (typeof _expSetEngine==='function') _expSetEngine('motion')` },
 ]
 
 const chromeBin = () => {

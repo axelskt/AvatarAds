@@ -34,7 +34,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -118,6 +118,14 @@
     "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
     "w": 0.1419,
     "h": 0.0456
    },
@@ -298,22 +306,6 @@
     "h": 0.0389
    },
    {
-    "name": "entrepreneur-en-studio-moderne",
-    "label": "Entrepreneur en studio moderne, …",
-    "x": 0.5323,
-    "y": 0.9205,
-    "w": 0.1421,
-    "h": 0.0333
-   },
-   {
-    "name": "face-cam-ugc-outdoor-micro-crav",
-    "label": "Face cam UGC outdoor, micro-crav…",
-    "x": 0.6825,
-    "y": 0.9205,
-    "w": 0.1482,
-    "h": 0.0333
-   },
-   {
     "name": "generer-l-image-3-cr",
     "label": "Générer l'image · 3 cr",
     "x": 0.9094,
@@ -358,7 +350,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -446,6 +438,14 @@
     "h": 0.0456
    },
    {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
     "name": "mon-compte",
     "label": "Mon compte",
     "x": 0.0772,
@@ -462,10 +462,34 @@
     "h": 0.0456
    },
    {
+    "name": "veo-3-1-genere-depuis-un-prompt",
+    "label": "Veo 3.1 · génère depuis un prompt",
+    "x": 0.2609,
+    "y": 0.2478,
+    "w": 0.1681,
+    "h": 0.0687
+   },
+   {
+    "name": "seedance-2-0-dev-genere-depuis-un-prompt",
+    "label": "Seedance 2.0 DEV · génère depuis un prompt (Hedra)",
+    "x": 0.2609,
+    "y": 0.3254,
+    "w": 0.1681,
+    "h": 0.0687
+   },
+   {
+    "name": "motion-control-transfere-un-mouvement",
+    "label": "Motion Control · transfère un mouvement",
+    "x": 0.2609,
+    "y": 0.4029,
+    "w": 0.1681,
+    "h": 0.0687
+   },
+   {
     "name": "realiste-avatar-reel",
     "label": "Réaliste · avatar réel",
     "x": 0.2177,
-    "y": 0.2504,
+    "y": 0.5519,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -473,7 +497,7 @@
     "name": "cartoon-3d-style-pixar",
     "label": "Cartoon 3D · style Pixar",
     "x": 0.3042,
-    "y": 0.2504,
+    "y": 0.5519,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -481,7 +505,7 @@
     "name": "ugc-reel-selfie-authentique",
     "label": "UGC réel · selfie authentique",
     "x": 0.2177,
-    "y": 0.3286,
+    "y": 0.6301,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -489,65 +513,33 @@
     "name": "studio-produit-pub",
     "label": "Studio · produit/pub",
     "x": 0.3042,
-    "y": 0.3286,
+    "y": 0.6301,
     "w": 0.0816,
     "h": 0.0693
    },
    {
     "name": "portrait-9-16",
-    "label": "📱 · Portrait · 9:16",
+    "label": "Portrait · 9:16",
     "x": 0.2177,
-    "y": 0.4773,
+    "y": 0.7766,
     "w": 0.0816,
     "h": 0.0636
    },
    {
     "name": "paysage-16-9",
-    "label": "🖥 · Paysage · 16:9",
+    "label": "Paysage · 16:9",
     "x": 0.3042,
-    "y": 0.4773,
+    "y": 0.7766,
     "w": 0.0816,
     "h": 0.0636
-   },
-   {
-    "name": "720p",
-    "label": "720p",
-    "x": 0.2177,
-    "y": 0.7347,
-    "w": 0.0816,
-    "h": 0.0511
-   },
-   {
-    "name": "1080pdes-8-s",
-    "label": "1080pdès 8 s",
-    "x": 0.3042,
-    "y": 0.7347,
-    "w": 0.0816,
-    "h": 0.0511
-   },
-   {
-    "name": "voix-native-veo-audio-genere-avec-la-vid",
-    "label": "Voix native (Veo) · audio généré avec la vidéo",
-    "x": 0.2609,
-    "y": 0.8953,
-    "w": 0.1681,
-    "h": 0.0658
-   },
-   {
-    "name": "gemini-tts-voix-generee-11-timbres",
-    "label": "Gemini TTS · voix générée · 11 timbres",
-    "x": 0.2609,
-    "y": 0.9666,
-    "w": 0.1681,
-    "h": 0.0658
    },
    {
     "name": "ajoute-tes-images-avatar-produit-perso",
     "label": "Ajoute tes images · avatar · produit · perso",
     "x": 0.4506,
-    "y": 0.7833,
+    "y": 0.7856,
     "w": 0.1313,
-    "h": 0.2222
+    "h": 0.2178
    },
    {
     "name": "importer-depuis-la-bibliotheque",
@@ -561,7 +553,7 @@
     "name": "decris-ta-video-et-ce-que-le-perso-dit-a",
     "label": "Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn",
     "x": 0.7544,
-    "y": 0.7556,
+    "y": 0.76,
     "w": 0.4562,
     "h": 0.1667
    },
@@ -569,41 +561,41 @@
     "name": "ameliorer",
     "label": "✦ Améliorer",
     "x": 0.5553,
-    "y": 0.8689,
+    "y": 0.8711,
     "w": 0.0581,
     "h": 0.0333
    },
    {
     "name": "face-camera",
-    "label": "💬 Face caméra",
+    "label": "Face caméra",
     "x": 0.6248,
-    "y": 0.8689,
-    "w": 0.071,
-    "h": 0.0378
+    "y": 0.8711,
+    "w": 0.0709,
+    "h": 0.0333
    },
    {
     "name": "cartoon",
-    "label": "🧸 Cartoon",
-    "x": 0.693,
-    "y": 0.8689,
+    "label": "Cartoon",
+    "x": 0.6929,
+    "y": 0.8711,
     "w": 0.0555,
-    "h": 0.0378
+    "h": 0.0333
    },
    {
     "name": "fitness",
-    "label": "💪 Fitness",
-    "x": 0.7516,
-    "y": 0.8689,
-    "w": 0.0516,
-    "h": 0.0378
+    "label": "Fitness",
+    "x": 0.7514,
+    "y": 0.8711,
+    "w": 0.0515,
+    "h": 0.0333
    },
    {
     "name": "produit",
-    "label": "🛍 Produit",
-    "x": 0.8084,
-    "y": 0.8689,
+    "label": "Produit",
+    "x": 0.8082,
+    "y": 0.8711,
     "w": 0.052,
-    "h": 0.0378
+    "h": 0.0333
    },
    {
     "name": "generer-la-video",
@@ -642,7 +634,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -730,6 +722,14 @@
     "h": 0.0456
    },
    {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
     "name": "mon-compte",
     "label": "Mon compte",
     "x": 0.0772,
@@ -746,84 +746,92 @@
     "h": 0.0456
    },
    {
-    "name": "1-produit",
-    "label": "1 · Produit",
-    "x": 0.2097,
+    "name": "1-avatar",
+    "label": "1 · Avatar",
+    "x": 0.2087,
     "y": 0.1938,
-    "w": 0.0457,
+    "w": 0.0437,
     "h": 0.0289
    },
    {
-    "name": "2-avatar",
-    "label": "2 · Avatar",
-    "x": 0.3201,
-    "y": 0.1938,
-    "w": 0.0435,
-    "h": 0.0289
-   },
-   {
-    "name": "3-voix",
-    "label": "3 · Voix",
-    "x": 0.4255,
+    "name": "2-voix",
+    "label": "2 · Voix",
+    "x": 0.3513,
     "y": 0.1938,
     "w": 0.0357,
     "h": 0.0289
    },
    {
-    "name": "4-style",
-    "label": "4 · Style",
-    "x": 0.5281,
+    "name": "3-style",
+    "label": "3 · Style",
+    "x": 0.491,
     "y": 0.1938,
     "w": 0.038,
     "h": 0.0289
    },
    {
-    "name": "5-generer",
-    "label": "5 · Générer",
+    "name": "4-generer",
+    "label": "4 · Générer",
     "x": 0.6373,
     "y": 0.1938,
     "w": 0.0491,
     "h": 0.0289
    },
    {
-    "name": "ex-dropacademy-funnelpro-monbusiness-ia",
-    "label": "Ex : DropAcademy, FunnelPro, MonBusiness IA…",
-    "x": 0.4244,
-    "y": 0.2902,
-    "w": 0.475,
-    "h": 0.0506
+    "name": "ma-photo-ton-portrait-devient-un-avatar-",
+    "label": "Ma photo · Ton portrait devient un avatar animé",
+    "x": 0.2635,
+    "y": 0.3352,
+    "w": 0.1533,
+    "h": 0.1495
    },
    {
-    "name": "selectionner-un-hook-personne-ne-t-en-pa",
-    "label": "Sélectionner un hook... · Personne ne t'en parle mais actuel",
+    "name": "ma-video-existante-reutilise-une-video-d",
+    "label": "Ma vidéo existante · Réutilise une vidéo déjà générée · 0 cr",
     "x": 0.4244,
-    "y": 0.4785,
-    "w": 0.475,
-    "h": 0.0506
+    "y": 0.3352,
+    "w": 0.1533,
+    "h": 0.1495
    },
    {
-    "name": "le-hook-apparaitra-ici-ou-ecris-le-tien-",
-    "label": "Le hook apparaîtra ici, ou écris le tien directement",
-    "x": 0.4244,
-    "y": 0.5479,
-    "w": 0.475,
-    "h": 0.0506
+    "name": "un-avatar-ia-49-visages-prets-a-l-emploi",
+    "label": "Un avatar IA · 49 visages prêts à l'emploi",
+    "x": 0.5852,
+    "y": 0.3352,
+    "w": 0.1533,
+    "h": 0.1495
    },
    {
-    "name": "ecris-le-corps-de-ton-script-ici-le-hook",
-    "label": "Écris le corps de ton script ici… · Le hook et le CTA seront",
+    "name": "glisse-ta-photo-ici-png-jpg-webp-portrai",
+    "label": "Glisse ta photo ici · PNG · JPG · WEBP — portrait recommandé",
     "x": 0.4244,
-    "y": 0.711,
+    "y": 0.5666,
     "w": 0.475,
-    "h": 0.1667
+    "h": 0.2689
    },
    {
-    "name": "selectionner-un-cta-commente-plan-et-je-",
-    "label": "Sélectionner un CTA... · Commente \"PLAN\" et je t'explique to",
+    "name": "parcourir",
+    "label": "Parcourir",
     "x": 0.4244,
-    "y": 0.874,
+    "y": 0.6255,
+    "w": 0.0543,
+    "h": 0.0422
+   },
+   {
+    "name": "mes-avatars-sauvegardes",
+    "label": "Mes avatars sauvegardés",
+    "x": 0.4244,
+    "y": 0.7411,
     "w": 0.475,
-    "h": 0.0506
+    "h": 0.0533
+   },
+   {
+    "name": "reinitialiser-totalement",
+    "label": "Réinitialiser totalement",
+    "x": 0.4244,
+    "y": 0.8133,
+    "w": 0.475,
+    "h": 0.0422
    },
    {
     "name": "continuer",
@@ -910,7 +918,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -998,6 +1006,14 @@
     "h": 0.0456
    },
    {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
     "name": "mon-compte",
     "label": "Mon compte",
     "x": 0.0772,
@@ -1014,16 +1030,16 @@
     "h": 0.0456
    },
    {
-    "name": "gameplay-voix-ta-voix-ou-elevenlabs-sur-",
-    "label": "Gameplay + voix · Ta voix (ou ElevenLabs) sur un clip gamepl",
+    "name": "ma-voix-off-l-ia-cree-toute-la-video-ava",
+    "label": "Ma voix off · L'IA crée toute la vidéo : avatar qui parle + ",
     "x": 0.4647,
     "y": 0.2755,
     "w": 0.2181,
     "h": 0.0813
    },
    {
-    "name": "ma-video-importe-ta-video-l-ia-la-monte-",
-    "label": "Ma vidéo · Importe ta vidéo, l'IA la monte façon créateur pr",
+    "name": "monter-ma-video-importe-ta-video-l-ia-la",
+    "label": "Monter ma vidéo · Importe ta vidéo, l'IA la monte façon créa",
     "x": 0.6903,
     "y": 0.2755,
     "w": 0.2181,
@@ -1033,49 +1049,33 @@
     "name": "importe-ta-voix-off-mp3-wav-m4a-l-ia-en-",
     "label": "Importe ta voix off · MP3 · WAV · M4A — l'IA en extrait les ",
     "x": 0.5775,
-    "y": 0.4118,
+    "y": 0.4329,
     "w": 0.4437,
     "h": 0.0934
    },
    {
-    "name": "ajoute-une-photo-d-avatar-sinon-100-game",
-    "label": "Ajoute une photo d'avatar · Sinon 100% gameplay · 0 crédit l",
+    "name": "ajoute-une-photo-d-avatar-sinon-visuels-",
+    "label": "Ajoute une photo d'avatar · Sinon visuels seuls · 0 crédit l",
     "x": 0.5775,
-    "y": 0.5519,
+    "y": 0.5941,
     "w": 0.4437,
     "h": 0.0934
-   },
-   {
-    "name": "https-ton-site-com",
-    "label": "https://ton-site.com",
-    "x": 0.4637,
-    "y": 0.6731,
-    "w": 0.2162,
-    "h": 0.0556
    },
    {
     "name": "0-8",
     "label": "0/8",
-    "x": 0.6012,
-    "y": 0.6775,
+    "x": 0.3738,
+    "y": 0.7408,
     "w": 0.0362,
     "h": 0.0644
    },
    {
-    "name": "parametres-avances-sous-titres-mot-par-m",
-    "label": "Paramètres avancés · sous-titres mot-par-mot · musique auto",
+    "name": "decris-ce-que-la-video-doit-dire-ou-mont",
+    "label": "Décris ce que la vidéo doit dire ou montrer. Ex : présentati",
     "x": 0.5775,
-    "y": 0.7731,
+    "y": 0.8486,
     "w": 0.4437,
-    "h": 0.0756
-   },
-   {
-    "name": "ajouter-un-script-brief-dis-a-l-ia-ce-qu",
-    "label": "Ajouter un script / brief · Dis à l'IA ce que la vidéo doit ",
-    "x": 0.5775,
-    "y": 0.8942,
-    "w": 0.4437,
-    "h": 0.0756
+    "h": 0.1244
    },
    {
     "name": "creer-ma-video-8-credits",
@@ -1114,7 +1114,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -1198,6 +1198,14 @@
     "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
     "w": 0.1419,
     "h": 0.0456
    },
@@ -1302,7 +1310,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -1386,6 +1394,14 @@
     "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
     "w": 0.1419,
     "h": 0.0456
    },
@@ -1482,7 +1498,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -1566,6 +1582,14 @@
     "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
     "w": 0.1419,
     "h": 0.0456
    },
@@ -1604,65 +1628,57 @@
    {
     "name": "ecouter",
     "label": "▶ Écouter",
-    "x": 0.3983,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
+    "x": 0.3985,
+    "y": 0.5929,
+    "w": 0.0882,
+    "h": 0.0444
    },
    {
     "name": "couper-ici",
     "label": "Couper ici",
-    "x": 0.4913,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
+    "x": 0.4917,
+    "y": 0.5929,
+    "w": 0.0883,
+    "h": 0.0444
    },
    {
     "name": "supprimer",
     "label": "Supprimer",
-    "x": 0.5842,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
+    "x": 0.585,
+    "y": 0.5929,
+    "w": 0.0883,
+    "h": 0.0444
    },
    {
     "name": "remplacer",
-    "label": "✂️ Remplacer",
-    "x": 0.6772,
-    "y": 0.5952,
-    "w": 0.0879,
-    "h": 0.0489
+    "label": "Remplacer",
+    "x": 0.6782,
+    "y": 0.5929,
+    "w": 0.0883,
+    "h": 0.0444
    },
    {
     "name": "silences-on",
-    "label": "🔇 Silences ON",
-    "x": 0.7634,
-    "y": 0.5952,
-    "w": 0.0745,
-    "h": 0.0489
+    "label": "Silences ON",
+    "x": 0.764,
+    "y": 0.5929,
+    "w": 0.0733,
+    "h": 0.0444
    },
    {
-    "name": "wav",
-    "label": "WAV",
-    "x": 0.3653,
-    "y": 0.694,
-    "w": 0.0581,
+    "name": "telecharger",
+    "label": "Télécharger",
+    "x": 0.4556,
+    "y": 0.6896,
+    "w": 0.2387,
     "h": 0.0533
    },
    {
     "name": "envoyer-vers-bibliotheque",
     "label": "Envoyer vers bibliothèque",
-    "x": 0.4753,
-    "y": 0.694,
-    "w": 0.1519,
-    "h": 0.0533
-   },
-   {
-    "name": "utiliser-dans-le-generateur",
-    "label": "Utiliser dans le générateur",
-    "x": 0.7053,
-    "y": 0.694,
-    "w": 0.2269,
+    "x": 0.6994,
+    "y": 0.6896,
+    "w": 0.2387,
     "h": 0.0533
    }
   ]
@@ -1694,7 +1710,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -1782,6 +1798,14 @@
     "h": 0.0456
    },
    {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
     "name": "mon-compte",
     "label": "Mon compte",
     "x": 0.0772,
@@ -1801,7 +1825,7 @@
     "name": "https-avatarads-iamanager-fr-ref-f0cae49",
     "label": "https://avatarads.iamanager.fr/?ref=F0CAE49AE6",
     "x": 0.5394,
-    "y": 0.5886,
+    "y": 0.5674,
     "w": 0.29,
     "h": 0.0533
    },
@@ -1809,7 +1833,7 @@
     "name": "copier",
     "label": "Copier",
     "x": 0.7262,
-    "y": 0.5886,
+    "y": 0.5674,
     "w": 0.0688,
     "h": 0.0533
    },
@@ -1817,25 +1841,25 @@
     "name": "twitter",
     "label": "𝕏 Twitter",
     "x": 0.4529,
-    "y": 0.6586,
+    "y": 0.6358,
     "w": 0.1171,
     "h": 0.0522
    },
    {
     "name": "facebook",
-    "label": "📘 Facebook",
+    "label": "Facebook",
     "x": 0.5775,
-    "y": 0.6586,
+    "y": 0.6358,
     "w": 0.1171,
-    "h": 0.0556
+    "h": 0.0511
    },
    {
     "name": "tiktok",
-    "label": "🎵 TikTok",
+    "label": "TikTok",
     "x": 0.7021,
-    "y": 0.6586,
+    "y": 0.6358,
     "w": 0.1171,
-    "h": 0.0556
+    "h": 0.0511
    }
   ]
  },
@@ -1866,7 +1890,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -1954,6 +1978,14 @@
     "h": 0.0456
    },
    {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
     "name": "mon-compte",
     "label": "Mon compte",
     "x": 0.0772,
@@ -1974,7 +2006,7 @@
  "11-connecter-claude": {
   "zones": [
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9712,
     "y": 0.0467,
@@ -2118,18 +2150,26 @@
  "13-montage-avance": {
   "zones": [
    {
-    "name": "btn-quiet",
-    "label": "✕",
-    "x": 0.6638,
-    "y": 0.1283,
-    "w": 0.0186,
-    "h": 0.0322
+    "name": "btn",
+    "label": "",
+    "x": 0.6637,
+    "y": 0.1244,
+    "w": 0.0187,
+    "h": 0.0244
+   },
+   {
+    "name": "https-ton-site-com",
+    "label": "https://ton-site.com",
+    "x": 0.5,
+    "y": 0.2189,
+    "w": 0.3463,
+    "h": 0.0556
    },
    {
     "name": "mot-par-mot",
     "label": "Mot par mot",
     "x": 0.3863,
-    "y": 0.4517,
+    "y": 0.5639,
     "w": 0.1125,
     "h": 0.0411
    },
@@ -2137,7 +2177,7 @@
     "name": "karaoke",
     "label": "Karaoké",
     "x": 0.4953,
-    "y": 0.4517,
+    "y": 0.5639,
     "w": 0.0981,
     "h": 0.0411
    },
@@ -2145,7 +2185,7 @@
     "name": "ligne-complete",
     "label": "Ligne complète",
     "x": 0.6091,
-    "y": 0.4517,
+    "y": 0.5639,
     "w": 0.1219,
     "h": 0.0411
    },
@@ -2153,7 +2193,7 @@
     "name": "punch",
     "label": "Punch",
     "x": 0.372,
-    "y": 0.5439,
+    "y": 0.6561,
     "w": 0.0841,
     "h": 0.0411
    },
@@ -2161,7 +2201,7 @@
     "name": "neon",
     "label": "Néon",
     "x": 0.4582,
-    "y": 0.5439,
+    "y": 0.6561,
     "w": 0.0808,
     "h": 0.0411
    },
@@ -2169,7 +2209,7 @@
     "name": "auto",
     "label": "Auto",
     "x": 0.542,
-    "y": 0.5439,
+    "y": 0.6561,
     "w": 0.0791,
     "h": 0.0411
    },
@@ -2177,7 +2217,7 @@
     "name": "aucun",
     "label": "Aucun",
     "x": 0.6276,
-    "y": 0.5439,
+    "y": 0.6561,
     "w": 0.0847,
     "h": 0.0411
    },
@@ -2185,7 +2225,7 @@
     "name": "haut",
     "label": "Haut",
     "x": 0.3554,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0508,
     "h": 0.0411
    },
@@ -2193,7 +2233,7 @@
     "name": "centre",
     "label": "Centre",
     "x": 0.4136,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0582,
     "h": 0.0411
    },
@@ -2201,7 +2241,7 @@
     "name": "bas",
     "label": "Bas",
     "x": 0.4698,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0467,
     "h": 0.0411
    },
@@ -2209,7 +2249,7 @@
     "name": "s",
     "label": "S",
     "x": 0.5325,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0513,
     "h": 0.0411
    },
@@ -2217,7 +2257,7 @@
     "name": "m",
     "label": "M",
     "x": 0.5887,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0535,
     "h": 0.0411
    },
@@ -2225,7 +2265,7 @@
     "name": "l",
     "label": "L",
     "x": 0.6446,
-    "y": 0.6361,
+    "y": 0.7483,
     "w": 0.0508,
     "h": 0.0411
    },
@@ -2233,7 +2273,7 @@
     "name": "emoji-auto-sur-les-mots-cles-ajoutes-sur",
     "label": "Emoji auto sur les mots-clés · 🔥 💰 ✨ ajoutés sur les temps",
     "x": 0.5,
-    "y": 0.7106,
+    "y": 0.8228,
     "w": 0.3463,
     "h": 0.0679
    },
@@ -2241,23 +2281,23 @@
     "name": "auto-ia-choisit",
     "label": "Auto · IA choisit",
     "x": 0.3825,
-    "y": 0.8807,
+    "y": 0.9929,
     "w": 0.1113,
     "h": 0.1167
    },
    {
-    "name": "apple-fond-clair-minimal",
-    "label": "Apple · fond clair, minimal",
+    "name": "anim-fond-clair-minimal",
+    "label": "Anim · fond clair, minimal",
     "x": 0.5,
-    "y": 0.8807,
+    "y": 0.9929,
     "w": 0.1113,
     "h": 0.1167
    },
    {
-    "name": "liquid-glass-verre-depoli-reflets",
-    "label": "Liquid glass · verre dépoli, reflets",
+    "name": "bientot-disponible-liquid-glass-bientot-",
+    "label": "BIENTÔT DISPONIBLE · Liquid glass · bientôt disponible",
     "x": 0.6175,
-    "y": 0.8807,
+    "y": 0.9929,
     "w": 0.1113,
     "h": 0.1167
    }
@@ -2290,7 +2330,7 @@
     "h": 0.0333
    },
    {
-    "name": "btn-quiet",
+    "name": "btn",
     "label": "",
     "x": 0.9762,
     "y": 0.035,
@@ -2374,6 +2414,14 @@
     "label": "Publier · DEV",
     "x": 0.0772,
     "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
     "w": 0.1419,
     "h": 0.0456
    },
@@ -2490,6 +2538,202 @@
     "y": 0.04,
     "w": 0.0753,
     "h": 0.0417
+   }
+  ]
+ },
+ "15-motion-control": {
+  "zones": [
+   {
+    "name": "credits",
+    "label": "∞ crédits",
+    "x": 0.7854,
+    "y": 0.035,
+    "w": 0.0722,
+    "h": 0.0344
+   },
+   {
+    "name": "credits-2",
+    "label": "Crédits",
+    "x": 0.8595,
+    "y": 0.035,
+    "w": 0.061,
+    "h": 0.0422
+   },
+   {
+    "name": "a",
+    "label": "A",
+    "x": 0.915,
+    "y": 0.035,
+    "w": 0.0187,
+    "h": 0.0333
+   },
+   {
+    "name": "btn",
+    "label": "",
+    "x": 0.9762,
+    "y": 0.035,
+    "w": 0.02,
+    "h": 0.0333
+   },
+   {
+    "name": "generateur",
+    "label": "Générateur",
+    "x": 0.0772,
+    "y": 0.1272,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "bibliotheque",
+    "label": "Bibliothèque",
+    "x": 0.0772,
+    "y": 0.175,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "images-ia",
+    "label": "Images IA",
+    "x": 0.0772,
+    "y": 0.2228,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "enregistreur",
+    "label": "Enregistreur",
+    "x": 0.0772,
+    "y": 0.2706,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "nettoyage-audio",
+    "label": "Nettoyage audio",
+    "x": 0.0772,
+    "y": 0.3183,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "express",
+    "label": "Express",
+    "x": 0.0772,
+    "y": 0.4217,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "montage-ia-beta",
+    "label": "Montage IA · BÊTA",
+    "x": 0.0772,
+    "y": 0.4694,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "editeur-beta",
+    "label": "Éditeur · BETA",
+    "x": 0.0772,
+    "y": 0.5172,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "parrainage",
+    "label": "Parrainage",
+    "x": 0.0772,
+    "y": 0.565,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "publier-dev",
+    "label": "Publier · DEV",
+    "x": 0.0772,
+    "y": 0.6128,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "details-montage-dev",
+    "label": "Détails montage · DEV",
+    "x": 0.0772,
+    "y": 0.6606,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "mon-compte",
+    "label": "Mon compte",
+    "x": 0.0772,
+    "y": 0.9206,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "report-bug",
+    "label": "Report bug",
+    "x": 0.0772,
+    "y": 0.9683,
+    "w": 0.1419,
+    "h": 0.0456
+   },
+   {
+    "name": "veo-3-1-genere-depuis-un-prompt",
+    "label": "Veo 3.1 · génère depuis un prompt",
+    "x": 0.3837,
+    "y": 0.1278,
+    "w": 0.1875,
+    "h": 0.0733
+   },
+   {
+    "name": "seedance-2-0-dev-genere-depuis-un-prompt",
+    "label": "Seedance 2.0 DEV · génère depuis un prompt (Hedra)",
+    "x": 0.5775,
+    "y": 0.1278,
+    "w": 0.1875,
+    "h": 0.0733
+   },
+   {
+    "name": "motion-control-transfere-un-mouvement",
+    "label": "Motion Control · transfère un mouvement",
+    "x": 0.7712,
+    "y": 0.1278,
+    "w": 0.1875,
+    "h": 0.0733
+   },
+   {
+    "name": "insere-ta-video-le-mouvement-a-reproduir",
+    "label": "Insère ta vidéo · le mouvement à reproduire",
+    "x": 0.4313,
+    "y": 0.5205,
+    "w": 0.2475,
+    "h": 0.44
+   },
+   {
+    "name": "glisse-ton-image-le-perso-qui-bouge",
+    "label": "Glisse ton image · le perso qui bouge",
+    "x": 0.7238,
+    "y": 0.5205,
+    "w": 0.2475,
+    "h": 0.44
+   },
+   {
+    "name": "parametres-avances",
+    "label": "Paramètres avancés",
+    "x": 0.3708,
+    "y": 0.8094,
+    "w": 0.1266,
+    "h": 0.0567
+   },
+   {
+    "name": "generer-le-mouvement",
+    "label": "Générer le mouvement",
+    "x": 0.6445,
+    "y": 0.8094,
+    "w": 0.4059,
+    "h": 0.0622
    }
   ]
  }
