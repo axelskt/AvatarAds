@@ -693,9 +693,13 @@ export function buildDynamicComposition(plan, opts = {}) {
         // cheveux ». L'avatar prend donc TOUT le cadre (c'est lui qui porte le
         // hook), et la vidéo de marque devient une carte réduite posée en haut :
         // on voit le sujet ET celui qui parle, sans sacrifier le visage.
-        const bot = src
-          ? `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
-          : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
+        // la PHOTO reste posée SOUS la vidéo : si le clip s'éteint un souffle
+        // avant la fin de la poussée (fenêtre vidéo < fenêtre panneau), c'est
+        // le visage qui affleure — jamais un noir (le « blink » sombre de v11)
+        const bot = (src
+          ? `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>
+             <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+          : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`)
         inner += bot
         const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
         const cx2 = Math.round((W - cw) / 2), cy = Math.round(H * 0.05)
@@ -734,7 +738,10 @@ export function buildDynamicComposition(plan, opts = {}) {
         // et Axel les veut (« ça animé c'était bien, ça rajoute un truc de parler
         // avec les mains »). Le défaut se corrige à la source, dans le prompt
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
-        inner += `<video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+        // …et la PHOTO reste posée dessous : un clip qui s'éteint un souffle
+        // avant la fin de la poussée laisse le visage, jamais un noir.
+        inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
+          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
         // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
         // principaux différents ». Le hook et le CTA sont deux moments distincts ;
