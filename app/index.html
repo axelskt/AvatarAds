@@ -9135,6 +9135,13 @@ function _imgNewPrompt(){
   document.getElementById('imgCharCount').textContent = '0 / 1000';
   const r=document.getElementById('imgResult'); if(r) r.style.display='none';
   const m=document.getElementById('imgResultMulti'); if(m) m.style.display='none';
+  // reset COMPLET (Axel, 13/08) : les références et l'état 4K partent aussi —
+  // une « nouvelle image » repart vraiment de zéro.
+  if(typeof _imgClearRefZone==='function') _imgClearRefZone(); else if(typeof _imgClearRef==='function') _imgClearRef();
+  _imgIsHD=false; _imgPrevSrc=null;
+  { const ub=document.getElementById('imgUpscaleBtn');
+    if(ub && window._img4kBtnHtml){ ub.disabled=false; ub.style.opacity='1'; ub.innerHTML=window._img4kBtnHtml; } }
+  { const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; }
   _imgIdleShow(true); _imgUpdateIdleMeta();
   document.getElementById('imgPrompt').focus();
 }
@@ -25139,12 +25146,19 @@ async function expressCreate(){
 
 function expressDownload(){ if(!window._expVidUrl){ toast('Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
+  // RESET COMPLET (Axel, 13/08 : « à chaque fois qu'on a fini, ça ne se
+  // réinitialise pas complètement ») : images, prompt, résultat — ET la vidéo
+  // en mémoire, la voix, les sous-titres, la durée. Les préférences de style
+  // (moteur, format, qualité) restent : ce sont des réglages, pas du brouillon.
   window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expVidBlobRaw=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
+  window._expVidUrl=null; window._expVoiceBlob=null; window._expSubs=null; window._expSubsBusy=false;
+  window._expAvatarFile=null; window._expAvatarUrl=null; window._expClipId=null;
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
-  const vid=document.getElementById('expResultVid'); if(vid){ vid.style.display='none'; vid.src=''; }
+  const vid=document.getElementById('expResultVid'); if(vid){ try{ vid.pause(); }catch(_){} vid.style.display='none'; vid.removeAttribute('src'); }
   const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='block';
   const acts=document.getElementById('expResultActions'); if(acts) acts.style.display='none';
+  try{ if(typeof _expSetDur==='function' && typeof _expDurAllowed==='function'){ _expSetDur(_expDurAllowed()[0]); const sl=document.getElementById('expDurSlider'); if(sl){ sl.value=0; if(typeof _aaSliderFill==='function') _aaSliderFill(sl); } } }catch(_){}
 }
 // ── Sous-titres Express : modal style → Whisper IA → incrustation → téléchargement direct ──
 function expressAddSubs(){
