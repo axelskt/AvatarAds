@@ -1264,8 +1264,12 @@ export function buildDynamicComposition(plan, opts = {}) {
     const tTitre = String((plan.hook && plan.hook.text) || '').trim()
     const finH = r2((plan.hook && plan.hook.end) || 0)
     if (tTitre && finH >= 1) {
-      hookTitleHtml = `<div class="clip" id="hkTitle" data-start="0" data-duration="${finH}" data-track-index="15">${esc(tTitre)}</div>`
-      js += `\n  tl.fromTo('#hkTitle',{autoAlpha:0,scale:1.16,y:-12},{autoAlpha:1,scale:1,y:0,duration:0.3,ease:'back.out(1.9)',transformOrigin:'50% 0%'},0.06);`
+      // ⚠ CONTRAT HYPERFRAMES : « the framework alone controls .clip visibility »
+      // — un tween autoAlpha sur la RACINE .clip se bat avec le framework et le
+      // titre n'apparaît jamais (mesuré sur v7 : construit, logué, invisible).
+      // Comme les sous-titres (#dp intérieurs), on anime le WRAPPER intérieur.
+      hookTitleHtml = `<div class="clip" id="hkTitle" data-start="0" data-duration="${finH}" data-track-index="15"><span id="hkTitleIn" style="display:block">${esc(tTitre)}</span></div>`
+      js += `\n  tl.fromTo('#hkTitleIn',{autoAlpha:0,scale:1.16,y:-12},{autoAlpha:1,scale:1,y:0,duration:0.3,ease:'back.out(1.9)',transformOrigin:'50% 0%'},0.06);`
       console.log(`▶ titre du hook : « ${tTitre} » (0→${finH}s)`)
     }
   }
