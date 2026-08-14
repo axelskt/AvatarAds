@@ -189,20 +189,42 @@ export function buildComposition(plan, opts = {}) {
       beatsLibres.push({ t: r2(c.start), anim: a, value: b.value ? String(b.value) : '' })
       posees.add(a)
     }
-    // les creux : entre la fin du hook (~2,2 s) et l'entrée du CTA
+    // FILET LOCAL mots → animations (v3) : quand ni le chef ni ses beats n'ont
+    // couvert un passage, un mot sans ambiguïté peut porter une anim de la
+    // banque — mêmes correspondances que le lexique nettoyé d'orchestrate,
+    // chaque anim une seule fois. Le visuel reste le mot.
+    const NET = [
+      ['scroll', 'phone'], ['defil', 'phone'], ['tiktok', 'phone'], ['reels', 'phone'], ['feed', 'phone'],
+      ['courbe', 'easyup'], ['croiss', 'easyup'], ['augment', 'easyup'], ['simple', 'easyup'], ['facile', 'easyup'],
+      ['resultat', 'results'], ['vue', 'views'], ['abonn', 'network'], ['communaut', 'network'], ['audience', 'network'],
+      ['voix', 'voice'], ['micro', 'voice'], ['audio', 'voice'],
+      ['ecri', 'type'], ['redig', 'type'], ['script', 'type'], ['prompt', 'type'],
+      ['clic', 'oneclick'], ['bouton', 'oneclick'],
+      ['rapid', 'speed'], ['vite', 'speed'],
+      ['idee', 'idea'], ['secret', 'idea'], ['method', 'idea'], ['astuce', 'idea'],
+      ['photo', 'avatar'], ['avatar', 'avatar'], ['personnage', 'avatar'], ['influenceu', 'avatar'],
+      ['visage', 'faceless'], ['anonym', 'faceless'],
+      ['import', 'upload'], ['televers', 'upload'],
+      ['lance', 'rocket'], ['viral', 'rocket'], ['explos', 'rocket'],
+    ]
+    // les creux : entre la fin du hook (~2,2 s) et l'entrée du CTA. Les MOTIFS
+    // ne comptent PAS comme couverture (« formes abstraites trop fades ») —
+    // seuls une vraie anim ou un média occupent l'œil. Seuil resserré à 2,1 s
+    // (Axel : un visuel toutes les 3 s MAX, pas « presque toutes les 3,2 s »).
     const vis = [
-      ...slides.filter((sl) => sl.anim || sl.motif).map((sl) => [sl.start, r2(sl.end ?? sl.start + 2)]),
+      ...slides.filter((sl) => sl.anim).map((sl) => [sl.start, r2(sl.end ?? sl.start + 2)]),
       ...rawBroll.map((b) => [b.start, b.end]),
     ].sort((x, y) => x[0] - y[0])
     const creux = []
     let curseur = Math.min(2.2, D)
-    for (const [a, b] of vis) { if (a - curseur > 3.2) creux.push([curseur, a]); curseur = Math.max(curseur, b) }
-    if (ctaZone - curseur > 3.2) creux.push([curseur, ctaZone])
-    let flip = 0, mIdx = 0, nBeats = 0, nMedias = 0
+    for (const [a, b] of vis) { if (a - curseur > 2.1) creux.push([curseur, a]); curseur = Math.max(curseur, b) }
+    if (ctaZone - curseur > 2.1) creux.push([curseur, ctaZone])
+    let flip = 0, mIdx = 0, nBeats = 0, nNet = 0, nMedias = 0
     const assetsIds = [...new Set(rawBroll.map((b) => b.assetId))]
     for (const [a, b] of creux) {
-      for (let t = a + 0.9; t + 1.4 < b; t += 3.0) {
-        const beat = beatsLibres.find((x) => x.t >= t - 0.4 && x.t + 1.4 < b)
+      for (let t = a + 0.5; t + 1.3 < b; t += 2.6) {
+        // 1. un beat du chef dont le mot tombe ici
+        const beat = beatsLibres.find((x) => x.t >= t - 0.4 && x.t + 1.3 < b)
         if (beat) {
           beatsLibres.splice(beatsLibres.indexOf(beat), 1)
           const fin = r2(Math.min(b - 0.1, beat.t + 2.2))
@@ -212,6 +234,25 @@ export function buildComposition(plan, opts = {}) {
           t = beat.t; nBeats++
           continue
         }
+        // 2. un mot du filet local prononcé dans ce créneau
+        const hitNet = (() => {
+          for (const c2 of capsW) {
+            if (c2.start < t - 0.4 || c2.start + 1.3 > b || c2.start > ctaZone - 1.3) continue
+            const k = normW(c2.text); if (k.length < 3) continue
+            for (const [stem, an] of NET) {
+              if (k.startsWith(stem) && ANIMS.includes(an) && !posees.has(an)) return { t: r2(c2.start), anim: an }
+            }
+          }
+          return null
+        })()
+        if (hitNet) {
+          posees.add(hitNet.anim)
+          slides.push({ type: 'card', anim: hitNet.anim, start: hitNet.t, end: r2(Math.min(b - 0.1, hitNet.t + 2.2)), items: [] })
+          plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-3', t: r2(hitNet.t + 0.1), vol: 0.45 }]
+          t = hitNet.t; nNet++
+          continue
+        }
+        // 3. une image/vidéo de l'utilisateur en re-parution (carte ↔ plein centre)
         if (!assetsIds.length) continue
         const fin = r2(Math.min(b - 0.1, t + 2.2))
         if (fin - t < 1.2) continue
@@ -222,14 +263,41 @@ export function buildComposition(plan, opts = {}) {
         flip++; mIdx++; nMedias++
       }
     }
-    if (nBeats || nMedias) console.log(`▶ cadence mot-à-mot : ${nBeats} beat(s) du chef + ${nMedias} re-parution(s) média posés dans les creux`)
+    if (nBeats || nNet || nMedias) console.log(`▶ cadence mot-à-mot v3 : ${nBeats} beat(s) + ${nNet} mot(s) du filet + ${nMedias} re-parution(s) média`)
+    // LE TEXTE TAPÉ vit dans plan.tuto (champ text) mais la conversion
+    // tuto→slide d'orchestrate l'égare en word (screenText '') : la frappe ne
+    // s'affichait jamais. On le raccroche à SA capture — même écran, et le mot
+    // d'ancrage du tuto prononcé dans la fenêtre de la slide.
+    for (const sl of slides) {
+      if (sl.anim !== 'screen' || sl.screenText) continue
+      const tu = (plan.tuto || []).find((t) => String(t.screen) === String(sl.screen)
+        && String(t.text || '').trim()
+        && capsW.some((c2) => normW(c2.text).startsWith(normW(t.word))
+          && c2.start >= sl.start - 0.6 && c2.start <= (sl.end ?? sl.start + 3)))
+      if (tu) { sl.screenText = String(tu.text); console.log(`▶ mot-à-mot : frappe « ${tu.text} » raccrochée à ${sl.screen} (${sl.start}s)`) }
+    }
     // le SON du geste #91 : la souris glisse sur l'écran puis CLIQUE la zone —
-    // le bruitage rend le clic réel (les tweens du curseur sont dans anim-pack)
+    // le bruitage rend le clic réel (les tweens du curseur sont dans anim-pack),
+    // et la frappe dans le champ S'ENTEND (fenêtre clavier calée sur le typing
+    // du pack : départ t0+1,05, durée bornée comme lui).
     for (const sl of slides) {
       if (sl.anim !== 'screen') continue
       plan.sfx = [...(plan.sfx || []),
         { kind: 'mo-swipe-1', t: r2(sl.start + 0.45), vol: 0.4 },
         { kind: 'mo-tap-1', t: r2(sl.start + 0.98), vol: 0.6 }]
+      if (sl.screenText) {
+        const durS = (sl.end ?? sl.start + 2.5) - sl.start
+        const durK = r2(Math.max(0.9, Math.min(durS - 1.7, String(sl.screenText).length * 0.045)))
+        plan.keyboard = [...(plan.keyboard || []), { t: r2(sl.start + 1.05), dur: durK }]
+      }
+    }
+    // les ACCENTS claquent : un pop discret sur les mots forts, jamais deux
+    // en moins d'1,5 s — c'est le rythme qui rend le mot-à-mot vivant
+    let dernierPop = -9
+    for (const c of (plan.captions || [])) {
+      if (!c.accent || c.start - dernierPop < 1.5) continue
+      plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-1', t: r2(c.start), vol: 0.38 }]
+      dernierPop = c.start
     }
   }
   const brolls = rawBroll.map((b, i) => ({
@@ -419,7 +487,7 @@ export function buildComposition(plan, opts = {}) {
   const hookCapEnd = r2(plan.hook?.end ?? Math.min(4, D))
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
-      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+      <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1) * (c.accent ? 1.3 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}"${
     String(c.text || '').length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
@@ -516,7 +584,14 @@ export function buildComposition(plan, opts = {}) {
   const slideBody = (s, si) => {
     // une animation fabriquée l'emporte : elle montre le concept, là où une capture
     // d'interface ou une forme abstraite n'illustre rien
-    if (s.anim) return animHtml(s.anim, { ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, W, H, vs)
+    if (s.anim) {
+      const ah = animHtml(s.anim, { ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, W, H, vs)
+      // mot-à-mot v3 (Axel : « les animations bof, trop fade ») : l'animation
+      // prend de la PLACE — même geste que le moteur dynamic, ×1.18 ancré sur
+      // la bande visuelle du haut. L'écran du tuto garde son cadrage large.
+      return (wordMode && ah && s.anim !== 'screen')
+        ? `<div style="position:absolute;inset:0;transform:scale(1.18);transform-origin:50% 28%">${ah}</div>` : ah
+    }
     // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
     // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
     // rien et ne correspondent à aucun mot de l'audio. Le mot se suffit.
@@ -635,10 +710,20 @@ export function buildComposition(plan, opts = {}) {
   // le départ de 0.72 à 0.86 : l'œil enregistre l'apparition sans quitter le texte
   // pour regarder l'effet. Le TIMING, lui, ne bouge pas — c'est lui qui fait le
   // travail (le mot arrive avec la voix, le cerveau n'a rien à réconcilier).
-  const capsJs = caps.map((c) => (wordMode ? `
-      tl.fromTo('#${c.id}', { scale: 0.86 }, { scale: 1, duration: ${r2(Math.min(0.16, c.dur))}, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${c.start});` : `
-      tl.fromTo('#${c.id}', { scale: 1.09 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
-  ).join('')
+  // v3 mot-à-mot : les mots VIVENT (Axel, réf mp4 : « qu'il bouge tout le
+  // temps, différentes animations, différentes tailles selon l'importance »).
+  // Un ACCENT slame — il arrive énorme, se pose en overshoot ; un mot courant
+  // pope sec avec une inclinaison alternée gauche/droite pour casser la grille.
+  const capsJs = caps.map((c, ci) => {
+    if (!wordMode) return `
+      tl.fromTo('#${c.id}', { scale: 1.09 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`
+    const rot = (ci % 2 ? 1 : -1) * (c.accent ? 2.4 : 1.3)
+    if (c.accent) return `
+      tl.fromTo('#${c.id}', { scale: 1.65, autoAlpha: 0, rotation: ${rot} }, { scale: 1.05, autoAlpha: 1, rotation: 0, duration: ${r2(Math.min(0.2, c.dur))}, ease: 'power3.out', transformOrigin: '50% 60%' }, ${c.start});
+      tl.to('#${c.id}', { scale: 1, duration: 0.1, ease: 'power2.inOut' }, ${r2(c.start + Math.min(0.2, c.dur))});`
+    return `
+      tl.fromTo('#${c.id}', { scale: 0.78, yPercent: 7, rotation: ${rot} }, { scale: 1, yPercent: 0, rotation: 0, duration: ${r2(Math.min(0.15, c.dur))}, ease: 'back.out(2.2)', transformOrigin: '50% 55%' }, ${c.start});`
+  }).join('')
 
   // L'emoji s'inscrit d'un quart de tour, pas d'un tour complet : à -430° on suivait
   // la toupie au lieu de lire le symbole, et l'entrée depuis scale 0.2 ajoutait une
