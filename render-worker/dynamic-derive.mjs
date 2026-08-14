@@ -1276,6 +1276,39 @@ export function deriveDynamicSlides(plan, opts = {}) {
         console.log(`▶ média « ${id} » : panneau garanti sur « ${w.text} » (${a2}→${e2}s) — le chef l'avait laissé sans place`)
       }
     }
+    // ── « GÉNÈRE UNE PHOTO (D'IDENTITÉ) DE TON X » → LA PHOTO DE X, SEULE ─────
+    // Axel (14/08) : « là l'image de la fille seule aurait dû apparaître, et
+    // juste après l'animation avec les autres images — c'est plus cohérent ».
+    // La voix annonce un RÉSULTAT (« génère une photo d'identité de ton
+    // influenceuse ») : on montre le résultat — la photo du héros plein cadre —
+    // pas une capture d'app. Deuxième apparition assumée : la première dit le
+    // sujet (« danses TikTok d'influenceuses »), celle-ci montre ce que l'outil
+    // produit. Le mur (« dizaines de photos ») enchaîne juste derrière.
+    {
+      const hero2 = Object.keys(files).find((id) =>
+        /influenceus|brune|hero/i.test(id) && !/\.(mp4|mov|webm|m4v)$/i.test(String(files[id] || '')))
+      if (hero2) {
+        const iGen = words.findIndex((w2, i2) => /^(gener|genere|cree|crees)/.test(norm(w2.text))
+          && words.slice(i2 + 1, i2 + 5).some((x) => norm(x.text).startsWith('photo'))
+          && words.slice(i2 + 1, i2 + 8).some((x) => matchNom(motsDuNom(hero2), norm(x.text))))
+        if (iGen >= 0) {
+          const aG = r2(Math.max(0, words[iGen].start - LEAD))
+          // la PREMIÈRE apparition du héros (posée bien avant, sur son sujet) se
+          // rogne pour laisser la place au résultat — sans ça elle « occupait »
+          // déjà l'instant et cette règle ne posait jamais rien.
+          const chev = (plan.broll || []).find((b) => b.assetId === hero2
+            && (b.start || 0) < aG - 2 && (b.end || 0) > aG - 0.05)
+          if (chev) chev.end = r2(Math.max((chev.start || 0) + 0.9, aG - 0.05))
+          const dejaLa = (plan.broll || []).some((b) => b.assetId === hero2
+            && Math.abs((b.start || 0) - aG) < 1.2)
+          if (!dejaLa) {
+            const eG = r2(Math.min(D, aG + 2.4))
+            ;(plan.broll = plan.broll || []).push({ assetId: hero2, start: aG, end: eG })
+            console.log(`▶ « ${words[iGen].text} une photo… » → la photo « ${hero2} » seule (${aG}→${eG}s), le résultat avant le mur`)
+          }
+        }
+      }
+    }
     const brut = (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))
       .filter((b) => files[b.assetId])
     // ── « DES DIZAINES DE PHOTOS D'ELLE » = UN MUR DE PHOTOS (Axel, 11/08) ──────
@@ -1304,7 +1337,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
           const estHero = (b) => /influenceus|brune|hero/i.test(String(b.assetId || ''))
           const ordered = dispo.slice().sort((x, y) =>
             (estHero(x) ? 0 : 1) - (estHero(y) ? 0 : 1) || (x.start || 0) - (y.start || 0))
-          const items = ordered.map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
+          // un même asset posé deux fois (la brune : sujet PUIS résultat) ne
+          // rentre qu'UNE fois au mur — sinon la grille la montrait en double.
+          const vusMur = new Set()
+          const items = ordered.filter((b) => !vusMur.has(b.assetId) && vusMur.add(b.assetId))
+            .map((b) => ({ src: files[b.assetId], assetId: b.assetId }))
           if (add({ anim: 'photowall', items, count: items.length }, a, e)) {
             // Le HÉRO garde sa place EN SOLO ailleurs (Axel, 11/08 : « d'abord la
             // fille en grand quand je dis "danses TikTok d'influenceuses IA", PUIS
@@ -2193,18 +2230,33 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // de CTA mange : le navigateur ne jouait jamais.
     const GO = ['aller', 'va', 'vas', 'rends', 'rendre', 'rendez', 'direction', 'connecte',
       'creer', 'cree', 'crees', 'inscris', 'inscrire', 'commence', 'commencer', 'compte']
+    // « UTILISE AVATARADS » EST AUSSI UNE NAVIGATION (Axel, 14/08 : « quand je
+    // dis utilise AvatarAds il aurait fallu montrer la LP avec avatarads.fr qui
+    // s'écrit dans la barre »). Pas de « sur » dans cette tournure — le verbe
+    // porte seul le geste, le mot d'après doit ressembler à un NOM de produit
+    // (la marque, ou une majuscule ≥ 4 lettres — jamais un article).
+    const UTILISE = ['utilise', 'utiliser', 'utilises', 'ouvre', 'ouvrez', 'lance', 'teste', 'essaie', 'essaye']
     for (let j = 1; j < words.length - 1; j++) {
-      if (norm(words[j].text) !== 'sur') continue
-      const verb = words.slice(Math.max(0, j - 3), j).findIndex((w) => GO.includes(norm(w.text)))
-      if (verb < 0) continue
-      const from = words[Math.max(0, j - 3) + verb]      // « tu VAS aller sur… »
-      const site = words[j + 1]
-      if (!site || norm(site.text).length < 3) continue
+      const wj = norm(words[j].text)
+      let from = null, site = null
+      if (wj === 'sur') {
+        const verb = words.slice(Math.max(0, j - 3), j).findIndex((w) => GO.includes(norm(w.text)))
+        if (verb < 0) continue
+        from = words[Math.max(0, j - 3) + verb]          // « tu VAS aller sur… »
+        site = words[j + 1]
+      } else if (UTILISE.includes(wj)) {
+        const nx2 = words[j + 1]
+        const brut2 = String((nx2 && nx2.text) || '').replace(/[.,!?;:«»"']/g, '')
+        if (nx2 && (/avatarads/i.test(brut2) || (/^[A-ZÀ-Ü]/.test(brut2) && norm(brut2).length >= 4))) {
+          from = words[j]; site = nx2
+        }
+      }
+      if (!from || !site || norm(site.text).length < 3) continue
       let a = Math.max(0, from.start - LEAD)
       // la scène s'arrête net avant la phrase suivante : après « AvatarAds » il
       // enchaîne sur le compte, et le navigateur n'a plus rien à raconter
       const next = words.find((w) => w.start > site.end + 0.35)
-      const b = Math.min(D, next ? next.start - LEAD : site.end + 3.2, site.end + 3.2)
+      let b = Math.min(D, next ? next.start - LEAD : site.end + 3.2, site.end + 3.2)
       // …et elle PREND le blanc qui la précède (jusqu'à 1,3 s). Les panneaux se
       // poussent l'un l'autre : un trou n'affiche pas du vide, il laisse la scène
       // d'avant s'attarder — la vidéo de la fille débordait ainsi sur « pour
@@ -2212,6 +2264,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // le temps de se taper : la page arrive PILE sur le nom prononcé.
       const [fa] = fit(Math.max(0, a - 1.3), b)
       if (fa < a - 0.05) a = fa
+      // …mais JAMAIS par-dessus une réservation posée entre le blanc saisi et le
+      // mot : la brune (10→12,3 s) vivait là et le navigateur reculé à 9,7 s se
+      // faisait rejeter en bloc. Dans ce cas l'adresse se tape sur son mot.
+      if (taken.some((w) => w[0] > a + 0.05 && w[0] < (from.start - LEAD) - 0.05)) a = Math.max(0, from.start - LEAD)
       // le zoom se cale sur « clique sur commencer » — mais SEULEMENT si ce mot
       // tombe dans la scène. Ici « pour commencer » est dit AVANT l'adresse : le
       // zoom partait alors à 16,5 s, hors du panneau, et ne jouait jamais.
@@ -2233,6 +2289,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (ki >= 0) taken.splice(ki, 1)
         if ((s2.end || 0) > b + 0.3) { s2.start = r2(b); claim(s2.start, s2.end); console.log(`▶ navigateur : « ${s2.screen || s2.ui} » repoussé à ${r2(b)}s (il volait la fenêtre du site)`) }
         else { out.splice(k, 1); console.log(`▶ navigateur : « ${s2.screen || s2.ui} » retiré (dans la fenêtre du site)`) }
+      }
+      // …et un panneau MÉDIA qui déborde sur le début du navigateur se ROGNE
+      // (jamais retiré : ses secondes plein cadre restent). Sans ça, la brune
+      // (10→12,3 s) tenait la fenêtre et le add() du navigateur échouait —
+      // « Utilise AvatarAds » (11,3 s) ne montrait jamais le site (Axel, 14/08).
+      for (const s2 of out) {
+        if (!s2.assetId || (s2.start || 0) >= a - 0.1 || (s2.end || 0) <= a + 0.1) continue
+        if ((a - (s2.start || 0)) < 0.9) continue        // il ne resterait rien à voir
+        const ki2 = taken.findIndex((w) => Math.abs(w[0] - (s2.start || 0)) < 0.06 && Math.abs(w[1] - (s2.end || 0)) < 0.06)
+        if (ki2 >= 0) taken[ki2] = [taken[ki2][0], r2(a - 0.02)]
+        console.log(`▶ navigateur : média « ${s2.assetId} » rogné ${r2(s2.end)}→${r2(a - 0.02)}s (le site prend la suite)`)
+        s2.end = r2(a - 0.02)
+      }
+      // …et il se BORNE avant la réservation suivante (la photo-résultat à
+      // 12,3 s) : sans ça, add() rejetait toute la scène pour 0,3 s de trop.
+      {
+        const suivant = taken.filter((w) => w[0] > a + 0.2 && w[0] < b - 0.05).sort((x, y) => x[0] - y[0])[0]
+        if (suivant && (suivant[0] - 0.05 - a) >= 1.1) b = r2(suivant[0] - 0.05)
       }
       if (add({ anim: 'ui', ui: 'browser', url: 'avatarads.fr', screen: 'site-home' }, a, b)) {
         console.log(`▶ navigateur : l'adresse se tape, la LP arrive, puis zoom sur « Commencer » (${r2(a)}→${r2(b)}s)`)
@@ -3655,17 +3729,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
       ...(plan.slides || []).map((s) => [s.start, s.end, s]),
       ...(plan.avatarSegments || []).map((w) => [w.start, w.end, w]),
     ].filter((x) => typeof x[0] === 'number' && typeof x[1] === 'number').sort((a, b) => a[0] - b[0])
-    // 0,35 s et pas 1,0 s : le blanc que l'œil accroche commence bien avant la
-    // seconde pleine. Vu sur la v4 : 0,87 s de fond nu entre la capture (31,91)
-    // et « connect » (32,78) — Axel : « y'a toujours le blanc à 32 secondes ».
-    // Sous 0,35 s, c'est la respiration d'une transition ; au-delà, un trou.
-    const CREUX = 0.35
+    // 0,15 s : sur un job AUDIO SEUL il n'y a pas de vidéo de base derrière —
+    // le moindre creux montre le dégradé nu. Le 0,35 d'avant laissait passer le
+    // trou de ~0,3 s à 10 s de la v9 (Axel : « y'a toujours cette espace vide à
+    // 10 secondes »). Et on étire la scène d'avant JUSQUE DANS la suivante
+    // (+0,45 s = la durée de la poussée) : bornes seulement contiguës, le
+    // sortant était déjà caché pendant que l'entrant glissait → dégradé visible
+    // quand même. Un léger chevauchement, la poussée le recouvre proprement.
+    const CREUX = 0.15
     let cur = 0, bouches = 0
     for (const [a, , ] of bornes) {
       if (a - cur >= CREUX) {
         const avant = bornes.filter((x) => x[1] <= cur + 0.06).sort((x, y) => y[1] - x[1])[0]
         const apres = bornes.find((x) => x[0] >= a - 0.06)
-        if (avant) { avant[2].end = r2(a); bouches++ }
+        if (avant) { avant[2].end = r2(Math.min(D, a + 0.45)); bouches++ }
         else if (apres) { apres[2].start = r2(cur); bouches++ }
       }
       cur = Math.max(cur, bornes.filter((x) => x[0] <= a).reduce((m, x) => Math.max(m, x[1]), cur))

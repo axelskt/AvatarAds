@@ -736,7 +736,12 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
-  hook             : "texte|start|end"                 ex "PERSONNE NE FAIT CA|0|2.60"   ("" si aucun hook)
+  hook             : "texte|start|end"                 ex "COMMENT CREER DES INFLUENCEUSES IA EN 30 SECONDES|0|2.60"   ("" si aucun hook)
+                     Le texte du hook est un TITRE ACCROCHEUR affiche au-dessus de la tete pendant toute l'accroche
+                     (facon titre YouTube : « Comment [resultat concret] en [duree] », « La methode pour [promesse] »).
+                     Il RESUME LA PROMESSE de la video entiere — JAMAIS un bout de la premiere phrase recopie
+                     (« PERSONNE NE TE MONTRE CA » ne dit rien ; « COMMENT CREER DES INFLUENCEUSES IA EN 30 SECONDES » accroche).
+                     6 a 9 mots, en capitales, avec le sujet et le benefice dedans.
   music            : "intense" | "dynamique" | "chill" | ""   ("" = l'audio a deja une musique)
   face             : la position verticale du visage, ex "0.32"   ("" si aucun visage)
   detected         : "subtitles" si des sous-titres sont DEJA incrustes dans la video, "" sinon
