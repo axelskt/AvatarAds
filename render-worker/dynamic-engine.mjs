@@ -1496,7 +1496,11 @@ export function buildDynamicComposition(plan, opts = {}) {
   .dc-w { display:inline-block; }
   /* titre du hook — blanc massif au-dessus de la tête, ombre franche (réf
      makeugc_ai). Pas de transform en CSS : GSAP anime scale/y et l'écraserait. */
-  #hkTitle { position:absolute; left:${Math.round(W * 0.05)}px; width:${Math.round(W * 0.9)}px; top:${Math.round(H * 0.082)}px;
+  /* z-index 70 OBLIGATOIRE : les panneaux portent z-index:i+1 et les sous-titres
+     z-index:60 — l'ordre DOM ne suffit pas, un élément sans z-index peint SOUS
+     tout panneau (le titre de v8 était construit mais invisible, 2e leçon après
+     le tween-racine de v7 : « layering = CSS z-index, pas track-index »). */
+  #hkTitle { position:absolute; z-index:70; left:${Math.round(W * 0.05)}px; width:${Math.round(W * 0.9)}px; top:${Math.round(H * 0.082)}px;
     font-family:'Archivo Black',sans-serif; font-size:${Math.round(H * 0.037)}px; line-height:1.18; text-align:center;
     color:#FFFFFF; letter-spacing:-.01em;
     text-shadow:0 ${Math.round(H * 0.0023)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.92), 0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.018)}px rgba(0,0,0,.6); }
