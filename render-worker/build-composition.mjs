@@ -178,6 +178,89 @@ export function buildComposition(plan, opts = {}) {
     for (const sl of slides) {
       if (sl.anim === 'screen') sl.start = r2(Math.max(0, sl.start - LEAD_W))
     }
+    // ── CADENCE 3 s (Axel, 15/08 soir : « une animation / un média / une
+    // visite guidée toutes les 3 secondes pour dynamiser — là c'est fade ») :
+    // chaque creux visuel de plus de 3 s se remplit, dans l'ordre : un beat du
+    // chef sur SON mot → un mot sans ambiguïté du filet local → une re-parution
+    // de ses médias (carte ↔ plein centre une fois sur deux).
+    {
+      const ctaZone = ((plan.sections || []).filter((x) => x.role === 'cta' || x.role === 'outro')
+        .sort((a, b) => b.start - a.start)[0] || {}).start ?? (D - 5)
+      const posees = new Set(slides.map((sl) => sl.anim).filter(Boolean))
+      const beatsLibres = []
+      for (const b of (plan.beats || [])) {
+        const a = String(b.anim || '')
+        const k = normW(b.word)
+        if (!ANIMS.includes(a) || posees.has(a) || k.length < 3) continue
+        const c = capsW.find((c2) => normW(c2.text).startsWith(k))
+        if (!c || c.start > ctaZone - 1.4) continue
+        beatsLibres.push({ t: r2(c.start), anim: a, value: b.value ? String(b.value) : '' })
+        posees.add(a)
+      }
+      const NET = [
+        ['scroll', 'phone'], ['defil', 'phone'], ['tiktok', 'phone'], ['reels', 'phone'], ['feed', 'phone'],
+        ['courbe', 'easyup'], ['croiss', 'easyup'], ['augment', 'easyup'], ['simple', 'easyup'], ['facile', 'easyup'],
+        ['resultat', 'results'], ['vue', 'views'], ['abonn', 'network'], ['communaut', 'network'], ['audience', 'network'],
+        ['voix', 'voice'], ['micro', 'voice'], ['audio', 'voice'],
+        ['ecri', 'type'], ['redig', 'type'], ['script', 'type'], ['prompt', 'type'],
+        ['clic', 'oneclick'], ['bouton', 'oneclick'],
+        ['rapid', 'speed'], ['vite', 'speed'],
+        ['idee', 'idea'], ['secret', 'idea'], ['method', 'idea'], ['astuce', 'idea'],
+        ['photo', 'avatar'], ['avatar', 'avatar'], ['personnage', 'avatar'], ['influenceu', 'avatar'],
+        ['visage', 'faceless'], ['anonym', 'faceless'],
+        ['import', 'upload'], ['televers', 'upload'],
+        ['lance', 'rocket'], ['viral', 'rocket'], ['explos', 'rocket'],
+      ]
+      const vis = [
+        ...slides.filter((sl) => sl.anim).map((sl) => [sl.start, r2(sl.end ?? sl.start + 2)]),
+        ...rawBroll.map((b) => [b.start, b.end]),
+      ].sort((x, y) => x[0] - y[0])
+      const creux = []
+      let curseur = Math.min(2.2, D)
+      for (const [a, b] of vis) { if (a - curseur > 3.0) creux.push([curseur, a]); curseur = Math.max(curseur, b) }
+      if (ctaZone - curseur > 3.0) creux.push([curseur, ctaZone])
+      let flip = 0, mIdx = 0, nBeats = 0, nNet = 0, nMedias = 0
+      const assetsIds = [...new Set(rawBroll.map((b) => b.assetId))]
+      for (const [a, b] of creux) {
+        for (let t = a + 0.6; t + 1.3 < b; t += 3.0) {
+          const beat = beatsLibres.find((x) => x.t >= t - 0.4 && x.t + 1.3 < b)
+          if (beat) {
+            beatsLibres.splice(beatsLibres.indexOf(beat), 1)
+            slides.push({ type: 'card', anim: beat.anim, start: r2(beat.t), end: r2(Math.min(b - 0.1, beat.t + 2.4)),
+              items: beat.value ? [{ t: 0, text: beat.value }] : [] })
+            plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-3', t: r2(beat.t + 0.1), vol: 0.5 }]
+            t = beat.t; nBeats++
+            continue
+          }
+          const hitNet = (() => {
+            for (const c2 of capsW) {
+              if (c2.start < t - 0.4 || c2.start + 1.3 > b || c2.start > ctaZone - 1.3) continue
+              const k = normW(c2.text); if (k.length < 3) continue
+              for (const [stem, an] of NET) {
+                if (k.startsWith(stem) && ANIMS.includes(an) && !posees.has(an)) return { t: r2(c2.start), anim: an }
+              }
+            }
+            return null
+          })()
+          if (hitNet) {
+            posees.add(hitNet.anim)
+            slides.push({ type: 'card', anim: hitNet.anim, start: hitNet.t, end: r2(Math.min(b - 0.1, hitNet.t + 2.4)), items: [] })
+            plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-3', t: r2(hitNet.t + 0.1), vol: 0.45 }]
+            t = hitNet.t; nNet++
+            continue
+          }
+          if (!assetsIds.length) continue
+          const fin = r2(Math.min(b - 0.1, t + 2.4))
+          if (fin - t < 1.2) continue
+          const idxB = rawBroll.length
+          rawBroll.push({ assetId: assetsIds[mIdx % assetsIds.length], start: r2(t), end: fin })
+          if (flip % 2 === 1) heroIds.add(idxB)
+          plan.sfx = [...(plan.sfx || []), { kind: flip % 2 ? 'mo-swipe-2' : 'mo-pop-2', t: r2(t), vol: 0.5 }]
+          flip++; mIdx++; nMedias++
+        }
+      }
+      if (nBeats || nNet || nMedias) console.log(`▶ cadence mot-à-mot v5 (3 s) : ${nBeats} beat(s) + ${nNet} filet + ${nMedias} média(s)`)
+    }
     // LE TEXTE TAPÉ vit dans plan.tuto (champ text) mais la conversion
     // tuto→slide d'orchestrate l'égare en word (screenText '') : la frappe ne
     // s'affichait jamais. On le raccroche à SA capture — même écran, et le mot
@@ -490,11 +573,13 @@ export function buildComposition(plan, opts = {}) {
     // une animation fabriquée l'emporte : elle montre le concept, là où une capture
     // d'interface ou une forme abstraite n'illustre rien
     if (s.anim) {
-      // 15/08 (Axel) : en mot-à-mot, AUCUNE animation de banque — seules la
-      // visite guidée (screen) et la bulle du CTA (keyword) gardent l'écran ;
-      // pour le reste, le mot se suffit, la page reste blanche.
-      if (wordMode && s.anim !== 'screen' && s.anim !== 'keyword') return ''
-      return animHtml(s.anim, { ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, W, H, vs)
+      // 15/08 soir (Axel) : « une animation / un média / une visite guidée
+      // toutes les 3 secondes pour dynamiser » — les animations de banque
+      // reviennent en mot-à-mot, agrandies ×1.18 pour une vraie présence
+      // (l'écran du tuto garde son cadrage large).
+      const ah = animHtml(s.anim, { ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' }, W, H, vs)
+      return (wordMode && ah && s.anim !== 'screen')
+        ? `<div style="position:absolute;inset:0;transform:scale(1.18);transform-origin:50% 28%">${ah}</div>` : ah
     }
     // Une scène sans animation ET sans motif EXPLICITEMENT demandé n'affiche RIEN :
     // le motif déduit du type mettait des formes abstraites partout, qui ne montrent
