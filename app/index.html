@@ -773,6 +773,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg>
         Express
       </div>
+      <div class="nav-i" onclick="nav('motion',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.9 5.9l2 2M16.1 16.1l2 2M18.1 5.9l-2 2M7.9 16.1l-2 2"/></svg>
+        Motion Control
+      </div>
       <div class="nav-i" onclick="nav('montage',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/></svg>
         Montage IA
@@ -3535,19 +3539,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <p class="muted" style="margin-top:8px;font-size:13.5px;line-height:1.45">Décris ta vidéo, on la crée.</p>
         </div>
 
-        <!-- ⓪ MOTEUR — Veo 3.1 / Motion Control (dans le rail, au-dessus de Style) -->
-        <div class="exp-section" style="margin-bottom:0">
-          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur</div>
+        <!-- ⓪ MOTEUR — DEV UNIQUEMENT (Axel 14/08) : Veo / Seedance pour les
+             tests ; pour tout le monde Veo est LE moteur et la section n'existe
+             pas. Motion Control a son propre onglet (nav 'motion'). -->
+        <div class="exp-section" id="expMoteurSection" style="margin-bottom:0;display:none">
+          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
           <div id="expMoteurRailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:13px 14px">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div>
               <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt</div></div>
-            <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="display:none;padding:13px 14px">
+            <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="padding:13px 14px">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
               <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt (Hedra)</div></div>
-            <div id="expEngMotionRail" onclick="_expSetEngine('motion')" class="exp-card" style="padding:13px 14px">
-              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Motion Control</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">transfère un mouvement</div></div>
           </div>
         </div>
 
@@ -3593,24 +3596,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <!-- ══ CENTER — Stage ══ -->
       <div style="flex:1;display:flex;flex-direction:column;min-width:0">
 
-        <!-- ══ MOTEUR — sélecteur Veo 3.1 / Motion Control (maquette motion-handoff, 1:1) ══ -->
-        <div id="expMoteurBar" style="padding:18px 28px 0;flex:0 0 auto">
-          <div id="expMoteurGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:920px;margin:0 auto">
-            <button id="expEngVeo" onclick="_expSetEngine('veo')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:2px solid var(--accent);background:var(--accent-soft)">
-              <span style="font-weight:700;font-size:14px">Veo 3.1</span>
-              <span class="faint" style="font-size:11.5px">génère depuis un prompt</span>
-            </button>
-            <!-- Seedance — dev-only (affiché par _expInitSeedanceDev si compte dev) -->
-            <button id="expEngSeedance" onclick="_expSetEngine('seedance')" class="col" style="display:none;gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:1px solid var(--border);background:var(--surface)">
-              <span style="font-weight:700;font-size:14px">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></span>
-              <span class="faint" style="font-size:11.5px">génère depuis un prompt (Hedra)</span>
-            </button>
-            <button id="expEngMotion" onclick="_expSetEngine('motion')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:1px solid var(--border);background:var(--surface)">
-              <span style="font-weight:700;font-size:14px">Motion Control</span>
-              <span class="faint" style="font-size:11.5px">transfère un mouvement</span>
-            </button>
-          </div>
-        </div>
+        <!-- (la barre MOTEUR de la colonne droite est supprimée — Axel 14/08 :
+             Veo par défaut pour tous, le sélecteur dev vit dans le rail, et
+             Motion Control a son onglet.) -->
 
         <!-- Durée Seedance (dev) — visible seulement en mode Seedance -->
         <div id="expSeedanceDurRow" style="display:none;align-items:center;gap:8px;padding:12px 28px 0;max-width:920px;margin:0 auto;flex-wrap:wrap">
@@ -3694,51 +3682,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div><!-- /expVeoBody -->
 
         <!-- ══ MOTION CONTROL (maquette motion-handoff · gen-motion.jsx, 1:1) ══ -->
-        <div id="expMotionWrap" class="scroll-y" style="display:none;flex:1;min-height:0;max-width:920px;margin:0 auto;width:100%;padding:24px 28px 40px;box-sizing:border-box">
-          <div class="center" style="margin-bottom:26px">
-            <h2 class="display" style="font-size:26px;font-weight:800;letter-spacing:-.01em">Motion Control</h2>
-            <p class="muted" style="margin-top:6px;font-size:14.5px">Ton personnage reproduit le mouvement de la vidéo — même durée que l'original.</p>
-          </div>
-          <div class="row" style="gap:16px;align-items:center">
-            <div class="col grow" style="gap:8px;min-width:0">
-              <span class="label" style="margin:0">Vidéo de référence</span>
-              <div id="mcRefDrop" onclick="document.getElementById('mcRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'ref')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
-                <input type="file" id="mcRefInput" accept="video/*" style="display:none" onchange="_mcPick(this,'ref')">
-                <video id="mcRefPrev" muted playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
-                <svg id="mcRefIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
-                <span style="font-weight:700;color:var(--text);font-size:14px">Insère ta vidéo</span>
-                <span class="faint" id="mcRefSub" style="font-size:11.5px">le mouvement à reproduire</span>
-              </div>
-            </div>
-            <div style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);margin-top:24px">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </div>
-            <div class="col grow" style="gap:8px;min-width:0">
-              <span class="label" style="margin:0">Ton personnage</span>
-              <div id="mcCharDrop" onclick="document.getElementById('mcCharInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'char')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
-                <input type="file" id="mcCharInput" accept="image/*" style="display:none" onchange="_mcPick(this,'char')">
-                <img id="mcCharPrev" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
-                <svg id="mcCharIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                <span style="font-weight:700;color:var(--text);font-size:14px">Glisse ton image</span>
-                <span class="faint" id="mcCharSub" style="font-size:11.5px">le perso qui bouge</span>
-              </div>
-            </div>
-          </div>
-          <div class="row" style="margin-top:14px;gap:12px">
-            <button onclick="_mcOpenAdv()" class="row gap8" style="flex:0 0 auto;padding:15px 22px;border-radius:14px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Paramètres avancés
-            </button>
-            <button onclick="_mcGenerate()" class="btn btn-primary grow" style="font-weight:800;font-size:16.5px;padding:16px">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer le mouvement
-            </button>
-          </div>
-          <div id="mcCostTxt" class="mono" style="margin-top:11px;text-align:center;font-size:12.5px;color:var(--text-2)"></div>
-        </div>
-
-        <!-- Modale Paramètres avancés Motion Control (contenu généré par _mcRenderAdv) -->
-        <div id="mcAdvModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(6,6,9,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px" onclick="if(event.target===this)_mcCloseAdv()">
-          <div id="mcAdvCard" onclick="event.stopPropagation()" class="col scroll-y" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:min(560px,100%);max-height:88%;padding:26px"></div>
-        </div>
+        <!-- (Motion Control a déménagé dans sa propre vue v-motion — Axel 14/08) -->
       </div>
 
       <!-- ══ EXPRESS MOBILE (design proto : image · format · durée sur une ligne + prompt + générer) ══ -->
@@ -3795,6 +3739,58 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </button>
       </div>
     </div><!-- /express -->
+
+    <!-- ══════════════════════════════════════════════════════
+         🎯 MOTION CONTROL — onglet à part entière (Axel 14/08 :
+         « dans Express il est vraiment caché ») — même écran, sa propre vue.
+         ══════════════════════════════════════════════════════ -->
+    <div class="view" id="v-motion" style="flex-direction:column;overflow:hidden">
+<div id="expMotionWrap" class="scroll-y" style="flex:1;min-height:0;max-width:920px;margin:0 auto;width:100%;padding:24px 28px 40px;box-sizing:border-box">
+          <div class="center" style="margin-bottom:26px">
+            <h2 class="display" style="font-size:26px;font-weight:800;letter-spacing:-.01em">Motion Control</h2>
+            <p class="muted" style="margin-top:6px;font-size:14.5px">Ton personnage reproduit le mouvement de la vidéo — même durée que l'original.</p>
+          </div>
+          <div class="row" style="gap:16px;align-items:center">
+            <div class="col grow" style="gap:8px;min-width:0">
+              <span class="label" style="margin:0">Vidéo de référence</span>
+              <div id="mcRefDrop" onclick="document.getElementById('mcRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'ref')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
+                <input type="file" id="mcRefInput" accept="video/*" style="display:none" onchange="_mcPick(this,'ref')">
+                <video id="mcRefPrev" muted playsinline style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+                <svg id="mcRefIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
+                <span style="font-weight:700;color:var(--text);font-size:14px">Insère ta vidéo</span>
+                <span class="faint" id="mcRefSub" style="font-size:11.5px">le mouvement à reproduire</span>
+              </div>
+            </div>
+            <div style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);margin-top:24px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+            <div class="col grow" style="gap:8px;min-width:0">
+              <span class="label" style="margin:0">Ton personnage</span>
+              <div id="mcCharDrop" onclick="document.getElementById('mcCharInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="_mcDrop(event,'char')" class="ph" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:26px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);cursor:pointer;aspect-ratio:1/1;position:relative;overflow:hidden">
+                <input type="file" id="mcCharInput" accept="image/*" style="display:none" onchange="_mcPick(this,'char')">
+                <img id="mcCharPrev" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                <svg id="mcCharIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span style="font-weight:700;color:var(--text);font-size:14px">Glisse ton image</span>
+                <span class="faint" id="mcCharSub" style="font-size:11.5px">le perso qui bouge</span>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:14px;gap:12px">
+            <button onclick="_mcOpenAdv()" class="row gap8" style="flex:0 0 auto;padding:15px 22px;border-radius:14px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Paramètres avancés
+            </button>
+            <button onclick="_mcGenerate()" class="btn btn-primary grow" style="font-weight:800;font-size:16.5px;padding:16px">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:3px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer le mouvement
+            </button>
+          </div>
+          <div id="mcCostTxt" class="mono" style="margin-top:11px;text-align:center;font-size:12.5px;color:var(--text-2)"></div>
+        </div>
+
+        <!-- Modale Paramètres avancés Motion Control (contenu généré par _mcRenderAdv) -->
+        <div id="mcAdvModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(6,6,9,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px" onclick="if(event.target===this)_mcCloseAdv()">
+          <div id="mcAdvCard" onclick="event.stopPropagation()" class="col scroll-y" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:min(560px,100%);max-height:88%;padding:26px"></div>
+        </div>
+    </div><!-- /motion -->
 
     <!-- ══════════════════════════════════════════════════════
          🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
@@ -24222,7 +24218,7 @@ function initExpress(){
   _expUpdateGenCaption();
   _expHeroSync();
   if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
-  if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine||'veo');
+  if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine==='motion' ? 'veo' : (window._expEngine||'veo'));
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
@@ -24270,43 +24266,23 @@ function _expIsDev(){ try{ return ['developer'].includes((currentMember?.plan||'
 // affiche la carte Seedance + passe le sélecteur en 3 colonnes (appelé à l'init si dev)
 function _expInitSeedanceDev(){
   if(!_expIsDev()) return;
-  // ① carte Seedance DANS le rail Moteur (la « case » avec Veo/Motion) — desktop.
-  //    3 cartes empilées en colonne pour rester lisibles dans le rail étroit.
-  const rSd=document.getElementById('expEngSeedanceRail'), railGrid=document.getElementById('expMoteurRailGrid');
-  if(rSd) rSd.style.display='';
-  if(railGrid) railGrid.style.gridTemplateColumns='1fr';
-  // ② carte Seedance aussi dans la barre (le rail est masqué sur mobile → la barre sert de sélecteur).
-  const bSd=document.getElementById('expEngSeedance'), grid=document.getElementById('expMoteurGrid');
-  if(bSd) bSd.style.display='';
-  if(grid) grid.style.gridTemplateColumns='1fr 1fr 1fr';
+  // Le sélecteur Moteur (Veo / Seedance) n'existe QUE pour le compte dev —
+  // Axel 14/08 : « laisse-moi Moteur pour le dev, Veo ou Seedance juste ;
+  // pour les autres tu le supprimes, Veo est le défaut ».
+  const sec=document.getElementById('expMoteurSection'); if(sec) sec.style.display='';
 }
 function _expSetEngine(e){
-  // Seedance = même flux que Veo (corps Veo), seul le moteur de génération change.
+  // Motion Control a quitté Express (Axel, 14/08 : « il est vraiment caché ») —
+  // les vieux appels basculent sur SA vue. Express = Veo pour tout le monde ;
+  // le sélecteur Veo/Seedance n'existe que pour le compte dev (rail).
+  if(e==='motion'){ if(typeof nav==='function') nav('motion'); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); return; }
   if(e==='seedance' && !_expIsDev()) e='veo';
   window._expEngine = e;
-  const isVeoLike = (e!=='motion');
-  const rail=document.getElementById('expLeftRail'), veo=document.getElementById('expVeoBody'), mot=document.getElementById('expMotionWrap'), mexp=document.getElementById('mExp'), bar=document.getElementById('expMoteurBar');
-  const bVeo=document.getElementById('expEngVeo'), bMot=document.getElementById('expEngMotion'), bSd=document.getElementById('expEngSeedance');
-  const rVeo=document.getElementById('expEngVeoRail'), rMot=document.getElementById('expEngMotionRail'), rSd=document.getElementById('expEngSeedanceRail');
-  const on=(b)=>{ if(b){ b.style.border='2px solid var(--accent)'; b.style.background='var(--accent-soft)'; } };
-  const off=(b)=>{ if(b){ b.style.border='1px solid var(--border)'; b.style.background='var(--surface)'; } };
-  if(veo)  veo.style.display = isVeoLike ? 'flex' : 'none';
-  if(mot)  mot.style.display = isVeoLike ? 'none' : 'block';
-  if(mexp) mexp.style.display = isVeoLike ? '' : 'none';
-  // Sélecteur : rail (Moteur) en Veo/Seedance, barre en Motion — pour TOUT LE MONDE.
-  // (Seedance vit dans le rail comme 3ᵉ carte, cf _expInitSeedanceDev ; sur mobile le rail est masqué et la barre reprend la main via CSS.)
-  if(rail) rail.style.display = isVeoLike ? 'flex' : 'none';
-  if(bar)  bar.style.display  = isVeoLike ? 'none' : '';
-  // états des cartes de la barre (utilisée en Motion + sur mobile)
-  [ [bVeo,'veo'],[bSd,'seedance'],[bMot,'motion'] ].forEach(([b,id])=>{ if(!b) return; (id===e?on:off)(b); });
-  // états des cartes du rail (2 ou 3 selon dev) — classe .on
+  const rVeo=document.getElementById('expEngVeoRail'), rSd=document.getElementById('expEngSeedanceRail');
   if(rVeo) rVeo.classList.toggle('on', e==='veo');
   if(rSd)  rSd.classList.toggle('on', e==='seedance');
-  if(rMot) rMot.classList.toggle('on', e==='motion');
   // durée Seedance visible uniquement en mode seedance
   const sdDur=document.getElementById('expSeedanceDurRow'); if(sdDur) sdDur.style.display = (e==='seedance') ? 'flex' : 'none';
-  // #34 · Motion Control affiché → montre le coût (ou l'invite « ajoute une vidéo »)
-  if(e==='motion' && typeof _mcUpdateCost==='function') _mcUpdateCost();
 }
 
 /* ── Motion Control — état + uploads ── */
