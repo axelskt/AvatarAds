@@ -1391,9 +1391,15 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     let poolArg: unknown = args.avatar_urls
     if (typeof poolArg === 'string') { try { poolArg = JSON.parse(poolArg) } catch (_) { poolArg = [poolArg] } }
     if (poolArg && !Array.isArray(poolArg)) poolArg = [poolArg]
+    const dejaVues = new Set([String(args.avatar_url || '').trim()])
     for (const u of (Array.isArray(poolArg) ? poolArg : []).slice(0, 5)) {
       const url = String(u || '').trim()
-      if (!url) continue
+      // ⚠ un client qui remet avatar_url en tête d'avatar_urls créait un pool
+      // [tom, tom, tom2, tom3] → le hook ET la fenêtre suivante portaient la
+      // MÊME photo (Axel, 14/08 : « la 2e fois qu'on voit l'avatar ça doit être
+      // un autre que celui du hook »). Les doublons d'URL sont ignorés.
+      if (!url || dejaVues.has(url)) continue
+      dejaVues.add(url)
       const f = await fetchUserFile(url, 10_000_000, /^image\/(png|jpe?g|webp)$/, "une photo d'avatar (avatar_urls)")
       if (typeof f === 'string') return toolErr(f)
       avatarPoolFiles.push(f)
