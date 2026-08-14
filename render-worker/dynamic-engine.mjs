@@ -1193,6 +1193,17 @@ export function buildDynamicComposition(plan, opts = {}) {
     // (rouge dégradé réf) — « essaye de mettre de la couleur » sur le style 5
     const normAcc = (t) => String(t).toLowerCase().replace(/[.,!?;:«»()"']/g, '')
     const ACCFORTS = new Set((plan.accents || []).map(normAcc))
+    // ── SOUS-TITRES HOOK UNIQUEMENT (Axel 12/08 : « garde ceux du hook juste ») ──
+    // Opt-in via `plan.subtitlesHookOnly` (marqueur [SUBSHOOK] du brief, posé par le
+    // MCP). On ne garde que les groupes dont le début tombe DANS le hook ; après le
+    // hook, plus de bandeau — la vidéo se lit par les visuels (panneaux, médias,
+    // captures). Filtré ici, avant de générer HTML + timeline, pour ne rien animer
+    // qu'on n'affiche pas.
+    if (plan.subtitlesHookOnly === true) {
+      const avant = grp.length
+      for (let i = grp.length - 1; i >= 0; i--) { if (grp[i].a >= hookFin) grp.splice(i, 1) }
+      console.log(`▶ sous-titres hook uniquement : ${grp.length}/${avant} groupe(s) gardé(s)`)
+    }
     capHtml = grp.map((g, i) => {
       const a = g.a
       const b = Math.max(a + 0.2, g.b)
@@ -1239,6 +1250,24 @@ export function buildDynamicComposition(plan, opts = {}) {
       js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
     }
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
+  }
+
+  // ── LE TITRE DU HOOK, AU-DESSUS DE LA TÊTE (réf makeugc_ai, Axel 13/08) ─────
+  // « dans le hook, au-dessus de la tête de l'avatar, une phrase type qui
+  // représente ce que dit l'audio » — comme « How to copy winning ads (using
+  // AI) ». plan.hook.text EST cette phrase (le chef d'orchestre l'écrit depuis
+  // l'audio) : on la pose en haut du cadre, blanc massif + ombre portée, pendant
+  // toute l'accroche. Track 15 : au-dessus des sous-titres du hook (posés à 60 %),
+  // les deux coexistent comme dans la réf (titre en haut, mots animés plus bas).
+  let hookTitleHtml = ''
+  {
+    const tTitre = String((plan.hook && plan.hook.text) || '').trim()
+    const finH = r2((plan.hook && plan.hook.end) || 0)
+    if (tTitre && finH >= 1) {
+      hookTitleHtml = `<div class="clip" id="hkTitle" data-start="0" data-duration="${finH}" data-track-index="15">${esc(tTitre)}</div>`
+      js += `\n  tl.fromTo('#hkTitle',{autoAlpha:0,scale:1.16,y:-12},{autoAlpha:1,scale:1,y:0,duration:0.3,ease:'back.out(1.9)',transformOrigin:'50% 0%'},0.06);`
+      console.log(`▶ titre du hook : « ${tTitre} » (0→${finH}s)`)
+    }
   }
 
   // ── LA VIDÉO EN SOUS-COUCHE : PLUS JAMAIS D'APLAT ────────────────────────
@@ -1461,11 +1490,18 @@ export function buildDynamicComposition(plan, opts = {}) {
   .hk15 .dc-w.on { color:#FFFFFF;
     text-shadow:0 0 ${Math.round(H * 0.012)}px rgba(255,255,255,.85), 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.5); }
   .dc-w { display:inline-block; }
+  /* titre du hook — blanc massif au-dessus de la tête, ombre franche (réf
+     makeugc_ai). Pas de transform en CSS : GSAP anime scale/y et l'écraserait. */
+  #hkTitle { position:absolute; left:${Math.round(W * 0.05)}px; width:${Math.round(W * 0.9)}px; top:${Math.round(H * 0.082)}px;
+    font-family:'Archivo Black',sans-serif; font-size:${Math.round(H * 0.037)}px; line-height:1.18; text-align:center;
+    color:#FFFFFF; letter-spacing:-.01em;
+    text-shadow:0 ${Math.round(H * 0.0023)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.92), 0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.018)}px rgba(0,0,0,.6); }
 </style>
 </head>
 <body>
 <div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${sousCouche}${html}
 ${capHtml}
+${hookTitleHtml}
 </div>
 <script>
 window.__timelines = window.__timelines || {};

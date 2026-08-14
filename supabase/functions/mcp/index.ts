@@ -444,10 +444,11 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
+          avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
           lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte ~1,5 crédit par seconde de visage. Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
           media: {
-            type: 'array', maxItems: 6,
-            description: "Optionnel — jusqu'à 6 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
+            type: 'array', maxItems: 7,
+            description: "Optionnel — jusqu'à 7 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
             items: {
               type: 'object',
               properties: {
@@ -1381,6 +1382,23 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     if (typeof av === 'string') return toolErr(av)
     avatarFile = av
   }
+  // #84 · POOL de visages pour la ROTATION : `avatar_urls` = d'autres photos du
+  // MÊME perso (angles/tenues). Chacune devient avatar-1, avatar-2… et le worker
+  // en pose une DIFFÉRENTE par fenêtre. Téléchargées AVANT le débit (URL cassée
+  // = 0 crédit). Sans pool, comportement d'avant (une seule image partout).
+  const avatarPoolFiles: { bytes: Uint8Array; contentType: string }[] = []
+  {
+    let poolArg: unknown = args.avatar_urls
+    if (typeof poolArg === 'string') { try { poolArg = JSON.parse(poolArg) } catch (_) { poolArg = [poolArg] } }
+    if (poolArg && !Array.isArray(poolArg)) poolArg = [poolArg]
+    for (const u of (Array.isArray(poolArg) ? poolArg : []).slice(0, 5)) {
+      const url = String(u || '').trim()
+      if (!url) continue
+      const f = await fetchUserFile(url, 10_000_000, /^image\/(png|jpe?g|webp)$/, "une photo d'avatar (avatar_urls)")
+      if (typeof f === 'string') return toolErr(f)
+      avatarPoolFiles.push(f)
+    }
+  }
   // 420 px de large, JPEG 72 — le format qu'envoie l'app, et qui tient sous les
   // 400 Ko du chef. Renvoie null pour une vidéo ou un format non décodable :
   // le chef se rabat alors sur le NOM du média, qui reste explicite.
@@ -1403,7 +1421,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   let mediaArg: unknown = args.media
   if (typeof mediaArg === 'string') { try { mediaArg = JSON.parse(mediaArg) } catch (_) { mediaArg = [] } }
   if (mediaArg && !Array.isArray(mediaArg)) mediaArg = [mediaArg]
-  for (const [i, m] of (Array.isArray(mediaArg) ? mediaArg : []).slice(0, 6).entries()) {
+  for (const [i, m] of (Array.isArray(mediaArg) ? mediaArg : []).slice(0, 7).entries()) {
     const u = String((m as Record<string, unknown>)?.url || '').trim()
     if (!u) continue
     const nom = String((m as Record<string, unknown>)?.name || '').trim() || `media-${i + 1}`
@@ -1523,6 +1541,14 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
         if (!aErr) assets.push({ id: 'avatar', path: aPath, kind: 'image' })
         else console.warn('upload avatar:', aErr.message)
       }
+      // #84 · les visages du pool → assets avatar-1, avatar-2… (rotation worker)
+      for (const [pi, pf] of avatarPoolFiles.entries()) {
+        const pExt = /png/.test(pf.contentType) ? 'png' : /webp/.test(pf.contentType) ? 'webp' : 'jpg'
+        const pPath = `${userId}/mcp-avatar-${pi + 1}-${Date.now()}.${pExt}`
+        const { error: pErr } = await svc.storage.from('render-media').upload(pPath, pf.bytes, { contentType: pf.contentType })
+        if (!pErr) assets.push({ id: 'avatar-' + (pi + 1), path: pPath, kind: 'image' })
+        else console.warn('upload avatar pool ' + (pi + 1) + ':', pErr.message)
+      }
       for (const m of medias) {
         const mExt = m.kind === 'video' ? 'mp4' : /png/.test(m.contentType) ? 'png' : /webp/.test(m.contentType) ? 'webp' : 'jpg'
         const mPath = `${userId}/mcp-as-${m.id}-${Date.now()}.${mExt}`
@@ -1547,6 +1573,16 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
       if (veutLipsync) (plan as Record<string, unknown>).__lipsync = true
       console.log(`▶ lipsync demandé : ${veutLipsync} (param ${args.lipsync}, brief ${/\[LIPSYNC\]/i.test(brief)})`)
+
+      // ── SOUS-TITRES HOOK UNIQUEMENT (Axel 12/08 : « garde ceux du hook juste ») ─
+      // Même mécanique que le lipsync : un marqueur [SUBSHOOK] dans le brief pose
+      // le drapeau sur le plan, le moteur (dynamic-engine) ne garde alors que les
+      // groupes de sous-titres qui tombent dans le hook — le reste de la vidéo se
+      // lit par les visuels. Opt-in : sans le marqueur, rien ne change pour personne.
+      if (/\[SUBSHOOK\]/i.test(brief)) {
+        (plan as Record<string, unknown>).subtitlesHookOnly = true
+        console.log('▶ sous-titres : hook uniquement (marqueur [SUBSHOOK])')
+      }
 
       // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
       const { data: rj, error: rjErr } = await svc.from('render_jobs')

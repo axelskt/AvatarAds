@@ -1160,9 +1160,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
         if (!prem) continue
         const cible = r2(Math.max(0, prem.start - LEAD))
         const ecart = (b.start || 0) - cible
-        if (ecart <= 4) continue                       // déjà proche : on ne touche à rien
+        // Une VIDÉO nommée se cale sur son mot dans les DEUX sens : une démo ne
+        // vit qu'à son moment (« danser » à 20 s, pas sur « danses » à 9,7 s si le
+        // chef s'est trompé d'occurrence). Une image, elle, ne remonte que si
+        // elle est en retard — la déplacer en avant casserait les doubles poses
+        // voulues (solo + mur).
+        const estVid = /\.(mp4|mov|webm|m4v)$/i.test(String(files2[b.assetId] || ''))
+        if (estVid ? Math.abs(ecart) <= 4 : ecart <= 4) continue
         const duree = Math.max(1.4, (b.end || 0) - (b.start || 0))
-        console.log(`▶ média « ${b.assetId} » remonté sur sa 1re mention « ${prem.text} » : ${r2(b.start)}s → ${cible}s (il était ${r2(ecart)}s trop tard)`)
+        console.log(`▶ média « ${b.assetId} » recalé sur sa 1re mention « ${prem.text} » : ${r2(b.start)}s → ${cible}s (écart ${r2(ecart)}s)`)
         b.start = cible
         b.end = r2(Math.min(D, cible + duree))
       }
@@ -1865,6 +1871,24 @@ export function deriveDynamicSlides(plan, opts = {}) {
             hit = apres
           }
         }
+        // ── UN ÉCRAN D'APP NE S'ANCRE PAS SUR UNE PHRASE D'ARGENT ──────────────
+        // « génèrent des dizaines de milliers d'euros » parle des AUTRES qui
+        // gagnent de l'argent, pas de la fonction « génère une photo » d'AvatarAds.
+        // Mesuré (Cartoon 21) : le mot « génère » de l'étape Images IA matchait
+        // « génèrent » (7,7 s, section revenus) AVANT « génère une photo » (12,6 s),
+        // et la capture Images IA tombait sur « milliers d'euros » (Axel, deux
+        // fois : « je dis milliers d'euros et il montre Images IA »). Si le repère
+        // est collé à un terme d'argent, on prend l'occurrence suivante — la vraie.
+        if (hit && !t.at) {
+          const ctx = words.slice(hit.i, hit.i + 6).map((x) => norm(x.text))
+          if (ctx.some((x) => /(euro|millier|dollar|argent|centime|balle)/.test(x))) {
+            const apres = findSeq(words, w, hit.i + 1) || findAny(words, [w], hit.i + 1) || like(w, hit.i + 1)
+            if (apres) {
+              console.log(`▶ visite guidée : « ${w} » à ${r2(hit.start)}s est dans une phrase d'argent → on prend celui de ${r2(apres.start)}s`)
+              hit = apres
+            }
+          }
+        }
         if (!hit) { jetees.push(`${t.screen}/${t.zone} : « ${w} » introuvable dans la transcription`); continue }
         // DEUX CADRES SUR DEUX MOTS COLLÉS, C'EST UN CADRE DE TROP. Le plan
         // demandait « Image » puis « IA » — deux mots d'un même nom d'onglet —
@@ -2227,15 +2251,48 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ignore) mais ils ne PASSENT PLUS DEVANT : `add()` refuse toute fenêtre déjà
   // réservée ci-dessus.
 
-  // « N secondes/minutes » dans les 6 premières secondes → chrono (chiffres OU lettres)
+  // ── LE CHRONO « N SECONDES » COUPE LE HOOK ET JOUE EN SYNCHRO ─────────────
+  // Axel (12/08) : « couper le hook sur trente ». « en trente secondes top
+  // chrono » est la PUNCHLINE du hook — c'est le chronomètre qu'il faut voir
+  // pile là, pas l'avatar qui la couvre. Piège mesuré : le mot-nombre tombe
+  // DANS le hook (réservé en §0, fin ~3,5 s, valeur choisie par Claude donc
+  // variable) → la fenêtre du timer [trente−lead … chrono] chevauchait le hook,
+  // et `add()` la rejetait ou la repoussait après. Résultat : le « 30 sec »
+  // décalé de ~2 s. La règle : quand le nombre est dans le hook, on COUPE le
+  // hook pile sur lui — l'avatar ouvre (« …je vais te montrer »), puis cède au
+  // chrono qui se remplit sur toute la phrase, calé au mot. On réserve ici,
+  // AVANT le remplissage visage (§2), pour que le chrono gagne son créneau.
   for (let j = 0; j < words.length && words[j].start < 6; j++) {
     const v = numOf(words[j].text)
     const nx = words[j + 1] ? norm(words[j + 1].text) : ''
-    if (v > 0 && v <= 120 && (nx.startsWith('second') || nx.startsWith('minute'))) {
-      add({ anim: 'ui', ui: 'timer', value: String(v), unit: nx.startsWith('minute') ? 'MINUTES' : 'SECONDES' },
-        Math.max(0, words[j].start - LEAD), Math.min(D, words[j + 1].end + 1.6))
-      break
+    if (!(v > 0 && v <= 120 && (nx.startsWith('second') || nx.startsWith('minute')))) continue
+    const t0 = r2(Math.max(0, words[j].start - LEAD))
+    // fin de la phrase chrono : on avale « top chrono » (mots contigus, trou ≤ 0,35 s)
+    // et on S'ARRÊTE à la ponctuation de fin — sinon « chrono. La plupart des
+    // gens… » entrait dans la fenêtre et le chrono débordait sur l'idée suivante.
+    let k = j + 1, finPhrase = words[j + 1] ? (words[j + 1].end || t0) : t0
+    while (words[k + 1] && !/[.!?]$/.test(String(words[k].text || ''))
+      && (words[k + 1].start - (words[k].end || 0)) <= 0.35
+      && words[k + 1].start < words[j].start + 2.2) { k++; finPhrase = words[k].end || finPhrase }
+    const e = r2(Math.min(D, finPhrase + 0.7))
+    // le mot-nombre est DANS le hook → on coupe le hook pile là (on ne coupe que
+    // s'il reste une vraie ouverture ≥ 1,3 s ; le clip hook se re-génère plus court).
+    const finHook = (plan.hook && plan.hook.end) || 0
+    if (words[j].start < finHook && t0 >= 1.3) {
+      if (plan.hook) plan.hook.end = t0
+      const seg0 = (plan.avatarSegments || []).find((w) => (w.start || 0) < 0.6)
+      if (seg0 && (seg0.end || 0) > t0) seg0.end = t0
+      // ⚠ les BORNES finales de la fenêtre hook viennent de `hookWin` (§0), pas
+      // de seg0 : sans ce rognage, §3b la re-posait 0→fin de phrase et l'avatar
+      // (au-dessus des panneaux) recouvrait le chrono — le « sliver » de v6.
+      if (hookWin && hookWin.end > t0) hookWin.end = t0
+      const hk = taken.find((w) => w[0] < 0.3 && w[1] > 1.2)
+      if (hk && hk[1] > t0) hk[1] = t0
+      console.log(`▶ hook coupé sur « ${words[j].text} » à ${t0}s → le chrono ${v} joue en synchro`)
     }
+    if (add({ anim: 'ui', ui: 'timer', value: String(v), unit: nx.startsWith('minute') ? 'MINUTES' : 'SECONDES' }, t0, e))
+      console.log(`▶ chrono ${v} ${nx.startsWith('minute') ? 'MINUTES' : 'SECONDES'} : ${t0}→${e}s`)
+    break
   }
 
   // « avec cette qualité-là » → la photo témoin plein écran (montrer le résultat au hook)
